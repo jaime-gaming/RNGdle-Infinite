@@ -10,7 +10,6 @@ Retrieved on 2026-09-14 from [RNGdle Tools](https://rng.cubityfir.st/), pinned t
 - `badge-metadata.json`: 233 labels, descriptions, emojis, EP values, family names, and badge rarities, in pinned upstream definition order. `matchingNumbers`, `probabilityPercent`, and formatted `probability` are derived from the bitsets, not estimates.
 - `game-index.json`: source/revision, population, row order, compressed and inflated SHA-256 digests/lengths, versioned transport paths, roll-tier thresholds, and tier counts.
 - `diagram-hints.json`: observed whole-number contributor categories from reference test cases. Other contributor diagrams are independently derived in `src/contributors.js`. These presentation hints never determine membership or EP. If a helper cannot establish supporting digits, the diagram is omitted; the indexed badge and score remain correct.
-- `featured-badges.json`: badge IDs for the static reference `1337` best-roll card. This card remains labelled demo data and cannot generate or credit a roll.
 - `roll-samples.json`: fifty observed results used **only by tests**. These include contributor outputs and the reference engine’s older approximate percentile; runtime ranks are recalculated from the complete EP population instead. Not imported into the production app.
 
 The upstream executable engine was used only for local inspection. Its implementation and stylesheets are not shipped. The gzip files are factual precomputed indexes, not executable rules. The frontend evaluator independently reads membership, selects the highest-EP badge in each family, and verifies that the resulting total equals the EP index.
@@ -74,7 +73,7 @@ The EP pill is visible as `??? EP` from the start of the spin. Its first contrib
 
 ## Shared number-box appearance
 
-`NumberBox` is the shared presentation for generated rolls, the idle generator, demo best roll/profile, and shop previews. The observed scoring-box colours and shadow values in `number-box-palettes.css` come from [Box Lab](https://rng.cubityfir.st/beta/boxes), specifically `SCORE_TIERS` in `src/beta.js` at the pinned upstream revision above. Geometry, markup, and animations are independently implemented. There are separate light/dark gradients, borders, ink colours, and shadows for each of the seven existing tiers; the lab's custom eighth tier is not part of the game. Trash, common, and neutral boxes have no shimmer. Paid cosmetic layers share the same component without changing rarity classification or scoring.
+`NumberBox` is the shared presentation for generated rolls, the idle generator, historical roll boxes, and shop previews. The observed scoring-box colours and shadow values in `number-box-palettes.css` come from [Box Lab](https://rng.cubityfir.st/beta/boxes), specifically `SCORE_TIERS` in `src/beta.js` at the pinned upstream revision above. Geometry, markup, and animations are independently implemented. There are separate light/dark gradients, borders, ink colours, and shadows for each of the seven existing tiers; the lab's custom eighth tier is not part of the game. Trash, common, and neutral boxes have no shimmer. Paid cosmetic layers share the same component without changing rarity classification or scoring.
 
 ## Measured visual checkpoints
 
@@ -91,6 +90,6 @@ At a 1200 × 900 CSS-pixel viewport, with a generated `1337` result (including t
 | Badge section    | 546 |      — |   640 |
 | First badge card | 606 |    105 |   640 |
 
-The number is intentionally read-only in Infinite. There are no editable question marks, number inputs, presets, replay controls, or recent-roll history. Test-only crypto interception selects numbers for repeatable visual assertions. The generated-roll measurements were rechecked against the cached reference; each superseded badge row is 36 px high and the complete `1337` badge section is 1,812 px high. The header retains Infinite branding, and the daily countdown is replaced by the local short cooldown.
+The number is intentionally read-only in Infinite. There are no editable question marks, number inputs, presets, or replay controls. Completed rolls are recorded in the personal activity feed without altering scoring. Test-only crypto interception selects numbers for repeatable visual assertions. The generated-roll measurements were rechecked against the cached reference; each superseded badge row is 36 px high and the complete `1337` badge section is 1,812 px high. The header retains Infinite branding, and the daily countdown is replaced by the 60-second base cooldown (shortenable through upgrades).
 
 `tests/roll.spec.js` checks the schedule, stage gating, and edge cases. `tests/fidelity.spec.js` verifies geometry, the first EP tween, reduced-motion completion, read-only numbers, rank easing, and chip-group timing. `tests/probability.spec.js` validates the complete population, odds, secure sampling, loading/retry, and repeated-roll credit.

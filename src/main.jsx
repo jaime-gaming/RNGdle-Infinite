@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ShoppingBag,
-  Trophy,
+  History,
   Medal,
   Sun,
   Moon,
@@ -12,12 +12,9 @@ import {
   ArrowUpRight,
   ArrowRight,
   Infinity as InfinityIcon,
-  Sparkles,
   X,
-  Heart,
   Search,
   ChevronRight,
-  Clock3,
   Check,
   Dices,
   ArrowLeft,
@@ -29,186 +26,23 @@ import "@fontsource/space-mono/700.css";
 import "./styles.css";
 import Emoji from "./components/Emoji";
 import RollExperience from "./components/RollExperience";
-import featuredBadgeIds from "./data/featured-badges.json";
 import { POPULATION } from "./probability";
 import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
 import LocalProfile from "./components/LocalProfile";
-import NumberBox from "./components/NumberBox";
-
-const players = [
-  {
-    name: "wrongtypeofhero",
-    number: "1337",
-    ep: "100,177,458",
-    emoji: "💻",
-    note: "among us",
-    likes: 175,
-  },
-  {
-    name: "gummy_bearboy",
-    number: "911",
-    ep: "100,155,452",
-    emoji: "🚑",
-    note: "a lucky little number",
-    likes: 582,
-  },
-  {
-    name: "jamesx3",
-    number: "6283",
-    ep: "33,347,789",
-    emoji: "🌀",
-    note: "around and around",
-    likes: 7,
-  },
-  {
-    name: "verrdant",
-    number: "40320",
-    ep: "11,127,065",
-    emoji: "❗",
-    note: "between dividing skies",
-    likes: 53,
-  },
-  {
-    name: "crystaxol",
-    number: "599999",
-    ep: "10,907,903",
-    emoji: "🥳",
-    note: "so close",
-    likes: 5,
-  },
-  {
-    name: "xbcy",
-    number: "77777",
-    ep: "9,173,308",
-    emoji: "💰",
-    note: "wonder",
-    likes: 10,
-  },
-  {
-    name: "low_hanging_veg",
-    number: "55",
-    ep: "6,869,154",
-    emoji: "👻",
-    note: "same same",
-    likes: 6,
-  },
-  {
-    name: "ozempic",
-    number: "877777",
-    ep: "6,162,919",
-    emoji: "7️⃣",
-    note: "wild",
-    likes: 42,
-  },
-];
-const BadgePill = ({ badge, openBadge }) => (
-  <button
-    className={`badge-pill ${badge.rarity.toLowerCase()}`}
-    onClick={() => openBadge(badge)}
-  >
-    <Emoji text={badge.emoji} />
-    {badge.name}
-  </button>
-);
-const BestRoll = ({
-  discovered,
-  liked,
-  setLiked,
-  more,
-  setMore,
-  openBadge,
-  setPlayer,
-  setModal,
-  navigate,
-}) => {
-  const visibleBadges = badges.filter(
-    (b) =>
-      featuredBadgeIds.includes(b.canonicalId) &&
-      discovered.includes(b.canonicalId),
-  );
-  return (
-    <article className="best-card">
-      <div className="card-eyebrow">
-        <Trophy size={13} /> TODAY’S BEST ROLL{" "}
-        <span
-          className="sample-mark"
-          title="Reference data, not a live leaderboard"
-        >
-          DEMO
-        </span>
-      </div>
-      <NumberBox
-        as="button"
-        value="1337"
-        tier="mythic"
-        className="best-number"
-        onClick={() => {
-          setPlayer(players[0]);
-          setModal("player");
-        }}
-        aria-label="View today's best roll, 1337"
-      />
-      <div className="rolled-by">
-        rolled by{" "}
-        <button
-          onClick={() => {
-            setPlayer(players[0]);
-            setModal("player");
-          }}
-        >
-          wrongtypeofhero
-        </button>
-        <button
-          className={`like ${liked ? "is-liked" : ""}`}
-          aria-label={liked ? "Unlike roll" : "Like roll"}
-          aria-pressed={liked}
-          onClick={() => setLiked(!liked)}
-        >
-          <Heart size={13} fill={liked ? "currentColor" : "none"} />
-          {175 + Number(liked)}
-        </button>
-      </div>
-      <p className="roll-caption">“among us”</p>
-      {visibleBadges.length > 0 && (
-        <div className="badge-list">
-          {visibleBadges.slice(0, more ? undefined : 7).map((b) => (
-            <BadgePill key={b.canonicalId} badge={b} openBadge={openBadge} />
-          ))}
-          {visibleBadges.length > 7 && (
-            <button className="more-badges" onClick={() => setMore(!more)}>
-              {more ? "Show less" : `+${visibleBadges.length - 7} more`}
-            </button>
-          )}
-        </div>
-      )}
-      <div className="ep-score">
-        <Sparkles size={13} />
-        100,177,458 <span>EP</span>
-      </div>
-      <div className="card-bottom">
-        <span>
-          <span className="live-dot" />
-          76,593 rolls today
-        </span>
-        <button disabled title="Leaderboard disabled for now">
-          Leaderboard <ArrowUpRight size={13} />
-        </button>
-      </div>
-    </article>
-  );
-};
+import ActivityFeed from "./components/ActivityFeed";
 
 function App() {
   const [page, setPage] = useState(() =>
-    ["badges", "shop"].includes(location.hash.slice(1))
+    ["badges", "shop", "history"].includes(location.hash.slice(1))
       ? location.hash.slice(1)
       : "roll",
   );
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem("rng-theme") || "light";
+      const saved = localStorage.getItem("rng-theme");
+      return ["light", "dark", "system"].includes(saved) ? saved : "light";
     } catch {
       return "light";
     }
@@ -222,15 +56,21 @@ function App() {
   );
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
-  const [player, setPlayer] = useState(players[0]);
   const [toast, setToast] = useState("");
-  const [liked, setLiked] = useState(false);
-  const [more, setMore] = useState(false);
   const {
     progress: session,
     warning: progressWarning,
     dispatch,
+    epoch,
   } = useProgress();
+  useEffect(() => {
+    setModal(null);
+    setSelectedBadge(null);
+    setSearch("");
+    setRarity("All rarities");
+    setGroup("All sets");
+    setSort("Default");
+  }, [epoch]);
   async function completeRoll(result, id, cooldownUntil) {
     const outcome = await dispatch({
       type: "complete",
@@ -253,7 +93,7 @@ function App() {
     toastTimer.current = setTimeout(() => setToast(""), 3500);
   };
   const navigate = (next) => {
-    if (!["roll", "badges", "shop"].includes(next)) next = "roll";
+    if (!["roll", "badges", "shop", "history"].includes(next)) next = "roll";
     setPage(next);
     location.hash = next === "roll" ? "" : next;
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -261,7 +101,7 @@ function App() {
   useEffect(() => {
     const update = () =>
       setPage(
-        ["badges", "shop"].includes(location.hash.slice(1))
+        ["badges", "shop", "history"].includes(location.hash.slice(1))
           ? location.hash.slice(1)
           : "roll",
       );
@@ -372,12 +212,12 @@ function App() {
           <div className="nav-divider" />
           <nav aria-label="Main navigation">
             <button
-              aria-label="Leaderboard"
-              disabled
-              title="Leaderboard disabled for now"
+              aria-label="History"
+              className={page === "history" ? "active" : ""}
+              onClick={() => navigate("history")}
             >
-              <Trophy size={15} />
-              <span>Leaderboard</span>
+              <History size={15} />
+              <span>History</span>
             </button>
             <button
               aria-label="Badges"
@@ -446,25 +286,13 @@ function App() {
           }
         >
           <RollExperience
+            key={epoch}
             {...{ openBadge, notify, session }}
             theme={appliedTheme}
             onComplete={completeRoll}
             openSignup={openAuth}
             aura={session.equipped}
           >
-            <BestRoll
-              discovered={session.discovered}
-              {...{
-                liked,
-                setLiked,
-                more,
-                setMore,
-                openBadge,
-                setPlayer,
-                setModal,
-                navigate,
-              }}
-            />
             <button
               className="discover-link"
               onClick={() => navigate("badges")}
@@ -479,8 +307,18 @@ function App() {
             </button>
           </RollExperience>
         </div>
+        {page === "history" && (
+          <ActivityFeed
+            key={epoch}
+            progress={session}
+            navigate={navigate}
+            openSignup={openAuth}
+            openBadge={openBadge}
+          />
+        )}
         {page === "shop" && (
           <Shop
+            key={epoch}
             progress={session}
             onAction={dispatch}
             openSignup={openAuth}
@@ -655,9 +493,6 @@ function App() {
           Just a number. A whole lot of possibility.
         </span>
         <div>
-          <span className="preview-label">
-            <span /> UI preview
-          </span>
           <button onClick={() => setModal("help")}>
             How to play <ArrowUpRight size={12} />
           </button>
@@ -735,10 +570,12 @@ function App() {
                   Spend EP on timing upgrades or cosmetic auras in the shop.
                   Upgrades apply to future rolls; they never change your odds or
                   score. Sign up for a local profile to save your wallet,
-                  discoveries, purchases, and cooldown in this browser. Guest
-                  progress is temporary. This is not an online account, and
-                  clearing site data removes local saves. The leaderboard is
-                  disabled.
+                  discoveries, purchases, cooldown, and activity history in this
+                  browser. Guest progress is temporary. This is not an online
+                  account, and clearing site data removes local saves. The
+                  leaderboard is disabled. Open History for completed rolls,
+                  badge unlocks, and shop transactions. Delete your account and
+                  progress from Profile.
                 </div>
                 <button
                   className="primary-button"
@@ -824,32 +661,6 @@ function App() {
                 >
                   View badge reference <ArrowUpRight size={16} />
                 </a>
-              </>
-            )}
-            {modal === "player" && (
-              <>
-                <p className="eyebrow">A ROLL WORTH REMEMBERING</p>
-                <div className="profile-avatar">
-                  <Emoji text={player.emoji} />
-                </div>
-                <h2 id="modal-title">{player.name}</h2>
-                <p>“{player.note}”</p>
-                <NumberBox
-                  className="profile-number"
-                  value={player.number}
-                  tier="mythic"
-                />
-                <div className="ep-score">
-                  <Sparkles size={14} />
-                  {player.ep} EP
-                </div>
-                <div className="info-box">
-                  Reference player data · This profile is a UI preview, not a
-                  connected account.
-                </div>
-                <button className="primary-button" disabled>
-                  Leaderboard unavailable
-                </button>
               </>
             )}
           </section>

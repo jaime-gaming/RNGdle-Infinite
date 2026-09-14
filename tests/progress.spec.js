@@ -70,7 +70,7 @@ test("saved progress is versioned, validated, and cannot equip an unowned item",
   expect(p.equipped).toBe("none");
 });
 
-test("undiscovered badges are absent from collection, search, and demo cards", async ({
+test("undiscovered badges are absent from collection and search; demo cards are removed", async ({
   page,
 }) => {
   await page.goto("/");
@@ -79,7 +79,7 @@ test("undiscovered badges are absent from collection, search, and demo cards", a
     page
       .getByRole("navigation")
       .getByRole("button", { name: "Leaderboard", exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await expect(page.locator(".best-card .badge-pill")).toHaveCount(0);
   await page
     .getByRole("navigation")
