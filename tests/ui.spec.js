@@ -57,12 +57,8 @@ test("badge catalogue filters and details", async ({ page }) => {
   expect(await page.locator(".badge-card").count()).toBeGreaterThan(200);
 });
 
-test("navigation, themes, likes, help and local signup", async ({ page }) => {
+test("navigation, themes, help and local signup", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Like roll", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Unlike roll", exact: true }),
-  ).toHaveText("176");
   await page.getByRole("button", { name: "dark theme", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
@@ -83,7 +79,7 @@ test("navigation, themes, likes, help and local signup", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("navigation").getByRole("button", { name: "Leaderboard" }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await page.goto("/#leaderboard");
   await expect(page.locator(".roll-view")).toBeVisible();
   await expect(
@@ -94,7 +90,7 @@ test("navigation, themes, likes, help and local signup", async ({ page }) => {
 test("desktop and mobile layouts do not overflow", async ({ page }) => {
   for (const width of [1440, 768, 390, 360]) {
     await page.setViewportSize({ width, height: 1000 });
-    for (const hash of ["", "#badges", "#shop", "#leaderboard"]) {
+    for (const hash of ["", "#badges", "#shop", "#history", "#leaderboard"]) {
       await page.goto("/" + hash);
       expect(
         await page.evaluate(

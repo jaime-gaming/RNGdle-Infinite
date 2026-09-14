@@ -17,7 +17,7 @@ const css = (locator) =>
 const rgb = (hex) =>
   `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
 
-test("shared number boxes cover the idle generator, best roll, profile and all cosmetic previews", async ({
+test("shared number boxes cover the idle generator and cosmetic previews without demo rolls", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -25,13 +25,7 @@ test("shared number boxes cover the idle generator, best roll, profile and all c
   await expect(page.locator(".question-number.number-box")).toHaveText(
     "??????",
   );
-  const best = page.locator(".best-number.number-box");
-  await expect(best).toHaveAttribute("data-tier", "mythic");
-  const style = await css(best);
-  await best.click();
-  await expect(page.locator(".profile-number.number-box")).toHaveText("1337");
-  expect(await css(page.locator(".profile-number"))).toEqual(style);
-  await page.getByRole("button", { name: "Close dialog" }).click();
+  await expect(page.locator(".best-number, .profile-number")).toHaveCount(0);
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Shop", exact: true })

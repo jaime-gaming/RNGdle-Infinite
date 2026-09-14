@@ -14,6 +14,7 @@ export function emptyProgress() {
     equipped: "none",
     cooldownUntil: 0,
     receipts: [],
+    history: [],
   };
 }
 export function parseProgress(raw) {
@@ -57,6 +58,7 @@ export function parseProgress(raw) {
   }
   return {
     version: 1,
+    history: parseHistory(p.history),
     profile,
     balance: p.balance,
     totalEarned: p.totalEarned,
@@ -104,16 +106,59 @@ export function applyProgress(state, action) {
       typeof id !== "string" ||
       !id ||
       !validAmount(result?.totalEP) ||
+      !validAmount(result?.number) ||
+      result.number > 1000000 ||
+      !Array.isArray(result?.badges) ||
+      ![
+        "trash",
+        "common",
+        "uncommon",
+        "rare",
+        "epic",
+        "anomaly",
+        "mythic",
+      ].includes(result?.tier) ||
       !validAmount(cooldownUntil)
     )
       throw new Error("Invalid roll");
-    if (state.receipts.includes(id)) return state;
+    if (
+      state.receipts.includes(id) ||
+      state.history?.some((e) => e.id === id && e.type === "roll")
+    )
+      return state;
     const balance = state.balance + result.totalEP,
       totalEarned = state.totalEarned + result.totalEP;
     if (!validAmount(balance) || !validAmount(totalEarned))
       throw new Error("EP balance limit reached.");
+    const earned = [
+      ...new Set(
+        result.badges.map((b) => b.id).filter((id) => badgeIds.has(id)),
+      ),
+    ];
+    const unlocked = earned.filter((id) => !state.discovered.includes(id));
+    const at = action.at ?? Math.ceil(Date.now());
+    const events = [
+      {
+        id,
+        type: "roll",
+        at,
+        number: result.number,
+        tier: result.tier,
+        ep: result.totalEP,
+        badges: earned,
+      },
+    ];
+    if (unlocked.length)
+      events.push({
+        id: `${id}:unlock`,
+        type: "unlock",
+        at,
+        number: result.number,
+        badges: unlocked,
+      });
     return {
       ...state,
+      history: [...(state.history ?? []), ...events],
       balance,
       totalEarned,
       discovered: [
@@ -137,6 +182,17 @@ export function applyProgress(state, action) {
       throw new Error("Not enough EP for this item.");
     return {
       ...state,
+      history: [
+        ...(state.history ?? []),
+        {
+          id: action.eventId ?? `buy:${item.id}`,
+          type: "purchase",
+          at: action.at ?? Math.ceil(Date.now()),
+          productId: item.id,
+          name: item.name,
+          ep: item.price,
+        },
+      ],
       balance: state.balance - item.price,
       owned: [...state.owned, item.id],
       equipped: item.kind === "aura" ? item.id : state.equipped,
@@ -149,7 +205,91 @@ export function applyProgress(state, action) {
         productById.get(action.id)?.kind !== "aura")
     )
       throw new Error("Purchase this aura before equipping it.");
-    return { ...state, equipped: action.id };
+    if (state.equipped === action.id) return state;
+    return {
+      ...state,
+      equipped: action.id,
+      history: [
+        ...(state.history ?? []),
+        {
+          id:
+            action.eventId ??
+            `equip:${action.id}:${state.history?.length ?? 0}`,
+          type: "equip",
+          at: action.at ?? Math.ceil(Date.now()),
+          productId: action.id,
+          name: productById.get(action.id)?.name ?? "Original appearance",
+        },
+      ],
+    };
   }
   throw new Error("Unknown progress action");
+}
+
+// Old saves have no activity log. Keep valid historical entries, never invent
+// previous rolls from a wallet total or discard an otherwise usable save.
+function parseHistory(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value.flatMap((e) => {
+    if (
+      !e ||
+      typeof e.id !== "string" ||
+      !e.id ||
+      e.id.length > 160 ||
+      seen.has(e.id) ||
+      !validAmount(e.at) ||
+      e.at > 8640000000000000
+    )
+      return [];
+    const base = { id: e.id, type: e.type, at: e.at };
+    let next;
+    if (["roll", "unlock"].includes(e.type)) {
+      if (
+        !validAmount(e.number) ||
+        e.number > 1000000 ||
+        !Array.isArray(e.badges)
+      )
+        return [];
+      next = {
+        ...base,
+        number: e.number,
+        badges: [...new Set(e.badges.filter((id) => badgeIds.has(id)))],
+      };
+      if (e.type === "roll") {
+        if (
+          !validAmount(e.ep) ||
+          ![
+            "trash",
+            "common",
+            "uncommon",
+            "rare",
+            "epic",
+            "anomaly",
+            "mythic",
+          ].includes(e.tier)
+        )
+          return [];
+        next = { ...next, ep: e.ep, tier: e.tier };
+      }
+    } else if (["purchase", "equip"].includes(e.type)) {
+      if (
+        typeof e.productId !== "string" ||
+        !(
+          productById.has(e.productId) ||
+          (e.type === "equip" && e.productId === "none")
+        ) ||
+        typeof e.name !== "string" ||
+        e.name.length > 100
+      )
+        return [];
+      next = { ...base, productId: e.productId, name: e.name };
+      if (e.type === "purchase") {
+        if (!validAmount(e.ep)) return [];
+        next.ep = e.ep;
+      }
+    } else return [];
+    seen.add(e.id);
+    return [next];
+  });
 }

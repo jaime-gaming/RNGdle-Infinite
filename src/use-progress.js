@@ -5,7 +5,6 @@ import {
   parseProgress,
   applyProgress,
 } from "./progress.js";
-
 function load() {
   try {
     return {
@@ -21,47 +20,97 @@ function load() {
   }
 }
 export function useProgress() {
-  const [initial] = useState(load);
-  const [progress, setProgress] = useState(initial.progress);
-  const [warning, setWarning] = useState(initial.warning);
+  const [initial] = useState(load),
+    [progress, setProgress] = useState(initial.progress),
+    [warning, setWarning] = useState(initial.warning),
+    [epoch, setEpoch] = useState(0);
   const current = useRef(initial.progress),
     healthy = useRef(!initial.warning),
+    generation = useRef(0),
     queue = useRef(Promise.resolve());
+  function reset(next = emptyProgress()) {
+    generation.current++;
+    setEpoch(generation.current);
+    current.current = next;
+    setProgress(next);
+    healthy.current = true;
+    setWarning("");
+  }
   useEffect(() => {
     function synchronize(event) {
       if (event.key !== PROGRESS_KEY && event.key !== null) return;
-      // A different tab signing up must not discard or auto-save this guest's game.
       if (!current.current.profile) return;
       try {
         const next = parseProgress(localStorage.getItem(PROGRESS_KEY));
-        current.current = next;
-        setProgress(next);
-        healthy.current = true;
-        setWarning("");
+        if (next.profile?.id !== current.current.profile.id) reset(next);
+        else {
+          current.current = next;
+          setProgress(next);
+          healthy.current = true;
+          setWarning("");
+        }
       } catch {
+        healthy.current = false;
         setWarning(
           "Saved progress could not be synchronized. This tab is keeping its current progress.",
         );
-        healthy.current = false;
       }
     }
     window.addEventListener("storage", synchronize);
     return () => window.removeEventListener("storage", synchronize);
   }, []);
-  function dispatch(action) {
+  function dispatch(input) {
+    const token = epoch;
+    const action = {
+      ...input,
+      at: input.at ?? Math.ceil(Date.now()),
+      eventId: input.eventId ?? crypto.randomUUID(),
+    };
     const execute = () => {
       try {
+        if (token !== generation.current)
+          return {
+            ok: false,
+            message: "This game was reset. The previous action was cancelled.",
+          };
         let previous = current.current;
-        // Re-read inside the cross-tab lock; never charge a stale balance.
-        if (healthy.current && previous.profile) {
+        let readable = true;
+        if (previous.profile) {
           try {
-            previous = parseProgress(localStorage.getItem(PROGRESS_KEY));
+            const stored = parseProgress(localStorage.getItem(PROGRESS_KEY));
+            // Always check identity, even after a failed write: a stale tab must
+            // never resurrect a deleted account or spend another profile's EP.
+            if (stored.profile?.id !== previous.profile.id) {
+              reset(stored);
+              return {
+                ok: false,
+                message:
+                  "The local account changed. The previous action was cancelled.",
+              };
+            }
+            if (healthy.current) previous = stored;
           } catch {
+            readable = false;
             healthy.current = false;
           }
         }
+        if (action.type === "delete") {
+          if (!previous.profile || previous.profile.id !== action.profileId)
+            return { ok: false, message: "This account is no longer active." };
+          try {
+            if (!readable) throw new Error("Unreadable storage");
+            localStorage.removeItem(PROGRESS_KEY);
+          } catch {
+            return {
+              ok: false,
+              message:
+                "Deletion failed. Your account and progress have not been removed. Allow browser storage and try again.",
+            };
+          }
+          reset();
+          return { ok: true };
+        }
         if (action.type === "register") {
-          // Do not overwrite a profile created by another tab while signing up.
           try {
             if (
               parseProgress(localStorage.getItem(PROGRESS_KEY)).profile &&
@@ -72,18 +121,25 @@ export function useProgress() {
                 message:
                   "A local profile was created in another tab. Reload to use it.",
               };
-          } catch {}
+          } catch {
+            return {
+              ok: false,
+              message:
+                "Sign-up could not be saved. Your guest progress is still available in this tab.",
+            };
+          }
         }
         const next = applyProgress(previous, action);
         if (next !== previous && next.profile) {
           try {
+            if (!readable) throw new Error("Unreadable storage");
             localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
             healthy.current = true;
             setWarning("");
           } catch {
             healthy.current = false;
             setWarning(
-              "Local saving is unavailable. Rolls continue temporarily, but purchases require saving to work.",
+              "Local saving is unavailable or full. New rolls and activity are temporary until saving works again. Purchases are paused; no saved history has been deleted.",
             );
             if (action.type !== "complete")
               return {
@@ -102,8 +158,6 @@ export function useProgress() {
         return { ok: false, message: error.message };
       }
     };
-    // Web Locks serializes writes across tabs. The queue also prevents multiple
-    // rapid actions in this tab from spending or crediting the same EP twice.
     const task = queue.current.then(() =>
       navigator.locks?.request
         ? navigator.locks.request(PROGRESS_KEY, execute)
@@ -115,5 +169,5 @@ export function useProgress() {
       message: "Progress could not be updated. Please try again.",
     }));
   }
-  return { progress, warning, dispatch };
+  return { progress, warning, dispatch, epoch };
 }
