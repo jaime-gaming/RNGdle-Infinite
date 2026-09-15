@@ -113,31 +113,38 @@ nav {
   gap: 29px;
 }
 .wordmark {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
   padding: 0;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
   white-space: nowrap;
+  border-radius: 6px;
 }
-.wordmark > span:not(.infinite-label) {
-  font-weight: 600;
-  letter-spacing: 0.5px;
+.brand-mark {
+  display: block;
+  flex-shrink: 0;
 }
-.wordmark .infinite-label {
+.brand-name {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: 11px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.brand-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1;
+}
+.brand-title > span {
+  font-weight: 600;
+}
+.brand-edition {
   color: var(--green);
-  background: var(--green-bg);
-  border: 1px solid #6b9d7929;
-  border-radius: 5px;
-  padding: 4px 7px;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 750;
-  letter-spacing: 1.15px;
+  line-height: 1;
+  letter-spacing: 2.25px;
 }
 .nav-divider {
   height: 22px;
@@ -855,10 +862,48 @@ footer button {
   justify-content: space-between;
   padding: 18px 0;
   border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
   font-size: 12px;
-  color: var(--muted);
+  color: var(--secondary);
+}
+.collection-progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 18px;
   margin-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+.collection-progress-bar {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  border: 0;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--border);
+  color: var(--green);
+}
+.collection-progress-bar::-webkit-progress-bar {
+  background: var(--border);
+  border-radius: 99px;
+}
+.collection-progress-bar::-webkit-progress-value {
+  background: var(--green);
+  border-radius: 99px;
+}
+.collection-progress-bar::-moz-progress-bar {
+  background: var(--green);
+  border-radius: 99px;
+}
+.collection-progress-label {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .catalogue-intro strong {
   color: var(--text);
@@ -1461,9 +1506,6 @@ footer button {
   .header-right {
     gap: 12px;
   }
-  .wordmark {
-    font-size: 22px;
-  }
   .leaderboard-layout {
     grid-template-columns: 300px 1fr;
     gap: 18px;
@@ -1490,18 +1532,6 @@ footer button {
   }
   .nav-divider {
     display: none;
-  }
-  .wordmark {
-    font-size: 21px;
-  }
-  .wordmark .infinite-label {
-    font-size: 8px;
-    margin-left: 7px;
-    letter-spacing: 0.6px;
-    padding: 4px;
-  }
-  .wordmark .infinite-label svg {
-    width: 12px;
   }
   nav {
     gap: 14px;
@@ -1590,17 +1620,6 @@ footer button {
   }
   .header-left {
     gap: 17px;
-  }
-  .wordmark {
-    font-size: 20px;
-  }
-  .wordmark .infinite-label {
-    font-size: 7px;
-    margin-left: 6px;
-    gap: 3px;
-  }
-  .wordmark .infinite-label svg {
-    width: 11px;
   }
   nav {
     gap: 12px;

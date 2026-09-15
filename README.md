@@ -18,7 +18,7 @@ npm run preview
 
 ## Included
 
-- RNGdle-style light/dark layout, local **Inter + Space Mono** fonts, shared, tier-aware number boxes, and a colour-cycling Generate button.
+- Custom dice-and-infinity logo with a matching SVG favicon, **Shop → Badges → History** navigation, and RNGdle-style light/dark layout, local **Inter + Space Mono** fonts, shared, tier-aware number boxes, and a colour-cycling Generate button.
 - **Random-only generation across 0–1,000,000 inclusive**, using Web Crypto with rejection sampling. Every number is equally likely, including a repeat of the previous roll. There is no number editor, preset picker, seed setting, or arbitrary-number preview.
 - Exact EP and earned/superseded badge membership for all **1,000,001** possible numbers, using pinned full-range factual indexes from RNGdle Tools.
 - Full-population rank percentages with ties included and reference-style rounded rank labels, also used in share text. Rank tooltips retain precise percentages and integer counts. Badge details show percentages counted over the complete badge index.
@@ -26,7 +26,7 @@ npm run preview
 - No Skip Reveal button or keyboard skipping. The reference choreography plays on the selected reveal schedule; the browser’s reduced-motion preference still completes it immediately for accessibility.
 - A **45-second base reveal** plus **60-second base cooldown**, with permanent timing upgrades. The next-roll deadline is fixed at draw start: **105 seconds base**, or **30 seconds with both tracks maxed**. Reduced motion reveals instantly for accessibility but never advances this deadline.
 - **EP is spendable currency.** Each completed roll credits its full score exactly once. The existing EP counter shows the wallet balance. Completed rolls appear in your activity feed. There are no replay controls, presets, or number editing.
-- **Discovery-only collection:** 233 possible badges across 17 sets, but only earned badges appear in the collection, search results, details, and activity feed. Completing a roll discovers all its earned badges, including superseded badges.
+- **Discovery-only collection:** 233 possible badges across 17 sets, but only earned badges appear in the collection, search results, details, and activity feed. An accessible progress bar tracks unique discoveries against all 233 badges, independent of search filters. Badge details stay in-game without external reference buttons. Completing a roll discovers all its earned badges, including superseded badges.
 - **Leaderboard disabled**, including direct `#leaderboard` navigation. The History navigation replaces the inactive leaderboard. Today’s Best Roll, fake player data, and UI Preview labeling have been removed.
 - **Sign up to save:** a local username profile retains guest progress and enables automatic browser saves. No passwords, email collection, online authentication, or backend.
 - Light, dark, and system themes. Registered profiles persist wallet, discoveries, upgrades, equipped aura, and cooldown in localStorage; guest wallets and history stay in memory; a narrow sessionStorage guard retains only the committed draw and cooldown across refreshes. Theme preference can persist without signing up.
@@ -119,7 +119,7 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **81 tests** cover:
+The **86 tests** cover:
 
 - Every legal number’s score versus its highest-EP family memberships, all 233 badge probabilities, tier counts, and data hashes.
 - Agreement with fifty independent reference snapshots, exact inclusive rank tails, rare percentages, both range endpoints, and rejection-sampling boundaries/repeats.
@@ -129,6 +129,7 @@ The **81 tests** cover:
 - Committed registered/guest reloads, concurrent account draws and single rewards, failed commit protection, missing Web Locks, failed-settlement recovery preserving other-tab spending, monotonic in-tab time, and unchanged reduced-motion cadence.
 - Progressive/maxed upgrade cards, Archive Lens search before pagination, new cosmetic purchases and mobile filters.
 - Shared number-box coverage, all seven original light/dark palettes plus GODLY boundary/count/palette/particles, rarity-gated shimmer, upgraded cosmetics, legacy ownership after repricing, and reduced-motion/mobile rendering.
+- Logo/home navigation and keyboard order, empty/partial/complete collection progress, saved discoveries after reload, removed reference buttons, and responsive light/dark layouts.
 - Measured generated-roll desktop geometry (including superseded rows), persistent digit nodes, first-EP tween, reveal gating, accessible instant completion, contributor agreement with all fifty fixtures, shared chip-loop timing, and rank overshoot.
 
 Deterministic browser tests intercept the worker’s crypto source in Playwright only; there is no production test seed or number input. To use an existing Chromium binary, set `CHROMIUM_PATH`.
