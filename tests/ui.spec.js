@@ -21,7 +21,7 @@ test("home, random roll, cooldown, and badge breakdown", async ({ page }) => {
   await expect(
     page.locator(".history-card, .result-secondary-actions"),
   ).toHaveCount(0);
-  await page.clock.fastForward(60100);
+  await page.clock.fastForward(105100);
   await expect(page.getByRole("button", { name: "ROLL AGAIN" })).toBeEnabled({
     timeout: 8000,
   });

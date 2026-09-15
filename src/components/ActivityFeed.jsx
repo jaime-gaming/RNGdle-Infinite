@@ -41,6 +41,9 @@ export default function ActivityFeed({
 }) {
   const [filter, setFilter] = useState("All activity"),
     [limit, setLimit] = useState(50);
+  const [query, setQuery] = useState(""),
+    [tier, setTier] = useState("all");
+  const lens = progress.owned.includes("archive-lens");
   const history = progress.history ?? [];
   const events = useMemo(
     () =>
@@ -52,9 +55,16 @@ export default function ActivityFeed({
             (filter === "Badge unlocks" && e.type === "unlock") ||
             (filter === "Shop" && ["purchase", "equip"].includes(e.type)),
         )
+        .filter(
+          (e) =>
+            !lens ||
+            ((!query.trim() || String(e.number ?? "").includes(query.trim())) &&
+              (tier === "all" || (e.type === "roll" && e.tier === tier))),
+        )
         .slice()
+        .sort((a, b) => a.at - b.at)
         .reverse(),
-    [history, filter],
+    [history, filter, query, tier, lens],
   );
   return (
     <>
@@ -109,6 +119,70 @@ export default function ActivityFeed({
           </button>
         ))}
       </div>
+      {lens ? (
+        <div className="archive-controls">
+          <label>
+            Search a rolled number
+            <input
+              type="search"
+              inputMode="numeric"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setLimit(50);
+              }}
+              placeholder="e.g. 1337"
+            />
+          </label>
+          <label>
+            Roll tier
+            <select
+              aria-label="Roll tier"
+              value={tier}
+              onChange={(e) => {
+                setTier(e.target.value);
+                setLimit(50);
+              }}
+            >
+              <option value="all">All tiers</option>
+              {[
+                "trash",
+                "common",
+                "uncommon",
+                "rare",
+                "epic",
+                "anomaly",
+                "mythic",
+                "godly",
+              ].map((t) => (
+                <option key={t} value={t}>
+                  {t.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </label>
+          {(query || tier !== "all") && (
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setQuery("");
+                setTier("all");
+                setLimit(50);
+              }}
+            >
+              Clear archive filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="archive-upsell">
+          Need to find a specific roll?{" "}
+          <button onClick={() => navigate("shop")}>
+            Unlock Archive Lens in the shop
+          </button>
+          . Your full feed is always free.
+        </p>
+      )}
       <p className="activity-note">
         Newest first · Activity is recorded from this update onward; older rolls
         cannot be reconstructed. Nothing is automatically trimmed. Browser

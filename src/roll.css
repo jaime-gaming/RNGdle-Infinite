@@ -1054,3 +1054,14 @@ nav button.active {
   line-height: 20px;
   text-align: center;
 }
+
+.roll-experience .godly {
+  --rarity: #b45309;
+  --rarity-bg: #fef3c7;
+  --rarity-border: #f59e0b;
+}
+:root[data-theme="dark"] .roll-experience .godly {
+  --rarity: #fcd34d;
+  --rarity-bg: #78350f66;
+  --rarity-border: #f59e0b;
+}

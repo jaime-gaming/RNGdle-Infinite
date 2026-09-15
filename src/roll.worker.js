@@ -18,13 +18,20 @@ function load() {
       });
   return indexPromise;
 }
-// No seed, number, preset, or evaluate message is exposed to the interface.
+// The restore request re-evaluates a committed draw after reload. No editor,
+// preset or number-selection control exists in the game UI.
 self.onmessage = async ({ data }) => {
   const { id, type } = data;
   try {
-    if (type !== "init" && type !== "roll") throw new Error("Unknown request");
+    if (!["init", "roll", "restore"].includes(type))
+      throw new Error("Unknown request");
     const index = await load();
-    const result = type === "roll" ? index.evaluate(randomNumber()) : null;
+    const result =
+      type === "roll"
+        ? index.evaluate(randomNumber())
+        : type === "restore"
+          ? index.evaluate(data.number)
+          : null;
     self.postMessage({ id, result });
   } catch (error) {
     self.postMessage({

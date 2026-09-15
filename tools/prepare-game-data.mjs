@@ -50,6 +50,7 @@ const tiers = [
   ["epic", 22293],
   ["anomaly", 35469],
   ["mythic", 162292],
+  ["godly", 500000],
 ].map(([id, minEP]) => ({ id, minEP, count: 0 }));
 for (const score of scores) {
   let i = tiers.length - 1;

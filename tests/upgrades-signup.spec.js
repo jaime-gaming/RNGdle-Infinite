@@ -69,7 +69,9 @@ test("upgrade tiers require predecessors, deduct once and never equip as an aura
   };
   for (const id of ["quickwind-2", "quickwind-3", "clockwork-2", "clockwork-3"])
     expect(() => applyProgress(state, { type: "buy", id })).toThrow("Requires");
-  for (const product of shopProducts.filter((p) => p.kind !== "aura")) {
+  for (const product of shopProducts.filter((p) =>
+    ["roll", "cooldown"].includes(p.kind),
+  )) {
     const balance = state.balance;
     state = applyProgress(state, { type: "buy", id: product.id });
     expect(state.balance).toBe(balance - product.price);
@@ -248,13 +250,15 @@ test("maximum upgrades produce a fifteen-second reveal and fifteen-second cooldo
 }) => {
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
   await page.goto("/#shop");
-  await expect(
-    page.locator('[data-product="quickwind-2"] button'),
-  ).toBeDisabled();
-  await expect(
-    page.locator('[data-product="clockwork-3"] button'),
-  ).toBeDisabled();
-  for (const p of shopProducts.filter((p) => p.kind !== "aura"))
+  await expect(page.locator('[data-product="quickwind-2"] button')).toHaveCount(
+    0,
+  );
+  await expect(page.locator('[data-product="clockwork-3"] button')).toHaveCount(
+    0,
+  );
+  for (const p of shopProducts.filter((p) =>
+    ["roll", "cooldown"].includes(p.kind),
+  ))
     await buy(page, p.id);
   expect((await saved(page)).balance).toBe(7125000);
   expect((await saved(page)).equipped).toBe("none");

@@ -33,6 +33,7 @@ export function buildShareText(result) {
     epic: "🟪",
     anomaly: "🟧",
     mythic: "🟥",
+    godly: "🟨",
   };
   return [
     `RNGdle Infinite 🎲 ${result.number}`,

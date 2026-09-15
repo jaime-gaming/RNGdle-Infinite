@@ -25,6 +25,10 @@ export async function showRoll(page, number) {
     "data-phase",
     "complete",
   );
+  await expect(page.locator(".roll-experience")).toHaveAttribute(
+    "data-settled",
+    "true",
+  );
 }
 
 // Start a fresh generated roll under a virtual clock, not a production replay.

@@ -1,16 +1,37 @@
+import { gameNow } from "./game-clock";
 import { useEffect, useRef, useState } from "react";
 import {
   PROGRESS_KEY,
   emptyProgress,
   parseProgress,
   applyProgress,
+  parsePending,
+  recoverUnsavedRolls,
 } from "./progress.js";
+import { generateRoll, restoreRoll } from "./roll-client.js";
+import { rollSettings } from "./shop-data.js";
+export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
 function load() {
   try {
-    return {
-      progress: parseProgress(localStorage.getItem(PROGRESS_KEY)),
-      warning: "",
-    };
+    const progress = parseProgress(localStorage.getItem(PROGRESS_KEY));
+    if (!progress.profile) {
+      const guard = JSON.parse(
+        sessionStorage.getItem(GUEST_ROLL_KEY) || "null",
+      );
+      if (guard) {
+        progress.pendingRoll = parsePending(guard.pendingRoll);
+        if (
+          !Number.isSafeInteger(guard.cooldownUntil) ||
+          guard.cooldownUntil < 0
+        )
+          throw new Error("Invalid roll guard");
+        progress.cooldownUntil = Math.max(
+          progress.cooldownUntil,
+          guard.cooldownUntil,
+        );
+      }
+    }
+    return { progress, warning: "" };
   } catch {
     return {
       progress: emptyProgress(),
@@ -44,10 +65,13 @@ export function useProgress() {
         const next = parseProgress(localStorage.getItem(PROGRESS_KEY));
         if (next.profile?.id !== current.current.profile.id) reset(next);
         else {
-          current.current = next;
-          setProgress(next);
-          healthy.current = true;
-          setWarning("");
+          const merged = healthy.current
+            ? next
+            : recoverUnsavedRolls(next, current.current);
+          current.current = merged;
+          setProgress(merged);
+          healthy.current = merged === next;
+          if (healthy.current) setWarning("");
         }
       } catch {
         healthy.current = false;
@@ -63,10 +87,10 @@ export function useProgress() {
     const token = epoch;
     const action = {
       ...input,
-      at: input.at ?? Math.ceil(Date.now()),
+      at: input.at ?? Math.ceil(gameNow()),
       eventId: input.eventId ?? crypto.randomUUID(),
     };
-    const execute = () => {
+    const execute = async () => {
       try {
         if (token !== generation.current)
           return {
@@ -88,7 +112,9 @@ export function useProgress() {
                   "The local account changed. The previous action was cancelled.",
               };
             }
-            if (healthy.current) previous = stored;
+            previous = healthy.current
+              ? stored
+              : recoverUnsavedRolls(stored, previous);
           } catch {
             readable = false;
             healthy.current = false;
@@ -99,6 +125,7 @@ export function useProgress() {
             return { ok: false, message: "This account is no longer active." };
           try {
             if (!readable) throw new Error("Unreadable storage");
+            sessionStorage.removeItem(GUEST_ROLL_KEY);
             localStorage.removeItem(PROGRESS_KEY);
           } catch {
             return {
@@ -129,17 +156,103 @@ export function useProgress() {
             };
           }
         }
-        const next = applyProgress(previous, action);
+        let next, committed;
+        if (action.type === "draw") {
+          if (previous.profile && !navigator.locks?.request)
+            throw new Error(
+              "This browser cannot safely coordinate account rolls. Use a browser with Web Locks support.",
+            );
+          if (!readable)
+            throw new Error(
+              "Your saved game cannot be read. No new roll was started.",
+            );
+          if (previous.pendingRoll) {
+            const result = await restoreRoll(previous.pendingRoll.number);
+            if (token !== generation.current)
+              throw new Error("This game was reset. The roll was cancelled.");
+            current.current = previous;
+            setProgress(previous);
+            return { ok: true, run: { ...previous.pendingRoll, result } };
+          }
+          if (gameNow() < previous.cooldownUntil) {
+            current.current = previous;
+            setProgress(previous);
+            throw new Error(
+              "Your next roll is not ready yet. The cooldown is shared across account tabs.",
+            );
+          }
+          const timing = rollSettings(previous.owned);
+          const result = await generateRoll();
+          // No digits reach the UI until the draw has been committed below.
+          if (token !== generation.current)
+            throw new Error("This game was reset. The draw was cancelled.");
+          if (
+            previous.profile &&
+            parseProgress(localStorage.getItem(PROGRESS_KEY)).profile?.id !==
+              previous.profile.id
+          ) {
+            reset(parseProgress(localStorage.getItem(PROGRESS_KEY)));
+            throw new Error("The account changed. The draw was cancelled.");
+          }
+          const pendingRoll = {
+            id: crypto.randomUUID(),
+            number: result.number,
+            startedAt: Math.ceil(gameNow()),
+            ...timing,
+          };
+          next = {
+            ...previous,
+            pendingRoll,
+            cooldownUntil:
+              pendingRoll.startedAt + timing.rollMS + timing.cooldownMS,
+          };
+          committed = { ...pendingRoll, result };
+        } else if (action.type === "complete") {
+          if (
+            previous.receipts.includes(action.id) ||
+            previous.history.some(
+              (e) => e.type === "roll" && e.id === action.id,
+            )
+          ) {
+            current.current = previous;
+            setProgress(previous);
+            return { ok: true };
+          }
+          const pending = previous.pendingRoll;
+          if (!pending || pending.id !== action.id)
+            throw new Error("No matching committed roll. No EP was credited.");
+          // Scores and badges come from the verified index, never from a UI payload.
+          const result = await restoreRoll(pending.number);
+          if (token !== generation.current)
+            throw new Error("This game was reset. The roll was cancelled.");
+          next = applyProgress(previous, {
+            ...action,
+            result,
+            cooldownUntil:
+              pending.startedAt + pending.rollMS + pending.cooldownMS,
+          });
+        } else next = applyProgress(previous, action);
         if (next !== previous && next.profile) {
           try {
             if (!readable) throw new Error("Unreadable storage");
+            if (previous.profile) {
+              const latest = parseProgress(localStorage.getItem(PROGRESS_KEY));
+              if (latest.profile?.id !== previous.profile.id) {
+                reset(latest);
+                return {
+                  ok: false,
+                  message:
+                    "The account changed. The previous action was cancelled.",
+                };
+              }
+            }
             localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
             healthy.current = true;
             setWarning("");
           } catch {
             healthy.current = false;
             setWarning(
-              "Local saving is unavailable or full. New rolls and activity are temporary until saving works again. Purchases are paused; no saved history has been deleted.",
+              "Local saving is unavailable or full. New draws and purchases require saving. A committed result may be temporarily credited in this tab until saving works again; no saved history has been deleted.",
             );
             if (action.type !== "complete")
               return {
@@ -147,13 +260,45 @@ export function useProgress() {
                 message:
                   action.type === "register"
                     ? "Sign-up could not be saved. Your guest progress is still available in this tab."
-                    : "Purchase or equipment change not saved. Your EP has not been spent.",
+                    : action.type === "draw"
+                      ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
+                      : "Purchase or equipment change not saved. Your EP has not been spent.",
               };
           }
         }
+        if (
+          next !== previous &&
+          !next.profile &&
+          ["draw", "complete"].includes(action.type)
+        ) {
+          try {
+            sessionStorage.setItem(
+              GUEST_ROLL_KEY,
+              JSON.stringify({
+                pendingRoll: next.pendingRoll,
+                cooldownUntil: next.cooldownUntil,
+              }),
+            );
+          } catch {
+            if (action.type === "draw")
+              return {
+                ok: false,
+                message:
+                  "Temporary roll storage is unavailable. No number was revealed. Allow browser storage to roll.",
+              };
+            setWarning(
+              "The temporary roll guard could not be updated. Keep this tab open until the cooldown finishes.",
+            );
+          }
+        }
+        if (action.type === "register") {
+          try {
+            sessionStorage.removeItem(GUEST_ROLL_KEY);
+          } catch {}
+        }
         current.current = next;
         setProgress(next);
-        return { ok: true };
+        return { ok: true, ...(committed ? { run: committed } : {}) };
       } catch (error) {
         return { ok: false, message: error.message };
       }
