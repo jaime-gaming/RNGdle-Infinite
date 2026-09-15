@@ -120,10 +120,6 @@ nav {
   white-space: nowrap;
   border-radius: 6px;
 }
-.brand-mark {
-  display: block;
-  flex-shrink: 0;
-}
 .brand-name {
   display: flex;
   flex-direction: column;
@@ -133,7 +129,7 @@ nav {
 .brand-title {
   font-size: 18px;
   font-weight: 800;
-  letter-spacing: -0.6px;
+  letter-spacing: 0.4px;
   line-height: 1;
 }
 .brand-title > span {

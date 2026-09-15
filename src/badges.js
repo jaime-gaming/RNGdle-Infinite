@@ -1,7 +1,8 @@
-import metadata from "./data/badge-metadata.json";
+import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 // Catalogue labels and rarities from rng.cubityfir.st/badges.
 // Catalogue odds are counted over the full-range badge membership index.
 const groups = {
+  "Infinite Originals": `↕️|Pendulum|Anomaly;⏳|Last Second|Mythic`,
   "The Casino": `👯|Pair|Common;🫂|Contiguous Pair|Common;👯‍♀️|Two Pair|Common;👨‍👩‍👧‍👦|Contiguous Two Pair|Uncommon;👯‍♀️👯|Three Pair|Rare;👨‍👩‍👧‍👦👯|Contiguous Three Pair|Epic;🎰|Three of a Kind|Common;➖|Contiguous Trips|Uncommon;🍀|Four of a Kind|Uncommon;🏠|Full House|Uncommon;🏰|Contiguous Full House|Rare;📏|Straight|Epic;🎨|Flush|Uncommon;🃏|Straight Flush|Anomaly;👑|Royal Flush|Anomaly;🃏|Five of a Kind|Epic;📉|Low Ball|Uncommon;🤑|High Roller|Uncommon;🎲|Snake Eyes|Uncommon;♠️|Blackjack|Uncommon`,
   "Lucky Sevens": `🎰|Lucky Seven (Divisible)|Common;7️⃣|Lucky Seven|Common;💰|Jackpot|Rare;💰|Exact Jackpot|Mythic;💰💰|Jackpot Four|Epic;💰💰💰|Jackpot Five|Anomaly;🏦|Jackpot Six|Mythic;7️⃣|Power of Seven|Mythic`,
   "Deep Space": `🟦|2nd Power|Rare;🧊|3rd Power|Epic;📦|4th Power|Anomaly;🖐️|5th Power|Anomaly;🎲|6th Power|Anomaly;🌈|7th Power|Mythic;🎱|8th Power|Mythic;☁️|9th Power|Mythic;🔟|10th Power|Mythic;🐚|Fibonacci Number|Anomaly;💾|Power of Two|Anomaly;🔺|Power of Three|Anomaly;5️⃣|Power of Five|Mythic;7️⃣|Power of Seven|Mythic;🐍|Ouroboros|Mythic;❗|Factorial|Mythic;🤝|Harshad Number|Uncommon;🕵️|Spy Number|Anomaly;🧮|Pronic Number|Epic`,

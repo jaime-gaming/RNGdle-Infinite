@@ -1,4 +1,4 @@
-import metadata from "./data/badge-metadata.json" with { type: "json" };
+import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import { productById } from "./shop-data.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 const badgeIds = new Set(metadata.map((b) => b.id));

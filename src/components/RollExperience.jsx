@@ -146,11 +146,24 @@ export default function RollExperience({
   session,
   onComplete,
   onDraw,
+  active = true,
   theme,
   aura,
   openSignup,
 }) {
   const settings = rollSettings(session.owned);
+  const ownsAutoRoll = session.owned.includes("auto-roll");
+  const [autoRoll, setAutoRoll] = useState(false);
+  const [visible, setVisible] = useState(
+    () => document.visibilityState === "visible",
+  );
+  const autoAction = useRef(null);
+  autoAction.current = generate;
+  useEffect(() => {
+    const update = () => setVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
   const [run, setRun] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [instantCompletion, setInstantCompletion] = useState(false);
@@ -200,6 +213,42 @@ export default function RollExperience({
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
   const visibleGroups = groups.slice(-visibleCount || groups.length);
   const shownEP = visibleGroups.reduce((sum, g) => sum + g.lead.ep, 0);
+
+  useEffect(() => {
+    if (!ownsAutoRoll || error || settleError) {
+      setAutoRoll(false);
+      return;
+    }
+    if (
+      !autoRoll ||
+      !active ||
+      !visible ||
+      loading ||
+      drawing ||
+      busy ||
+      cooldown > 0 ||
+      awaitingSettlement ||
+      session.pendingRoll
+    )
+      return;
+    // Use the same serialized, persisted draw path as the manual button. Cleanup
+    // cancels a queued auto-start when switching it off or leaving the page.
+    const timer = setTimeout(() => autoAction.current(), 250);
+    return () => clearTimeout(timer);
+  }, [
+    autoRoll,
+    ownsAutoRoll,
+    active,
+    visible,
+    loading,
+    drawing,
+    busy,
+    cooldown,
+    awaitingSettlement,
+    session.pendingRoll,
+    error,
+    settleError,
+  ]);
 
   useEffect(() => {
     const until = Math.max(session.cooldownUntil, localCooldownUntil);
@@ -389,6 +438,31 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
+      {ownsAutoRoll && (
+        <div className="auto-roll-control">
+          <div className="auto-roll-heading">
+            <span>Auto-Roll</span>
+            <button
+              type="button"
+              role="switch"
+              aria-label="Auto-Roll"
+              aria-checked={autoRoll}
+              disabled={!!error || !!settleError}
+              onClick={() => setAutoRoll((enabled) => !enabled)}
+            >
+              <span className="auto-roll-thumb" aria-hidden="true" />
+              {autoRoll ? "On" : "Off"}
+            </button>
+          </div>
+          <p>
+            {autoRoll
+              ? "Starts your next roll when it’s ready."
+              : "Enable to roll automatically at your current pace."}{" "}
+            Pauses away from this page; off after reload. Stopping keeps your
+            current roll.
+          </p>
+        </div>
+      )}
       {!run ? (
         <section className="idle-roll" aria-label="Number generator">
           <NumberBox

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { seedProgress } from "./helpers/progress.js";
-import metadata from "../src/data/badge-metadata.json" with { type: "json" };
+import { allBadgeMetadata as metadata } from "../src/infinite-badges.js";
 
 test("home, random roll, cooldown, and badge breakdown", async ({ page }) => {
   const errors = [];

@@ -41,20 +41,28 @@ The [Luck page](https://rng.cubityfir.st/luck) uses the exact full-population CD
 - Badge odds count all earned badges, including superseded family members. These are per-number occurrence probabilities, not shares of total badges or of this session.
 - Each exact integer is equally likely: `1 / 1,000,001`. Web Crypto uint32 rejection sampling discards values at or above **4,294,004,294**, then applies modulo 1,000,001. Never exclude a previous roll; repeats are valid.
 
-Badge rarity and total-roll tier use different scales. The original seven lower bounds follow the reference; the requested Infinite-specific GODLY tier splits the previous Mythic tier at 500,000 EP. Full-range counts are:
+Badge rarity and total-roll tier use different scales. The original seven lower bounds follow the reference; the requested Infinite-specific GODLY tier splits the previous Mythic tier at 500,000 EP. Effective game counts, after the two Infinite Originals bonuses, are:
 
 | Roll tier | Minimum EP | Numbers |
 | --------- | ---------: | ------: |
 | Trash     |          0 |  10,114 |
 | Common    |      2,087 | 489,889 |
-| Uncommon  |      5,802 | 250,028 |
-| Rare      |     10,074 | 149,970 |
+| Uncommon  |      5,802 | 250,019 |
+| Rare      |     10,074 | 149,965 |
 | Epic      |     22,293 |  50,003 |
-| Anomaly   |     35,469 |  39,997 |
+| Anomaly   |     35,469 |  40,011 |
 | Mythic    |    162,292 |   7,925 |
 | Godly     |    500,000 |   2,075 |
 
 The runtime worker retains about 37 MB of typed-array indexes (EP, sorted EP, badge membership), with higher temporary memory during loading/decompression. It is initialized lazily on the roll page and reused for the session. The worker fetches the versioned JSON with cache revalidation, base64-decodes its inner payload, then checks the exact decompressed size and canonical SHA-256 before use. This accepts harmless gzip-container metadata or compression changes without ever accepting changed scores. Decompression is bounded to the manifest’s expected size. HTTP Content-Encoding applies only to the outer JSON, not the inner payload. No score or EP is awarded after a loading/integrity failure.
+
+## Infinite Originals extension
+
+The pinned EP table and 233-row membership bitset are unchanged. `src/infinite-badges.js` independently defines two additional badges and enumerates all matches: Pendulum (81 six-digit ABABAB numbers, A ≠ B, A ≠ 0; +25,000 EP) and Last Second (14 numbers HH5959, HH = 10…23; +75,000 EP). Both are independent scoring badges. No RNG is consumed to compute badge membership.
+
+`createGameIndex` adds their bonuses to the canonical base scores before sorting, adjusts the copied base tier counts, and includes them in the score-sum integrity check. The manifest continues to describe the unchanged **base** distribution; the table above describes the **effective game** distribution. Badge probabilities use 81/1,000,001 and 14/1,000,001; all inclusive ranks use the adjusted full score population. A test-only `originals: false` index option verifies the original reference fixtures without rewriting provenance. The user-facing worker always uses the complete game rules.
+
+The combined collection has 235 badges and 18 sets. Existing save IDs and historical rewards remain intact; only new completions can discover these additions. Old recorded scores are not recomputed or credited retroactively.
 
 ## Animation contract
 
