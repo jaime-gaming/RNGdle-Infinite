@@ -11,7 +11,6 @@ import {
   CircleHelp,
   ArrowUpRight,
   ArrowRight,
-  Infinity as InfinityIcon,
   X,
   Search,
   ChevronRight,
@@ -205,37 +204,38 @@ function App() {
             aria-label="RNGdle Infinite home"
             onClick={() => navigate("roll")}
           >
-            RNG<span>dle</span>
-            <span className="infinite-label">
-              <InfinityIcon size={14} /> INFINITE
+            <img
+              className="brand-mark"
+              src="/favicon.svg"
+              width="32"
+              height="32"
+              alt=""
+            />
+            <span className="brand-name">
+              <span className="brand-title">
+                RNG<span>dle</span>
+              </span>
+              <span className="brand-edition">INFINITE</span>
             </span>
           </button>
           <div className="nav-divider" />
           <nav aria-label="Main navigation">
-            <button
-              aria-label="History"
-              className={page === "history" ? "active" : ""}
-              onClick={() => navigate("history")}
-            >
-              <History size={15} />
-              <span>History</span>
-            </button>
-            <button
-              aria-label="Badges"
-              className={page === "badges" ? "active" : ""}
-              onClick={() => navigate("badges")}
-            >
-              <Medal size={16} />
-              <span>Badges</span>
-            </button>
-            <button
-              aria-label="Shop"
-              className={page === "shop" ? "active" : ""}
-              onClick={() => navigate("shop")}
-            >
-              <ShoppingBag size={16} />
-              <span>Shop</span>
-            </button>
+            {[
+              ["shop", "Shop", ShoppingBag],
+              ["badges", "Badges", Medal],
+              ["history", "History", History],
+            ].map(([destination, label, Icon]) => (
+              <button
+                key={destination}
+                aria-label={label}
+                aria-current={page === destination ? "page" : undefined}
+                className={page === destination ? "active" : ""}
+                onClick={() => navigate(destination)}
+              >
+                <Icon size={16} />
+                <span>{label}</span>
+              </button>
+            ))}
           </nav>
         </div>
         <div className="header-right">
@@ -353,6 +353,20 @@ function App() {
               <span>
                 {badgeGroups.length} sets{" "}
                 <span className="dot-separator">·</span> 6 rarities
+              </span>
+            </div>
+            <div className="collection-progress">
+              <progress
+                className="collection-progress-bar"
+                aria-label="Badge collection progress"
+                aria-valuetext={`${discoveredBadges.length} of ${badges.length} badges discovered`}
+                value={discoveredBadges.length}
+                max={badges.length}
+              />
+              <span className="collection-progress-label">
+                {discoveredBadges.length === badges.length
+                  ? "Collection complete"
+                  : `${((discoveredBadges.length / badges.length) * 100).toFixed(1)}% complete`}
               </span>
             </div>
             <div className="filters">
@@ -659,14 +673,6 @@ function App() {
                   Only the highest-EP badge in a family scores. Other family
                   badges are still earned, but add 0 EP.
                 </p>
-                <a
-                  className="primary-button"
-                  href={`https://rng.cubityfir.st/badges/${(selectedBadge.canonicalId || selectedBadge.id).toLowerCase()}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View badge reference <ArrowUpRight size={16} />
-                </a>
               </>
             )}
           </section>
