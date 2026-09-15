@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { seedProgress } from "./helpers/progress.js";
 import { showRoll } from "./helpers/random-roll.js";
 import { evaluate } from "./helpers/index.js";
-import metadata from "../src/data/badge-metadata.json" with { type: "json" };
+import { allBadgeMetadata as metadata } from "../src/infinite-badges.js";
 
 const progress = (page) =>
   page.getByRole("progressbar", { name: "Badge collection progress" });
@@ -13,7 +13,8 @@ test("new logo loads, links home, and navigation follows Shop–Badges–History
   await page.goto("/#history");
   const logo = page.getByRole("button", { name: "RNGdle Infinite home" });
   await expect(logo.locator(".brand-edition")).toHaveText("INFINITE");
-  await expect(logo.locator("img")).toHaveJSProperty("naturalWidth", 40);
+  await expect(logo.locator("img,svg")).toHaveCount(0);
+  await expect(logo.locator(".brand-title")).toHaveText("RNGdle");
   const nav = page.getByRole("navigation", { name: "Main navigation" });
   expect(
     await nav
@@ -114,7 +115,7 @@ test("branding, ordered navigation and collection progress fit mobile and both t
         .getByRole("button", { name: `${theme} theme`, exact: true })
         .click();
       await expect(progress(page)).toBeVisible();
-      await expect(page.locator(".brand-mark")).toBeVisible();
+      await expect(page.locator(".brand-name")).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBe(width);

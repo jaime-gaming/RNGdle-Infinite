@@ -204,13 +204,6 @@ function App() {
             aria-label="RNGdle Infinite home"
             onClick={() => navigate("roll")}
           >
-            <img
-              className="brand-mark"
-              src="/favicon.svg"
-              width="32"
-              height="32"
-              alt=""
-            />
             <span className="brand-name">
               <span className="brand-title">
                 RNG<span>dle</span>
@@ -289,6 +282,7 @@ function App() {
           <RollExperience
             key={epoch}
             {...{ openBadge, notify, session }}
+            active={page === "roll"}
             theme={appliedTheme}
             onComplete={completeRoll}
             onDraw={() => dispatch({ type: "draw" })}
@@ -487,7 +481,7 @@ function App() {
               </div>
             )}
             <p className="source-note">
-              Badge names and rarities from{" "}
+              Original badge references from{" "}
               <a
                 href="https://rng.cubityfir.st/badges"
                 target="_blank"
@@ -495,8 +489,9 @@ function App() {
               >
                 RNGdle Tools <ArrowUpRight size={12} />
               </a>
-              . Only your discovered badges are shown. Sign up for a local
-              profile to save your collection.
+              . Includes two Infinite-exclusive badges. Only your discovered
+              badges are shown. Sign up for a local profile to save your
+              collection.
             </p>
           </>
         )}
@@ -585,17 +580,19 @@ function App() {
                   to see the precise percentage and counts. Only the highest-EP
                   badge in each family adds to your score. Completing a roll
                   adds its EP to your wallet and unlocks all earned badges.
-                  Spend EP on timing upgrades or cosmetic auras in the shop.
-                  Upgrades apply to future rolls; they never change your odds or
-                  score. Sign up for a local profile to save your wallet,
-                  discoveries, purchases, cooldown, and activity history in this
-                  browser. Guest progress is temporary. This is not an online
-                  account, and clearing site data removes local saves. The
-                  leaderboard is disabled. Refreshing resumes the same committed
-                  number and deadline, including for guests in the same tab.
-                  Account tabs share one draw and reward. Open History for
-                  completed rolls, badge unlocks, and shop transactions. Delete
-                  your account and progress from Profile.
+                  Spend EP on timing upgrades, cosmetic auras, or tools in the
+                  shop. Auto-Roll starts the next ready roll while the Roll page
+                  is visible and switches off after reload. Upgrades apply to
+                  future rolls; they never change your odds or score. Sign up
+                  for a local profile to save your wallet, discoveries,
+                  purchases, cooldown, and activity history in this browser.
+                  Guest progress is temporary. This is not an online account,
+                  and clearing site data removes local saves. The leaderboard is
+                  disabled. Refreshing resumes the same committed number and
+                  deadline, including for guests in the same tab. Account tabs
+                  share one draw and reward. Open History for completed rolls,
+                  badge unlocks, and shop transactions. Delete your account and
+                  progress from Profile.
                 </div>
                 <button
                   className="primary-button"

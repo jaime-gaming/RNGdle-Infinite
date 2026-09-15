@@ -166,7 +166,7 @@ test("all shop prices are five times the prior prices without changing permanent
     aurora: 100000,
     orbit: 500000,
   };
-  expect(shopProducts).toHaveLength(12);
+  expect(shopProducts).toHaveLength(13);
   for (const product of shopProducts.filter((p) => old[p.id]))
     expect(product.price).toBe(old[product.id] * 5);
 });

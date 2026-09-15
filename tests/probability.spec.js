@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { createHash } from "node:crypto";
 import manifest from "../src/data/game-index.json" with { type: "json" };
 import metadata from "../src/data/badge-metadata.json" with { type: "json" };
+import { originalsByNumber } from "../src/infinite-badges.js";
 import { randomNumber } from "../src/random.js";
 import { createGameIndex } from "../src/game-index.js";
 import {
@@ -70,9 +71,12 @@ test("every legal number has consistent EP and every badge probability matches i
   }
 });
 
-test("full index matches all fifty observed scores, tiers, earned and superseded badges", () => {
+test("pinned base index matches all fifty observed scores, tiers, earned and superseded badges", () => {
+  const reference = createGameIndex(inflate("ep"), inflate("badge"), {
+    originals: false,
+  });
   for (const sample of sampleResults) {
-    const result = evaluate(sample.number);
+    const result = reference.evaluate(sample.number);
     expect(result.totalEP).toBe(sample.totalEP);
     expect(result.tier).toBe(sample.totalEP >= 500000 ? "godly" : sample.tier);
     expect(result.badges.map((b) => [b.id, b.isScoring])).toEqual(
@@ -94,7 +98,9 @@ test("ranks use inclusive tails of the full population and preserve rare-result 
       below = 0,
       equal = 0;
     for (let i = 0; i < POPULATION; i++) {
-      const score = view.getUint32(i * 4, true);
+      const score =
+        view.getUint32(i * 4, true) +
+        (originalsByNumber.get(i) ?? []).reduce((s, b) => s + b.ep, 0);
       above += score >= result.totalEP;
       below += score <= result.totalEP;
       equal += score === result.totalEP;

@@ -108,6 +108,17 @@ export function getContributors(badge, number, equation = null) {
   }
   if (id === "FIREFLY")
     return indices(all.filter((i) => counts.get(s[i]).length === 1));
+  if (id === "INFINITE_PENDULUM")
+    return groups([
+      [0, 2, 4],
+      [1, 3, 5],
+    ]);
+  if (id === "INFINITE_LAST_SECOND")
+    return groups([
+      [0, 1],
+      [2, 3],
+      [4, 5],
+    ]);
   if (id === "EQUATION") return equation ? groups(equation.positions) : null;
   if (id.startsWith("FRAMED_")) return range(1, n - 1);
   if (id === "ULTIMEME")

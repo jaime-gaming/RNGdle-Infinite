@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
-  <rect x="1" y="1" width="38" height="38" rx="11" fill="#173c31" stroke="#44856f" stroke-width="2"/>
-  <rect x="5" y="5" width="30" height="30" rx="7" stroke="#89c4a8" stroke-opacity=".22"/>
-  <circle cx="10" cy="10" r="2" fill="#d9f5e7"/>
-  <circle cx="30" cy="30" r="2" fill="#d9f5e7"/>
-  <path d="M20 20c-3-4-4.5-6-7-6a6 6 0 0 0 0 12c2.5 0 4-2 7-6s4.5-6 7-6a6 6 0 0 1 0 12c-2.5 0-4-2-7-6Z" stroke="#a6edc9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><rect width="64" height="64" rx="12" fill="#13151b"/><text x="32" y="38" font-family="monospace" font-size="23" font-weight="700" text-anchor="middle" fill="#ffffff">RNG</text><text x="32" y="52" font-family="sans-serif" font-size="8" letter-spacing="1" text-anchor="middle" fill="#89c4a8">INFINITE</text></svg>

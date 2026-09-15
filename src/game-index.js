@@ -1,9 +1,14 @@
 import metadata from "./data/badge-metadata.json" with { type: "json" };
 import manifest from "./data/game-index.json" with { type: "json" };
+import { originalsByNumber } from "./infinite-badges.js";
 import { rankScore } from "./probability.js";
 import { findEquation, getContributors } from "./contributors.js";
 
-export function createGameIndex(epBuffer, badgeBuffer) {
+export function createGameIndex(
+  epBuffer,
+  badgeBuffer,
+  { originals = true } = {},
+) {
   if (
     epBuffer.byteLength !== manifest.files.ep.inflatedBytes ||
     badgeBuffer.byteLength !== manifest.files.badge.inflatedBytes
@@ -18,6 +23,14 @@ export function createGameIndex(epBuffer, badgeBuffer) {
     scores = new Uint32Array(manifest.population);
   for (let i = 0; i < scores.length; i++)
     scores[i] = view.getUint32(i * 4, true);
+  // Derive the complete game distribution after adding the two original bonuses.
+  const tiers = manifest.tiers.map((t) => ({ ...t }));
+  if (originals)
+    for (const [number, badges] of originalsByNumber) {
+      tiers.findLast((t) => scores[number] >= t.minEP).count--;
+      scores[number] += badges.reduce((sum, b) => sum + b.ep, 0);
+      tiers.findLast((t) => scores[number] >= t.minEP).count++;
+    }
   const sorted = scores.slice().sort(),
     bits = new Uint8Array(badgeBuffer);
   function evaluate(number) {
@@ -31,6 +44,7 @@ export function createGameIndex(epBuffer, badgeBuffer) {
       (_, i) =>
         bits[i * manifest.rowBytes + (number >> 3)] & (1 << (number & 7)),
     );
+    if (originals) earned.push(...(originalsByNumber.get(number) ?? []));
     const winners = new Map();
     for (const b of earned)
       if (
@@ -54,7 +68,7 @@ export function createGameIndex(epBuffer, badgeBuffer) {
     )
       throw new Error("Badge and score indexes disagree");
     const rank = rankScore(sorted, totalEP),
-      tier = manifest.tiers.findLast((t) => totalEP >= t.minEP);
+      tier = tiers.findLast((t) => totalEP >= t.minEP);
     return {
       number,
       totalEP,
@@ -66,5 +80,5 @@ export function createGameIndex(epBuffer, badgeBuffer) {
       equation,
     };
   }
-  return { evaluate };
+  return { evaluate, tiers };
 }

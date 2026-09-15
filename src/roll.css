@@ -1050,3 +1050,51 @@ nav button.active {
   --rarity-bg: #78350f66;
   --rarity-border: #f59e0b;
 }
+
+.auto-roll-control {
+  width: min(100%, 380px);
+  margin: 18px auto 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+}
+.auto-roll-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.auto-roll-heading button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 64px;
+  min-height: 32px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--secondary);
+  background: var(--hover);
+  font-size: 11px;
+}
+.auto-roll-heading button[aria-checked="true"] {
+  color: var(--green);
+  background: var(--green-bg);
+  border-color: var(--green);
+}
+.auto-roll-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.auto-roll-control p {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--secondary);
+  margin: 8px 0 0;
+}

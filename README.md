@@ -18,15 +18,15 @@ npm run preview
 
 ## Included
 
-- Custom dice-and-infinity logo with a matching SVG favicon, **Shop → Badges → History** navigation, and RNGdle-style light/dark layout, local **Inter + Space Mono** fonts, shared, tier-aware number boxes, and a colour-cycling Generate button.
+- Text-only RNGdle wordmark with INFINITE beneath it (no logo icon), plus a text-based favicon, **Shop → Badges → History** navigation, and RNGdle-style light/dark layout, local **Inter + Space Mono** fonts, shared, tier-aware number boxes, and a colour-cycling Generate button.
 - **Random-only generation across 0–1,000,000 inclusive**, using Web Crypto with rejection sampling. Every number is equally likely, including a repeat of the previous roll. There is no number editor, preset picker, seed setting, or arbitrary-number preview.
-- Exact EP and earned/superseded badge membership for all **1,000,001** possible numbers, using pinned full-range factual indexes from RNGdle Tools.
+- Exact EP and earned/superseded badge membership for all **1,000,001** possible numbers, using pinned full-range factual indexes from RNGdle Tools plus two independently authored Infinite badge bonuses.
 - Full-population rank percentages with ties included and reference-style rounded rank labels, also used in share text. Rank tooltips retain precise percentages and integer counts. Badge details show percentages counted over the complete badge index.
 - Staged progressive digit reveals, settle animations, two card pulses, vignette, lowest-to-highest EP badge stream, delayed rank, animated EP, and contributor highlights.
 - No Skip Reveal button or keyboard skipping. The reference choreography plays on the selected reveal schedule; the browser’s reduced-motion preference still completes it immediately for accessibility.
 - A **45-second base reveal** plus **60-second base cooldown**, with permanent timing upgrades. The next-roll deadline is fixed at draw start: **105 seconds base**, or **30 seconds with both tracks maxed**. Reduced motion reveals instantly for accessibility but never advances this deadline.
 - **EP is spendable currency.** Each completed roll credits its full score exactly once. The existing EP counter shows the wallet balance. Completed rolls appear in your activity feed. There are no replay controls, presets, or number editing.
-- **Discovery-only collection:** 233 possible badges across 17 sets, but only earned badges appear in the collection, search results, details, and activity feed. An accessible progress bar tracks unique discoveries against all 233 badges, independent of search filters. Badge details stay in-game without external reference buttons. Completing a roll discovers all its earned badges, including superseded badges.
+- **Discovery-only collection:** 235 possible badges across 18 sets, but only earned badges appear in the collection, search results, details, and activity feed. An accessible progress bar tracks unique discoveries against all 235 badges, independent of search filters. Badge details stay in-game without external reference buttons. Completing a roll discovers all its earned badges, including superseded badges.
 - **Leaderboard disabled**, including direct `#leaderboard` navigation. The History navigation replaces the inactive leaderboard. Today’s Best Roll, fake player data, and UI Preview labeling have been removed.
 - **Sign up to save:** a local username profile retains guest progress and enables automatic browser saves. No passwords, email collection, online authentication, or backend.
 - Light, dark, and system themes. Registered profiles persist wallet, discoveries, upgrades, equipped aura, and cooldown in localStorage; guest wallets and history stay in memory; a narrow sessionStorage guard retains only the committed draw and cooldown across refreshes. Theme preference can persist without signing up.
@@ -34,7 +34,7 @@ npm run preview
 
 ## EP shop and local progress
 
-The shop has two sequential upgrade tracks, five cosmetic auras, and one utility. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
+The shop has two sequential upgrade tracks, five cosmetic auras, and two utilities. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
 
 | Upgrade       |        Price | Effect             | Prerequisite |
 | ------------- | -----------: | ------------------ | ------------ |
@@ -59,11 +59,24 @@ Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped 
 
 **Archive Lens — 350,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
 
+**Auto-Roll — 5,000,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. There is no offline catch-up or faster automatic cadence.
+
+### Infinite Originals
+
+Two new badges join the original 233 in the **Infinite Originals** set:
+
+| Badge       | Rule                                                                                               | Bonus EP | Earning numbers | Probability |
+| ----------- | -------------------------------------------------------------------------------------------------- | -------: | --------------: | ----------: |
+| Pendulum    | Six digits alternating two different digits, ABABAB, with A from 1–9 and B from 0–9.               |   25,000 |              81 |     0.0081% |
+| Last Second | Six-digit HH5959 with HH from 10 through 23: the last second of an hour. No padded leading zeroes. |   75,000 |              14 |     0.0014% |
+
+These are independent scoring badges (no supersession family), with supporting-digit diagrams, normal discovery/history entries, and saved unlocks. Badge rarities are Anomaly and Mythic respectively. The pinned upstream files, original badge rules, and original EP contributions remain intact; the runtime adds these bonuses before sorting the **entire population** for ranks and updating tier counts. Thus total scores and ranks can differ from the reference. Old wallets and recorded rolls are not repriced, and old history does not retroactively unlock either badge. Collection progress now uses 235.
+
 ### Number boxes and cosmetics
 
 A single `NumberBox` component renders the idle generator, generated results, historical rolls, and every cosmetic preview. Its original seven rarity palettes use the light/dark scoring-box colour and shadow tokens observed in [Box Lab](https://rng.cubityfir.st/beta/boxes): 3px borders, 12px corners, gradients, gloss, tier-specific glows, and shimmer only from Uncommon upward. Neutral/unrevealed boxes do not disclose the outcome. The requested **GODLY tier starts at 500,000 EP**: gold `#fde68a → #fffbeb → #fde68a` gradient, `#f59e0b` border, 20px outer glow and inset highlight, 12px radius, 3px border, `#78350f` ink with gradient digits, shimmer, ten shadowed star particles generated with seed 1234, and a three-second breathing cycle. GODLY splits the old Mythic population without changing any scores or badge odds (2,075 of 1,000,001 numbers, approximately 0.2075%). Legacy high-EP history boxes migrate to GODLY.
 
-The component and animations are independently implemented. Starfall adds twinkling stars and a comet; Aurora adds drifting ribbons and a holographic layer; Orbital Halo adds a five-colour halo, orbital rings, and satellite lights; Frostglass adds icy facets; Emberwake adds rising sparks. They decorate the box without replacing the score's underlying rarity palette. Reduced motion disables animated layers throughout the app, including shop previews. The original 233 badges and full-population odds remain unchanged.
+The component and animations are independently implemented. Starfall adds twinkling stars and a comet; Aurora adds drifting ribbons and a holographic layer; Orbital Halo adds a five-colour halo, orbital rings, and satellite lights; Frostglass adds icy facets; Emberwake adds rising sparks. They decorate the box without replacing the score's underlying rarity palette. Reduced motion disables animated layers throughout the app, including shop previews. Cosmetics never change the original badge rules or the two Infinite Originals; all badge probabilities and roll ranks use the complete population.
 
 ### Personal activity feed
 
@@ -119,9 +132,9 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **86 tests** cover:
+The **96 tests** cover:
 
-- Every legal number’s score versus its highest-EP family memberships, all 233 badge probabilities, tier counts, and data hashes.
+- Every legal number’s base score versus its highest-EP family memberships, all 233 pinned badge probabilities and data hashes, plus exhaustive independent checks of both Infinite Originals, their bonuses, adjusted ranks and tier counts.
 - Agreement with fifty independent reference snapshots, exact inclusive rank tails, rare percentages, both range endpoints, and rejection-sampling boundaries/repeats.
 - Real worker loading, text-safe versioned delivery, changed gzip metadata/recompression, HTTP-compressed JSON, corrupt-data retry, bounded decompression, double-click protection, and read-only numbers.
 - Activity filtering and pagination, complete history persistence, first unlocks only, immutable transaction prices, deduplication beyond 128 rolls, confirmation/cancel/retry deletion, cross-tab reveal cancellation, missed deletion events, and queued-completion safety.
@@ -129,7 +142,8 @@ The **86 tests** cover:
 - Committed registered/guest reloads, concurrent account draws and single rewards, failed commit protection, missing Web Locks, failed-settlement recovery preserving other-tab spending, monotonic in-tab time, and unchanged reduced-motion cadence.
 - Progressive/maxed upgrade cards, Archive Lens search before pagination, new cosmetic purchases and mobile filters.
 - Shared number-box coverage, all seven original light/dark palettes plus GODLY boundary/count/palette/particles, rarity-gated shimmer, upgraded cosmetics, legacy ownership after repricing, and reduced-motion/mobile rendering.
-- Logo/home navigation and keyboard order, empty/partial/complete collection progress, saved discoveries after reload, removed reference buttons, and responsive light/dark layouts.
+- Auto-Roll price/confirmation/persistence, off-by-default state, timing upgrades and reduced-motion cadence, pausing, stopping during a reveal, failed commits, account deletion and multi-tab single rewards; new badge discovery/history/details and non-retroactive migration.
+- Text-only logo/home navigation and keyboard order, empty/partial/complete collection progress, saved discoveries after reload, removed reference buttons, and responsive light/dark layouts.
 - Measured generated-roll desktop geometry (including superseded rows), persistent digit nodes, first-EP tween, reveal gating, accessible instant completion, contributor agreement with all fifty fixtures, shared chip-loop timing, and rank overshoot.
 
 Deterministic browser tests intercept the worker’s crypto source in Playwright only; there is no production test seed or number input. To use an existing Chromium binary, set `CHROMIUM_PATH`.
@@ -145,6 +159,7 @@ Deterministic browser tests intercept the worker’s crypto source in Playwright
 - `src/components/RollExperience.jsx` — asynchronous generation, reveal controller and sharing
 - `src/roll-client.js`, `src/roll.worker.js` — worker lifecycle, loading/retry, and random-roll messages
 - `src/load-index.js` — text-safe data transport, bounded decompression, and canonical integrity checks
+- `src/infinite-badges.js` — two original badge rules/memberships, EP bonuses, exact odds, and combined metadata
 - `src/game-clock.js` — wall-anchored monotonic in-tab time
 - `src/random.js` — unbiased Web Crypto rejection sampling
 - `src/game-index.js` — indexed scoring, badge families, and roll tiers

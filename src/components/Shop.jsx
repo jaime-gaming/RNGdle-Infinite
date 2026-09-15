@@ -13,6 +13,7 @@ import {
   Snowflake,
   Flame,
   ScanSearch,
+  Repeat2,
 } from "lucide-react";
 import {
   shopProducts,
@@ -32,6 +33,7 @@ const icons = {
   ice: Snowflake,
   fire: Flame,
   lens: ScanSearch,
+  auto: Repeat2,
 };
 export default function Shop({
   progress,
@@ -77,7 +79,11 @@ export default function Shop({
           type === "buy"
             ? productById.get(id).kind === "aura"
               ? "Aura purchased and equipped."
-              : "Upgrade purchased. Applies to your next roll."
+              : productById.get(id).kind === "utility"
+                ? id === "auto-roll"
+                  ? "Auto-Roll unlocked. Enable it on the Roll page."
+                  : "Archive Lens unlocked in History."
+                : "Upgrade purchased. Applies to your next roll."
             : "Appearance updated.",
         );
       } else {
@@ -120,8 +126,12 @@ export default function Shop({
           ) : item.kind === "utility" ? (
             <>
               <Icon size={25} />
-              <span>Archive tools</span>
-              <small>SEARCH · FILTER · DISCOVER</small>
+              <span>{item.name}</span>
+              <small>
+                {item.id === "auto-roll"
+                  ? "ENABLE · ROLL · REPEAT"
+                  : "SEARCH · FILTER · DISCOVER"}
+              </small>
             </>
           ) : (
             <>
@@ -182,7 +192,9 @@ export default function Shop({
                   ? aura
                     ? "Equip whenever you like."
                     : item.kind === "utility"
-                      ? "Unlocked in History."
+                      ? item.id === "auto-roll"
+                        ? "Enable on the Roll page."
+                        : "Unlocked in History."
                       : "Maximum level reached."
                   : aura
                     ? "One-time cosmetic purchase"
@@ -289,8 +301,11 @@ export default function Shop({
       <section className="shop-category">
         <div className="shop-section-heading">
           <div>
-            <h2>Archive tools</h2>
-            <p>More ways to explore your rolls. No changes to luck or EP.</p>
+            <h2>Tools</h2>
+            <p>
+              Automate your rolls or explore your archive. Same odds and EP
+              rules.
+            </p>
           </div>
         </div>
         <div className="shop-grid">
@@ -339,7 +354,9 @@ export default function Shop({
               {selected.kind === "aura"
                 ? "equips your new aura."
                 : selected.kind === "utility"
-                  ? "unlocks advanced history search immediately."
+                  ? selected.id === "auto-roll"
+                    ? "unlocks the Auto-Roll switch on the Roll page. It starts off and never skips the reveal or cooldown."
+                    : "unlocks advanced history search immediately."
                   : "applies the upgrade to future rolls."}
             </p>
             {!progress.profile && (

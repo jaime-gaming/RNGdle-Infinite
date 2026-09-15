@@ -118,6 +118,15 @@ export const shopProducts = [
       "Rising embers and a warm furnace glow, without changing the rarity beneath.",
   },
   {
+    id: "auto-roll",
+    kind: "utility",
+    name: "Auto-Roll",
+    price: 5000000,
+    icon: "auto",
+    description:
+      "Automatically start your next roll when it is ready. Toggle it on the Roll page; normal timings and odds still apply. Pauses away from the visible Roll page; off after reload.",
+  },
+  {
     id: "archive-lens",
     kind: "utility",
     name: "Archive Lens",
