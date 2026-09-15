@@ -11,8 +11,15 @@ const tiers = new Set([
   "epic",
   "anomaly",
   "mythic",
+  "godly",
 ]);
-const cosmetics = new Set(["starfall", "aurora", "orbit"]);
+const cosmetics = new Set([
+  "starfall",
+  "aurora",
+  "orbit",
+  "frostglass",
+  "emberwake",
+]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [
   [8, 20, 8],
@@ -22,6 +29,18 @@ const stars = [
   [66, 85, 9],
   [42, 12, 5],
 ];
+
+// Deterministic, decorative scatter. Never consumes the gameplay RNG.
+const godlyStars = (() => {
+  let seed = 1234;
+  const random = () =>
+    (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
+  return Array.from({ length: 10 }, () => [
+    6 + 88 * random(),
+    8 + 84 * random(),
+    5 + 9 * random(),
+  ]);
+})();
 
 export default function NumberBox({
   as: Tag = "div",
@@ -50,7 +69,7 @@ export default function NumberBox({
   return (
     <Tag
       {...props}
-      className={`number-box ${compact ? "number-box-compact" : ""} ${className}`}
+      className={`number-box ${rarity === "godly" ? "tier-godly" : ""} ${compact ? "number-box-compact" : ""} ${className}`}
       data-tier={rarity}
       data-cosmetic={cosmetic}
       style={{ "--box-font": `${fontSize}px`, ...style }}
@@ -76,6 +95,22 @@ export default function NumberBox({
               />
             ))}
           </span>
+        </span>
+      )}
+      {rarity === "godly" && (
+        <span className="godly-particles" aria-hidden="true">
+          {godlyStars.map(([x, y, size], i) => (
+            <i
+              key={i}
+              style={{
+                left: `${x}%`,
+                top: `${y}%`,
+                width: size,
+                height: size,
+                animationDelay: `-${i * 0.29}s`,
+              }}
+            />
+          ))}
         </span>
       )}
       <span className="number-box-content">{children ?? value}</span>

@@ -79,6 +79,7 @@ function App() {
       cooldownUntil,
     });
     if (!outcome.ok) notify(outcome.message);
+    return outcome;
   }
   const [search, setSearch] = useState("");
   const [rarity, setRarity] = useState("All rarities");
@@ -290,6 +291,7 @@ function App() {
             {...{ openBadge, notify, session }}
             theme={appliedTheme}
             onComplete={completeRoll}
+            onDraw={() => dispatch({ type: "draw" })}
             openSignup={openAuth}
             aura={session.equipped}
           >
@@ -554,6 +556,8 @@ function App() {
                       <p>
                         Start with a 45-second reveal and a 60-second cooldown.
                         Spend EP on permanent timing upgrades in the shop.
+                        Reduced motion changes the reveal, not your next-roll
+                        deadline.
                       </p>
                     </div>
                   </div>
@@ -573,9 +577,11 @@ function App() {
                   discoveries, purchases, cooldown, and activity history in this
                   browser. Guest progress is temporary. This is not an online
                   account, and clearing site data removes local saves. The
-                  leaderboard is disabled. Open History for completed rolls,
-                  badge unlocks, and shop transactions. Delete your account and
-                  progress from Profile.
+                  leaderboard is disabled. Refreshing resumes the same committed
+                  number and deadline, including for guests in the same tab.
+                  Account tabs share one draw and reward. Open History for
+                  completed rolls, badge unlocks, and shop transactions. Delete
+                  your account and progress from Profile.
                 </div>
                 <button
                   className="primary-button"

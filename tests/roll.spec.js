@@ -69,7 +69,7 @@ test("digit nodes persist and progressively settle; reduced motion finishes with
     "complete",
   );
   await expect(page.locator(".roll-ep")).toHaveText("100,177,458 EP");
-  await expect(page.locator(".rank-pill")).toHaveText("mythic");
+  await expect(page.locator(".rank-pill")).toHaveText("godly");
   await expect(page.locator(".result-badge-group")).toHaveCount(14);
   await expect(page.locator(".superseded-badge")).toHaveCount(3);
   await expect(page.locator(".badge-summary")).toHaveText("17 badges earned");
@@ -125,7 +125,7 @@ test("completed rolls persist EP exactly once and enforce the saved cooldown", a
   await expect(
     page.getByRole("button", { name: /NEXT ROLL IN/ }),
   ).toBeDisabled();
-  await page.clock.fastForward(60100);
+  await page.clock.fastForward(105100);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
@@ -166,7 +166,11 @@ test("random rolls score zero, seven digits, and numbers outside the old sample 
     await expect(page.locator(".roll-ep")).toHaveText(
       `${evaluate(number).totalEP.toLocaleString("en-US")} EP`,
     );
-    await page.clock.fastForward(60100);
+    await expect(page.locator(".roll-experience")).toHaveAttribute(
+      "data-settled",
+      "true",
+    );
+    await page.clock.fastForward(105100);
   }
 });
 
@@ -191,7 +195,7 @@ test("reduced motion skips the sequence, including under a changed preference", 
 test("share format and actual badge details", async ({ page, context }) => {
   const sample = evaluate(1337);
   expect(buildShareText(sample)).toContain("RNGdle Infinite 🎲 1337");
-  expect(buildShareText(sample)).toContain("🟥 MYTHIC • Top <1%");
+  expect(buildShareText(sample)).toContain("🟨 GODLY • Top <1%");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
   await showRoll(page, 1337);
@@ -215,7 +219,7 @@ test("all result tiers fit mobile, including a seven-digit result", async ({
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
   const numbers = [
-    1337, 103000, 103001, 103002, 103006, 103381, 103463, 1000000,
+    1337, 109, 103000, 103001, 103002, 103006, 103381, 103463, 1000000,
   ];
   await mockRandom(page, numbers);
   await page.goto("/");
@@ -231,7 +235,11 @@ test("all result tiers fit mobile, including a seven-digit result", async ({
       "aria-label",
       `Number ${number}`,
     );
-    await page.clock.fastForward(60100);
+    await expect(page.locator(".roll-experience")).toHaveAttribute(
+      "data-settled",
+      "true",
+    );
+    await page.clock.fastForward(105100);
     await expect(page.locator(".roll-experience")).toHaveAttribute(
       "data-phase",
       "complete",
@@ -302,7 +310,11 @@ test("a delayed clipboard response cannot mark a different roll as copied", asyn
   );
   await page.clock.install();
   await page.getByRole("button", { name: "Share", exact: true }).click();
-  await page.clock.fastForward(60100);
+  await expect(page.locator(".roll-experience")).toHaveAttribute(
+    "data-settled",
+    "true",
+  );
+  await page.clock.fastForward(105100);
   await page.getByRole("button", { name: "ROLL AGAIN", exact: true }).click();
   await expect(page.locator(".number-artifact")).toHaveAttribute(
     "aria-label",

@@ -1,3 +1,4 @@
+import { gameNow } from "../game-clock";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
 import {
@@ -7,7 +8,7 @@ import {
   revealCueTimes,
 } from "../roll-timeline";
 import { groupResultBadges, formatEP, buildShareText } from "../roll-data";
-import { prepareRolls, generateRoll } from "../roll-client";
+import { prepareRolls, restoreRoll } from "../roll-client";
 import BadgeBreakdown from "./BadgeBreakdown";
 import RankSummary from "./RankSummary";
 import { rollSettings, formatDuration } from "../shop-data";
@@ -144,6 +145,7 @@ export default function RollExperience({
   notify,
   session,
   onComplete,
+  onDraw,
   theme,
   aura,
   openSignup,
@@ -159,9 +161,10 @@ export default function RollExperience({
   const [localCooldownUntil, setLocalCooldownUntil] = useState(0);
   const mounted = useRef(false);
   const [error, setError] = useState("");
+  const [settleError, setSettleError] = useState("");
   const [copied, setCopied] = useState(false);
   const [cooldown, setCooldown] = useState(() =>
-    Math.max(0, Math.ceil((session.cooldownUntil - Date.now()) / 1000)),
+    Math.max(0, Math.ceil((session.cooldownUntil - gameNow()) / 1000)),
   );
   const reducedMotion = useReducedMotion();
   const finishedRun = useRef(null);
@@ -186,6 +189,10 @@ export default function RollExperience({
       ),
     [result, groups, run?.rollMS],
   );
+  const awaitingSettlement =
+    !!run &&
+    session.pendingRoll?.id === run.id &&
+    !session.receipts.includes(run.id);
   const busy = !!run && elapsed < timeline.end;
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
@@ -197,12 +204,12 @@ export default function RollExperience({
   useEffect(() => {
     const until = Math.max(session.cooldownUntil, localCooldownUntil);
     const update = () =>
-      setCooldown(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+      setCooldown(Math.max(0, Math.ceil((until - gameNow()) / 1000)));
     update();
-    if (until <= Date.now()) return;
+    if (until <= gameNow()) return;
     const timer = setInterval(() => {
       update();
-      if (Date.now() >= until) clearInterval(timer);
+      if (gameNow() >= until) clearInterval(timer);
     }, 100);
     return () => clearInterval(timer);
   }, [session.cooldownUntil, localCooldownUntil]);
@@ -212,6 +219,7 @@ export default function RollExperience({
     let stopped = false,
       timer;
     const start = performance.now();
+    const alreadyElapsed = Math.max(0, gameNow() - run.startedAt);
     const cues = revealCueTimes(timeline);
     const finish = (instant = false) => {
       if (stopped) return;
@@ -220,18 +228,21 @@ export default function RollExperience({
       clearTimeout(timer);
       setInstantCompletion(instant);
       setElapsed(timeline.end);
-      const until = Math.ceil(Date.now() + run.cooldownMS);
+      const until = run.startedAt + run.rollMS + run.cooldownMS;
       localCooldown.current = until;
       setLocalCooldownUntil(until);
-      setCooldown(Math.ceil(run.cooldownMS / 1000));
-      creditCallback.current(run.result, run.id, until);
+      setCooldown(Math.max(0, Math.ceil((until - gameNow()) / 1000)));
+      creditCallback.current(run.result, run.id, until).then((outcome) => {
+        if (mounted.current && activeRun.current === run.id)
+          setSettleError(outcome.ok ? "" : outcome.message);
+      });
     };
-    if (reducedMotion) finish(true);
+    if (reducedMotion || alreadyElapsed >= timeline.end) finish(reducedMotion);
     else {
       let cue = 0;
       const advance = () => {
         if (stopped) return;
-        const time = performance.now() - start;
+        const time = alreadyElapsed + performance.now() - start;
         if (time >= timeline.end) {
           finish();
           return;
@@ -240,7 +251,7 @@ export default function RollExperience({
         while (cue < cues.length && cues[cue] <= time) cue++;
         timer = setTimeout(advance, Math.max(1, cues[cue] - time));
       };
-      timer = setTimeout(advance, cues[0]);
+      advance();
     }
     return () => {
       stopped = true;
@@ -270,16 +281,18 @@ export default function RollExperience({
       drawPending.current ||
       loading ||
       busy ||
-      Date.now() < Math.max(session.cooldownUntil, localCooldown.current)
+      settleError ||
+      awaitingSettlement ||
+      gameNow() < Math.max(session.cooldownUntil, localCooldown.current)
     )
       return;
     drawPending.current = true;
     setDrawing(true);
     setError("");
-    const timing = rollSettings(session.owned);
     try {
-      const next = await generateRoll();
-      if (mounted.current) begin(next, timing);
+      const outcome = await onDraw();
+      if (!outcome.ok) throw new Error(outcome.message);
+      if (mounted.current) begin(outcome.run);
     } catch (error) {
       if (mounted.current) setError(error.message);
     } finally {
@@ -288,31 +301,65 @@ export default function RollExperience({
     }
   }
 
-  function begin(next, timing) {
-    if (
-      busy ||
-      Date.now() < Math.max(session.cooldownUntil, localCooldown.current)
-    )
-      return;
+  function begin(committed) {
+    if (!committed || activeRun.current === committed.id) return;
+    activeRun.current = committed.id;
     setError("");
     clearTimeout(copiedTimer.current);
     setCopied(false);
+    setSettleError("");
     setInstantCompletion(reducedMotion);
     setElapsed(
       reducedMotion
-        ? buildRevealTimeline(
-            String(next.number).length,
-            groupResultBadges(next.badges).length,
-            timing.rollMS,
-          ).end
-        : 0,
+        ? committed.rollMS
+        : Math.min(
+            committed.rollMS,
+            Math.max(0, gameNow() - committed.startedAt),
+          ),
     );
-    setRun({
-      id: crypto.randomUUID(),
-      result: next,
-      ...timing,
-    });
+    setRun(committed);
     window.scrollTo({ top: 0, behavior: "instant" });
+  }
+  useEffect(() => {
+    const pending = session.pendingRoll;
+    if (!pending || activeRun.current === pending.id) return;
+    let cancelled = false;
+    setDrawing(true);
+    restoreRoll(pending.number)
+      .then((result) => {
+        if (!cancelled && mounted.current) begin({ ...pending, result });
+      })
+      .catch((error) => {
+        if (!cancelled) setError(error.message);
+      })
+      .finally(() => {
+        if (!cancelled) setDrawing(false);
+      });
+    return () => {
+      cancelled = true;
+      setDrawing(false);
+    };
+  }, [session.pendingRoll?.id]);
+  async function retryCommitted() {
+    setDrawing(true);
+    try {
+      const outcome = await onDraw();
+      if (!outcome.ok) throw new Error(outcome.message);
+      if (mounted.current) begin(outcome.run);
+    } catch (error) {
+      if (mounted.current) setError(error.message);
+    } finally {
+      if (mounted.current) setDrawing(false);
+    }
+  }
+  async function retrySettlement() {
+    const outcome = await creditCallback.current(
+      run.result,
+      run.id,
+      run.startedAt + run.rollMS + run.cooldownMS,
+    );
+    if (mounted.current && activeRun.current === run.id)
+      setSettleError(outcome.ok ? "" : outcome.message);
   }
   async function share() {
     const sharedRun = run.id;
@@ -333,6 +380,7 @@ export default function RollExperience({
     <div
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
       style={{ "--reveal-scale": timeline.scale }}
+      data-settled={!!run && session.receipts.includes(run.id)}
       data-phase={
         !run ? "idle" : !digitsDone ? "digits" : busy ? "badges" : "complete"
       }
@@ -368,8 +416,10 @@ export default function RollExperience({
           </button>
           {error && (
             <p className="roll-load-error" role="alert">
-              {error} No roll or EP was awarded. Use Retry &amp; Roll to try
-              again.
+              {error}{" "}
+              {session.pendingRoll
+                ? "Your committed roll is retained; resume it below."
+                : "No roll or EP was awarded. Use Retry & Roll to try again."}
             </p>
           )}
           <p className="roll-hint">
@@ -478,6 +528,8 @@ export default function RollExperience({
                         <>
                           NEXT ROLL IN <b>{formatDuration(cooldown)}</b>
                         </>
+                      ) : awaitingSettlement ? (
+                        "SETTLING YOUR RESULT"
                       ) : (
                         "YOUR NEXT ROLL IS READY"
                       )}
@@ -494,7 +546,14 @@ export default function RollExperience({
               <button
                 ref={generateButton}
                 className={`generate ${cooldown || loading || drawing ? "cooling" : ""}`}
-                disabled={loading || drawing || busy || cooldown > 0}
+                disabled={
+                  loading ||
+                  drawing ||
+                  busy ||
+                  cooldown > 0 ||
+                  awaitingSettlement ||
+                  !!settleError
+                }
                 onClick={generate}
               >
                 {drawing ? (
@@ -503,6 +562,8 @@ export default function RollExperience({
                   <>
                     <Clock3 size={18} /> NEXT ROLL IN {formatDuration(cooldown)}
                   </>
+                ) : awaitingSettlement ? (
+                  "RESULT PENDING"
                 ) : error ? (
                   "RETRY & ROLL"
                 ) : (
@@ -534,6 +595,23 @@ export default function RollExperience({
             </div>
           )}
         </>
+      )}
+      {error && session.pendingRoll && !run && (
+        <button
+          className="secondary-button"
+          onClick={retryCommitted}
+          disabled={drawing}
+        >
+          Resume committed roll
+        </button>
+      )}
+      {settleError && (
+        <div className="roll-load-error" role="alert">
+          {settleError} Your committed number is retained.{" "}
+          <button className="secondary-button" onClick={retrySettlement}>
+            Retry result settlement
+          </button>
+        </div>
       )}
       {(loading || drawing) && (
         <span className="sr-only" role="status">

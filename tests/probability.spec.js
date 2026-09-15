@@ -74,7 +74,7 @@ test("full index matches all fifty observed scores, tiers, earned and superseded
   for (const sample of sampleResults) {
     const result = evaluate(sample.number);
     expect(result.totalEP).toBe(sample.totalEP);
-    expect(result.tier).toBe(sample.tier);
+    expect(result.tier).toBe(sample.totalEP >= 500000 ? "godly" : sample.tier);
     expect(result.badges.map((b) => [b.id, b.isScoring])).toEqual(
       sample.badges.map((b) => [b.id, b.isScoring]),
     );
@@ -189,7 +189,11 @@ test("repeated random results each earn EP once and double-clicking cannot bypas
       b.click();
     });
   await expect(page.locator(".number-artifact")).toBeVisible();
-  await page.clock.fastForward(60100);
+  await expect(page.locator(".roll-experience")).toHaveAttribute(
+    "data-settled",
+    "true",
+  );
+  await page.clock.fastForward(105100);
   await page.getByRole("button", { name: "ROLL AGAIN", exact: true }).click();
   await expect(page.locator(".number-artifact")).toHaveAttribute(
     "aria-label",
@@ -198,7 +202,11 @@ test("repeated random results each earn EP once and double-clicking cannot bypas
   await expect(page.locator(".session-total>span")).toHaveText(
     "200,354,916 EP",
   );
-  await page.clock.fastForward(60100);
+  await expect(page.locator(".roll-experience")).toHaveAttribute(
+    "data-settled",
+    "true",
+  );
+  await page.clock.fastForward(105100);
   await page.getByRole("button", { name: "ROLL AGAIN", exact: true }).click();
   await expect(page.locator(".number-artifact")).toHaveAttribute(
     "aria-label",

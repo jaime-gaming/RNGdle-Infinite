@@ -290,7 +290,12 @@
     {
       "id": "mythic",
       "minEP": 162292,
-      "count": 10000
+      "count": 7925
+    },
+    {
+      "id": "godly",
+      "minEP": 500000,
+      "count": 2075
     }
   ]
 }

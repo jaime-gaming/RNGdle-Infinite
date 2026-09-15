@@ -327,3 +327,111 @@ button.number-box.number-box:hover {
     opacity: 0.6;
   }
 }
+
+/* User-specified GODLY recipe. This is earned at 500,000 EP, not a shop item. */
+.tier-godly {
+  --sb-bg: linear-gradient(to bottom right, #fde68a, #fffbeb, #fde68a);
+  --sb-bd: #f59e0b;
+  --sb-sh:
+    0 0 20px rgba(245, 158, 11, 0.4), inset 0 2px 4px 0 rgba(253, 230, 138, 0.5);
+  --sb-ink: #78350f;
+  --sb-spark: #f59e0b;
+  --sb-radius: 12px;
+  --sb-bw: 3px;
+}
+.number-box.tier-godly {
+  --box-background: var(--sb-bg);
+  --box-border: var(--sb-bd);
+  --box-shadow: var(--sb-sh);
+  --box-ink: var(--sb-ink);
+  border-radius: var(--sb-radius);
+  border-width: var(--sb-bw);
+  animation: godly-breathe 3s ease-in-out infinite;
+}
+.number-box.tier-godly .number-box-content,
+.number-box.tier-godly .artifact-digits {
+  background: linear-gradient(180deg, #78350f, #b45309 55%, #78350f);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+.number-box.tier-godly .artifact-digit {
+  text-shadow: none;
+}
+.godly-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.godly-particles i {
+  position: absolute;
+  background: var(--sb-spark);
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0% 50%,
+    39% 39%
+  );
+  filter: drop-shadow(0 1px 2px #78350f99);
+  animation: box-twinkle 2.6s ease-in-out infinite;
+}
+@keyframes godly-breathe {
+  50% {
+    transform: scale(1.015);
+  }
+}
+.number-box[data-cosmetic="frostglass"] .box-halo {
+  display: block;
+  inset: -14px;
+  z-index: -1;
+  background: radial-gradient(ellipse, #67e8f955, transparent 72%);
+  filter: blur(6px);
+  border-radius: inherit;
+}
+.number-box[data-cosmetic="frostglass"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 24px,
+    #a5f3fc33 25px 27px,
+    transparent 28px 47px
+  );
+  background-size: 200% 100%;
+  animation: box-sweep 9s ease-in-out infinite;
+}
+.number-box[data-cosmetic="frostglass"] .box-particles i {
+  background: #a5f3fc;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  filter: drop-shadow(0 0 3px #0891b2);
+}
+.number-box[data-cosmetic="emberwake"] .box-halo {
+  display: block;
+  inset: -16px;
+  z-index: -1;
+  background: radial-gradient(ellipse at bottom, #f9731666, transparent 75%);
+  filter: blur(8px);
+  border-radius: inherit;
+  animation: box-halo-pulse 5s ease-in-out infinite;
+}
+.number-box[data-cosmetic="emberwake"] .box-particles i {
+  background: #fb923c;
+  clip-path: none;
+  border-radius: 50%;
+  width: 4px !important;
+  height: 6px !important;
+  box-shadow: 0 0 5px #ea580c;
+  animation: box-rise 4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .godly-particles i {
+    opacity: 0.8;
+  }
+}

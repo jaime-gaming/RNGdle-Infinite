@@ -99,7 +99,38 @@ export const shopProducts = [
     description:
       "A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.",
   },
+  {
+    id: "frostglass",
+    kind: "aura",
+    name: "Frostglass",
+    price: 750000,
+    icon: "ice",
+    description:
+      "Ice-blue facets and drifting crystal shards catch the light around your number.",
+  },
+  {
+    id: "emberwake",
+    kind: "aura",
+    name: "Emberwake",
+    price: 1500000,
+    icon: "fire",
+    description:
+      "Rising embers and a warm furnace glow, without changing the rarity beneath.",
+  },
+  {
+    id: "archive-lens",
+    kind: "utility",
+    name: "Archive Lens",
+    price: 350000,
+    icon: "lens",
+    description:
+      "Unlock number search and roll-tier filters across your entire activity archive. Your basic feed stays free.",
+  },
 ];
+export function nextUpgrade(owned, kind) {
+  const track = shopProducts.filter((p) => p.kind === kind);
+  return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);
+}
 export const productById = new Map(shopProducts.map((item) => [item.id, item]));
 
 export function rollSettings(owned = []) {

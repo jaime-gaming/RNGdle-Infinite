@@ -36,7 +36,13 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
     state = applyProgress(state, { type: "buy", id: item.id });
     expect(state.balance).toBe(before - item.price);
     if (item.kind === "aura") expect(state.equipped).toBe(item.id);
-    else expect(state.equipped).toBe("none");
+    else
+      expect(state.equipped).toBe(
+        shopProducts
+          .slice(0, shopProducts.indexOf(item))
+          .filter((p) => p.kind === "aura")
+          .at(-1)?.id ?? "none",
+      );
     expect(() => applyProgress(state, { type: "buy", id: item.id })).toThrow(
       "already own",
     );
@@ -281,7 +287,7 @@ test("malformed localStorage fails safely and shop layouts fit mobile", async ({
   }
 });
 
-test("cooldown begins immediately even while another tab holds the save lock", async ({
+test("draws wait for the save lock without exposing a number", async ({
   page,
 }) => {
   await seedProgress(page);
@@ -303,13 +309,10 @@ test("cooldown begins immediately even while another tab holds the save lock", a
     await acquired;
   }, PROGRESS_KEY);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
-  await expect(page.locator(".roll-experience")).toHaveAttribute(
-    "data-phase",
-    "complete",
-  );
   await expect(
-    page.getByRole("button", { name: /NEXT ROLL IN/ }),
+    page.getByRole("button", { name: "DRAWING…", exact: true }),
   ).toBeDisabled();
+  await expect(page.locator(".number-artifact")).toHaveCount(0);
   await page.evaluate(() => window.releaseSave());
   await expect.poll(async () => (await saved(page))?.balance).toBe(4663);
 });

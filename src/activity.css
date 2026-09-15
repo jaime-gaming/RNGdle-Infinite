@@ -210,3 +210,41 @@
     padding: 9px 11px;
   }
 }
+
+.archive-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+.archive-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--secondary);
+  flex: 1;
+  min-width: 140px;
+}
+.archive-controls input,
+.archive-controls select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  min-height: 40px;
+  min-width: 0;
+  width: 100%;
+}
+.archive-upsell {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin-top: 20px;
+}
+.archive-upsell button {
+  text-decoration: underline;
+  padding: 0;
+}

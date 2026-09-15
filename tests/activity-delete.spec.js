@@ -58,7 +58,7 @@ test("activity logs every completed roll, first unlock only, immutable purchases
   expect(p.history[0]).toMatchObject({
     number: 1337,
     ep: 100177458,
-    tier: "mythic",
+    tier: "godly",
     at: 1000,
   });
   expect(p.history[1].badges).toHaveLength(17);
@@ -105,7 +105,7 @@ test("old saves gain an empty feed without invented history, malformed entries c
     type: "roll",
     number: 0,
     at: 1000,
-    tier: "mythic",
+    tier: "godly",
     ep: 139927162,
     badges: ["EVEN"],
   };
@@ -165,7 +165,7 @@ test("guest feed, filters, badge details, shop transactions and repeated rolls p
   expect((await saved(page)).history).toEqual(before.history);
   await page.getByRole("button", { name: "Back to rolling" }).click();
   await page.clock.install();
-  await page.clock.fastForward(60100);
+  await page.clock.fastForward(105100);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
@@ -378,7 +378,7 @@ test("no demo best roll, fake players or UI Preview labels remain", async ({
   }
 });
 
-test("failed purchases add no transactions; failed roll saves keep the full feed temporary until retry", async ({
+test("failed purchases add no transactions; failed draw commits reveal no new number", async ({
   page,
 }) => {
   await page.goto("/");
@@ -404,14 +404,14 @@ test("failed purchases add no transactions; failed roll saves keep the full feed
   expect(await saved(page)).toEqual(before);
   await page.getByRole("button", { name: "Back to rolling" }).click();
   await page.clock.install();
-  await page.clock.fastForward(60100);
+  await page.clock.fastForward(105100);
   await page.getByRole("button", { name: "ROLL AGAIN", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
     "complete",
   );
   await nav(page, "History");
-  await expect(page.locator('[data-event-type="roll"]')).toHaveCount(2);
+  await expect(page.locator('[data-event-type="roll"]')).toHaveCount(1);
   await expect(page.locator('[data-event-type="purchase"]')).toHaveCount(0);
   expect(await saved(page)).toEqual(before);
   await page.evaluate(() => {
@@ -421,13 +421,13 @@ test("failed purchases add no transactions; failed roll saves keep the full feed
   await buy(page, "starfall");
   expect(
     (await saved(page)).history.filter((e) => e.type === "roll"),
-  ).toHaveLength(2);
+  ).toHaveLength(1);
   expect(
     (await saved(page)).history.filter((e) => e.type === "purchase"),
   ).toHaveLength(1);
 });
 
-test("a completion queued behind account deletion cannot recreate progress or leave a cooldown", async ({
+test("a draw queued behind account deletion cannot recreate progress or leave a cooldown", async ({
   page,
   context,
 }) => {
@@ -457,10 +457,9 @@ test("a completion queued behind account deletion cannot recreate progress or le
     )
     .toBe(1);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
-  await expect(page.locator(".roll-experience")).toHaveAttribute(
-    "data-phase",
-    "complete",
-  );
+  await expect(
+    page.getByRole("button", { name: "DRAWING…", exact: true }),
+  ).toBeDisabled();
   await expect
     .poll(() =>
       page.evaluate(async () => (await navigator.locks.query()).pending.length),

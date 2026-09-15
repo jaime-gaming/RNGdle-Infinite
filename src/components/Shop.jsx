@@ -10,12 +10,16 @@ import {
   X,
   FastForward,
   Clock3,
+  Snowflake,
+  Flame,
+  ScanSearch,
 } from "lucide-react";
 import {
   shopProducts,
   productById,
   rollSettings,
   formatDuration,
+  nextUpgrade,
 } from "../shop-data";
 import NumberBox from "./NumberBox";
 import { formatEP } from "../roll-data";
@@ -25,6 +29,9 @@ const icons = {
   orbit: Orbit,
   speed: FastForward,
   clock: Clock3,
+  ice: Snowflake,
+  fire: Flame,
+  lens: ScanSearch,
 };
 export default function Shop({
   progress,
@@ -38,16 +45,24 @@ export default function Shop({
     [purchaseError, setPurchaseError] = useState("");
   const busy = useRef(false),
     dialog = useRef(null),
-    returnFocus = useRef(null);
+    returnFocus = useRef(null),
+    returnKind = useRef(null);
   const settings = rollSettings(progress.owned);
   useEffect(() => {
     if (selected) {
       setPurchaseError("");
       returnFocus.current = document.activeElement;
+      returnKind.current = selected.kind;
       dialog.current.showModal();
     } else {
       dialog.current?.close();
-      returnFocus.current?.focus();
+      if (returnFocus.current?.isConnected) returnFocus.current.focus();
+      else if (returnKind.current)
+        (
+          document.querySelector(
+            `[data-kind="${returnKind.current}"] button:not(:disabled)`,
+          ) ?? document.querySelector(`[data-kind="${returnKind.current}"]`)
+        )?.focus();
     }
   }, [selected]);
   async function perform(type, id) {
@@ -82,7 +97,13 @@ export default function Shop({
       requires = item.requires && !progress.owned.includes(item.requires),
       Icon = icons[item.icon];
     return (
-      <article className="shop-card" key={item.id} data-product={item.id}>
+      <article
+        className="shop-card"
+        key={item.id}
+        data-product={item.id}
+        data-kind={item.kind}
+        tabIndex={-1}
+      >
         <div
           className={
             aura
@@ -95,6 +116,12 @@ export default function Shop({
             <>
               <NumberBox value="??????" tier="rare" aura={item.id} compact />
               <Icon size={21} />
+            </>
+          ) : item.kind === "utility" ? (
+            <>
+              <Icon size={25} />
+              <span>Archive tools</span>
+              <small>SEARCH · FILTER · DISCOVER</small>
             </>
           ) : (
             <>
@@ -154,10 +181,12 @@ export default function Shop({
                 : owned
                   ? aura
                     ? "Equip whenever you like."
-                    : "Applied automatically to future rolls."
+                    : item.kind === "utility"
+                      ? "Unlocked in History."
+                      : "Maximum level reached."
                   : aura
                     ? "One-time cosmetic purchase"
-                    : "One-time upgrade · same odds and scores"}
+                    : "One-time unlock · same odds and scores"}
           </small>
         </div>
       </article>
@@ -216,23 +245,17 @@ export default function Shop({
       <section className="shop-category">
         <div className="shop-section-heading">
           <div>
-            <h2>Faster reveals</h2>
-            <p>45s base → 35s → 25s → 15s. Unlock each tier in order.</p>
+            <h2>Upgrade your pace</h2>
+            <p>
+              One level at a time. Buy an upgrade to reveal the next one in its
+              path.
+            </p>
           </div>
         </div>
-        <div className="shop-grid">
-          {shopProducts.filter((item) => item.kind === "roll").map(card)}
-        </div>
-      </section>
-      <section className="shop-category">
-        <div className="shop-section-heading">
-          <div>
-            <h2>Shorter cooldowns</h2>
-            <p>60s base → 45s → 30s → 15s. More rolls, not better odds.</p>
-          </div>
-        </div>
-        <div className="shop-grid">
-          {shopProducts.filter((item) => item.kind === "cooldown").map(card)}
+        <div className="shop-grid shop-grid-upgrades">
+          {["roll", "cooldown"].map((kind) =>
+            card(nextUpgrade(progress.owned, kind)),
+          )}
         </div>
       </section>
       <p className="shop-save-note">
@@ -261,6 +284,17 @@ export default function Shop({
         </div>
         <div className="shop-grid">
           {shopProducts.filter((item) => item.kind === "aura").map(card)}
+        </div>
+      </section>
+      <section className="shop-category">
+        <div className="shop-section-heading">
+          <div>
+            <h2>Archive tools</h2>
+            <p>More ways to explore your rolls. No changes to luck or EP.</p>
+          </div>
+        </div>
+        <div className="shop-grid">
+          {shopProducts.filter((p) => p.kind === "utility").map(card)}
         </div>
       </section>
       <p className="shop-save-note">
@@ -292,14 +326,21 @@ export default function Shop({
               <ShoppingBag size={26} />
             </div>
             <p className="eyebrow">
-              PERMANENT {selected.kind === "aura" ? "COSMETIC" : "UPGRADE"}
+              PERMANENT{" "}
+              {selected.kind === "aura"
+                ? "COSMETIC"
+                : selected.kind === "utility"
+                  ? "TOOL"
+                  : "UPGRADE"}
             </p>
             <h2 id="purchase-title">Buy {selected.name}?</h2>
             <p>
               This spends <strong>{formatEP(selected.price)} EP</strong> and{" "}
               {selected.kind === "aura"
                 ? "equips your new aura."
-                : "applies the upgrade to future rolls."}
+                : selected.kind === "utility"
+                  ? "unlocks advanced history search immediately."
+                  : "applies the upgrade to future rolls."}
             </p>
             {!progress.profile && (
               <p className="guest-purchase-note">

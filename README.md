@@ -24,17 +24,17 @@ npm run preview
 - Full-population rank percentages with ties included and reference-style rounded rank labels, also used in share text. Rank tooltips retain precise percentages and integer counts. Badge details show percentages counted over the complete badge index.
 - Staged progressive digit reveals, settle animations, two card pulses, vignette, lowest-to-highest EP badge stream, delayed rank, animated EP, and contributor highlights.
 - No Skip Reveal button or keyboard skipping. The reference choreography plays on the selected reveal schedule; the browser’s reduced-motion preference still completes it immediately for accessibility.
-- A **45-second base reveal** and **60-second base cooldown** after completion, with permanent timing upgrades. Reduced motion shortens only the reveal, not the cooldown.
+- A **45-second base reveal** plus **60-second base cooldown**, with permanent timing upgrades. The next-roll deadline is fixed at draw start: **105 seconds base**, or **30 seconds with both tracks maxed**. Reduced motion reveals instantly for accessibility but never advances this deadline.
 - **EP is spendable currency.** Each completed roll credits its full score exactly once. The existing EP counter shows the wallet balance. Completed rolls appear in your activity feed. There are no replay controls, presets, or number editing.
 - **Discovery-only collection:** 233 possible badges across 17 sets, but only earned badges appear in the collection, search results, details, and activity feed. Completing a roll discovers all its earned badges, including superseded badges.
 - **Leaderboard disabled**, including direct `#leaderboard` navigation. The History navigation replaces the inactive leaderboard. Today’s Best Roll, fake player data, and UI Preview labeling have been removed.
 - **Sign up to save:** a local username profile retains guest progress and enables automatic browser saves. No passwords, email collection, online authentication, or backend.
-- Light, dark, and system themes. Registered profiles persist wallet, discoveries, upgrades, equipped aura, and cooldown in localStorage; guests play in memory only. Theme preference can persist without signing up.
+- Light, dark, and system themes. Registered profiles persist wallet, discoveries, upgrades, equipped aura, and cooldown in localStorage; guest wallets and history stay in memory; a narrow sessionStorage guard retains only the committed draw and cooldown across refreshes. Theme preference can persist without signing up.
 - Responsive layouts, accessible dialogs, local emoji assets, and no runtime CDN dependency.
 
 ## EP shop and local progress
 
-The shop has two sequential upgrade tracks and three cosmetic auras. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
+The shop has two sequential upgrade tracks, five cosmetic auras, and one utility. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
 
 | Upgrade       |        Price | Effect             | Prerequisite |
 | ------------- | -----------: | ------------------ | ------------ |
@@ -51,15 +51,19 @@ Timing upgrades activate automatically. Both timings are snapshotted when Genera
 | ------------ | -----------: | ------------------------------------------------------------------------------------------------------- |
 | Starfall     |   125,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
 | Aurora Veil  |   500,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
+| Frostglass   |   750,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
+| Emberwake    | 1,500,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
 | Orbital Halo | 2,500,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
 
-Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades do not occupy the aura slot. All prices are **5× the earlier prototype prices**. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset.
+Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades and utilities do not occupy the aura slot. The original six upgrades and three auras retain their increased prices. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset.
+
+**Archive Lens — 350,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
 
 ### Number boxes and cosmetics
 
-A single `NumberBox` component renders the idle generator, generated results, historical rolls, and every cosmetic preview. Its seven rarity palettes use the light/dark scoring-box colour and shadow tokens observed in [Box Lab](https://rng.cubityfir.st/beta/boxes): 3px borders, 12px corners, gradients, gloss, tier-specific glows, and shimmer only from Uncommon upward. Neutral/unrevealed boxes do not disclose the outcome. No community-made or Legendary rarity is added.
+A single `NumberBox` component renders the idle generator, generated results, historical rolls, and every cosmetic preview. Its original seven rarity palettes use the light/dark scoring-box colour and shadow tokens observed in [Box Lab](https://rng.cubityfir.st/beta/boxes): 3px borders, 12px corners, gradients, gloss, tier-specific glows, and shimmer only from Uncommon upward. Neutral/unrevealed boxes do not disclose the outcome. The requested **GODLY tier starts at 500,000 EP**: gold `#fde68a → #fffbeb → #fde68a` gradient, `#f59e0b` border, 20px outer glow and inset highlight, 12px radius, 3px border, `#78350f` ink with gradient digits, shimmer, ten shadowed star particles generated with seed 1234, and a three-second breathing cycle. GODLY splits the old Mythic population without changing any scores or badge odds (2,075 of 1,000,001 numbers, approximately 0.2075%). Legacy high-EP history boxes migrate to GODLY.
 
-The component and animations are independently implemented. Starfall adds twinkling stars and a comet; Aurora adds drifting ribbons and a holographic layer; Orbital Halo adds a five-colour halo, orbital rings, and satellite lights. They decorate the box without replacing the score's underlying rarity palette. Reduced motion disables animated layers throughout the app, including shop previews. The original 233 badges and full-population odds remain unchanged.
+The component and animations are independently implemented. Starfall adds twinkling stars and a comet; Aurora adds drifting ribbons and a holographic layer; Orbital Halo adds a five-colour halo, orbital rings, and satellite lights; Frostglass adds icy facets; Emberwake adds rising sparks. They decorate the box without replacing the score's underlying rarity palette. Reduced motion disables animated layers throughout the app, including shop previews. The original 233 badges and full-population odds remain unchanged.
 
 ### Personal activity feed
 
@@ -67,23 +71,23 @@ History (`#history`) records completed rolls with the number, tier, EP, earned b
 
 All recorded entries are retained, with 50-at-a-time display pagination rather than a rolling data cutoff. Old saves migrate without losing EP or purchases, but rolls from before tracking was introduced cannot be reconstructed and are not fabricated. Guest activity remains in memory and is saved together with current progress on sign-up.
 
-The entire log is stored with progress in localStorage, whose capacity is browser-dependent. If writing fails or storage fills up, existing saved activity is left intact, new rolls continue temporarily in memory, a warning appears, and purchases are refused. No saved history is silently truncated to make room.
+The entire log is stored with progress in localStorage, whose capacity is browser-dependent. If writing fails or storage fills up, existing saved activity is left intact, new draws are refused before their number is exposed, a warning appears, and purchases are refused. An already committed result may settle temporarily in the current tab; retry/recovery retains the committed number and merges missing roll receipts into the latest saved wallet without undoing another tab’s purchases. No saved history is silently truncated to make room.
 
 ### Delete account and progress
 
-Profile → **Delete account & progress** opens a separate confirmation step requiring the exact word **DELETE**. A successful deletion removes the account, wallet, cumulative EP, discoveries, owned/equipped items, cooldown, receipt list, and entire activity log from this browser/origin. Theme preference is kept. Deletion can be cancelled before submission; a storage-removal failure leaves the account intact and allows retry.
+Profile → **Delete account & progress** opens a separate confirmation step requiring the exact word **DELETE**. A successful deletion removes the account, wallet, cumulative EP, discoveries, owned/equipped items, cooldown, pending draw, guest guard, receipt list, and entire activity log from this browser/origin. Theme preference is kept. Deletion can be cancelled before submission; a storage-removal failure leaves the account intact and allows retry.
 
 Registered tabs synchronize deletion. Active reveals and pending draws are cancelled by resetting the game instance. Queued actions carry a game-generation token, and writes always check the saved profile identity inside the lock—even after a failed save—so a stale completion cannot resurrect a deleted account or credit a newly created profile. Signing up again starts fresh. There is no remote account to delete.
 
 ### Local sign-up and persistence
 
-Guests can roll, discover badges, and buy items, but these changes exist **only in the current tab’s memory** and disappear on reload. Creating a local profile saves the entire current guest game atomically, then enables automatic saves. The username accepts 3–20 letters, numbers, underscores, or hyphens. No email, password, or other credential is requested or stored. This is **not online authentication**, and usernames are not globally reserved.
+Guests can roll, discover badges, and buy items, but these changes exist **only in the current tab’s memory** and disappear on reload. The exception is a temporary anti-reroll guard under `rng-infinite-guest-roll-v1` in sessionStorage: it stores only the pending number, ID, start time, snapshotted timings, and next-roll deadline. Refreshing resumes that draw without saving the guest wallet/history. A guest guard belongs to a tab/session, not an identity across fresh browser sessions. Creating a local profile saves the entire current guest game atomically, then enables automatic saves. The username accepts 3–20 letters, numbers, underscores, or hyphens. No email, password, or other credential is requested or stored. This is **not online authentication**, and usernames are not globally reserved.
 
-`rng-infinite-progress-v1` stores a versioned object with local `profile` (ID, username, creation timestamp), spendable `balance`, cumulative `totalEarned`, discovered badge IDs, owned product IDs, equipped aura, cooldown deadline, and a bounded recent receipt list, and the complete `history` activity log. Roll IDs in history also prevent duplicate credits after the recent receipt window expires. Theme remains under `rng-theme`. Existing profileless saves from the earlier prototype can be loaded into guest memory, but new changes are not persisted until sign-up.
+`rng-infinite-progress-v1` stores a versioned object with local `profile` (ID, username, creation timestamp), spendable `balance`, cumulative `totalEarned`, discovered badge IDs, owned product IDs, equipped aura, cooldown deadline, `pendingRoll` commitment, a bounded recent receipt list, and the complete `history` activity log. Roll IDs in history also prevent duplicate credits after the recent receipt window expires. Theme remains under `rng-theme`. Existing profileless saves from the earlier prototype can be loaded into guest memory, but new changes are not persisted until sign-up.
 
-Writes are serialized in each tab and use **Web Locks** where available to protect shared balances across tabs. Storage events synchronize registered tabs. A guest tab does not silently join a profile created in another tab or lose its guest game; attempting sign-up then explains the conflict instead of overwriting the other profile. If Web Locks is unavailable, only same-tab serialization is guaranteed; this is a local-only game, not a server-authoritative economy.
+Writes are serialized in each tab and use **Web Locks** to protect shared balances and coordinate registered draws across tabs. A registered draw is refused without Web Locks support. Storage events synchronize registered tabs. A guest tab does not silently join a profile created in another tab or lose its guest game; attempting sign-up then explains the conflict instead of overwriting the other profile. Simultaneous account tabs join the same pending draw, and canonical settlement recomputes the score and credits its ID only once.
 
-Invalid saves recover to safe defaults with a warning. If saving fails, registered rolls can continue temporarily in memory, but a purchase/equipment change is refused rather than spending EP that cannot be saved. Failed sign-up leaves the current guest game intact and allows retry. Guests do not require writable storage to play.
+Invalid saves recover to safe defaults with a warning. If the chosen number and original deadline cannot be committed, no new result is revealed. An existing commitment remains recoverable even if a subsequent settlement write fails; a purchase/equipment change is refused rather than spending EP that cannot be saved. Failed sign-up leaves the current guest game intact and allows retry. Guests require writable sessionStorage for the anti-reroll guard.
 
 Progress belongs to the browser **and origin**. Clearing site data removes the local profile and progress. Switching browsers, devices, or preview hostnames does not carry saves across. No cloud backup or real money is involved.
 
@@ -99,13 +103,13 @@ The reference’s [Luck page](https://rng.cubityfir.st/luck) uses the full score
 
 The two scoring indexes total approximately **2.5 MB compressed**. They are delivered as versioned, ASCII-safe JSON envelopes (approximately **3.3 MB** before HTTP compression) so preview proxies cannot reinterpret the binary gzip payload. A shared Web Worker decodes and decompresses them, then verifies the **canonical decompressed SHA-256 and exact size** before indexing. Gzip metadata/recompression changes do not cause false failures; changed scores still fail. Content-addressed URLs and cache revalidation avoid stale data/manifest mismatches. Generate stays disabled while loading. Failed or corrupt data produces a visible retry action, never a fallback sample or invented score.
 
-The worker’s UI-facing interface accepts only initialization and random-roll requests. The old fifty reference snapshots are **test fixtures only**, not a production roll pool. The upstream executable engine is not shipped. See [`src/data/README.md`](src/data/README.md) for provenance, formats, and animation details.
+The worker accepts initialization, uniform random draws, and internal restoration of an already committed number. Restoration does not consume RNG; it is not exposed as a number-entry control. The old fifty reference snapshots are **test fixtures only**, not a production roll pool. The upstream executable engine is not shipped. See [`src/data/README.md`](src/data/README.md) for provenance, formats, and animation details.
 
 ### Frontend boundary
 
 Randomness and scoring run locally in the browser. Serve over HTTPS (localhost is also permitted for development) for Web Crypto. Current browsers are recommended; decoding the scoring payloads requires `DecompressionStream` support.
 
-This is **not a server-authoritative or tamper-proof game**: client-side state and cooldowns cannot enforce competitive fairness. Online accounts, cross-device sync, live rankings, and server-enforced cooldowns remain unimplemented. Reloading preserves completed progress only after local sign-up. Navigating between the roll, badges, shop, and history keeps an active reveal running; reloading or closing the page before completion discards that unfinished roll. A future backend can replace `src/roll-client.js` while retaining the result/animation interface.
+This is **not a server-authoritative or tamper-proof game**: client-side state and cooldowns cannot enforce competitive fairness. Online accounts, cross-device sync, live rankings, and server-enforced cooldowns remain unimplemented. Reloading preserves completed progress only after local sign-up, but resumes the same pending draw for both registered players and guests in the same tab session. Its ID, start time, and next-roll deadline do not reset. Navigating between sections keeps the reveal running. An open tab uses a monotonic clock, so changing wall time cannot skip its cooldown; deliberately modifying storage/code or clock time across reloads is still outside the frontend trust boundary. A guest can also clear storage or create a fresh session; preventing that requires a backend identity. A future backend can replace `src/roll-client.js` while retaining the result/animation interface.
 
 ## Tests
 
@@ -115,14 +119,16 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **68 tests** cover:
+The **81 tests** cover:
 
 - Every legal number’s score versus its highest-EP family memberships, all 233 badge probabilities, tier counts, and data hashes.
 - Agreement with fifty independent reference snapshots, exact inclusive rank tails, rare percentages, both range endpoints, and rejection-sampling boundaries/repeats.
 - Real worker loading, text-safe versioned delivery, changed gzip metadata/recompression, HTTP-compressed JSON, corrupt-data retry, bounded decompression, double-click protection, and read-only numbers.
 - Activity filtering and pagination, complete history persistence, first unlocks only, immutable transaction prices, deduplication beyond 128 rolls, confirmation/cancel/retry deletion, cross-tab reveal cancellation, missed deletion events, and queued-completion safety.
 - Guest save gating and reload resets, atomic local sign-up, failed signup/retry, cross-tab profile conflicts, 45s/60s base timings, 15s/15s upgraded timings, sequential prerequisites, mid-reveal/cooldown upgrade snapshots, disabled leaderboard, persistent wallet/cooldown, hidden undiscovered badges, purchase confirmation and affordability, duplicate/cross-tab purchase protection, ownership/equipment reloads, corrupt/blocked storage, sharing, reduced motion, navigation during reveals, dialogs, themes, and mobile overflow.
-- Shared number-box coverage, all seven light/dark palettes, rarity-gated shimmer, upgraded cosmetics, legacy ownership after repricing, and reduced-motion/mobile rendering.
+- Committed registered/guest reloads, concurrent account draws and single rewards, failed commit protection, missing Web Locks, failed-settlement recovery preserving other-tab spending, monotonic in-tab time, and unchanged reduced-motion cadence.
+- Progressive/maxed upgrade cards, Archive Lens search before pagination, new cosmetic purchases and mobile filters.
+- Shared number-box coverage, all seven original light/dark palettes plus GODLY boundary/count/palette/particles, rarity-gated shimmer, upgraded cosmetics, legacy ownership after repricing, and reduced-motion/mobile rendering.
 - Measured generated-roll desktop geometry (including superseded rows), persistent digit nodes, first-EP tween, reveal gating, accessible instant completion, contributor agreement with all fifty fixtures, shared chip-loop timing, and rank overshoot.
 
 Deterministic browser tests intercept the worker’s crypto source in Playwright only; there is no production test seed or number input. To use an existing Chromium binary, set `CHROMIUM_PATH`.
@@ -138,6 +144,7 @@ Deterministic browser tests intercept the worker’s crypto source in Playwright
 - `src/components/RollExperience.jsx` — asynchronous generation, reveal controller and sharing
 - `src/roll-client.js`, `src/roll.worker.js` — worker lifecycle, loading/retry, and random-roll messages
 - `src/load-index.js` — text-safe data transport, bounded decompression, and canonical integrity checks
+- `src/game-clock.js` — wall-anchored monotonic in-tab time
 - `src/random.js` — unbiased Web Crypto rejection sampling
 - `src/game-index.js` — indexed scoring, badge families, and roll tiers
 - `src/probability.js` — exact full-population rank counts and percentage formatting

@@ -30,7 +30,7 @@ test("shared number boxes cover the idle generator and cosmetic previews without
     .getByRole("navigation")
     .getByRole("button", { name: "Shop", exact: true })
     .click();
-  await expect(page.locator(".aura-preview .number-box")).toHaveCount(3);
+  await expect(page.locator(".aura-preview .number-box")).toHaveCount(5);
   for (const id of ["starfall", "aurora", "orbit"]) {
     const box = page.locator(`[data-product="${id}"] .number-box`);
     await expect(box).toHaveAttribute("data-cosmetic", id);
@@ -43,7 +43,7 @@ test("shared number boxes cover the idle generator and cosmetic previews without
 test("every roll tier uses the observed light/dark Box Lab palettes and shimmer gates", async ({
   page,
 }) => {
-  const numbers = [103463, 103381, 103006, 103002, 103001, 103000, 1337];
+  const numbers = [103463, 103381, 103006, 103002, 103001, 103000, 109];
   const palette = {
     trash: ["#ffd230", "#973c00", "#973c00", "#ffd230"],
     common: ["#99a1af", "#52525c", "#364153", "#d1d5dc"],
@@ -83,7 +83,11 @@ test("every roll tier uses the observed light/dark Box Lab palettes and shimmer 
       expect(s.radius).toBe("12px");
       expect(s.background).toContain("linear-gradient");
     }
-    await page.clock.fastForward(60100);
+    await expect(page.locator(".roll-experience")).toHaveAttribute(
+      "data-settled",
+      "true",
+    );
+    await page.clock.fastForward(105100);
   }
   expect(seen.size).toBe(7);
 });
@@ -162,7 +166,7 @@ test("all shop prices are five times the prior prices without changing permanent
     aurora: 100000,
     orbit: 500000,
   };
-  expect(shopProducts).toHaveLength(9);
-  for (const product of shopProducts)
+  expect(shopProducts).toHaveLength(12);
+  for (const product of shopProducts.filter((p) => old[p.id]))
     expect(product.price).toBe(old[product.id] * 5);
 });

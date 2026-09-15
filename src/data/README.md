@@ -41,7 +41,7 @@ The [Luck page](https://rng.cubityfir.st/luck) uses the exact full-population CD
 - Badge odds count all earned badges, including superseded family members. These are per-number occurrence probabilities, not shares of total badges or of this session.
 - Each exact integer is equally likely: `1 / 1,000,001`. Web Crypto uint32 rejection sampling discards values at or above **4,294,004,294**, then applies modulo 1,000,001. Never exclude a previous roll; repeats are valid.
 
-Badge rarity and total-roll tier use different scales. The independently observed roll-tier lower bounds and full-range counts are:
+Badge rarity and total-roll tier use different scales. The original seven lower bounds follow the reference; the requested Infinite-specific GODLY tier splits the previous Mythic tier at 500,000 EP. Full-range counts are:
 
 | Roll tier | Minimum EP | Numbers |
 | --------- | ---------: | ------: |
@@ -51,7 +51,8 @@ Badge rarity and total-roll tier use different scales. The independently observe
 | Rare      |     10,074 | 149,970 |
 | Epic      |     22,293 |  50,003 |
 | Anomaly   |     35,469 |  39,997 |
-| Mythic    |    162,292 |  10,000 |
+| Mythic    |    162,292 |   7,925 |
+| Godly     |    500,000 |   2,075 |
 
 The runtime worker retains about 37 MB of typed-array indexes (EP, sorted EP, badge membership), with higher temporary memory during loading/decompression. It is initialized lazily on the roll page and reused for the session. The worker fetches the versioned JSON with cache revalidation, base64-decodes its inner payload, then checks the exact decompressed size and canonical SHA-256 before use. This accepts harmless gzip-container metadata or compression changes without ever accepting changed scores. Decompression is bounded to the manifest’s expected size. HTTP Content-Encoding applies only to the outer JSON, not the inner payload. No score or EP is awarded after a loading/integrity failure.
 
@@ -65,7 +66,7 @@ The frontend preserves the [documented sequence](https://github.com/CubityFirst/
 4. Show the badge summary 1,500 ms after the last group. Reveal the rarity colours and Share row 1,000 ms later, with a second 700 ms card pulse. Pop in the rank/percentile 250 ms after that.
 5. Show the EP wallet 1,000 ms later; begin its 1,500 ms count-up after another 1,500 ms. Lift the 600 ms vignette transition 2,000 ms after the count starts.
 6. The values above describe the reference choreography in `buildReferenceTimeline`. Infinite proportionally scales its cue times, digit settles, card pulses, badge entrances, EP count-ups, and rank entrances to a **45-second complete reveal**. Quickwind upgrades reduce the complete reveal to **35, 25, or 15 seconds**.
-7. A **60-second base cooldown** starts at completion, including reduced-motion completion. Clockwork upgrades reduce it to **45, 30, or 15 seconds**. Reveal/cooldown settings are snapshotted when starting a roll; purchases never re-time an active reveal or cooldown. Saving EP and cooldown requires a local profile, not an online account; guest changes remain in memory.
+7. The next draw is allowed only at **committed start + reveal duration + cooldown duration** (45s + 60s at base). Reduced motion can complete the visual reveal immediately but does not shorten this 105-second cycle. Clockwork upgrades reduce the cooldown portion to **45, 30, or 15 seconds**. Reveal/cooldown settings are snapshotted when starting a roll; purchases never re-time an active reveal or cooldown. Saving the wallet and history requires a local profile, not an online account; guest wallets/history remain in memory, while a sessionStorage guard retains the pending draw and deadline across refreshes.
 
 Contributor chips highlight in 200 ms with 80 ms staggers, then periodically fade back to resting colours and highlight again. Multi-group contributors have distinct colours; mountains/valleys ripple from the centre. Factor-based badges use a formula rather than arbitrary digit chips. Unrelated badges receive no diagram.
 
@@ -73,7 +74,7 @@ The EP pill is visible as `??? EP` from the start of the spin. Its first contrib
 
 ## Shared number-box appearance
 
-`NumberBox` is the shared presentation for generated rolls, the idle generator, historical roll boxes, and shop previews. The observed scoring-box colours and shadow values in `number-box-palettes.css` come from [Box Lab](https://rng.cubityfir.st/beta/boxes), specifically `SCORE_TIERS` in `src/beta.js` at the pinned upstream revision above. Geometry, markup, and animations are independently implemented. There are separate light/dark gradients, borders, ink colours, and shadows for each of the seven existing tiers; the lab's custom eighth tier is not part of the game. Trash, common, and neutral boxes have no shimmer. Paid cosmetic layers share the same component without changing rarity classification or scoring.
+`NumberBox` is the shared presentation for generated rolls, the idle generator, historical roll boxes, and shop previews. The observed scoring-box colours and shadow values in `number-box-palettes.css` come from [Box Lab](https://rng.cubityfir.st/beta/boxes), specifically `SCORE_TIERS` in `src/beta.js` at the pinned upstream revision above. Geometry, markup, and animations are independently implemented. There are separate light/dark gradients, borders, ink colours, and shadows for each of the seven existing tiers; the lab’s custom example is not copied. The user-requested GODLY recipe is an Infinite-specific eighth tier at 500,000 EP: gold gradient, 3px amber border, 12px radius, 20px glow, gradient ink, shimmer, ten deterministic seed-1234 twinkling star particles, and 3.0s breathing. All effects respect reduced motion. Trash, common, and neutral boxes have no shimmer. Paid cosmetic layers share the same component without changing rarity classification or scoring.
 
 ## Measured visual checkpoints
 

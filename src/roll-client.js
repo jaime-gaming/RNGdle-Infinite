@@ -10,7 +10,7 @@ function reset(message) {
   }
   pending.clear();
 }
-function request(type) {
+function request(type, number) {
   return new Promise((resolve, reject) => {
     try {
       if (!worker) {
@@ -41,7 +41,7 @@ function request(type) {
         60000,
       );
       pending.set(id, { resolve, reject, timer });
-      worker.postMessage({ id, type });
+      worker.postMessage({ id, type, number });
     } catch (error) {
       reset("Unable to load scoring data. Please retry.");
       reject(error);
@@ -50,3 +50,6 @@ function request(type) {
 }
 export const prepareRolls = () => request("init");
 export const generateRoll = () => request("roll");
+
+// Internal recovery of a committed number, never a number-entry UI.
+export const restoreRoll = (number) => request("restore", number);

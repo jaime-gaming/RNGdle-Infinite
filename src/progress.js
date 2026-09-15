@@ -15,6 +15,7 @@ export function emptyProgress() {
     cooldownUntil: 0,
     receipts: [],
     history: [],
+    pendingRoll: null,
   };
 }
 export function parseProgress(raw) {
@@ -59,6 +60,7 @@ export function parseProgress(raw) {
   return {
     version: 1,
     history: parseHistory(p.history),
+    pendingRoll: parsePending(p.pendingRoll),
     profile,
     balance: p.balance,
     totalEarned: p.totalEarned,
@@ -117,6 +119,7 @@ export function applyProgress(state, action) {
         "epic",
         "anomaly",
         "mythic",
+        "godly",
       ].includes(result?.tier) ||
       !validAmount(cooldownUntil)
     )
@@ -159,6 +162,7 @@ export function applyProgress(state, action) {
     return {
       ...state,
       history: [...(state.history ?? []), ...events],
+      pendingRoll: null,
       balance,
       totalEarned,
       discovered: [
@@ -267,10 +271,11 @@ function parseHistory(value) {
             "epic",
             "anomaly",
             "mythic",
+            "godly",
           ].includes(e.tier)
         )
           return [];
-        next = { ...next, ep: e.ep, tier: e.tier };
+        next = { ...next, ep: e.ep, tier: e.ep >= 500000 ? "godly" : e.tier };
       }
     } else if (["purchase", "equip"].includes(e.type)) {
       if (
@@ -292,4 +297,56 @@ function parseHistory(value) {
     seen.add(e.id);
     return [next];
   });
+}
+
+export function parsePending(p) {
+  if (p == null) return null;
+  if (
+    typeof p.id !== "string" ||
+    !p.id ||
+    p.id.length > 100 ||
+    !validAmount(p.number) ||
+    p.number > 1000000 ||
+    !validAmount(p.startedAt) ||
+    ![45000, 35000, 25000, 15000].includes(p.rollMS) ||
+    ![60000, 45000, 30000, 15000].includes(p.cooldownMS) ||
+    !validAmount(p.startedAt + p.rollMS + p.cooldownMS)
+  )
+    throw new Error("Invalid committed roll");
+  return {
+    id: p.id,
+    number: p.number,
+    startedAt: p.startedAt,
+    rollMS: p.rollMS,
+    cooldownMS: p.cooldownMS,
+  };
+}
+
+// Only roll settlement can succeed in memory after a failed write. Reapply those
+// receipts to the latest shared wallet instead of overwriting other tabs' spending.
+export function recoverUnsavedRolls(stored, temporary) {
+  let merged = stored;
+  for (const event of temporary.history ?? []) {
+    if (
+      event.type !== "roll" ||
+      merged.history.some((e) => e.type === "roll" && e.id === event.id)
+    )
+      continue;
+    const pending = merged.pendingRoll;
+    merged = applyProgress(merged, {
+      type: "complete",
+      id: event.id,
+      at: event.at,
+      result: {
+        number: event.number,
+        totalEP: event.ep,
+        tier: event.tier,
+        badges: event.badges.map((id) => ({ id })),
+      },
+      cooldownUntil: Math.max(merged.cooldownUntil, temporary.cooldownUntil),
+    });
+    if (pending && pending.id !== event.id)
+      merged = { ...merged, pendingRoll: pending };
+  }
+  return merged;
 }
