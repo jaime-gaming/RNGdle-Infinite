@@ -17,6 +17,7 @@ import {
   Eclipse,
   Gem,
   MoonStar,
+  Cog,
 } from "lucide-react";
 import {
   shopProducts,
@@ -40,6 +41,7 @@ const icons = {
   eclipse: Eclipse,
   prism: Gem,
   offline: MoonStar,
+  flywheel: Cog,
 };
 export default function Shop({
   progress,
@@ -137,6 +139,14 @@ export default function Shop({
               />
               <Icon size={21} />
             </>
+          ) : item.kind === "pace" ? (
+            <>
+              <Icon size={28} />
+              <span>
+                <b>4</b> rolls <small>→</small> charged
+              </span>
+              <small>NEXT ROLL · ZERO COOLDOWN</small>
+            </>
           ) : item.kind === "utility" ? (
             <>
               <Icon size={25} />
@@ -223,7 +233,9 @@ export default function Shop({
                           : item.id === "offline-roller"
                             ? "Ready · one roll per 10 minutes away."
                             : "Unlocked in History."
-                        : "Maximum level reached."
+                        : item.kind === "pace"
+                          ? `${progress.flywheelCharge ?? 0} / 4 charges · applies automatically.`
+                          : "Maximum level reached."
                     : aura
                       ? "One-time cosmetic purchase"
                       : "One-time unlock · same odds and scores"}
@@ -296,6 +308,7 @@ export default function Shop({
           {["roll", "cooldown"].map((kind) =>
             card(nextUpgrade(progress.owned, kind)),
           )}
+          {card(productById.get("flywheel"))}
         </div>
       </section>
       <p className="shop-save-note">
@@ -415,7 +428,9 @@ export default function Shop({
                     : selected.id === "offline-roller"
                       ? "unlocks offline earnings: one normal roll per 10 minutes away, up to 144 rolls per absence. Calculated automatically on return; a local profile is required."
                       : "unlocks advanced history search immediately."
-                  : "applies the upgrade to future rolls."}
+                  : selected.kind === "pace"
+                    ? "starts your Flywheel at zero charge. Four completed online rolls charge a fifth roll with no cooldown. Its reveal and EP are unchanged."
+                    : "applies the upgrade to future rolls."}
             </p>
             {!progress.profile && (
               <p className="guest-purchase-note">

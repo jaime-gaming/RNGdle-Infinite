@@ -3,7 +3,7 @@ import { rankPopFrames } from "../roll-timeline";
 import {
   formatPercentile,
   rankExplanation,
-  formatPercent,
+  chanceLabels,
 } from "../probability";
 
 export default memo(function RankSummary({
@@ -13,6 +13,7 @@ export default memo(function RankSummary({
   instant,
   scale = 1,
 }) {
+  const chance = chanceLabels(result.tierCount, result.rank.population);
   const row = useRef(null),
     pill = useRef(null),
     played = useRef(false);
@@ -48,7 +49,7 @@ export default memo(function RankSummary({
         className={`rank-pill ${rankKnown ? result.tier : "neutral"}`}
         title={
           rankKnown
-            ? `${formatPercent(result.tierProbability)}% of all possible rolls are ${result.tier}.`
+            ? `${chance.percent} of all possible rolls are ${result.tier} — ${chance.outcomes}. ${chance.frequency} rolls; each roll is independent.`
             : undefined
         }
       >

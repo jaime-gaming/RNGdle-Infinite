@@ -9,6 +9,7 @@ import {
   recoverUnsavedRolls,
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
+import { flywheelForDraw } from "./flywheel.js";
 import { rollSettings } from "./shop-data.js";
 import {
   offlinePlan,
@@ -306,6 +307,8 @@ export function useProgress() {
             );
           }
           const timing = rollSettings(previous.owned);
+          const flywheel = flywheelForDraw(previous);
+          if (flywheel === "boost") timing.cooldownMS = 0;
           const result = await generateRoll();
           // No digits reach the UI until the draw has been committed below.
           if (token !== generation.current)
@@ -323,10 +326,12 @@ export function useProgress() {
             number: result.number,
             startedAt: Math.ceil(gameNow()),
             ...timing,
+            ...(flywheel ? { flywheel } : {}),
           };
           next = {
             ...previous,
             pendingRoll,
+            ...(flywheel === "boost" ? { flywheelCharge: 0 } : {}),
             cooldownUntil:
               pendingRoll.startedAt + timing.rollMS + timing.cooldownMS,
           };

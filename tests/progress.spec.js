@@ -158,18 +158,18 @@ test("there is no button or keyboard shortcut to skip the reveal", async ({
 test("purchases require confirmation, deduct once, persist ownership, and equip without changing scores", async ({
   page,
 }) => {
-  await seedProgress(page, { balance: 125000, totalEarned: 125000 });
+  await seedProgress(page, { balance: 50000, totalEarned: 50000 });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#shop");
   const card = page.locator('[data-product="starfall"]');
-  await card.getByRole("button", { name: "Buy for 125,000 EP" }).click();
+  await card.getByRole("button", { name: "Buy for 50,000 EP" }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
-  expect((await saved(page)).balance).toBe(125000);
-  await card.getByRole("button", { name: "Buy for 125,000 EP" }).click();
+  expect((await saved(page)).balance).toBe(50000);
+  await card.getByRole("button", { name: "Buy for 50,000 EP" }).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .evaluate((b) => {
@@ -213,7 +213,7 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   page,
   context,
 }) => {
-  await seedProgress(page, { balance: 500000, totalEarned: 500000 });
+  await seedProgress(page, { balance: 300000, totalEarned: 300000 });
   await page.goto("/#shop");
   const other = await context.newPage();
   await other.goto("/#shop");
@@ -230,7 +230,7 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   await expect.poll(async () => (await saved(page))?.owned.length).toBe(1);
   const p = await saved(page);
   const item = shopProducts.find((item) => item.id === p.owned[0]);
-  expect(p.balance).toBe(500000 - item.price);
+  expect(p.balance).toBe(300000 - item.price);
   await expect(other.getByTestId("wallet-balance")).toHaveText(
     `${p.balance.toLocaleString("en-US")} EP`,
   );

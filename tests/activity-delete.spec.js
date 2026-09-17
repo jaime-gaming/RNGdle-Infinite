@@ -77,7 +77,7 @@ test("activity logs every completed roll, first unlock only, immutable purchases
   expect(p.history.at(-1)).toMatchObject({
     type: "purchase",
     productId: "starfall",
-    ep: 125000,
+    ep: 50000,
   });
   p = applyProgress(p, {
     type: "equip",
@@ -153,7 +153,7 @@ test("guest feed, filters, badge details, shop transactions and repeated rolls p
   await page.getByRole("button", { name: "Shop", exact: true }).last().click();
   await expect(page.locator(".activity-event")).toHaveCount(2);
   await expect(page.locator('[data-event-type="purchase"]')).toContainText(
-    "−125,000 EP",
+    "−50,000 EP",
   );
   await expect(page.locator('[data-event-type="equip"]')).toContainText(
     "No EP spent",

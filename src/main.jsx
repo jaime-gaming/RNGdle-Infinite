@@ -25,7 +25,7 @@ import "@fontsource/space-mono/700.css";
 import "./styles.css";
 import Emoji from "./components/Emoji";
 import RollExperience from "./components/RollExperience";
-import { POPULATION } from "./probability";
+import { POPULATION, chanceLabels } from "./probability";
 import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
@@ -657,7 +657,7 @@ function App() {
                     </strong>
                   </div>
                   <div>
-                    <span>Of numbers</span>
+                    <span>Chance per roll</span>
                     <strong
                       title={
                         selectedBadge.matchingNumbers != null
@@ -665,7 +665,17 @@ function App() {
                           : undefined
                       }
                     >
-                      {selectedBadge.probability ?? "—"}
+                      {selectedBadge.matchingNumbers != null
+                        ? chanceLabels(selectedBadge.matchingNumbers).percent
+                        : "—"}
+                      {selectedBadge.matchingNumbers != null && (
+                        <small className="chance-frequency">
+                          {
+                            chanceLabels(selectedBadge.matchingNumbers)
+                              .frequency
+                          }
+                        </small>
+                      )}
                     </strong>
                   </div>
                   <div>
@@ -677,9 +687,16 @@ function App() {
                     </strong>
                   </div>
                 </div>
+                {selectedBadge.matchingNumbers != null && (
+                  <p className="chance-outcomes">
+                    {chanceLabels(selectedBadge.matchingNumbers).outcomes} earn
+                    this badge, including superseded badges.
+                  </p>
+                )}
                 <p className="detail-note">
                   Only the highest-EP badge in a family scores. Other family
-                  badges are still earned, but add 0 EP.
+                  badges are still earned, but add 0 EP. Each roll is
+                  independent; “1 in” is not a guarantee or a pity counter.
                 </p>
               </>
             )}

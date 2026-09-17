@@ -185,7 +185,7 @@ test("invalid pending data is rejected, and temporary recovery never restores sp
   });
   const spent = applyProgress(base, { type: "buy", id: "starfall", at: 3000 });
   const recovered = recoverUnsavedRolls(spent, temporary);
-  expect(recovered.balance).toBe(base.balance - 125000 + 4663);
+  expect(recovered.balance).toBe(base.balance - 50000 + 4663);
   expect(recovered.owned).toEqual(["starfall"]);
   expect(recovered.history.filter((e) => e.type === "purchase")).toHaveLength(
     1,
@@ -248,7 +248,11 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
 }) => {
   await seedProgress(page, { balance: 10000000, totalEarned: 10000000 });
   await page.goto("/#shop");
-  await expect(page.locator(".shop-grid-upgrades .shop-card")).toHaveCount(2);
+  await expect(
+    page.locator(
+      '.shop-grid-upgrades .shop-card[data-kind="roll"], .shop-grid-upgrades .shop-card[data-kind="cooldown"]',
+    ),
+  ).toHaveCount(2);
   await expect(
     page.locator(
       '[data-product="quickwind-2"],[data-product="quickwind-3"],[data-product="clockwork-2"]',
@@ -256,7 +260,11 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
   ).toHaveCount(0);
   for (const id of ["quickwind-1", "quickwind-2", "quickwind-3"]) {
     await buy(page, id);
-    await expect(page.locator(".shop-grid-upgrades .shop-card")).toHaveCount(2);
+    await expect(
+      page.locator(
+        '.shop-grid-upgrades .shop-card[data-kind="roll"], .shop-grid-upgrades .shop-card[data-kind="cooldown"]',
+      ),
+    ).toHaveCount(2);
   }
   await expect(
     page.locator('[data-product="quickwind-1"],[data-product="quickwind-2"]'),
@@ -302,7 +310,7 @@ test("new cosmetics persist and Archive Lens searches the complete history witho
     "archive-lens",
   ]);
   expect((await saved(page)).equipped).toBe("emberwake");
-  expect((await saved(page)).balance).toBe(1400000);
+  expect((await saved(page)).balance).toBe(2500000);
   await nav(page, "History");
   await page
     .getByRole("searchbox", { name: "Search a rolled number" })
@@ -341,11 +349,16 @@ test("changing Date.now in an open tab does not bypass the monotonic cooldown", 
   ).toBeEnabled();
 });
 
-test("failed settlement is merged with later cross-tab spending rather than overwriting it", async ({
+test("failed settlement is merged with later cross-tab spending rather than overwriting it or duplicating Flywheel charge", async ({
   page,
   context,
 }) => {
-  await seedProgress(page, { balance: 500000, totalEarned: 500000 });
+  await seedProgress(page, {
+    balance: 500000,
+    totalEarned: 500000,
+    owned: ["flywheel"],
+    flywheelCharge: 3,
+  });
   await startRoll(page, 604827);
   await page.evaluate((key) => {
     const write = Storage.prototype.setItem;
@@ -363,19 +376,21 @@ test("failed settlement is merged with later cross-tab spending rather than over
   await page.emulateMedia({ reducedMotion: "reduce" });
   await settled(page);
   expect((await saved(page)).balance).toBe(500000);
+  expect((await saved(page)).flywheelCharge).toBe(3);
   expect((await saved(page)).pendingRoll).not.toBeNull();
   const other = await context.newPage();
   await other.goto("/#shop");
   await buy(other, "starfall");
   await nav(page, "Shop");
-  await expect(page.getByTestId("wallet-balance")).toHaveText("379,663 EP");
+  await expect(page.getByTestId("wallet-balance")).toHaveText("454,663 EP");
   await page.evaluate(() => {
     window.failSettlement = false;
   });
   await buy(page, "clockwork-1");
   const after = await saved(page);
-  expect(after.balance).toBe(129663);
-  expect(after.owned).toEqual(["starfall", "clockwork-1"]);
+  expect(after.balance).toBe(329663);
+  expect(after.owned).toEqual(["flywheel", "starfall", "clockwork-1"]);
+  expect(after.flywheelCharge).toBe(4);
   expect(after.history.filter((e) => e.type === "roll")).toHaveLength(1);
   expect(after.history.filter((e) => e.type === "purchase")).toHaveLength(2);
   expect(after.pendingRoll).toBeNull();

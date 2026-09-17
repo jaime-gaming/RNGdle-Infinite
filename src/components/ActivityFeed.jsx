@@ -233,7 +233,9 @@ export default function ActivityFeed({
                     {event.type === "roll"
                       ? event.source === "offline"
                         ? "Offline roll completed"
-                        : "Roll completed"
+                        : event.flywheel === "boost"
+                          ? "Flywheel roll completed"
+                          : "Roll completed"
                       : event.type === "unlock"
                         ? `${event.badges.length} new badge${event.badges.length === 1 ? "" : "s"} unlocked`
                         : event.type === "purchase"

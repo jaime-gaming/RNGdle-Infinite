@@ -154,19 +154,34 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   );
 });
 
-test("all shop prices are five times the prior prices without changing permanent product IDs", () => {
-  const old = {
-    "quickwind-1": 25000,
-    "quickwind-2": 100000,
-    "quickwind-3": 400000,
-    "clockwork-1": 50000,
-    "clockwork-2": 200000,
-    "clockwork-3": 800000,
-    starfall: 25000,
-    aurora: 100000,
-    orbit: 500000,
+test("rebalanced catalogue preserves product IDs, premium progression and the specified Auto-Roll price", () => {
+  const prices = {
+    "quickwind-1": 75000,
+    "quickwind-2": 300000,
+    "quickwind-3": 1200000,
+    "clockwork-1": 125000,
+    "clockwork-2": 650000,
+    "clockwork-3": 2500000,
+    flywheel: 1000000,
+    starfall: 50000,
+    aurora: 300000,
+    orbit: 1500000,
+    frostglass: 450000,
+    emberwake: 900000,
+    eclipse: 2500000,
+    prism: 4000000,
+    "archive-lens": 150000,
+    "auto-roll": 5000000,
+    "offline-roller": 15000000,
   };
-  expect(shopProducts).toHaveLength(16);
-  for (const product of shopProducts.filter((p) => old[p.id]))
-    expect(product.price).toBe(old[product.id] * 5);
+  expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
+    prices,
+  );
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(17);
+  for (const product of shopProducts) {
+    expect(Number.isSafeInteger(product.price)).toBe(true);
+    expect(product.price).toBeGreaterThan(0);
+    if (product.requires)
+      expect(product.price).toBeGreaterThan(prices[product.requires]);
+  }
 });

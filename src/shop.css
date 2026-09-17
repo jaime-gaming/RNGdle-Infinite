@@ -471,3 +471,15 @@ nav button:disabled,
     text-align: left;
   }
 }
+.shop-grid-upgrades {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.upgrade-pace {
+  background: linear-gradient(135deg, #fbbf2412, #a78bfa12);
+  color: var(--secondary);
+}
+@media (max-width: 760px) {
+  .shop-grid-upgrades {
+    grid-template-columns: 1fr;
+  }
+}
