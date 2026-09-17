@@ -10,6 +10,13 @@ import {
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
 import { rollSettings } from "./shop-data.js";
+import {
+  offlinePlan,
+  readPresence,
+  writePresence,
+  clearPresence,
+  OFFLINE_INTERVAL,
+} from "./offline.js";
 export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
 function load() {
   try {
@@ -134,6 +141,9 @@ export function useProgress() {
                 "Deletion failed. Your account and progress have not been removed. Allow browser storage and try again.",
             };
           }
+          try {
+            clearPresence(previous.profile.id);
+          } catch {}
           reset();
           return { ok: true };
         }
@@ -156,8 +166,122 @@ export function useProgress() {
             };
           }
         }
-        let next, committed;
-        if (action.type === "draw") {
+        let next, committed, presence;
+        if (action.type.startsWith("offline-")) {
+          if (!previous.profile || !previous.owned.includes("offline-roller"))
+            throw new Error(
+              "Offline Roller requires a saved local profile and ownership.",
+            );
+          if (!readable || !navigator.locks?.request)
+            throw new Error(
+              "Offline rewards need writable storage and Web Locks support.",
+            );
+          const now = Math.ceil(gameNow()),
+            offline = previous.offline ?? {
+              lastSeenAt: now,
+              batch: null,
+              report: null,
+            };
+          if (action.type === "offline-sync") {
+            if (offline.batch) {
+              current.current = previous;
+              setProgress(previous);
+              return {
+                ok: true,
+                offlineRemaining:
+                  offline.batch.numbers.length - offline.batch.index,
+              };
+            }
+            const plan = offlinePlan(
+              offline,
+              now,
+              readPresence(previous.profile.id),
+              action.tabId,
+              action.visible === true,
+            );
+            if (action.checkAbsence === false) plan.count = 0;
+            const numbers = [];
+            for (let i = 0; i < plan.count; i++)
+              numbers.push((await generateRoll()).number);
+            next = {
+              ...previous,
+              offline: {
+                ...offline,
+                lastSeenAt: Math.max(offline.lastSeenAt, now),
+                batch: numbers.length
+                  ? {
+                      id: crypto.randomUUID(),
+                      since: plan.since,
+                      numbers,
+                      index: 0,
+                      ep: 0,
+                      newBadges: 0,
+                    }
+                  : null,
+              },
+            };
+            presence = {
+              tabId: action.tabId,
+              at: now,
+              visible: action.visible === true,
+            };
+          } else if (action.type === "offline-settle") {
+            const batch = offline.batch;
+            if (!batch) return { ok: true, offlineRemaining: 0 };
+            next = previous;
+            let index = batch.index,
+              ep = batch.ep,
+              newBadges = batch.newBadges;
+            const stop = Math.min(index + 10, batch.numbers.length);
+            while (index < stop) {
+              const result = await restoreRoll(batch.numbers[index]);
+              const before = next;
+              next = applyProgress(next, {
+                type: "complete",
+                id: `${batch.id}:${index}`,
+                result,
+                source: "offline",
+                at: batch.since + (index + 1) * OFFLINE_INTERVAL,
+                cooldownUntil: previous.cooldownUntil,
+              });
+              ep += next.balance - before.balance;
+              newBadges += next.discovered.length - before.discovered.length;
+              index++;
+            }
+            next = {
+              ...next,
+              pendingRoll: previous.pendingRoll,
+              offline: {
+                ...offline,
+                batch:
+                  index === batch.numbers.length
+                    ? null
+                    : { ...batch, index, ep, newBadges },
+                report:
+                  index === batch.numbers.length
+                    ? {
+                        id: batch.id,
+                        at: now,
+                        rolls:
+                          (offline.report?.rolls ?? 0) + batch.numbers.length,
+                        ep: (offline.report?.ep ?? 0) + ep,
+                        newBadges: (offline.report?.newBadges ?? 0) + newBadges,
+                      }
+                    : offline.report,
+              },
+            };
+          } else if (action.type === "offline-dismiss")
+            next = { ...previous, offline: { ...offline, report: null } };
+          else throw new Error("Unknown offline action");
+          if (token !== generation.current)
+            throw new Error(
+              "This account was reset. Offline action cancelled.",
+            );
+        } else if (action.type === "draw") {
+          if (previous.offline?.batch)
+            throw new Error(
+              "Finish restoring offline rewards before starting another roll.",
+            );
           if (previous.profile && !navigator.locks?.request)
             throw new Error(
               "This browser cannot safely coordinate account rolls. Use a browser with Web Locks support.",
@@ -231,7 +355,15 @@ export function useProgress() {
             cooldownUntil:
               pending.startedAt + pending.rollMS + pending.cooldownMS,
           });
-        } else next = applyProgress(previous, action);
+        } else {
+          if (
+            action.type === "buy" &&
+            action.id === "offline-roller" &&
+            !navigator.locks?.request
+          )
+            throw new Error("Offline Roller requires Web Locks support.");
+          next = applyProgress(previous, action);
+        }
         if (next !== previous && next.profile) {
           try {
             if (!readable) throw new Error("Unreadable storage");
@@ -257,8 +389,9 @@ export function useProgress() {
             if (action.type !== "complete")
               return {
                 ok: false,
-                message:
-                  action.type === "register"
+                message: action.type.startsWith("offline-")
+                  ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
+                  : action.type === "register"
                     ? "Sign-up could not be saved. Your guest progress is still available in this tab."
                     : action.type === "draw"
                       ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
@@ -298,7 +431,22 @@ export function useProgress() {
         }
         current.current = next;
         setProgress(next);
-        return { ok: true, ...(committed ? { run: committed } : {}) };
+        if (presence)
+          try {
+            writePresence(
+              next.profile.id,
+              presence.tabId,
+              presence.at,
+              presence.visible,
+            );
+          } catch {}
+        return {
+          ok: true,
+          offlineRemaining: next.offline?.batch
+            ? next.offline.batch.numbers.length - next.offline.batch.index
+            : 0,
+          ...(committed ? { run: committed } : {}),
+        };
       } catch (error) {
         return { ok: false, message: error.message };
       }

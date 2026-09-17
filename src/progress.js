@@ -1,5 +1,6 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import { productById } from "./shop-data.js";
+import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 const badgeIds = new Set(metadata.map((b) => b.id));
 const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
@@ -16,6 +17,7 @@ export function emptyProgress() {
     receipts: [],
     history: [],
     pendingRoll: null,
+    offline: null,
   };
 }
 export function parseProgress(raw) {
@@ -61,6 +63,7 @@ export function parseProgress(raw) {
     version: 1,
     history: parseHistory(p.history),
     pendingRoll: parsePending(p.pendingRoll),
+    offline: parseOffline(p.offline, owned),
     profile,
     balance: p.balance,
     totalEarned: p.totalEarned,
@@ -149,6 +152,7 @@ export function applyProgress(state, action) {
         tier: result.tier,
         ep: result.totalEP,
         badges: earned,
+        ...(action.source === "offline" ? { source: "offline" } : {}),
       },
     ];
     if (unlocked.length)
@@ -182,6 +186,8 @@ export function applyProgress(state, action) {
       throw new Error("You already own this item.");
     if (item.requires && !state.owned.includes(item.requires))
       throw new Error(`Requires ${productById.get(item.requires).name} first.`);
+    if (item.requiresProfile && !state.profile)
+      throw new Error("Create a local profile before buying Offline Roller.");
     if (state.balance < item.price)
       throw new Error("Not enough EP for this item.");
     return {
@@ -198,6 +204,15 @@ export function applyProgress(state, action) {
         },
       ],
       balance: state.balance - item.price,
+      ...(item.id === "offline-roller"
+        ? {
+            offline: {
+              lastSeenAt: action.at ?? Math.ceil(Date.now()),
+              batch: null,
+              report: null,
+            },
+          }
+        : {}),
       owned: [...state.owned, item.id],
       equipped: item.kind === "aura" ? item.id : state.equipped,
     };
@@ -275,7 +290,12 @@ function parseHistory(value) {
           ].includes(e.tier)
         )
           return [];
-        next = { ...next, ep: e.ep, tier: e.ep >= 500000 ? "godly" : e.tier };
+        next = {
+          ...next,
+          ep: e.ep,
+          tier: e.ep >= 500000 ? "godly" : e.tier,
+          ...(e.source === "offline" ? { source: "offline" } : {}),
+        };
       }
     } else if (["purchase", "equip"].includes(e.type)) {
       if (
@@ -336,6 +356,7 @@ export function recoverUnsavedRolls(stored, temporary) {
     merged = applyProgress(merged, {
       type: "complete",
       id: event.id,
+      source: event.source,
       at: event.at,
       result: {
         number: event.number,

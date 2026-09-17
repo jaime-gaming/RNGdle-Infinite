@@ -118,6 +118,34 @@ export const shopProducts = [
       "Rising embers and a warm furnace glow, without changing the rarity beneath.",
   },
   {
+    id: "eclipse",
+    kind: "aura",
+    name: "Eclipse Crown",
+    price: 4000000,
+    icon: "eclipse",
+    description:
+      "A dark corona edged in gold, orbiting crescent rings, and a trail of stardust. Your rarity stays visible.",
+  },
+  {
+    id: "prism",
+    kind: "aura",
+    name: "Prismatic Bloom",
+    price: 6500000,
+    icon: "prism",
+    description:
+      "A luminous prism with rotating spectral petals and drifting light motes. A permanent finishing touch.",
+  },
+  {
+    id: "offline-roller",
+    kind: "utility",
+    name: "Offline Roller",
+    price: 25000000,
+    icon: "offline",
+    requiresProfile: true,
+    description:
+      "One normal roll per full 10 minutes away, up to 24 hours (144 rolls). Rewards are calculated and saved when you return. Requires a local profile.",
+  },
+  {
     id: "auto-roll",
     kind: "utility",
     name: "Auto-Roll",

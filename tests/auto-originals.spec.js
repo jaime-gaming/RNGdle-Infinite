@@ -349,6 +349,10 @@ test("Auto-Roll uses purchased timings and Last Second appears in the actual bad
   await expect(page.getByRole("dialog")).toContainText("75,000 EP");
   await expect(page.getByRole("dialog")).toContainText("0.0014%");
   await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "The badge collection" }),
+  ).toBeVisible();
+  await page.unrouteAll({ behavior: "wait" });
   expect((await saved(page)).discovered).toContain("INFINITE_LAST_SECOND");
 });
 

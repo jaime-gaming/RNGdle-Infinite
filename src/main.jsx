@@ -30,6 +30,8 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
 import LocalProfile from "./components/LocalProfile";
+import { useOffline } from "./use-offline";
+import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
 
 function App() {
@@ -172,6 +174,7 @@ function App() {
   function openAuth() {
     setModal("auth");
   }
+  const offlineState = useOffline(session, dispatch);
   const discoveredBadges = badges.filter((b) =>
     session.discovered.includes(b.canonicalId),
   );
@@ -272,6 +275,12 @@ function App() {
         </div>
       )}
       <main className={page === "roll" ? "home-main" : "content-main"}>
+        <OfflineRewards
+          progress={session}
+          status={offlineState}
+          onDismiss={() => dispatch({ type: "offline-dismiss" })}
+          onHistory={() => navigate("history")}
+        />
         <div
           className="roll-view"
           hidden={page !== "roll"}
@@ -282,7 +291,9 @@ function App() {
           <RollExperience
             key={epoch}
             {...{ openBadge, notify, session }}
-            active={page === "roll"}
+            active={
+              page === "roll" && !offlineState.busy && !session.offline?.batch
+            }
             theme={appliedTheme}
             onComplete={completeRoll}
             onDraw={() => dispatch({ type: "draw" })}
