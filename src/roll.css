@@ -1098,3 +1098,77 @@ nav button.active {
   color: var(--secondary);
   margin: 8px 0 0;
 }
+.flywheel-meter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 380px);
+  padding: 14px 16px;
+  margin: 18px auto 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+  color: var(--secondary);
+}
+.flywheel-copy {
+  flex: 1;
+  min-width: 0;
+}
+.flywheel-copy > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+.flywheel-copy strong {
+  color: var(--text);
+  font-weight: 650;
+}
+.flywheel-copy > div > span {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.flywheel-copy progress {
+  display: block;
+  width: 100%;
+  height: 5px;
+  margin: 8px 0;
+  appearance: none;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--border);
+  color: var(--green);
+}
+.flywheel-copy progress::-webkit-progress-bar {
+  background: var(--border);
+}
+.flywheel-copy progress::-webkit-progress-value {
+  background: var(--green);
+  border-radius: 8px;
+}
+.flywheel-copy progress::-moz-progress-bar {
+  background: var(--green);
+  border-radius: 8px;
+}
+.flywheel-copy p {
+  font-size: 10px;
+  line-height: 1.7;
+  margin: 0;
+}
+.flywheel-meter.is-charged {
+  border-color: var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+}
+.flywheel-meter.is-spinning > svg {
+  animation: flywheel-turn 8s linear infinite;
+  color: var(--green);
+}
+@keyframes flywheel-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}

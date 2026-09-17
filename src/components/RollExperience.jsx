@@ -1,4 +1,6 @@
+import { flywheelForDraw } from "../flywheel";
 import { gameNow } from "../game-clock";
+import FlywheelMeter from "./FlywheelMeter";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
 import {
@@ -443,6 +445,10 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
+      <FlywheelMeter
+        progress={session}
+        boosted={!!run && run.flywheel === "boost" && !runSettled}
+      />
       {ownsAutoRoll && (
         <div className="auto-roll-control">
           <div className="auto-roll-heading">
@@ -505,7 +511,11 @@ export default function RollExperience({
           )}
           <p className="roll-hint">
             <InfinityIcon size={14} /> {settings.rollMS / 1000}s reveal{" "}
-            <span>·</span> {formatDuration(settings.cooldownMS / 1000)} cooldown
+            <span>·</span>{" "}
+            {flywheelForDraw(session) === "boost"
+              ? "no"
+              : formatDuration(settings.cooldownMS / 1000)}{" "}
+            cooldown
           </p>
           <p className="signup-note">
             {session.profile ? (

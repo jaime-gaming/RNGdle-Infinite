@@ -299,7 +299,7 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
       .click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
   }
-  expect((await saved(page)).balance).toBe(4500000);
+  expect((await saved(page)).balance).toBe(18500000);
   expect((await saved(page)).equipped).toBe("prism");
   await page.reload();
   await page.emulateMedia({ reducedMotion: "reduce" });

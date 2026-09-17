@@ -1,5 +1,6 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import { productById } from "./shop-data.js";
+import { FLYWHEEL_CHARGES, flywheelAfterSettlement } from "./flywheel.js";
 import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 const badgeIds = new Set(metadata.map((b) => b.id));
@@ -18,6 +19,7 @@ export function emptyProgress() {
     history: [],
     pendingRoll: null,
     offline: null,
+    flywheelCharge: 0,
   };
 }
 export function parseProgress(raw) {
@@ -44,6 +46,12 @@ export function parseProgress(raw) {
         !productById.get(id).requires ||
         owned.includes(productById.get(id).requires),
     );
+  if (
+    owned.includes("flywheel") &&
+    p.flywheelCharge != null &&
+    (!validAmount(p.flywheelCharge) || p.flywheelCharge > FLYWHEEL_CHARGES)
+  )
+    throw new Error("Invalid Flywheel charge");
   let profile = null;
   if (p.profile != null) {
     if (
@@ -64,6 +72,7 @@ export function parseProgress(raw) {
     history: parseHistory(p.history),
     pendingRoll: parsePending(p.pendingRoll),
     offline: parseOffline(p.offline, owned),
+    flywheelCharge: owned.includes("flywheel") ? (p.flywheelCharge ?? 0) : 0,
     profile,
     balance: p.balance,
     totalEarned: p.totalEarned,
@@ -153,6 +162,11 @@ export function applyProgress(state, action) {
         ep: result.totalEP,
         badges: earned,
         ...(action.source === "offline" ? { source: "offline" } : {}),
+        ...(action.source !== "offline" &&
+        state.pendingRoll?.id === id &&
+        state.pendingRoll.flywheel
+          ? { flywheel: state.pendingRoll.flywheel }
+          : {}),
       },
     ];
     if (unlocked.length)
@@ -167,6 +181,7 @@ export function applyProgress(state, action) {
       ...state,
       history: [...(state.history ?? []), ...events],
       pendingRoll: null,
+      flywheelCharge: flywheelAfterSettlement(state, id, action.source),
       balance,
       totalEarned,
       discovered: [
@@ -204,6 +219,7 @@ export function applyProgress(state, action) {
         },
       ],
       balance: state.balance - item.price,
+      ...(item.id === "flywheel" ? { flywheelCharge: 0 } : {}),
       ...(item.id === "offline-roller"
         ? {
             offline: {
@@ -295,6 +311,9 @@ function parseHistory(value) {
           ep: e.ep,
           tier: e.ep >= 500000 ? "godly" : e.tier,
           ...(e.source === "offline" ? { source: "offline" } : {}),
+          ...(["boost", "charge"].includes(e.flywheel)
+            ? { flywheel: e.flywheel }
+            : {}),
         };
       }
     } else if (["purchase", "equip"].includes(e.type)) {
@@ -329,7 +348,9 @@ export function parsePending(p) {
     p.number > 1000000 ||
     !validAmount(p.startedAt) ||
     ![45000, 35000, 25000, 15000].includes(p.rollMS) ||
-    ![60000, 45000, 30000, 15000].includes(p.cooldownMS) ||
+    ![60000, 45000, 30000, 15000, 0].includes(p.cooldownMS) ||
+    (p.flywheel != null && !["charge", "boost"].includes(p.flywheel)) ||
+    (p.cooldownMS === 0) !== (p.flywheel === "boost") ||
     !validAmount(p.startedAt + p.rollMS + p.cooldownMS)
   )
     throw new Error("Invalid committed roll");
@@ -339,6 +360,7 @@ export function parsePending(p) {
     startedAt: p.startedAt,
     rollMS: p.rollMS,
     cooldownMS: p.cooldownMS,
+    ...(p.flywheel ? { flywheel: p.flywheel } : {}),
   };
 }
 

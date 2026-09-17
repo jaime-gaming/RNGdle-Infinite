@@ -137,7 +137,7 @@ test("signup saves existing guest rewards, purchases, discoveries, equipment and
   ).toBeVisible();
   const p = await saved(page);
   expect(p.profile.username).toBe("Lucky_Player");
-  expect(p.balance).toBe(99302458);
+  expect(p.balance).toBe(99677458);
   expect(p.totalEarned).toBe(100177458);
   expect(p.discovered).toHaveLength(17);
   expect(p.owned).toEqual(["quickwind-1", "clockwork-1", "aurora"]);
@@ -260,7 +260,7 @@ test("maximum upgrades produce a fifteen-second reveal and fifteen-second cooldo
     ["roll", "cooldown"].includes(p.kind),
   ))
     await buy(page, p.id);
-  expect((await saved(page)).balance).toBe(7125000);
+  expect((await saved(page)).balance).toBe(10150000);
   expect((await saved(page)).equipped).toBe("none");
   await page.reload();
   await expect(page.getByTestId("roll-duration")).toHaveText("15s");

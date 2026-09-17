@@ -1,7 +1,7 @@
 import metadata from "./data/badge-metadata.json" with { type: "json" };
 import manifest from "./data/game-index.json" with { type: "json" };
 import { originalsByNumber } from "./infinite-badges.js";
-import { rankScore } from "./probability.js";
+import { rankScore, lowerBound } from "./probability.js";
 import { findEquation, getContributors } from "./contributors.js";
 
 export function createGameIndex(
@@ -24,15 +24,20 @@ export function createGameIndex(
   for (let i = 0; i < scores.length; i++)
     scores[i] = view.getUint32(i * 4, true);
   // Derive the complete game distribution after adding the two original bonuses.
-  const tiers = manifest.tiers.map((t) => ({ ...t }));
   if (originals)
     for (const [number, badges] of originalsByNumber) {
-      tiers.findLast((t) => scores[number] >= t.minEP).count--;
       scores[number] += badges.reduce((sum, b) => sum + b.ep, 0);
-      tiers.findLast((t) => scores[number] >= t.minEP).count++;
     }
   const sorted = scores.slice().sort(),
     bits = new Uint8Array(badgeBuffer);
+  // Derive odds from the effective score population, not cached manifest counts.
+  const tiers = manifest.tiers.map((tier, i) => ({
+    ...tier,
+    count:
+      (i + 1 < manifest.tiers.length
+        ? lowerBound(sorted, manifest.tiers[i + 1].minEP)
+        : sorted.length) - lowerBound(sorted, tier.minEP),
+  }));
   function evaluate(number) {
     if (
       !Number.isInteger(number) ||
@@ -76,6 +81,7 @@ export function createGameIndex(
       rank,
       tier: tier.id,
       tierProbability: (100 * tier.count) / manifest.population,
+      tierCount: tier.count,
       badges,
       equation,
     };

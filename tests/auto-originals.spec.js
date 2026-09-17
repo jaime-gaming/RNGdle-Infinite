@@ -61,6 +61,7 @@ test("Auto-Roll costs 5,000,000 EP, requires confirmation, does not equip, and p
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(card.getByRole("button")).toBeDisabled();
   const after = await saved(page);
   expect(after.balance).toBe(0);

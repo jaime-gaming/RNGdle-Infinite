@@ -1839,3 +1839,16 @@ footer button {
     margin-top: 21px;
   }
 }
+.chance-frequency {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--secondary);
+  margin-top: 5px;
+}
+.chance-outcomes {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--secondary);
+  margin: 16px 0 0;
+}

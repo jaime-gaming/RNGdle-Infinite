@@ -296,5 +296,5 @@ test("loading disables generation without blocking help, and badge odds explain 
   await expect(page.getByRole("dialog")).toContainText("0.0001%");
   await expect(
     page.getByRole("dialog").locator('[title^="1 of 1,000,001"]'),
-  ).toHaveText("0.0001%");
+  ).toHaveText("0.0001%1 in 1,000,001");
 });

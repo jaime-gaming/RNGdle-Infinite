@@ -21,10 +21,10 @@ npm run preview
 - Text-only RNGdle wordmark with INFINITE beneath it (no logo icon), plus a text-based favicon, **Shop → Badges → History** navigation, and RNGdle-style light/dark layout, local **Inter + Space Mono** fonts, shared, tier-aware number boxes, and a colour-cycling Generate button.
 - **Random-only generation across 0–1,000,000 inclusive**, using Web Crypto with rejection sampling. Every number is equally likely, including a repeat of the previous roll. There is no number editor, preset picker, seed setting, or arbitrary-number preview.
 - Exact EP and earned/superseded badge membership for all **1,000,001** possible numbers, using pinned full-range factual indexes from RNGdle Tools plus two independently authored Infinite badge bonuses.
-- Full-population rank percentages with ties included and reference-style rounded rank labels, also used in share text. Rank tooltips retain precise percentages and integer counts. Badge details show percentages counted over the complete badge index.
+- Full-population rank percentages with ties included and reference-style rounded rank labels, also used in share text. Rank tooltips retain precise percentages and integer counts. Badge details show full-population percentages, approximate “1 in” frequencies, and exact outcome counts. Chances stay independent; no pity counter is implied.
 - Staged progressive digit reveals, settle animations, two card pulses, vignette, lowest-to-highest EP badge stream, delayed rank, animated EP, and contributor highlights.
 - No Skip Reveal button or keyboard skipping. The reference choreography plays on the selected reveal schedule; the browser’s reduced-motion preference still completes it immediately for accessibility.
-- A **45-second base reveal** plus **60-second base cooldown**, with permanent timing upgrades. The next-roll deadline is fixed at draw start: **105 seconds base**, or **30 seconds with both tracks maxed**. Reduced motion reveals instantly for accessibility but never advances this deadline.
+- A **45-second base reveal** plus **60-second base cooldown**, with permanent timing upgrades. The next-roll deadline is fixed at draw start: **105 seconds base**, or **30 seconds with both tracks maxed**, before Flywheel. A charged Flywheel waives only that roll’s cooldown, leaving a 45s/15s reveal deadline. Reduced motion reveals instantly for accessibility but never advances this deadline.
 - **EP is spendable currency.** Each completed roll credits its full score exactly once. The existing EP counter shows the wallet balance. Completed rolls appear in your activity feed. There are no replay controls, presets, or number editing.
 - **Discovery-only collection:** 235 possible badges across 18 sets, but only earned badges appear in the collection, search results, details, and activity feed. An accessible progress bar tracks unique discoveries against all 235 badges, independent of search filters. Badge details stay in-game without external reference buttons. Completing a roll discovers all its earned badges, including superseded badges.
 - **Leaderboard disabled**, including direct `#leaderboard` navigation. The History navigation replaces the inactive leaderboard. Today’s Best Roll, fake player data, and UI Preview labeling have been removed.
@@ -34,36 +34,46 @@ npm run preview
 
 ## EP shop and local progress
 
-The shop has two sequential upgrade tracks, seven cosmetic auras, and three utilities. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
+The shop has two sequential upgrade tracks, the original Flywheel pace mechanic, seven cosmetic auras, and three utilities (17 products total). Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
 
 | Upgrade       |        Price | Effect             | Prerequisite |
 | ------------- | -----------: | ------------------ | ------------ |
-| Quickwind I   |   125,000 EP | 45s → 35s reveal   | None         |
-| Quickwind II  |   500,000 EP | 35s → 25s reveal   | Quickwind I  |
-| Quickwind III | 2,000,000 EP | 25s → 15s reveal   | Quickwind II |
-| Clockwork I   |   250,000 EP | 60s → 45s cooldown | None         |
-| Clockwork II  | 1,000,000 EP | 45s → 30s cooldown | Clockwork I  |
-| Clockwork III | 4,000,000 EP | 30s → 15s cooldown | Clockwork II |
+| Quickwind I   |    75,000 EP | 45s → 35s reveal   | None         |
+| Quickwind II  |   300,000 EP | 35s → 25s reveal   | Quickwind I  |
+| Quickwind III | 1,200,000 EP | 25s → 15s reveal   | Quickwind II |
+| Clockwork I   |   125,000 EP | 60s → 45s cooldown | None         |
+| Clockwork II  |   650,000 EP | 45s → 30s cooldown | Clockwork I  |
+| Clockwork III | 2,500,000 EP | 30s → 15s cooldown | Clockwork II |
 
 Timing upgrades activate automatically. Both timings are snapshotted when Generate is pressed: buying during a reveal does not restart or shorten it, and does not shorten its upcoming cooldown. Buying during a cooldown does not change its deadline. Upgrades apply to rolls started afterward. They never change uniform random odds, badge rules, or EP scoring.
 
 | Aura            |        Price | Effect                                                                                                  |
 | --------------- | -----------: | ------------------------------------------------------------------------------------------------------- |
-| Starfall        |   125,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
-| Aurora Veil     |   500,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
-| Frostglass      |   750,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
-| Emberwake       | 1,500,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
-| Eclipse Crown   | 4,000,000 EP | A golden corona, crescent rings, and orbiting stardust.                                                 |
-| Prismatic Bloom | 6,500,000 EP | Spectral petals, layered prism outlines, and drifting light motes.                                      |
-| Orbital Halo    | 2,500,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
+| Starfall        |    50,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
+| Aurora Veil     |   300,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
+| Frostglass      |   450,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
+| Emberwake       |   900,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
+| Eclipse Crown   | 2,500,000 EP | A golden corona, crescent rings, and orbiting stardust.                                                 |
+| Prismatic Bloom | 4,000,000 EP | Spectral petals, layered prism outlines, and drifting light motes.                                      |
+| Orbital Halo    | 1,500,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
 
-Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades and utilities do not occupy the aura slot. The original six upgrades and three auras retain their increased prices. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset.
+Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades, Flywheel, and utilities do not occupy the aura slot. Prices have been rebalanced around ordinary rolls rather than the jackpot-inflated average. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset. Old purchase records retain the price actually paid; repricing does not retroactively refund or debit EP.
 
-**Archive Lens — 350,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
+**Archive Lens — 150,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
 
-**Auto-Roll — 5,000,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. There is no offline catch-up or faster automatic cadence.
+**Auto-Roll — 5,000,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. Auto-Roll has no special speed advantage over manual rolls and does not perform offline catch-up; Flywheel benefits both equally.
 
-### Offline Roller — 25,000,000 EP
+### Flywheel — 1,000,000 EP
+
+A permanent pace upgrade with an automatic **four-charge / fifth-roll** rhythm. Four completed online rolls begun after purchase charge it; the fifth roll retains its full reveal but has **zero cooldown afterward**. Boosted rolls do not charge the next cycle. Auto-Roll counts normally; offline rolls never charge or consume it. Normal cooldowns still apply to the four charging rolls, including the fourth. A full five-roll cycle averages 93 seconds per roll at base timings, or 27 seconds with both timing tracks maxed, excluding user/UI delays.
+
+Charge is visible on the Roll page and persisted with a local profile. The draw snapshots a `flywheel: "charge" | "boost"` flag, and consuming a charged boost is atomic with committing the next number and its deadline. Failed draws keep the charge; refresh restores the same boosted number, not a replacement. Eligible settlement adds exactly one charge; duplicate receipts and failed-write recovery cannot add it twice. Reduced motion still reserves the full reveal deadline. Buying during a reveal does not retrospectively count that roll, and all existing timing upgrades stack without changing EP or probability. Existing version-1 saves default to zero charge.
+
+### Price audit
+
+`npm run audit:economy` reproduces the complete 1,000,001-number distribution and catalogue price comparisons. Including the existing two originals, the **median is 5,801 EP**, versus a jackpot-inflated **mean of 21,548.40 EP**; **748,167 outcomes pay less than 10,000 EP**. Early purchases now start at 50,000 EP (Starfall), 75,000 EP (Quickwind I), and 125,000 EP (Clockwork I). Higher levels remain progressively more expensive. Auto-Roll retains the explicitly requested 5,000,000 EP price, while Offline Roller remains a premium tool at three times that cost. Median-roll equivalents are a comparison baseline, not a promise of how many rolls a purchase takes. Reference EP rewards, the two original bonuses, and uniform RNG are unchanged.
+
+### Offline Roller — 15,000,000 EP
 
 A permanent tool for saved local profiles. It earns **one normal random roll for each full 10 minutes away**, capped at **24 hours / 144 rolls per absence**, as requested. Reveal/cooldown upgrades do not speed up this interval. It activates on purchase without retroactive credit for time before purchase. No further purchase or claim fee is required.
 
@@ -112,7 +122,7 @@ Registered tabs synchronize deletion. Active reveals and pending draws are cance
 
 Guests can roll, discover badges, and buy items, but these changes exist **only in the current tab’s memory** and disappear on reload. The exception is a temporary anti-reroll guard under `rng-infinite-guest-roll-v1` in sessionStorage: it stores only the pending number, ID, start time, snapshotted timings, and next-roll deadline. Refreshing resumes that draw without saving the guest wallet/history. A guest guard belongs to a tab/session, not an identity across fresh browser sessions. Creating a local profile saves the entire current guest game atomically, then enables automatic saves. The username accepts 3–20 letters, numbers, underscores, or hyphens. No email, password, or other credential is requested or stored. This is **not online authentication**, and usernames are not globally reserved.
 
-`rng-infinite-progress-v1` stores a versioned object with local `profile` (ID, username, creation timestamp), spendable `balance`, cumulative `totalEarned`, discovered badge IDs, owned product IDs, equipped aura, cooldown deadline, `pendingRoll` commitment, a bounded recent receipt list, and the complete `history` activity log. Roll IDs in history also prevent duplicate credits after the recent receipt window expires. Theme remains under `rng-theme`. Existing profileless saves from the earlier prototype can be loaded into guest memory, but new changes are not persisted until sign-up.
+`rng-infinite-progress-v1` stores a versioned object with local `profile` (ID, username, creation timestamp), spendable `balance`, cumulative `totalEarned`, discovered badge IDs, owned product IDs, equipped aura, cooldown deadline, `pendingRoll` commitment, a bounded recent receipt list, `flywheelCharge` (0–4), and the complete `history` activity log. Roll IDs in history also prevent duplicate credits after the recent receipt window expires. Theme remains under `rng-theme`. Existing profileless saves from the earlier prototype can be loaded into guest memory, but new changes are not persisted until sign-up.
 
 Writes are serialized in each tab and use **Web Locks** to protect shared balances and coordinate registered draws across tabs. A registered draw is refused without Web Locks support. Storage events synchronize registered tabs. A guest tab does not silently join a profile created in another tab or lose its guest game; attempting sign-up then explains the conflict instead of overwriting the other profile. Simultaneous account tabs join the same pending draw, and canonical settlement recomputes the score and credits its ID only once.
 
@@ -128,7 +138,7 @@ The reference’s [Luck page](https://rng.cubityfir.st/luck) uses the full score
 - **Top** = percentage scoring **at least** this EP; **Bottom** = percentage scoring **at most** this EP. Both include ties. Top is shown when the inclusive percentile is at least 50.
 - Visible rank labels match the reference: rounded whole percentages, with **<1%** when the rounded value would be zero. Hovering shows the precise percentage (up to six decimal places), exact integer counts, and tie policy. Badge odds retain three-significant-digit formatting.
 - A badge’s percentage counts every number earning it, even if another badge in its family supersedes it. Only the highest-EP badge in each family contributes to the total score.
-- Badge rarity and total-roll rarity use different thresholds. Rarity tooltips use actual tier population counts.
+- Badge rarity and total-roll rarity use different thresholds. Rarity tooltips use exact tier counts recomputed from the final score distribution, never cached manifest counts. Rounding never changes a nonzero chance to 0% or a non-certain chance to 100%.
 
 The two scoring indexes total approximately **2.5 MB compressed**. They are delivered as versioned, ASCII-safe JSON envelopes (approximately **3.3 MB** before HTTP compression) so preview proxies cannot reinterpret the binary gzip payload. A shared Web Worker decodes and decompresses them, then verifies the **canonical decompressed SHA-256 and exact size** before indexing. Gzip metadata/recompression changes do not cause false failures; changed scores still fail. Content-addressed URLs and cache revalidation avoid stale data/manifest mismatches. Generate stays disabled while loading. Failed or corrupt data produces a visible retry action, never a fallback sample or invented score.
 
@@ -148,8 +158,10 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **106 tests** cover:
+The **118 tests** cover:
 
+- Flywheel’s two-cycle accounting, zero-cooldown validation, mid-reveal purchase snapshots, full base/upgraded reveal deadlines, reload restoration, concurrent single consumption, failed commit/recovery, offline exclusion, Auto-Roll compatibility, mobile display, and legacy price preservation.
+- Exact chance/frequency formatting at rare and near-certain boundaries, and full-population tier odds despite stale manifest counts.
 - Every legal number’s base score versus its highest-EP family memberships, all 233 pinned badge probabilities and data hashes, plus exhaustive independent checks of both Infinite Originals, their bonuses, adjusted ranks and tier counts.
 - Agreement with fifty independent reference snapshots, exact inclusive rank tails, rare percentages, both range endpoints, and rejection-sampling boundaries/repeats.
 - Real worker loading, text-safe versioned delivery, changed gzip metadata/recompression, HTTP-compressed JSON, corrupt-data retry, bounded decompression, double-click protection, and read-only numbers.
@@ -177,6 +189,8 @@ Deterministic browser tests intercept the worker’s crypto source in Playwright
 - `src/roll-client.js`, `src/roll.worker.js` — worker lifecycle, loading/retry, and random-roll messages
 - `src/load-index.js` — text-safe data transport, bounded decompression, and canonical integrity checks
 - `src/offline.js`, `src/use-offline.js`, `src/components/OfflineRewards.jsx` — offline accounting, shared presence, catch-up scheduling and reward summary
+- `src/flywheel.js`, `src/components/FlywheelMeter.jsx` — snapshotted charge rules and accessible pace progress
+- `tools/audit-economy.mjs` — reproducible score distribution and price audit
 - `src/infinite-badges.js` — two original badge rules/memberships, EP bonuses, exact odds, and combined metadata
 - `src/game-clock.js` — wall-anchored monotonic in-tab time
 - `src/random.js` — unbiased Web Crypto rejection sampling
