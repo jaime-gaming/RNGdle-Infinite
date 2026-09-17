@@ -34,7 +34,7 @@ npm run preview
 
 ## EP shop and local progress
 
-The shop has two sequential upgrade tracks, five cosmetic auras, and two utilities. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
+The shop has two sequential upgrade tracks, seven cosmetic auras, and three utilities. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
 
 | Upgrade       |        Price | Effect             | Prerequisite |
 | ------------- | -----------: | ------------------ | ------------ |
@@ -47,19 +47,35 @@ The shop has two sequential upgrade tracks, five cosmetic auras, and two utiliti
 
 Timing upgrades activate automatically. Both timings are snapshotted when Generate is pressed: buying during a reveal does not restart or shorten it, and does not shorten its upcoming cooldown. Buying during a cooldown does not change its deadline. Upgrades apply to rolls started afterward. They never change uniform random odds, badge rules, or EP scoring.
 
-| Aura         |        Price | Effect                                                                                                  |
-| ------------ | -----------: | ------------------------------------------------------------------------------------------------------- |
-| Starfall     |   125,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
-| Aurora Veil  |   500,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
-| Frostglass   |   750,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
-| Emberwake    | 1,500,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
-| Orbital Halo | 2,500,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
+| Aura            |        Price | Effect                                                                                                  |
+| --------------- | -----------: | ------------------------------------------------------------------------------------------------------- |
+| Starfall        |   125,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
+| Aurora Veil     |   500,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
+| Frostglass      |   750,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
+| Emberwake       | 1,500,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
+| Eclipse Crown   | 4,000,000 EP | A golden corona, crescent rings, and orbiting stardust.                                                 |
+| Prismatic Bloom | 6,500,000 EP | Spectral petals, layered prism outlines, and drifting light motes.                                      |
+| Orbital Halo    | 2,500,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
 
 Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades and utilities do not occupy the aura slot. The original six upgrades and three auras retain their increased prices. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset.
 
 **Archive Lens — 350,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
 
 **Auto-Roll — 5,000,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. There is no offline catch-up or faster automatic cadence.
+
+### Offline Roller — 25,000,000 EP
+
+A permanent tool for saved local profiles. It earns **one normal random roll for each full 10 minutes away**, capped at **24 hours / 144 rolls per absence**, as requested. Reveal/cooldown upgrades do not speed up this interval. It activates on purchase without retroactive credit for time before purchase. No further purchase or claim fee is required.
+
+**Browser-only implementation:** closed pages cannot execute a worker. On return, the game calculates the earned roll count, commits all chosen numbers before showing rewards, and then settles ten rolls per saved transaction. Each roll uses the same uniform RNG, verified scores, badge rules, discoveries, and history as an online roll. The welcome-back summary shows rewards already credited—not an unclaimed balance. The free **Offline** history filter shows every recorded offline roll.
+
+The tool tracks **absence from all visible tabs of the same local account**, not simply leaving the Roll section. Visible tabs heartbeat every 15 seconds; hiding a tab records a transition. Closing/crashing a browser may miss the final write, so timing can fall back to its last successful heartbeat (approximately 15-second granularity in normal operation). Whole-period rounding occurs per absence; fractional periods do not carry forward. Presence leases expire after 45 seconds to recover from abruptly closed tabs. A stalled or modified browser cannot be distinguished perfectly from an absent one without a backend.
+
+The saved `offline` ledger contains the last seen timestamp, a bounded committed batch (up to 144 numbers, IDs and saved index), and an optional reward summary. Interrupted batches resume the same numbers, without replacing another pending manual roll or its cooldown. Web Locks serialize catch-up across tabs. Failed settlement writes leave the committed batch available to retry; no extra EP is exposed as credited. Account deletion clears the ledger and profile-scoped `rng-infinite-presence-v1:` entries. Deliberate save/clock tampering remains outside frontend security guarantees; authoritative offline rewards need server time and storage.
+
+### Cosmetic workshop
+
+Existing aura owners receive the new effects free: constellation tracery for Starfall, additional Aurora ribbons, an extra orbital plane, faceted Frostglass edges, and a brighter Emberwake rim. Eclipse Crown and Prismatic Bloom add permanent premium options. The shop's rarity selector previews every aura on the selected scoring palette using question marks, never editable or fabricated rolls. Core tier colours, GODLY's supplied recipe, and RNG remain unchanged; reduced motion disables all animated layers. The same upgraded number-box component is used in the live game.
 
 ### Infinite Originals
 
@@ -132,7 +148,7 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **96 tests** cover:
+The **106 tests** cover:
 
 - Every legal number’s base score versus its highest-EP family memberships, all 233 pinned badge probabilities and data hashes, plus exhaustive independent checks of both Infinite Originals, their bonuses, adjusted ranks and tier counts.
 - Agreement with fifty independent reference snapshots, exact inclusive rank tails, rare percentages, both range endpoints, and rejection-sampling boundaries/repeats.
@@ -142,6 +158,7 @@ The **96 tests** cover:
 - Committed registered/guest reloads, concurrent account draws and single rewards, failed commit protection, missing Web Locks, failed-settlement recovery preserving other-tab spending, monotonic in-tab time, and unchanged reduced-motion cadence.
 - Progressive/maxed upgrade cards, Archive Lens search before pagination, new cosmetic purchases and mobile filters.
 - Shared number-box coverage, all seven original light/dark palettes plus GODLY boundary/count/palette/particles, rarity-gated shimmer, upgraded cosmetics, legacy ownership after repricing, and reduced-motion/mobile rendering.
+- Offline ten-minute arithmetic and the 144-roll cap, concurrent return single credit, visible-tab exclusion, heartbeat/visibility transitions, interruption/retry, preserved manual commitments, free offline history, deletion, profile-gated purchase, and mobile/reduced-motion premium previews.
 - Auto-Roll price/confirmation/persistence, off-by-default state, timing upgrades and reduced-motion cadence, pausing, stopping during a reveal, failed commits, account deletion and multi-tab single rewards; new badge discovery/history/details and non-retroactive migration.
 - Text-only logo/home navigation and keyboard order, empty/partial/complete collection progress, saved discoveries after reload, removed reference buttons, and responsive light/dark layouts.
 - Measured generated-roll desktop geometry (including superseded rows), persistent digit nodes, first-EP tween, reveal gating, accessible instant completion, contributor agreement with all fifty fixtures, shared chip-loop timing, and rank overshoot.
@@ -159,6 +176,7 @@ Deterministic browser tests intercept the worker’s crypto source in Playwright
 - `src/components/RollExperience.jsx` — asynchronous generation, reveal controller and sharing
 - `src/roll-client.js`, `src/roll.worker.js` — worker lifecycle, loading/retry, and random-roll messages
 - `src/load-index.js` — text-safe data transport, bounded decompression, and canonical integrity checks
+- `src/offline.js`, `src/use-offline.js`, `src/components/OfflineRewards.jsx` — offline accounting, shared presence, catch-up scheduling and reward summary
 - `src/infinite-badges.js` — two original badge rules/memberships, EP bonuses, exact odds, and combined metadata
 - `src/game-clock.js` — wall-anchored monotonic in-tab time
 - `src/random.js` — unbiased Web Crypto rejection sampling

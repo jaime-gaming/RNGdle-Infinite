@@ -14,6 +14,9 @@ import {
   Flame,
   ScanSearch,
   Repeat2,
+  Eclipse,
+  Gem,
+  MoonStar,
 } from "lucide-react";
 import {
   shopProducts,
@@ -34,6 +37,9 @@ const icons = {
   fire: Flame,
   lens: ScanSearch,
   auto: Repeat2,
+  eclipse: Eclipse,
+  prism: Gem,
+  offline: MoonStar,
 };
 export default function Shop({
   progress,
@@ -42,6 +48,7 @@ export default function Shop({
   notify,
   openSignup,
 }) {
+  const [previewTier, setPreviewTier] = useState("rare");
   const [selected, setSelected] = useState(null),
     [pending, setPending] = useState(false),
     [purchaseError, setPurchaseError] = useState("");
@@ -82,7 +89,9 @@ export default function Shop({
               : productById.get(id).kind === "utility"
                 ? id === "auto-roll"
                   ? "Auto-Roll unlocked. Enable it on the Roll page."
-                  : "Archive Lens unlocked in History."
+                  : id === "offline-roller"
+                    ? "Offline Roller is ready for your next break."
+                    : "Archive Lens unlocked in History."
                 : "Upgrade purchased. Applies to your next roll."
             : "Appearance updated.",
         );
@@ -120,7 +129,12 @@ export default function Shop({
         >
           {aura ? (
             <>
-              <NumberBox value="??????" tier="rare" aura={item.id} compact />
+              <NumberBox
+                value="??????"
+                tier={previewTier}
+                aura={item.id}
+                compact
+              />
               <Icon size={21} />
             </>
           ) : item.kind === "utility" ? (
@@ -130,7 +144,9 @@ export default function Shop({
               <small>
                 {item.id === "auto-roll"
                   ? "ENABLE · ROLL · REPEAT"
-                  : "SEARCH · FILTER · DISCOVER"}
+                  : item.id === "offline-roller"
+                    ? "10 MIN / ROLL · 24H CAP"
+                    : "SEARCH · FILTER · DISCOVER"}
               </small>
             </>
           ) : (
@@ -161,13 +177,21 @@ export default function Shop({
               pending ||
               equipped ||
               (owned && !aura) ||
-              (!owned && (!affordable || requires))
+              (!owned &&
+                !(item.requiresProfile && !progress.profile) &&
+                (!affordable || requires))
             }
             onClick={() =>
-              owned ? perform("equip", item.id) : setSelected(item)
+              item.requiresProfile && !progress.profile
+                ? openSignup()
+                : owned
+                  ? perform("equip", item.id)
+                  : setSelected(item)
             }
           >
-            {equipped ? (
+            {item.requiresProfile && !progress.profile ? (
+              "Sign up to unlock"
+            ) : equipped ? (
               <>
                 <Check size={14} /> Equipped
               </>
@@ -184,21 +208,25 @@ export default function Shop({
             )}
           </button>
           <small className="shop-item-note">
-            {requires
-              ? `Requires ${productById.get(item.requires).name}`
-              : !owned && !affordable
-                ? `${formatEP(item.price - progress.balance)} more EP needed`
-                : owned
-                  ? aura
-                    ? "Equip whenever you like."
-                    : item.kind === "utility"
-                      ? item.id === "auto-roll"
-                        ? "Enable on the Roll page."
-                        : "Unlocked in History."
-                      : "Maximum level reached."
-                  : aura
-                    ? "One-time cosmetic purchase"
-                    : "One-time unlock · same odds and scores"}
+            {item.requiresProfile && !progress.profile
+              ? "Offline progress needs a saved local profile."
+              : requires
+                ? `Requires ${productById.get(item.requires).name}`
+                : !owned && !affordable
+                  ? `${formatEP(item.price - progress.balance)} more EP needed`
+                  : owned
+                    ? aura
+                      ? "Equip whenever you like."
+                      : item.kind === "utility"
+                        ? item.id === "auto-roll"
+                          ? "Enable on the Roll page."
+                          : item.id === "offline-roller"
+                            ? "Ready · one roll per 10 minutes away."
+                            : "Unlocked in History."
+                        : "Maximum level reached."
+                    : aura
+                      ? "One-time cosmetic purchase"
+                      : "One-time unlock · same odds and scores"}
           </small>
         </div>
       </article>
@@ -294,6 +322,34 @@ export default function Shop({
             )}
           </button>
         </div>
+        <div className="aura-preview-controls">
+          <label>
+            Preview rarity{" "}
+            <select
+              aria-label="Cosmetic preview rarity"
+              value={previewTier}
+              onChange={(e) => setPreviewTier(e.target.value)}
+            >
+              {[
+                "common",
+                "uncommon",
+                "rare",
+                "epic",
+                "anomaly",
+                "mythic",
+                "godly",
+              ].map((t) => (
+                <option key={t} value={t}>
+                  {t.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span>
+            Same rarity. Your signature look. Existing owners get the upgraded
+            effects free.
+          </span>
+        </div>
         <div className="shop-grid">
           {shopProducts.filter((item) => item.kind === "aura").map(card)}
         </div>
@@ -356,7 +412,9 @@ export default function Shop({
                 : selected.kind === "utility"
                   ? selected.id === "auto-roll"
                     ? "unlocks the Auto-Roll switch on the Roll page. It starts off and never skips the reveal or cooldown."
-                    : "unlocks advanced history search immediately."
+                    : selected.id === "offline-roller"
+                      ? "unlocks offline earnings: one normal roll per 10 minutes away, up to 144 rolls per absence. Calculated automatically on return; a local profile is required."
+                      : "unlocks advanced history search immediately."
                   : "applies the upgrade to future rolls."}
             </p>
             {!progress.profile && (

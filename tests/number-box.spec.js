@@ -30,7 +30,7 @@ test("shared number boxes cover the idle generator and cosmetic previews without
     .getByRole("navigation")
     .getByRole("button", { name: "Shop", exact: true })
     .click();
-  await expect(page.locator(".aura-preview .number-box")).toHaveCount(5);
+  await expect(page.locator(".aura-preview .number-box")).toHaveCount(7);
   for (const id of ["starfall", "aurora", "orbit"]) {
     const box = page.locator(`[data-product="${id}"] .number-box`);
     await expect(box).toHaveAttribute("data-cosmetic", id);
@@ -166,7 +166,7 @@ test("all shop prices are five times the prior prices without changing permanent
     aurora: 100000,
     orbit: 500000,
   };
-  expect(shopProducts).toHaveLength(13);
+  expect(shopProducts).toHaveLength(16);
   for (const product of shopProducts.filter((p) => old[p.id]))
     expect(product.price).toBe(old[product.id] * 5);
 });

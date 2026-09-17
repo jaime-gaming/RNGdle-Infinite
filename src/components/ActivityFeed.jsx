@@ -12,7 +12,7 @@ import { badges } from "../badges";
 import { formatEP } from "../roll-data";
 import "../activity.css";
 const byId = new Map(badges.map((b) => [b.canonicalId, b]));
-const filters = ["All activity", "Rolls", "Badge unlocks", "Shop"];
+const filters = ["All activity", "Rolls", "Badge unlocks", "Shop", "Offline"];
 function BadgeList({ ids, openBadge }) {
   return (
     <div className="activity-badges">
@@ -52,6 +52,7 @@ export default function ActivityFeed({
           (e) =>
             filter === "All activity" ||
             (filter === "Rolls" && e.type === "roll") ||
+            (filter === "Offline" && e.source === "offline") ||
             (filter === "Badge unlocks" && e.type === "unlock") ||
             (filter === "Shop" && ["purchase", "equip"].includes(e.type)),
         )
@@ -230,7 +231,9 @@ export default function ActivityFeed({
                 <div className="activity-event-heading">
                   <h2>
                     {event.type === "roll"
-                      ? "Roll completed"
+                      ? event.source === "offline"
+                        ? "Offline roll completed"
+                        : "Roll completed"
                       : event.type === "unlock"
                         ? `${event.badges.length} new badge${event.badges.length === 1 ? "" : "s"} unlocked`
                         : event.type === "purchase"

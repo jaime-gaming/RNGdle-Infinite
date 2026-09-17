@@ -19,6 +19,8 @@ const cosmetics = new Set([
   "orbit",
   "frostglass",
   "emberwake",
+  "eclipse",
+  "prism",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [
@@ -79,6 +81,9 @@ export default function NumberBox({
       {cosmetic !== "none" && (
         <span className="box-cosmetic" aria-hidden="true">
           <span className="box-halo" />
+          <span className="box-ornament">
+            <span className="aura-trace" />
+          </span>
           <span className="box-ribbon" />
           <span className="box-comet" />
           <span className="box-particles">

@@ -435,3 +435,186 @@ button.number-box.number-box:hover {
     opacity: 0.8;
   }
 }
+
+/* Second-generation aura details. All layers stay behind the number's ink. */
+.box-ornament,
+.aura-trace {
+  position: absolute;
+  inset: -7px;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.box-ornament {
+  z-index: 1;
+}
+.box-ornament::before,
+.box-ornament::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.number-box[data-cosmetic="starfall"] .box-ornament {
+  border: 1px dashed #eab30860;
+  box-shadow: 0 0 18px #fbbf2420;
+  animation: aura-drift 7s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="starfall"] .box-ornament::after {
+  inset: 5px;
+  border-radius: inherit;
+  border-top: 1px solid #fff3c4;
+  opacity: 0.7;
+}
+.number-box[data-cosmetic="starfall"] .box-particles i {
+  filter: drop-shadow(0 0 3px #eab308);
+}
+.number-box[data-cosmetic="aurora"] .box-ornament {
+  inset: -10px;
+  background: linear-gradient(135deg, #10b98125, transparent 35%, #a78bfa33);
+  filter: blur(7px);
+  animation: aura-drift 6s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="aurora"] .aura-trace {
+  inset: 2px;
+  border: 1px solid #a7f3d070;
+  border-left-color: transparent;
+  border-right-color: #c4b5fd;
+}
+.number-box[data-cosmetic="orbit"] .box-ornament {
+  inset: -15px -7px;
+  border: 1px solid #f472b670;
+  border-radius: 50%;
+  transform: rotate(22deg);
+  animation: box-orbit 14s ease-in-out infinite alternate-reverse;
+}
+.number-box[data-cosmetic="orbit"] .box-ornament::before {
+  width: 5px;
+  height: 5px;
+  left: 15%;
+  top: 8%;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 6px #f472b6,
+    0 0 12px #a78bfa;
+}
+.number-box[data-cosmetic="frostglass"] .box-ornament {
+  inset: -5px;
+  border: 1px solid #a5f3fcaa;
+  box-shadow:
+    inset 0 0 8px #67e8f930,
+    0 0 14px #38bdf830;
+  clip-path: polygon(
+    0 15%,
+    15% 0,
+    85% 0,
+    100% 15%,
+    100% 85%,
+    85% 100%,
+    15% 100%,
+    0 85%
+  );
+}
+.number-box[data-cosmetic="frostglass"] .aura-trace {
+  inset: 3px;
+  background: linear-gradient(
+    120deg,
+    transparent 40%,
+    #ecfeff70 50%,
+    transparent 60%
+  );
+  background-size: 220% 100%;
+  animation: box-sweep 8s ease-in-out infinite;
+}
+.number-box[data-cosmetic="emberwake"] .box-ornament {
+  inset: -5px;
+  border-bottom: 2px solid #fb923caa;
+  box-shadow: 0 5px 16px #ea580c40;
+  animation: box-halo-pulse 4s ease-in-out infinite;
+}
+.number-box[data-cosmetic="emberwake"] .aura-trace {
+  inset: 1px;
+  background: linear-gradient(to top, #fb923c33, transparent 45%);
+}
+.number-box[data-cosmetic="eclipse"] .box-halo {
+  display: block;
+  inset: -17px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    transparent 48%,
+    #0f172a88 50%,
+    #fbbf2490 60%,
+    transparent 74%
+  );
+  filter: blur(5px);
+  animation: box-halo-pulse 6s ease-in-out infinite;
+}
+.number-box[data-cosmetic="eclipse"] .box-ornament {
+  inset: -9px -14px;
+  border-radius: 50%;
+  border: 1px solid #fbbf2477;
+  border-top: 2px solid #fde68a;
+  animation: box-orbit 10s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="eclipse"] .aura-trace {
+  inset: 5px -3px;
+  border-radius: 50%;
+  border-bottom: 1px solid #a78bfa;
+  transform: rotate(-25deg);
+}
+.number-box[data-cosmetic="eclipse"] .box-particles i {
+  background: #fde68a;
+  filter: drop-shadow(0 0 3px #f59e0b);
+}
+.number-box[data-cosmetic="prism"] .box-halo {
+  display: block;
+  inset: -16px;
+  z-index: -1;
+  background: conic-gradient(
+    #fb718580,
+    #c084fc88,
+    #38bdf888,
+    #34d39980,
+    #fbbf2488,
+    #fb718580
+  );
+  border-radius: 50%;
+  filter: blur(10px);
+  opacity: 0.5;
+  animation: box-aurora 8s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="prism"] .box-ornament {
+  inset: -6px;
+  border: 1px solid #c084fcaa;
+  transform: rotate(3deg);
+  animation: aura-drift 7s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="prism"] .aura-trace {
+  inset: -4px;
+  border: 1px solid #67e8f9aa;
+  transform: rotate(-6deg);
+}
+.number-box[data-cosmetic="prism"] .box-ornament::after {
+  inset: 3px;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    #ffffff60 50%,
+    transparent 70%
+  );
+  background-size: 220% 100%;
+  animation: box-sweep 6s ease-in-out infinite;
+}
+.number-box[data-cosmetic="prism"] .box-particles i {
+  background: #e9d5ff;
+  filter: drop-shadow(0 0 2px #38bdf8);
+}
+@keyframes aura-drift {
+  from {
+    transform: translateY(-2px) rotate(-2deg);
+  }
+  to {
+    transform: translateY(2px) rotate(2deg);
+  }
+}

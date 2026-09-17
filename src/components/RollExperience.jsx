@@ -202,10 +202,12 @@ export default function RollExperience({
       ),
     [result, groups, run?.rollMS],
   );
-  const awaitingSettlement =
+  const runSettled =
     !!run &&
-    session.pendingRoll?.id === run.id &&
-    !session.receipts.includes(run.id);
+    (session.receipts.includes(run.id) ||
+      session.history.some((e) => e.type === "roll" && e.id === run.id));
+  const awaitingSettlement =
+    !!run && session.pendingRoll?.id === run.id && !runSettled;
   const busy = !!run && elapsed < timeline.end;
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
@@ -228,6 +230,7 @@ export default function RollExperience({
       busy ||
       cooldown > 0 ||
       awaitingSettlement ||
+      session.offline?.batch ||
       session.pendingRoll
     )
       return;
@@ -246,6 +249,7 @@ export default function RollExperience({
     cooldown,
     awaitingSettlement,
     session.pendingRoll,
+    session.offline?.batch,
     error,
     settleError,
   ]);
@@ -332,6 +336,7 @@ export default function RollExperience({
       busy ||
       settleError ||
       awaitingSettlement ||
+      session.offline?.batch ||
       gameNow() < Math.max(session.cooldownUntil, localCooldown.current)
     )
       return;
@@ -429,7 +434,7 @@ export default function RollExperience({
     <div
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
       style={{ "--reveal-scale": timeline.scale }}
-      data-settled={!!run && session.receipts.includes(run.id)}
+      data-settled={!!run && runSettled}
       data-phase={
         !run ? "idle" : !digitsDone ? "digits" : busy ? "badges" : "complete"
       }
@@ -475,7 +480,9 @@ export default function RollExperience({
           <button
             ref={generateButton}
             className={`generate ${cooldown || loading || drawing ? "cooling" : ""}`}
-            disabled={loading || drawing || cooldown > 0}
+            disabled={
+              loading || drawing || cooldown > 0 || !!session.offline?.batch
+            }
             onClick={generate}
           >
             {loading
@@ -565,8 +572,7 @@ export default function RollExperience({
                       <AnimatedCount
                         value={
                           session.balance +
-                          (elapsed >= timeline.sessionCount &&
-                          !session.receipts.includes(run.id)
+                          (elapsed >= timeline.sessionCount && !runSettled
                             ? result.totalEP
                             : 0)
                         }
@@ -626,6 +632,7 @@ export default function RollExperience({
                   busy ||
                   cooldown > 0 ||
                   awaitingSettlement ||
+                  !!session.offline?.batch ||
                   !!settleError
                 }
                 onClick={generate}

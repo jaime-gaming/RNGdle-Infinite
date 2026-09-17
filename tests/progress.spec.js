@@ -30,7 +30,12 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   expect(() =>
     applyProgress(emptyProgress(), { type: "equip", id: "orbit" }),
   ).toThrow("Purchase");
-  let state = earned;
+  let state = applyProgress(earned, {
+    type: "register",
+    id: "shop-test",
+    username: "ShopTester",
+    createdAt: 1000,
+  });
   for (const item of shopProducts) {
     const before = state.balance;
     state = applyProgress(state, { type: "buy", id: item.id });
