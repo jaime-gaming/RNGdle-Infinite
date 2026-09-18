@@ -388,7 +388,7 @@ test("failed settlement is merged with later cross-tab spending rather than over
   });
   await buy(page, "clockwork-1");
   const after = await saved(page);
-  expect(after.balance).toBe(329663);
+  expect(after.balance).toBe(394663);
   expect(after.owned).toEqual(["flywheel", "starfall", "clockwork-1"]);
   expect(after.flywheelCharge).toBe(4);
   expect(after.history.filter((e) => e.type === "roll")).toHaveLength(1);

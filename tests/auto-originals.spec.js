@@ -305,7 +305,7 @@ test("Auto-Roll uses purchased timings and Last Second appears in the actual bad
   const owned = [
     "auto-roll",
     ...shopProducts
-      .filter((p) => ["roll", "cooldown"].includes(p.kind))
+      .filter((p) => ["roll", "cooldown"].includes(p.kind) && !p.lateGame)
       .map((p) => p.id),
   ];
   await seedProgress(page, { owned });

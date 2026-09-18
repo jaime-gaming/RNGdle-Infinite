@@ -161,7 +161,7 @@ test("Flywheel migration validates charge and zero-cooldown snapshots without re
 test("two complete Flywheel cycles require four distinct eligible completions each, never offline or pre-purchase rolls", () => {
   let p = { ...emptyProgress(), balance: 1000000, totalEarned: 1000000 };
   p = applyProgress(p, { type: "buy", id: "flywheel" });
-  expect(p.balance).toBe(0);
+  expect(p.balance).toBe(400000);
   expect(p.equipped).toBe("none");
   expect(p.flywheelCharge).toBe(0);
   for (let n = 0; n < 10; n++) {
@@ -178,7 +178,7 @@ test("two complete Flywheel cycles require four distinct eligible completions ea
     expect(applyProgress(p, complete(id))).toBe(p);
     p = parseProgress(JSON.stringify(p));
   }
-  expect(p.balance).toBe(46630);
+  expect(p.balance).toBe(446630);
   expect(rolls(p)).toHaveLength(10);
   expect(rolls(p).filter((e) => e.flywheel === "boost")).toHaveLength(2);
   p = { ...p, pendingRoll: pending("before-buy", null) };
@@ -388,7 +388,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#shop");
   const card = page.locator('[data-product="flywheel"]');
-  await expect(card).toContainText("1,000,000 EP");
+  await expect(card).toContainText("600,000 EP");
   await card.getByRole("button").click();
   await expect(page.getByRole("dialog")).toContainText("zero charge");
   await page
@@ -396,7 +396,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   const p = await saved(page);
-  expect(p.balance).toBe(0);
+  expect(p.balance).toBe(400000);
   expect(p.equipped).toBe("starfall");
   expect(p.flywheelCharge).toBe(0);
   await expect(page.getByTestId("roll-duration")).toHaveText("45s");
@@ -506,7 +506,7 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
   await settled(page);
   const after = await saved(page);
   expect(after.flywheelCharge).toBe(0);
-  expect(after.balance).toBe(4663);
+  expect(after.balance).toBe(404663);
   expect(after.cooldownUntil).toBe(before.cooldownUntil);
   await expect(page.locator(".generate")).toBeDisabled();
 });

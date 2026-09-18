@@ -3,7 +3,12 @@ import fs from "node:fs";
 import { gunzipSync } from "node:zlib";
 import manifest from "../src/data/game-index.json" with { type: "json" };
 import { originalsByNumber } from "../src/infinite-badges.js";
-import { shopProducts } from "../src/shop-data.js";
+import { flywheelRequired } from "../src/flywheel.js";
+import {
+  shopProducts,
+  rollSettings,
+  offlineSettings,
+} from "../src/shop-data.js";
 const buffer = gunzipSync(
   fs.readFileSync(new URL("../public/data/ep-table.bin.gz", import.meta.url)),
 );
@@ -39,6 +44,81 @@ console.log(
         priceEP: p.price,
         medianRollEquivalents: Math.ceil(p.price / median),
       })),
+      onlineCadence: [
+        { stage: "Base", owned: [] },
+        { stage: "First useful pair", owned: ["quickwind-1", "clockwork-1"] },
+        {
+          stage: "Previous pace ceiling",
+          owned: [
+            "quickwind-1",
+            "quickwind-2",
+            "quickwind-3",
+            "clockwork-1",
+            "clockwork-2",
+            "clockwork-3",
+            "flywheel",
+          ],
+        },
+        {
+          stage: "Late workshop",
+          owned: [
+            "quickwind-1",
+            "quickwind-2",
+            "quickwind-3",
+            "clockwork-1",
+            "clockwork-2",
+            "clockwork-3",
+            "clockwork-4",
+            "flywheel",
+            "flywheel-2",
+          ],
+        },
+        {
+          stage: "Final online pace",
+          owned: shopProducts
+            .filter((p) => ["roll", "cooldown", "pace"].includes(p.kind))
+            .map((p) => p.id),
+        },
+      ].map(({ stage, owned }) => {
+        const { rollMS, cooldownMS } = rollSettings(owned),
+          charges = flywheelRequired(owned);
+        const averageCycleSeconds =
+          (rollMS +
+            cooldownMS *
+              (owned.includes("flywheel") ? charges / (charges + 1) : 1)) /
+          1000;
+        return {
+          stage,
+          priceEP: shopProducts
+            .filter((p) => owned.includes(p.id))
+            .reduce((s, p) => s + p.price, 0),
+          averageCycleSeconds,
+          idealRollsPerHour: 3600 / averageCycleSeconds,
+        };
+      }),
+      offlineCadence: [
+        [],
+        ["offline-clock-1"],
+        ["offline-clock-1", "offline-clock-2"],
+      ].map((upgrades) => {
+        const owned = ["offline-roller", ...upgrades],
+          { intervalMS } = offlineSettings(owned);
+        return {
+          stage: upgrades.at(-1) ?? "offline-roller",
+          priceEP: shopProducts
+            .filter((p) => owned.includes(p.id))
+            .reduce((s, p) => s + p.price, 0),
+          intervalMinutes: intervalMS / 60000,
+          rollsAfter8Hours: Math.min(
+            144,
+            Math.floor((8 * 3600000) / intervalMS),
+          ),
+          hoursTo144: (144 * intervalMS) / 3600000,
+          rollsAfter24Hours: 144,
+        };
+      }),
+      cadenceNote:
+        "Online cadence averages complete Flywheel cycles without user or processing delays. Offline upgrades fill the same per-absence cap sooner; a single daily return still pays at most 144 rolls.",
       note: "Median-roll equivalents compare prices; they are not expected waiting times. Independent rolls can repeat. Jackpot-heavy averages are not guaranteed income.",
     },
     null,

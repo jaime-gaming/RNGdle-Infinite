@@ -36,6 +36,9 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
     username: "ShopTester",
     createdAt: 1000,
   });
+  // The expanded workshop costs more than this one jackpot. Fund it with a
+  // second ordinary credited result, not an artificial negative wallet.
+  state = applyProgress(state, { ...action, id: "second-test-roll" });
   for (const item of shopProducts) {
     const before = state.balance;
     state = applyProgress(state, { type: "buy", id: item.id });
@@ -54,7 +57,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   }
   const reset = applyProgress(state, { type: "equip", id: "none" });
   expect(reset.balance).toBe(state.balance);
-  expect(reset.totalEarned).toBe(result.totalEP);
+  expect(reset.totalEarned).toBe(2 * result.totalEP);
   expect(reset.equipped).toBe("none");
 });
 

@@ -62,8 +62,8 @@ test("fixed reveal duration preserves choreography across digit counts, badge co
 test("upgrade tiers require predecessors, deduct once and never equip as an aura", () => {
   let state = {
     ...emptyProgress(),
-    balance: 15000000,
-    totalEarned: 15000000,
+    balance: 50000000,
+    totalEarned: 50000000,
     owned: ["starfall"],
     equipped: "starfall",
   };
@@ -90,7 +90,7 @@ test("upgrade tiers require predecessors, deduct once and never equip as an aura
   }
   expect(rollSettings(state.owned)).toEqual({
     rollMS: 15000,
-    cooldownMS: 15000,
+    cooldownMS: 5000,
   });
   const parsed = parseProgress(
     JSON.stringify({
@@ -137,7 +137,7 @@ test("signup saves existing guest rewards, purchases, discoveries, equipment and
   ).toBeVisible();
   const p = await saved(page);
   expect(p.profile.username).toBe("Lucky_Player");
-  expect(p.balance).toBe(99677458);
+  expect(p.balance).toBe(99782458);
   expect(p.totalEarned).toBe(100177458);
   expect(p.discovered).toHaveLength(17);
   expect(p.owned).toEqual(["quickwind-1", "clockwork-1", "aurora"]);
@@ -245,7 +245,7 @@ test("base reveal completes at forty-five seconds, then waits a full sixty secon
   ).toBeEnabled();
 });
 
-test("maximum upgrades produce a fifteen-second reveal and fifteen-second cooldown after reload", async ({
+test("the first three tiers produce a fifteen-second reveal and fifteen-second cooldown after reload", async ({
   page,
 }) => {
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
@@ -256,11 +256,11 @@ test("maximum upgrades produce a fifteen-second reveal and fifteen-second cooldo
   await expect(page.locator('[data-product="clockwork-3"] button')).toHaveCount(
     0,
   );
-  for (const p of shopProducts.filter((p) =>
-    ["roll", "cooldown"].includes(p.kind),
+  for (const p of shopProducts.filter(
+    (p) => ["roll", "cooldown"].includes(p.kind) && !p.lateGame,
   ))
     await buy(page, p.id);
-  expect((await saved(page)).balance).toBe(10150000);
+  expect((await saved(page)).balance).toBe(11730000);
   expect((await saved(page)).equipped).toBe("none");
   await page.reload();
   await expect(page.getByTestId("roll-duration")).toHaveText("15s");

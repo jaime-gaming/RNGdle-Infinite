@@ -14,7 +14,7 @@ export function parseCooldownWindow(value, deadline, pending) {
     candidate.startsAt < 0 ||
     !Number.isSafeInteger(candidate.endsAt) ||
     candidate.endsAt !== deadline ||
-    ![0, 15000, 30000, 45000, 60000].includes(
+    ![0, 5000, 10000, 15000, 30000, 45000, 60000].includes(
       candidate.endsAt - candidate.startsAt,
     )
   )

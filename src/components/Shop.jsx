@@ -23,6 +23,7 @@ import {
   shopProducts,
   productById,
   rollSettings,
+  offlineSettings,
   formatDuration,
   nextUpgrade,
 } from "../shop-data";
@@ -32,6 +33,7 @@ import {
   recommendedGoal,
 } from "../gameplay-loop.js";
 import "../progress-links.css";
+import { flywheelRequired } from "../flywheel.js";
 import NumberBox from "./NumberBox";
 import { formatEP } from "../roll-data";
 const icons = {
@@ -67,6 +69,8 @@ export default function Shop({
     returnFocus = useRef(null),
     returnKind = useRef(null);
   const settings = rollSettings(progress.owned);
+  const offlineInterval = offlineSettings(progress.owned).intervalMS;
+  const charges = flywheelRequired(progress.owned);
   const goal = currentGoal(progress),
     suggested = recommendedGoal(progress),
     choices = availableGoals(progress);
@@ -167,9 +171,19 @@ export default function Shop({
             <>
               <Icon size={28} />
               <span>
-                <b>4</b> rolls <small>→</small> charged
+                <b>{item.charges}</b> {item.charges === 1 ? "roll" : "rolls"}{" "}
+                <small>→</small> charged
               </span>
               <small>NEXT ROLL · ZERO COOLDOWN</small>
+            </>
+          ) : item.kind === "offline" ? (
+            <>
+              <Icon size={25} />
+              <span>
+                {item.from / 60000} min <small>→</small>{" "}
+                <b>{item.value / 60000} min</b>
+              </span>
+              <small>OFFLINE INTERVAL · SAME 144-ROLL CAP</small>
             </>
           ) : item.kind === "utility" ? (
             <>
@@ -179,7 +193,7 @@ export default function Shop({
                 {item.id === "auto-roll"
                   ? "ENABLE · ROLL · REPEAT"
                   : item.id === "offline-roller"
-                    ? "10 MIN / ROLL · 24H CAP"
+                    ? `${owned ? offlineInterval / 60000 : 10} MIN / ROLL · 144 MAX`
                     : "SEARCH · FILTER · DISCOVER"}
               </small>
             </>
@@ -200,7 +214,11 @@ export default function Shop({
             <h3>{item.name}</h3>
             <span>{equipped ? "Equipped" : owned ? "Owned" : "Permanent"}</span>
           </div>
-          <p>{item.description}</p>
+          <p>
+            {item.id === "offline-roller" && owned
+              ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum 144 rolls per absence; unused fractions do not carry over.`
+              : item.description}
+          </p>
           <div className="shop-price">
             <Coins size={15} />
             {formatEP(item.price)} EP
@@ -255,10 +273,10 @@ export default function Shop({
                         ? item.id === "auto-roll"
                           ? "Enable on the Roll page."
                           : item.id === "offline-roller"
-                            ? "Ready · one roll per 10 minutes away."
+                            ? `Ready · one roll per ${offlineInterval / 60000} minutes away.`
                             : "Unlocked in History."
                         : item.kind === "pace"
-                          ? `${progress.flywheelCharge ?? 0} / 4 charges · applies automatically.`
+                          ? `${progress.flywheelCharge ?? 0} / ${charges} charges · applies automatically.`
                           : "Maximum level reached."
                     : aura
                       ? "One-time cosmetic purchase"
@@ -354,7 +372,7 @@ export default function Shop({
           {["roll", "cooldown"].map((kind) =>
             card(nextUpgrade(progress.owned, kind)),
           )}
-          {card(productById.get("flywheel"))}
+          {card(nextUpgrade(progress.owned, "pace"))}
         </div>
       </section>
       {lastPurchase && (
@@ -445,6 +463,22 @@ export default function Shop({
           {shopProducts.filter((p) => p.kind === "utility").map(card)}
         </div>
       </section>
+      {progress.owned.includes("offline-roller") && (
+        <section className="shop-category">
+          <div className="shop-section-heading">
+            <div>
+              <h2>Offline upgrades</h2>
+              <p>
+                Fill the same offline allowance sooner. Maximum 144 rolls per
+                absence.
+              </p>
+            </div>
+          </div>
+          <div className="shop-grid">
+            {card(nextUpgrade(progress.owned, "offline"))}
+          </div>
+        </section>
+      )}
       <p className="shop-save-note">
         {progress.profile
           ? `Saved locally as ${progress.profile.username}. Clearing site data removes your profile and progress.`
@@ -493,8 +527,10 @@ export default function Shop({
                       ? "unlocks offline earnings: one normal roll per 10 minutes away, up to 144 rolls per absence. Calculated automatically on return; a local profile is required."
                       : "unlocks advanced history search immediately."
                   : selected.kind === "pace"
-                    ? "starts your Flywheel at zero charge. Four completed online rolls charge a fifth roll with no cooldown. Its reveal and EP are unchanged."
-                    : "applies the upgrade to future rolls."}
+                    ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge. Earned charge carries over up to this limit; a new Flywheel starts at zero charge. Reveals and scores are unchanged.`
+                    : selected.kind === "offline"
+                      ? `sets future offline earnings to one ordinary roll per ${selected.value / 60000} minutes. Maximum 144 per absence. No retroactive rewards; committed batches must finish first.`
+                      : "applies the upgrade to future rolls."}
             </p>
             {!progress.profile && (
               <p className="guest-purchase-note">

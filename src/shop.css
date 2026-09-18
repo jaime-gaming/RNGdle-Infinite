@@ -483,3 +483,12 @@ nav button:disabled,
     grid-template-columns: 1fr;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-card {
+    transition: none;
+  }
+  .shop-card:hover {
+    transform: none;
+  }
+}
