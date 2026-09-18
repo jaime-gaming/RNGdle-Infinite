@@ -10,6 +10,7 @@ import {
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
 import { flywheelForDraw } from "./flywheel.js";
+import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings } from "./shop-data.js";
 import {
   offlinePlan,
@@ -36,6 +37,11 @@ function load() {
         progress.cooldownUntil = Math.max(
           progress.cooldownUntil,
           guard.cooldownUntil,
+        );
+        progress.cooldownWindow = parseCooldownWindow(
+          guard.cooldownWindow,
+          progress.cooldownUntil,
+          progress.pendingRoll,
         );
       }
     }
@@ -71,7 +77,11 @@ export function useProgress() {
       if (!current.current.profile) return;
       try {
         const next = parseProgress(localStorage.getItem(PROGRESS_KEY));
-        if (next.profile?.id !== current.current.profile.id) reset(next);
+        if (
+          next.profile?.id !== current.current.profile.id ||
+          next.rebirths !== current.current.rebirths
+        )
+          reset(next);
         else {
           const merged = healthy.current
             ? next
@@ -112,12 +122,15 @@ export function useProgress() {
             const stored = parseProgress(localStorage.getItem(PROGRESS_KEY));
             // Always check identity, even after a failed write: a stale tab must
             // never resurrect a deleted account or spend another profile's EP.
-            if (stored.profile?.id !== previous.profile.id) {
+            if (
+              stored.profile?.id !== previous.profile.id ||
+              stored.rebirths !== previous.rebirths
+            ) {
               reset(stored);
               return {
                 ok: false,
                 message:
-                  "The local account changed. The previous action was cancelled.",
+                  "The account or rebirth cycle changed. The previous action was cancelled.",
               };
             }
             previous = healthy.current
@@ -128,6 +141,14 @@ export function useProgress() {
             healthy.current = false;
           }
         }
+        if (
+          action.type === "rebirth" &&
+          previous.profile &&
+          (!readable || !navigator.locks?.request)
+        )
+          throw new Error(
+            "Rebirth requires working local storage and Web Locks support.",
+          );
         if (action.type === "delete") {
           if (!previous.profile || previous.profile.id !== action.profileId)
             return { ok: false, message: "This account is no longer active." };
@@ -332,6 +353,10 @@ export function useProgress() {
             ...previous,
             pendingRoll,
             ...(flywheel === "boost" ? { flywheelCharge: 0 } : {}),
+            cooldownWindow: {
+              startsAt: pendingRoll.startedAt + timing.rollMS,
+              endsAt: pendingRoll.startedAt + timing.rollMS + timing.cooldownMS,
+            },
             cooldownUntil:
               pendingRoll.startedAt + timing.rollMS + timing.cooldownMS,
           };
@@ -374,7 +399,10 @@ export function useProgress() {
             if (!readable) throw new Error("Unreadable storage");
             if (previous.profile) {
               const latest = parseProgress(localStorage.getItem(PROGRESS_KEY));
-              if (latest.profile?.id !== previous.profile.id) {
+              if (
+                latest.profile?.id !== previous.profile.id ||
+                latest.rebirths !== previous.rebirths
+              ) {
                 reset(latest);
                 return {
                   ok: false,
@@ -394,22 +422,25 @@ export function useProgress() {
             if (action.type !== "complete")
               return {
                 ok: false,
-                message: action.type.startsWith("offline-")
-                  ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
-                  : action.type === "register"
-                    ? "Sign-up could not be saved. Your guest progress is still available in this tab."
-                    : action.type === "draw"
-                      ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
-                      : action.type === "goal"
-                        ? "Your goal could not be saved. Your previous goal and EP are unchanged."
-                        : "Purchase or equipment change not saved. Your EP has not been spent.",
+                message:
+                  action.type === "rebirth"
+                    ? "Rebirth could not be saved. Your progress has not been reset."
+                    : action.type.startsWith("offline-")
+                      ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
+                      : action.type === "register"
+                        ? "Sign-up could not be saved. Your guest progress is still available in this tab."
+                        : action.type === "draw"
+                          ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
+                          : action.type === "goal"
+                            ? "Your goal could not be saved. Your previous goal and EP are unchanged."
+                            : "Purchase or equipment change not saved. Your EP has not been spent.",
               };
           }
         }
         if (
           next !== previous &&
           !next.profile &&
-          ["draw", "complete"].includes(action.type)
+          ["draw", "complete", "rebirth"].includes(action.type)
         ) {
           try {
             sessionStorage.setItem(
@@ -417,14 +448,17 @@ export function useProgress() {
               JSON.stringify({
                 pendingRoll: next.pendingRoll,
                 cooldownUntil: next.cooldownUntil,
+                cooldownWindow: next.cooldownWindow,
               }),
             );
           } catch {
-            if (action.type === "draw")
+            if (action.type === "draw" || action.type === "rebirth")
               return {
                 ok: false,
                 message:
-                  "Temporary roll storage is unavailable. No number was revealed. Allow browser storage to roll.",
+                  action.type === "rebirth"
+                    ? "Rebirth could not update session storage. Your progress has not been reset."
+                    : "Temporary roll storage is unavailable. No number was revealed. Allow browser storage to roll.",
               };
             setWarning(
               "The temporary roll guard could not be updated. Keep this tab open until the cooldown finishes.",
@@ -435,6 +469,13 @@ export function useProgress() {
           try {
             sessionStorage.removeItem(GUEST_ROLL_KEY);
           } catch {}
+        }
+        if (action.type === "rebirth") {
+          try {
+            if (previous.profile) clearPresence(previous.profile.id);
+          } catch {}
+          reset(next);
+          return { ok: true };
         }
         current.current = next;
         setProgress(next);

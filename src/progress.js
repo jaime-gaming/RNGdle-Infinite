@@ -2,6 +2,8 @@ import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import { productById } from "./shop-data.js";
 import { FLYWHEEL_CHARGES, flywheelAfterSettlement } from "./flywheel.js";
 import { validGoal } from "./gameplay-loop.js";
+import { rebirthBlocker } from "./rebirth.js";
+import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 const badgeIds = new Set(metadata.map((b) => b.id));
@@ -22,6 +24,8 @@ export function emptyProgress() {
     offline: null,
     flywheelCharge: 0,
     goalId: null,
+    rebirths: 0,
+    cooldownWindow: null,
   };
 }
 export function parseProgress(raw) {
@@ -54,6 +58,9 @@ export function parseProgress(raw) {
     (!validAmount(p.flywheelCharge) || p.flywheelCharge > FLYWHEEL_CHARGES)
   )
     throw new Error("Invalid Flywheel charge");
+  if (p.rebirths != null && !validAmount(p.rebirths))
+    throw new Error("Invalid rebirth count");
+  const pendingRoll = parsePending(p.pendingRoll);
   let profile = null;
   if (p.profile != null) {
     if (
@@ -72,7 +79,13 @@ export function parseProgress(raw) {
   return {
     version: 1,
     history: parseHistory(p.history),
-    pendingRoll: parsePending(p.pendingRoll),
+    pendingRoll,
+    cooldownWindow: parseCooldownWindow(
+      p.cooldownWindow,
+      p.cooldownUntil,
+      pendingRoll,
+    ),
+    rebirths: p.rebirths ?? 0,
     offline: parseOffline(p.offline, owned),
     flywheelCharge: owned.includes("flywheel") ? (p.flywheelCharge ?? 0) : 0,
     profile,
@@ -97,6 +110,34 @@ export function validUsername(value) {
   return typeof value === "string" && /^[\p{L}\p{N}_-]{3,20}$/u.test(value);
 }
 export function applyProgress(state, action) {
+  if (action.type === "rebirth") {
+    const count = state.rebirths ?? 0;
+    if (action.expectedRebirths !== count)
+      throw new Error(
+        "This rebirth belongs to an older cycle. Reload and try again.",
+      );
+    const now = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(now) || now > 8640000000000000)
+      throw new Error("Invalid rebirth time");
+    const blocked = rebirthBlocker(state, now);
+    if (blocked) throw new Error(blocked);
+    if (!validAmount(count + 1))
+      throw new Error("Rebirth count limit reached.");
+    return {
+      ...emptyProgress(),
+      profile: state.profile,
+      rebirths: count + 1,
+      history: [
+        ...state.history,
+        {
+          id: action.eventId ?? `rebirth:${count + 1}`,
+          type: "rebirth",
+          at: now,
+          count: count + 1,
+        },
+      ],
+    };
+  }
   if (action.type === "goal") {
     if (action.id !== null && !validGoal(action.id, state.owned))
       throw new Error(
@@ -220,7 +261,9 @@ export function applyProgress(state, action) {
       history: [
         ...(state.history ?? []),
         {
-          id: action.eventId ?? `buy:${item.id}`,
+          id:
+            action.eventId ??
+            `buy:${item.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
           type: "purchase",
           at: action.at ?? Math.ceil(Date.now()),
           productId: item.id,
@@ -327,6 +370,9 @@ function parseHistory(value) {
             : {}),
         };
       }
+    } else if (e.type === "rebirth") {
+      if (!validAmount(e.count) || e.count < 1) return [];
+      next = { ...base, count: e.count };
     } else if (["purchase", "equip"].includes(e.type)) {
       if (
         typeof e.productId !== "string" ||
@@ -378,6 +424,7 @@ export function parsePending(p) {
 // Only roll settlement can succeed in memory after a failed write. Reapply those
 // receipts to the latest shared wallet instead of overwriting other tabs' spending.
 export function recoverUnsavedRolls(stored, temporary) {
+  if ((stored.rebirths ?? 0) !== (temporary.rebirths ?? 0)) return stored;
   let merged = stored;
   for (const event of temporary.history ?? []) {
     if (

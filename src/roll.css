@@ -1172,3 +1172,28 @@ nav button.active {
     transform: rotate(360deg);
   }
 }
+/* The bar measures the cooldown window, not reveal + cooldown. Transform updates
+   are driven by the same monotonic clock as eligibility; no delayed CSS tween. */
+.roll-experience .cooldown-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: #8b8b94;
+  transform-origin: left;
+  pointer-events: none;
+  transition: none;
+  border-radius: 0 0 5px 5px;
+}
+.flywheel-meter,
+.flywheel-meter.is-charged {
+  width: min(100%, 320px);
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.flywheel-meter.is-spinning > svg {
+  animation: none;
+}

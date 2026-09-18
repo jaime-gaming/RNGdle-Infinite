@@ -18,8 +18,6 @@ import {
   Gem,
   MoonStar,
   Cog,
-  Target,
-  ArrowRight,
 } from "lucide-react";
 import {
   shopProducts,
@@ -32,8 +30,8 @@ import {
   availableGoals,
   currentGoal,
   recommendedGoal,
-  purchaseSummary,
 } from "../gameplay-loop.js";
+import "../progress-links.css";
 import NumberBox from "./NumberBox";
 import { formatEP } from "../roll-data";
 const icons = {
@@ -280,9 +278,8 @@ export default function Shop({
           <ShoppingBag size={25} />
         </div>
         <div>
-          <p className="eyebrow">MAKE EVERY ROLL YOURS.</p>
           <h1>The EP shop</h1>
-          <p>Upgrade your pace. Keep your luck.</p>
+          <p>Upgrades, tools and cosmetics.</p>
         </div>
       </div>
       {!progress.profile && (
@@ -321,16 +318,6 @@ export default function Shop({
         </div>
       </section>
       <section className="shop-goal-picker" aria-label="Choose your next goal">
-        <div>
-          <Target size={19} />
-          <div>
-            <h2>A little direction for your next roll.</h2>
-            <p>
-              Track an upgrade or a look you love. Choosing a goal never spends
-              EP.
-            </p>
-          </div>
-        </div>
         <label htmlFor="shop-goal">Track a goal</label>
         <select
           id="shop-goal"
@@ -349,8 +336,8 @@ export default function Shop({
         </select>
         <small>
           {progress.profile
-            ? "Your choice saves with your local profile."
-            : "Guest choice is temporary. Sign up to keep it."}
+            ? "Saved with your profile."
+            : "Guest goals are temporary."}
         </small>
       </section>
       <section className="shop-category">
@@ -374,15 +361,9 @@ export default function Shop({
         <>
           <div className="purchase-return-space" aria-hidden="true" />
           <aside className="purchase-return" aria-label="Purchase complete">
-            <div role="status">
-              <strong>
-                <Check size={16} />
-                {lastPurchase.name} is yours.
-              </strong>
-              <p>{purchaseSummary(lastPurchase)}</p>
-            </div>
-            <button className="primary-button" onClick={() => navigate("roll")}>
-              Continue rolling <ArrowRight size={15} />
+            <p role="status">{lastPurchase.name} purchased.</p>
+            <button className="return-link" onClick={() => navigate("roll")}>
+              Continue rolling
             </button>
             <button
               className="icon-button"
