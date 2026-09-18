@@ -190,7 +190,7 @@ test("numbers are read-only; there are no editors or presets", async ({
   );
 });
 
-test("desktop geometry matches the measured reference, without result entrance animations", async ({
+test("core reveal geometry matches the reference and the settled progress hub precedes the badge breakdown", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
@@ -207,6 +207,7 @@ test("desktop geometry matches the measured reference, without result entrance a
         ".roll-ep",
         ".share-row",
         ".generate",
+        ".loop-hub",
         ".badge-breakdown",
         ".result-badge",
       ].map((s) => {
@@ -223,8 +224,14 @@ test("desktop geometry matches the measured reference, without result entrance a
   expect(positions[".roll-ep"]).toEqual({ top: 266, width: 166, height: 34 });
   expect(positions[".share-row"].top).toBe(368);
   expect(positions[".generate"]).toEqual({ top: 426, width: 320, height: 72 });
-  expect(positions[".badge-breakdown"].top).toBe(546);
-  expect(positions[".result-badge"].top).toBe(606);
+  expect(positions[".loop-hub"].top).toBe(530);
+  expect(positions[".loop-hub"].width).toBe(720);
+  expect(positions[".badge-breakdown"].top).toBe(
+    positions[".loop-hub"].top + positions[".loop-hub"].height + 48,
+  );
+  expect(positions[".result-badge"].top).toBe(
+    positions[".badge-breakdown"].top + 60,
+  );
   expect(positions[".result-badge"].height).toBe(105);
   expect(positions[".badge-breakdown"].height).toBe(1812);
   for (const row of await page.locator(".superseded-badge").all())

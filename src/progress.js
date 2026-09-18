@@ -1,6 +1,7 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import { productById } from "./shop-data.js";
 import { FLYWHEEL_CHARGES, flywheelAfterSettlement } from "./flywheel.js";
+import { validGoal } from "./gameplay-loop.js";
 import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 const badgeIds = new Set(metadata.map((b) => b.id));
@@ -20,6 +21,7 @@ export function emptyProgress() {
     pendingRoll: null,
     offline: null,
     flywheelCharge: 0,
+    goalId: null,
   };
 }
 export function parseProgress(raw) {
@@ -74,6 +76,7 @@ export function parseProgress(raw) {
     offline: parseOffline(p.offline, owned),
     flywheelCharge: owned.includes("flywheel") ? (p.flywheelCharge ?? 0) : 0,
     profile,
+    goalId: validGoal(p.goalId, owned) ? p.goalId : null,
     balance: p.balance,
     totalEarned: p.totalEarned,
     discovered: [...new Set(p.discovered.filter((id) => badgeIds.has(id)))],
@@ -94,6 +97,13 @@ export function validUsername(value) {
   return typeof value === "string" && /^[\p{L}\p{N}_-]{3,20}$/u.test(value);
 }
 export function applyProgress(state, action) {
+  if (action.type === "goal") {
+    if (action.id !== null && !validGoal(action.id, state.owned))
+      throw new Error(
+        "Choose an unowned item with its prerequisites unlocked.",
+      );
+    return state.goalId === action.id ? state : { ...state, goalId: action.id };
+  }
   if (action.type === "register") {
     if (state.profile)
       throw new Error("A local profile already exists on this browser.");
@@ -219,6 +229,7 @@ export function applyProgress(state, action) {
         },
       ],
       balance: state.balance - item.price,
+      goalId: state.goalId === item.id ? null : (state.goalId ?? null),
       ...(item.id === "flywheel" ? { flywheelCharge: 0 } : {}),
       ...(item.id === "offline-roller"
         ? {

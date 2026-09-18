@@ -400,7 +400,9 @@ export function useProgress() {
                     ? "Sign-up could not be saved. Your guest progress is still available in this tab."
                     : action.type === "draw"
                       ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
-                      : "Purchase or equipment change not saved. Your EP has not been spent.",
+                      : action.type === "goal"
+                        ? "Your goal could not be saved. Your previous goal and EP are unchanged."
+                        : "Purchase or equipment change not saved. Your EP has not been spent.",
               };
           }
         }

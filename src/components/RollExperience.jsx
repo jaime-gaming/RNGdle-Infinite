@@ -1,5 +1,6 @@
 import { flywheelForDraw } from "../flywheel";
 import { gameNow } from "../game-clock";
+import LoopHub from "./LoopHub";
 import FlywheelMeter from "./FlywheelMeter";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
@@ -152,6 +153,7 @@ export default function RollExperience({
   theme,
   aura,
   openSignup,
+  navigate,
 }) {
   const settings = rollSettings(session.owned);
   const ownsAutoRoll = session.owned.includes("auto-roll");
@@ -467,7 +469,9 @@ export default function RollExperience({
           </div>
           <p>
             {autoRoll
-              ? "Starts your next roll when it’s ready."
+              ? active && visible
+                ? "Starts your next roll when it’s ready."
+                : "Paused while you browse. Your current roll will finish."
               : "Enable to roll automatically at your current pace."}{" "}
             Pauses away from this page; off after reload. Stopping keeps your
             current roll.
@@ -652,6 +656,13 @@ export default function RollExperience({
                 ) : cooldown ? (
                   <>
                     <Clock3 size={18} /> NEXT ROLL IN {formatDuration(cooldown)}
+                    <span
+                      className="cooldown-fill"
+                      aria-hidden="true"
+                      style={{
+                        width: `${100 * Math.max(0, Math.min(1, 1 - (cooldown * 1000) / (run.rollMS + run.cooldownMS)))}%`,
+                      }}
+                    />
                   </>
                 ) : awaitingSettlement ? (
                   "RESULT PENDING"
@@ -668,7 +679,24 @@ export default function RollExperience({
                 again.
               </p>
             )}
+            {settleError && (
+              <div className="roll-load-error" role="alert">
+                {settleError} Your committed number is retained.{" "}
+                <button className="secondary-button" onClick={retrySettlement}>
+                  Retry result settlement
+                </button>
+              </div>
+            )}
           </section>
+          {!busy && (
+            <LoopHub
+              progress={session}
+              runId={run.id}
+              stage={!runSettled ? "settling" : "complete"}
+              navigate={navigate}
+              openBadge={openBadge}
+            />
+          )}
           {digitsDone && result.totalEP !== null && (
             <div className="breakdown-wrap">
               <BadgeBreakdown
@@ -696,14 +724,7 @@ export default function RollExperience({
           Resume committed roll
         </button>
       )}
-      {settleError && (
-        <div className="roll-load-error" role="alert">
-          {settleError} Your committed number is retained.{" "}
-          <button className="secondary-button" onClick={retrySettlement}>
-            Retry result settlement
-          </button>
-        </div>
-      )}
+
       {(loading || drawing) && (
         <span className="sr-only" role="status">
           {loading
@@ -712,6 +733,14 @@ export default function RollExperience({
         </span>
       )}
       {!run && children}
+      {!run && (
+        <LoopHub
+          progress={session}
+          stage="idle"
+          navigate={navigate}
+          openBadge={openBadge}
+        />
+      )}
     </div>
   );
 }
