@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "build:pages": "vite build --base=/RNGdle-Infinite/",
+    "deploy": "node tools/deploy-pages.mjs",
     "test:pages": "node tools/test-pages.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",

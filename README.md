@@ -20,29 +20,43 @@ npm run preview
 
 This is a static site: GitHub Pages hosts the built HTML, JavaScript, local fonts,
 emoji, and verified scoring data. No backend, custom server, API key, or paid
-service is needed. Use Node.js 22 for builds and tests.
+service is needed. Deployment uses Pages' built-in **Deploy from a branch** mode —
+there is no GitHub Actions workflow to run, approve, or wait for. Use Node.js 22
+for builds and tests.
 
 ### One-time setup
 
-1. Merge this branch into **`main`** so the workflows are on the default branch.
-2. Open **Settings → Pages → Build and deployment**, and set **Source** to
-   **GitHub Actions** (not “Deploy from a branch”).
-3. Open **Actions → Deploy to GitHub Pages → Run workflow**, choose `main`, and
-   run it. Future pushes to `main` deploy automatically after the Pages smoke
-   check passes. If the `github-pages` environment requires approval, approve
-   the deployment in Actions.
+1. Open **Settings → Pages → Build and deployment**, set **Source** to
+   **Deploy from a branch**, choose the **`gh-pages`** branch and the
+   **`/ (root)`** folder.
+2. From any machine with push access, run:
 
-The default project URL is **https://jaime-gaming.github.io/RNGdle-Infinite/**.
-This is the intended URL, not a claim that deployment has already completed.
-The workflow's deployment job shows the actual published link.
+   ```sh
+   npm ci
+   npm run deploy
+   ```
 
-`.github/workflows/pages.yml` builds with the base path reported by GitHub Pages,
-then uploads **`dist/`** using the official Pages artifact/deploy actions. This
-supports the repository subpath and a root/custom-domain site configured in Pages
-settings. Manual deployment is restricted to `main`; feature branches do not
-replace the live game. No `gh-pages` branch or personal access token is required.
-PRs targeting `main` run the game tests and Pages smoke checks via
-`.github/workflows/check.yml`.
+   The first deploy creates the `gh-pages` branch, and Pages publishes
+   **https://jaime-gaming.github.io/RNGdle-Infinite/** within a minute or two.
+
+### Publish an update
+
+```sh
+npm run deploy
+```
+
+`npm run deploy` builds with the base path derived from the `origin` remote
+(`/RNGdle-Infinite/` for this repository), stages the built `dist/` files on
+`gh-pages` through a temporary worktree in ignored `.cache/`, and pushes. The
+`gh-pages` branch holds build output only — never source — so every deploy is a
+single commit and the live game changes only when you run the command. If the
+build output is unchanged, nothing is pushed.
+
+For a renamed repository or another static host, override the path with
+`npm run deploy -- --base=/YOUR-REPOSITORY/`. For a root/custom-domain site,
+use `npm run deploy -- --base=/`. Do not set the base only to `./`: the scoring
+worker needs the deployment base, not its own asset folder. The development
+server and ordinary production build still use `/`.
 
 ### Check the Pages build locally
 
