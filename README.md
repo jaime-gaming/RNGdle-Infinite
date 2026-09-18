@@ -16,6 +16,68 @@ npm run build   # Production build in dist/
 npm run preview
 ```
 
+## Deploy to GitHub Pages
+
+This is a static site: GitHub Pages hosts the built HTML, JavaScript, local fonts,
+emoji, and verified scoring data. No backend, custom server, API key, or paid
+service is needed. Use Node.js 22 for builds and tests.
+
+### One-time setup
+
+1. Merge this branch into **`main`** so the workflows are on the default branch.
+2. Open **Settings → Pages → Build and deployment**, and set **Source** to
+   **GitHub Actions** (not “Deploy from a branch”).
+3. Open **Actions → Deploy to GitHub Pages → Run workflow**, choose `main`, and
+   run it. Future pushes to `main` deploy automatically after the Pages smoke
+   check passes. If the `github-pages` environment requires approval, approve
+   the deployment in Actions.
+
+The default project URL is **https://jaime-gaming.github.io/RNGdle-Infinite/**.
+This is the intended URL, not a claim that deployment has already completed.
+The workflow's deployment job shows the actual published link.
+
+`.github/workflows/pages.yml` builds with the base path reported by GitHub Pages,
+then uploads **`dist/`** using the official Pages artifact/deploy actions. This
+supports the repository subpath and a root/custom-domain site configured in Pages
+settings. Manual deployment is restricted to `main`; feature branches do not
+replace the live game. No `gh-pages` branch or personal access token is required.
+PRs targeting `main` run the game tests and Pages smoke checks via
+`.github/workflows/check.yml`.
+
+### Check the Pages build locally
+
+```sh
+npm ci
+npm run build:pages  # dist/ built for /RNGdle-Infinite/
+npm run preview -- --base=/RNGdle-Infinite/
+# Open http://localhost:4173/RNGdle-Infinite/
+```
+
+For a renamed repository or another static host, use
+`npm run build -- --base=/YOUR-REPOSITORY/` and preview with the same `--base`.
+For a root/custom domain, use the ordinary `npm run build`. Do not set the base
+only to `./`: the scoring worker needs the deployment base, not its own asset
+folder. The development server and ordinary production build still use `/`.
+
+```sh
+npx playwright install --with-deps chromium  # Once, for browser checks
+npm run test:pages
+```
+
+The smoke check independently builds and serves both `/` and
+`/RNGdle-Infinite/` on a strict static server, with no SPA fallback. It checks a
+real roll, the scoring worker and both data downloads, emoji/fonts/favicon,
+direct hash links and reloads, and exactly-once saved progress. Temporary test
+builds stay in ignored `.cache/`; deployable files are built into ignored
+`dist/`. All sections use `#shop`, `#badges`, or `#history`, so Pages needs no
+404 redirect or server rewrite. Open via HTTP(S), not `file://`.
+
+**Saved games remain browser-local.** GitHub Pages does not add accounts or cloud
+sync. Moving from an Arena preview to Pages (or changing domains) changes the
+browser origin, so existing saves do not transfer automatically. HTTPS Pages
+supports the secure browser APIs used by the game; use a current browser with
+Web Crypto, Web Locks, and gzip decompression support.
+
 ## Included
 
 - Text-only RNGdle wordmark with INFINITE beneath it (no logo icon), plus a text-based favicon, **Shop → Badges → History** navigation, and RNGdle-style light/dark layout, local **Inter + Space Mono** fonts, shared, tier-aware number boxes, and a colour-cycling Generate button.
