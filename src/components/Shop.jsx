@@ -18,6 +18,8 @@ import {
   Gem,
   MoonStar,
   Cog,
+  Target,
+  ArrowRight,
 } from "lucide-react";
 import {
   shopProducts,
@@ -26,6 +28,12 @@ import {
   formatDuration,
   nextUpgrade,
 } from "../shop-data";
+import {
+  availableGoals,
+  currentGoal,
+  recommendedGoal,
+  purchaseSummary,
+} from "../gameplay-loop.js";
 import NumberBox from "./NumberBox";
 import { formatEP } from "../roll-data";
 const icons = {
@@ -45,12 +53,14 @@ const icons = {
 };
 export default function Shop({
   progress,
+  focusProduct,
   onAction,
   navigate,
   notify,
   openSignup,
 }) {
   const [previewTier, setPreviewTier] = useState("rare");
+  const [lastPurchase, setLastPurchase] = useState(null);
   const [selected, setSelected] = useState(null),
     [pending, setPending] = useState(false),
     [purchaseError, setPurchaseError] = useState("");
@@ -59,8 +69,26 @@ export default function Shop({
     returnFocus = useRef(null),
     returnKind = useRef(null);
   const settings = rollSettings(progress.owned);
+  const goal = currentGoal(progress),
+    suggested = recommendedGoal(progress),
+    choices = availableGoals(progress);
+  useEffect(() => {
+    if (!focusProduct || !productById.has(focusProduct)) return;
+    const frame = requestAnimationFrame(() => {
+      const card = document.querySelector(`[data-product="${focusProduct}"]`);
+      card?.scrollIntoView({
+        block: "center",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
+      card?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusProduct]);
   useEffect(() => {
     if (selected) {
+      setLastPurchase(null);
       setPurchaseError("");
       returnFocus.current = document.activeElement;
       returnKind.current = selected.kind;
@@ -84,19 +112,15 @@ export default function Shop({
       const result = await onAction({ type, id });
       if (result.ok) {
         setSelected(null);
-        notify(
-          type === "buy"
-            ? productById.get(id).kind === "aura"
-              ? "Aura purchased and equipped."
-              : productById.get(id).kind === "utility"
-                ? id === "auto-roll"
-                  ? "Auto-Roll unlocked. Enable it on the Roll page."
-                  : id === "offline-roller"
-                    ? "Offline Roller is ready for your next break."
-                    : "Archive Lens unlocked in History."
-                : "Upgrade purchased. Applies to your next roll."
-            : "Appearance updated.",
-        );
+        if (type === "buy") setLastPurchase(productById.get(id));
+        else {
+          setLastPurchase(null);
+          notify(
+            type === "goal"
+              ? "Goal updated. No EP spent."
+              : "Appearance updated.",
+          );
+        }
       } else {
         setPurchaseError(result.message);
         notify(result.message);
@@ -119,6 +143,8 @@ export default function Shop({
         key={item.id}
         data-product={item.id}
         data-kind={item.kind}
+        data-tracked={goal?.id === item.id}
+        aria-label={item.name}
         tabIndex={-1}
       >
         <div
@@ -294,6 +320,39 @@ export default function Shop({
           </div>
         </div>
       </section>
+      <section className="shop-goal-picker" aria-label="Choose your next goal">
+        <div>
+          <Target size={19} />
+          <div>
+            <h2>A little direction for your next roll.</h2>
+            <p>
+              Track an upgrade or a look you love. Choosing a goal never spends
+              EP.
+            </p>
+          </div>
+        </div>
+        <label htmlFor="shop-goal">Track a goal</label>
+        <select
+          id="shop-goal"
+          value={progress.goalId ?? ""}
+          disabled={pending || !choices.length}
+          onChange={(e) => perform("goal", e.target.value || null)}
+        >
+          <option value="">
+            {suggested ? `Recommended · ${suggested.name}` : "All items owned"}
+          </option>
+          {choices.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name} · {formatEP(item.price)} EP
+            </option>
+          ))}
+        </select>
+        <small>
+          {progress.profile
+            ? "Your choice saves with your local profile."
+            : "Guest choice is temporary. Sign up to keep it."}
+        </small>
+      </section>
       <section className="shop-category">
         <div className="shop-section-heading">
           <div>
@@ -311,6 +370,30 @@ export default function Shop({
           {card(productById.get("flywheel"))}
         </div>
       </section>
+      {lastPurchase && (
+        <>
+          <div className="purchase-return-space" aria-hidden="true" />
+          <aside className="purchase-return" aria-label="Purchase complete">
+            <div role="status">
+              <strong>
+                <Check size={16} />
+                {lastPurchase.name} is yours.
+              </strong>
+              <p>{purchaseSummary(lastPurchase)}</p>
+            </div>
+            <button className="primary-button" onClick={() => navigate("roll")}>
+              Continue rolling <ArrowRight size={15} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Dismiss purchase update"
+              onClick={() => setLastPurchase(null)}
+            >
+              <X size={16} />
+            </button>
+          </aside>
+        </>
+      )}
       <p className="shop-save-note">
         Timing upgrades apply when you start your next roll. An active reveal or
         cooldown is not shortened by a purchase.

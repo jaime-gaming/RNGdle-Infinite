@@ -1,0 +1,371 @@
+/* Quiet, useful feedback around the original reveal. No new reward economy. */
+.loop-hub {
+  width: min(100%, 720px);
+  margin: 32px auto 0;
+  text-align: left;
+}
+.loop-receipt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 2px;
+  min-height: 82px;
+}
+.loop-symbol {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--green);
+  background: var(--green-bg);
+}
+.loop-kicker {
+  margin: 0 0 5px;
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  font-weight: 650;
+  color: var(--secondary);
+}
+.loop-receipt-copy {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--secondary);
+}
+.loop-receipt-copy strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.loop-receipt-copy > span {
+  white-space: nowrap;
+}
+.loop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.loop-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.loop-card-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 20px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--secondary);
+}
+.loop-card-label > svg {
+  color: var(--green);
+}
+.loop-card h2 {
+  font-size: 20px;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+  line-height: 1.4;
+  margin: 13px 0 6px;
+  color: var(--text);
+}
+.loop-card h2 small {
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--secondary);
+  letter-spacing: 0;
+}
+.loop-description {
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--secondary);
+  margin: 0 0 14px;
+}
+.loop-card progress {
+  display: block;
+  appearance: none;
+  border: 0;
+  border-radius: 9px;
+  overflow: hidden;
+  width: 100%;
+  height: 5px;
+  background: var(--border);
+  color: var(--green);
+}
+.loop-card progress::-webkit-progress-bar {
+  background: var(--border);
+}
+.loop-card progress::-webkit-progress-value {
+  background: var(--green);
+  border-radius: 9px;
+  transition: width 0.45s ease;
+}
+.loop-card progress::-moz-progress-bar {
+  background: var(--green);
+  border-radius: 9px;
+}
+.loop-progress-copy {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 10px;
+  line-height: 1.7;
+  margin: 9px 0 17px;
+  color: var(--secondary);
+  font-variant-numeric: tabular-nums;
+}
+.loop-progress-copy strong {
+  font-weight: 550;
+  color: var(--text);
+}
+.loop-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px 0 0;
+  margin-top: auto;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.loop-action:hover {
+  color: var(--green);
+}
+.goal-ready {
+  border-color: var(--green);
+  background: linear-gradient(140deg, var(--green-bg), var(--surface) 65%);
+}
+.goal-ready-tag {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 9px;
+  letter-spacing: 0;
+}
+.loop-discoveries {
+  margin: 12px 0 16px;
+}
+.loop-discoveries .loop-description {
+  margin-bottom: 7px;
+}
+.loop-badge-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.loop-badge-chips button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 5px 8px;
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 10px;
+  color: var(--text);
+  cursor: pointer;
+}
+.loop-badge-chips button span {
+  overflow-wrap: anywhere;
+}
+.loop-badge-chips button:hover {
+  border-color: var(--green);
+}
+.loop-badge-chips .emoji {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.loop-more {
+  font-size: 10px;
+  color: var(--secondary);
+}
+.cooldown-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--green);
+  border-radius: 0 4px 4px 0;
+  transition: width 0.35s linear;
+  pointer-events: none;
+}
+.shop-goal-picker {
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  margin: -12px 0 32px;
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 340px);
+  gap: 8px 24px;
+}
+.shop-goal-picker > div {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  grid-row: 1/4;
+}
+.shop-goal-picker > div > svg {
+  flex-shrink: 0;
+  color: var(--green);
+  margin-top: 3px;
+}
+.shop-goal-picker h2 {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 6px;
+}
+.shop-goal-picker p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--secondary);
+  margin: 0;
+}
+.shop-goal-picker label {
+  font-size: 11px;
+  font-weight: 600;
+}
+.shop-goal-picker select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.shop-goal-picker > small {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--secondary);
+}
+.shop-card[data-tracked="true"] {
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--green) 15%, transparent);
+}
+.shop-card:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 4px;
+}
+.loop-hub button:focus-visible,
+.shop-goal-picker select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 4px;
+}
+@media (max-width: 600px) {
+  .loop-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .loop-card {
+    padding: 20px;
+  }
+  .loop-hub {
+    margin-top: 24px;
+  }
+  .shop-goal-picker {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  .shop-goal-picker > div {
+    grid-row: auto;
+    margin-bottom: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loop-hub *,
+  .loop-hub progress::-webkit-progress-value,
+  .cooldown-fill {
+    transition: none !important;
+  }
+}
+.purchase-return-space {
+  height: 100px;
+}
+.purchase-return {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  width: min(700px, calc(100% - 32px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--green);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 40px #00000020;
+}
+.purchase-return strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text);
+}
+.purchase-return strong svg {
+  color: var(--green);
+  flex-shrink: 0;
+}
+.purchase-return p {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--secondary);
+  margin: 5px 0 0;
+}
+.purchase-return .primary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  min-height: 42px;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .purchase-return-space {
+    height: 165px;
+  }
+  .purchase-return {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 16px;
+    gap: 12px;
+    bottom: 12px;
+  }
+  .purchase-return > .icon-button {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+  .purchase-return > .primary-button {
+    grid-column: 1/-1;
+    grid-row: 2;
+  }
+}

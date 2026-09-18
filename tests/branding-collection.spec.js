@@ -72,6 +72,7 @@ test("collection progress updates after earning badges, ignores search filters a
     .fill("no such badge");
   await expect(page.locator(".badge-card")).toHaveCount(0);
   await expect(progress(page)).toHaveAttribute("value", String(count));
+  await page.unrouteAll({ behavior: "wait" });
   await page.reload();
   await expect(progress(page)).toHaveAttribute("value", String(count));
   await expect(page.locator(".badge-card")).toHaveCount(count);

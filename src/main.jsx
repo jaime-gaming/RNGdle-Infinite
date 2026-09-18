@@ -55,6 +55,7 @@ function App() {
         : "light"
       : theme,
   );
+  const [shopFocus, setShopFocus] = useState(null);
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
@@ -66,6 +67,7 @@ function App() {
   } = useProgress();
   useEffect(() => {
     setModal(null);
+    setShopFocus(null);
     setSelectedBadge(null);
     setSearch("");
     setRarity("All rarities");
@@ -94,7 +96,8 @@ function App() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 3500);
   };
-  const navigate = (next) => {
+  const navigate = (next, productId = null) => {
+    setShopFocus(next === "shop" ? productId : null);
     if (!["roll", "badges", "shop", "history"].includes(next)) next = "roll";
     setPage(next);
     location.hash = next === "roll" ? "" : next;
@@ -292,9 +295,13 @@ function App() {
             key={epoch}
             {...{ openBadge, notify, session }}
             active={
-              page === "roll" && !offlineState.busy && !session.offline?.batch
+              page === "roll" &&
+              !modal &&
+              !offlineState.busy &&
+              !session.offline?.batch
             }
             theme={appliedTheme}
+            navigate={navigate}
             onComplete={completeRoll}
             onDraw={() => dispatch({ type: "draw" })}
             openSignup={openAuth}
@@ -327,6 +334,7 @@ function App() {
           <Shop
             key={epoch}
             progress={session}
+            focusProduct={shopFocus}
             onAction={dispatch}
             openSignup={openAuth}
             navigate={navigate}
@@ -592,18 +600,20 @@ function App() {
                   badge in each family adds to your score. Completing a roll
                   adds its EP to your wallet and unlocks all earned badges.
                   Spend EP on timing upgrades, cosmetic auras, or tools in the
-                  shop. Auto-Roll starts the next ready roll while the Roll page
-                  is visible and switches off after reload. Upgrades apply to
-                  future rolls; they never change your odds or score. Sign up
-                  for a local profile to save your wallet, discoveries,
-                  purchases, cooldown, and activity history in this browser.
-                  Guest progress is temporary. This is not an online account,
-                  and clearing site data removes local saves. The leaderboard is
-                  disabled. Refreshing resumes the same committed number and
-                  deadline, including for guests in the same tab. Account tabs
-                  share one draw and reward. Open History for completed rolls,
-                  badge unlocks, and shop transactions. Delete your account and
-                  progress from Profile.
+                  shop. Choose a goal in the shop to track your EP savings; your
+                  roll recap shows new discoveries and the next step. Auto-Roll
+                  starts the next ready roll while the Roll page is visible,
+                  pauses while a dialog is open, and switches off after reload.
+                  Upgrades apply to future rolls; they never change your odds or
+                  score. Sign up for a local profile to save your wallet,
+                  discoveries, purchases, cooldown, and activity history in this
+                  browser. Guest progress is temporary. This is not an online
+                  account, and clearing site data removes local saves. The
+                  leaderboard is disabled. Refreshing resumes the same committed
+                  number and deadline, including for guests in the same tab.
+                  Account tabs share one draw and reward. Open History for
+                  completed rolls, badge unlocks, and shop transactions. Delete
+                  your account and progress from Profile.
                 </div>
                 <button
                   className="primary-button"
