@@ -1,6 +1,10 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
-import { productById } from "./shop-data.js";
-import { FLYWHEEL_CHARGES, flywheelAfterSettlement } from "./flywheel.js";
+import { productById, offlineSettings } from "./shop-data.js";
+import {
+  FLYWHEEL_CHARGES,
+  flywheelAfterSettlement,
+  flywheelRequired,
+} from "./flywheel.js";
 import { validGoal } from "./gameplay-loop.js";
 import { rebirthBlocker } from "./rebirth.js";
 import { parseCooldownWindow } from "./cooldown.js";
@@ -46,12 +50,16 @@ export function parseProgress(raw) {
   )
     throw new Error("Invalid save collections");
   let owned = [...new Set(p.owned.filter((id) => productById.has(id)))];
-  for (let i = 0; i < 3; i++)
+  // Prune to a fixed point: late-game chains can be deeper than three levels.
+  let priorLength;
+  do {
+    priorLength = owned.length;
     owned = owned.filter(
       (id) =>
         !productById.get(id).requires ||
         owned.includes(productById.get(id).requires),
     );
+  } while (owned.length !== priorLength);
   if (
     owned.includes("flywheel") &&
     p.flywheelCharge != null &&
@@ -87,7 +95,9 @@ export function parseProgress(raw) {
     ),
     rebirths: p.rebirths ?? 0,
     offline: parseOffline(p.offline, owned),
-    flywheelCharge: owned.includes("flywheel") ? (p.flywheelCharge ?? 0) : 0,
+    flywheelCharge: owned.includes("flywheel")
+      ? Math.min(p.flywheelCharge ?? 0, flywheelRequired(owned))
+      : 0,
     profile,
     goalId: validGoal(p.goalId, owned) ? p.goalId : null,
     balance: p.balance,
@@ -253,7 +263,17 @@ export function applyProgress(state, action) {
     if (item.requires && !state.owned.includes(item.requires))
       throw new Error(`Requires ${productById.get(item.requires).name} first.`);
     if (item.requiresProfile && !state.profile)
-      throw new Error("Create a local profile before buying Offline Roller.");
+      throw new Error(`Create a local profile before buying ${item.name}.`);
+    if (
+      item.kind === "offline" &&
+      (state.offline?.batch ||
+        (state.offline &&
+          (action.at ?? Math.ceil(Date.now())) - state.offline.lastSeenAt >=
+            offlineSettings(state.owned).intervalMS))
+    )
+      throw new Error(
+        "Restore offline rewards before upgrading the clock. No EP was spent.",
+      );
     if (state.balance < item.price)
       throw new Error("Not enough EP for this item.");
     return {
@@ -273,13 +293,23 @@ export function applyProgress(state, action) {
       ],
       balance: state.balance - item.price,
       goalId: state.goalId === item.id ? null : (state.goalId ?? null),
-      ...(item.id === "flywheel" ? { flywheelCharge: 0 } : {}),
-      ...(item.id === "offline-roller"
+      ...(item.kind === "pace"
+        ? {
+            flywheelCharge:
+              item.id === "flywheel"
+                ? 0
+                : Math.min(state.flywheelCharge ?? 0, item.charges),
+          }
+        : {}),
+      ...(item.id === "offline-roller" || item.kind === "offline"
         ? {
             offline: {
               lastSeenAt: action.at ?? Math.ceil(Date.now()),
               batch: null,
-              report: null,
+              report:
+                item.kind === "offline"
+                  ? (state.offline?.report ?? null)
+                  : null,
             },
           }
         : {}),
@@ -405,7 +435,7 @@ export function parsePending(p) {
     p.number > 1000000 ||
     !validAmount(p.startedAt) ||
     ![45000, 35000, 25000, 15000].includes(p.rollMS) ||
-    ![60000, 45000, 30000, 15000, 0].includes(p.cooldownMS) ||
+    ![60000, 45000, 30000, 15000, 10000, 5000, 0].includes(p.cooldownMS) ||
     (p.flywheel != null && !["charge", "boost"].includes(p.flywheel)) ||
     (p.cooldownMS === 0) !== (p.flywheel === "boost") ||
     !validAmount(p.startedAt + p.rollMS + p.cooldownMS)

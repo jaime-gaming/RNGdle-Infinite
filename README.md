@@ -24,7 +24,7 @@ npm run preview
 - Full-population rank percentages with ties included and reference-style rounded rank labels, also used in share text. Rank tooltips retain precise percentages and integer counts. Badge details show full-population percentages, approximate “1 in” frequencies, and exact outcome counts. Chances stay independent; no pity counter is implied.
 - Staged progressive digit reveals, settle animations, two card pulses, vignette, lowest-to-highest EP badge stream, delayed rank, animated EP, and contributor highlights.
 - No Skip Reveal button or keyboard skipping. The reference choreography plays on the selected reveal schedule; the browser’s reduced-motion preference still completes it immediately for accessibility.
-- A **45-second base reveal** plus **60-second base cooldown**, with permanent timing upgrades. The next-roll deadline is fixed at draw start: **105 seconds base**, or **30 seconds with both tracks maxed**, before Flywheel. A charged Flywheel waives only that roll’s cooldown, leaving a 45s/15s reveal deadline. Reduced motion reveals instantly for accessibility but never advances this deadline.
+- A **45-second base reveal** plus **60-second base cooldown**, with permanent timing upgrades. The next-roll deadline is fixed at draw start: **105 seconds base**, or **20 seconds with both timing tracks maxed**, before Flywheel. A charged Flywheel waives only that roll’s cooldown, leaving a 45s/15s reveal deadline. Reduced motion reveals instantly for accessibility but never advances this deadline.
 - **EP is spendable currency.** Each completed roll credits its full score exactly once. The existing EP counter shows the wallet balance. Completed rolls appear in your activity feed. There are no replay controls, presets, or number editing.
 - **Discovery-only collection:** 235 possible badges across 18 sets, but only earned badges appear in the collection, search results, details, and activity feed. An accessible progress bar tracks unique discoveries against all 235 badges, independent of search filters. Badge details stay in-game without external reference buttons. Completing a roll discovers all its earned badges, including superseded badges.
 - **Leaderboard disabled**, including direct `#leaderboard` navigation. The History navigation replaces the inactive leaderboard. Today’s Best Roll, fake player data, and UI Preview labeling have been removed.
@@ -54,16 +54,18 @@ A pending online roll, committed offline batch or unexpired next-roll deadline b
 
 ## EP shop and local progress
 
-The shop has two sequential upgrade tracks, the original Flywheel pace mechanic, seven cosmetic auras, and three utilities (17 products total). Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
+The shop has sequential Quickwind, Clockwork, Flywheel and Offline Clock upgrade paths, seven cosmetic auras, and three utilities (23 products total). Offline Clock appears after Offline Roller is owned. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
 
-| Upgrade       |        Price | Effect             | Prerequisite |
-| ------------- | -----------: | ------------------ | ------------ |
-| Quickwind I   |    75,000 EP | 45s → 35s reveal   | None         |
-| Quickwind II  |   300,000 EP | 35s → 25s reveal   | Quickwind I  |
-| Quickwind III | 1,200,000 EP | 25s → 15s reveal   | Quickwind II |
-| Clockwork I   |   125,000 EP | 60s → 45s cooldown | None         |
-| Clockwork II  |   650,000 EP | 45s → 30s cooldown | Clockwork I  |
-| Clockwork III | 2,500,000 EP | 30s → 15s cooldown | Clockwork II |
+| Upgrade       |         Price | Effect             | Prerequisite  |
+| ------------- | ------------: | ------------------ | ------------- |
+| Quickwind I   |     35,000 EP | 45s → 35s reveal   | None          |
+| Quickwind II  |    175,000 EP | 35s → 25s reveal   | Quickwind I   |
+| Quickwind III |    800,000 EP | 25s → 15s reveal   | Quickwind II  |
+| Clockwork I   |     60,000 EP | 60s → 45s cooldown | None          |
+| Clockwork II  |    400,000 EP | 45s → 30s cooldown | Clockwork I   |
+| Clockwork III |  1,800,000 EP | 30s → 15s cooldown | Clockwork II  |
+| Clockwork IV  |  8,000,000 EP | 15s → 10s cooldown | Clockwork III |
+| Clockwork V   | 20,000,000 EP | 10s → 5s cooldown  | Clockwork IV  |
 
 Timing upgrades activate automatically. Both timings are snapshotted when Generate is pressed: buying during a reveal does not restart or shorten it, and does not shorten its upcoming cooldown. Buying during a cooldown does not change its deadline. Upgrades apply to rolls started afterward. They never change uniform random odds, badge rules, or EP scoring.
 
@@ -83,19 +85,31 @@ Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped 
 
 **Auto-Roll — 5,000,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. Auto-Roll has no special speed advantage over manual rolls and does not perform offline catch-up; Flywheel benefits both equally.
 
-### Flywheel — 1,000,000 EP
+### Flywheel — 600,000 EP; II — 4,000,000 EP; III — 12,000,000 EP
 
-A permanent pace upgrade with an automatic **four-charge / fifth-roll** rhythm. Four completed online rolls begun after purchase charge it; the fifth roll retains its full reveal but has **zero cooldown afterward**. Boosted rolls do not charge the next cycle. Auto-Roll counts normally; offline rolls never charge or consume it. Normal cooldowns still apply to the four charging rolls, including the fourth. A full five-roll cycle averages 93 seconds per roll at base timings, or 27 seconds with both timing tracks maxed, excluding user/UI delays.
+A permanent pace upgrade with an automatic **four-charge / fifth-roll** rhythm. Four completed online rolls begun after purchase charge it; the fifth roll retains its full reveal but has **zero cooldown afterward**. Boosted rolls do not charge the next cycle. Auto-Roll counts normally; offline rolls never charge or consume it. Normal cooldowns still apply to the four charging rolls, including the fourth. A full five-roll cycle averages 93 seconds per roll at base timings, or 27 seconds at the previous 15s-reveal / 15s-cooldown ceiling, excluding user/UI delays.
+
+**Flywheel II** needs two charging rolls before a boosted third roll; **Flywheel III** needs one, so every other roll is boosted. Each requires its predecessor. Buying a tier preserves earned charge up to the new limit, without changing any already-committed roll. With Clockwork V, Quickwind III and Flywheel III, the average cycle is **17.5 seconds** (15s full reveal plus an alternating 5s/0s cooldown). That is an ideal ~206 rolls/hour before processing or user delays—not a promise of EP income.
 
 Charge is visible on the Roll page and persisted with a local profile. The draw snapshots a `flywheel: "charge" | "boost"` flag, and consuming a charged boost is atomic with committing the next number and its deadline. Failed draws keep the charge; refresh restores the same boosted number, not a replacement. Eligible settlement adds exactly one charge; duplicate receipts and failed-write recovery cannot add it twice. Reduced motion still reserves the full reveal deadline. Buying during a reveal does not retrospectively count that roll, and all existing timing upgrades stack without changing EP or probability. Existing version-1 saves default to zero charge.
 
 ### Price audit
 
-`npm run audit:economy` reproduces the complete 1,000,001-number distribution and catalogue price comparisons. Including the existing two originals, the **median is 5,801 EP**, versus a jackpot-inflated **mean of 21,548.40 EP**; **748,167 outcomes pay less than 10,000 EP**. Early purchases now start at 50,000 EP (Starfall), 75,000 EP (Quickwind I), and 125,000 EP (Clockwork I). Higher levels remain progressively more expensive. Auto-Roll retains the explicitly requested 5,000,000 EP price, while Offline Roller remains a premium tool at three times that cost. Median-roll equivalents are a comparison baseline, not a promise of how many rolls a purchase takes. Reference EP rewards, the two original bonuses, and uniform RNG are unchanged.
+`npm run audit:economy` reproduces the complete 1,000,001-number distribution and catalogue price comparisons. Including the existing two originals, the **median is 5,801 EP**, versus a jackpot-inflated **mean of 21,548.40 EP**; **748,167 outcomes pay less than 10,000 EP**. The first useful pair now costs **95,000 EP** (35,000 Quickwind I + 60,000 Clockwork I), versus 200,000 before, and shortens the base 105-second cycle to 80 seconds. The original three timing tiers cost 3,270,000 EP total instead of 4,850,000. Base Flywheel drops from 1,000,000 to 600,000 EP; Offline Roller drops from 15,000,000 to 10,000,000. Auto-Roll retains the explicitly requested 5,000,000 EP price. Cosmetics and Archive Lens keep their prices. Recommendations compare all eligible pace/earning tools by price, so expensive late Clockwork tiers no longer hide cheaper core tools.
 
-### Offline Roller — 15,000,000 EP
+New online tiers deliberately have diminishing speed returns while preserving the 15-second reveal floor. The audit also reports reproducible timing milestones and offline-cap fill times. Median-roll equivalents are a comparison baseline, not a promise of how many rolls a purchase takes. Reference EP rewards, the two original bonuses, and uniform RNG are unchanged. Repricing never refunds/debits existing wallets or rewrites historical purchase prices.
 
-A permanent tool for saved local profiles. It earns **one normal random roll for each full 10 minutes away**, capped at **24 hours / 144 rolls per absence**, as requested. Reveal/cooldown upgrades do not speed up this interval. It activates on purchase without retroactive credit for time before purchase. No further purchase or claim fee is required.
+### Offline Roller — 10,000,000 EP
+
+A permanent tool for saved local profiles. It earns **one normal random roll for each full 10 minutes away**, capped at **24 hours / 144 rolls per absence**, as requested. Online reveal/cooldown upgrades do not speed up this interval. It activates on purchase without retroactive credit for time before purchase. No further purchase or claim fee is required.
+
+| Offline upgrade  |         Price | Interval | Rolls after 8h | Time to 144-roll cap |
+| ---------------- | ------------: | -------: | -------------: | -------------------: |
+| Offline Roller   | 10,000,000 EP |   10 min |             48 |                  24h |
+| Offline Clock I  | 12,000,000 EP |  7.5 min |             64 |                  18h |
+| Offline Clock II | 25,000,000 EP |    5 min |             96 |                  12h |
+
+Each tier requires the previous one and a local profile. **The limit stays at 144 rolls per absence:** checking only once every 24 hours gives no extra rolls from either clock tier. Upgrades make shorter absences more productive, not individual rolls more valuable. Purchase starts a new future-rate anchor; owed whole intervals or a pending batch must be settled first, and already-paid summaries remain available. Partial intervals do not carry over or receive retroactive credit. Committed batches snapshot their interval for reload-safe history timestamps; legacy batches without the field retain their original ten-minute spacing.
 
 **Browser-only implementation:** closed pages cannot execute a worker. On return, the game calculates the earned roll count, commits all chosen numbers before showing rewards, and then settles ten rolls per saved transaction. Each roll uses the same uniform RNG, verified scores, badge rules, discoveries, and history as an online roll. The welcome-back summary shows rewards already credited—not an unclaimed balance. The free **Offline** history filter shows every recorded offline roll.
 
@@ -178,11 +192,12 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **150 tests** cover:
+The **173 tests** cover:
 
 - Goal recommendations/prerequisites, backward-compatible goal saves, failed-write retry, cross-tab preservation, guest/signup gating, confirmed purchase → next goal, plain progress links, duplicate-roll discoveries, Auto-Roll dialog pausing, completed-workshop states, profile-required goals and narrow-screen themes.
 - Rebirth visibility at 140/141/234/235 badges, unique-badge eligibility, filters, typed confirmation/cancel, complete resets and preserved history, repurchases/rediscovery, failed local/session saves, simultaneous tabs, missed storage events, stale-cycle recovery, Web Locks, pending-roll/offline/cooldown guards and mobile dialogs.
 - Cooldown-only fill arithmetic, fractional progression, reload and mid-cooldown purchases, reduced-motion reveal reservation and zero-cooldown Flywheel rolls.
+- Six late tiers, prerequisite-chain migration, historical prices, recommendation ordering, 5s/10s snapshots, 4/2/1-charge rhythms, rate changes without retroactive rewards, snapshotted legacy batches, the unchanged 144 cap, concurrent tier purchases and failed-save rollback.
 - Flywheel’s two-cycle accounting, zero-cooldown validation, mid-reveal purchase snapshots, full base/upgraded reveal deadlines, reload restoration, concurrent single consumption, failed commit/recovery, offline exclusion, Auto-Roll compatibility, mobile display, and legacy price preservation.
 - Exact chance/frequency formatting at rare and near-certain boundaries, and full-population tier odds despite stale manifest counts.
 - Every legal number’s base score versus its highest-EP family memberships, all 233 pinned badge probabilities and data hashes, plus exhaustive independent checks of both Infinite Originals, their bonuses, adjusted ranks and tier counts.

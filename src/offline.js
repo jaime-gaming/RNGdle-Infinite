@@ -2,6 +2,7 @@
 // be made authoritative without a backend. A visible tab keeps the account online.
 export const OFFLINE_INTERVAL = 600000;
 export const OFFLINE_CAP = 144;
+export const OFFLINE_INTERVALS = [600000, 450000, 300000];
 export const PRESENCE_PREFIX = "rng-infinite-presence-v1:";
 const amount = (n) => Number.isSafeInteger(n) && n >= 0;
 const timestamp = (n) => amount(n) && n <= 8640000000000000;
@@ -13,6 +14,7 @@ export function parseOffline(value, owned) {
     report = null;
   if (value.batch) {
     const b = value.batch;
+    const intervalMS = b.intervalMS ?? OFFLINE_INTERVAL;
     if (
       typeof b.id !== "string" ||
       !b.id ||
@@ -21,7 +23,8 @@ export function parseOffline(value, owned) {
       !Array.isArray(b.numbers) ||
       !b.numbers.length ||
       b.numbers.length > OFFLINE_CAP ||
-      !timestamp(b.since + b.numbers.length * OFFLINE_INTERVAL) ||
+      !OFFLINE_INTERVALS.includes(intervalMS) ||
+      !timestamp(b.since + b.numbers.length * intervalMS) ||
       b.numbers.some((n) => !amount(n) || n > 1000000) ||
       !amount(b.index) ||
       b.index >= b.numbers.length ||
@@ -32,6 +35,7 @@ export function parseOffline(value, owned) {
     batch = {
       id: b.id,
       since: b.since,
+      ...(b.intervalMS != null ? { intervalMS } : {}),
       numbers: b.numbers,
       index: b.index,
       ep: b.ep,
@@ -59,7 +63,16 @@ export function parseOffline(value, owned) {
   }
   return { lastSeenAt: value.lastSeenAt, batch, report };
 }
-export function offlinePlan(offline, now, presences, tabId, visible) {
+export function offlinePlan(
+  offline,
+  now,
+  presences,
+  tabId,
+  visible,
+  intervalMS = OFFLINE_INTERVAL,
+) {
+  if (!OFFLINE_INTERVALS.includes(intervalMS))
+    throw new Error("Invalid offline interval");
   const since = Math.max(
     offline?.lastSeenAt ?? now,
     ...presences.map((p) => p.at),
@@ -73,7 +86,7 @@ export function offlinePlan(offline, now, presences, tabId, visible) {
       visible && !online
         ? Math.min(
             OFFLINE_CAP,
-            Math.max(0, Math.floor((now - since) / OFFLINE_INTERVAL)),
+            Math.max(0, Math.floor((now - since) / intervalMS)),
           )
         : 0,
   };

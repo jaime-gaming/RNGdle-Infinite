@@ -106,7 +106,7 @@ test("first visit keeps goals as plain links without dashboard cards or invented
   const progress = page.getByRole("region", { name: "Progress" });
   await expect(progress).toContainText("0 / 235 badges");
   await expect(progress).toContainText("Quickwind I");
-  await expect(progress).toContainText("0 / 75,000 EP");
+  await expect(progress).toContainText("0 / 35,000 EP");
   await expect(
     page.locator(".loop-hub,.loop-card,.loop-badge-chips"),
   ).toHaveCount(0);
@@ -134,7 +134,7 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
     `${evaluate(604827).badges.length} new in this roll`,
   );
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "4,663 / 75,000 EP",
+    "4,663 / 35,000 EP",
   );
 
   await page.locator(".result-badge-heading button").first().click();
@@ -149,7 +149,7 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
     "new in this roll",
   );
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "9,326 / 75,000 EP",
+    "9,326 / 35,000 EP",
   );
 });
 
@@ -171,7 +171,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   );
   await home(page);
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "75,000 / 75,000 EP",
+    "35,000 / 35,000 EP",
   );
   await page.getByRole("button", { name: "Quickwind I", exact: true }).click();
   const card = page.locator('[data-product="quickwind-1"]');
@@ -187,7 +187,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   expect((await saved(page)).goalId).toBeNull();
-  expect((await saved(page)).balance).toBe(25000);
+  expect((await saved(page)).balance).toBe(65000);
   expect((await saved(page)).owned).toEqual(["quickwind-1"]);
   await expect(
     page.getByRole("complementary", { name: "Purchase complete" }),
@@ -200,7 +200,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   );
   await expect(page.locator(".roll-hint")).toContainText("35s reveal");
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "25,000 / 125,000 EP",
+    "60,000 / 60,000 EP",
   );
 });
 
@@ -418,7 +418,7 @@ test("a funded offline goal still explains the profile requirement instead of cl
   );
 
   await expect(page.locator(".roll-progress-links")).not.toContainText(
-    "75,000 / 75,000 EP",
+    "35,000 / 35,000 EP",
   );
   await expect(page.locator(".roll-progress-links")).not.toContainText("to go");
   await page

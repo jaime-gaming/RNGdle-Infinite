@@ -11,7 +11,7 @@ import {
 import { generateRoll, restoreRoll } from "./roll-client.js";
 import { flywheelForDraw } from "./flywheel.js";
 import { parseCooldownWindow } from "./cooldown.js";
-import { rollSettings } from "./shop-data.js";
+import { rollSettings, offlineSettings, productById } from "./shop-data.js";
 import {
   offlinePlan,
   readPresence,
@@ -214,12 +214,14 @@ export function useProgress() {
                   offline.batch.numbers.length - offline.batch.index,
               };
             }
+            const intervalMS = offlineSettings(previous.owned).intervalMS;
             const plan = offlinePlan(
               offline,
               now,
               readPresence(previous.profile.id),
               action.tabId,
               action.visible === true,
+              intervalMS,
             );
             if (action.checkAbsence === false) plan.count = 0;
             const numbers = [];
@@ -234,6 +236,7 @@ export function useProgress() {
                   ? {
                       id: crypto.randomUUID(),
                       since: plan.since,
+                      intervalMS,
                       numbers,
                       index: 0,
                       ep: 0,
@@ -263,7 +266,9 @@ export function useProgress() {
                 id: `${batch.id}:${index}`,
                 result,
                 source: "offline",
-                at: batch.since + (index + 1) * OFFLINE_INTERVAL,
+                at:
+                  batch.since +
+                  (index + 1) * (batch.intervalMS ?? OFFLINE_INTERVAL),
                 cooldownUntil: previous.cooldownUntil,
               });
               ep += next.balance - before.balance;
@@ -388,7 +393,8 @@ export function useProgress() {
         } else {
           if (
             action.type === "buy" &&
-            action.id === "offline-roller" &&
+            (action.id === "offline-roller" ||
+              productById.get(action.id)?.kind === "offline") &&
             !navigator.locks?.request
           )
             throw new Error("Offline Roller requires Web Locks support.");

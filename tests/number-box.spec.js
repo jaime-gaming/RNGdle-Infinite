@@ -156,13 +156,17 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
 
 test("rebalanced catalogue preserves product IDs, premium progression and the specified Auto-Roll price", () => {
   const prices = {
-    "quickwind-1": 75000,
-    "quickwind-2": 300000,
-    "quickwind-3": 1200000,
-    "clockwork-1": 125000,
-    "clockwork-2": 650000,
-    "clockwork-3": 2500000,
-    flywheel: 1000000,
+    "quickwind-1": 35000,
+    "quickwind-2": 175000,
+    "quickwind-3": 800000,
+    "clockwork-1": 60000,
+    "clockwork-2": 400000,
+    "clockwork-3": 1800000,
+    "clockwork-4": 8000000,
+    "clockwork-5": 20000000,
+    flywheel: 600000,
+    "flywheel-2": 4000000,
+    "flywheel-3": 12000000,
     starfall: 50000,
     aurora: 300000,
     orbit: 1500000,
@@ -172,12 +176,14 @@ test("rebalanced catalogue preserves product IDs, premium progression and the sp
     prism: 4000000,
     "archive-lens": 150000,
     "auto-roll": 5000000,
-    "offline-roller": 15000000,
+    "offline-roller": 10000000,
+    "offline-clock-1": 12000000,
+    "offline-clock-2": 25000000,
   };
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(17);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(23);
   for (const product of shopProducts) {
     expect(Number.isSafeInteger(product.price)).toBe(true);
     expect(product.price).toBeGreaterThan(0);
