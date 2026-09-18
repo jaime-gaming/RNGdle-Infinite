@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "build:pages": "vite build --base=/RNGdle-Infinite/",
+    "test:pages": "node tools/test-pages.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",
     "format": "prettier --write src tests *.js *.json index.html README.md",

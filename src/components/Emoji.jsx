@@ -6,7 +6,12 @@ export default function Emoji({ text }) {
     <span className="emoji" aria-hidden="true">
       {[...emojiSegmenter.segment(text)].map(({ segment }, i) =>
         emojiMap[segment] ? (
-          <img key={i} src={emojiMap[segment]} alt="" draggable="false" />
+          <img
+            key={i}
+            src={`${import.meta.env.BASE_URL}${emojiMap[segment].replace(/^\//, "")}`}
+            alt=""
+            draggable="false"
+          />
         ) : (
           segment
         ),
