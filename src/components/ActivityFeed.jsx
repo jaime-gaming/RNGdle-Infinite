@@ -6,6 +6,7 @@ import {
   Medal,
   ShoppingBag,
   Check,
+  RotateCcw,
 } from "lucide-react";
 import NumberBox from "./NumberBox";
 import { badges } from "../badges";
@@ -53,6 +54,7 @@ export default function ActivityFeed({
             filter === "All activity" ||
             (filter === "Rolls" && e.type === "roll") ||
             (filter === "Offline" && e.source === "offline") ||
+            (filter === "Rebirths" && e.type === "rebirth") ||
             (filter === "Badge unlocks" && e.type === "unlock") ||
             (filter === "Shop" && ["purchase", "equip"].includes(e.type)),
         )
@@ -77,7 +79,6 @@ export default function ActivityFeed({
           <History size={25} />
         </div>
         <div>
-          <p className="eyebrow">YOUR LUCK, RECORDED.</p>
           <h1>Your activity</h1>
           <p>Every completed roll, new discovery, and shop transaction.</p>
         </div>
@@ -107,18 +108,20 @@ export default function ActivityFeed({
         role="group"
         aria-label="Activity filters"
       >
-        {filters.map((name) => (
-          <button
-            key={name}
-            aria-pressed={filter === name}
-            onClick={() => {
-              setFilter(name);
-              setLimit(50);
-            }}
-          >
-            {name}
-          </button>
-        ))}
+        {[...filters, ...(progress.rebirths ? ["Rebirths"] : [])].map(
+          (name) => (
+            <button
+              key={name}
+              aria-pressed={filter === name}
+              onClick={() => {
+                setFilter(name);
+                setLimit(50);
+              }}
+            >
+              {name}
+            </button>
+          ),
+        )}
       </div>
       {lens ? (
         <div className="archive-controls">
@@ -192,11 +195,7 @@ export default function ActivityFeed({
       {!events.length ? (
         <section className="activity-empty">
           <History size={30} />
-          <h2>
-            {history.length
-              ? "No matching activity"
-              : "Your story starts with a roll"}
-          </h2>
+          <h2>{history.length ? "No matching activity" : "No rolls yet"}</h2>
           <p>
             {history.length
               ? "Try another activity filter."
@@ -223,6 +222,8 @@ export default function ActivityFeed({
                   <Medal size={19} />
                 ) : event.type === "purchase" ? (
                   <ShoppingBag size={19} />
+                ) : event.type === "rebirth" ? (
+                  <RotateCcw size={19} />
                 ) : (
                   <Check size={19} />
                 )}
@@ -240,7 +241,9 @@ export default function ActivityFeed({
                         ? `${event.badges.length} new badge${event.badges.length === 1 ? "" : "s"} unlocked`
                         : event.type === "purchase"
                           ? `Purchased ${event.name}`
-                          : `Equipped ${event.name}`}
+                          : event.type === "rebirth"
+                            ? `Rebirth ${event.count}`
+                            : `Equipped ${event.name}`}
                   </h2>
                   <time dateTime={new Date(event.at).toISOString()}>
                     {new Date(event.at).toLocaleString(undefined, {
@@ -281,6 +284,11 @@ export default function ActivityFeed({
                     </p>
                     <BadgeList ids={event.badges} openBadge={openBadge} />
                   </>
+                ) : event.type === "rebirth" ? (
+                  <p>
+                    All badges collected. EP, collection and shop items reset.
+                    Profile and history kept.
+                  </p>
                 ) : (
                   <p className="activity-transaction">
                     {event.type === "purchase" ? (

@@ -1,6 +1,8 @@
 import { flywheelForDraw } from "../flywheel";
 import { gameNow } from "../game-clock";
-import LoopHub from "./LoopHub";
+import RollProgress from "./RollProgress";
+import CooldownFill from "./CooldownFill";
+import { parseCooldownWindow } from "../cooldown.js";
 import FlywheelMeter from "./FlywheelMeter";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
@@ -213,6 +215,13 @@ export default function RollExperience({
   const awaitingSettlement =
     !!run && session.pendingRoll?.id === run.id && !runSettled;
   const busy = !!run && elapsed < timeline.end;
+  const cooldownWindow =
+    session.cooldownWindow ??
+    parseCooldownWindow(
+      null,
+      Math.max(session.cooldownUntil, localCooldownUntil),
+      run,
+    );
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
   const rankKnown = !!run && elapsed >= timeline.rarity;
@@ -504,6 +513,12 @@ export default function RollExperience({
                   : error
                     ? "RETRY & ROLL"
                     : "GENERATE"}
+            {!!cooldown && (
+              <CooldownFill
+                window={cooldownWindow}
+                reducedMotion={reducedMotion}
+              />
+            )}
           </button>
           {error && (
             <p className="roll-load-error" role="alert">
@@ -656,12 +671,9 @@ export default function RollExperience({
                 ) : cooldown ? (
                   <>
                     <Clock3 size={18} /> NEXT ROLL IN {formatDuration(cooldown)}
-                    <span
-                      className="cooldown-fill"
-                      aria-hidden="true"
-                      style={{
-                        width: `${100 * Math.max(0, Math.min(1, 1 - (cooldown * 1000) / (run.rollMS + run.cooldownMS)))}%`,
-                      }}
+                    <CooldownFill
+                      window={cooldownWindow}
+                      reducedMotion={reducedMotion}
                     />
                   </>
                 ) : awaitingSettlement ? (
@@ -688,15 +700,6 @@ export default function RollExperience({
               </div>
             )}
           </section>
-          {!busy && (
-            <LoopHub
-              progress={session}
-              runId={run.id}
-              stage={!runSettled ? "settling" : "complete"}
-              navigate={navigate}
-              openBadge={openBadge}
-            />
-          )}
           {digitsDone && result.totalEP !== null && (
             <div className="breakdown-wrap">
               <BadgeBreakdown
@@ -733,13 +736,8 @@ export default function RollExperience({
         </span>
       )}
       {!run && children}
-      {!run && (
-        <LoopHub
-          progress={session}
-          stage="idle"
-          navigate={navigate}
-          openBadge={openBadge}
-        />
+      {(!run || (!busy && runSettled)) && (
+        <RollProgress progress={session} runId={run?.id} navigate={navigate} />
       )}
     </div>
   );

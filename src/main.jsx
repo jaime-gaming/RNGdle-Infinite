@@ -26,6 +26,7 @@ import "./styles.css";
 import Emoji from "./components/Emoji";
 import RollExperience from "./components/RollExperience";
 import { POPULATION, chanceLabels } from "./probability";
+import Rebirth from "./components/Rebirth";
 import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
@@ -351,9 +352,8 @@ function App() {
                 <Medal size={25} />
               </div>
               <div>
-                <p className="eyebrow">LITTLE NUMBERS. BIG DISCOVERIES.</p>
                 <h1>The badge collection</h1>
-                <p>From everyday coincidences to one-in-a-million finds.</p>
+                <p>Discover badges by rolling numbers.</p>
               </div>
             </div>
             <div className="catalogue-intro">
@@ -382,6 +382,22 @@ function App() {
                   : `${((discoveredBadges.length / badges.length) * 100).toFixed(1)}% complete`}
               </span>
             </div>
+            {!!session.rebirths && (
+              <p className="rebirth-count">
+                Rebirths: {session.rebirths.toLocaleString("en-US")}
+              </p>
+            )}
+            <Rebirth
+              key={epoch}
+              progress={session}
+              onAction={dispatch}
+              onDone={() => {
+                navigate("roll");
+                notify(
+                  "Rebirth complete. Your collection and shop progress have been reset.",
+                );
+              }}
+            />
             <div className="filters">
               <label className="search-field">
                 <Search size={17} />
@@ -601,19 +617,19 @@ function App() {
                   adds its EP to your wallet and unlocks all earned badges.
                   Spend EP on timing upgrades, cosmetic auras, or tools in the
                   shop. Choose a goal in the shop to track your EP savings; your
-                  roll recap shows new discoveries and the next step. Auto-Roll
-                  starts the next ready roll while the Roll page is visible,
-                  pauses while a dialog is open, and switches off after reload.
-                  Upgrades apply to future rolls; they never change your odds or
-                  score. Sign up for a local profile to save your wallet,
-                  discoveries, purchases, cooldown, and activity history in this
-                  browser. Guest progress is temporary. This is not an online
-                  account, and clearing site data removes local saves. The
-                  leaderboard is disabled. Refreshing resumes the same committed
-                  number and deadline, including for guests in the same tab.
-                  Account tabs share one draw and reward. Open History for
-                  completed rolls, badge unlocks, and shop transactions. Delete
-                  your account and progress from Profile.
+                  collection records your discoveries. Auto-Roll starts the next
+                  ready roll while the Roll page is visible, pauses while a
+                  dialog is open, and switches off after reload. Upgrades apply
+                  to future rolls; they never change your odds or score. Sign up
+                  for a local profile to save your wallet, discoveries,
+                  purchases, cooldown, and activity history in this browser.
+                  Guest progress is temporary. This is not an online account,
+                  and clearing site data removes local saves. The leaderboard is
+                  disabled. Refreshing resumes the same committed number and
+                  deadline, including for guests in the same tab. Account tabs
+                  share one draw and reward. Open History for completed rolls,
+                  badge unlocks, and shop transactions. Delete your account and
+                  progress from Profile.
                 </div>
                 <button
                   className="primary-button"
@@ -693,7 +709,9 @@ function App() {
                     <strong>
                       {session.discovered.includes(selectedBadge.canonicalId)
                         ? "Discovered"
-                        : "Earned in this roll"}
+                        : session.rebirths
+                          ? "Not yet rediscovered"
+                          : "Earned in this roll"}
                     </strong>
                   </div>
                 </div>

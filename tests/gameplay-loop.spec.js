@@ -99,22 +99,17 @@ test("recaps use actual settlement and unlock receipts, never balances or pendin
   );
 });
 
-test("the first visit explains the loop without exposing undiscovered badges or invented progress", async ({
+test("first visit keeps goals as plain links without dashboard cards or invented progress", async ({
   page,
 }) => {
   await page.goto("/");
-  const hub = page.getByRole("region", { name: "Your next steps" });
-  await expect(hub).toContainText("ROLL · DISCOVER · UPGRADE");
+  const progress = page.getByRole("region", { name: "Progress" });
+  await expect(progress).toContainText("0 / 235 badges");
+  await expect(progress).toContainText("Quickwind I");
+  await expect(progress).toContainText("0 / 75,000 EP");
   await expect(
-    hub.getByRole("progressbar", { name: "Savings for Quickwind I" }),
-  ).toHaveAttribute("value", "0");
-  await expect(
-    hub.getByRole("progressbar", { name: "Your discovered badges" }),
-  ).toHaveAttribute("value", "0");
-  await expect(hub.getByRole("button", { name: /View new badge/ })).toHaveCount(
-    0,
-  );
-  await expect(hub).not.toContainText("EP added to your balance");
+    page.locator(".loop-hub,.loop-card,.loop-badge-chips"),
+  ).toHaveCount(0);
   expect(await saved(page)).toBeNull();
 });
 
@@ -128,21 +123,21 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
   await page.goto("/");
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
-  await expect(page.locator(".loop-hub")).toHaveCount(0);
+  await expect(page.locator(".roll-progress-links")).toHaveCount(0);
   await page.clock.fastForward(44000);
   expect((await saved(page)).history).toHaveLength(0);
-  await expect(page.locator(".loop-hub")).toHaveCount(0);
+  await expect(page.locator(".roll-progress-links")).toHaveCount(0);
   await page.clock.runFor(1200);
   await settled(page);
-  await expect(page.locator(".loop-receipt")).toContainText("+4,663 EP");
-  await expect(page.locator(".loop-receipt")).toContainText(
-    `${evaluate(604827).badges.length} new badges`,
+  expect((await saved(page)).balance).toBe(4663);
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    `${evaluate(604827).badges.length} new in this roll`,
   );
-  await expect(
-    page.getByRole("progressbar", { name: "Savings for Quickwind I" }),
-  ).toHaveAttribute("value", "4663");
-  await expect(page.locator(".loop-badge-chips button")).toHaveCount(2);
-  await page.locator(".loop-badge-chips button").first().click();
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    "4,663 / 75,000 EP",
+  );
+
+  await page.locator(".result-badge-heading button").first().click();
   await expect(page.getByRole("dialog")).toContainText("Discovered");
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.clock.fastForward(60000);
@@ -150,11 +145,12 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   await page.clock.fastForward(46000);
   await settled(page);
-  await expect(page.locator(".loop-receipt")).toContainText("0 new badges");
-  await expect(page.locator(".loop-badge-chips button")).toHaveCount(0);
-  await expect(
-    page.getByRole("progressbar", { name: "Savings for Quickwind I" }),
-  ).toHaveAttribute("value", "9326");
+  await expect(page.locator(".roll-progress-links")).not.toContainText(
+    "new in this roll",
+  );
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    "9,326 / 75,000 EP",
+  );
 });
 
 test("a chosen goal persists, focuses its shop card, requires confirmation and advances after buying", async ({
@@ -174,10 +170,10 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
     "quickwind-1",
   );
   await home(page);
-  await expect(page.locator(".goal-card")).toContainText("Ready to buy");
-  await page
-    .getByRole("button", { name: "Review upgrade", exact: true })
-    .click();
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    "75,000 / 75,000 EP",
+  );
+  await page.getByRole("button", { name: "Quickwind I", exact: true }).click();
   const card = page.locator('[data-product="quickwind-1"]');
   await expect(card).toBeFocused();
   expect((await saved(page)).owned).toEqual([]);
@@ -195,13 +191,17 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   expect((await saved(page)).owned).toEqual(["quickwind-1"]);
   await expect(
     page.getByRole("complementary", { name: "Purchase complete" }),
-  ).toContainText("Quickwind I is yours.");
+  ).toContainText("Quickwind I purchased.");
   await page
     .getByRole("button", { name: "Continue rolling", exact: true })
     .click();
-  await expect(page.locator(".goal-card")).toContainText("Clockwork I");
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    "Clockwork I",
+  );
   await expect(page.locator(".roll-hint")).toContainText("35s reveal");
-  await expect(page.locator(".goal-card")).toContainText("100,000 to go");
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    "25,000 / 125,000 EP",
+  );
 });
 
 test("failed goal writes preserve the previous choice and wallet and can be retried", async ({
@@ -289,7 +289,7 @@ test("Auto-Roll pauses for badge inspection and resumes without replacing its co
   await page.getByRole("switch", { name: "Auto-Roll" }).click();
   await page.clock.runFor(300);
   await settled(page);
-  await page.locator(".loop-badge-chips button").first().click();
+  await page.locator(".result-badge-heading button").first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.clock.fastForward(120000);
   expect(
@@ -353,14 +353,15 @@ test("the completed workshop and collection have honest end states with no inven
     discovered: allBadgeMetadata.map((b) => b.id),
   });
   await page.goto("/");
-  await expect(page.locator(".goal-card")).toContainText(
-    "Your workshop is complete",
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    "All shop items owned",
   );
-  await expect(page.locator(".collection-card")).toContainText(
-    "Your collection is complete",
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    "235 / 235 badges",
   );
   await page
-    .getByRole("button", { name: "Open your workshop", exact: true })
+    .locator(".roll-progress-links")
+    .getByRole("button", { name: "Shop", exact: true })
     .click();
   await expect(page.getByLabel("Track a goal", { exact: true })).toBeDisabled();
 });
@@ -375,7 +376,7 @@ test("feedback and goals fit narrow screens in both themes and respect reduced m
     await page
       .getByRole("button", { name: `${theme} theme`, exact: true })
       .click();
-    await expect(page.locator(".loop-hub")).toBeVisible();
+    await expect(page.locator(".roll-progress-links")).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -386,11 +387,11 @@ test("feedback and goals fit narrow screens in both themes and respect reduced m
         .locator(".cooldown-fill")
         .evaluate((e) => getComputedStyle(e).transitionDuration),
     ).toBe("0s");
-    await page.locator(".loop-badge-chips button").first().click();
+    await page.locator(".result-badge-heading button").first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
     await page
-      .getByRole("button", { name: "Review upgrade", exact: true })
+      .getByRole("button", { name: "Quickwind I", exact: true })
       .click();
     await expect(page.locator('[data-product="quickwind-1"]')).toBeFocused();
     expect(
@@ -412,14 +413,16 @@ test("a funded offline goal still explains the profile requirement instead of cl
     goalId: "offline-roller",
   });
   await page.goto("/");
-  await expect(page.locator(".goal-card")).toContainText(
-    "Requires a saved profile",
+  await expect(page.locator(".roll-progress-links")).toContainText(
+    "Local profile required",
   );
-  await expect(page.locator(".goal-card")).toContainText("Profile needed");
-  await expect(page.locator(".goal-card")).not.toContainText("Ready to buy");
-  await expect(page.locator(".goal-card")).not.toContainText("to go");
+
+  await expect(page.locator(".roll-progress-links")).not.toContainText(
+    "75,000 / 75,000 EP",
+  );
+  await expect(page.locator(".roll-progress-links")).not.toContainText("to go");
   await page
-    .getByRole("button", { name: "View goal in shop", exact: true })
+    .getByRole("button", { name: "Offline Roller", exact: true })
     .click();
   await expect(page.locator('[data-product="offline-roller"]')).toBeFocused();
   await page.locator('[data-product="offline-roller"] button').click();

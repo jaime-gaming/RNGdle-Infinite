@@ -1,0 +1,117 @@
+.roll-progress-links {
+  width: min(100%, 640px);
+  margin: 28px auto 0;
+  text-align: center;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.8;
+}
+.roll-progress-links p {
+  margin: 5px 0;
+}
+.roll-progress-links button {
+  border: 0;
+  background: none;
+  padding: 3px 0;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.roll-progress-links button:hover {
+  color: var(--text);
+}
+.roll-progress-links button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+.shop-goal-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  margin: -12px 0 28px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.shop-goal-picker select {
+  max-width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.shop-goal-picker small {
+  font-size: 11px;
+  color: var(--secondary);
+}
+.shop-card[data-tracked="true"] {
+  border-color: var(--secondary);
+}
+.shop-card:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 3px;
+}
+.purchase-return-space {
+  height: 75px;
+}
+.purchase-return {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+}
+.purchase-return p {
+  margin: 0;
+  line-height: 1.7;
+}
+.purchase-return .return-link {
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 7px 0;
+}
+@media (max-width: 480px) {
+  .shop-goal-picker select {
+    width: 100%;
+  }
+  .purchase-return {
+    flex-wrap: wrap;
+    gap: 6px 14px;
+  }
+  .purchase-return > p {
+    flex: 1 0 calc(100% - 46px);
+  }
+  .purchase-return .icon-button {
+    order: 0;
+  }
+  .purchase-return .return-link {
+    order: 1;
+  }
+  .purchase-return-space {
+    height: 110px;
+  }
+}

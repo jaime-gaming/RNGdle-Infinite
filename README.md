@@ -32,16 +32,25 @@ npm run preview
 - Light, dark, and system themes. Registered profiles persist wallet, discoveries, upgrades, equipped aura, and cooldown in localStorage; guest wallets and history stay in memory; a narrow sessionStorage guard retains only the committed draw and cooldown across refreshes. Theme preference can persist without signing up.
 - Responsive layouts, accessible dialogs, local emoji assets, and no runtime CDN dependency.
 
-## The gameplay loop
+## Presentation and progression
 
-**Roll → discover → work toward an upgrade → roll again.** The reveal keeps its original choreography; no extra currency, quests, streak penalties, or chance boosts are added.
+The reference-style number, rank, EP, share/roll controls and badge breakdown form one uninterrupted sequence. The added dashboard cards, duplicate reward recap and promotional goal copy have been removed. Collection and optional goal links remain as small text below the original content; the Shop retains a compact goal selector and plain purchase confirmation. Fonts, rarity palettes, reveal effects and optional owned cosmetics remain unchanged.
 
-- **A clear next step:** the Roll page shows a suggested upgrade, its effect, an exact EP savings bar and the amount still needed. Recommendations respect prerequisites and prioritise pace, then automation, then remaining cosmetics/tools. A completed workshop has a real end state rather than invented upgrades.
-- **Player-chosen goals:** use “Track a goal” in the Shop to choose any available unowned item, or return to recommendations. It costs nothing and never purchases automatically. Local profiles save and synchronise this optional `goalId`; guest choices stay temporary until signup. Invalid/obsolete goals fall back safely without resetting progress. Buying the chosen item clears it and recommends the next step.
-- **Honest roll feedback:** once a roll finishes, its actual settlement and unlock receipts power a recap of EP earned and new badges. Two newly discovered badges can be inspected directly; the complete collection stays one click away. Repeated numbers never pretend to be new discoveries. The recap is absent during the reveal and never derives rewards from a pending number. Reloading shows the last recorded online roll, not a new payout; offline rewards retain their separate summary.
-- **A connected shop:** “View goal in shop” focuses the corresponding card. Purchases still require confirmation. After a successful purchase, a dismissible, untimed confirmation explains what changed and offers “Continue rolling”, even when the player is far down the shop page. Changes never shorten an already committed deadline.
-- **Useful waiting time:** a subtle bar on the cooldown button tracks the committed cycle. During cooldown, the progress cards give access to goals and discoveries. Auto-Roll now pauses for dialogs as well as hidden tabs/other pages; committed reveals continue normally and cannot be discarded.
-- Two-column desktop cards become a single column on narrow screens, with native labelled progress bars, focusable shop targets, visible keyboard focus, light/dark palettes and reduced-motion support. The reference number/EP/control geometry and badge choreography remain; the new settled recap sits before the complete breakdown.
+**Next Roll bar:** each committed draw now records a cosmetic `cooldownWindow` (`startsAt`, `endsAt`) alongside the enforced deadline. The fill measures only the cooldown: zero at the end of the reveal, half at the middle of the cooldown, and full at readiness. A compositor animation is periodically synchronised to `gameNow()` instead of using rounded display seconds or a per-frame React loop. It restores after reload and does not change when an upgrade is bought mid-roll. Reduced motion uses discrete updates and never skips the reserved reveal time. A Flywheel roll has no cooldown bar, but still reserves its full reveal. Older saves without a reconstructable window retain the exact countdown without inventing a fill percentage.
+
+Goals remain optional and free. Recommendations respect prerequisites; a chosen goal persists with a local profile and clears after its purchase. Choosing or viewing a goal never spends EP. Auto-Roll pauses while browsing other pages, hidden tabs or dialogs, and remains off after reload. These conveniences do not modify randomness, scoring or timing.
+
+## Rebirth
+
+Rebirth is based on **all 235 discovered badges**, not shop ownership. The option is entirely hidden below **141/235 (60%)**, appears disabled from 141 to 234, and unlocks at **235/235** on the Badges page. Filtering the catalogue does not change eligibility.
+
+Confirming requires typing **REBIRTH** and cannot be undone. As requested:
+
+- **Reset:** EP balance and cycle earnings, discovered badges, every shop purchase (including cosmetics, Auto-Roll and Offline Roller), equipped aura, tracked goal, Flywheel charge, offline ledger and completed cooldown state.
+- **Keep:** local profile, full activity history and an incremented rebirth count. Theme preference also remains. Guest progress is still temporary until signup.
+- Each rebirth is recorded in History; previous roll rewards and purchase prices remain archived. Badges may be rediscovered and items repurchased in the new cycle. No luck or EP multiplier is added.
+
+A pending online roll, committed offline batch or unexpired next-roll deadline blocks rebirth: it cannot discard an unwanted number or skip a wait. Registered resets use the same Web Lock and an atomic save. Failed saves leave progress intact. Rebirth count also acts as a cycle guard: other tabs cancel old work and reset their live reveal/automation state, and failed-settlement recovery cannot restore earnings from a previous cycle. New fields default safely for older version-1 saves. As with all frontend-only progress, deliberate storage/code tampering requires a future server-authoritative implementation to prevent.
 
 ## EP shop and local progress
 
@@ -133,7 +142,7 @@ Registered tabs synchronize deletion. Active reveals and pending draws are cance
 
 Guests can roll, discover badges, and buy items, but these changes exist **only in the current tab’s memory** and disappear on reload. The exception is a temporary anti-reroll guard under `rng-infinite-guest-roll-v1` in sessionStorage: it stores only the pending number, ID, start time, snapshotted timings, and next-roll deadline. Refreshing resumes that draw without saving the guest wallet/history. A guest guard belongs to a tab/session, not an identity across fresh browser sessions. Creating a local profile saves the entire current guest game atomically, then enables automatic saves. The username accepts 3–20 letters, numbers, underscores, or hyphens. No email, password, or other credential is requested or stored. This is **not online authentication**, and usernames are not globally reserved.
 
-`rng-infinite-progress-v1` stores a versioned object with local `profile` (ID, username, creation timestamp), spendable `balance`, cumulative `totalEarned`, discovered badge IDs, owned product IDs, equipped aura, cooldown deadline, `pendingRoll` commitment, a bounded recent receipt list, optional `goalId`, `flywheelCharge` (0–4), and the complete `history` activity log. Roll IDs in history also prevent duplicate credits after the recent receipt window expires. Theme remains under `rng-theme`. Existing profileless saves from the earlier prototype can be loaded into guest memory, but new changes are not persisted until sign-up.
+`rng-infinite-progress-v1` stores a versioned object with local `profile` (ID, username, creation timestamp), spendable `balance`, cumulative `totalEarned`, discovered badge IDs, owned product IDs, equipped aura, cooldown deadline, `pendingRoll` commitment, a bounded recent receipt list, optional `goalId`, `cooldownWindow`, `rebirths`, `flywheelCharge` (0–4), and the complete `history` activity log. Roll IDs in history also prevent duplicate credits after the recent receipt window expires. Theme remains under `rng-theme`. Existing profileless saves from the earlier prototype can be loaded into guest memory, but new changes are not persisted until sign-up.
 
 Writes are serialized in each tab and use **Web Locks** to protect shared balances and coordinate registered draws across tabs. A registered draw is refused without Web Locks support. Storage events synchronize registered tabs. A guest tab does not silently join a profile created in another tab or lose its guest game; attempting sign-up then explains the conflict instead of overwriting the other profile. Simultaneous account tabs join the same pending draw, and canonical settlement recomputes the score and credits its ID only once.
 
@@ -169,9 +178,11 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **131 tests** cover:
+The **150 tests** cover:
 
-- Goal recommendations/prerequisites, backward-compatible goal saves, failed-write retry, cross-tab preservation, guest/signup gating, confirmed purchase → next goal, no premature or fabricated recaps, duplicate-roll discoveries, Auto-Roll dialog pausing, completed-workshop states, profile-required goals and narrow-screen themes.
+- Goal recommendations/prerequisites, backward-compatible goal saves, failed-write retry, cross-tab preservation, guest/signup gating, confirmed purchase → next goal, plain progress links, duplicate-roll discoveries, Auto-Roll dialog pausing, completed-workshop states, profile-required goals and narrow-screen themes.
+- Rebirth visibility at 140/141/234/235 badges, unique-badge eligibility, filters, typed confirmation/cancel, complete resets and preserved history, repurchases/rediscovery, failed local/session saves, simultaneous tabs, missed storage events, stale-cycle recovery, Web Locks, pending-roll/offline/cooldown guards and mobile dialogs.
+- Cooldown-only fill arithmetic, fractional progression, reload and mid-cooldown purchases, reduced-motion reveal reservation and zero-cooldown Flywheel rolls.
 - Flywheel’s two-cycle accounting, zero-cooldown validation, mid-reveal purchase snapshots, full base/upgraded reveal deadlines, reload restoration, concurrent single consumption, failed commit/recovery, offline exclusion, Auto-Roll compatibility, mobile display, and legacy price preservation.
 - Exact chance/frequency formatting at rare and near-certain boundaries, and full-population tier odds despite stale manifest counts.
 - Every legal number’s base score versus its highest-EP family memberships, all 233 pinned badge probabilities and data hashes, plus exhaustive independent checks of both Infinite Originals, their bonuses, adjusted ranks and tier counts.
@@ -201,7 +212,9 @@ Deterministic browser tests intercept the worker’s crypto source in Playwright
 - `src/roll-client.js`, `src/roll.worker.js` — worker lifecycle, loading/retry, and random-roll messages
 - `src/load-index.js` — text-safe data transport, bounded decompression, and canonical integrity checks
 - `src/offline.js`, `src/use-offline.js`, `src/components/OfflineRewards.jsx` — offline accounting, shared presence, catch-up scheduling and reward summary
-- `src/gameplay-loop.js`, `src/components/LoopHub.jsx`, `src/loop.css` — read-only economy guidance, saved goals, receipt-based feedback and the shop return flow
+- `src/gameplay-loop.js`, `src/components/RollProgress.jsx`, `src/progress-links.css` — optional goals and plain collection/progression links
+- `src/rebirth.js`, `src/components/Rebirth.jsx` — collection eligibility and typed reset confirmation
+- `src/cooldown.js`, `src/components/CooldownFill.jsx` — persisted cooldown windows and monotonic, compositor-driven fill
 - `src/flywheel.js`, `src/components/FlywheelMeter.jsx` — snapshotted charge rules and accessible pace progress
 - `tools/audit-economy.mjs` — reproducible score distribution and price audit
 - `src/infinite-badges.js` — two original badge rules/memberships, EP bonuses, exact odds, and combined metadata
