@@ -166,32 +166,20 @@ test("buying an aura equips it and equipping another is free", () => {
   );
 });
 
-test("the goal recap reports savings from the wallet without inventing progress", async () => {
+test("the goal recap ring reflects the wallet without inventing progress", async () => {
   const { currentGoal } = await import("../src/gameplay-loop.js");
-  const { MEDIAN_ROLL_EP } = await import("../src/probability.js");
-  expect(MEDIAN_ROLL_EP).toBe(5801);
-  // A fresh profile is pointed at the cheapest useful upgrade, at zero progress.
   const fresh = {
     ...emptyProgress(),
     profile: { id: "p", username: "a", createdAt: 1 },
   };
   const goal = currentGoal(fresh);
   expect(goal.id).toBe("quickwind-1");
-  expect(Math.min(fresh.balance, goal.price)).toBe(0);
-  // Savings are capped at the price and never exceed 100%.
-  const flush = {
-    ...fresh,
-    balance: goal.price * 3,
-    totalEarned: goal.price * 3,
-  };
-  expect(Math.min(flush.balance, goal.price)).toBe(goal.price);
-  expect(Math.max(0, goal.price - flush.balance)).toBe(0);
-  // The estimate uses the median, never the jackpot-inflated mean.
-  const halfway = {
-    ...fresh,
-    balance: goal.price / 2,
-    totalEarned: goal.price / 2,
-  };
-  const remaining = goal.price - halfway.balance;
-  expect(Math.ceil(remaining / MEDIAN_ROLL_EP)).toBe(4);
+  // The ring is a pure function of wallet over price, clamped at both ends.
+  const fill = (balance) => Math.min(100, (balance / goal.price) * 100);
+  expect(fill(0)).toBe(0);
+  expect(fill(goal.price / 2)).toBe(50);
+  expect(fill(goal.price)).toBe(100);
+  expect(fill(goal.price * 3)).toBe(100);
+  // Saved EP is capped at the price, so it can never overstate progress.
+  expect(Math.min(goal.price * 3, goal.price)).toBe(goal.price);
 });

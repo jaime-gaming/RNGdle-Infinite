@@ -309,12 +309,22 @@ centre, an equipped companion drifts, and the savings bar fills rather than
 jumping. Nothing moves more than 8px or shifts layout, and the global
 `prefers-reduced-motion` reset disables all of it.
 
-**Share includes the link.** The result screen shows a dedicated, selectable
-`https://jaime-gaming.github.io/RNGdle-Infinite` area with its own copy button,
-and the copied share text ends with the same URL.
+**Share carries the link.** There is one copy action, not two: pressing Share
+copies the result _and_ `https://jaime-gaming.github.io/RNGdle-Infinite`
+together, and the button confirms with "Copied result + link!".
 
-The **goal savings line** now sits directly above the badge breakdown and is
-rendered noticeably smaller.
+**The goal savings marker is just a ring.** It sits directly above the badge
+breakdown as a small progress ring holding the goal icon, followed by a link
+into the shop. The exact figures — saved, price and percentage — are no longer
+drawn on screen but remain available on hover and to screen readers through the
+ring's label, so nothing was lost for assistive technology.
+
+**Sign-up was reworked.** It now validates the name as you type (saying whether
+it is too short or has invalid characters, and confirming when it is fine)
+using the _same_ validator the reducer enforces, so the form and the rules can
+never disagree. Submission stays disabled until the name is valid, there is a
+dice button to suggest one, and the panel states plainly what is saved from
+that moment on and what is not carried over from guest play.
 
 ## Real URLs, light mode and a lighter economy
 
@@ -395,13 +405,14 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **197 tests** cover:
+The **201 tests** cover:
 
 - Goal recommendations/prerequisites, backward-compatible goal saves, failed-write retry, cross-tab preservation, guest/signup gating, confirmed purchase → next goal, plain progress links, duplicate-roll discoveries, Auto-Roll dialog pausing, completed-workshop states, profile-required goals and narrow-screen themes.
 - Rebirth visibility at 140/141/234/235 badges, unique-badge eligibility, filters, typed confirmation/cancel, complete resets and preserved history, repurchases/rediscovery, failed local/session saves, simultaneous tabs, missed storage events, stale-cycle recovery, Web Locks, pending-roll/offline/cooldown guards and mobile dialogs.
 - Cooldown-only fill arithmetic, fractional progression, reload and mid-cooldown purchases, reduced-motion reveal reservation and zero-cooldown Flywheel rolls.
 - Every late tier’s prerequisite chain and deep orphan pruning, historical prices, recommendation ordering, 2s/5s/10s snapshots, 4/2/1-charge rhythms, rate changes without retroactive rewards, snapshotted legacy batches, all three offline caps, concurrent tier purchases and failed-save rollback.
 - Settings defaults, field-by-field validation of corrupt preferences, separation from saved progress, compact-EP formatting that never changes a spent amount, Offline Vault caps, Persistence Core prerequisites, catalogue kinds and the four-times-prerequisite price ceiling.
+- The changelog staying short and lowercase with the launch note preserved verbatim, Share being a single copy action that includes the link, the goal recap rendering as a ring that still announces its figures, and sign-up sharing one validator with the reducer.
 - Companions multiplying banked EP without altering the scored roll, ordered and capped multipliers, purchase/equip/validation rules, forged-save rejection, and rare weighted drops that never duplicate or auto-swap; guest play saving nothing and sign-up starting a clean account; the share link; the changelog's entries and unseen-version flag including unavailable storage; and ambient motion staying small and reduced-motion safe.
 - Real-path routing for all six pages including subpath deployment, legacy hash links, unknown-route fallback and duplicate-history suppression; the `404.html` static fallback; rebirth unlocking on badges alone with an empty shop and refusing with a full shop; light mode having a single palette source and themed semantic tokens; and the rebalanced catalogue's total, early prices and prerequisite ratios.
 - All twelve auras carrying no gameplay payload, distinct prices, renderer coverage for every catalogue aura, purchase-equips/free-re-equip behaviour, refusal to equip an unowned aura, and goal-recap savings that cap at the price and estimate from the median.

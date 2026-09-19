@@ -1,136 +1,65 @@
-/* Deliberately not a card: no border, no panel background and no shadow, so
-   the savings line reads as part of the result rather than a separate box. */
+/* Deliberately tiny: a progress ring and a link, nothing more. Not a card —
+   no border, no panel background, no shadow. */
 .goal-recap {
-  width: 100%;
-  margin: 0 auto 14px;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-align: left;
-}
-.goal-recap-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  margin: 0 0 14px;
 }
-.goal-recap-icon {
-  display: flex;
-  transform: scale(0.85);
-  align-items: center;
-  justify-content: center;
+.goal-recap-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   color: var(--muted);
+  /* The ring is the savings bar. */
+  background: conic-gradient(
+    var(--ring-colour, var(--secondary)) var(--fill, 0%),
+    var(--border) 0
+  );
+  cursor: help;
 }
-.goal-recap.is-ready .goal-recap-icon {
+.goal-recap-ring::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+.goal-recap-ring > svg {
+  position: relative;
+  z-index: 1;
+}
+.goal-recap.is-ready .goal-recap-ring {
+  --ring-colour: var(--green);
   color: var(--green);
-}
-.goal-recap-title {
-  flex: 1;
-  min-width: 0;
-}
-.goal-recap-title .eyebrow {
-  display: block;
-  font-size: 8.5px;
-  letter-spacing: 0.09em;
-  color: var(--muted);
-}
-.goal-recap-title strong {
-  display: block;
-  font-size: 11.5px;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.goal-recap-gain {
-  flex-shrink: 0;
-  padding: 0;
-  background: none;
-  color: var(--green);
-  font-size: 10px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-.goal-recap-bar {
-  display: block;
-  width: 100%;
-  height: 3px;
-  margin: 6px 0 5px;
-  border: 0;
-  border-radius: 20px;
-  background: var(--hover);
-  appearance: none;
-}
-.goal-recap-bar::-webkit-progress-bar {
-  border-radius: 20px;
-  background: var(--hover);
-}
-.goal-recap-bar::-webkit-progress-value {
-  border-radius: 20px;
-  background: var(--secondary);
-  transition: width 0.6s ease;
-}
-.goal-recap-bar::-moz-progress-bar {
-  border-radius: 20px;
-  background: var(--secondary);
-}
-.goal-recap.is-ready .goal-recap-bar::-webkit-progress-value {
-  background: var(--green);
-}
-.goal-recap.is-ready .goal-recap-bar::-moz-progress-bar {
-  background: var(--green);
-}
-.goal-recap-figures {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0;
-  font-size: 10px;
-  color: var(--secondary);
-  font-variant-numeric: tabular-nums;
-}
-.goal-recap-figures strong {
-  color: var(--text);
-  font-size: 10.5px;
-}
-.goal-recap-percent {
-  font-weight: 650;
-}
-.goal-recap-note {
-  margin: 5px 0 0;
-  font-size: 10px;
-  line-height: 1.55;
-  color: var(--secondary);
 }
 .goal-recap-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 6px;
-  padding: 3px 0;
+  padding: 2px 0;
   border: 0;
   background: none;
-  color: var(--text);
+  color: var(--secondary);
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
   text-decoration: underline;
   text-underline-offset: 3px;
+  text-decoration-color: var(--border);
   cursor: pointer;
+  transition:
+    color 0.2s,
+    text-decoration-color 0.2s;
+}
+.goal-recap-link:hover {
+  color: var(--text);
+  text-decoration-color: currentColor;
+}
+.goal-recap.is-ready .goal-recap-link {
+  color: var(--green);
 }
 .goal-recap-link:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 3px;
-}
-.goal-recap-disclaimer {
-  display: block;
-  margin-top: 5px;
-  font-size: 9px;
-  line-height: 1.55;
-  color: var(--muted);
-}
-@media (prefers-reduced-motion: reduce) {
-  .goal-recap-bar::-webkit-progress-value {
-    transition: none;
-  }
 }

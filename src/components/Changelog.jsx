@@ -28,8 +28,7 @@ export default function Changelog({ onSeen }) {
         </article>
       ))}
       <p className="changelog-note">
-        Rolls stay uniform over 0–1,000,000 and EP scoring is unchanged in every
-        version listed here.
+        Rolls stay uniform over 0–1,000,000 and EP scoring never changed.
       </p>
     </div>
   );
