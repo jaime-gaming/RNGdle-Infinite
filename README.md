@@ -22,27 +22,6 @@ This is a static site: GitHub Pages hosts the built HTML, JavaScript, local font
 emoji, and verified scoring data. No backend, custom server, API key, or paid
 service is needed. Use Node.js 22 for builds and tests.
 
-### One-time setup
-
-1. Merge this branch into **`main`** so the workflows are on the default branch.
-2. Open **Settings → Pages → Build and deployment**, and set **Source** to
-   **GitHub Actions** (not “Deploy from a branch”).
-3. Open **Actions → Deploy to GitHub Pages → Run workflow**, choose `main`, and
-   run it. Future pushes to `main` deploy automatically after the Pages smoke
-   check passes. If the `github-pages` environment requires approval, approve
-   the deployment in Actions.
-
-The default project URL is **https://jaime-gaming.github.io/RNGdle-Infinite/**.
-This is the intended URL, not a claim that deployment has already completed.
-The workflow's deployment job shows the actual published link.
-
-`.github/workflows/pages.yml` builds with the base path reported by GitHub Pages,
-then uploads **`dist/`** using the official Pages artifact/deploy actions. This
-supports the repository subpath and a root/custom-domain site configured in Pages
-settings. Manual deployment is restricted to `main`; feature branches do not
-replace the live game. No `gh-pages` branch or personal access token is required.
-PRs targeting `main` run the game tests and Pages smoke checks via
-`.github/workflows/check.yml`.
 
 ### Check the Pages build locally
 
