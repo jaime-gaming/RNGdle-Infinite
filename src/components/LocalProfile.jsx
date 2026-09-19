@@ -134,8 +134,9 @@ export default function LocalProfile({ profile, onAction, onClose }) {
       ) : (
         <form onSubmit={register}>
           <p>
-            Choose a name to keep your current guest progress and save future
-            progress.
+            Choose a name to start a saved account. Nothing you rolled as a
+            guest carries over — guest play is not saved, so your new account
+            starts clean at 0 EP with an empty collection.
           </p>
           <label>
             Username

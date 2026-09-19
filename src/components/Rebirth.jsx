@@ -108,7 +108,9 @@ export default function Rebirth({ progress, onAction, onDone }) {
             unlock it.
           </p>
           {!progress.profile && (
-            <p>Guest rebirth progress is temporary until you sign up.</p>
+            <p>
+              Guest progress is never saved, so this resets nothing permanent.
+            </p>
           )}
           <label>
             Type REBIRTH to confirm

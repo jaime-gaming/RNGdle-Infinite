@@ -1,0 +1,105 @@
+/* Deliberately unlike the plain nav buttons: bordered pill, progress ring and
+   a distinct accent, so Rebirth reads as a milestone rather than a page. */
+.rebirth-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--secondary);
+  transition:
+    border-color 0.25s,
+    background 0.25s,
+    color 0.25s;
+}
+.rebirth-nav:hover {
+  border-color: var(--muted);
+  background: var(--hover);
+}
+.rebirth-nav.active {
+  border-color: var(--text);
+  color: var(--text);
+}
+.rebirth-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  color: var(--muted);
+  /* The ring itself is the progress bar: conic fill to the discovered share. */
+  background: conic-gradient(
+    var(--ring-colour, var(--secondary)) var(--fill, 0%),
+    var(--border) 0
+  );
+}
+.rebirth-ring::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.rebirth-ring > svg {
+  position: relative;
+  z-index: 1;
+}
+.rebirth-nav-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+.rebirth-nav-label {
+  font-size: 11px;
+  font-weight: 620;
+}
+.rebirth-nav-count {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+/* Complete collection: the one state that earns colour. */
+.rebirth-nav.is-ready {
+  border-color: var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+}
+.rebirth-nav.is-ready .rebirth-ring {
+  --ring-colour: var(--green);
+  color: var(--green);
+  animation: rebirth-ready-glow 3.4s ease-in-out infinite;
+}
+.rebirth-nav.is-ready .rebirth-ring::after {
+  background: var(--green-bg);
+}
+.rebirth-nav.is-ready .rebirth-nav-count {
+  color: var(--green);
+}
+@keyframes rebirth-ready-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 16%, transparent);
+  }
+}
+@media (max-width: 860px) {
+  .rebirth-nav-text {
+    display: none;
+  }
+  .rebirth-nav {
+    padding: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rebirth-nav,
+  .rebirth-nav.is-ready .rebirth-ring {
+    animation: none;
+    transition: none;
+  }
+}

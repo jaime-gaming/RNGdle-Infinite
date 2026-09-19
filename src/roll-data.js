@@ -42,6 +42,7 @@ export function formatEPCompact(value) {
     }
   return formatEP(rounded);
 }
+export const GAME_URL = "https://jaime-gaming.github.io/RNGdle-Infinite";
 export function buildShareText(result) {
   const squares = {
     trash: "🟫",
@@ -64,5 +65,7 @@ export function buildShareText(result) {
     ...(result.badges.length > 3 ? [`+${result.badges.length - 3} more`] : []),
     "",
     `${formatEP(result.totalEP)} EP`,
+    "",
+    GAME_URL,
   ].join("\n");
 }

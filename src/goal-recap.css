@@ -1,8 +1,8 @@
 /* Deliberately not a card: no border, no panel background and no shadow, so
    the savings line reads as part of the result rather than a separate box. */
 .goal-recap {
-  width: min(100%, 440px);
-  margin: 0 auto 6px;
+  width: 100%;
+  margin: 0 auto 14px;
   padding: 0;
   border: 0;
   background: none;
@@ -11,10 +11,11 @@
 .goal-recap-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 .goal-recap-icon {
   display: flex;
+  transform: scale(0.85);
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
@@ -29,14 +30,14 @@
 }
 .goal-recap-title .eyebrow {
   display: block;
-  font-size: 9px;
+  font-size: 8.5px;
   letter-spacing: 0.09em;
   color: var(--muted);
 }
 .goal-recap-title strong {
   display: block;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 11.5px;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -46,15 +47,15 @@
   padding: 0;
   background: none;
   color: var(--green);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
 .goal-recap-bar {
   display: block;
   width: 100%;
-  height: 4px;
-  margin: 8px 0 6px;
+  height: 3px;
+  margin: 6px 0 5px;
   border: 0;
   border-radius: 20px;
   background: var(--hover);
@@ -85,34 +86,34 @@
   justify-content: space-between;
   gap: 10px;
   margin: 0;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--secondary);
   font-variant-numeric: tabular-nums;
 }
 .goal-recap-figures strong {
   color: var(--text);
-  font-size: 12px;
+  font-size: 10.5px;
 }
 .goal-recap-percent {
   font-weight: 650;
 }
 .goal-recap-note {
-  margin: 7px 0 0;
-  font-size: 11px;
-  line-height: 1.6;
+  margin: 5px 0 0;
+  font-size: 10px;
+  line-height: 1.55;
   color: var(--secondary);
 }
 .goal-recap-link {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 8px;
-  padding: 4px 0;
+  margin-top: 6px;
+  padding: 3px 0;
   border: 0;
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: 11px;
+  font-size: 10px;
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
@@ -123,9 +124,9 @@
 }
 .goal-recap-disclaimer {
   display: block;
-  margin-top: 7px;
-  font-size: 9.5px;
-  line-height: 1.6;
+  margin-top: 5px;
+  font-size: 9px;
+  line-height: 1.55;
   color: var(--muted);
 }
 @media (prefers-reduced-motion: reduce) {

@@ -86,7 +86,8 @@ export default function ActivityFeed({
       {!progress.profile && (
         <div className="guest-save-notice">
           <p>
-            Your guest feed is temporary. Sign up to keep it with your progress.
+            Guest play is not saved. This feed disappears when you leave, and
+            signing up starts a fresh account rather than keeping it.
           </p>
           <button className="secondary-button" onClick={openSignup}>
             Sign up to save

@@ -40,6 +40,7 @@ import {
   recommendedGoal,
 } from "../gameplay-loop.js";
 import "../progress-links.css";
+import PetShelf from "./PetShelf";
 import { flywheelRequired } from "../flywheel.js";
 import NumberBox from "./NumberBox";
 import { useFormatEP, useSettings } from "../use-settings.jsx";
@@ -479,6 +480,7 @@ export default function Shop({
           {shopProducts.filter((item) => item.kind === "aura").map(card)}
         </div>
       </section>
+      <PetShelf progress={progress} onAction={onAction} notify={notify} />
       <section className="shop-category">
         <div className="shop-section-heading">
           <div>

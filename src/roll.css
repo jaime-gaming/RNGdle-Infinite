@@ -1195,3 +1195,52 @@ nav button.active {
 .flywheel-meter.is-spinning > svg {
   animation: none;
 }
+
+/* The shareable game link, shown as its own readable area rather than being
+   hidden inside the copied text. */
+.share-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  width: min(100%, 440px);
+  margin: 10px auto 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  background: var(--hover);
+}
+.share-link-label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.share-link-url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--roll-font);
+  font-size: 11px;
+  color: var(--secondary);
+  user-select: all;
+}
+.share-link-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.share-link-copy:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}

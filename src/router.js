@@ -1,7 +1,14 @@
 // Real URLs instead of hash fragments: /shop, /badges, /history, /settings.
 // The site is also published to a repository subpath on GitHub Pages, so every
 // route is resolved against the build-time base rather than the domain root.
-export const PAGES = ["roll", "shop", "badges", "history", "settings"];
+export const PAGES = [
+  "roll",
+  "shop",
+  "badges",
+  "history",
+  "settings",
+  "changelog",
+];
 export const HOME = "roll";
 
 // import.meta.env.BASE_URL is "/" locally and "/RNGdle-Infinite/" on Pages.
