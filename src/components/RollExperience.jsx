@@ -17,21 +17,10 @@ import { prepareRolls, restoreRoll } from "../roll-client";
 import BadgeBreakdown from "./BadgeBreakdown";
 import RankSummary from "./RankSummary";
 import { rollSettings, formatDuration } from "../shop-data";
+import { useMotionPreference, useSettings } from "../use-settings.jsx";
+import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
 import "../roll.css";
-
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(
-    () => matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    const media = matchMedia("(prefers-reduced-motion: reduce)");
-    const change = () => setReduced(media.matches);
-    media.addEventListener("change", change);
-    return () => media.removeEventListener("change", change);
-  }, []);
-  return reduced;
-}
 
 const AnimatedCount = memo(function AnimatedCount({
   value,
@@ -158,8 +147,17 @@ export default function RollExperience({
   navigate,
 }) {
   const settings = rollSettings(session.owned);
+  const { settings: preferences } = useSettings();
   const ownsAutoRoll = session.owned.includes("auto-roll");
-  const [autoRoll, setAutoRoll] = useState(false);
+  // Persistence Core is the only way a switch survives a reload; without it the
+  // stored value is ignored so Auto-Roll still starts off, as documented.
+  const persistsAutoRoll =
+    ownsAutoRoll && session.owned.includes("persistence-core");
+  const [autoRoll, setAutoRoll] = useState(() =>
+    persistsAutoRoll
+      ? readAutoRoll(session.profile?.id)
+      : preferences.autoRollDefault && ownsAutoRoll,
+  );
   const [visible, setVisible] = useState(
     () => document.visibilityState === "visible",
   );
@@ -170,6 +168,9 @@ export default function RollExperience({
     document.addEventListener("visibilitychange", update);
     return () => document.removeEventListener("visibilitychange", update);
   }, []);
+  useEffect(() => {
+    if (persistsAutoRoll) writeAutoRoll(session.profile?.id, autoRoll);
+  }, [persistsAutoRoll, autoRoll, session.profile?.id]);
   const [run, setRun] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [instantCompletion, setInstantCompletion] = useState(false);
@@ -185,7 +186,7 @@ export default function RollExperience({
   const [cooldown, setCooldown] = useState(() =>
     Math.max(0, Math.ceil((session.cooldownUntil - gameNow()) / 1000)),
   );
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useMotionPreference();
   const finishedRun = useRef(null);
   const shareButton = useRef(null);
   const creditCallback = useRef(onComplete);
@@ -237,7 +238,7 @@ export default function RollExperience({
     if (
       !autoRoll ||
       !active ||
-      !visible ||
+      (!visible && !persistsAutoRoll) ||
       loading ||
       drawing ||
       busy ||
@@ -256,6 +257,7 @@ export default function RollExperience({
     ownsAutoRoll,
     active,
     visible,
+    persistsAutoRoll,
     loading,
     drawing,
     busy,
@@ -456,10 +458,12 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
-      <FlywheelMeter
-        progress={session}
-        boosted={!!run && run.flywheel === "boost" && !runSettled}
-      />
+      {preferences.showFlywheelMeter && (
+        <FlywheelMeter
+          progress={session}
+          boosted={!!run && run.flywheel === "boost" && !runSettled}
+        />
+      )}
       {ownsAutoRoll && (
         <div className="auto-roll-control">
           <div className="auto-roll-heading">
@@ -478,12 +482,14 @@ export default function RollExperience({
           </div>
           <p>
             {autoRoll
-              ? active && visible
+              ? active && (visible || persistsAutoRoll)
                 ? "Starts your next roll when it’s ready."
                 : "Paused while you browse. Your current roll will finish."
               : "Enable to roll automatically at your current pace."}{" "}
-            Pauses away from this page; off after reload. Stopping keeps your
-            current roll.
+            {persistsAutoRoll
+              ? "Persistence Core keeps this switch after a reload and while this tab is in the background."
+              : "Pauses away from this page; off after reload."}{" "}
+            Stopping keeps your current roll.
           </p>
         </div>
       )}

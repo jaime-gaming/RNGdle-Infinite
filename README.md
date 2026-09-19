@@ -100,7 +100,7 @@ The reference-style number, rank, EP, share/roll controls and badge breakdown fo
 
 **Next Roll bar:** each committed draw now records a cosmetic `cooldownWindow` (`startsAt`, `endsAt`) alongside the enforced deadline. The fill measures only the cooldown: zero at the end of the reveal, half at the middle of the cooldown, and full at readiness. A compositor animation is periodically synchronised to `gameNow()` instead of using rounded display seconds or a per-frame React loop. It restores after reload and does not change when an upgrade is bought mid-roll. Reduced motion uses discrete updates and never skips the reserved reveal time. A Flywheel roll has no cooldown bar, but still reserves its full reveal. Older saves without a reconstructable window retain the exact countdown without inventing a fill percentage.
 
-Goals remain optional and free. Recommendations respect prerequisites; a chosen goal persists with a local profile and clears after its purchase. Choosing or viewing a goal never spends EP. Auto-Roll pauses while browsing other pages, hidden tabs or dialogs, and remains off after reload. These conveniences do not modify randomness, scoring or timing.
+Goals remain optional and free. Recommendations respect prerequisites; a chosen goal persists with a local profile and clears after its purchase. Choosing or viewing a goal never spends EP. Auto-Roll pauses while browsing other pages, hidden tabs or dialogs, and remains off after reload unless Persistence Core is owned. These conveniences do not modify randomness, scoring or timing.
 
 ## Rebirth
 
@@ -116,68 +116,91 @@ A pending online roll, committed offline batch or unexpired next-roll deadline b
 
 ## EP shop and local progress
 
-The shop has sequential Quickwind, Clockwork, Flywheel and Offline Clock upgrade paths, seven cosmetic auras, and three utilities (23 products total). Offline Clock appears after Offline Roller is owned. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
+The shop has sequential Quickwind, Clockwork, Flywheel, Offline Clock and Offline Vault upgrade paths, seven cosmetic auras, and four utilities (29 products total). Offline Clock appears after Offline Roller is owned, and Offline Vault after Offline Clock I. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
 
 | Upgrade       |         Price | Effect             | Prerequisite  |
 | ------------- | ------------: | ------------------ | ------------- |
 | Quickwind I   |     35,000 EP | 45s → 35s reveal   | None          |
-| Quickwind II  |    175,000 EP | 35s → 25s reveal   | Quickwind I   |
-| Quickwind III |    800,000 EP | 25s → 15s reveal   | Quickwind II  |
+| Quickwind II  |    140,000 EP | 35s → 25s reveal   | Quickwind I   |
+| Quickwind III |    500,000 EP | 25s → 15s reveal   | Quickwind II  |
+| Quickwind IV  |  1,800,000 EP | 15s → 10s reveal   | Quickwind III |
 | Clockwork I   |     60,000 EP | 60s → 45s cooldown | None          |
-| Clockwork II  |    400,000 EP | 45s → 30s cooldown | Clockwork I   |
-| Clockwork III |  1,800,000 EP | 30s → 15s cooldown | Clockwork II  |
-| Clockwork IV  |  8,000,000 EP | 15s → 10s cooldown | Clockwork III |
-| Clockwork V   | 20,000,000 EP | 10s → 5s cooldown  | Clockwork IV  |
+| Clockwork II  |    240,000 EP | 45s → 30s cooldown | Clockwork I   |
+| Clockwork III |    900,000 EP | 30s → 15s cooldown | Clockwork II  |
+| Clockwork IV  |  2,500,000 EP | 15s → 10s cooldown | Clockwork III |
+| Clockwork V   |  6,000,000 EP | 10s → 5s cooldown  | Clockwork IV  |
+| Clockwork VI  | 18,000,000 EP | 5s → 2s cooldown   | Clockwork V   |
 
 Timing upgrades activate automatically. Both timings are snapshotted when Generate is pressed: buying during a reveal does not restart or shorten it, and does not shorten its upcoming cooldown. Buying during a cooldown does not change its deadline. Upgrades apply to rolls started afterward. They never change uniform random odds, badge rules, or EP scoring.
 
 | Aura            |        Price | Effect                                                                                                  |
 | --------------- | -----------: | ------------------------------------------------------------------------------------------------------- |
 | Starfall        |    50,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
-| Aurora Veil     |   300,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
-| Frostglass      |   450,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
-| Emberwake       |   900,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
-| Eclipse Crown   | 2,500,000 EP | A golden corona, crescent rings, and orbiting stardust.                                                 |
-| Prismatic Bloom | 4,000,000 EP | Spectral petals, layered prism outlines, and drifting light motes.                                      |
-| Orbital Halo    | 1,500,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
+| Aurora Veil     |   250,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
+| Frostglass      |   400,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
+| Emberwake       |   750,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
+| Eclipse Crown   | 2,000,000 EP | A golden corona, crescent rings, and orbiting stardust.                                                 |
+| Prismatic Bloom | 3,000,000 EP | Spectral petals, layered prism outlines, and drifting light motes.                                      |
+| Orbital Halo    | 1,200,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
 
 Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades, Flywheel, and utilities do not occupy the aura slot. Prices have been rebalanced around ordinary rolls rather than the jackpot-inflated average. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset. Old purchase records retain the price actually paid; repricing does not retroactively refund or debit EP.
 
 **Archive Lens — 150,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
 
-**Auto-Roll — 5,000,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. Auto-Roll has no special speed advantage over manual rolls and does not perform offline catch-up; Flywheel benefits both equally.
+**Auto-Roll — 2,500,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. Auto-Roll has no special speed advantage over manual rolls and does not perform offline catch-up; Flywheel benefits both equally.
 
-### Flywheel — 600,000 EP; II — 4,000,000 EP; III — 12,000,000 EP
+**Persistence Core — 8,000,000 EP (requires Auto-Roll):** a late-game convenience that makes the Auto-Roll switch survive a reload and keep running while its tab is in the background. The switch position is stored per profile under `rng-infinite-auto-roll-v1:`, outside saved progress, and is cleared on account deletion. Every roll it starts still uses the same committed draw, full reveal, cooldown deadline, verified scoring, single-credit settlement and cross-tab locks. It grants no extra speed, EP, luck or offline catch-up; without it, Auto-Roll keeps its original pause-when-hidden, off-after-reload behaviour.
+
+### Flywheel — 600,000 EP; II — 2,400,000 EP; III — 6,000,000 EP
 
 A permanent pace upgrade with an automatic **four-charge / fifth-roll** rhythm. Four completed online rolls begun after purchase charge it; the fifth roll retains its full reveal but has **zero cooldown afterward**. Boosted rolls do not charge the next cycle. Auto-Roll counts normally; offline rolls never charge or consume it. Normal cooldowns still apply to the four charging rolls, including the fourth. A full five-roll cycle averages 93 seconds per roll at base timings, or 27 seconds at the previous 15s-reveal / 15s-cooldown ceiling, excluding user/UI delays.
 
-**Flywheel II** needs two charging rolls before a boosted third roll; **Flywheel III** needs one, so every other roll is boosted. Each requires its predecessor. Buying a tier preserves earned charge up to the new limit, without changing any already-committed roll. With Clockwork V, Quickwind III and Flywheel III, the average cycle is **17.5 seconds** (15s full reveal plus an alternating 5s/0s cooldown). That is an ideal ~206 rolls/hour before processing or user delays—not a promise of EP income.
+**Flywheel II** needs two charging rolls before a boosted third roll; **Flywheel III** needs one, so every other roll is boosted. Each requires its predecessor. Buying a tier preserves earned charge up to the new limit, without changing any already-committed roll. With Clockwork VI, Quickwind IV and Flywheel III, the average cycle is **11 seconds** (10s full reveal plus an alternating 2s/0s cooldown). That is an ideal ~327 rolls/hour before processing or user delays—not a promise of EP income.
 
 Charge is visible on the Roll page and persisted with a local profile. The draw snapshots a `flywheel: "charge" | "boost"` flag, and consuming a charged boost is atomic with committing the next number and its deadline. Failed draws keep the charge; refresh restores the same boosted number, not a replacement. Eligible settlement adds exactly one charge; duplicate receipts and failed-write recovery cannot add it twice. Reduced motion still reserves the full reveal deadline. Buying during a reveal does not retrospectively count that roll, and all existing timing upgrades stack without changing EP or probability. Existing version-1 saves default to zero charge.
 
 ### Price audit
 
-`npm run audit:economy` reproduces the complete 1,000,001-number distribution and catalogue price comparisons. Including the existing two originals, the **median is 5,801 EP**, versus a jackpot-inflated **mean of 21,548.40 EP**; **748,167 outcomes pay less than 10,000 EP**. The first useful pair now costs **95,000 EP** (35,000 Quickwind I + 60,000 Clockwork I), versus 200,000 before, and shortens the base 105-second cycle to 80 seconds. The original three timing tiers cost 3,270,000 EP total instead of 4,850,000. Base Flywheel drops from 1,000,000 to 600,000 EP; Offline Roller drops from 15,000,000 to 10,000,000. Auto-Roll retains the explicitly requested 5,000,000 EP price. Cosmetics and Archive Lens keep their prices. Recommendations compare all eligible pace/earning tools by price, so expensive late Clockwork tiers no longer hide cheaper core tools.
+`npm run audit:economy` reproduces the complete 1,000,001-number distribution, the catalogue price comparison, and reproducible pace/offline milestones. Including the two originals, the **median is 5,801 EP**, versus a jackpot-inflated **mean of 21,548.40 EP**; **748,167 outcomes pay less than 10,000 EP**. All balancing is measured against the median, never the mean.
 
-New online tiers deliberately have diminishing speed returns while preserving the 15-second reveal floor. The audit also reports reproducible timing milestones and offline-cap fill times. Median-roll equivalents are a comparison baseline, not a promise of how many rolls a purchase takes. Reference EP rewards, the two original bonuses, and uniform RNG are unchanged. Repricing never refunds/debits existing wallets or rewrites historical purchase prices.
+The current curve:
 
-### Offline Roller — 10,000,000 EP
+| Milestone                                         |      Cost | Average cycle | Ideal rolls/hour |
+| ------------------------------------------------- | --------: | ------------: | ---------------: |
+| Base                                              |         0 |         105 s |               34 |
+| First useful pair (Quickwind I + Clockwork I)     | 95,000 EP |          80 s |               45 |
+| Mid ceiling (all three original tiers + Flywheel) | 2.48 M EP |          27 s |              133 |
+| Late workshop (Clockwork V + Flywheel II)         | 13.4 M EP |        18.3 s |              196 |
+| Final online pace (everything)                    | 39.2 M EP |          11 s |              327 |
+
+**What changed in this rebalance.** The mid-game walls were the problem: the original three timing tiers and the first Flywheel gated an ordinary player behind hundreds of median rolls before anything felt different. Quickwind II/III, Clockwork II/III, Flywheel II/III, the auras, Auto-Roll and Offline Roller are all cheaper, and the steepest jumps are gone: **no upgrade now costs more than four times its own prerequisite**, which `tests/number-box.spec.js` enforces. Auto-Roll fell from 5,000,000 to 2,500,000 EP and Offline Roller from 10,000,000 to 4,000,000 EP, so the tools that change how you play arrive during the mid game rather than after it.
+
+The freed headroom went into **new late-game content** rather than inflation: Quickwind IV (10s reveal), Clockwork VI (2s cooldown), Offline Clock III (3-minute interval), Offline Vault I/II (216 and 288 offline rolls per absence) and Persistence Core. The online ceiling moves from ~206 to ~327 ideal rolls/hour, and the offline ceiling from 144 to 288 rolls per absence — both behind prices that only a deep late-game wallet reaches. Median-roll equivalents range from 7 (Quickwind I) to 3,448 (Offline Vault II).
+
+Late tiers keep deliberately diminishing returns: each one costs more per second saved than the tier before it, so the endgame is a long tail rather than a cliff, and the complete catalogue totals 121.5 M EP. Recommendations compare all eligible pace/earning tools by price, so an expensive clock never hides a cheaper tool. Reference EP rewards, the two original bonuses, badge rules and uniform RNG are untouched. Repricing never refunds or debits an existing wallet, and historical purchase records keep the price actually paid.
+
+### Offline Roller — 4,000,000 EP
 
 A permanent tool for saved local profiles. It earns **one normal random roll for each full 10 minutes away**, capped at **24 hours / 144 rolls per absence**, as requested. Online reveal/cooldown upgrades do not speed up this interval. It activates on purchase without retroactive credit for time before purchase. No further purchase or claim fee is required.
 
-| Offline upgrade  |         Price | Interval | Rolls after 8h | Time to 144-roll cap |
-| ---------------- | ------------: | -------: | -------------: | -------------------: |
-| Offline Roller   | 10,000,000 EP |   10 min |             48 |                  24h |
-| Offline Clock I  | 12,000,000 EP |  7.5 min |             64 |                  18h |
-| Offline Clock II | 25,000,000 EP |    5 min |             96 |                  12h |
+| Offline upgrade   |         Price | Interval | Cap | Rolls after 8h | Time to fill cap |
+| ----------------- | ------------: | -------: | --: | -------------: | ---------------: |
+| Offline Roller    |  4,000,000 EP |   10 min | 144 |             48 |              24h |
+| Offline Clock I   |  6,000,000 EP |  7.5 min | 144 |             64 |              18h |
+| Offline Clock II  |  9,000,000 EP |    5 min | 144 |             96 |              12h |
+| Offline Clock III | 15,000,000 EP |    3 min | 144 |            144 |             7.2h |
+| Offline Vault I   | 10,000,000 EP |        — | 216 |              — |                — |
+| Offline Vault II  | 20,000,000 EP |        — | 288 |              — |                — |
 
-Each tier requires the previous one and a local profile. **The limit stays at 144 rolls per absence:** checking only once every 24 hours gives no extra rolls from either clock tier. Upgrades make shorter absences more productive, not individual rolls more valuable. Purchase starts a new future-rate anchor; owed whole intervals or a pending batch must be settled first, and already-paid summaries remain available. Partial intervals do not carry over or receive retroactive credit. Committed batches snapshot their interval for reload-safe history timestamps; legacy batches without the field retain their original ten-minute spacing.
+Clocks change **how fast** offline rolls accrue; vaults change **how many** a single absence can store. Vault I requires Offline Clock I, and Vault II requires Vault I. With Offline Clock III and Offline Vault II, a 14.4-hour absence fills the maximum 288 rolls. Neither track changes the value, odds or badge rules of an individual offline roll.
+
+Each tier requires the previous one and a local profile. **Clock tiers never raise the cap:** with the base 144-roll vault, checking only once every 24 hours gives no extra rolls from any clock tier. Clocks make shorter absences more productive; only an Offline Vault raises the per-absence maximum, and neither makes individual rolls more valuable. Purchase starts a new future-rate anchor; owed whole intervals or a pending batch must be settled first, and already-paid summaries remain available. Partial intervals do not carry over or receive retroactive credit. Committed batches snapshot their interval for reload-safe history timestamps; legacy batches without the field retain their original ten-minute spacing.
 
 **Browser-only implementation:** closed pages cannot execute a worker. On return, the game calculates the earned roll count, commits all chosen numbers before showing rewards, and then settles ten rolls per saved transaction. Each roll uses the same uniform RNG, verified scores, badge rules, discoveries, and history as an online roll. The welcome-back summary shows rewards already credited—not an unclaimed balance. The free **Offline** history filter shows every recorded offline roll.
 
 The tool tracks **absence from all visible tabs of the same local account**, not simply leaving the Roll section. Visible tabs heartbeat every 15 seconds; hiding a tab records a transition. Closing/crashing a browser may miss the final write, so timing can fall back to its last successful heartbeat (approximately 15-second granularity in normal operation). Whole-period rounding occurs per absence; fractional periods do not carry forward. Presence leases expire after 45 seconds to recover from abruptly closed tabs. A stalled or modified browser cannot be distinguished perfectly from an absent one without a backend.
 
-The saved `offline` ledger contains the last seen timestamp, a bounded committed batch (up to 144 numbers, IDs and saved index), and an optional reward summary. Interrupted batches resume the same numbers, without replacing another pending manual roll or its cooldown. Web Locks serialize catch-up across tabs. Failed settlement writes leave the committed batch available to retry; no extra EP is exposed as credited. Account deletion clears the ledger and profile-scoped `rng-infinite-presence-v1:` entries. Deliberate save/clock tampering remains outside frontend security guarantees; authoritative offline rewards need server time and storage.
+The saved `offline` ledger contains the last seen timestamp, a bounded committed batch (up to the owned vault size — 144, 216 or 288 numbers — with IDs and a saved index), and an optional reward summary. A batch larger than the vault actually owned is rejected on load. Interrupted batches resume the same numbers, without replacing another pending manual roll or its cooldown. Web Locks serialize catch-up across tabs. Failed settlement writes leave the committed batch available to retry; no extra EP is exposed as credited. Account deletion clears the ledger and profile-scoped `rng-infinite-presence-v1:` entries. Deliberate save/clock tampering remains outside frontend security guarantees; authoritative offline rewards need server time and storage.
 
 ### Cosmetic workshop
 
@@ -226,6 +249,28 @@ Invalid saves recover to safe defaults with a warning. If the chosen number and 
 
 Progress belongs to the browser **and origin**. Clearing site data removes the local profile and progress. Switching browsers, devices, or preview hostnames does not carry saves across. No cloud backup or real money is involved.
 
+## Settings and desktop notifications
+
+**Settings** (`#settings`, from the header slider icon or the footer link) is a real page, not a dialog. Preferences live in `rng-infinite-settings-v1`, entirely separate from saved progress: they are never part of a rebirth, never touched by a purchase, and deliberately survive account deletion. Unknown, missing or malformed fields fall back to their defaults field by field, so a corrupted preference can never break the game or discard a save. Changes apply immediately and synchronize across tabs via the `storage` event; if writing fails, a warning explains the settings apply only until reload.
+
+| Setting                         | Default      | Effect                                                                               |
+| ------------------------------- | ------------ | ------------------------------------------------------------------------------------ |
+| Desktop notification when ready | Off          | Browser notification once a cooldown has finished, only while the tab is hidden      |
+| Chime when ready                | Off          | Short two-tone WebAudio chime under the same conditions                              |
+| Reveal motion                   | Match system | Force full animation or reduced motion, overriding `prefers-reduced-motion`          |
+| Show the Flywheel meter         | On           | Hides the meter only; charge still accrues and applies                               |
+| Compact large EP numbers        | Off          | Displays 12.5M instead of 12,500,000; exact EP is still spent and recorded           |
+| Confirm every purchase          | On           | Off buys in one click; prices, prerequisites and history are unchanged               |
+| Start Auto-Roll enabled         | Off          | Applies when Auto-Roll is owned; Persistence Core overrides it with your last switch |
+
+**Nothing in Settings is a gameplay advantage.** No option changes randomness, EP scoring, badge rules, prices, reveal length, cooldown length or the offline rate. Reduced motion completes a reveal instantly but still reserves the full committed deadline, exactly as the system preference always has. Compact numbers are presentation only — every purchase, balance check, history entry and save uses exact EP. Turning off purchase confirmation removes a dialog, not a cost.
+
+### Desktop notifications
+
+Notifications are **opt-in and permission-gated**. The switch requests permission when you enable it; if the browser blocks or does not support notifications, the switch stays off and explains why rather than silently failing. A single alert fires per cooldown deadline, tagged `rngdle-infinite-ready` so a new alert replaces an old one instead of stacking, and never while the tab is visible — the countdown in front of you is already the notification. Clicking one focuses the tab. A committed reveal still running, or an offline batch still settling, suppresses it.
+
+The alert is **purely an announcement**: it does not start a roll, credit EP, extend or shorten a deadline, or work while the browser is fully closed (a frontend-only game has no service worker or server push). The **Test your alerts** button sends exactly the alert you would receive, so you can verify the permission and volume without waiting for a cooldown. The chime is synthesized with WebAudio, needs no asset download, and respects browsers that require a prior interaction before playing audio.
+
 ## Randomness, scoring, and percentages
 
 The reference’s [Luck page](https://rng.cubityfir.st/luck) uses the full score distribution rather than a sample. Infinite uses that same full population:
@@ -254,12 +299,13 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **173 tests** cover:
+The **180 tests** cover:
 
 - Goal recommendations/prerequisites, backward-compatible goal saves, failed-write retry, cross-tab preservation, guest/signup gating, confirmed purchase → next goal, plain progress links, duplicate-roll discoveries, Auto-Roll dialog pausing, completed-workshop states, profile-required goals and narrow-screen themes.
 - Rebirth visibility at 140/141/234/235 badges, unique-badge eligibility, filters, typed confirmation/cancel, complete resets and preserved history, repurchases/rediscovery, failed local/session saves, simultaneous tabs, missed storage events, stale-cycle recovery, Web Locks, pending-roll/offline/cooldown guards and mobile dialogs.
 - Cooldown-only fill arithmetic, fractional progression, reload and mid-cooldown purchases, reduced-motion reveal reservation and zero-cooldown Flywheel rolls.
-- Six late tiers, prerequisite-chain migration, historical prices, recommendation ordering, 5s/10s snapshots, 4/2/1-charge rhythms, rate changes without retroactive rewards, snapshotted legacy batches, the unchanged 144 cap, concurrent tier purchases and failed-save rollback.
+- Every late tier’s prerequisite chain and deep orphan pruning, historical prices, recommendation ordering, 2s/5s/10s snapshots, 4/2/1-charge rhythms, rate changes without retroactive rewards, snapshotted legacy batches, all three offline caps, concurrent tier purchases and failed-save rollback.
+- Settings defaults, field-by-field validation of corrupt preferences, separation from saved progress, compact-EP formatting that never changes a spent amount, Offline Vault caps, Persistence Core prerequisites, catalogue kinds and the four-times-prerequisite price ceiling.
 - Flywheel’s two-cycle accounting, zero-cooldown validation, mid-reveal purchase snapshots, full base/upgraded reveal deadlines, reload restoration, concurrent single consumption, failed commit/recovery, offline exclusion, Auto-Roll compatibility, mobile display, and legacy price preservation.
 - Exact chance/frequency formatting at rare and near-certain boundaries, and full-population tier odds despite stale manifest counts.
 - Every legal number’s base score versus its highest-EP family memberships, all 233 pinned badge probabilities and data hashes, plus exhaustive independent checks of both Infinite Originals, their bonuses, adjusted ranks and tier counts.
@@ -270,7 +316,7 @@ The **173 tests** cover:
 - Committed registered/guest reloads, concurrent account draws and single rewards, failed commit protection, missing Web Locks, failed-settlement recovery preserving other-tab spending, monotonic in-tab time, and unchanged reduced-motion cadence.
 - Progressive/maxed upgrade cards, Archive Lens search before pagination, new cosmetic purchases and mobile filters.
 - Shared number-box coverage, all seven original light/dark palettes plus GODLY boundary/count/palette/particles, rarity-gated shimmer, upgraded cosmetics, legacy ownership after repricing, and reduced-motion/mobile rendering.
-- Offline ten-minute arithmetic and the 144-roll cap, concurrent return single credit, visible-tab exclusion, heartbeat/visibility transitions, interruption/retry, preserved manual commitments, free offline history, deletion, profile-gated purchase, and mobile/reduced-motion premium previews.
+- Offline ten-minute arithmetic, the 144-roll base cap and larger vault batches, concurrent return single credit, visible-tab exclusion, heartbeat/visibility transitions, interruption/retry, preserved manual commitments, free offline history, deletion, profile-gated purchase, and mobile/reduced-motion premium previews.
 - Auto-Roll price/confirmation/persistence, off-by-default state, timing upgrades and reduced-motion cadence, pausing, stopping during a reveal, failed commits, account deletion and multi-tab single rewards; new badge discovery/history/details and non-retroactive migration.
 - Text-only logo/home navigation and keyboard order, empty/partial/complete collection progress, saved discoveries after reload, removed reference buttons, and responsive light/dark layouts.
 - Measured generated-roll desktop geometry (including superseded rows), persistent digit nodes, first-EP tween, reveal gating, accessible instant completion, contributor agreement with all fifty fixtures, shared chip-loop timing, and rank overshoot.
@@ -290,6 +336,9 @@ Deterministic browser tests intercept the worker’s crypto source in Playwright
 - `src/load-index.js` — text-safe data transport, bounded decompression, and canonical integrity checks
 - `src/offline.js`, `src/use-offline.js`, `src/components/OfflineRewards.jsx` — offline accounting, shared presence, catch-up scheduling and reward summary
 - `src/gameplay-loop.js`, `src/components/RollProgress.jsx`, `src/progress-links.css` — optional goals and plain collection/progression links
+- `src/settings.js`, `src/use-settings.jsx`, `src/components/Settings.jsx`, `src/settings.css` — validated local preferences, the settings page and the shared motion/format helpers
+- `src/notifications.js`, `src/use-ready-alert.js` — permission-gated desktop notifications, the WebAudio chime and one-per-deadline announcement
+- `src/auto-roll.js` — the Persistence Core switch position, stored per profile outside saved progress
 - `src/rebirth.js`, `src/components/Rebirth.jsx` — collection eligibility and typed reset confirmation
 - `src/cooldown.js`, `src/components/CooldownFill.jsx` — persisted cooldown windows and monotonic, compositor-driven fill
 - `src/flywheel.js`, `src/components/FlywheelMeter.jsx` — snapshotted charge rules and accessible pace progress

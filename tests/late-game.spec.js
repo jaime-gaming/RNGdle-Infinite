@@ -21,7 +21,12 @@ import { mockRandom, startRoll } from "./helpers/random-roll.js";
 const timings = shopProducts
   .filter((p) => ["roll", "cooldown"].includes(p.kind))
   .map((p) => p.id);
-const clocks = ["offline-roller", "offline-clock-1", "offline-clock-2"];
+const clocks = [
+  "offline-roller",
+  "offline-clock-1",
+  "offline-clock-2",
+  "offline-clock-3",
+];
 const pace = ["flywheel", "flywheel-2", "flywheel-3"];
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
@@ -50,7 +55,7 @@ async function collected(page, n) {
   await expect.poll(async () => (await saved(page)).offline.batch).toBeNull();
 }
 
-test("all six late tiers require their predecessor, charge exactly once and preserve old transaction prices", () => {
+test("every late tier requires its predecessor, charges exactly once and preserves old transaction prices", () => {
   let p = rich({
     history: [
       {
@@ -73,12 +78,12 @@ test("all six late tiers require their predecessor, charge exactly once and pres
     p = parseProgress(JSON.stringify(p));
   }
   expect(p.history[0].ep).toBe(75000);
-  expect(p.history).toHaveLength(24);
-  expect(rollSettings(p.owned)).toEqual({ rollMS: 15000, cooldownMS: 5000 });
-  expect(offlineSettings(p.owned).intervalMS).toBe(300000);
+  expect(p.history).toHaveLength(shopProducts.length + 1);
+  expect(rollSettings(p.owned)).toEqual({ rollMS: 10000, cooldownMS: 2000 });
+  expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 288 });
   expect(flywheelRequired(p.owned)).toBe(1);
   expect(p.equipped).toBe("prism");
-  for (const kind of ["roll", "cooldown", "pace", "offline"])
+  for (const kind of ["roll", "cooldown", "pace", "offline", "offline-cap"])
     expect(p.owned).toContain(nextUpgrade(p.owned, kind).id);
 });
 
@@ -131,18 +136,34 @@ for (const cooldownMS of [10000, 5000])
 test("useful recommendations combine tools with pace tiers instead of prioritising expensive clocks", () => {
   let p = rich({
     owned: [
-      ...timings.filter((id) => !["clockwork-4", "clockwork-5"].includes(id)),
+      ...timings.filter(
+        (id) =>
+          ![
+            "quickwind-4",
+            "clockwork-4",
+            "clockwork-5",
+            "clockwork-6",
+          ].includes(id),
+      ),
       "flywheel",
     ],
   });
-  expect(recommendedGoal(p).id).toBe("flywheel-2");
-  p.owned.push("flywheel-2");
-  expect(recommendedGoal(p).id).toBe("auto-roll");
-  p.owned.push("auto-roll");
-  expect(recommendedGoal(p).id).toBe("clockwork-4");
-  p.owned.push("clockwork-4");
-  expect(recommendedGoal(p).id).toBe("offline-roller");
-  expect(recommendedGoal({ ...p, profile: null }).id).toBe("flywheel-3");
+  // Cheapest useful pace/earning tool first, regardless of which track it is on.
+  const order = [
+    "quickwind-4",
+    "flywheel-2",
+    "clockwork-4",
+    "auto-roll",
+    "offline-roller",
+  ];
+  for (const id of order) {
+    expect(recommendedGoal(p).id).toBe(id);
+    p.owned.push(id);
+  }
+  // A guest is never pointed at a purchase that needs a saved profile.
+  expect(recommendedGoal({ ...p, profile: null }).requiresProfile).toBeFalsy();
+  // Cosmetics never outrank an available pace or tool upgrade.
+  expect(recommendedGoal(p).kind).not.toBe("aura");
 });
 
 for (const [owned, required] of [
@@ -214,10 +235,10 @@ test("pace purchases preserve earned charge up to the new capacity and never rew
   expect(p.cooldownUntil).toBe(106000);
 });
 
-for (const intervalMS of [600000, 450000, 300000])
-  test(`offline ${intervalMS / 60000}-minute periods keep whole-roll rounding, visibility rules and the 144 cap`, () => {
+for (const intervalMS of [600000, 450000, 300000, 180000])
+  test(`offline ${intervalMS / 60000}-minute periods keep whole-roll rounding, visibility rules and every owned cap`, () => {
     const now = 100000000;
-    const plan = (age, presence = [], visible = true) =>
+    const plan = (age, presence = [], visible = true, cap = 144) =>
       offlinePlan(
         { lastSeenAt: now - age },
         now,
@@ -225,11 +246,17 @@ for (const intervalMS of [600000, 450000, 300000])
         "mine",
         visible,
         intervalMS,
+        cap,
       );
     expect(plan(intervalMS - 1).count).toBe(0);
     expect(plan(intervalMS).count).toBe(1);
     expect(plan(intervalMS * 144).count).toBe(144);
     expect(plan(intervalMS * 1000).count).toBe(144);
+    for (const cap of [216, 288]) {
+      expect(plan(intervalMS * cap, [], true, cap).count).toBe(cap);
+      expect(plan(intervalMS * 1000, [], true, cap).count).toBe(cap);
+      expect(plan(intervalMS * (cap - 1), [], true, cap).count).toBe(cap - 1);
+    }
     expect(plan(-1).count).toBe(0);
     expect(plan(intervalMS * 2, [], false).count).toBe(0);
     expect(
@@ -269,6 +296,20 @@ test("offline upgrades are profile gated and cannot discard or re-rate owed batc
   ).toBe(0);
   expect(p.balance).toBe(200000000);
   expect(p.offline.lastSeenAt).toBe(1000);
+  // Vaults are gated by the same owed-batch rule and keep the saved summary.
+  const withClock = buy(p, "offline-clock-1", 1000);
+  expect(() =>
+    buy(
+      { ...withClock, offline: { ...withClock.offline, batch } },
+      "offline-vault-1",
+    ),
+  ).toThrow("Restore offline rewards");
+  const vaulted = buy(withClock, "offline-vault-1", 1000);
+  expect(vaulted.offline.report).toEqual(report);
+  expect(offlineSettings(vaulted.owned)).toEqual({
+    intervalMS: 450000,
+    cap: 216,
+  });
 });
 
 test("batch interval snapshots accept only supported rates and preserve legacy ten-minute batches", () => {
@@ -285,18 +326,22 @@ test("batch interval snapshots accept only supported rates and preserve legacy t
     report: null,
   };
   expect(parseOffline(value, clocks)).toEqual(value);
-  for (const intervalMS of [600000, 450000, 300000])
+  for (const intervalMS of [600000, 450000, 300000, 180000])
     expect(
       parseOffline({ ...value, batch: { ...value.batch, intervalMS } }, clocks)
         .batch.intervalMS,
     ).toBe(intervalMS);
-  for (const intervalMS of [0, 1, 299999, 450001, "300000", -1])
+  for (const intervalMS of [0, 1, 179999, 450001, "300000", -1])
     expect(() =>
       parseOffline({ ...value, batch: { ...value.batch, intervalMS } }, clocks),
     ).toThrow("Invalid offline commitment");
   expect(() => offlinePlan(value, 1000, [], "mine", true, 0)).toThrow(
     "Invalid offline interval",
   );
+  for (const cap of [0, 100, 145, 289, "216"])
+    expect(() =>
+      offlinePlan(value, 1000, [], "mine", true, 600000, cap),
+    ).toThrow("Invalid offline cap");
 });
 
 test("mobile shop exposes only the next tier, confirms exact effects and persists all late upgrades", async ({

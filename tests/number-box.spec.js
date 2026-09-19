@@ -154,40 +154,54 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   );
 });
 
-test("rebalanced catalogue preserves product IDs, premium progression and the specified Auto-Roll price", () => {
+test("rebalanced catalogue preserves product IDs, premium progression and monotonic upgrade chains", () => {
   const prices = {
     "quickwind-1": 35000,
-    "quickwind-2": 175000,
-    "quickwind-3": 800000,
+    "quickwind-2": 140000,
+    "quickwind-3": 500000,
+    "quickwind-4": 1800000,
     "clockwork-1": 60000,
-    "clockwork-2": 400000,
-    "clockwork-3": 1800000,
-    "clockwork-4": 8000000,
-    "clockwork-5": 20000000,
+    "clockwork-2": 240000,
+    "clockwork-3": 900000,
+    "clockwork-4": 2500000,
+    "clockwork-5": 6000000,
+    "clockwork-6": 18000000,
     flywheel: 600000,
-    "flywheel-2": 4000000,
-    "flywheel-3": 12000000,
+    "flywheel-2": 2400000,
+    "flywheel-3": 6000000,
     starfall: 50000,
-    aurora: 300000,
-    orbit: 1500000,
-    frostglass: 450000,
-    emberwake: 900000,
-    eclipse: 2500000,
-    prism: 4000000,
+    aurora: 250000,
+    orbit: 1200000,
+    frostglass: 400000,
+    emberwake: 750000,
+    eclipse: 2000000,
+    prism: 3000000,
     "archive-lens": 150000,
-    "auto-roll": 5000000,
-    "offline-roller": 10000000,
-    "offline-clock-1": 12000000,
-    "offline-clock-2": 25000000,
+    "auto-roll": 2500000,
+    "persistence-core": 8000000,
+    "offline-roller": 4000000,
+    "offline-clock-1": 6000000,
+    "offline-clock-2": 9000000,
+    "offline-clock-3": 15000000,
+    "offline-vault-1": 10000000,
+    "offline-vault-2": 20000000,
   };
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(23);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(29);
   for (const product of shopProducts) {
     expect(Number.isSafeInteger(product.price)).toBe(true);
     expect(product.price).toBeGreaterThan(0);
     if (product.requires)
       expect(product.price).toBeGreaterThan(prices[product.requires]);
   }
+  // No step inside a chain may cost more than four times its predecessor: late
+  // tiers must stay reachable rather than becoming a wall.
+  for (const product of shopProducts)
+    if (product.requires)
+      expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
+  // The whole catalogue stays within a sane multiple of the cheapest upgrade.
+  const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
+  expect(total).toBeLessThanOrEqual(130000000);
 });
