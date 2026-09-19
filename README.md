@@ -22,6 +22,27 @@ This is a static site: GitHub Pages hosts the built HTML, JavaScript, local font
 emoji, and verified scoring data. No backend, custom server, API key, or paid
 service is needed. Use Node.js 22 for builds and tests.
 
+Deployment is configured **from a branch, not from GitHub Actions**: Pages serves
+the prebuilt site committed to the **`main` branch, `/docs` folder**
+(Settings → Pages → Source: _Deploy from a branch_, branch `main`, folder
+`/docs`). There is no deploy workflow and no `gh-pages` branch — the
+_pages build and deployment_ entries that may appear in the Actions tab are
+GitHub's built-in builder for branch sources, not a workflow in this
+repository.
+
+### Publish an update
+
+```sh
+npm ci
+npm run pages:publish   # rebuilds docs/ with base /RNGdle-Infinite/
+git add docs
+git commit -m "Update Pages build"
+git push origin main    # Pages rebuilds from main automatically
+```
+
+`npm run pages:publish` empties and rebuilds `docs/` with the
+`/RNGdle-Infinite/` base and writes the `.nojekyll` marker so the files are
+served as-is. `docs/` is committed on purpose — it is what GitHub Pages serves.
 
 ### Check the Pages build locally
 
