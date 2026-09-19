@@ -17,6 +17,7 @@ import {
   Check,
   Dices,
   ArrowLeft,
+  SlidersHorizontal,
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
@@ -34,10 +35,13 @@ import LocalProfile from "./components/LocalProfile";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
+import Settings from "./components/Settings";
+import { SettingsProvider } from "./use-settings.jsx";
+import { useReadyAlert } from "./use-ready-alert.js";
 
 function App() {
   const [page, setPage] = useState(() =>
-    ["badges", "shop", "history"].includes(location.hash.slice(1))
+    ["badges", "shop", "history", "settings"].includes(location.hash.slice(1))
       ? location.hash.slice(1)
       : "roll",
   );
@@ -99,7 +103,8 @@ function App() {
   };
   const navigate = (next, productId = null) => {
     setShopFocus(next === "shop" ? productId : null);
-    if (!["roll", "badges", "shop", "history"].includes(next)) next = "roll";
+    if (!["roll", "badges", "shop", "history", "settings"].includes(next))
+      next = "roll";
     setPage(next);
     location.hash = next === "roll" ? "" : next;
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -107,7 +112,9 @@ function App() {
   useEffect(() => {
     const update = () =>
       setPage(
-        ["badges", "shop", "history"].includes(location.hash.slice(1))
+        ["badges", "shop", "history", "settings"].includes(
+          location.hash.slice(1),
+        )
           ? location.hash.slice(1)
           : "roll",
       );
@@ -179,6 +186,10 @@ function App() {
     setModal("auth");
   }
   const offlineState = useOffline(session, dispatch);
+  // One alert per finished cooldown, and never while a roll is still revealing.
+  useReadyAlert(session.cooldownUntil, {
+    blocked: !!session.pendingRoll || !!session.offline?.batch,
+  });
   const discoveredBadges = badges.filter((b) =>
     session.discovered.includes(b.canonicalId),
   );
@@ -245,6 +256,14 @@ function App() {
             onClick={() => setModal("help")}
           >
             <CircleHelp size={18} />
+          </button>
+          <button
+            className="icon-button help-button"
+            aria-label="Settings"
+            aria-current={page === "settings" ? "page" : undefined}
+            onClick={() => navigate("settings")}
+          >
+            <SlidersHorizontal size={18} />
           </button>
           <div className="theme-switch" aria-label="Color theme">
             {[
@@ -330,6 +349,28 @@ function App() {
             openSignup={openAuth}
             openBadge={openBadge}
           />
+        )}
+        {page === "settings" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <SlidersHorizontal size={25} />
+              </div>
+              <div>
+                <h1>Settings</h1>
+                <p>Alerts, presentation and gameplay conveniences.</p>
+              </div>
+            </div>
+            <Settings
+              notify={notify}
+              progress={session}
+              onAction={dispatch}
+              navigate={navigate}
+            />
+          </>
         )}
         {page === "shop" && (
           <Shop
@@ -539,6 +580,7 @@ function App() {
           Just a number. A whole lot of possibility.
         </span>
         <div>
+          <button onClick={() => navigate("settings")}>Settings</button>
           <button onClick={() => setModal("help")}>
             How to play <ArrowUpRight size={12} />
           </button>
@@ -741,4 +783,8 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <SettingsProvider>
+    <App />
+  </SettingsProvider>,
+);
