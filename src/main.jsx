@@ -15,14 +15,16 @@ import {
   Search,
   ChevronRight,
   Check,
-  Dices,
   ArrowLeft,
+  SlidersHorizontal,
+  ScrollText,
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "./styles.css";
+import "./ambient.css";
 import Emoji from "./components/Emoji";
 import RollExperience from "./components/RollExperience";
 import { POPULATION, chanceLabels } from "./probability";
@@ -34,13 +36,29 @@ import LocalProfile from "./components/LocalProfile";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
+import Settings from "./components/Settings";
+import { SettingsProvider } from "./use-settings.jsx";
+import { useReadyAlert } from "./use-ready-alert.js";
+import { petDrop, petById } from "./pets.js";
+import { randomUnit } from "./random.js";
+import Changelog from "./components/Changelog";
+import RebirthNav from "./components/RebirthNav";
+import About from "./components/About";
+import {
+  LATEST_VERSION,
+  readSeenVersion,
+  hasUnseenVersion,
+  markSeen,
+} from "./changelog.js";
+import {
+  pageFromLocation,
+  pathForPage,
+  isCurrentPath,
+  validPage,
+} from "./router.js";
 
 function App() {
-  const [page, setPage] = useState(() =>
-    ["badges", "shop", "history"].includes(location.hash.slice(1))
-      ? location.hash.slice(1)
-      : "roll",
-  );
+  const [page, setPage] = useState(() => pageFromLocation(location));
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem("rng-theme");
@@ -56,6 +74,8 @@ function App() {
         : "light"
       : theme,
   );
+  const [seenVersion, setSeenVersion] = useState(readSeenVersion);
+  const showVersionFlag = hasUnseenVersion(seenVersion);
   const [shopFocus, setShopFocus] = useState(null);
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
@@ -76,12 +96,25 @@ function App() {
     setSort("Default");
   }, [epoch]);
   async function completeRoll(result, id, cooldownUntil) {
+    // Companion luck is sampled here, independently of the number itself.
+    let drop = null;
+    try {
+      drop = petDrop(randomUnit(), session.pets);
+    } catch {}
     const outcome = await dispatch({
       type: "complete",
       result,
       id,
       cooldownUntil,
+      ...(drop ? { petDrop: drop } : {}),
     });
+    // Rolling counts as getting on with the game, so the flag stops nagging.
+    if (outcome.ok && showVersionFlag) {
+      markSeen();
+      setSeenVersion(LATEST_VERSION);
+    }
+    if (outcome.ok && drop)
+      notify(`${petById.get(drop).emoji} ${petById.get(drop).name} appeared!`);
     if (!outcome.ok) notify(outcome.message);
     return outcome;
   }
@@ -99,20 +132,29 @@ function App() {
   };
   const navigate = (next, productId = null) => {
     setShopFocus(next === "shop" ? productId : null);
-    if (!["roll", "badges", "shop", "history"].includes(next)) next = "roll";
-    setPage(next);
-    location.hash = next === "roll" ? "" : next;
+    setPage((next = validPage(next)));
+    // Real URLs, so a page can be linked, bookmarked and reloaded directly.
+    if (!isCurrentPath(next, location))
+      history.pushState({ page: next }, "", pathForPage(next));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   useEffect(() => {
-    const update = () =>
-      setPage(
-        ["badges", "shop", "history"].includes(location.hash.slice(1))
-          ? location.hash.slice(1)
-          : "roll",
+    // Back/forward must move between pages, and a legacy #shop link or a
+    // 404.html fallback landing must be normalised to its real path once.
+    const update = () => setPage(pageFromLocation(location));
+    update();
+    if (location.hash || !isCurrentPath(pageFromLocation(location), location))
+      history.replaceState(
+        { page: pageFromLocation(location) },
+        "",
+        pathForPage(pageFromLocation(location)),
       );
+    window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
-    return () => window.removeEventListener("hashchange", update);
+    return () => {
+      window.removeEventListener("popstate", update);
+      window.removeEventListener("hashchange", update);
+    };
   }, []);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
@@ -179,6 +221,10 @@ function App() {
     setModal("auth");
   }
   const offlineState = useOffline(session, dispatch);
+  // One alert per finished cooldown, and never while a roll is still revealing.
+  useReadyAlert(session.cooldownUntil, {
+    blocked: !!session.pendingRoll || !!session.offline?.batch,
+  });
   const discoveredBadges = badges.filter((b) =>
     session.discovered.includes(b.canonicalId),
   );
@@ -239,12 +285,36 @@ function App() {
           </nav>
         </div>
         <div className="header-right">
+          {showVersionFlag && (
+            <button
+              className="version-flag"
+              onClick={() => navigate("changelog")}
+              aria-label={`New version ${LATEST_VERSION}, see what changed`}
+            >
+              <span className="version-flag-dot" aria-hidden="true" />
+              <span>New Version</span>
+            </button>
+          )}
+          <RebirthNav
+            progress={session}
+            active={page === "badges"}
+            onClick={() => navigate("badges")}
+          />
           <button
             className="icon-button help-button"
             aria-label="How to play"
-            onClick={() => setModal("help")}
+            aria-current={page === "about" ? "page" : undefined}
+            onClick={() => navigate("about")}
           >
             <CircleHelp size={18} />
+          </button>
+          <button
+            className="icon-button help-button"
+            aria-label="Settings"
+            aria-current={page === "settings" ? "page" : undefined}
+            onClick={() => navigate("settings")}
+          >
+            <SlidersHorizontal size={18} />
           </button>
           <div className="theme-switch" aria-label="Color theme">
             {[
@@ -330,6 +400,62 @@ function App() {
             openSignup={openAuth}
             openBadge={openBadge}
           />
+        )}
+        {page === "settings" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <SlidersHorizontal size={25} />
+              </div>
+              <div>
+                <h1>Settings</h1>
+                <p>Alerts, presentation and gameplay conveniences.</p>
+              </div>
+            </div>
+            <Settings
+              notify={notify}
+              progress={session}
+              onAction={dispatch}
+              navigate={navigate}
+            />
+          </>
+        )}
+        {page === "about" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <CircleHelp size={25} />
+              </div>
+              <div>
+                <h1>How to play</h1>
+                <p>What the game is, and what it never does.</p>
+              </div>
+            </div>
+            <About navigate={navigate} />
+          </>
+        )}
+        {page === "changelog" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <ScrollText size={25} />
+              </div>
+              <div>
+                <h1>Changelog</h1>
+                <p>What changed, and when.</p>
+              </div>
+            </div>
+            <Changelog onSeen={() => setSeenVersion(LATEST_VERSION)} />
+          </>
         )}
         {page === "shop" && (
           <Shop
@@ -539,9 +665,17 @@ function App() {
           Just a number. A whole lot of possibility.
         </span>
         <div>
-          <button onClick={() => setModal("help")}>
-            How to play <ArrowUpRight size={12} />
-          </button>
+          <a
+            href="https://www.rngdle.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="footer-real-game"
+          >
+            Real game <ArrowUpRight size={12} />
+          </a>
+          <button onClick={() => navigate("changelog")}>Changelog</button>
+          <button onClick={() => navigate("settings")}>Settings</button>
+          <button onClick={() => navigate("about")}>How to play</button>
         </div>
       </footer>
       {modal && (
@@ -565,83 +699,6 @@ function App() {
             >
               <X size={20} />
             </button>
-            {modal === "help" && (
-              <>
-                <div className="modal-symbol">
-                  <Dices size={28} />
-                </div>
-                <p className="eyebrow">WELCOME TO RNGdle INFINITE</p>
-                <h2 id="modal-title">One roll. A little possibility.</h2>
-                <p>
-                  It’s simple. Generate a number and see what makes it special.
-                </p>
-                <div className="help-steps">
-                  <div>
-                    <span>01</span>
-                    <div>
-                      <h3>Let luck do its thing</h3>
-                      <p>Hit Generate for a number between 0 and 1,000,000.</p>
-                    </div>
-                  </div>
-                  <div>
-                    <span>02</span>
-                    <div>
-                      <h3>Discover the unexpected</h3>
-                      <p>
-                        Explore badges for patterns, famous numbers, and
-                        mathematical curiosities.
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <span>03</span>
-                    <div>
-                      <h3>No need to wait until tomorrow</h3>
-                      <p>
-                        Start with a 45-second reveal and a 60-second cooldown.
-                        Spend EP on permanent timing upgrades in the shop.
-                        Reduced motion changes the reveal, not your next-roll
-                        deadline.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="info-box">
-                  Every number from 0 through 1,000,000 is equally likely;
-                  repeats are possible. Scores and badge odds use all 1,000,001
-                  numbers, not your session. Top means the share scoring at
-                  least as much; Bottom means the share scoring at most as much.
-                  Both include ties. Rank labels are rounded like RNGdle; hover
-                  to see the precise percentage and counts. Only the highest-EP
-                  badge in each family adds to your score. Completing a roll
-                  adds its EP to your wallet and unlocks all earned badges.
-                  Spend EP on timing upgrades, cosmetic auras, or tools in the
-                  shop. Choose a goal in the shop to track your EP savings; your
-                  collection records your discoveries. Auto-Roll starts the next
-                  ready roll while the Roll page is visible, pauses while a
-                  dialog is open, and switches off after reload. Upgrades apply
-                  to future rolls; they never change your odds or score. Sign up
-                  for a local profile to save your wallet, discoveries,
-                  purchases, cooldown, and activity history in this browser.
-                  Guest progress is temporary. This is not an online account,
-                  and clearing site data removes local saves. The leaderboard is
-                  disabled. Refreshing resumes the same committed number and
-                  deadline, including for guests in the same tab. Account tabs
-                  share one draw and reward. Open History for completed rolls,
-                  badge unlocks, and shop transactions. Delete your account and
-                  progress from Profile.
-                </div>
-                <button
-                  className="primary-button"
-                  onClick={() => {
-                    setModal(null);
-                    navigate("roll");
-                  }}
-                >
-                  Let’s roll <ArrowRight size={16} />
-                </button>
-              </>
-            )}
             {modal === "auth" && (
               <LocalProfile
                 profile={session.profile}
@@ -741,4 +798,8 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <SettingsProvider>
+    <App />
+  </SettingsProvider>,
+);

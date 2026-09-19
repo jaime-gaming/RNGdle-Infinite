@@ -166,8 +166,8 @@
   padding-top: 20px;
 }
 .danger-button {
-  color: #c24141;
-  border: 1px solid #c2414160;
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
   border-radius: 8px;
   padding: 11px 16px;
   font-size: 12px;

@@ -8,6 +8,7 @@ import {
 import { evaluate } from "./helpers/index.js";
 import { showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
+import { productById } from "../src/shop-data.js";
 const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
 const nav = (page, name) =>
@@ -77,7 +78,7 @@ test("activity logs every completed roll, first unlock only, immutable purchases
   expect(p.history.at(-1)).toMatchObject({
     type: "purchase",
     productId: "starfall",
-    ep: 50000,
+    ep: productById.get("starfall").price,
   });
   p = applyProgress(p, {
     type: "equip",

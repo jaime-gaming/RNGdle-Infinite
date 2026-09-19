@@ -6,6 +6,7 @@ import {
   PROGRESS_KEY,
 } from "../src/progress.js";
 import { flywheelForDraw } from "../src/flywheel.js";
+import { shopProducts } from "../src/shop-data.js";
 import { chanceLabels, formatPercent, POPULATION } from "../src/probability.js";
 import { createGameIndex } from "../src/game-index.js";
 import { originalsByNumber } from "../src/infinite-badges.js";
@@ -161,7 +162,9 @@ test("Flywheel migration validates charge and zero-cooldown snapshots without re
 test("two complete Flywheel cycles require four distinct eligible completions each, never offline or pre-purchase rolls", () => {
   let p = { ...emptyProgress(), balance: 1000000, totalEarned: 1000000 };
   p = applyProgress(p, { type: "buy", id: "flywheel" });
-  expect(p.balance).toBe(400000);
+  expect(p.balance).toBe(
+    1000000 - shopProducts.find((item) => item.id === "flywheel").price,
+  );
   expect(p.equipped).toBe("none");
   expect(p.flywheelCharge).toBe(0);
   for (let n = 0; n < 10; n++) {
@@ -178,7 +181,12 @@ test("two complete Flywheel cycles require four distinct eligible completions ea
     expect(applyProgress(p, complete(id))).toBe(p);
     p = parseProgress(JSON.stringify(p));
   }
-  expect(p.balance).toBe(446630);
+  // 10 credited rolls on top of whatever the Flywheel purchase left behind.
+  expect(p.balance).toBe(
+    1000000 -
+      shopProducts.find((item) => item.id === "flywheel").price +
+      10 * rolls(p)[0].ep,
+  );
   expect(rolls(p)).toHaveLength(10);
   expect(rolls(p).filter((e) => e.flywheel === "boost")).toHaveLength(2);
   p = { ...p, pendingRoll: pending("before-buy", null) };

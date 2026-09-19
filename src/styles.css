@@ -9,14 +9,26 @@
   --bg: #fafafa;
   --surface: #fff;
   --text: #20212a;
-  --muted: #85858f;
+  --muted: #6f7078;
   --secondary: #676873;
   --border: #e8e8ec;
   --hover: #f0f0f3;
-  --green: #44856f;
+  --green: #2f6b57;
   --green-bg: #edf5f0;
   --shadow: 0 4px 20px #20212a03;
   --button: #1b1c24;
+  /* Semantic colours, themed in one place so light mode stays legible.
+     Light values are chosen to clear WCAG AA (4.5:1) against --bg/--surface. */
+  --danger: #b3373c;
+  --danger-border: #b3373c60;
+  --warning: #9a5b06;
+  --rank-exceptional: #8a6206;
+  --rank-excellent: #1d7a46;
+  --rank-above: #17795f;
+  --rank-below: #a6501a;
+  --rank-low: #b83a3a;
+  --scrim: #20212a66;
+  --scrim-strong: #20212a2e;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -29,6 +41,16 @@
   --hover: #252630;
   --green: #89c4a8;
   --green-bg: #1b2e26;
+  --danger: #f0a5a5;
+  --danger-border: #f0a5a560;
+  --warning: #e9b949;
+  --rank-exceptional: #fbbf24;
+  --rank-excellent: #4ade80;
+  --rank-above: #34d399;
+  --rank-below: #fb923c;
+  --rank-low: #f87171;
+  --scrim: #0009;
+  --scrim-strong: #0006;
   --shadow: 0 4px 20px #0000000a;
   --button: #ededf1;
   background: var(--bg);
@@ -701,13 +723,21 @@ footer > div {
   align-items: center;
   gap: 22px;
 }
-footer button {
+footer button,
+.footer-real-game {
   display: flex;
   align-items: center;
   gap: 5px;
   color: var(--muted);
   font-size: 10px;
   padding: 0;
+}
+.footer-real-game {
+  text-decoration: none;
+}
+footer button:hover,
+.footer-real-game:hover {
+  color: var(--text);
 }
 .preview-label {
   display: flex;
@@ -1851,4 +1881,72 @@ footer button {
   line-height: 1.8;
   color: var(--secondary);
   margin: 16px 0 0;
+}
+
+/* Sign-up: what is saved, what is not, and live name validation. */
+.signup-points {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  display: grid;
+  gap: 10px;
+}
+.signup-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+.signup-points svg {
+  margin-top: 2px;
+  color: var(--muted);
+}
+.signup-points li:nth-child(2) svg {
+  color: var(--green);
+}
+.signup-points strong {
+  color: var(--text);
+  font-weight: 620;
+}
+.signup-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.signup-field input {
+  flex: 1;
+  min-width: 0;
+}
+.signup-suggest {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.signup-suggest:hover:not(:disabled) {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.profile-input-hint.is-invalid {
+  color: var(--danger) !important;
+}
+.profile-input-hint.is-valid {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--green) !important;
+}
+.signup-footnote {
+  margin: 14px 0 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--muted);
 }

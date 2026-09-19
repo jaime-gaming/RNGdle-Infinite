@@ -21,8 +21,9 @@ export function recommendedGoal(progress) {
     (item) => !item.requiresProfile || progress.profile,
   );
   const priority = (item) =>
-    ["roll", "cooldown", "pace", "offline"].includes(item.kind) ||
-    ["auto-roll", "offline-roller"].includes(item.id)
+    ["roll", "cooldown", "pace", "offline", "offline-cap"].includes(
+      item.kind,
+    ) || ["auto-roll", "offline-roller", "persistence-core"].includes(item.id)
       ? 0
       : 1;
   return (

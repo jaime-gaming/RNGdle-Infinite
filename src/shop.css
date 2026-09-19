@@ -163,10 +163,10 @@
   border-radius: 14px;
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 20px 60px #0003;
+  box-shadow: 0 20px 60px var(--scrim-strong);
 }
 .shop-confirm::backdrop {
-  background: #0006;
+  background: var(--scrim);
   backdrop-filter: blur(4px);
 }
 .shop-confirm h2 {
@@ -369,7 +369,7 @@
   margin-top: 8px !important;
 }
 .profile-error {
-  color: #c95050 !important;
+  color: var(--danger) !important;
 }
 .guest-purchase-note {
   font-size: 12px !important;
@@ -491,4 +491,19 @@ nav button:disabled,
   .shop-card:hover {
     transform: none;
   }
+}
+.aura-preview.aura-tidepool {
+  background: linear-gradient(to top, #2dd4bf1c, var(--hover) 70%);
+}
+.aura-preview.aura-verdant {
+  background: radial-gradient(ellipse at center, #4ade8018, var(--hover) 75%);
+}
+.aura-preview.aura-circuit {
+  background: linear-gradient(125deg, #22d3ee14, var(--hover) 70%);
+}
+.aura-preview.aura-obsidian {
+  background: radial-gradient(ellipse at center, #e879f914, var(--hover) 72%);
+}
+.aura-preview.aura-singularity {
+  background: radial-gradient(ellipse at center, #a78bfa1c, var(--hover) 72%);
 }
