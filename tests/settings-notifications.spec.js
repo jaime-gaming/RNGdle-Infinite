@@ -74,7 +74,7 @@ test("compact EP is presentation only and never rounds a spendable amount", () =
   );
   expect(spent.balance).toBe(0);
   expect(spent.history.at(-1).ep).toBe(item.price);
-  expect(formatEP(item.price)).toBe("150,000");
+  expect(formatEP(item.price)).toBe(item.price.toLocaleString("en-US"));
 });
 
 test("late-game offline vaults raise the per-absence cap without touching the rate", () => {

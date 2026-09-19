@@ -470,7 +470,8 @@ test("rebuying items in a new cycle retains both historical purchase prices and 
     (e) => e.type === "purchase",
   );
   expect(purchases).toHaveLength(2);
-  expect(purchases.map((e) => e.ep)).toEqual([50000, 50000]);
+  const starfallPrice = shopProducts.find((p) => p.id === "starfall").price;
+  expect(purchases.map((e) => e.ep)).toEqual([starfallPrice, starfallPrice]);
   expect(purchases[0].id).not.toBe(purchases[1].id);
 });
 

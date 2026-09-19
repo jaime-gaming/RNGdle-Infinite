@@ -67,10 +67,14 @@ npm run test:pages
 The smoke check independently builds and serves both `/` and
 `/RNGdle-Infinite/` on a strict static server, with no SPA fallback. It checks a
 real roll, the scoring worker and both data downloads, emoji/fonts/favicon,
-direct hash links and reloads, and exactly-once saved progress. Temporary test
+direct links and reloads, and exactly-once saved progress. Temporary test
 builds stay in ignored `.cache/`; deployable files are built into ignored
-`dist/`. All sections use `#shop`, `#badges`, or `#history`, so Pages needs no
-404 redirect or server rewrite. Open via HTTP(S), not `file://`.
+`dist/`. Sections are **real paths** — `/shop`, `/badges`, `/history`,
+`/settings` — so the build also emits `404.html` (a copy of `index.html`), which
+is what GitHub Pages serves for unknown paths. That makes a direct link or a
+reload land on the right page with no server rewrite. Legacy `#shop` style links
+still resolve and are rewritten to their real path on arrival. Open via HTTP(S),
+not `file://`.
 
 **Saved games remain browser-local.** GitHub Pages does not add accounts or cloud
 sync. Moving from an Arena preview to Pages (or changing domains) changes the
@@ -120,45 +124,45 @@ A pending online roll, committed offline batch or unexpired next-roll deadline b
 
 The shop has sequential Quickwind, Clockwork, Flywheel, Offline Clock and Offline Vault upgrade paths, twelve cosmetic auras, and four utilities (34 products total). Offline Clock appears after Offline Roller is owned, and Offline Vault after Offline Clock I. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
 
-| Upgrade       |         Price | Effect             | Prerequisite  |
-| ------------- | ------------: | ------------------ | ------------- |
-| Quickwind I   |     35,000 EP | 45s → 35s reveal   | None          |
-| Quickwind II  |    140,000 EP | 35s → 25s reveal   | Quickwind I   |
-| Quickwind III |    500,000 EP | 25s → 15s reveal   | Quickwind II  |
-| Quickwind IV  |  1,800,000 EP | 15s → 10s reveal   | Quickwind III |
-| Clockwork I   |     60,000 EP | 60s → 45s cooldown | None          |
-| Clockwork II  |    240,000 EP | 45s → 30s cooldown | Clockwork I   |
-| Clockwork III |    900,000 EP | 30s → 15s cooldown | Clockwork II  |
-| Clockwork IV  |  2,500,000 EP | 15s → 10s cooldown | Clockwork III |
-| Clockwork V   |  6,000,000 EP | 10s → 5s cooldown  | Clockwork IV  |
-| Clockwork VI  | 18,000,000 EP | 5s → 2s cooldown   | Clockwork V   |
+| Upgrade       |        Price | Effect             | Prerequisite  |
+| ------------- | -----------: | ------------------ | ------------- |
+| Quickwind I   |    30,000 EP | 45s → 35s reveal   | None          |
+| Quickwind II  |   110,000 EP | 35s → 25s reveal   | Quickwind I   |
+| Quickwind III |   380,000 EP | 25s → 15s reveal   | Quickwind II  |
+| Quickwind IV  |   620,000 EP | 15s → 10s reveal   | Quickwind III |
+| Clockwork I   |    40,000 EP | 60s → 45s cooldown | None          |
+| Clockwork II  |   180,000 EP | 45s → 30s cooldown | Clockwork I   |
+| Clockwork III |   620,000 EP | 30s → 15s cooldown | Clockwork II  |
+| Clockwork IV  | 1,700,000 EP | 15s → 10s cooldown | Clockwork III |
+| Clockwork V   | 3,800,000 EP | 10s → 5s cooldown  | Clockwork IV  |
+| Clockwork VI  | 5,320,000 EP | 5s → 2s cooldown   | Clockwork V   |
 
 Timing upgrades activate automatically. Both timings are snapshotted when Generate is pressed: buying during a reveal does not restart or shorten it, and does not shorten its upcoming cooldown. Buying during a cooldown does not change its deadline. Upgrades apply to rolls started afterward. They never change uniform random odds, badge rules, or EP scoring.
 
 | Aura            |        Price | Effect                                                                                                  |
 | --------------- | -----------: | ------------------------------------------------------------------------------------------------------- |
-| Starfall        |    50,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
-| Aurora Veil     |   250,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
-| Frostglass      |   400,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
-| Emberwake       |   750,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
-| Eclipse Crown   | 2,000,000 EP | A golden corona, crescent rings, and orbiting stardust.                                                 |
-| Prismatic Bloom | 3,000,000 EP | Spectral petals, layered prism outlines, and drifting light motes.                                      |
-| Orbital Halo    | 1,200,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
-| Tidepool        |   120,000 EP | Slow turquoise swells and rising bubbles, like light through shallow water.                             |
-| Verdant Bloom   |   550,000 EP | Creeping vines frame the box while pollen motes drift upward in a soft green glow.                     |
-| Circuit Bloom   | 1,600,000 EP | Etched traces pulse with cyan data packets that race the border and flash at each corner node.         |
-| Obsidian Edge   | 2,400,000 EP | A matte volcanic-glass frame with a razor-thin magenta edge light and slow drifting ash.               |
-| Singularity     | 5,000,000 EP | A collapsing accretion disc with an event-horizon ring and infalling sparks.                           |
+| Starfall        |    40,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
+| Aurora Veil     |   200,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
+| Frostglass      |   320,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
+| Emberwake       |   440,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
+| Eclipse Crown   | 1,380,000 EP | A golden corona, crescent rings, and orbiting stardust.                                                 |
+| Prismatic Bloom | 2,300,000 EP | Spectral petals, layered prism outlines, and drifting light motes.                                      |
+| Orbital Halo    |   620,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
+| Tidepool        |   100,000 EP | Slow turquoise swells and rising bubbles, like light through shallow water.                             |
+| Verdant Bloom   |   440,000 EP | Creeping vines frame the box while pollen motes drift upward in a soft green glow.                      |
+| Circuit Bloom   |   620,000 EP | Etched traces pulse with cyan data packets that race the border and flash at each corner node.          |
+| Obsidian Edge   | 1,380,000 EP | A matte volcanic-glass frame with a razor-thin magenta edge light and slow drifting ash.                |
+| Singularity     | 3,380,000 EP | A collapsing accretion disc with an event-horizon ring and infalling sparks.                            |
 
-**Five auras were added** — Tidepool, Verdant Bloom, Circuit Bloom, Obsidian Edge and Singularity — spread deliberately across the price ladder so there is a fresh look to chase at 120,000 EP as well as at 5,000,000 EP. Each renders through the same shared `NumberBox` layers as the originals, keeps the rarity palette visible beneath, and is fully disabled by reduced motion. Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades, Flywheel, and utilities do not occupy the aura slot. Prices have been rebalanced around ordinary rolls rather than the jackpot-inflated average. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset. Old purchase records retain the price actually paid; repricing does not retroactively refund or debit EP.
+**Five auras were added** — Tidepool, Verdant Bloom, Circuit Bloom, Obsidian Edge and Singularity — spread deliberately across the price ladder so there is a fresh look to chase at 100,000 EP as well as at 3,380,000 EP. Each renders through the same shared `NumberBox` layers as the originals, keeps the rarity palette visible beneath, and is fully disabled by reduced motion. Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades, Flywheel, and utilities do not occupy the aura slot. Prices have been rebalanced around ordinary rolls rather than the jackpot-inflated average. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset. Old purchase records retain the price actually paid; repricing does not retroactively refund or debit EP.
 
-**Archive Lens — 150,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
+**Archive Lens — 100,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
 
-**Auto-Roll — 2,500,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. Auto-Roll has no special speed advantage over manual rolls and does not perform offline catch-up; Flywheel benefits both equally.
+**Auto-Roll — 1,700,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. Auto-Roll has no special speed advantage over manual rolls and does not perform offline catch-up; Flywheel benefits both equally.
 
-**Persistence Core — 8,000,000 EP (requires Auto-Roll):** a late-game convenience that makes the Auto-Roll switch survive a reload and keep running while its tab is in the background. The switch position is stored per profile under `rng-infinite-auto-roll-v1:`, outside saved progress, and is cleared on account deletion. Every roll it starts still uses the same committed draw, full reveal, cooldown deadline, verified scoring, single-credit settlement and cross-tab locks. It grants no extra speed, EP, luck or offline catch-up; without it, Auto-Roll keeps its original pause-when-hidden, off-after-reload behaviour.
+**Persistence Core — 4,800,000 EP (requires Auto-Roll):** a late-game convenience that makes the Auto-Roll switch survive a reload and keep running while its tab is in the background. The switch position is stored per profile under `rng-infinite-auto-roll-v1:`, outside saved progress, and is cleared on account deletion. Every roll it starts still uses the same committed draw, full reveal, cooldown deadline, verified scoring, single-credit settlement and cross-tab locks. It grants no extra speed, EP, luck or offline catch-up; without it, Auto-Roll keeps its original pause-when-hidden, off-after-reload behaviour.
 
-### Flywheel — 600,000 EP; II — 2,400,000 EP; III — 6,000,000 EP
+### Flywheel — 440,000 EP; II — 1,380,000 EP; III — 3,800,000 EP
 
 A permanent pace upgrade with an automatic **four-charge / fifth-roll** rhythm. Four completed online rolls begun after purchase charge it; the fifth roll retains its full reveal but has **zero cooldown afterward**. Boosted rolls do not charge the next cycle. Auto-Roll counts normally; offline rolls never charge or consume it. Normal cooldowns still apply to the four charging rolls, including the fourth. A full five-roll cycle averages 93 seconds per roll at base timings, or 27 seconds at the previous 15s-reveal / 15s-cooldown ceiling, excluding user/UI delays.
 
@@ -180,24 +184,24 @@ The current curve:
 | Late workshop (Clockwork V + Flywheel II)         | 13.4 M EP |        18.3 s |              196 |
 | Final online pace (everything)                    | 39.2 M EP |          11 s |              327 |
 
-**What changed in this rebalance.** The mid-game walls were the problem: the original three timing tiers and the first Flywheel gated an ordinary player behind hundreds of median rolls before anything felt different. Quickwind II/III, Clockwork II/III, Flywheel II/III, the auras, Auto-Roll and Offline Roller are all cheaper, and the steepest jumps are gone: **no upgrade now costs more than four times its own prerequisite**, which `tests/number-box.spec.js` enforces. Auto-Roll fell from 5,000,000 to 2,500,000 EP and Offline Roller from 10,000,000 to 4,000,000 EP, so the tools that change how you play arrive during the mid game rather than after it.
+**What changed in this rebalance.** The mid-game walls were the problem: the original three timing tiers and the first Flywheel gated an ordinary player behind hundreds of median rolls before anything felt different. Quickwind II/III, Clockwork II/III, Flywheel II/III, the auras, Auto-Roll and Offline Roller are all cheaper, and the steepest jumps are gone: **no upgrade now costs more than four times its own prerequisite**, which `tests/number-box.spec.js` enforces. Auto-Roll fell from 5,000,000 to 1,700,000 EP and Offline Roller from 10,000,000 to 2,440,000 EP, so the tools that change how you play arrive during the mid game rather than after it.
 
-The freed headroom went into **new late-game content** rather than inflation: Quickwind IV (10s reveal), Clockwork VI (2s cooldown), Offline Clock III (3-minute interval), Offline Vault I/II (216 and 288 offline rolls per absence) and Persistence Core. The online ceiling moves from ~206 to ~327 ideal rolls/hour, and the offline ceiling from 144 to 288 rolls per absence — both behind prices that only a deep late-game wallet reaches. Median-roll equivalents range from 7 (Quickwind I) to 3,448 (Offline Vault II).
+The freed headroom went into **new late-game content** rather than inflation: Quickwind IV (10s reveal), Clockwork VI (2s cooldown), Offline Clock III (3-minute interval), Offline Vault I/II (216 and 288 offline rolls per absence) and Persistence Core. The online ceiling still moves from ~206 to ~327 ideal rolls/hour, and the offline ceiling from 144 to 288 rolls per absence — both behind prices that only a deep late-game wallet reaches. Median-roll equivalents range from 5 (Quickwind I) to 1,896 (Offline Vault II).
 
-Late tiers keep deliberately diminishing returns: each one costs more per second saved than the tier before it, so the endgame is a long tail rather than a cliff, and the complete catalogue totals 121.5 M EP. Recommendations compare all eligible pace/earning tools by price, so an expensive clock never hides a cheaper tool. Reference EP rewards, the two original bonuses, badge rules and uniform RNG are untouched. Repricing never refunds or debits an existing wallet, and historical purchase records keep the price actually paid.
+Late tiers keep deliberately diminishing returns: each one costs more per second saved than the tier before it, so the endgame is a long tail rather than a cliff, and the complete catalogue totals 79.25 M EP. Recommendations compare all eligible pace/earning tools by price, so an expensive clock never hides a cheaper tool. Reference EP rewards, the two original bonuses, badge rules and uniform RNG are untouched. Repricing never refunds or debits an existing wallet, and historical purchase records keep the price actually paid.
 
-### Offline Roller — 4,000,000 EP
+### Offline Roller — 2,440,000 EP
 
 A permanent tool for saved local profiles. It earns **one normal random roll for each full 10 minutes away**, capped at **24 hours / 144 rolls per absence**, as requested. Online reveal/cooldown upgrades do not speed up this interval. It activates on purchase without retroactive credit for time before purchase. No further purchase or claim fee is required.
 
 | Offline upgrade   |         Price | Interval | Cap | Rolls after 8h | Time to fill cap |
 | ----------------- | ------------: | -------: | --: | -------------: | ---------------: |
-| Offline Roller    |  4,000,000 EP |   10 min | 144 |             48 |              24h |
-| Offline Clock I   |  6,000,000 EP |  7.5 min | 144 |             64 |              18h |
-| Offline Clock II  |  9,000,000 EP |    5 min | 144 |             96 |              12h |
-| Offline Clock III | 15,000,000 EP |    3 min | 144 |            144 |             7.2h |
-| Offline Vault I   | 10,000,000 EP |        — | 216 |              — |                — |
-| Offline Vault II  | 20,000,000 EP |        — | 288 |              — |                — |
+| Offline Roller    |  2,440,000 EP |   10 min | 144 |             48 |              24h |
+| Offline Clock I   |  3,800,000 EP |  7.5 min | 144 |             64 |              18h |
+| Offline Clock II  |  5,320,000 EP |    5 min | 144 |             96 |              12h |
+| Offline Clock III |  8,380,000 EP |    3 min | 144 |            144 |             7.2h |
+| Offline Vault I   |  3,800,000 EP |        — | 216 |              — |                — |
+| Offline Vault II  | 11,000,000 EP |        — | 288 |              — |                — |
 
 Clocks change **how fast** offline rolls accrue; vaults change **how many** a single absence can store. Vault I requires Offline Clock I, and Vault II requires Vault I. With Offline Clock III and Offline Vault II, a 14.4-hour absence fills the maximum 288 rolls. Neither track changes the value, odds or badge rules of an individual offline roll.
 
@@ -226,7 +230,7 @@ These are independent scoring badges (no supersession family), with supporting-d
 
 ### Number boxes and cosmetics
 
-A single `NumberBox` component renders the idle generator, generated results, historical rolls, and every cosmetic preview. Its original seven rarity palettes use the light/dark scoring-box colour and shadow tokens observed in [Box Lab](https://rng.cubityfir.st/beta/boxes): 3px borders, 12px corners, gradients, gloss, tier-specific glows, and shimmer only from Uncommon upward. Neutral/unrevealed boxes do not disclose the outcome. The requested **GODLY tier starts at 500,000 EP**: gold `#fde68a → #fffbeb → #fde68a` gradient, `#f59e0b` border, 20px outer glow and inset highlight, 12px radius, 3px border, `#78350f` ink with gradient digits, shimmer, ten shadowed star particles generated with seed 1234, and a three-second breathing cycle. GODLY splits the old Mythic population without changing any scores or badge odds (2,075 of 1,000,001 numbers, approximately 0.2075%). Legacy high-EP history boxes migrate to GODLY.
+A single `NumberBox` component renders the idle generator, generated results, historical rolls, and every cosmetic preview. Its original seven rarity palettes use the light/dark scoring-box colour and shadow tokens observed in [Box Lab](https://rng.cubityfir.st/beta/boxes): 3px borders, 12px corners, gradients, gloss, tier-specific glows, and shimmer only from Uncommon upward. Neutral/unrevealed boxes do not disclose the outcome. The requested **GODLY tier starts at 380,000 EP**: gold `#fde68a → #fffbeb → #fde68a` gradient, `#f59e0b` border, 20px outer glow and inset highlight, 12px radius, 3px border, `#78350f` ink with gradient digits, shimmer, ten shadowed star particles generated with seed 1234, and a three-second breathing cycle. GODLY splits the old Mythic population without changing any scores or badge odds (2,075 of 1,000,001 numbers, approximately 0.2075%). Legacy high-EP history boxes migrate to GODLY.
 
 The component and animations are independently implemented. Starfall adds twinkling stars and a comet; Aurora adds drifting ribbons and a holographic layer; Orbital Halo adds a five-colour halo, orbital rings, and satellite lights; Frostglass adds icy facets; Emberwake adds rising sparks. They decorate the box without replacing the score's underlying rarity palette. Reduced motion disables animated layers throughout the app, including shop previews. Cosmetics never change the original badge rules or the two Infinite Originals; all badge probabilities and roll ranks use the complete population.
 
@@ -270,6 +274,47 @@ Progress belongs to the browser **and origin**. Clearing site data removes the l
 | Confirm every purchase          | On           | Off buys in one click; prices, prerequisites and history are unchanged               |
 | Start Auto-Roll enabled         | Off          | Applies when Auto-Roll is owned; Persistence Core overrides it with your last switch |
 
+## Real URLs, light mode and a lighter economy
+
+**Every top-bar destination is its own page with its own URL.** Shop, Badges,
+History and Settings are `/shop`, `/badges`, `/history` and `/settings` instead
+of hash fragments, so each one can be linked, bookmarked, opened in a new tab
+and reached with browser back/forward. Unknown paths fall back to the roll page
+rather than a blank screen, and old `#`-style links keep working.
+
+**Light mode was genuinely broken, not just unpolished.** `roll.css` is imported
+after `styles.css` and redefined `--text`, `--secondary`, `--muted`, `--border`
+and `--hover` in an **unscoped `:root`**, silently replacing the light palette
+with a second, different one. Those overrides now live only in the dark block.
+Hardcoded status colours (danger red, the offline warning, the rank percentile
+scale, modal scrims) became themed tokens — `--danger`, `--warning`,
+`--rank-*`, `--scrim` — with light values picked to clear the WCAG AA 4.5:1
+contrast ratio against the page background; several of the old ones sat as low
+as 1.8:1 and were effectively unreadable. `--muted` and `--green` were darkened
+for the same reason.
+
+**Rebirth no longer depends on the shop.** It is a collection milestone, so
+auras, Auto-Roll, Archive Lens, Offline Roller, Persistence Core and the vaults
+are all excluded: a complete badge collection unlocks rebirth with an entirely
+empty shop, and owning all 34 products with one badge missing does not. The
+dialog says so explicitly.
+
+**Prices were rebalanced against the real game.** RNGdle proper reports about
+1,538 EP per roll (112,146,596 EP over 72,931 rolls), while Infinite averages
+21,548 — scoring is a fixed invariant, so instead of changing EP the catalogue
+was repriced so the _number of rolls_ an upgrade costs feels like the real game.
+Every price fell: the catalogue went from 131.1 M to **79.25 M EP**, about
+6,086 → **3,678** average rolls to own everything (−40%), with the deepest cuts
+in the late game (Clockwork VI −50%, the offline tiers −40%). The chain shape,
+the `price / prices[requires] <= 4` rule and one-time confirmed purchases are
+unchanged, and repricing never refunds or debits an existing wallet.
+
+**Savings now lead the result.** The post-roll goal progress sits at the very
+top of a finished roll, above the badge breakdown, and is no longer a bordered
+card — no panel background, no shadow — so it reads as part of the result.
+
+The footer links to the **real game** at [rngdle.com](https://www.rngdle.com/).
+
 **Wardrobe.** Settings also holds an aura wardrobe: every aura you already own, previewed live on any rarity you pick, equippable in one click without walking back to the shop. It lists the original appearance first and marks the equipped entry. Equipping is free and cosmetic — it spends no EP, buys nothing, and cannot show an aura you do not own. With none owned it explains what auras are and links to the shop instead.
 
 **Nothing in Settings is a gameplay advantage.** No option changes randomness, EP scoring, badge rules, prices, reveal length, cooldown length or the offline rate. Reduced motion completes a reveal instantly but still reserves the full committed deadline, exactly as the system preference always has. Compact numbers are presentation only — every purchase, balance check, history entry and save uses exact EP. Turning off purchase confirmation removes a dialog, not a cost.
@@ -308,13 +353,14 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **183 tests** cover:
+The **189 tests** cover:
 
 - Goal recommendations/prerequisites, backward-compatible goal saves, failed-write retry, cross-tab preservation, guest/signup gating, confirmed purchase → next goal, plain progress links, duplicate-roll discoveries, Auto-Roll dialog pausing, completed-workshop states, profile-required goals and narrow-screen themes.
 - Rebirth visibility at 140/141/234/235 badges, unique-badge eligibility, filters, typed confirmation/cancel, complete resets and preserved history, repurchases/rediscovery, failed local/session saves, simultaneous tabs, missed storage events, stale-cycle recovery, Web Locks, pending-roll/offline/cooldown guards and mobile dialogs.
 - Cooldown-only fill arithmetic, fractional progression, reload and mid-cooldown purchases, reduced-motion reveal reservation and zero-cooldown Flywheel rolls.
 - Every late tier’s prerequisite chain and deep orphan pruning, historical prices, recommendation ordering, 2s/5s/10s snapshots, 4/2/1-charge rhythms, rate changes without retroactive rewards, snapshotted legacy batches, all three offline caps, concurrent tier purchases and failed-save rollback.
 - Settings defaults, field-by-field validation of corrupt preferences, separation from saved progress, compact-EP formatting that never changes a spent amount, Offline Vault caps, Persistence Core prerequisites, catalogue kinds and the four-times-prerequisite price ceiling.
+- Real-path routing for all five pages including subpath deployment, legacy hash links, unknown-route fallback and duplicate-history suppression; the `404.html` static fallback; rebirth unlocking on badges alone with an empty shop and refusing with a full shop; light mode having a single palette source and themed semantic tokens; and the rebalanced catalogue's total, early prices and prerequisite ratios.
 - All twelve auras carrying no gameplay payload, distinct prices, renderer coverage for every catalogue aura, purchase-equips/free-re-equip behaviour, refusal to equip an unowned aura, and goal-recap savings that cap at the price and estimate from the median.
 - Flywheel’s two-cycle accounting, zero-cooldown validation, mid-reveal purchase snapshots, full base/upgraded reveal deadlines, reload restoration, concurrent single consumption, failed commit/recovery, offline exclusion, Auto-Roll compatibility, mobile display, and legacy price preservation.
 - Exact chance/frequency formatting at rare and near-certain boundaries, and full-population tier odds despite stale manifest counts.

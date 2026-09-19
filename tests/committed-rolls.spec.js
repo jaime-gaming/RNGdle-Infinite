@@ -10,6 +10,7 @@ import {
 import { seedProgress } from "./helpers/progress.js";
 import { startRoll, showRoll, mockRandom } from "./helpers/random-roll.js";
 import { evaluate, inflate } from "./helpers/index.js";
+import { shopProducts } from "../src/shop-data.js";
 import manifest from "../src/data/game-index.json" with { type: "json" };
 const guestKey = "rng-infinite-guest-roll-v1";
 const saved = (page) =>
@@ -185,7 +186,9 @@ test("invalid pending data is rejected, and temporary recovery never restores sp
   });
   const spent = applyProgress(base, { type: "buy", id: "starfall", at: 3000 });
   const recovered = recoverUnsavedRolls(spent, temporary);
-  expect(recovered.balance).toBe(base.balance - 50000 + 4663);
+  expect(recovered.balance).toBe(
+    base.balance - shopProducts.find((p) => p.id === "starfall").price + 4663,
+  );
   expect(recovered.owned).toEqual(["starfall"]);
   expect(recovered.history.filter((e) => e.type === "purchase")).toHaveLength(
     1,
@@ -294,7 +297,12 @@ test("new cosmetics persist and Archive Lens searches the complete history witho
     at: 1000 + i,
     badges: [],
   }));
-  await seedProgress(page, { balance: 4000000, totalEarned: 4000000, history });
+  const startingBalance = 4000000;
+  await seedProgress(page, {
+    balance: startingBalance,
+    totalEarned: startingBalance,
+    history,
+  });
   await page.goto("/#history");
   await expect(page.locator(".activity-event")).toHaveCount(50);
   await expect(
@@ -310,7 +318,13 @@ test("new cosmetics persist and Archive Lens searches the complete history witho
     "archive-lens",
   ]);
   expect((await saved(page)).equipped).toBe("emberwake");
-  expect((await saved(page)).balance).toBe(2500000);
+  expect((await saved(page)).balance).toBe(
+    startingBalance -
+      ["frostglass", "emberwake", "archive-lens"].reduce(
+        (sum, id) => sum + shopProducts.find((p) => p.id === id).price,
+        0,
+      ),
+  );
   await nav(page, "History");
   await page
     .getByRole("searchbox", { name: "Search a rolled number" })

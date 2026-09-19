@@ -459,6 +459,12 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
+      {/* Savings sit at the very top of a finished roll, ahead of the badge
+          breakdown. It only appears once the reveal has played out and the EP
+          is credited — never mid-reveal. */}
+      {!!run && !busy && runSettled && preferences.showGoalRecap && (
+        <GoalRecap progress={session} runId={run.id} navigate={navigate} />
+      )}
       {preferences.showFlywheelMeter && (
         <FlywheelMeter
           progress={session}
@@ -741,11 +747,6 @@ export default function RollExperience({
             ? "Loading full-range scoring data"
             : "Drawing a random number"}
         </span>
-      )}
-      {/* The goal recap belongs to a finished roll, so it appears only once the
-          reveal has played out and the result is credited — never mid-reveal. */}
-      {!!run && !busy && runSettled && preferences.showGoalRecap && (
-        <GoalRecap progress={session} runId={run.id} navigate={navigate} />
       )}
       {!run && children}
       {(!run || (!busy && runSettled)) && (

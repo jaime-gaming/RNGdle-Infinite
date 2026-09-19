@@ -38,13 +38,15 @@ import ActivityFeed from "./components/ActivityFeed";
 import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
+import {
+  pageFromLocation,
+  pathForPage,
+  isCurrentPath,
+  validPage,
+} from "./router.js";
 
 function App() {
-  const [page, setPage] = useState(() =>
-    ["badges", "shop", "history", "settings"].includes(location.hash.slice(1))
-      ? location.hash.slice(1)
-      : "roll",
-  );
+  const [page, setPage] = useState(() => pageFromLocation(location));
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem("rng-theme");
@@ -103,23 +105,29 @@ function App() {
   };
   const navigate = (next, productId = null) => {
     setShopFocus(next === "shop" ? productId : null);
-    if (!["roll", "badges", "shop", "history", "settings"].includes(next))
-      next = "roll";
-    setPage(next);
-    location.hash = next === "roll" ? "" : next;
+    setPage((next = validPage(next)));
+    // Real URLs, so a page can be linked, bookmarked and reloaded directly.
+    if (!isCurrentPath(next, location))
+      history.pushState({ page: next }, "", pathForPage(next));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   useEffect(() => {
-    const update = () =>
-      setPage(
-        ["badges", "shop", "history", "settings"].includes(
-          location.hash.slice(1),
-        )
-          ? location.hash.slice(1)
-          : "roll",
+    // Back/forward must move between pages, and a legacy #shop link or a
+    // 404.html fallback landing must be normalised to its real path once.
+    const update = () => setPage(pageFromLocation(location));
+    update();
+    if (location.hash || !isCurrentPath(pageFromLocation(location), location))
+      history.replaceState(
+        { page: pageFromLocation(location) },
+        "",
+        pathForPage(pageFromLocation(location)),
       );
+    window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
-    return () => window.removeEventListener("hashchange", update);
+    return () => {
+      window.removeEventListener("popstate", update);
+      window.removeEventListener("hashchange", update);
+    };
   }, []);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
@@ -580,6 +588,14 @@ function App() {
           Just a number. A whole lot of possibility.
         </span>
         <div>
+          <a
+            href="https://www.rngdle.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="footer-real-game"
+          >
+            Real game <ArrowUpRight size={12} />
+          </a>
           <button onClick={() => navigate("settings")}>Settings</button>
           <button onClick={() => setModal("help")}>
             How to play <ArrowUpRight size={12} />
