@@ -67,6 +67,21 @@ test("offline accounting uses whole ten-minute periods, caps at 144, and exclude
       "offline-roller",
     ]),
   ).toThrow();
+  // A vault owner may legitimately hold a larger batch, but never more than it.
+  expect(
+    parseOffline({ ...b, batch: { ...b.batch, numbers: Array(216).fill(1) } }, [
+      "offline-roller",
+      "offline-clock-1",
+      "offline-vault-1",
+    ]).batch.numbers,
+  ).toHaveLength(216);
+  expect(() =>
+    parseOffline({ ...b, batch: { ...b.batch, numbers: Array(217).fill(1) } }, [
+      "offline-roller",
+      "offline-clock-1",
+      "offline-vault-1",
+    ]),
+  ).toThrow();
   expect(() =>
     parseOffline({ ...b, batch: { ...b.batch, index: 1 } }, ["offline-roller"]),
   ).toThrow();

@@ -1,5 +1,10 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
-import { productById, offlineSettings } from "./shop-data.js";
+import {
+  productById,
+  offlineSettings,
+  ROLL_DURATIONS,
+  COOLDOWN_DURATIONS,
+} from "./shop-data.js";
 import {
   FLYWHEEL_CHARGES,
   flywheelAfterSettlement,
@@ -265,14 +270,14 @@ export function applyProgress(state, action) {
     if (item.requiresProfile && !state.profile)
       throw new Error(`Create a local profile before buying ${item.name}.`);
     if (
-      item.kind === "offline" &&
+      ["offline", "offline-cap"].includes(item.kind) &&
       (state.offline?.batch ||
         (state.offline &&
           (action.at ?? Math.ceil(Date.now())) - state.offline.lastSeenAt >=
             offlineSettings(state.owned).intervalMS))
     )
       throw new Error(
-        "Restore offline rewards before upgrading the clock. No EP was spent.",
+        "Restore offline rewards before upgrading offline earnings. No EP was spent.",
       );
     if (state.balance < item.price)
       throw new Error("Not enough EP for this item.");
@@ -301,15 +306,16 @@ export function applyProgress(state, action) {
                 : Math.min(state.flywheelCharge ?? 0, item.charges),
           }
         : {}),
-      ...(item.id === "offline-roller" || item.kind === "offline"
+      ...(item.id === "offline-roller" ||
+      ["offline", "offline-cap"].includes(item.kind)
         ? {
             offline: {
               lastSeenAt: action.at ?? Math.ceil(Date.now()),
               batch: null,
               report:
-                item.kind === "offline"
-                  ? (state.offline?.report ?? null)
-                  : null,
+                item.id === "offline-roller"
+                  ? null
+                  : (state.offline?.report ?? null),
             },
           }
         : {}),
@@ -434,8 +440,8 @@ export function parsePending(p) {
     !validAmount(p.number) ||
     p.number > 1000000 ||
     !validAmount(p.startedAt) ||
-    ![45000, 35000, 25000, 15000].includes(p.rollMS) ||
-    ![60000, 45000, 30000, 15000, 10000, 5000, 0].includes(p.cooldownMS) ||
+    !ROLL_DURATIONS.includes(p.rollMS) ||
+    ![...COOLDOWN_DURATIONS, 0].includes(p.cooldownMS) ||
     (p.flywheel != null && !["charge", "boost"].includes(p.flywheel)) ||
     (p.cooldownMS === 0) !== (p.flywheel === "boost") ||
     !validAmount(p.startedAt + p.rollMS + p.cooldownMS)

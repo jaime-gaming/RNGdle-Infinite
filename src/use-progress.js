@@ -9,6 +9,7 @@ import {
   recoverUnsavedRolls,
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
+import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings, offlineSettings, productById } from "./shop-data.js";
@@ -166,6 +167,7 @@ export function useProgress() {
           try {
             clearPresence(previous.profile.id);
           } catch {}
+          clearAutoRoll(previous.profile.id);
           reset();
           return { ok: true };
         }
@@ -214,7 +216,7 @@ export function useProgress() {
                   offline.batch.numbers.length - offline.batch.index,
               };
             }
-            const intervalMS = offlineSettings(previous.owned).intervalMS;
+            const { intervalMS, cap } = offlineSettings(previous.owned);
             const plan = offlinePlan(
               offline,
               now,
@@ -222,6 +224,7 @@ export function useProgress() {
               action.tabId,
               action.visible === true,
               intervalMS,
+              cap,
             );
             if (action.checkAbsence === false) plan.count = 0;
             const numbers = [];

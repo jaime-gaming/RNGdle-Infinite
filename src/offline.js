@@ -2,12 +2,27 @@
 // be made authoritative without a backend. A visible tab keeps the account online.
 export const OFFLINE_INTERVAL = 600000;
 export const OFFLINE_CAP = 144;
-export const OFFLINE_INTERVALS = [600000, 450000, 300000];
+// Every offline rate and per-absence cap a saved batch may legally claim.
+export const OFFLINE_INTERVALS = [600000, 450000, 300000, 180000];
+export const OFFLINE_CAPS = [144, 216, 288];
+export const OFFLINE_MAX_CAP = Math.max(...OFFLINE_CAPS);
+export const OFFLINE_CAP_BY_PRODUCT = {
+  "offline-vault-1": 216,
+  "offline-vault-2": 288,
+};
 export const PRESENCE_PREFIX = "rng-infinite-presence-v1:";
 const amount = (n) => Number.isSafeInteger(n) && n >= 0;
 const timestamp = (n) => amount(n) && n <= 8640000000000000;
 export function parseOffline(value, owned) {
   if (!owned.includes("offline-roller") || value == null) return null;
+  // A saved batch can never claim more rolls than the owned vault allows.
+  const cap = owned.reduce(
+    (largest, id) =>
+      OFFLINE_CAP_BY_PRODUCT[id] > largest
+        ? OFFLINE_CAP_BY_PRODUCT[id]
+        : largest,
+    OFFLINE_CAP,
+  );
   if (!timestamp(value.lastSeenAt))
     throw new Error("Invalid offline timestamp");
   let batch = null,
@@ -22,7 +37,7 @@ export function parseOffline(value, owned) {
       !timestamp(b.since) ||
       !Array.isArray(b.numbers) ||
       !b.numbers.length ||
-      b.numbers.length > OFFLINE_CAP ||
+      b.numbers.length > cap ||
       !OFFLINE_INTERVALS.includes(intervalMS) ||
       !timestamp(b.since + b.numbers.length * intervalMS) ||
       b.numbers.some((n) => !amount(n) || n > 1000000) ||
@@ -70,9 +85,11 @@ export function offlinePlan(
   tabId,
   visible,
   intervalMS = OFFLINE_INTERVAL,
+  cap = OFFLINE_CAP,
 ) {
   if (!OFFLINE_INTERVALS.includes(intervalMS))
     throw new Error("Invalid offline interval");
+  if (!OFFLINE_CAPS.includes(cap)) throw new Error("Invalid offline cap");
   const since = Math.max(
     offline?.lastSeenAt ?? now,
     ...presences.map((p) => p.at),
@@ -84,10 +101,7 @@ export function offlinePlan(
     since,
     count:
       visible && !online
-        ? Math.min(
-            OFFLINE_CAP,
-            Math.max(0, Math.floor((now - since) / intervalMS)),
-          )
+        ? Math.min(cap, Math.max(0, Math.floor((now - since) / intervalMS)))
         : 0,
   };
 }
