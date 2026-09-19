@@ -9,6 +9,7 @@ import { emptyProgress, applyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { evaluate } from "./helpers/index.js";
+import { shopProducts } from "../src/shop-data.js";
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
 const rows = async (p) =>
@@ -65,6 +66,21 @@ test("offline accounting uses whole ten-minute periods, caps at 144, and exclude
   expect(() =>
     parseOffline({ ...b, batch: { ...b.batch, numbers: Array(145).fill(1) } }, [
       "offline-roller",
+    ]),
+  ).toThrow();
+  // A vault owner may legitimately hold a larger batch, but never more than it.
+  expect(
+    parseOffline({ ...b, batch: { ...b.batch, numbers: Array(216).fill(1) } }, [
+      "offline-roller",
+      "offline-clock-1",
+      "offline-vault-1",
+    ]).batch.numbers,
+  ).toHaveLength(216);
+  expect(() =>
+    parseOffline({ ...b, batch: { ...b.batch, numbers: Array(217).fill(1) } }, [
+      "offline-roller",
+      "offline-clock-1",
+      "offline-vault-1",
     ]),
   ).toThrow();
   expect(() =>
@@ -299,7 +315,13 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
       .click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
   }
-  expect((await saved(page)).balance).toBe(23500000);
+  expect((await saved(page)).balance).toBe(
+    25000000 -
+      ["eclipse", "prism", "offline-roller"].reduce(
+        (sum, id) => sum + shopProducts.find((p) => p.id === id).price,
+        0,
+      ),
+  );
   expect((await saved(page)).equipped).toBe("prism");
   await page.reload();
   await page.emulateMedia({ reducedMotion: "reduce" });

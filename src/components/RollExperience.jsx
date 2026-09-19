@@ -1,8 +1,9 @@
 import { flywheelForDraw } from "../flywheel";
 import { gameNow } from "../game-clock";
 import RollProgress from "./RollProgress";
+import GoalRecap from "./GoalRecap";
 import CooldownFill from "./CooldownFill";
-import { parseCooldownWindow } from "../cooldown.js";
+import { parseCooldownWindow, displayedCooldownSeconds } from "../cooldown.js";
 import FlywheelMeter from "./FlywheelMeter";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
@@ -17,21 +18,10 @@ import { prepareRolls, restoreRoll } from "../roll-client";
 import BadgeBreakdown from "./BadgeBreakdown";
 import RankSummary from "./RankSummary";
 import { rollSettings, formatDuration } from "../shop-data";
+import { useMotionPreference, useSettings } from "../use-settings.jsx";
+import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
 import "../roll.css";
-
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(
-    () => matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    const media = matchMedia("(prefers-reduced-motion: reduce)");
-    const change = () => setReduced(media.matches);
-    media.addEventListener("change", change);
-    return () => media.removeEventListener("change", change);
-  }, []);
-  return reduced;
-}
 
 const AnimatedCount = memo(function AnimatedCount({
   value,
@@ -158,8 +148,17 @@ export default function RollExperience({
   navigate,
 }) {
   const settings = rollSettings(session.owned);
+  const { settings: preferences } = useSettings();
   const ownsAutoRoll = session.owned.includes("auto-roll");
-  const [autoRoll, setAutoRoll] = useState(false);
+  // Persistence Core is the only way a switch survives a reload; without it the
+  // stored value is ignored so Auto-Roll still starts off, as documented.
+  const persistsAutoRoll =
+    ownsAutoRoll && session.owned.includes("persistence-core");
+  const [autoRoll, setAutoRoll] = useState(() =>
+    persistsAutoRoll
+      ? readAutoRoll(session.profile?.id)
+      : preferences.autoRollDefault && ownsAutoRoll,
+  );
   const [visible, setVisible] = useState(
     () => document.visibilityState === "visible",
   );
@@ -170,6 +169,9 @@ export default function RollExperience({
     document.addEventListener("visibilitychange", update);
     return () => document.removeEventListener("visibilitychange", update);
   }, []);
+  useEffect(() => {
+    if (persistsAutoRoll) writeAutoRoll(session.profile?.id, autoRoll);
+  }, [persistsAutoRoll, autoRoll, session.profile?.id]);
   const [run, setRun] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [instantCompletion, setInstantCompletion] = useState(false);
@@ -183,9 +185,13 @@ export default function RollExperience({
   const [settleError, setSettleError] = useState("");
   const [copied, setCopied] = useState(false);
   const [cooldown, setCooldown] = useState(() =>
-    Math.max(0, Math.ceil((session.cooldownUntil - gameNow()) / 1000)),
+    displayedCooldownSeconds(
+      session.cooldownWindow,
+      session.cooldownUntil,
+      gameNow(),
+    ),
   );
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useMotionPreference();
   const finishedRun = useRef(null);
   const shareButton = useRef(null);
   const creditCallback = useRef(onComplete);
@@ -237,7 +243,7 @@ export default function RollExperience({
     if (
       !autoRoll ||
       !active ||
-      !visible ||
+      (!visible && !persistsAutoRoll) ||
       loading ||
       drawing ||
       busy ||
@@ -256,6 +262,7 @@ export default function RollExperience({
     ownsAutoRoll,
     active,
     visible,
+    persistsAutoRoll,
     loading,
     drawing,
     busy,
@@ -269,8 +276,12 @@ export default function RollExperience({
 
   useEffect(() => {
     const until = Math.max(session.cooldownUntil, localCooldownUntil);
+    // Show the cooldown alone, not the reveal that precedes it. Eligibility is
+    // still governed by `until`, so the actual wait is unchanged.
+    const window =
+      session.cooldownWindow ?? parseCooldownWindow(null, until, run);
     const update = () =>
-      setCooldown(Math.max(0, Math.ceil((until - gameNow()) / 1000)));
+      setCooldown(displayedCooldownSeconds(window, until, gameNow()));
     update();
     if (until <= gameNow()) return;
     const timer = setInterval(() => {
@@ -278,14 +289,22 @@ export default function RollExperience({
       if (gameNow() >= until) clearInterval(timer);
     }, 100);
     return () => clearInterval(timer);
-  }, [session.cooldownUntil, localCooldownUntil]);
+  }, [
+    session.cooldownUntil,
+    localCooldownUntil,
+    session.cooldownWindow,
+    run?.id,
+  ]);
 
   useEffect(() => {
     if (!run || finishedRun.current === run.id) return;
     let stopped = false,
       timer;
-    const start = performance.now();
-    const alreadyElapsed = Math.max(0, gameNow() - run.startedAt);
+    // gameNow() rather than performance.now(): the reveal is paced by the same
+    // hardened, monotonic clock as the cooldown, so replacing performance.now
+    // cannot fast-forward the number onto the screen.
+    const start = gameNow();
+    const alreadyElapsed = Math.max(0, start - run.startedAt);
     const cues = revealCueTimes(timeline);
     const finish = (instant = false) => {
       if (stopped) return;
@@ -297,7 +316,13 @@ export default function RollExperience({
       const until = run.startedAt + run.rollMS + run.cooldownMS;
       localCooldown.current = until;
       setLocalCooldownUntil(until);
-      setCooldown(Math.max(0, Math.ceil((until - gameNow()) / 1000)));
+      setCooldown(
+        displayedCooldownSeconds(
+          session.cooldownWindow ?? parseCooldownWindow(null, until, run),
+          until,
+          gameNow(),
+        ),
+      );
       creditCallback.current(run.result, run.id, until).then((outcome) => {
         if (mounted.current && activeRun.current === run.id)
           setSettleError(outcome.ok ? "" : outcome.message);
@@ -308,7 +333,7 @@ export default function RollExperience({
       let cue = 0;
       const advance = () => {
         if (stopped) return;
-        const time = alreadyElapsed + performance.now() - start;
+        const time = alreadyElapsed + gameNow() - start;
         if (time >= timeline.end) {
           finish();
           return;
@@ -456,10 +481,12 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
-      <FlywheelMeter
-        progress={session}
-        boosted={!!run && run.flywheel === "boost" && !runSettled}
-      />
+      {preferences.showFlywheelMeter && (
+        <FlywheelMeter
+          progress={session}
+          boosted={!!run && run.flywheel === "boost" && !runSettled}
+        />
+      )}
       {ownsAutoRoll && (
         <div className="auto-roll-control">
           <div className="auto-roll-heading">
@@ -478,12 +505,14 @@ export default function RollExperience({
           </div>
           <p>
             {autoRoll
-              ? active && visible
+              ? active && (visible || persistsAutoRoll)
                 ? "Starts your next roll when it’s ready."
                 : "Paused while you browse. Your current roll will finish."
               : "Enable to roll automatically at your current pace."}{" "}
-            Pauses away from this page; off after reload. Stopping keeps your
-            current roll.
+            {persistsAutoRoll
+              ? "Persistence Core keeps this switch after a reload and while this tab is in the background."
+              : "Pauses away from this page; off after reload."}{" "}
+            Stopping keeps your current roll.
           </p>
         </div>
       )}
@@ -541,8 +570,8 @@ export default function RollExperience({
               `Saved locally as ${session.profile.username}.`
             ) : (
               <>
-                Guest progress is temporary.{" "}
-                <button onClick={openSignup}>Sign up to save</button>
+                Guest rolls are not saved.{" "}
+                <button onClick={openSignup}>Sign up to start saving</button>
               </>
             )}
           </p>
@@ -618,6 +647,16 @@ export default function RollExperience({
                         )}
                     </span>
                     <small>Your EP balance</small>
+                    {/* Savings sit with the wallet they are measured against,
+                        and only once the reveal has settled and the EP is
+                        actually credited. */}
+                    {!busy && runSettled && preferences.showGoalRecap && (
+                      <GoalRecap
+                        progress={session}
+                        runId={run.id}
+                        navigate={navigate}
+                      />
+                    )}
                   </div>
                 )}
                 {rankKnown && (
@@ -628,7 +667,7 @@ export default function RollExperience({
                       onClick={share}
                     >
                       {copied ? <Check size={15} /> : <Share2 size={15} />}{" "}
-                      {copied ? "Copied!" : "Share"}
+                      {copied ? "Copied result + link!" : "Share"}
                     </button>
                     <span>
                       {busy ? (

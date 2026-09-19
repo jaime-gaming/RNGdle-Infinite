@@ -154,40 +154,65 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   );
 });
 
-test("rebalanced catalogue preserves product IDs, premium progression and the specified Auto-Roll price", () => {
+test("rebalanced catalogue preserves product IDs, premium progression and monotonic upgrade chains", () => {
   const prices = {
-    "quickwind-1": 35000,
-    "quickwind-2": 175000,
-    "quickwind-3": 800000,
-    "clockwork-1": 60000,
-    "clockwork-2": 400000,
-    "clockwork-3": 1800000,
-    "clockwork-4": 8000000,
-    "clockwork-5": 20000000,
-    flywheel: 600000,
-    "flywheel-2": 4000000,
-    "flywheel-3": 12000000,
-    starfall: 50000,
-    aurora: 300000,
-    orbit: 1500000,
-    frostglass: 450000,
-    emberwake: 900000,
-    eclipse: 2500000,
-    prism: 4000000,
-    "archive-lens": 150000,
-    "auto-roll": 5000000,
-    "offline-roller": 10000000,
-    "offline-clock-1": 12000000,
-    "offline-clock-2": 25000000,
+    "quickwind-1": 30000,
+    "quickwind-2": 110000,
+    "quickwind-3": 380000,
+    "quickwind-4": 1200000,
+    "clockwork-1": 50000,
+    "clockwork-2": 180000,
+    "clockwork-3": 620000,
+    "clockwork-4": 1700000,
+    "clockwork-5": 3800000,
+    "clockwork-6": 9000000,
+    flywheel: 450000,
+    "flywheel-2": 1500000,
+    "flywheel-3": 3600000,
+    starfall: 40000,
+    aurora: 200000,
+    orbit: 900000,
+    frostglass: 320000,
+    emberwake: 600000,
+    eclipse: 1500000,
+    prism: 2300000,
+    tidepool: 100000,
+    verdant: 450000,
+    circuit: 1200000,
+    obsidian: 1900000,
+    singularity: 3500000,
+    "archive-lens": 120000,
+    "auto-roll": 1600000,
+    "persistence-core": 4800000,
+    "offline-roller": 2600000,
+    "offline-clock-1": 3600000,
+    "offline-clock-2": 5400000,
+    "offline-clock-3": 8500000,
+    "offline-vault-1": 6000000,
+    "offline-vault-2": 11000000,
   };
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(23);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(34);
+  // Every aura is cosmetic: none may carry a timing, charge or cap payload.
+  for (const aura of shopProducts.filter((p) => p.kind === "aura")) {
+    expect(aura.value).toBeUndefined();
+    expect(aura.charges).toBeUndefined();
+    expect(aura.requires).toBeUndefined();
+  }
   for (const product of shopProducts) {
     expect(Number.isSafeInteger(product.price)).toBe(true);
     expect(product.price).toBeGreaterThan(0);
     if (product.requires)
       expect(product.price).toBeGreaterThan(prices[product.requires]);
   }
+  // No step inside a chain may cost more than four times its predecessor: late
+  // tiers must stay reachable rather than becoming a wall.
+  for (const product of shopProducts)
+    if (product.requires)
+      expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
+  // The whole catalogue stays within a sane multiple of the cheapest upgrade.
+  const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
+  expect(total).toBeLessThanOrEqual(90000000);
 });

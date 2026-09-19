@@ -1,5 +1,26 @@
 import React, { useRef, useState } from "react";
-import { UserRound, Check, ArrowRight, Trash2 } from "lucide-react";
+import {
+  UserRound,
+  Check,
+  ArrowRight,
+  Trash2,
+  ShieldCheck,
+  X,
+  Dices,
+} from "lucide-react";
+import { validUsername } from "../progress.js";
+
+// Suggestions are cosmetic only: a starting point for the name field.
+const NAME_PARTS = [
+  ["Lucky", "Golden", "Cosmic", "Quiet", "Feral", "Velvet", "Neon", "Humble"],
+  ["Comet", "Otter", "Pigeon", "Cipher", "Marble", "Falcon", "Ember", "Badger"],
+];
+function suggestName() {
+  const pick = (list) => list[Math.floor(Math.random() * list.length)];
+  return `${pick(NAME_PARTS[0])}${pick(NAME_PARTS[1])}${Math.floor(
+    Math.random() * 90 + 10,
+  )}`;
+}
 
 export default function LocalProfile({ profile, onAction, onClose }) {
   const [username, setUsername] = useState(""),
@@ -8,6 +29,17 @@ export default function LocalProfile({ profile, onAction, onClose }) {
     [deleting, setDeleting] = useState(false),
     [confirmation, setConfirmation] = useState("");
   const busy = useRef(false);
+  // Live feedback: say what is wrong while typing rather than only on submit.
+  const trimmed = username.trim();
+  const tooShort = trimmed.length > 0 && trimmed.length < 3;
+  const badCharacters =
+    trimmed.length >= 3 && !validUsername(trimmed.normalize("NFKC"));
+  const ready = validUsername(trimmed.normalize("NFKC"));
+  const hint = tooShort
+    ? "A little longer — at least 3 characters."
+    : badCharacters
+      ? "Letters, numbers, underscores and hyphens only."
+      : "3–20 letters, numbers, underscores, or hyphens.";
   async function register(event) {
     event.preventDefault();
     if (busy.current) return;
@@ -103,7 +135,9 @@ export default function LocalProfile({ profile, onAction, onClose }) {
         {profile ? <Check size={28} /> : <UserRound size={28} />}
       </div>
       <h2 id="modal-title">
-        {profile ? `Your profile, ${profile.username}` : "Sign up to save"}
+        {profile
+          ? `Your profile, ${profile.username}`
+          : "Start saving your progress"}
       </h2>
       {profile ? (
         <>
@@ -134,39 +168,93 @@ export default function LocalProfile({ profile, onAction, onClose }) {
       ) : (
         <form onSubmit={register}>
           <p>
-            Choose a name to keep your current guest progress and save future
-            progress.
+            Pick a name and your progress starts saving from this moment on.
           </p>
+          <ul className="signup-points">
+            <li>
+              <ShieldCheck size={15} aria-hidden="true" />
+              <span>
+                <strong>No email, no password, no server.</strong> The name is
+                just a label for a save file in this browser.
+              </span>
+            </li>
+            <li>
+              <Check size={15} aria-hidden="true" />
+              <span>
+                <strong>Saved from here on:</strong> your EP, badges, purchases,
+                companions and history.
+              </span>
+            </li>
+            <li>
+              <X size={15} aria-hidden="true" />
+              <span>
+                <strong>Not carried over:</strong> anything you rolled as a
+                guest. Guest play is never saved, so you start at 0 EP with an
+                empty collection.
+              </span>
+            </li>
+          </ul>
           <label>
             Username
-            <input
-              autoComplete="nickname"
-              required
-              minLength={3}
-              maxLength={20}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Your lucky alias"
-              disabled={pending}
-            />
+            <span className="signup-field">
+              <input
+                autoComplete="nickname"
+                required
+                minLength={3}
+                maxLength={20}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Your lucky alias"
+                disabled={pending}
+                aria-invalid={tooShort || badCharacters || undefined}
+                aria-describedby="signup-hint"
+              />
+              <button
+                type="button"
+                className="signup-suggest"
+                onClick={() => {
+                  setUsername(suggestName());
+                  setError("");
+                }}
+                disabled={pending}
+                aria-label="Suggest a name"
+                title="Suggest a name"
+              >
+                <Dices size={15} />
+              </button>
+            </span>
           </label>
-          <p className="profile-input-hint">
-            3–20 letters, numbers, underscores, or hyphens.
+          <p
+            className={`profile-input-hint ${
+              tooShort || badCharacters ? "is-invalid" : ""
+            } ${ready ? "is-valid" : ""}`}
+            id="signup-hint"
+          >
+            {ready ? (
+              <>
+                <Check size={12} aria-hidden="true" /> {trimmed} looks good.
+              </>
+            ) : (
+              hint
+            )}
           </p>
-          <div className="info-box">
-            Local sign-up only. No email or password is needed, and nothing is
-            sent to a server. Saves stay on this browser; clearing site data
-            deletes them.
-          </div>
           {error && (
             <p className="profile-error" role="alert">
               {error}
             </p>
           )}
-          <button className="primary-button" type="submit" disabled={pending}>
-            {pending ? "Creating profile…" : "Create local profile"}{" "}
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={pending || !ready}
+          >
+            {pending ? "Creating profile…" : "Start saving my progress"}{" "}
             <ArrowRight size={16} />
           </button>
+          <p className="signup-footnote">
+            Clearing your browser's site data deletes the save. You can delete
+            it yourself at any time.
+          </p>
         </form>
       )}
     </>

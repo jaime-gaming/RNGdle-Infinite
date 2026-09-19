@@ -1,0 +1,120 @@
+/* Ambient motion: present but deliberately near-subliminal. Nothing here moves
+   more than a few pixels or runs faster than ~3s, nothing shifts layout, and
+   the global prefers-reduced-motion reset in styles.css disables all of it. */
+
+/* Pages settle in rather than snapping. */
+.page-heading,
+.changelog-entry,
+.wardrobe,
+.settings-group {
+  animation: ambient-rise 0.5s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+.changelog-entry:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.changelog-entry:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.settings-group:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.settings-group:nth-child(3) {
+  animation-delay: 0.1s;
+}
+@keyframes ambient-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Cards lift a hair under the pointer. */
+.shop-card,
+.wardrobe-slot,
+.pet-card {
+  transition:
+    transform 0.28s cubic-bezier(0.33, 1, 0.68, 1),
+    border-color 0.28s,
+    box-shadow 0.28s;
+}
+.shop-card:hover,
+.wardrobe-slot:hover,
+.pet-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Nav underline grows from the centre instead of appearing. */
+nav button {
+  position: relative;
+}
+nav button::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  right: 50%;
+  bottom: 2px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transition:
+    left 0.3s cubic-bezier(0.33, 1, 0.68, 1),
+    right 0.3s cubic-bezier(0.33, 1, 0.68, 1),
+    opacity 0.3s;
+}
+nav button:hover::after {
+  left: 9px;
+  right: 9px;
+  opacity: 0.32;
+}
+
+/* The wallet figure breathes very slightly when it changes. */
+.session-total.is-visible {
+  animation: ambient-breathe 3.2s ease-in-out infinite;
+}
+@keyframes ambient-breathe {
+  0%,
+  100% {
+    opacity: 0.94;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* An equipped companion drifts a couple of pixels, forever. */
+.pet-avatar.is-active {
+  animation: ambient-float 4.5s ease-in-out infinite;
+}
+@keyframes ambient-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* The goal savings bar fills rather than jumping to its new width. */
+.goal-recap-bar::-webkit-progress-value {
+  transition: width 0.8s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* Toasts arrive from below. */
+.toast {
+  animation: ambient-toast 0.34s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+@keyframes ambient-toast {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}

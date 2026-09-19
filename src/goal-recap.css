@@ -1,0 +1,68 @@
+/* Deliberately tiny: a progress ring and a link, nothing more. Not a card —
+   no border, no panel background, no shadow. */
+/* Sits directly under the EP balance, so it is centred and compact to match
+   that block rather than reading as a separate panel. */
+.goal-recap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 9px auto 0;
+}
+.goal-recap-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--muted);
+  /* The ring is the savings bar. */
+  background: conic-gradient(
+    var(--ring-colour, var(--secondary)) var(--fill, 0%),
+    var(--border) 0
+  );
+  cursor: help;
+}
+.goal-recap-ring::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+.goal-recap-ring > svg {
+  position: relative;
+  z-index: 1;
+}
+.goal-recap.is-ready .goal-recap-ring {
+  --ring-colour: var(--green);
+  color: var(--green);
+}
+.goal-recap-link {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--secondary);
+  font: inherit;
+  font-size: 10.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border);
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    text-decoration-color 0.2s;
+}
+.goal-recap-link:hover {
+  color: var(--text);
+  text-decoration-color: currentColor;
+}
+.goal-recap.is-ready .goal-recap-link {
+  color: var(--green);
+}
+.goal-recap-link:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}

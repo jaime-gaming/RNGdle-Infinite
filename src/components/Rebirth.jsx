@@ -4,6 +4,7 @@ import {
   REBIRTH_VISIBLE_AT,
   discoveredCount,
   rebirthBlocker,
+  rebirthOptionalProducts,
 } from "../rebirth.js";
 import { gameNow } from "../game-clock.js";
 import "../rebirth.css";
@@ -55,7 +56,7 @@ export default function Rebirth({ progress, onAction, onDone }) {
         <strong>Rebirth</strong>
         <p>
           {count < BADGE_TOTAL
-            ? `Discover all ${BADGE_TOTAL} badges to start again. ${BADGE_TOTAL - count} ${BADGE_TOTAL - count === 1 ? "badge" : "badges"} remaining.`
+            ? `Discover all ${BADGE_TOTAL} badges to start again. ${BADGE_TOTAL - count} ${BADGE_TOTAL - count === 1 ? "badge" : "badges"} remaining — no aura or tool purchase is needed.`
             : blocker ||
               "Collection complete. Start a new cycle and record a rebirth."}
         </p>
@@ -100,8 +101,16 @@ export default function Rebirth({ progress, onAction, onDone }) {
             Odds and EP rewards stay the same. Past purchases must be earned
             again.
           </p>
+          <p>
+            Rebirth depends only on your badge collection. Auras and tools are
+            cosmetic or convenience, so none of the{" "}
+            {rebirthOptionalProducts.length} optional purchases are required to
+            unlock it.
+          </p>
           {!progress.profile && (
-            <p>Guest rebirth progress is temporary until you sign up.</p>
+            <p>
+              Guest progress is never saved, so this resets nothing permanent.
+            </p>
           )}
           <label>
             Type REBIRTH to confirm

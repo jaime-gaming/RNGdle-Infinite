@@ -24,6 +24,25 @@ export function groupResultBadges(badges) {
 }
 
 export const formatEP = (value) => Math.round(value).toLocaleString("en-US");
+// Optional shorthand for wallet-sized amounts. Purely presentational: exact
+// values are always the ones spent, saved and recorded in history.
+export function formatEPCompact(value) {
+  const rounded = Math.round(value);
+  if (Math.abs(rounded) < 100000) return formatEP(rounded);
+  const units = [
+    [1e9, "B"],
+    [1e6, "M"],
+    [1e3, "K"],
+  ];
+  for (const [size, suffix] of units)
+    if (Math.abs(rounded) >= size) {
+      const scaled = rounded / size;
+      const digits = Math.abs(scaled) >= 100 ? 0 : 1;
+      return `${Number(scaled.toFixed(digits)).toLocaleString("en-US")}${suffix}`;
+    }
+  return formatEP(rounded);
+}
+export const GAME_URL = "https://jaime-gaming.github.io/RNGdle-Infinite";
 export function buildShareText(result) {
   const squares = {
     trash: "🟫",
@@ -46,5 +65,7 @@ export function buildShareText(result) {
     ...(result.badges.length > 3 ? [`+${result.badges.length - 3} more`] : []),
     "",
     `${formatEP(result.totalEP)} EP`,
+    "",
+    GAME_URL,
   ].join("\n");
 }

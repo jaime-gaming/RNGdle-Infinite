@@ -52,7 +52,7 @@
   font: inherit;
 }
 .rebirth-confirm [role="alert"] {
-  color: #e05757;
+  color: var(--danger);
 }
 .rebirth-count {
   font-size: 12px;

@@ -5,11 +5,9 @@
   background: var(--bg);
   --roll-font: "Space Mono", monospace;
   --ease-reveal: cubic-bezier(0.33, 1, 0.68, 1);
-  --text: #111827;
-  --secondary: #4b5563;
-  --muted: #9ca3af;
-  --border: #e5e7eb;
-  --hover: #f3f4f6;
+  /* Only roll-specific tokens belong here. The shared light palette lives in
+     styles.css; redefining --text/--muted/--border here silently overrode it
+     because this file is imported later, which broke light mode. */
   --input-hint: #6b7280;
 }
 :root[data-theme="dark"] {
@@ -287,19 +285,19 @@ nav button.active {
   text-transform: uppercase;
 }
 .percentile.exceptional {
-  color: #eab308;
+  color: var(--rank-exceptional);
 }
 .percentile.excellent {
-  color: #22c55e;
+  color: var(--rank-excellent);
 }
 .percentile.above-average {
-  color: #10b981;
+  color: var(--rank-above);
 }
 .percentile.below-average {
-  color: #f97316;
+  color: var(--rank-below);
 }
 .percentile.low-roll {
-  color: #ef4444;
+  color: var(--rank-low);
 }
 .roll-ep {
   display: inline-flex;

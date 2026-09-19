@@ -72,7 +72,9 @@ test("goal preferences migrate safely, never spend EP, and clear after their con
   expect(parseProgress(JSON.stringify(p))).toEqual(p);
   const bought = applyProgress(p, { type: "buy", id: "starfall" });
   expect(bought.goalId).toBeNull();
-  expect(bought.balance).toBe(50000);
+  expect(bought.balance).toBe(
+    100000 - shopProducts.find((p) => p.id === "starfall").price,
+  );
   expect(bought.history).toHaveLength(1);
   expect(currentGoal(bought).id).toBe("quickwind-1");
   expect(() =>

@@ -1,5 +1,11 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
-import { productById, offlineSettings } from "./shop-data.js";
+import {
+  productById,
+  offlineSettings,
+  ROLL_DURATIONS,
+  COOLDOWN_DURATIONS,
+  rollSettings,
+} from "./shop-data.js";
 import {
   FLYWHEEL_CHARGES,
   flywheelAfterSettlement,
@@ -7,6 +13,7 @@ import {
 } from "./flywheel.js";
 import { validGoal } from "./gameplay-loop.js";
 import { rebirthBlocker } from "./rebirth.js";
+import { petById, PET_IDS, walletEP, petBonusEP } from "./pets.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
@@ -30,6 +37,8 @@ export function emptyProgress() {
     goalId: null,
     rebirths: 0,
     cooldownWindow: null,
+    pets: [],
+    activePet: "none",
   };
 }
 export function parseProgress(raw) {
@@ -68,7 +77,12 @@ export function parseProgress(raw) {
     throw new Error("Invalid Flywheel charge");
   if (p.rebirths != null && !validAmount(p.rebirths))
     throw new Error("Invalid rebirth count");
-  const pendingRoll = parsePending(p.pendingRoll);
+  if (p.pets != null && !Array.isArray(p.pets))
+    throw new Error("Invalid pet collection");
+  const pets = [
+    ...new Set((p.pets ?? []).filter((id) => petById.has(id))),
+  ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
+  const pendingRoll = parsePending(p.pendingRoll, owned);
   let profile = null;
   if (p.profile != null) {
     if (
@@ -84,13 +98,24 @@ export function parseProgress(raw) {
       createdAt: p.profile.createdAt,
     };
   }
+  // A committed roll already states when it ends. Trusting a separately stored
+  // cooldownUntil let an edited save keep its number while truncating (or
+  // zeroing) the deadline, cancelling the wait entirely. The deadline can only
+  // ever be extended by the roll in flight, never shortened by one.
+  const cooldownUntil = pendingRoll
+    ? Math.max(
+        p.cooldownUntil,
+        pendingRoll.startedAt + pendingRoll.rollMS + pendingRoll.cooldownMS,
+      )
+    : p.cooldownUntil;
+  if (!validAmount(cooldownUntil)) throw new Error("Invalid save values");
   return {
     version: 1,
     history: parseHistory(p.history),
     pendingRoll,
     cooldownWindow: parseCooldownWindow(
       p.cooldownWindow,
-      p.cooldownUntil,
+      cooldownUntil,
       pendingRoll,
     ),
     rebirths: p.rebirths ?? 0,
@@ -108,7 +133,10 @@ export function parseProgress(raw) {
       owned.includes(p.equipped) && productById.get(p.equipped)?.kind === "aura"
         ? p.equipped
         : "none",
-    cooldownUntil: p.cooldownUntil,
+    pets: pets,
+    // Only an owned pet can be active; anything else falls back to no pet.
+    activePet: pets.includes(p.activePet) ? p.activePet : "none",
+    cooldownUntil,
     receipts: [
       ...new Set(
         p.receipts.filter((id) => typeof id === "string" && id.length <= 100),
@@ -170,8 +198,11 @@ export function applyProgress(state, action) {
       !validAmount(action.createdAt)
     )
       throw new Error("Invalid profile");
+    // Guest play is a demo, not a save file. Signing up starts a genuinely
+    // fresh account: nothing rolled, earned, discovered or bought beforehand
+    // carries over, so an account's history always matches what it did.
     return {
-      ...state,
+      ...emptyProgress(),
       profile: { id: action.id, username, createdAt: action.createdAt },
     };
   }
@@ -202,8 +233,12 @@ export function applyProgress(state, action) {
       state.history?.some((e) => e.id === id && e.type === "roll")
     )
       return state;
-    const balance = state.balance + result.totalEP,
-      totalEarned = state.totalEarned + result.totalEP;
+    // A pet multiplies only banked EP. result.totalEP — the scored value shown,
+    // ranked and recorded — is never modified.
+    const credited = walletEP(result.totalEP, state.activePet);
+    const bonus = petBonusEP(result.totalEP, state.activePet);
+    const balance = state.balance + credited,
+      totalEarned = state.totalEarned + credited;
     if (!validAmount(balance) || !validAmount(totalEarned))
       throw new Error("EP balance limit reached.");
     const earned = [
@@ -221,6 +256,7 @@ export function applyProgress(state, action) {
         number: result.number,
         tier: result.tier,
         ep: result.totalEP,
+        ...(bonus ? { petBonus: bonus, pet: state.activePet } : {}),
         badges: earned,
         ...(action.source === "offline" ? { source: "offline" } : {}),
         ...(action.source !== "offline" &&
@@ -230,6 +266,20 @@ export function applyProgress(state, action) {
           : {}),
       },
     ];
+    const droppedPet =
+      typeof action.petDrop === "string" &&
+      petById.has(action.petDrop) &&
+      !(state.pets ?? []).includes(action.petDrop)
+        ? action.petDrop
+        : null;
+    if (droppedPet)
+      events.push({
+        id: `${id}:pet`,
+        type: "pet",
+        at,
+        productId: droppedPet,
+        name: petById.get(droppedPet).name,
+      });
     if (unlocked.length)
       events.push({
         id: `${id}:unlock`,
@@ -253,6 +303,18 @@ export function applyProgress(state, action) {
       ],
       cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
       receipts: [...state.receipts, id].slice(-128),
+      ...(droppedPet
+        ? {
+            pets: [...new Set([...(state.pets ?? []), droppedPet])].sort(
+              (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
+            ),
+            // A first pet is worn immediately; later drops never swap your choice.
+            activePet:
+              (state.activePet ?? "none") === "none"
+                ? droppedPet
+                : state.activePet,
+          }
+        : {}),
     };
   }
   if (action.type === "buy") {
@@ -265,14 +327,14 @@ export function applyProgress(state, action) {
     if (item.requiresProfile && !state.profile)
       throw new Error(`Create a local profile before buying ${item.name}.`);
     if (
-      item.kind === "offline" &&
+      ["offline", "offline-cap"].includes(item.kind) &&
       (state.offline?.batch ||
         (state.offline &&
           (action.at ?? Math.ceil(Date.now())) - state.offline.lastSeenAt >=
             offlineSettings(state.owned).intervalMS))
     )
       throw new Error(
-        "Restore offline rewards before upgrading the clock. No EP was spent.",
+        "Restore offline rewards before upgrading offline earnings. No EP was spent.",
       );
     if (state.balance < item.price)
       throw new Error("Not enough EP for this item.");
@@ -301,21 +363,59 @@ export function applyProgress(state, action) {
                 : Math.min(state.flywheelCharge ?? 0, item.charges),
           }
         : {}),
-      ...(item.id === "offline-roller" || item.kind === "offline"
+      ...(item.id === "offline-roller" ||
+      ["offline", "offline-cap"].includes(item.kind)
         ? {
             offline: {
               lastSeenAt: action.at ?? Math.ceil(Date.now()),
               batch: null,
               report:
-                item.kind === "offline"
-                  ? (state.offline?.report ?? null)
-                  : null,
+                item.id === "offline-roller"
+                  ? null
+                  : (state.offline?.report ?? null),
             },
           }
         : {}),
       owned: [...state.owned, item.id],
       equipped: item.kind === "aura" ? item.id : state.equipped,
     };
+  }
+  if (action.type === "buy-pet") {
+    const pet = petById.get(action.id);
+    if (!pet) throw new Error("That companion is not available.");
+    if ((state.pets ?? []).includes(pet.id))
+      throw new Error("You already have this companion.");
+    if (state.balance < pet.price)
+      throw new Error("Not enough EP for this companion.");
+    return {
+      ...state,
+      balance: state.balance - pet.price,
+      pets: [...new Set([...(state.pets ?? []), pet.id])].sort(
+        (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
+      ),
+      // Buying a companion equips it, matching how auras behave.
+      activePet: pet.id,
+      history: [
+        ...(state.history ?? []),
+        {
+          id:
+            action.eventId ??
+            `pet:${pet.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
+          type: "purchase",
+          at: action.at ?? Math.ceil(Date.now()),
+          productId: pet.id,
+          name: pet.name,
+          ep: pet.price,
+        },
+      ],
+    };
+  }
+  if (action.type === "equip-pet") {
+    if (action.id !== "none" && !(state.pets ?? []).includes(action.id))
+      throw new Error("Find or buy this companion before equipping it.");
+    if ((state.activePet ?? "none") === action.id) return state;
+    // Swapping companions is free and spends nothing.
+    return { ...state, activePet: action.id };
   }
   if (action.type === "equip") {
     if (
@@ -425,7 +525,7 @@ function parseHistory(value) {
   });
 }
 
-export function parsePending(p) {
+export function parsePending(p, owned = null) {
   if (p == null) return null;
   if (
     typeof p.id !== "string" ||
@@ -434,13 +534,26 @@ export function parsePending(p) {
     !validAmount(p.number) ||
     p.number > 1000000 ||
     !validAmount(p.startedAt) ||
-    ![45000, 35000, 25000, 15000].includes(p.rollMS) ||
-    ![60000, 45000, 30000, 15000, 10000, 5000, 0].includes(p.cooldownMS) ||
+    !ROLL_DURATIONS.includes(p.rollMS) ||
+    ![...COOLDOWN_DURATIONS, 0].includes(p.cooldownMS) ||
     (p.flywheel != null && !["charge", "boost"].includes(p.flywheel)) ||
     (p.cooldownMS === 0) !== (p.flywheel === "boost") ||
     !validAmount(p.startedAt + p.rollMS + p.cooldownMS)
   )
     throw new Error("Invalid committed roll");
+  // Tamper guard: a committed roll may never be faster than the timings its own
+  // save has actually paid for. Without this, editing storage (or a plugin
+  // doing it) could hand an upgrade-free profile the fastest reveal and
+  // cooldown. Slower snapshots stay valid: buying an upgrade mid-roll must not
+  // invalidate the roll already in flight.
+  if (owned) {
+    const allowed = rollSettings(owned);
+    if (
+      p.rollMS < allowed.rollMS ||
+      (p.cooldownMS < allowed.cooldownMS && p.cooldownMS !== 0)
+    )
+      throw new Error("Committed roll timings do not match your upgrades");
+  }
   return {
     id: p.id,
     number: p.number,

@@ -1,0 +1,141 @@
+.about {
+  width: min(100%, 720px);
+  margin: 0 auto;
+}
+.about-intro {
+  text-align: center;
+  padding-bottom: 26px;
+}
+.about-intro h2 {
+  margin: 8px 0 10px;
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.about-intro p:last-child {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--secondary);
+}
+.about-steps {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 30px;
+  padding: 0;
+  list-style: none;
+  counter-reset: about;
+}
+.about-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+}
+.about-step-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 40px;
+  color: var(--muted);
+}
+.about-step-mark b {
+  font-family: "Space Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.about-steps h3,
+.about-topic h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 640;
+}
+.about-steps p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--secondary);
+}
+.about-topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.about-topic {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+.about-topic h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.about-topic h3 svg {
+  color: var(--muted);
+}
+.about-topic ul {
+  margin: 0;
+  padding-left: 17px;
+  display: grid;
+  gap: 7px;
+}
+.about-topic li {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--secondary);
+}
+.about-fair {
+  padding: 16px 18px;
+  border: 1px solid var(--green);
+  border-radius: 11px;
+  background: var(--green-bg);
+  margin-bottom: 26px;
+}
+.about-fair h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 640;
+  color: var(--green);
+}
+.about-fair p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--secondary);
+}
+.about-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.about-footnote {
+  margin: 26px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.about-footnote a {
+  color: var(--secondary);
+}
+@media (max-width: 620px) {
+  .about-intro h2 {
+    font-size: 21px;
+  }
+  .about-topics {
+    grid-template-columns: 1fr;
+  }
+}

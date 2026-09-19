@@ -43,18 +43,21 @@ async function enable(p) {
   await settled(p);
 }
 
-test("Auto-Roll costs 5,000,000 EP, requires confirmation, does not equip, and persists as an off-by-default tool", async ({
+test("Auto-Roll is a confirmed purchase that does not equip and persists as an off-by-default tool", async ({
   page,
 }) => {
-  expect(shopProducts.find((p) => p.id === "auto-roll")).toMatchObject({
-    price: 5000000,
-    kind: "utility",
+  // Price comes from the catalogue so a rebalance cannot silently stale this.
+  const autoRoll = shopProducts.find((p) => p.id === "auto-roll");
+  expect(autoRoll).toMatchObject({ kind: "utility" });
+  const autoRollPrice = autoRoll.price.toLocaleString("en-US");
+  await seedProgress(page, {
+    balance: autoRoll.price,
+    totalEarned: autoRoll.price,
   });
-  await seedProgress(page, { balance: 5000000, totalEarned: 5000000 });
   await page.goto("/#shop");
   const card = page.locator('[data-product="auto-roll"]');
   await card.getByRole("button").click();
-  await expect(page.getByRole("dialog")).toContainText("5,000,000 EP");
+  await expect(page.getByRole("dialog")).toContainText(`${autoRollPrice} EP`);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect((await saved(page)).owned).toEqual([]);
   await card.getByRole("button").click();
