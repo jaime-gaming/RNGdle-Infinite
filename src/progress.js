@@ -98,13 +98,24 @@ export function parseProgress(raw) {
       createdAt: p.profile.createdAt,
     };
   }
+  // A committed roll already states when it ends. Trusting a separately stored
+  // cooldownUntil let an edited save keep its number while truncating (or
+  // zeroing) the deadline, cancelling the wait entirely. The deadline can only
+  // ever be extended by the roll in flight, never shortened by one.
+  const cooldownUntil = pendingRoll
+    ? Math.max(
+        p.cooldownUntil,
+        pendingRoll.startedAt + pendingRoll.rollMS + pendingRoll.cooldownMS,
+      )
+    : p.cooldownUntil;
+  if (!validAmount(cooldownUntil)) throw new Error("Invalid save values");
   return {
     version: 1,
     history: parseHistory(p.history),
     pendingRoll,
     cooldownWindow: parseCooldownWindow(
       p.cooldownWindow,
-      p.cooldownUntil,
+      cooldownUntil,
       pendingRoll,
     ),
     rebirths: p.rebirths ?? 0,
@@ -125,7 +136,7 @@ export function parseProgress(raw) {
     pets: pets,
     // Only an owned pet can be active; anything else falls back to no pet.
     activePet: pets.includes(p.activePet) ? p.activePet : "none",
-    cooldownUntil: p.cooldownUntil,
+    cooldownUntil,
     receipts: [
       ...new Set(
         p.receipts.filter((id) => typeof id === "string" && id.length <= 100),

@@ -300,8 +300,11 @@ export default function RollExperience({
     if (!run || finishedRun.current === run.id) return;
     let stopped = false,
       timer;
-    const start = performance.now();
-    const alreadyElapsed = Math.max(0, gameNow() - run.startedAt);
+    // gameNow() rather than performance.now(): the reveal is paced by the same
+    // hardened, monotonic clock as the cooldown, so replacing performance.now
+    // cannot fast-forward the number onto the screen.
+    const start = gameNow();
+    const alreadyElapsed = Math.max(0, start - run.startedAt);
     const cues = revealCueTimes(timeline);
     const finish = (instant = false) => {
       if (stopped) return;
@@ -313,7 +316,13 @@ export default function RollExperience({
       const until = run.startedAt + run.rollMS + run.cooldownMS;
       localCooldown.current = until;
       setLocalCooldownUntil(until);
-      setCooldown(Math.max(0, Math.ceil((until - gameNow()) / 1000)));
+      setCooldown(
+        displayedCooldownSeconds(
+          session.cooldownWindow ?? parseCooldownWindow(null, until, run),
+          until,
+          gameNow(),
+        ),
+      );
       creditCallback.current(run.result, run.id, until).then((outcome) => {
         if (mounted.current && activeRun.current === run.id)
           setSettleError(outcome.ok ? "" : outcome.message);
@@ -324,7 +333,7 @@ export default function RollExperience({
       let cue = 0;
       const advance = () => {
         if (stopped) return;
-        const time = alreadyElapsed + performance.now() - start;
+        const time = alreadyElapsed + gameNow() - start;
         if (time >= timeline.end) {
           finish();
           return;
