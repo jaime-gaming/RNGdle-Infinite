@@ -144,9 +144,64 @@ test("the countdown displays the cooldown alone while the wait itself is unchang
     30,
   );
   expect(displayedCooldownSeconds(window, deadline, deadline)).toBe(0);
+  // Regression: once the deadline passes the value must be a falsy 0, never a
+  // negative. A negative is truthy, which stranded the UI on "NEXT ROLL IN
+  // 0:00" and never showed ROLL AGAIN again.
+  for (const past of [1, 500, 1500, 4000, 60000, 864e5]) {
+    const shown = displayedCooldownSeconds(window, deadline, deadline + past);
+    expect(shown).toBe(0);
+    expect(Boolean(shown)).toBe(false);
+  }
+  expect(displayedCooldownSeconds(null, deadline, deadline + 4000)).toBe(0);
+  // The last tick before readiness still reads as remaining time.
+  expect(displayedCooldownSeconds(window, deadline, deadline - 50)).toBe(1);
+
   // Legacy or mismatched saves fall back to the exact remaining time.
   expect(displayedCooldownSeconds(null, deadline, startedAt)).toBe(105);
   expect(
     displayedCooldownSeconds({ startsAt: 0, endsAt: 5 }, deadline, startedAt),
   ).toBe(105);
+});
+
+test("the reveal is paced by the hardened clock, not by a replaceable timer", () => {
+  const source = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
+  const reveal = source.slice(
+    source.indexOf("if (!run || finishedRun.current === run.id) return;"),
+    source.indexOf("mounted.current = true;"),
+  );
+  // Strip comments first: the code must call gameNow(), but the comments are
+  // allowed to explain which API it deliberately avoids.
+  const code = reveal.replace(/\/\/.*$/gm, "");
+  expect(code).toContain("gameNow()");
+  expect(code).not.toContain("performance.now()");
+});
+
+test("a committed roll's own deadline cannot be truncated away by an edited save", () => {
+  const committed = pending({});
+  const honest = committed.startedAt + committed.rollMS + committed.cooldownMS;
+  const saved = (cooldownUntil) =>
+    parseProgress(
+      JSON.stringify({
+        ...emptyProgress(),
+        pendingRoll: committed,
+        cooldownUntil,
+      }),
+    );
+  // Shortened or zeroed deadlines are restored from the roll in flight, so the
+  // wait cannot be cancelled by editing storage.
+  for (const forged of [0, 1, committed.startedAt, honest - 1])
+    expect(saved(forged).cooldownUntil).toBe(honest);
+  // An honest deadline is untouched, and a longer one is still respected.
+  expect(saved(honest).cooldownUntil).toBe(honest);
+  expect(saved(honest + 500000).cooldownUntil).toBe(honest + 500000);
+  // The cosmetic window is rebuilt against the restored deadline.
+  expect(saved(0).cooldownWindow).toEqual({
+    startsAt: committed.startedAt + committed.rollMS,
+    endsAt: honest,
+  });
+  // A save with no committed roll keeps its plain deadline.
+  expect(
+    parseProgress(JSON.stringify({ ...emptyProgress(), cooldownUntil: 205000 }))
+      .cooldownUntil,
+  ).toBe(205000);
 });

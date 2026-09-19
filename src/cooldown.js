@@ -36,8 +36,14 @@ export function displayedCooldownSeconds(window, deadline, now) {
   const remaining = Math.max(0, deadline - now);
   if (!window || window.endsAt !== deadline) return Math.ceil(remaining / 1000);
   // Before the cooldown starts, hold at its full length rather than counting
-  // the reveal; afterwards it ticks down normally.
-  return Math.ceil(
-    Math.min(remaining, window.endsAt - Math.max(now, window.startsAt)) / 1000,
+  // the reveal; afterwards it ticks down normally. Clamped at zero: past the
+  // deadline this must return a falsy 0 so the button flips back to ROLL
+  // AGAIN, never a negative (truthy) value that would strand the countdown.
+  return Math.max(
+    0,
+    Math.ceil(
+      Math.min(remaining, window.endsAt - Math.max(now, window.startsAt)) /
+        1000,
+    ),
   );
 }
