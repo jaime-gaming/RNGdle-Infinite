@@ -21,6 +21,11 @@ const cosmetics = new Set([
   "emberwake",
   "eclipse",
   "prism",
+  "tidepool",
+  "verdant",
+  "circuit",
+  "obsidian",
+  "singularity",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [

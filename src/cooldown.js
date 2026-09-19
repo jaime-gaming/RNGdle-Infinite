@@ -1,3 +1,4 @@
+import { COOLDOWN_DURATIONS } from "./shop-data.js";
 // A cosmetic snapshot only: roll eligibility still uses cooldownUntil.
 export function parseCooldownWindow(value, deadline, pending) {
   const candidate =
@@ -14,9 +15,7 @@ export function parseCooldownWindow(value, deadline, pending) {
     candidate.startsAt < 0 ||
     !Number.isSafeInteger(candidate.endsAt) ||
     candidate.endsAt !== deadline ||
-    ![0, 5000, 10000, 15000, 30000, 45000, 60000].includes(
-      candidate.endsAt - candidate.startsAt,
-    )
+    ![0, ...COOLDOWN_DURATIONS].includes(candidate.endsAt - candidate.startsAt)
   )
     return null;
   return { startsAt: candidate.startsAt, endsAt: candidate.endsAt };

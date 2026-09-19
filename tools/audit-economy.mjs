@@ -48,7 +48,7 @@ console.log(
         { stage: "Base", owned: [] },
         { stage: "First useful pair", owned: ["quickwind-1", "clockwork-1"] },
         {
-          stage: "Previous pace ceiling",
+          stage: "Mid pace ceiling",
           owned: [
             "quickwind-1",
             "quickwind-2",
@@ -69,6 +69,7 @@ console.log(
             "clockwork-2",
             "clockwork-3",
             "clockwork-4",
+            "clockwork-5",
             "flywheel",
             "flywheel-2",
           ],
@@ -100,25 +101,38 @@ console.log(
         [],
         ["offline-clock-1"],
         ["offline-clock-1", "offline-clock-2"],
+        ["offline-clock-1", "offline-clock-2", "offline-clock-3"],
+        ["offline-clock-1", "offline-vault-1"],
+        [
+          "offline-clock-1",
+          "offline-clock-2",
+          "offline-clock-3",
+          "offline-vault-1",
+          "offline-vault-2",
+        ],
       ].map((upgrades) => {
         const owned = ["offline-roller", ...upgrades],
-          { intervalMS } = offlineSettings(owned);
+          { intervalMS, cap } = offlineSettings(owned);
         return {
           stage: upgrades.at(-1) ?? "offline-roller",
           priceEP: shopProducts
             .filter((p) => owned.includes(p.id))
             .reduce((s, p) => s + p.price, 0),
           intervalMinutes: intervalMS / 60000,
+          cap,
           rollsAfter8Hours: Math.min(
-            144,
+            cap,
             Math.floor((8 * 3600000) / intervalMS),
           ),
-          hoursTo144: (144 * intervalMS) / 3600000,
-          rollsAfter24Hours: 144,
+          hoursToCap: (cap * intervalMS) / 3600000,
+          rollsAfter24Hours: Math.min(
+            cap,
+            Math.floor((24 * 3600000) / intervalMS),
+          ),
         };
       }),
       cadenceNote:
-        "Online cadence averages complete Flywheel cycles without user or processing delays. Offline upgrades fill the same per-absence cap sooner; a single daily return still pays at most 144 rolls.",
+        "Online cadence averages complete Flywheel cycles without user or processing delays. Offline clocks fill the per-absence cap sooner; vaults raise the cap itself. A single return still pays at most the owned cap.",
       note: "Median-roll equivalents compare prices; they are not expected waiting times. Independent rolls can repeat. Jackpot-heavy averages are not guaranteed income.",
     },
     null,

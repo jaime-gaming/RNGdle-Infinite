@@ -18,6 +18,13 @@ import {
   Gem,
   MoonStar,
   Cog,
+  Vault,
+  Infinity as InfinityIcon,
+  Waves as TideIcon,
+  Leaf,
+  CircuitBoard,
+  Triangle,
+  CircleDot,
 } from "lucide-react";
 import {
   shopProducts,
@@ -35,7 +42,7 @@ import {
 import "../progress-links.css";
 import { flywheelRequired } from "../flywheel.js";
 import NumberBox from "./NumberBox";
-import { formatEP } from "../roll-data";
+import { useFormatEP, useSettings } from "../use-settings.jsx";
 const icons = {
   stars: Sparkles,
   aurora: Waves,
@@ -50,6 +57,13 @@ const icons = {
   prism: Gem,
   offline: MoonStar,
   flywheel: Cog,
+  vault: Vault,
+  core: InfinityIcon,
+  tide: TideIcon,
+  leaf: Leaf,
+  circuit: CircuitBoard,
+  obsidian: Triangle,
+  singularity: CircleDot,
 };
 export default function Shop({
   progress,
@@ -59,6 +73,8 @@ export default function Shop({
   notify,
   openSignup,
 }) {
+  const formatEP = useFormatEP();
+  const { settings: preferences } = useSettings();
   const [previewTier, setPreviewTier] = useState("rare");
   const [lastPurchase, setLastPurchase] = useState(null);
   const [selected, setSelected] = useState(null),
@@ -69,7 +85,9 @@ export default function Shop({
     returnFocus = useRef(null),
     returnKind = useRef(null);
   const settings = rollSettings(progress.owned);
-  const offlineInterval = offlineSettings(progress.owned).intervalMS;
+  const { intervalMS: offlineInterval, cap: offlineCap } = offlineSettings(
+    progress.owned,
+  );
   const charges = flywheelRequired(progress.owned);
   const goal = currentGoal(progress),
     suggested = recommendedGoal(progress),
@@ -176,6 +194,14 @@ export default function Shop({
               </span>
               <small>NEXT ROLL · ZERO COOLDOWN</small>
             </>
+          ) : item.kind === "offline-cap" ? (
+            <>
+              <Icon size={25} />
+              <span>
+                {item.from} <small>→</small> <b>{item.value}</b>
+              </span>
+              <small>OFFLINE ROLLS STORED PER ABSENCE</small>
+            </>
           ) : item.kind === "offline" ? (
             <>
               <Icon size={25} />
@@ -183,7 +209,7 @@ export default function Shop({
                 {item.from / 60000} min <small>→</small>{" "}
                 <b>{item.value / 60000} min</b>
               </span>
-              <small>OFFLINE INTERVAL · SAME 144-ROLL CAP</small>
+              <small>OFFLINE INTERVAL · SAME ROLL CAP</small>
             </>
           ) : item.kind === "utility" ? (
             <>
@@ -192,9 +218,11 @@ export default function Shop({
               <small>
                 {item.id === "auto-roll"
                   ? "ENABLE · ROLL · REPEAT"
-                  : item.id === "offline-roller"
-                    ? `${owned ? offlineInterval / 60000 : 10} MIN / ROLL · 144 MAX`
-                    : "SEARCH · FILTER · DISCOVER"}
+                  : item.id === "persistence-core"
+                    ? "AUTO-ROLL · REMEMBERED · BACKGROUND"
+                    : item.id === "offline-roller"
+                      ? `${owned ? offlineInterval / 60000 : 10} MIN / ROLL · ${owned ? offlineCap : 144} MAX`
+                      : "SEARCH · FILTER · DISCOVER"}
               </small>
             </>
           ) : (
@@ -216,7 +244,7 @@ export default function Shop({
           </div>
           <p>
             {item.id === "offline-roller" && owned
-              ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum 144 rolls per absence; unused fractions do not carry over.`
+              ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum ${offlineCap} rolls per absence; unused fractions do not carry over.`
               : item.description}
           </p>
           <div className="shop-price">
@@ -238,7 +266,9 @@ export default function Shop({
                 ? openSignup()
                 : owned
                   ? perform("equip", item.id)
-                  : setSelected(item)
+                  : preferences.confirmPurchases
+                    ? setSelected(item)
+                    : perform("buy", item.id)
             }
           >
             {item.requiresProfile && !progress.profile ? (
@@ -469,13 +499,16 @@ export default function Shop({
             <div>
               <h2>Offline upgrades</h2>
               <p>
-                Fill the same offline allowance sooner. Maximum 144 rolls per
-                absence.
+                Earn offline rolls sooner, and store more of them. Currently one
+                roll per {offlineInterval / 60000} minutes, up to {offlineCap}{" "}
+                per absence.
               </p>
             </div>
           </div>
           <div className="shop-grid">
             {card(nextUpgrade(progress.owned, "offline"))}
+            {progress.owned.includes("offline-clock-1") &&
+              card(nextUpgrade(progress.owned, "offline-cap"))}
           </div>
         </section>
       )}
@@ -523,14 +556,18 @@ export default function Shop({
                 : selected.kind === "utility"
                   ? selected.id === "auto-roll"
                     ? "unlocks the Auto-Roll switch on the Roll page. It starts off and never skips the reveal or cooldown."
-                    : selected.id === "offline-roller"
-                      ? "unlocks offline earnings: one normal roll per 10 minutes away, up to 144 rolls per absence. Calculated automatically on return; a local profile is required."
-                      : "unlocks advanced history search immediately."
+                    : selected.id === "persistence-core"
+                      ? "makes Auto-Roll remember its switch after a reload and keep going while this tab is in the background. Timings, odds and settlement are unchanged."
+                      : selected.id === "offline-roller"
+                        ? "unlocks offline earnings: one normal roll per 10 minutes away, up to 144 rolls per absence. Calculated automatically on return; a local profile is required."
+                        : "unlocks advanced history search immediately."
                   : selected.kind === "pace"
                     ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge. Earned charge carries over up to this limit; a new Flywheel starts at zero charge. Reveals and scores are unchanged.`
                     : selected.kind === "offline"
-                      ? `sets future offline earnings to one ordinary roll per ${selected.value / 60000} minutes. Maximum 144 per absence. No retroactive rewards; committed batches must finish first.`
-                      : "applies the upgrade to future rolls."}
+                      ? `sets future offline earnings to one ordinary roll per ${selected.value / 60000} minutes. Your ${offlineCap}-roll cap per absence is unchanged. No retroactive rewards; committed batches must finish first.`
+                      : selected.kind === "offline-cap"
+                        ? `stores up to ${selected.value} offline rolls per absence instead of ${selected.from}. Rates, odds and EP are unchanged, and committed batches must finish first.`
+                        : "applies the upgrade to future rolls."}
             </p>
             {!progress.profile && (
               <p className="guest-purchase-note">

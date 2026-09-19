@@ -1,5 +1,9 @@
 // All ranks use the entire 0..1,000,000 population, never a session/sample pool.
 export const POPULATION = 1000001;
+// The exact median of the full 1,000,001-number distribution, reproduced by
+// `npm run audit:economy`. Used only to phrase savings estimates in ordinary
+// rolls rather than the jackpot-inflated mean; it never affects a score.
+export const MEDIAN_ROLL_EP = 5801;
 export function formatPercent(value) {
   if (!Number.isFinite(value) || value < 0 || value > 100)
     throw new RangeError("Invalid percentage");

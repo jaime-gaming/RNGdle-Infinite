@@ -618,3 +618,326 @@ button.number-box.number-box:hover {
     transform: translateY(2px) rotate(2deg);
   }
 }
+
+/* Third-generation auras. Every layer sits behind the number's ink, keeps the
+   original rarity palette visible, and is disabled by reduced motion above. */
+.number-box[data-cosmetic="tidepool"] .box-halo {
+  display: block;
+  inset: -14px;
+  z-index: -1;
+  background: radial-gradient(ellipse at bottom, #2dd4bf66, transparent 74%);
+  filter: blur(8px);
+  border-radius: inherit;
+  animation: box-halo-pulse 6s ease-in-out infinite;
+}
+.number-box[data-cosmetic="tidepool"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    to top,
+    #2dd4bf3a 0%,
+    #22d3ee22 28%,
+    transparent 55%
+  );
+  background-size: 100% 260%;
+  animation: box-tide 7s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="tidepool"] .box-ornament {
+  inset: -5px;
+  border: 1px solid #5eead499;
+  border-top-color: transparent;
+  box-shadow: inset 0 -6px 14px #14b8a625;
+}
+.number-box[data-cosmetic="tidepool"] .aura-trace {
+  inset: 3px;
+  background: linear-gradient(
+    100deg,
+    transparent 42%,
+    #cffafe55 50%,
+    transparent 58%
+  );
+  background-size: 240% 100%;
+  animation: box-sweep 9s ease-in-out infinite;
+}
+.number-box[data-cosmetic="tidepool"] .box-particles i {
+  background: #a5f3fc;
+  clip-path: none;
+  border-radius: 50%;
+  width: 4px !important;
+  height: 4px !important;
+  box-shadow:
+    inset 0 0 0 1px #ffffff90,
+    0 0 5px #22d3ee;
+  animation: box-rise 5s ease-in-out infinite;
+}
+
+.number-box[data-cosmetic="verdant"] .box-halo {
+  display: block;
+  inset: -13px;
+  z-index: -1;
+  background: radial-gradient(ellipse, #4ade8055, transparent 72%);
+  filter: blur(7px);
+  border-radius: inherit;
+  animation: box-halo-pulse 7s ease-in-out infinite;
+}
+.number-box[data-cosmetic="verdant"] .box-ornament {
+  inset: -7px;
+  border: 1px solid #86efac88;
+  border-radius: 14px 4px 14px 4px;
+  animation: aura-drift 8s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="verdant"] .box-ornament::before {
+  width: 7px;
+  height: 7px;
+  left: 6%;
+  top: -3px;
+  border-radius: 0 50% 0 50%;
+  background: #4ade80;
+  box-shadow: 0 0 6px #22c55e;
+}
+.number-box[data-cosmetic="verdant"] .box-ornament::after {
+  width: 6px;
+  height: 6px;
+  right: 8%;
+  bottom: -3px;
+  border-radius: 0 50% 0 50%;
+  background: #86efac;
+  box-shadow: 0 0 5px #16a34a;
+}
+.number-box[data-cosmetic="verdant"] .aura-trace {
+  inset: 2px;
+  border-left: 1px solid #bbf7d0aa;
+  border-bottom: 1px solid #86efac77;
+  border-radius: 12px;
+}
+.number-box[data-cosmetic="verdant"] .box-particles i {
+  background: #d9f99d;
+  clip-path: none;
+  border-radius: 50%;
+  width: 3px !important;
+  height: 3px !important;
+  box-shadow: 0 0 6px #a3e635;
+  animation: box-rise 6s ease-in-out infinite;
+}
+
+.number-box[data-cosmetic="circuit"] .box-halo {
+  display: block;
+  inset: -12px;
+  z-index: -1;
+  background: radial-gradient(ellipse, #22d3ee4d, transparent 70%);
+  filter: blur(7px);
+  border-radius: inherit;
+  animation: box-halo-pulse 4s ease-in-out infinite;
+}
+.number-box[data-cosmetic="circuit"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 18px,
+      #22d3ee1f 18px 19px,
+      transparent 19px 38px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 16px,
+      #22d3ee18 16px 17px,
+      transparent 17px 34px
+    );
+}
+.number-box[data-cosmetic="circuit"] .box-ornament {
+  inset: -6px;
+  border: 1px solid #67e8f999;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 10px #06b6d425,
+    0 0 12px #0891b230;
+}
+.number-box[data-cosmetic="circuit"] .box-ornament::before,
+.number-box[data-cosmetic="circuit"] .box-ornament::after {
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  background: #67e8f9;
+  box-shadow: 0 0 7px #22d3ee;
+}
+.number-box[data-cosmetic="circuit"] .box-ornament::before {
+  left: -3px;
+  top: -3px;
+}
+.number-box[data-cosmetic="circuit"] .box-ornament::after {
+  right: -3px;
+  bottom: -3px;
+}
+.number-box[data-cosmetic="circuit"] .aura-trace {
+  inset: -6px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, transparent, #a5f3fc, transparent);
+  background-size: 45% 1px;
+  background-repeat: no-repeat;
+  background-position: -45% 0;
+  animation: box-packet 3.2s linear infinite;
+}
+.number-box[data-cosmetic="circuit"] .box-particles i {
+  background: #a5f3fc;
+  clip-path: none;
+  border-radius: 1px;
+  width: 3px !important;
+  height: 3px !important;
+  box-shadow: 0 0 6px #22d3ee;
+  animation: box-twinkle 2.2s steps(2, end) infinite;
+}
+
+.number-box[data-cosmetic="obsidian"] .box-halo {
+  display: block;
+  inset: -12px;
+  z-index: -1;
+  background: radial-gradient(ellipse, #0f172a99, transparent 70%);
+  filter: blur(9px);
+  border-radius: inherit;
+}
+.number-box[data-cosmetic="obsidian"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    140deg,
+    #0f172a2e 0%,
+    transparent 40%,
+    #1e293b33 100%
+  );
+}
+.number-box[data-cosmetic="obsidian"] .box-ornament {
+  inset: -5px;
+  border: 1px solid #1e293bcc;
+  box-shadow:
+    0 0 0 1px #e879f955,
+    0 0 16px #c026d340;
+  clip-path: polygon(
+    0 12%,
+    12% 0,
+    88% 0,
+    100% 12%,
+    100% 88%,
+    88% 100%,
+    12% 100%,
+    0 88%
+  );
+}
+.number-box[data-cosmetic="obsidian"] .aura-trace {
+  inset: 2px;
+  background: linear-gradient(
+    115deg,
+    transparent 44%,
+    #f0abfc66 50%,
+    transparent 56%
+  );
+  background-size: 260% 100%;
+  animation: box-sweep 7s ease-in-out infinite;
+}
+.number-box[data-cosmetic="obsidian"] .box-particles i {
+  background: #475569;
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  filter: drop-shadow(0 0 3px #e879f9);
+  animation: box-rise 7s ease-in-out infinite;
+}
+
+.number-box[data-cosmetic="singularity"] .box-halo {
+  display: block;
+  inset: -20px;
+  z-index: -1;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #7c3aed00,
+    #a78bfa99,
+    #f0abfcaa,
+    #38bdf899,
+    #7c3aed00
+  );
+  filter: blur(9px);
+  animation: box-spin 9s linear infinite;
+}
+.number-box[data-cosmetic="singularity"] .box-ribbon {
+  display: block;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    #020617ee 30%,
+    #1e1b4b55 46%,
+    transparent 62%
+  );
+}
+.number-box[data-cosmetic="singularity"] .box-ornament {
+  inset: -13px -20px;
+  border-radius: 50%;
+  border: 1px solid #c4b5fdaa;
+  border-top-color: #f5d0fe;
+  transform: rotate(-16deg);
+  animation: box-orbit 11s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="singularity"] .box-ornament::before {
+  width: 4px;
+  height: 4px;
+  right: 12%;
+  top: 14%;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 7px #e9d5ff,
+    0 0 14px #a78bfa;
+}
+.number-box[data-cosmetic="singularity"] .aura-trace {
+  inset: -8px -14px;
+  border-radius: 50%;
+  border: 1px solid #38bdf866;
+  transform: rotate(24deg);
+  animation: box-orbit 14s ease-in-out infinite alternate-reverse;
+}
+.number-box[data-cosmetic="singularity"] .box-particles i {
+  background: #ede9fe;
+  clip-path: none;
+  border-radius: 50%;
+  width: 3px !important;
+  height: 3px !important;
+  box-shadow: 0 0 6px #c4b5fd;
+  animation: box-infall 4.5s ease-in infinite;
+}
+@keyframes box-tide {
+  from {
+    background-position: 0 100%;
+  }
+  to {
+    background-position: 0 30%;
+  }
+}
+@keyframes box-packet {
+  from {
+    background-position: -45% 0;
+  }
+  to {
+    background-position: 145% 0;
+  }
+}
+@keyframes box-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes box-infall {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-40%, -30%) scale(0.2);
+  }
+}

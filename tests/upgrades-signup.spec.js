@@ -89,8 +89,8 @@ test("upgrade tiers require predecessors, deduct once and never equip as an aura
     ).toBe(product.value);
   }
   expect(rollSettings(state.owned)).toEqual({
-    rollMS: 15000,
-    cooldownMS: 5000,
+    rollMS: 10000,
+    cooldownMS: 2000,
   });
   const parsed = parseProgress(
     JSON.stringify({

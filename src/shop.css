@@ -492,3 +492,18 @@ nav button:disabled,
     transform: none;
   }
 }
+.aura-preview.aura-tidepool {
+  background: linear-gradient(to top, #2dd4bf1c, var(--hover) 70%);
+}
+.aura-preview.aura-verdant {
+  background: radial-gradient(ellipse at center, #4ade8018, var(--hover) 75%);
+}
+.aura-preview.aura-circuit {
+  background: linear-gradient(125deg, #22d3ee14, var(--hover) 70%);
+}
+.aura-preview.aura-obsidian {
+  background: radial-gradient(ellipse at center, #e879f914, var(--hover) 72%);
+}
+.aura-preview.aura-singularity {
+  background: radial-gradient(ellipse at center, #a78bfa1c, var(--hover) 72%);
+}
