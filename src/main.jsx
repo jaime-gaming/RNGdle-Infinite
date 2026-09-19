@@ -15,7 +15,6 @@ import {
   Search,
   ChevronRight,
   Check,
-  Dices,
   ArrowLeft,
   SlidersHorizontal,
   ScrollText,
@@ -44,6 +43,7 @@ import { petDrop, petById } from "./pets.js";
 import { randomUnit } from "./random.js";
 import Changelog from "./components/Changelog";
 import RebirthNav from "./components/RebirthNav";
+import About from "./components/About";
 import {
   LATEST_VERSION,
   readSeenVersion,
@@ -303,7 +303,8 @@ function App() {
           <button
             className="icon-button help-button"
             aria-label="How to play"
-            onClick={() => setModal("help")}
+            aria-current={page === "about" ? "page" : undefined}
+            onClick={() => navigate("about")}
           >
             <CircleHelp size={18} />
           </button>
@@ -420,6 +421,23 @@ function App() {
               onAction={dispatch}
               navigate={navigate}
             />
+          </>
+        )}
+        {page === "about" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <CircleHelp size={25} />
+              </div>
+              <div>
+                <h1>How to play</h1>
+                <p>What the game is, and what it never does.</p>
+              </div>
+            </div>
+            <About navigate={navigate} />
           </>
         )}
         {page === "changelog" && (
@@ -657,9 +675,7 @@ function App() {
           </a>
           <button onClick={() => navigate("changelog")}>Changelog</button>
           <button onClick={() => navigate("settings")}>Settings</button>
-          <button onClick={() => setModal("help")}>
-            How to play <ArrowUpRight size={12} />
-          </button>
+          <button onClick={() => navigate("about")}>How to play</button>
         </div>
       </footer>
       {modal && (
@@ -683,85 +699,6 @@ function App() {
             >
               <X size={20} />
             </button>
-            {modal === "help" && (
-              <>
-                <div className="modal-symbol">
-                  <Dices size={28} />
-                </div>
-                <p className="eyebrow">WELCOME TO RNGdle INFINITE</p>
-                <h2 id="modal-title">One roll. A little possibility.</h2>
-                <p>
-                  It’s simple. Generate a number and see what makes it special.
-                </p>
-                <div className="help-steps">
-                  <div>
-                    <span>01</span>
-                    <div>
-                      <h3>Let luck do its thing</h3>
-                      <p>Hit Generate for a number between 0 and 1,000,000.</p>
-                    </div>
-                  </div>
-                  <div>
-                    <span>02</span>
-                    <div>
-                      <h3>Discover the unexpected</h3>
-                      <p>
-                        Explore badges for patterns, famous numbers, and
-                        mathematical curiosities.
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <span>03</span>
-                    <div>
-                      <h3>No need to wait until tomorrow</h3>
-                      <p>
-                        Start with a 45-second reveal and a 60-second cooldown.
-                        Spend EP on permanent timing upgrades in the shop.
-                        Reduced motion changes the reveal, not your next-roll
-                        deadline.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="info-box">
-                  Every number from 0 through 1,000,000 is equally likely;
-                  repeats are possible. Scores and badge odds use all 1,000,001
-                  numbers, not your session. Top means the share scoring at
-                  least as much; Bottom means the share scoring at most as much.
-                  Both include ties. Rank labels are rounded like RNGdle; hover
-                  to see the precise percentage and counts. Only the highest-EP
-                  badge in each family adds to your score. Completing a roll
-                  adds its EP to your wallet and unlocks all earned badges.
-                  Spend EP on timing upgrades, cosmetic auras, or tools in the
-                  shop. Choose a goal in the shop to track your EP savings; your
-                  collection records your discoveries. Auto-Roll starts the next
-                  ready roll while the Roll page is visible, pauses while a
-                  dialog is open, and switches off after reload. Upgrades apply
-                  to future rolls; they never change your odds or score. Sign up
-                  for a local profile to save your wallet, discoveries,
-                  purchases, cooldown, and activity history in this browser.
-                  Guest play is never saved: rolls, EP and discoveries vanish
-                  when you leave, and signing up starts a fresh account instead
-                  of keeping them. This is not an online account, and clearing
-                  site data removes local saves. The leaderboard is disabled.
-                  Refreshing resumes the same committed number and deadline,
-                  including for guests in the same tab. Account tabs share one
-                  draw and reward. Open History for completed rolls, badge
-                  unlocks, and shop transactions. Delete your account and
-                  progress from Profile.
-                </div>
-                <button
-                  className="primary-button"
-                  onClick={() => {
-                    setModal(null);
-                    navigate("roll");
-                  }}
-                >
-                  Let’s roll <ArrowRight size={16} />
-                </button>
-              </>
-            )}
             {modal === "auth" && (
               <LocalProfile
                 profile={session.profile}

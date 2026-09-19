@@ -4,6 +4,7 @@ import {
   offlineSettings,
   ROLL_DURATIONS,
   COOLDOWN_DURATIONS,
+  rollSettings,
 } from "./shop-data.js";
 import {
   FLYWHEEL_CHARGES,
@@ -81,7 +82,7 @@ export function parseProgress(raw) {
   const pets = [
     ...new Set((p.pets ?? []).filter((id) => petById.has(id))),
   ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
-  const pendingRoll = parsePending(p.pendingRoll);
+  const pendingRoll = parsePending(p.pendingRoll, owned);
   let profile = null;
   if (p.profile != null) {
     if (
@@ -513,7 +514,7 @@ function parseHistory(value) {
   });
 }
 
-export function parsePending(p) {
+export function parsePending(p, owned = null) {
   if (p == null) return null;
   if (
     typeof p.id !== "string" ||
@@ -529,6 +530,19 @@ export function parsePending(p) {
     !validAmount(p.startedAt + p.rollMS + p.cooldownMS)
   )
     throw new Error("Invalid committed roll");
+  // Tamper guard: a committed roll may never be faster than the timings its own
+  // save has actually paid for. Without this, editing storage (or a plugin
+  // doing it) could hand an upgrade-free profile the fastest reveal and
+  // cooldown. Slower snapshots stay valid: buying an upgrade mid-roll must not
+  // invalidate the roll already in flight.
+  if (owned) {
+    const allowed = rollSettings(owned);
+    if (
+      p.rollMS < allowed.rollMS ||
+      (p.cooldownMS < allowed.cooldownMS && p.cooldownMS !== 0)
+    )
+      throw new Error("Committed roll timings do not match your upgrades");
+  }
   return {
     id: p.id,
     number: p.number,

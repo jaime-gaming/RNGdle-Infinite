@@ -28,6 +28,7 @@ test("every top navigation destination is a real path, not a hash fragment", () 
     "history",
     "settings",
     "changelog",
+    "about",
   ]);
   expect(pathForPage("roll")).toBe("/");
   for (const page of PAGES.filter((p) => p !== HOME))
