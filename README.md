@@ -274,6 +274,48 @@ Progress belongs to the browser **and origin**. Clearing site data removes the l
 | Confirm every purchase          | On           | Off buys in one click; prices, prerequisites and history are unchanged               |
 | Start Auto-Roll enabled         | Off          | Applies when Auto-Roll is owned; Persistence Core overrides it with your last switch |
 
+## Companions, changelog and honest guest play
+
+**Companions (pets) are a small multiplier on banked EP.** Six of them, from
+Pebble at +4% to Ember Dragonet at +20%. The boundary is deliberate and
+enforced by tests: a companion multiplies **only the EP that lands in your
+wallet**. The number you rolled, its tier, its badges, its score and its rank
+are untouched, so two players who roll the same number always score the same —
+prices stay exactly where the balance pass put them, you just reach them a
+little sooner. You can buy one in the shop, or find one free at roughly **1 in
+250 rolls**; the drop is sampled from its own random source so companion luck
+never consumes or biases the roll's own randomness. A found companion is worn
+only if you are not already wearing one, and swapping is always free.
+
+**Rebirth moved into the top bar** as a progress ring that fills with your
+badge collection, showing `141/235` as you go and switching to a green "Ready"
+state when the collection is complete. It is styled apart from the ordinary
+page buttons, and stays hidden until rebirth is a realistic prospect.
+
+**Guest play is no longer pretend-saved.** It never really persisted, but the
+wording implied it did and signing up appeared to adopt whatever you had
+rolled. Now it is explicit: guest rolls, EP and discoveries are not saved, and
+**registering starts a genuinely clean account** at 0 EP with an empty
+collection. An account's history now always matches what that account actually
+did.
+
+**A changelog lives at `/changelog`**, linked from the footer. A small "New
+Version" flag appears in the header while the newest entry has not been read,
+and it clears when you either open the changelog or simply roll.
+
+**Ambient animations** were added throughout: page sections rise a few pixels
+on entry, cards lift under the pointer, the nav underline grows from the
+centre, an equipped companion drifts, and the savings bar fills rather than
+jumping. Nothing moves more than 8px or shifts layout, and the global
+`prefers-reduced-motion` reset disables all of it.
+
+**Share includes the link.** The result screen shows a dedicated, selectable
+`https://jaime-gaming.github.io/RNGdle-Infinite` area with its own copy button,
+and the copied share text ends with the same URL.
+
+The **goal savings line** now sits directly above the badge breakdown and is
+rendered noticeably smaller.
+
 ## Real URLs, light mode and a lighter economy
 
 **Every top-bar destination is its own page with its own URL.** Shop, Badges,
@@ -353,14 +395,15 @@ npm test
 npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
 ```
 
-The **189 tests** cover:
+The **197 tests** cover:
 
 - Goal recommendations/prerequisites, backward-compatible goal saves, failed-write retry, cross-tab preservation, guest/signup gating, confirmed purchase → next goal, plain progress links, duplicate-roll discoveries, Auto-Roll dialog pausing, completed-workshop states, profile-required goals and narrow-screen themes.
 - Rebirth visibility at 140/141/234/235 badges, unique-badge eligibility, filters, typed confirmation/cancel, complete resets and preserved history, repurchases/rediscovery, failed local/session saves, simultaneous tabs, missed storage events, stale-cycle recovery, Web Locks, pending-roll/offline/cooldown guards and mobile dialogs.
 - Cooldown-only fill arithmetic, fractional progression, reload and mid-cooldown purchases, reduced-motion reveal reservation and zero-cooldown Flywheel rolls.
 - Every late tier’s prerequisite chain and deep orphan pruning, historical prices, recommendation ordering, 2s/5s/10s snapshots, 4/2/1-charge rhythms, rate changes without retroactive rewards, snapshotted legacy batches, all three offline caps, concurrent tier purchases and failed-save rollback.
 - Settings defaults, field-by-field validation of corrupt preferences, separation from saved progress, compact-EP formatting that never changes a spent amount, Offline Vault caps, Persistence Core prerequisites, catalogue kinds and the four-times-prerequisite price ceiling.
-- Real-path routing for all five pages including subpath deployment, legacy hash links, unknown-route fallback and duplicate-history suppression; the `404.html` static fallback; rebirth unlocking on badges alone with an empty shop and refusing with a full shop; light mode having a single palette source and themed semantic tokens; and the rebalanced catalogue's total, early prices and prerequisite ratios.
+- Companions multiplying banked EP without altering the scored roll, ordered and capped multipliers, purchase/equip/validation rules, forged-save rejection, and rare weighted drops that never duplicate or auto-swap; guest play saving nothing and sign-up starting a clean account; the share link; the changelog's entries and unseen-version flag including unavailable storage; and ambient motion staying small and reduced-motion safe.
+- Real-path routing for all six pages including subpath deployment, legacy hash links, unknown-route fallback and duplicate-history suppression; the `404.html` static fallback; rebirth unlocking on badges alone with an empty shop and refusing with a full shop; light mode having a single palette source and themed semantic tokens; and the rebalanced catalogue's total, early prices and prerequisite ratios.
 - All twelve auras carrying no gameplay payload, distinct prices, renderer coverage for every catalogue aura, purchase-equips/free-re-equip behaviour, refusal to equip an unowned aura, and goal-recap savings that cap at the price and estimate from the median.
 - Flywheel’s two-cycle accounting, zero-cooldown validation, mid-reveal purchase snapshots, full base/upgraded reveal deadlines, reload restoration, concurrent single consumption, failed commit/recovery, offline exclusion, Auto-Roll compatibility, mobile display, and legacy price preservation.
 - Exact chance/frequency formatting at rare and near-certain boundaries, and full-population tier odds despite stale manifest counts.

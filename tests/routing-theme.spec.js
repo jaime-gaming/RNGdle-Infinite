@@ -21,7 +21,14 @@ import { shopProducts } from "../src/shop-data.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 
 test("every top navigation destination is a real path, not a hash fragment", () => {
-  expect(PAGES).toEqual(["roll", "shop", "badges", "history", "settings"]);
+  expect(PAGES).toEqual([
+    "roll",
+    "shop",
+    "badges",
+    "history",
+    "settings",
+    "changelog",
+  ]);
   expect(pathForPage("roll")).toBe("/");
   for (const page of PAGES.filter((p) => p !== HOME))
     expect(pathForPage(page)).toBe(`/${page}`);

@@ -30,14 +30,24 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   expect(() =>
     applyProgress(emptyProgress(), { type: "equip", id: "orbit" }),
   ).toThrow("Purchase");
-  let state = applyProgress(earned, {
+  // Signing up starts a clean account by design: guest play is not saved. So
+  // the shop run is funded by rolls made *after* registering, not before.
+  let state = applyProgress(emptyProgress(), {
     type: "register",
     id: "shop-test",
     username: "ShopTester",
     createdAt: 1000,
   });
-  // The expanded workshop costs more than this one jackpot. Fund it with a
-  // second ordinary credited result, not an artificial negative wallet.
+  expect(state.balance).toBe(0);
+  expect(
+    applyProgress(earned, {
+      type: "register",
+      id: "x",
+      username: "Fresh",
+      createdAt: 1,
+    }).balance,
+  ).toBe(0);
+  state = applyProgress(state, action);
   state = applyProgress(state, { ...action, id: "second-test-roll" });
   for (const item of shopProducts) {
     const before = state.balance;

@@ -6,14 +6,25 @@ import CooldownFill from "./CooldownFill";
 import { parseCooldownWindow } from "../cooldown.js";
 import FlywheelMeter from "./FlywheelMeter";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
-import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
+import {
+  Clock3,
+  Check,
+  Share2,
+  Infinity as InfinityIcon,
+  Link as LinkIcon,
+} from "lucide-react";
 import {
   buildRevealTimeline,
   SCRAMBLE_MS,
   easeOutCubic,
   revealCueTimes,
 } from "../roll-timeline";
-import { groupResultBadges, formatEP, buildShareText } from "../roll-data";
+import {
+  groupResultBadges,
+  formatEP,
+  buildShareText,
+  GAME_URL,
+} from "../roll-data";
 import { prepareRolls, restoreRoll } from "../roll-client";
 import BadgeBreakdown from "./BadgeBreakdown";
 import RankSummary from "./RankSummary";
@@ -184,12 +195,14 @@ export default function RollExperience({
   const [error, setError] = useState("");
   const [settleError, setSettleError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [cooldown, setCooldown] = useState(() =>
     Math.max(0, Math.ceil((session.cooldownUntil - gameNow()) / 1000)),
   );
   const reducedMotion = useMotionPreference();
   const finishedRun = useRef(null);
   const shareButton = useRef(null);
+  const linkTimer = useRef(null);
   const creditCallback = useRef(onComplete);
   const copiedTimer = useRef(null);
   const activeRun = useRef(null);
@@ -342,6 +355,7 @@ export default function RollExperience({
       active = false;
       mounted.current = false;
       clearTimeout(copiedTimer.current);
+      clearTimeout(linkTimer.current);
     };
   }, []);
 
@@ -377,6 +391,8 @@ export default function RollExperience({
     setError("");
     clearTimeout(copiedTimer.current);
     setCopied(false);
+    clearTimeout(linkTimer.current);
+    setLinkCopied(false);
     setSettleError("");
     setInstantCompletion(reducedMotion);
     setElapsed(
@@ -431,6 +447,17 @@ export default function RollExperience({
     if (mounted.current && activeRun.current === run.id)
       setSettleError(outcome.ok ? "" : outcome.message);
   }
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(GAME_URL);
+      if (!mounted.current) return;
+      setLinkCopied(true);
+      clearTimeout(linkTimer.current);
+      linkTimer.current = setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      notify("Clipboard isn’t available. You can select the link and copy it.");
+    }
+  }
   async function share() {
     const sharedRun = run.id;
     try {
@@ -459,12 +486,6 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
-      {/* Savings sit at the very top of a finished roll, ahead of the badge
-          breakdown. It only appears once the reveal has played out and the EP
-          is credited — never mid-reveal. */}
-      {!!run && !busy && runSettled && preferences.showGoalRecap && (
-        <GoalRecap progress={session} runId={run.id} navigate={navigate} />
-      )}
       {preferences.showFlywheelMeter && (
         <FlywheelMeter
           progress={session}
@@ -554,8 +575,8 @@ export default function RollExperience({
               `Saved locally as ${session.profile.username}.`
             ) : (
               <>
-                Guest progress is temporary.{" "}
-                <button onClick={openSignup}>Sign up to save</button>
+                Guest rolls are not saved.{" "}
+                <button onClick={openSignup}>Sign up to start saving</button>
               </>
             )}
           </p>
@@ -658,6 +679,24 @@ export default function RollExperience({
                     </span>
                   </div>
                 )}
+                {rankKnown && (
+                  <div className="share-link">
+                    <span className="share-link-label">Game link</span>
+                    <code className="share-link-url">{GAME_URL}</code>
+                    <button
+                      className="share-link-copy"
+                      onClick={copyLink}
+                      aria-label="Copy the game link"
+                    >
+                      {linkCopied ? (
+                        <Check size={13} />
+                      ) : (
+                        <LinkIcon size={13} />
+                      )}
+                      {linkCopied ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             <div
@@ -715,6 +754,15 @@ export default function RollExperience({
           </section>
           {digitsDone && result.totalEP !== null && (
             <div className="breakdown-wrap">
+              {/* Savings sit directly above the badge breakdown, and only once
+                  the reveal has settled and the EP is actually credited. */}
+              {!busy && runSettled && preferences.showGoalRecap && (
+                <GoalRecap
+                  progress={session}
+                  runId={run.id}
+                  navigate={navigate}
+                />
+              )}
               <BadgeBreakdown
                 {...{
                   result,

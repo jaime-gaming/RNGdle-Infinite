@@ -18,12 +18,14 @@ import {
   Dices,
   ArrowLeft,
   SlidersHorizontal,
+  ScrollText,
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "./styles.css";
+import "./ambient.css";
 import Emoji from "./components/Emoji";
 import RollExperience from "./components/RollExperience";
 import { POPULATION, chanceLabels } from "./probability";
@@ -38,6 +40,16 @@ import ActivityFeed from "./components/ActivityFeed";
 import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
+import { petDrop, petById } from "./pets.js";
+import { randomUnit } from "./random.js";
+import Changelog from "./components/Changelog";
+import RebirthNav from "./components/RebirthNav";
+import {
+  LATEST_VERSION,
+  readSeenVersion,
+  hasUnseenVersion,
+  markSeen,
+} from "./changelog.js";
 import {
   pageFromLocation,
   pathForPage,
@@ -62,6 +74,8 @@ function App() {
         : "light"
       : theme,
   );
+  const [seenVersion, setSeenVersion] = useState(readSeenVersion);
+  const showVersionFlag = hasUnseenVersion(seenVersion);
   const [shopFocus, setShopFocus] = useState(null);
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
@@ -82,12 +96,25 @@ function App() {
     setSort("Default");
   }, [epoch]);
   async function completeRoll(result, id, cooldownUntil) {
+    // Companion luck is sampled here, independently of the number itself.
+    let drop = null;
+    try {
+      drop = petDrop(randomUnit(), session.pets);
+    } catch {}
     const outcome = await dispatch({
       type: "complete",
       result,
       id,
       cooldownUntil,
+      ...(drop ? { petDrop: drop } : {}),
     });
+    // Rolling counts as getting on with the game, so the flag stops nagging.
+    if (outcome.ok && showVersionFlag) {
+      markSeen();
+      setSeenVersion(LATEST_VERSION);
+    }
+    if (outcome.ok && drop)
+      notify(`${petById.get(drop).emoji} ${petById.get(drop).name} appeared!`);
     if (!outcome.ok) notify(outcome.message);
     return outcome;
   }
@@ -258,6 +285,21 @@ function App() {
           </nav>
         </div>
         <div className="header-right">
+          {showVersionFlag && (
+            <button
+              className="version-flag"
+              onClick={() => navigate("changelog")}
+              aria-label={`New version ${LATEST_VERSION}, see what changed`}
+            >
+              <span className="version-flag-dot" aria-hidden="true" />
+              <span>New Version</span>
+            </button>
+          )}
+          <RebirthNav
+            progress={session}
+            active={page === "badges"}
+            onClick={() => navigate("badges")}
+          />
           <button
             className="icon-button help-button"
             aria-label="How to play"
@@ -378,6 +420,23 @@ function App() {
               onAction={dispatch}
               navigate={navigate}
             />
+          </>
+        )}
+        {page === "changelog" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <ScrollText size={25} />
+              </div>
+              <div>
+                <h1>Changelog</h1>
+                <p>What changed, and when.</p>
+              </div>
+            </div>
+            <Changelog onSeen={() => setSeenVersion(LATEST_VERSION)} />
           </>
         )}
         {page === "shop" && (
@@ -596,6 +655,7 @@ function App() {
           >
             Real game <ArrowUpRight size={12} />
           </a>
+          <button onClick={() => navigate("changelog")}>Changelog</button>
           <button onClick={() => navigate("settings")}>Settings</button>
           <button onClick={() => setModal("help")}>
             How to play <ArrowUpRight size={12} />
@@ -681,12 +741,14 @@ function App() {
                   to future rolls; they never change your odds or score. Sign up
                   for a local profile to save your wallet, discoveries,
                   purchases, cooldown, and activity history in this browser.
-                  Guest progress is temporary. This is not an online account,
-                  and clearing site data removes local saves. The leaderboard is
-                  disabled. Refreshing resumes the same committed number and
-                  deadline, including for guests in the same tab. Account tabs
-                  share one draw and reward. Open History for completed rolls,
-                  badge unlocks, and shop transactions. Delete your account and
+                  Guest play is never saved: rolls, EP and discoveries vanish
+                  when you leave, and signing up starts a fresh account instead
+                  of keeping them. This is not an online account, and clearing
+                  site data removes local saves. The leaderboard is disabled.
+                  Refreshing resumes the same committed number and deadline,
+                  including for guests in the same tab. Account tabs share one
+                  draw and reward. Open History for completed rolls, badge
+                  unlocks, and shop transactions. Delete your account and
                   progress from Profile.
                 </div>
                 <button
