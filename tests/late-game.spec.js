@@ -151,14 +151,21 @@ test("useful recommendations combine tools with pace tiers instead of prioritisi
       "flywheel",
     ],
   });
-  // Cheapest useful pace/earning tool first, regardless of which track it is on.
-  const order = [
+  // Cheapest useful pace/earning tool first, regardless of which track it is
+  // on. The expected order is derived from the catalogue so a repricing shows
+  // up as a genuine ordering change rather than a stale literal.
+  const candidates = [
     "quickwind-4",
     "flywheel-2",
     "clockwork-4",
     "auto-roll",
     "offline-roller",
   ];
+  const order = [...candidates].sort(
+    (a, b) =>
+      shopProducts.find((item) => item.id === a).price -
+      shopProducts.find((item) => item.id === b).price,
+  );
   for (const id of order) {
     expect(recommendedGoal(p).id).toBe(id);
     p.owned.push(id);

@@ -14,6 +14,7 @@ import {
   emptyProgress,
   applyProgress,
   parseProgress,
+  validUsername,
 } from "../src/progress.js";
 import {
   CHANGELOG,
@@ -251,4 +252,60 @@ test("ambient animations are subtle and fully disabled by reduced motion", () =>
   expect(styles).toContain("prefers-reduced-motion: reduce");
   expect(styles).toContain("animation: none !important");
   expect(styles).toContain("transition: none !important");
+});
+
+test("the changelog stays short and casual, and keeps the launch note verbatim", () => {
+  for (const entry of CHANGELOG) {
+    for (const line of entry.body) {
+      // Short, chatty lines rather than release-note paragraphs.
+      expect(line.length).toBeLessThanOrEqual(110);
+      // Casual tone: lines start lowercase rather than as formal sentences.
+      expect(line[0]).toBe(line[0].toLowerCase());
+    }
+  }
+  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(8);
+  // The launch note is preserved exactly as written.
+  expect(CHANGELOG.at(-1).body).toEqual([
+    "so uhhhh we launched RNGdle infinite",
+  ]);
+});
+
+test("share is the single copy action and carries the link with it", () => {
+  const source = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
+  // One share control: no separate link area or second copy button.
+  expect(source).not.toContain("share-link");
+  expect(source).not.toContain("copyLink");
+  expect(source.match(/async function share\(/g)).toHaveLength(1);
+  expect(source).not.toContain("Game link");
+  const text = buildShareText(evaluate(1337));
+  expect(text).toContain(GAME_URL);
+});
+
+test("the goal recap is a ring and a shop link, with the figures still announced", () => {
+  const source = fs.readFileSync("src/components/GoalRecap.jsx", "utf8");
+  // No bar, no headline numbers, no percentage text in the layout.
+  expect(source).not.toContain("<progress");
+  expect(source).not.toContain("goal-recap-figures");
+  expect(source).not.toContain("SAVING TOWARDS");
+  expect(source).toContain("goal-recap-ring");
+  // The numbers must survive for screen readers even though they are not drawn.
+  expect(source).toContain("aria-label={label}");
+  expect(source).toContain("Saving towards");
+  const css = fs.readFileSync("src/goal-recap.css", "utf8");
+  expect(css).toContain("conic-gradient");
+});
+
+test("sign-up validates the name live and states what is and is not kept", () => {
+  const source = fs.readFileSync("src/components/LocalProfile.jsx", "utf8");
+  // Submission is blocked until the name is actually valid.
+  expect(source).toContain("disabled={pending || !ready}");
+  expect(source).toContain("validUsername");
+  expect(source).toContain("aria-invalid");
+  expect(source).toContain("Not carried over:");
+  expect(source).toContain("Saved from here on:");
+  // The same validator guards the reducer, so UI and rules cannot disagree.
+  for (const good of ["abc", "Lucky_Otter-12", "ñandú99"])
+    expect(validUsername(good)).toBe(true);
+  for (const bad of ["ab", "", "a".repeat(21), "has space", "bad!"])
+    expect(validUsername(bad)).toBe(false);
 });

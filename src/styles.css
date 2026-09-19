@@ -1882,3 +1882,71 @@ footer button:hover,
   color: var(--secondary);
   margin: 16px 0 0;
 }
+
+/* Sign-up: what is saved, what is not, and live name validation. */
+.signup-points {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  display: grid;
+  gap: 10px;
+}
+.signup-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+.signup-points svg {
+  margin-top: 2px;
+  color: var(--muted);
+}
+.signup-points li:nth-child(2) svg {
+  color: var(--green);
+}
+.signup-points strong {
+  color: var(--text);
+  font-weight: 620;
+}
+.signup-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.signup-field input {
+  flex: 1;
+  min-width: 0;
+}
+.signup-suggest {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.signup-suggest:hover:not(:disabled) {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.profile-input-hint.is-invalid {
+  color: var(--danger) !important;
+}
+.profile-input-hint.is-valid {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--green) !important;
+}
+.signup-footnote {
+  margin: 14px 0 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
