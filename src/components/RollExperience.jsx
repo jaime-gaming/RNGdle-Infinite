@@ -3,7 +3,7 @@ import { gameNow } from "../game-clock";
 import RollProgress from "./RollProgress";
 import GoalRecap from "./GoalRecap";
 import CooldownFill from "./CooldownFill";
-import { parseCooldownWindow } from "../cooldown.js";
+import { parseCooldownWindow, displayedCooldownSeconds } from "../cooldown.js";
 import FlywheelMeter from "./FlywheelMeter";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
@@ -185,7 +185,11 @@ export default function RollExperience({
   const [settleError, setSettleError] = useState("");
   const [copied, setCopied] = useState(false);
   const [cooldown, setCooldown] = useState(() =>
-    Math.max(0, Math.ceil((session.cooldownUntil - gameNow()) / 1000)),
+    displayedCooldownSeconds(
+      session.cooldownWindow,
+      session.cooldownUntil,
+      gameNow(),
+    ),
   );
   const reducedMotion = useMotionPreference();
   const finishedRun = useRef(null);
@@ -272,8 +276,12 @@ export default function RollExperience({
 
   useEffect(() => {
     const until = Math.max(session.cooldownUntil, localCooldownUntil);
+    // Show the cooldown alone, not the reveal that precedes it. Eligibility is
+    // still governed by `until`, so the actual wait is unchanged.
+    const window =
+      session.cooldownWindow ?? parseCooldownWindow(null, until, run);
     const update = () =>
-      setCooldown(Math.max(0, Math.ceil((until - gameNow()) / 1000)));
+      setCooldown(displayedCooldownSeconds(window, until, gameNow()));
     update();
     if (until <= gameNow()) return;
     const timer = setInterval(() => {
@@ -281,7 +289,12 @@ export default function RollExperience({
       if (gameNow() >= until) clearInterval(timer);
     }, 100);
     return () => clearInterval(timer);
-  }, [session.cooldownUntil, localCooldownUntil]);
+  }, [
+    session.cooldownUntil,
+    localCooldownUntil,
+    session.cooldownWindow,
+    run?.id,
+  ]);
 
   useEffect(() => {
     if (!run || finishedRun.current === run.id) return;
@@ -625,6 +638,16 @@ export default function RollExperience({
                         )}
                     </span>
                     <small>Your EP balance</small>
+                    {/* Savings sit with the wallet they are measured against,
+                        and only once the reveal has settled and the EP is
+                        actually credited. */}
+                    {!busy && runSettled && preferences.showGoalRecap && (
+                      <GoalRecap
+                        progress={session}
+                        runId={run.id}
+                        navigate={navigate}
+                      />
+                    )}
                   </div>
                 )}
                 {rankKnown && (
@@ -709,15 +732,6 @@ export default function RollExperience({
           </section>
           {digitsDone && result.totalEP !== null && (
             <div className="breakdown-wrap">
-              {/* Savings sit directly above the badge breakdown, and only once
-                  the reveal has settled and the EP is actually credited. */}
-              {!busy && runSettled && preferences.showGoalRecap && (
-                <GoalRecap
-                  progress={session}
-                  runId={run.id}
-                  navigate={navigate}
-                />
-              )}
               <BadgeBreakdown
                 {...{
                   result,

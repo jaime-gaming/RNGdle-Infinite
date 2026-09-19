@@ -1,18 +1,21 @@
 /* Deliberately tiny: a progress ring and a link, nothing more. Not a card —
    no border, no panel background, no shadow. */
+/* Sits directly under the EP balance, so it is centred and compact to match
+   that block rather than reading as a separate panel. */
 .goal-recap {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
-  margin: 0 0 14px;
+  justify-content: center;
+  gap: 7px;
+  margin: 9px auto 0;
 }
 .goal-recap-ring {
   position: relative;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   color: var(--muted);
   /* The ring is the savings bar. */
@@ -43,7 +46,7 @@
   background: none;
   color: var(--secondary);
   font: inherit;
-  font-size: 11px;
+  font-size: 10.5px;
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--border);

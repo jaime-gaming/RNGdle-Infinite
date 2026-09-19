@@ -8,6 +8,7 @@ export const PAGES = [
   "history",
   "settings",
   "changelog",
+  "about",
 ];
 export const HOME = "roll";
 
