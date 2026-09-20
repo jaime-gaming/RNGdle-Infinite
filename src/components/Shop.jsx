@@ -25,6 +25,14 @@ import {
   CircuitBoard,
   Triangle,
   CircleDot,
+  Zap,
+  PawPrint,
+  Wind,
+  Layers,
+  Mountain,
+  Gauge,
+  Target,
+  LayoutGrid,
 } from "lucide-react";
 import {
   shopProducts,
@@ -42,6 +50,12 @@ import {
 import "../progress-links.css";
 import PetShelf from "./PetShelf";
 import { flywheelRequired } from "../flywheel.js";
+import {
+  skillById,
+  skillChargeOf,
+  skillEffectSummary,
+  skillSlots,
+} from "../skills.js";
 import NumberBox from "./NumberBox";
 import { useFormatEP, useSettings } from "../use-settings.jsx";
 const icons = {
@@ -65,6 +79,14 @@ const icons = {
   circuit: CircuitBoard,
   obsidian: Triangle,
   singularity: CircleDot,
+  surge: Zap,
+  trail: PawPrint,
+  bounce: Wind,
+  twice: Layers,
+  bedrock: Mountain,
+  turbo: Gauge,
+  quarry: Target,
+  bay: LayoutGrid,
 };
 export default function Shop({
   progress,
@@ -125,22 +147,20 @@ export default function Shop({
         )?.focus();
     }
   }, [selected]);
-  async function perform(type, id) {
+  async function perform(type, id, extra = null) {
     if (busy.current) return;
     busy.current = true;
     setPending(true);
     try {
-      const result = await onAction({ type, id });
+      const result = await onAction({ type, id, ...(extra ?? {}) });
       if (result.ok) {
         setSelected(null);
         if (type === "buy") setLastPurchase(productById.get(id));
         else {
           setLastPurchase(null);
-          notify(
-            type === "goal"
-              ? "Goal updated. No EP spent."
-              : "Appearance updated.",
-          );
+          if (type === "goal") notify("Goal updated. No EP spent.");
+          else if (type === "equip-skill") notify("Skill rack updated. Free.");
+          else notify("Appearance updated.");
         }
       } else {
         setPurchaseError(result.message);
@@ -153,8 +173,15 @@ export default function Shop({
   }
   function card(item) {
     const aura = item.kind === "aura",
+      skill = item.kind === "skill",
+      bay = item.kind === "skill-slot",
       owned = progress.owned.includes(item.id),
-      equipped = aura && progress.equipped === item.id;
+      equipped = aura
+        ? progress.equipped === item.id
+        : skill
+          ? (progress.equippedSkills ?? []).includes(item.id)
+          : false;
+    const definition = skill ? skillById.get(item.skillId ?? item.id) : null;
     const affordable = progress.balance >= item.price,
       requires = item.requires && !progress.owned.includes(item.requires),
       Icon = icons[item.icon];
@@ -212,6 +239,23 @@ export default function Shop({
               </span>
               <small>OFFLINE INTERVAL · SAME ROLL CAP</small>
             </>
+          ) : skill ? (
+            <>
+              <Icon size={25} />
+              <span>
+                <b>{item.charges}</b> {item.charges === 1 ? "roll" : "rolls"}{" "}
+                <small>→</small> ready
+              </span>
+              <small>CHARGED EFFECT · FIRES ON ONE ROLL</small>
+            </>
+          ) : bay ? (
+            <>
+              <Icon size={25} />
+              <span>
+                {item.from} <small>→</small> <b>{item.slots}</b>
+              </span>
+              <small>SKILL SLOTS · SWAPPING IS FREE</small>
+            </>
           ) : item.kind === "utility" ? (
             <>
               <Icon size={25} />
@@ -247,30 +291,40 @@ export default function Shop({
             {item.id === "offline-roller" && owned
               ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum ${offlineCap} rolls per absence; unused fractions do not carry over.`
               : item.description}
+            {skill && definition && (
+              <>
+                {" "}
+                <span className="shop-skill-effect">
+                  {skillEffectSummary(definition)}
+                </span>
+              </>
+            )}
           </p>
           <div className="shop-price">
             <Coins size={15} />
             {formatEP(item.price)} EP
           </div>
           <button
-            className={owned ? "secondary-button" : "primary-button"}
+            className={owned && !skill ? "secondary-button" : "primary-button"}
             disabled={
               pending ||
-              equipped ||
-              (owned && !aura) ||
+              (equipped && aura) ||
+              (owned && !aura && !skill) ||
               (!owned &&
                 !(item.requiresProfile && !progress.profile) &&
                 (!affordable || requires))
             }
-            onClick={() =>
-              item.requiresProfile && !progress.profile
-                ? openSignup()
-                : owned
-                  ? perform("equip", item.id)
-                  : preferences.confirmPurchases
-                    ? setSelected(item)
-                    : perform("buy", item.id)
-            }
+            onClick={() => {
+              if (item.requiresProfile && !progress.profile) return openSignup();
+              if (!owned)
+                return preferences.confirmPurchases
+                  ? setSelected(item)
+                  : perform("buy", item.id);
+              if (aura) return perform("equip", item.id);
+              if (skill)
+                return perform("equip-skill", item.id, { equipped: !equipped });
+              return undefined;
+            }}
           >
             {item.requiresProfile && !progress.profile ? (
               "Sign up to unlock"
@@ -281,6 +335,8 @@ export default function Shop({
             ) : owned ? (
               aura ? (
                 "Equip aura"
+              ) : skill ? (
+                "Equip"
               ) : (
                 <>
                   <Check size={14} /> Purchased
@@ -297,21 +353,29 @@ export default function Shop({
                 ? `Requires ${productById.get(item.requires).name}`
                 : !owned && !affordable
                   ? `${formatEP(item.price - progress.balance)} more EP needed`
-                  : owned
-                    ? aura
-                      ? "Equip whenever you like."
-                      : item.kind === "utility"
-                        ? item.id === "auto-roll"
-                          ? "Enable on the Roll page."
-                          : item.id === "offline-roller"
-                            ? `Ready · one roll per ${offlineInterval / 60000} minutes away.`
-                            : "Unlocked in History."
-                        : item.kind === "pace"
-                          ? `${progress.flywheelCharge ?? 0} / ${charges} charges · applies automatically.`
-                          : "Maximum level reached."
-                    : aura
-                      ? "One-time cosmetic purchase"
-                      : "One-time unlock · same odds and scores"}
+                    : owned
+                      ? aura
+                        ? "Equip whenever you like."
+                        : skill
+                          ? `${skillChargeOf(progress, item.id)} / ${item.charges} charged · ${
+                              equipped
+                                ? "in your rack"
+                                : "not in your rack yet"
+                            }.`
+                          : bay
+                            ? `Rack size: ${item.slots} skills. Swapping is always free.`
+                            : item.kind === "utility"
+                              ? item.id === "auto-roll"
+                                ? "Enable on the Roll page."
+                                : item.id === "offline-roller"
+                                  ? `Ready · one roll per ${offlineInterval / 60000} minutes away.`
+                                  : "Unlocked in History."
+                              : item.kind === "pace"
+                                ? `${progress.flywheelCharge ?? 0} / ${charges} charges · applies automatically.`
+                                : "Maximum level reached."
+                      : aura
+                        ? "One-time cosmetic purchase"
+                        : "One-time unlock · same odds and scores"}
           </small>
         </div>
       </article>
@@ -481,6 +545,26 @@ export default function Shop({
         </div>
       </section>
       <PetShelf progress={progress} onAction={onAction} notify={notify} />
+      <section className="shop-category skill-shelf">
+        <div className="shop-section-heading">
+          <div>
+            <h2>Skills</h2>
+            <p>
+              Charged effects. A circle fills as you roll; when it is full, the
+              next roll fires it. Your rack holds {skillSlots(progress.owned)}{" "}
+              {skillSlots(progress.owned) === 1 ? "skill" : "skills"} — Equipping
+              and swapping is free, and every charge is kept.
+            </p>
+          </div>
+        </div>
+        <div className="shop-grid">
+          {shopProducts
+            .filter((item) =>
+              ["skill", "skill-slot"].includes(item.kind),
+            )
+            .map(card)}
+        </div>
+      </section>
       <section className="shop-category">
         <div className="shop-section-heading">
           <div>
@@ -546,16 +630,24 @@ export default function Shop({
               PERMANENT{" "}
               {selected.kind === "aura"
                 ? "COSMETIC"
-                : selected.kind === "utility"
-                  ? "TOOL"
-                  : "UPGRADE"}
+                : selected.kind === "skill"
+                  ? "SKILL"
+                  : selected.kind === "skill-slot"
+                    ? "SKILL RACK"
+                    : selected.kind === "utility"
+                      ? "TOOL"
+                      : "UPGRADE"}
             </p>
             <h2 id="purchase-title">Buy {selected.name}?</h2>
             <p>
               This spends <strong>{formatEP(selected.price)} EP</strong> and{" "}
               {selected.kind === "aura"
                 ? "equips your new aura."
-                : selected.kind === "utility"
+                : selected.kind === "skill"
+                  ? `unlocks ${selected.name} permanently and puts it in your rack if a slot is free. It charges over ${selected.charges} completed online rolls and then fires on one roll. Offline rolls never charge it.`
+                  : selected.kind === "skill-slot"
+                    ? `widens your rack to ${selected.slots} skill slots. Equipping and swapping skills stays free, and existing charge is kept.`
+                    : selected.kind === "utility"
                   ? selected.id === "auto-roll"
                     ? "unlocks the Auto-Roll switch on the Roll page. It starts off and never skips the reveal or cooldown."
                     : selected.id === "persistence-core"

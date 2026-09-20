@@ -12,13 +12,66 @@ import {
   flywheelRequired,
 } from "./flywheel.js";
 import { validGoal } from "./gameplay-loop.js";
-import { rebirthBlocker } from "./rebirth.js";
-import { petById, PET_IDS, walletEP, petBonusEP } from "./pets.js";
+import {
+  rebirthBlocker,
+  ultraRebirthBlocker,
+  nextRebirthSkill,
+  ultraRebirthMultiplier,
+} from "./rebirth.js";
+import { petById, PET_IDS, petMultiplier } from "./pets.js";
+import {
+  chargeAfterSettlement,
+  drawPlanFor,
+  parseEquippedSkills,
+  parseSkillCharge,
+  parseUnlockedSkills,
+  skillById,
+  skillChargeFactor,
+  skillForPet,
+  skillSlots,
+  skillUnlocked,
+  skillWaivesCooldown,
+  skillWalletMultiplier,
+  validSkillCharge,
+  SKILL_MAX_DRAWS,
+} from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 const badgeIds = new Set(metadata.map((b) => b.id));
 const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
+
+// The wallet multiplier of a settled roll: companions, ultra-rebirth bonus and
+// any wallet skill that fired. It only ever scales the EP that reaches the
+// wallet — the scored roll, its tier and its rank never move.
+export function walletMultiplier(progress, skillIds = progress.pendingRoll?.skills) {
+  return (
+    petMultiplier(progress.activePet) *
+    ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
+    skillWalletMultiplier(skillIds ?? [])
+  );
+}
+
+// The skills a settled roll actually fired. Only a committed, online roll can
+// activate one, so an offline batch or a duplicate receipt activates nothing.
+function firedSkills(state, id, source) {
+  if (source === "offline" || state.pendingRoll?.id !== id) return [];
+  return (state.pendingRoll.skills ?? []).filter((skillId) =>
+    skillById.has(skillId),
+  );
+}
+
+// Equipping is free. A newly unlocked skill takes a free slot instead of
+// silently doing nothing; a full rack is left exactly as the player set it.
+function autoEquip(equipped, progress, id) {
+  const list = [...new Set(equipped)].filter((skillId) =>
+    skillUnlocked(skillId, progress),
+  );
+  if (!id || !skillById.has(id) || list.includes(id)) return list;
+  if (list.length >= skillSlots(progress.owned ?? [])) return list;
+  return [...list, id];
+}
+
 export function emptyProgress() {
   return {
     version: 1,
@@ -36,9 +89,13 @@ export function emptyProgress() {
     flywheelCharge: 0,
     goalId: null,
     rebirths: 0,
+    ultraRebirths: 0,
     cooldownWindow: null,
     pets: [],
     activePet: "none",
+    skills: [],
+    equippedSkills: [],
+    skillCharge: {},
   };
 }
 export function parseProgress(raw) {
@@ -77,11 +134,25 @@ export function parseProgress(raw) {
     throw new Error("Invalid Flywheel charge");
   if (p.rebirths != null && !validAmount(p.rebirths))
     throw new Error("Invalid rebirth count");
+  if (p.ultraRebirths != null && !validAmount(p.ultraRebirths))
+    throw new Error("Invalid ultra-rebirth count");
+  if (!validSkillCharge(p.skillCharge)) throw new Error("Invalid skill charge");
   if (p.pets != null && !Array.isArray(p.pets))
     throw new Error("Invalid pet collection");
+  if (p.skills != null && !Array.isArray(p.skills))
+    throw new Error("Invalid skill collection");
   const pets = [
     ...new Set((p.pets ?? []).filter((id) => petById.has(id))),
   ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
+  // Only an owned pet can be active; anything else falls back to no pet.
+  const activePet = pets.includes(p.activePet) ? p.activePet : "none";
+  const skills = parseUnlockedSkills(p.skills, { owned });
+  const equippedSkills = parseEquippedSkills(p.equippedSkills, {
+    owned,
+    skills,
+    pets,
+    activePet,
+  });
   const pendingRoll = parsePending(p.pendingRoll, owned);
   let profile = null;
   if (p.profile != null) {
@@ -119,6 +190,7 @@ export function parseProgress(raw) {
       pendingRoll,
     ),
     rebirths: p.rebirths ?? 0,
+    ultraRebirths: p.ultraRebirths ?? 0,
     offline: parseOffline(p.offline, owned),
     flywheelCharge: owned.includes("flywheel")
       ? Math.min(p.flywheelCharge ?? 0, flywheelRequired(owned))
@@ -134,8 +206,10 @@ export function parseProgress(raw) {
         ? p.equipped
         : "none",
     pets: pets,
-    // Only an owned pet can be active; anything else falls back to no pet.
-    activePet: pets.includes(p.activePet) ? p.activePet : "none",
+    activePet,
+    skills,
+    equippedSkills,
+    skillCharge: parseSkillCharge(p.skillCharge),
     cooldownUntil,
     receipts: [
       ...new Set(
@@ -161,15 +235,74 @@ export function applyProgress(state, action) {
     if (blocked) throw new Error(blocked);
     if (!validAmount(count + 1))
       throw new Error("Rebirth count limit reached.");
+    const granted = nextRebirthSkill(count);
+    // Everything you earned stays: EP, upgrades, companions and skills. What
+    // restarts is the collection itself, together with the aura wardrobe —
+    // the cosmetic price of a new cycle.
+    const owned = state.owned.filter(
+      (id) => productById.get(id)?.kind !== "aura",
+    );
+    const skills = granted
+      ? [...new Set([...(state.skills ?? []), granted.id])]
+      : [...(state.skills ?? [])];
+    const equippedSkills = autoEquip(
+      state.equippedSkills ?? [],
+      { ...state, owned, skills },
+      granted?.id,
+    );
     return {
-      ...emptyProgress(),
+      ...state,
       profile: state.profile,
       rebirths: count + 1,
+      discovered: [],
+      owned,
+      equipped: "none",
+      goalId: null,
+      skills,
+      equippedSkills,
+      pendingRoll: null,
+      cooldownUntil: 0,
+      cooldownWindow: null,
+      receipts: [],
+      // Offline earnings are a tool, so the tool stays; the absence it had
+      // already banked belongs to the cycle that just ended.
+      offline: state.offline
+        ? { lastSeenAt: now, batch: null, report: null }
+        : null,
       history: [
-        ...state.history,
         {
           id: action.eventId ?? `rebirth:${count + 1}`,
           type: "rebirth",
+          at: now,
+          count: count + 1,
+          ...(granted ? { skill: granted.id } : {}),
+        },
+      ],
+    };
+  }
+  if (action.type === "ultra-rebirth") {
+    const count = state.ultraRebirths ?? 0;
+    if (action.expectedUltraRebirths !== count)
+      throw new Error(
+        "This ultra-rebirth belongs to an older cycle. Reload and try again.",
+      );
+    const now = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(now) || now > 8640000000000000)
+      throw new Error("Invalid ultra-rebirth time");
+    const blocked = ultraRebirthBlocker(state, now);
+    if (blocked) throw new Error(blocked);
+    if (!validAmount(count + 1))
+      throw new Error("Ultra-rebirth limit reached.");
+    // The full reset: everything the ladder kept is handed back for a fresh
+    // run, and the permanent wallet bonus grows by ten points.
+    return {
+      ...emptyProgress(),
+      profile: state.profile,
+      ultraRebirths: count + 1,
+      history: [
+        {
+          id: action.eventId ?? `ultra:${count + 1}`,
+          type: "ultra-rebirth",
           at: now,
           count: count + 1,
         },
@@ -233,10 +366,17 @@ export function applyProgress(state, action) {
       state.history?.some((e) => e.id === id && e.type === "roll")
     )
       return state;
-    // A pet multiplies only banked EP. result.totalEP — the scored value shown,
-    // ranked and recorded — is never modified.
-    const credited = walletEP(result.totalEP, state.activePet);
-    const bonus = petBonusEP(result.totalEP, state.activePet);
+    // Companions, ultra-rebirth bonuses and wallet skills multiply only banked
+    // EP. result.totalEP — the scored value shown, ranked and recorded — is
+    // never modified.
+    const fired = firedSkills(state, id, action.source);
+    const petFactor = petMultiplier(state.activePet);
+    const multiplier = petFactor * ultraRebirthMultiplier(state.ultraRebirths ?? 0) * skillWalletMultiplier(fired);
+    const credited =
+      multiplier === 1 ? result.totalEP : Math.round(result.totalEP * multiplier);
+    const bonus = credited - result.totalEP;
+    const petBonus =
+      petFactor === 1 ? 0 : Math.round(result.totalEP * petFactor) - result.totalEP;
     const balance = state.balance + credited,
       totalEarned = state.totalEarned + credited;
     if (!validAmount(balance) || !validAmount(totalEarned))
@@ -256,7 +396,11 @@ export function applyProgress(state, action) {
         number: result.number,
         tier: result.tier,
         ep: result.totalEP,
-        ...(bonus ? { petBonus: bonus, pet: state.activePet } : {}),
+        ...(petBonus ? { petBonus, pet: state.activePet } : {}),
+        ...(bonus && bonus !== petBonus
+          ? { walletBonus: bonus, walletMultiplier: multiplier }
+          : {}),
+        ...(fired.length ? { skills: fired } : {}),
         badges: earned,
         ...(action.source === "offline" ? { source: "offline" } : {}),
         ...(action.source !== "offline" &&
@@ -292,7 +436,14 @@ export function applyProgress(state, action) {
       ...state,
       history: [...(state.history ?? []), ...events],
       pendingRoll: null,
-      flywheelCharge: flywheelAfterSettlement(state, id, action.source),
+      // Turbo makes the settled roll count more than once towards Flywheel.
+      flywheelCharge: flywheelAfterSettlement(
+        state,
+        id,
+        action.source,
+        skillChargeFactor(fired),
+      ),
+      skillCharge: chargeAfterSettlement(state, id, action.source),
       balance,
       totalEarned,
       discovered: [
@@ -378,6 +529,17 @@ export function applyProgress(state, action) {
         : {}),
       owned: [...state.owned, item.id],
       equipped: item.kind === "aura" ? item.id : state.equipped,
+      // A bought skill joins the rack straight away if a slot is free.
+      ...(item.kind === "skill"
+        ? {
+            skills: [...new Set([...(state.skills ?? []), item.id])],
+            equippedSkills: autoEquip(
+              state.equippedSkills ?? [],
+              { ...state, owned: [...state.owned, item.id] },
+              item.id,
+            ),
+          }
+        : {}),
     };
   }
   if (action.type === "buy-pet") {
@@ -414,8 +576,46 @@ export function applyProgress(state, action) {
     if (action.id !== "none" && !(state.pets ?? []).includes(action.id))
       throw new Error("Find or buy this companion before equipping it.");
     if ((state.activePet ?? "none") === action.id) return state;
-    // Swapping companions is free and spends nothing.
-    return { ...state, activePet: action.id };
+    // A signature skill only exists while its companion is the active one, so
+    // the rack follows the swap. Swapping is free and spends nothing.
+    const leaving = skillForPet(state.activePet);
+    const equippedSkills = (state.equippedSkills ?? []).filter(
+      (id) => !leaving || id !== leaving.id,
+    );
+    const next = { ...state, activePet: action.id, equippedSkills };
+    const arriving = skillForPet(action.id);
+    return arriving
+      ? { ...next, equippedSkills: autoEquip(equippedSkills, next, arriving.id) }
+      : next;
+  }
+  if (action.type === "equip-skill") {
+    const skill = skillById.get(action.id);
+    if (!skill) throw new Error("That skill is not available.");
+    if (!skillUnlocked(skill.id, state))
+      throw new Error(
+        skill.source === "pet"
+          ? "Equip this companion to use its signature skill."
+          : "Unlock this skill before equipping it.",
+      );
+    const equipped = [...new Set(state.equippedSkills ?? [])];
+    const wanted = action.equipped ?? !equipped.includes(skill.id);
+    if (wanted && !equipped.includes(skill.id)) {
+      const slots = skillSlots(state.owned ?? []);
+      if (equipped.length >= slots)
+        throw new Error(
+          `Your rack holds ${slots} skills. Unequip one, or buy a bigger Skill Bay.`,
+        );
+      equipped.push(skill.id);
+    }
+    if (!wanted) {
+      const index = equipped.indexOf(skill.id);
+      if (index >= 0) equipped.splice(index, 1);
+    }
+    if (equipped.length === (state.equippedSkills ?? []).length &&
+      equipped.every((id, i) => id === state.equippedSkills[i]))
+      return state;
+    // Swapping skills is free, so there is no history entry and no charge lost.
+    return { ...state, equippedSkills: equipped };
   }
   if (action.type === "equip") {
     if (
@@ -498,9 +698,37 @@ function parseHistory(value) {
           ...(["boost", "charge"].includes(e.flywheel)
             ? { flywheel: e.flywheel }
             : {}),
+          ...(typeof e.pet === "string" && petById.has(e.pet)
+            ? { pet: e.pet }
+            : {}),
+          ...(validAmount(e.petBonus) && e.petBonus
+            ? { petBonus: e.petBonus }
+            : {}),
+          ...(validAmount(e.walletBonus) && e.walletBonus
+            ? {
+                walletBonus: e.walletBonus,
+                ...(typeof e.walletMultiplier === "number" &&
+                Number.isFinite(e.walletMultiplier) &&
+                e.walletMultiplier > 1
+                  ? { walletMultiplier: e.walletMultiplier }
+                  : {}),
+              }
+            : {}),
+          // Which charged skills fired on this roll: the receipt of the charge
+          // it spent, kept for the activity feed.
+          ...(Array.isArray(e.skills)
+            ? { skills: e.skills.filter((id) => skillById.has(id)) }
+            : {}),
         };
       }
     } else if (e.type === "rebirth") {
+      if (!validAmount(e.count) || e.count < 1) return [];
+      next = {
+        ...base,
+        count: e.count,
+        ...(skillById.has(e.skill) ? { skill: e.skill } : {}),
+      };
+    } else if (e.type === "ultra-rebirth") {
       if (!validAmount(e.count) || e.count < 1) return [];
       next = { ...base, count: e.count };
     } else if (["purchase", "equip"].includes(e.type)) {
@@ -527,6 +755,19 @@ function parseHistory(value) {
 
 export function parsePending(p, owned = null) {
   if (p == null) return null;
+  // A committed roll snapshots the armed skills that fired on it, so a reload
+  // can never re-fire a circle. The snapshot is validated like the timings.
+  const skills =
+    p.skills == null
+      ? []
+      : Array.isArray(p.skills)
+        ? p.skills.filter((id) => skillById.has(id))
+        : null;
+  if (skills === null || skills.length !== (p.skills?.length ?? 0))
+    throw new Error("Invalid committed roll");
+  const plan = drawPlanFor(skills);
+  const waived = skillWaivesCooldown(skills);
+  const draws = p.draws == null ? null : p.draws;
   if (
     typeof p.id !== "string" ||
     !p.id ||
@@ -537,8 +778,17 @@ export function parsePending(p, owned = null) {
     !ROLL_DURATIONS.includes(p.rollMS) ||
     ![...COOLDOWN_DURATIONS, 0].includes(p.cooldownMS) ||
     (p.flywheel != null && !["charge", "boost"].includes(p.flywheel)) ||
-    (p.cooldownMS === 0) !== (p.flywheel === "boost") ||
-    !validAmount(p.startedAt + p.rollMS + p.cooldownMS)
+    // A free roll must be explained: a Flywheel boost or a cooldown-waiving
+    // skill. Nothing else may commit a zero cooldown.
+    (p.cooldownMS === 0) !== (p.flywheel === "boost" || waived) ||
+    !validAmount(p.startedAt + p.rollMS + p.cooldownMS) ||
+    (draws !== null &&
+      (!plan ||
+        !Array.isArray(draws) ||
+        draws.length < 1 ||
+        draws.length > Math.min(plan.attempts, SKILL_MAX_DRAWS) ||
+        !draws.every((number) => validAmount(number) && number <= 1000000) ||
+        !draws.includes(p.number)))
   )
     throw new Error("Invalid committed roll");
   // Tamper guard: a committed roll may never be faster than the timings its own
@@ -560,6 +810,8 @@ export function parsePending(p, owned = null) {
     startedAt: p.startedAt,
     rollMS: p.rollMS,
     cooldownMS: p.cooldownMS,
+    ...(skills.length ? { skills } : {}),
+    ...(draws ? { draws } : {}),
     ...(p.flywheel ? { flywheel: p.flywheel } : {}),
   };
 }

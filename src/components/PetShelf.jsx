@@ -7,6 +7,7 @@ import {
   formatMultiplier,
   PET_DROP_CHANCE,
 } from "../pets.js";
+import { skillForPet, skillEffectSummary, skillSlots } from "../skills.js";
 import { useFormatEP } from "../use-settings.jsx";
 import Emoji from "./Emoji";
 import "../pets.css";
@@ -35,14 +36,17 @@ export default function PetShelf({ progress, onAction, notify }) {
   }
 
   const oneIn = Math.round(1 / PET_DROP_CHANCE);
+  const slots = skillSlots(progress.owned);
+  const signature = PETS.map((pet) => skillForPet(pet.id)).filter(Boolean);
   return (
     <section className="shop-category pet-shelf">
       <div className="shop-section-heading">
         <div>
           <h2>Companions</h2>
           <p>
-            A small bonus to the EP you bank. Buy one, or find one free at
-            roughly 1 in {oneIn} rolls.
+            A bonus to the EP you bank and one exclusive skill of their own.
+            Buy one, or find one free at roughly 1 in {oneIn} rolls. Your rack
+            holds {slots} {slots === 1 ? "skill" : "skills"}.
           </p>
         </div>
         <button
@@ -60,9 +64,11 @@ export default function PetShelf({ progress, onAction, notify }) {
         </button>
       </div>
       <p className="pet-disclaimer">
-        A companion multiplies only the EP added to your wallet. Your rolled
-        number, its tier, its badges and its score are completely unaffected,
-        and your odds never change.
+        A companion multiplies only the EP added to your wallet. Its signature
+        skill is only available while that companion is the active one, and it
+        still needs a free slot in your rack. Your rolled number, its tier, its
+        badges and its score are completely unaffected, and your odds never
+        change.
       </p>
       <ul className="pet-grid">
         {PETS.map((pet) => {
@@ -91,6 +97,15 @@ export default function PetShelf({ progress, onAction, notify }) {
                   </span>
                 </div>
                 <p className="pet-description">{pet.description}</p>
+                {skillForPet(pet.id) && (
+                  <p className="pet-skill">
+                    <span className="pet-skill-name">
+                      <Sparkles size={11} />{" "}
+                      {skillForPet(pet.id).name}
+                    </span>
+                    {skillEffectSummary(skillForPet(pet.id))}
+                  </p>
+                )}
                 <div className="pet-actions">
                   <span className="pet-bonus">
                     {petBonusLabel(pet.multiplier)}
@@ -139,7 +154,8 @@ export default function PetShelf({ progress, onAction, notify }) {
         })}
       </ul>
       <p className="pet-footnote">
-        {owned.length} of {PETS.length} companions found. Swapping between the
+        {owned.length} of {PETS.length} companions found, and{" "}
+        {signature.length} signature skills between them. Swapping between the
         ones you own is always free.
       </p>
     </section>

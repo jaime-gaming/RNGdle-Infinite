@@ -4,7 +4,8 @@ import RollProgress from "./RollProgress";
 import GoalRecap from "./GoalRecap";
 import CooldownFill from "./CooldownFill";
 import { parseCooldownWindow, displayedCooldownSeconds } from "../cooldown.js";
-import FlywheelMeter from "./FlywheelMeter";
+import SkillBar from "./SkillBar";
+import PetParade from "./PetParade";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
 import {
@@ -481,12 +482,24 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
-      {preferences.showFlywheelMeter && (
-        <FlywheelMeter
+      {/* The corner rack: charged circles only, no copy. A circle that is full
+          fires on the next roll, and during that roll it shows as firing. */}
+      {preferences.showSkillBar && (
+        <SkillBar
           progress={session}
-          boosted={!!run && run.flywheel === "boost" && !runSettled}
+          firing={[
+            ...(run && !runSettled ? (run.skills ?? []) : []),
+            ...(run && run.flywheel === "boost" && !runSettled
+              ? ["flywheel"]
+              : []),
+          ]}
         />
       )}
+      <PetParade
+        pets={session.pets ?? []}
+        active={session.activePet}
+        reducedMotion={reducedMotion}
+      />
       {ownsAutoRoll && (
         <div className="auto-roll-control">
           <div className="auto-roll-heading">

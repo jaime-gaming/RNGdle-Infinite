@@ -2,6 +2,18 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.3",
+    title: "companions, skills and a rebirth you can actually reach",
+    body: [
+      "13 companions now. they hit harder and they walk around the roll screen.",
+      "every companion carries its own exclusive skill, and the shop sells more.",
+      "skills are circles in the top-left corner. full circle, next roll fires it.",
+      "flywheel lives in the same rack now. same charge, same boost.",
+      "rebirth is a ladder: 30% shows it, 50% gets the first one, +10% per cycle after.",
+      "finish all six and you can ultra-rebirth for a permanent +10% EP.",
+    ],
+  },
+  {
     version: "v0.2",
     title: "tf is this update",
     body: [

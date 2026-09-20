@@ -423,7 +423,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   ).toHaveAttribute("value", "0");
   expect(
     await page
-      .locator(".flywheel-meter>svg")
+      .locator(".skill-bar .skill-ring")
       .evaluate((e) => getComputedStyle(e).animationName),
   ).toBe("none");
   expect(

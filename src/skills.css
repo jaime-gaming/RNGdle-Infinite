@@ -1,0 +1,180 @@
+/* The skill rack: a corner of icons with filling circles and no text at all.
+   Everything a player needs to read lives in the tooltip, which opens on hover
+   or keyboard focus. */
+.skill-bar {
+  position: fixed;
+  top: 91px;
+  left: 14px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.skill-slot {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: help;
+  outline: none;
+}
+.skill-slot:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.skill-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.skill-ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+.skill-ring-track {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 3;
+}
+.skill-ring-fill {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 320ms ease-out;
+}
+.skill-ring-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--secondary);
+}
+.skill-bar .tint-gold .skill-ring-fill {
+  stroke: #d9a441;
+}
+.skill-bar .tint-pink .skill-ring-fill {
+  stroke: #d97ba6;
+}
+.skill-bar .tint-cyan .skill-ring-fill {
+  stroke: #4bb3c4;
+}
+.skill-bar .tint-violet .skill-ring-fill {
+  stroke: #8a7ad9;
+}
+.skill-bar .tint-green .skill-ring-fill {
+  stroke: var(--green);
+}
+.skill-bar .tint-orange .skill-ring-fill {
+  stroke: #d98241;
+}
+.skill-bar .tint-steel .skill-ring-fill {
+  stroke: var(--secondary);
+}
+.skill-slot.is-armed .skill-ring-icon {
+  color: var(--ink);
+}
+.skill-slot.is-armed .skill-ring {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--green) 55%, transparent));
+  animation: skill-ready 2.6s ease-in-out infinite;
+}
+.skill-slot.is-firing .skill-ring {
+  animation: skill-fire 900ms ease-out 1;
+}
+.skill-slot.is-firing .skill-ring-icon {
+  color: var(--green);
+}
+@keyframes skill-ready {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+@keyframes skill-fire {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  45% {
+    transform: scale(1.18) rotate(-12deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+/* The tooltip is the only place this corner ever shows words. */
+.skill-tooltip {
+  position: absolute;
+  top: -6px;
+  left: calc(100% + 12px);
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+  width: 232px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 14%);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+  color: var(--secondary);
+  pointer-events: none;
+}
+.skill-slot:hover .skill-tooltip,
+.skill-slot:focus-visible .skill-tooltip,
+.skill-slot:focus-within .skill-tooltip {
+  display: flex;
+}
+.skill-tooltip strong {
+  font-size: 12px;
+  color: var(--ink);
+}
+.skill-tooltip-effect {
+  color: var(--secondary);
+}
+.skill-tooltip-meta {
+  font-family: "Space Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.skill-tooltip-state {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.skill-slot:not(.is-armed) .skill-tooltip-state {
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .skill-bar {
+    top: 68px;
+    left: 8px;
+    gap: 7px;
+  }
+  .skill-slot .skill-ring {
+    width: 34px !important;
+    height: 34px !important;
+  }
+  .skill-tooltip {
+    left: 0;
+    top: calc(100% + 8px);
+    width: min(240px, calc(100vw - 32px));
+  }
+}
+/* Motion is decoration here: the state is still readable from the ring. */
+@media (prefers-reduced-motion: reduce) {
+  .skill-slot.is-armed .skill-ring,
+  .skill-slot.is-firing .skill-ring {
+    animation: none;
+  }
+}

@@ -190,11 +190,28 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     "offline-clock-3": 8500000,
     "offline-vault-1": 6000000,
     "offline-vault-2": 11000000,
+    // v0.3 skills and the two rack upgrades.
+    surge: 180000,
+    trail: 320000,
+    bounce: 500000,
+    twice: 900000,
+    bedrock: 1600000,
+    turbo: 2600000,
+    quarry: 6000000,
+    "skill-bay-1": 1000000,
+    "skill-bay-2": 4000000,
   };
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(34);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(43);
+  // A skill product carries its effect in skills.js, never inside the product:
+  // the shop only mirrors the catalogue so both read the same numbers.
+  for (const product of shopProducts.filter((p) => p.kind === "skill")) {
+    expect(typeof product.skillId).toBe("string");
+    expect(product.value).toBeUndefined();
+    expect(product.floor).toBeUndefined();
+  }
   // Every aura is cosmetic: none may carry a timing, charge or cap payload.
   for (const aura of shopProducts.filter((p) => p.kind === "aura")) {
     expect(aura.value).toBeUndefined();
@@ -214,5 +231,5 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
       expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
   // The whole catalogue stays within a sane multiple of the cheapest upgrade.
   const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBeLessThanOrEqual(90000000);
+  expect(total).toBeLessThanOrEqual(110000000);
 });

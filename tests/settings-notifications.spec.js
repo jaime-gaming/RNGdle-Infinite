@@ -11,6 +11,7 @@ import {
   shopProducts,
   productById,
 } from "../src/shop-data.js";
+import { SKILL_IDS } from "../src/skills.js";
 
 const rich = (extra = {}) => ({
   ...emptyProgress(),
@@ -21,6 +22,18 @@ const rich = (extra = {}) => ({
 });
 const buy = (p, id, at = 1000) => applyProgress(p, { type: "buy", id, at });
 
+test("the v0.2 Flywheel-meter preference migrates to the skill bar", () => {
+  expect(
+    parseSettings(JSON.stringify({ showFlywheelMeter: false })).showSkillBar,
+  ).toBe(false);
+  // An explicit new value always wins over the legacy key.
+  expect(
+    parseSettings(
+      JSON.stringify({ showFlywheelMeter: false, showSkillBar: true }),
+    ).showSkillBar,
+  ).toBe(true);
+});
+
 test("settings default to a quiet, unchanged game and are keyed separately from progress", () => {
   expect(SETTINGS_KEY).not.toBe("rng-infinite-progress-v1");
   expect(defaultSettings).toEqual({
@@ -28,7 +41,7 @@ test("settings default to a quiet, unchanged game and are keyed separately from 
     notifySound: false,
     reduceMotion: "system",
     compactNumbers: false,
-    showFlywheelMeter: true,
+    showSkillBar: true,
     showGoalRecap: true,
     confirmPurchases: true,
     autoRollDefault: false,
@@ -118,11 +131,17 @@ test("every catalogue entry declares a known kind and late tiers stay optional",
     "utility",
     "offline",
     "offline-cap",
+    "skill",
+    "skill-slot",
   ]);
   for (const product of shopProducts) {
     expect(kinds.has(product.kind)).toBe(true);
     if (product.lateGame) expect(product.requires).toBeTruthy();
     if (product.requires) expect(productById.has(product.requires)).toBe(true);
+    // Skills carry no payload of their own: skills.js is the single source.
+    if (product.kind === "skill")
+      expect(SKILL_IDS).toContain(product.skillId);
+    if (product.kind === "skill-slot") expect(product.slots).toBeGreaterThan(2);
   }
 });
 

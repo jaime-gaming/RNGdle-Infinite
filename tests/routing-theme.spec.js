@@ -11,6 +11,7 @@ import {
 } from "../src/router.js";
 import {
   BADGE_TOTAL,
+  REBIRTH_STEPS,
   REBIRTH_OPTIONAL_KINDS,
   rebirthOptionalProducts,
   rebirthRelevantPurchases,
@@ -70,29 +71,33 @@ test("static hosting ships a 404 fallback so real URLs survive a direct load", (
   expect(config).toContain("404.html");
 });
 
-test("rebirth depends on badges alone, never on auras or tools", () => {
+test("the rebirth ladder depends on the collection alone, never on auras or tools", () => {
   expect(BADGE_TOTAL).toBe(allBadgeMetadata.length);
   expect(REBIRTH_OPTIONAL_KINDS).toContain("aura");
-  // Every aura and every optional tool is excluded from the requirement.
+  // No purchase is ever part of a rung: shekels can buy the shop, not the ladder.
   const auras = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
   for (const id of auras) expect(rebirthOptionalProducts).toContain(id);
   for (const id of ["auto-roll", "archive-lens", "offline-roller"])
     expect(rebirthOptionalProducts).toContain(id);
   expect(rebirthRelevantPurchases([...auras, "auto-roll"])).toEqual([]);
 
-  // A full collection unlocks rebirth with an empty shop; an all-owned shop
-  // with an incomplete collection still cannot.
+  // Rung 1 wants half the collection; owning nothing else is fine.
   const ids = allBadgeMetadata.map((b) => b.id);
-  const broke = { ...emptyProgress(), discovered: ids, owned: [] };
+  const rungOne = ids.slice(0, Math.ceil(REBIRTH_STEPS[0] * BADGE_TOTAL));
+  const broke = {
+    ...emptyProgress(),
+    discovered: rungOne,
+    owned: [],
+  };
   expect(rebirthBlocker(broke, 0)).toBe("");
+  // An all-owned shop with three badges missing from the rung still cannot.
   const rich = {
     ...emptyProgress(),
-    discovered: ids.slice(0, -1),
+    discovered: rungOne.slice(0, -1),
     owned: shopProducts.map((p) => p.id),
   };
-  expect(rebirthBlocker(rich, 0)).toContain(`Discover all ${BADGE_TOTAL}`);
+  expect(rebirthBlocker(rich, 0)).toContain(`Discover ${rungOne.length} badges`);
 });
-
 test("light mode keeps a single source of truth for the palette", () => {
   // roll.css is imported after styles.css, so an unscoped :root palette there
   // silently overrides light mode. Theme overrides must be theme-scoped.
@@ -117,10 +122,11 @@ test("light mode keeps a single source of truth for the palette", () => {
 
 test("rebalanced prices keep the catalogue shape and every chain affordable", () => {
   const price = Object.fromEntries(shopProducts.map((p) => [p.id, p.price]));
-  // Same 34 products, cheaper curve: the grind shrank without losing content.
-  expect(shopProducts).toHaveLength(34);
+  // 34 upgrades plus the nine v0.3 skills and bays, cheaper curve: the grind
+  // shrank without losing content.
+  expect(shopProducts).toHaveLength(43);
   const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBe(79250000);
+  expect(total).toBe(96350000);
   expect(total).toBeLessThan(131145000);
   // The first upgrade of each visible chain stays reachable early.
   expect(price["quickwind-1"]).toBeLessThanOrEqual(30000);

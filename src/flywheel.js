@@ -14,12 +14,12 @@ export function flywheelForDraw(progress) {
     ? "boost"
     : "charge";
 }
-export function flywheelAfterSettlement(progress, id, source) {
+export function flywheelAfterSettlement(progress, id, source, factor = 1) {
   const count = progress.flywheelCharge ?? 0;
   return source !== "offline" &&
     progress.owned.includes("flywheel") &&
     progress.pendingRoll?.id === id &&
     progress.pendingRoll.flywheel === "charge"
-    ? Math.min(flywheelRequired(progress.owned), count + 1)
+    ? Math.min(flywheelRequired(progress.owned), count + Math.max(1, factor))
     : count;
 }
