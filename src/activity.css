@@ -248,3 +248,17 @@
   text-decoration: underline;
   padding: 0;
 }
+
+/* Which charged skills fired on a historical roll. */
+.activity-skills {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: "Space Mono", monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green);
+}

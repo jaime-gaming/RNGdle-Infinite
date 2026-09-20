@@ -7,8 +7,10 @@ import {
   ShoppingBag,
   Check,
   RotateCcw,
+  Infinity as InfinityIcon,
 } from "lucide-react";
 import NumberBox from "./NumberBox";
+import { skillById } from "../skills.js";
 import { badges } from "../badges";
 import { formatEP } from "../roll-data";
 import "../activity.css";
@@ -54,7 +56,8 @@ export default function ActivityFeed({
             filter === "All activity" ||
             (filter === "Rolls" && e.type === "roll") ||
             (filter === "Offline" && e.source === "offline") ||
-            (filter === "Rebirths" && e.type === "rebirth") ||
+            (filter === "Rebirths" &&
+              ["rebirth", "ultra-rebirth"].includes(e.type)) ||
             (filter === "Badge unlocks" && e.type === "unlock") ||
             (filter === "Shop" && ["purchase", "equip"].includes(e.type)),
         )
@@ -225,6 +228,8 @@ export default function ActivityFeed({
                   <ShoppingBag size={19} />
                 ) : event.type === "rebirth" ? (
                   <RotateCcw size={19} />
+                ) : event.type === "ultra-rebirth" ? (
+                  <InfinityIcon size={19} />
                 ) : (
                   <Check size={19} />
                 )}
@@ -244,7 +249,9 @@ export default function ActivityFeed({
                           ? `Purchased ${event.name}`
                           : event.type === "rebirth"
                             ? `Rebirth ${event.count}`
-                            : `Equipped ${event.name}`}
+                            : event.type === "ultra-rebirth"
+                              ? `Ultra-rebirth ${event.count}`
+                              : `Equipped ${event.name}`}
                   </h2>
                   <time dateTime={new Date(event.at).toISOString()}>
                     {new Date(event.at).toLocaleString(undefined, {
@@ -269,7 +276,18 @@ export default function ActivityFeed({
                         <span>
                           {event.tier.toUpperCase()} · {event.badges.length}{" "}
                           badges earned
+                          {event.walletBonus
+                            ? ` · +${formatEP(event.walletBonus)} EP extra`
+                            : ""}
                         </span>
+                        {!!event.skills?.length && (
+                          <span className="activity-skills">
+                            {event.skills
+                              .map((id) => skillById.get(id)?.name)
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <details>
@@ -287,8 +305,14 @@ export default function ActivityFeed({
                   </>
                 ) : event.type === "rebirth" ? (
                   <p>
-                    All badges collected. EP, collection and shop items reset.
-                    Profile and history kept.
+                    New cycle started{event.skill ? ` · ${skillById.get(event.skill)?.name} unlocked` : ""}.
+                    The collection, auras and activity history reset; EP,
+                    upgrades, companions and skills were kept.
+                  </p>
+                ) : event.type === "ultra-rebirth" ? (
+                  <p>
+                    Everything reset, including the rebirth ladder. The
+                    permanent wallet bonus grew by 10 points.
                   </p>
                 ) : (
                   <p className="activity-transaction">

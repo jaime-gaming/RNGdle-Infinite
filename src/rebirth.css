@@ -68,3 +68,76 @@
     flex-wrap: wrap;
   }
 }
+
+/* The ladder, rung by rung: 50% to 100% of the collection. */
+.rebirth-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 220px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex-shrink: 0;
+}
+.rebirth-ladder li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rebirth-ladder li.is-done {
+  border-color: var(--green);
+  color: var(--green);
+}
+.rebirth-ladder li.is-current {
+  border-color: var(--text);
+  color: var(--text);
+  font-weight: 650;
+}
+.rebirth-rung-percent {
+  font-family: "Space Mono", monospace;
+}
+.rebirth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.rebirth-ultra {
+  border-color: #d9a441;
+  color: #d9a441;
+}
+.rebirth-ultra:disabled {
+  border-color: var(--border);
+  color: var(--muted);
+}
+.rebirth-ultra-note {
+  font-size: 11px !important;
+  color: #b8860b !important;
+}
+/* The cosmetic mark an ultra-rebirth leaves on the header. */
+.ultra-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid #d9a441;
+  border-radius: 999px;
+  background: color-mix(in srgb, #d9a441 12%, transparent);
+  font-family: "Space Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: #b8860b;
+  white-space: nowrap;
+}
+[data-theme="dark"] .ultra-mark {
+  color: #e8c268;
+}

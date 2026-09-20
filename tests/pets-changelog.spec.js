@@ -24,6 +24,7 @@ import {
   readSeenVersion,
 } from "../src/changelog.js";
 import { buildShareText, GAME_URL } from "../src/roll-data.js";
+import { skillForPet } from "../src/skills.js";
 import { evaluate } from "./helpers/index.js";
 
 const fund = (balance) => ({
@@ -59,12 +60,24 @@ test("a companion multiplies banked EP only, never the scored roll", () => {
   expect(withPet.discovered).toEqual(plain.discovered);
 });
 
-test("companion multipliers stay small and ordered, and never reach the draw", () => {
-  expect(PETS).toHaveLength(6);
+test("companion multipliers stay ordered, and never reach the draw", () => {
+  expect(PETS).toHaveLength(13);
   const multipliers = PETS.map((p) => p.multiplier);
   expect(Math.min(...multipliers)).toBeGreaterThanOrEqual(1.01);
-  // A deliberate ceiling: companions nudge the economy, they do not replace it.
-  expect(Math.max(...multipliers)).toBeLessThanOrEqual(1.25);
+  // A deliberate ceiling, raised in v0.3: companions are meant to feel strong
+  // now, but they still only multiply the EP that reaches the wallet.
+  expect(Math.max(...multipliers)).toBeLessThanOrEqual(1.8);
+  // Every companion carries exactly one exclusive skill, and no two share one.
+  const signatures = PETS.map((p) => skillForPet(p.id)?.id);
+  expect(signatures.every(Boolean)).toBe(true);
+  expect(new Set(signatures).size).toBe(PETS.length);
+  for (const signature of PETS.map((p) => skillForPet(p.id))) {
+    expect(signature.source).toBe("pet");
+    expect(signature.charges).toBeGreaterThan(0);
+  }
+  // Drop weights fall as the reward grows, so a rarer companion is rarer.
+  const weights = PETS.map((p) => p.dropWeight);
+  expect([...weights].sort((a, b) => b - a)).toEqual(weights);
   expect([...multipliers].sort((a, b) => a - b)).toEqual(multipliers);
   expect(PETS.map((p) => p.price).sort((a, b) => a - b)).toEqual(
     PETS.map((p) => p.price),
@@ -210,9 +223,10 @@ test("share text ends with the public game link", () => {
   expect(text).toContain("RNGdle Infinite");
 });
 
-test("the changelog lists both releases and flags an unseen version", () => {
-  expect(CHANGELOG.map((e) => e.version)).toEqual(["v0.2", "v0.1"]);
-  expect(LATEST_VERSION).toBe("v0.2");
+test("the changelog lists every release and flags an unseen version", () => {
+  expect(CHANGELOG.map((e) => e.version)).toEqual(["v0.3", "v0.2", "v0.1"]);
+  expect(LATEST_VERSION).toBe("v0.3");
+  expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
   expect(launch.body).toEqual(["so uhhhh we launched RNGdle infinite"]);

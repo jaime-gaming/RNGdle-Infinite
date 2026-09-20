@@ -4,6 +4,7 @@ import {
   ShoppingBag,
   History,
   Medal,
+  Infinity as InfinityIcon,
   Sun,
   Moon,
   Monitor,
@@ -40,6 +41,7 @@ import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
 import { petDrop, petById } from "./pets.js";
+import { skillPetLuck, skillById } from "./skills.js";
 import { randomUnit } from "./random.js";
 import Changelog from "./components/Changelog";
 import RebirthNav from "./components/RebirthNav";
@@ -99,7 +101,14 @@ function App() {
     // Companion luck is sampled here, independently of the number itself.
     let drop = null;
     try {
-      drop = petDrop(randomUnit(), session.pets);
+      // Trail and Drift widen the companion window for the roll they fire on.
+      // It is still its own sample, drawn after the number, so it can never
+      // bias the roll itself.
+      drop = petDrop(
+        randomUnit(),
+        session.pets,
+        skillPetLuck(session.pendingRoll?.skills),
+      );
     } catch {}
     const outcome = await dispatch({
       type: "complete",
@@ -294,6 +303,17 @@ function App() {
               <span className="version-flag-dot" aria-hidden="true" />
               <span>New Version</span>
             </button>
+          )}
+          {session.ultraRebirths > 0 && (
+            <span
+              className="ultra-mark"
+              title={`Ultra-rebirth ${session.ultraRebirths} · +${Math.round(
+                session.ultraRebirths * 10,
+              )}% EP on every banked roll`}
+            >
+              <InfinityIcon size={13} aria-hidden="true" /> Ultra ×
+              {session.ultraRebirths}
+            </span>
           )}
           <RebirthNav
             progress={session}
@@ -517,11 +537,9 @@ function App() {
               key={epoch}
               progress={session}
               onAction={dispatch}
-              onDone={() => {
+              onDone={(message) => {
                 navigate("roll");
-                notify(
-                  "Rebirth complete. Your collection and shop progress have been reset.",
-                );
+                notify(message ?? "Rebirth complete.");
               }}
             />
             <div className="filters">

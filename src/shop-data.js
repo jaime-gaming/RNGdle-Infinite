@@ -1,3 +1,5 @@
+import { SKILLS, SKILL_SLOTS } from "./skills.js";
+
 // Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
 export const BASE_COOLDOWN_MS = 60000;
@@ -381,6 +383,20 @@ export const shopProducts = [
     description:
       "Unlock number search and roll-tier filters across your entire activity archive. Your basic feed stays free.",
   },
+  // Skills are charged one-shot effects; every one is defined in skills.js so
+  // the shop, the save file and the roll engine read the same numbers.
+  ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({
+    id: skill.id,
+    kind: "skill",
+    skillId: skill.id,
+    name: skill.name,
+    price: skill.price,
+    icon: skill.icon,
+    tint: skill.tint,
+    charges: skill.charges,
+    description: skill.description,
+  })),
+  ...SKILL_SLOTS.map((bay) => ({ ...bay })),
 ];
 export function nextUpgrade(owned, kind) {
   const track = shopProducts.filter((p) => p.kind === kind);
