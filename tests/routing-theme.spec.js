@@ -96,7 +96,9 @@ test("the rebirth ladder depends on the collection alone, never on auras or tool
     discovered: rungOne.slice(0, -1),
     owned: shopProducts.map((p) => p.id),
   };
-  expect(rebirthBlocker(rich, 0)).toContain(`Discover ${rungOne.length} badges`);
+  expect(rebirthBlocker(rich, 0)).toContain(
+    `Discover ${rungOne.length} badges`,
+  );
 });
 test("light mode keeps a single source of truth for the palette", () => {
   // roll.css is imported after styles.css, so an unscoped :root palette there

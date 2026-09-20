@@ -353,7 +353,8 @@ export function useProgress() {
           const plan = drawPlanFor(armed);
           if (flywheel === "boost" || skillWaivesCooldown(armed))
             timing.cooldownMS = 0;
-          let result, draws = null;
+          let result,
+            draws = null;
           if (!plan) result = await generateRoll();
           else {
             draws = [];
@@ -467,15 +468,15 @@ export function useProgress() {
                     ? "Rebirth could not be saved. Your progress has not been reset."
                     : action.type === "ultra-rebirth"
                       ? "Ultra-rebirth could not be saved. Your progress has not been reset."
-                    : action.type.startsWith("offline-")
-                      ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
-                      : action.type === "register"
-                        ? "Sign-up could not be saved. Your guest progress is still available in this tab."
-                        : action.type === "draw"
-                          ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
-                          : action.type === "goal"
-                            ? "Your goal could not be saved. Your previous goal and EP are unchanged."
-                            : "Purchase or equipment change not saved. Your EP has not been spent.",
+                      : action.type.startsWith("offline-")
+                        ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
+                        : action.type === "register"
+                          ? "Sign-up could not be saved. Your guest progress is still available in this tab."
+                          : action.type === "draw"
+                            ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
+                            : action.type === "goal"
+                              ? "Your goal could not be saved. Your previous goal and EP are unchanged."
+                              : "Purchase or equipment change not saved. Your EP has not been spent.",
               };
           }
         }

@@ -44,7 +44,10 @@ const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
 // The wallet multiplier of a settled roll: companions, ultra-rebirth bonus and
 // any wallet skill that fired. It only ever scales the EP that reaches the
 // wallet — the scored roll, its tier and its rank never move.
-export function walletMultiplier(progress, skillIds = progress.pendingRoll?.skills) {
+export function walletMultiplier(
+  progress,
+  skillIds = progress.pendingRoll?.skills,
+) {
   return (
     petMultiplier(progress.activePet) *
     ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
@@ -371,12 +374,19 @@ export function applyProgress(state, action) {
     // never modified.
     const fired = firedSkills(state, id, action.source);
     const petFactor = petMultiplier(state.activePet);
-    const multiplier = petFactor * ultraRebirthMultiplier(state.ultraRebirths ?? 0) * skillWalletMultiplier(fired);
+    const multiplier =
+      petFactor *
+      ultraRebirthMultiplier(state.ultraRebirths ?? 0) *
+      skillWalletMultiplier(fired);
     const credited =
-      multiplier === 1 ? result.totalEP : Math.round(result.totalEP * multiplier);
+      multiplier === 1
+        ? result.totalEP
+        : Math.round(result.totalEP * multiplier);
     const bonus = credited - result.totalEP;
     const petBonus =
-      petFactor === 1 ? 0 : Math.round(result.totalEP * petFactor) - result.totalEP;
+      petFactor === 1
+        ? 0
+        : Math.round(result.totalEP * petFactor) - result.totalEP;
     const balance = state.balance + credited,
       totalEarned = state.totalEarned + credited;
     if (!validAmount(balance) || !validAmount(totalEarned))
@@ -585,7 +595,10 @@ export function applyProgress(state, action) {
     const next = { ...state, activePet: action.id, equippedSkills };
     const arriving = skillForPet(action.id);
     return arriving
-      ? { ...next, equippedSkills: autoEquip(equippedSkills, next, arriving.id) }
+      ? {
+          ...next,
+          equippedSkills: autoEquip(equippedSkills, next, arriving.id),
+        }
       : next;
   }
   if (action.type === "equip-skill") {
@@ -611,8 +624,10 @@ export function applyProgress(state, action) {
       const index = equipped.indexOf(skill.id);
       if (index >= 0) equipped.splice(index, 1);
     }
-    if (equipped.length === (state.equippedSkills ?? []).length &&
-      equipped.every((id, i) => id === state.equippedSkills[i]))
+    if (
+      equipped.length === (state.equippedSkills ?? []).length &&
+      equipped.every((id, i) => id === state.equippedSkills[i])
+    )
       return state;
     // Swapping skills is free, so there is no history entry and no charge lost.
     return { ...state, equippedSkills: equipped };

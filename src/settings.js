@@ -40,7 +40,10 @@ export function parseSettings(raw) {
     if (typeof value[key] === "boolean") next[key] = value[key];
   // v0.2 saves stored the Flywheel meter toggle under its old name; the rack
   // that replaced it keeps the same preference.
-  if (typeof value.showFlywheelMeter === "boolean" && value.showSkillBar == null)
+  if (
+    typeof value.showFlywheelMeter === "boolean" &&
+    value.showSkillBar == null
+  )
     next.showSkillBar = value.showFlywheelMeter;
   if (["system", "on", "off"].includes(value.reduceMotion))
     next.reduceMotion = value.reduceMotion;

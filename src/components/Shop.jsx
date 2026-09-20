@@ -88,6 +88,18 @@ const icons = {
   quarry: Target,
   bay: LayoutGrid,
 };
+// The shop reads as a street of little stands rather than one long wall. The
+// jump bar at the top links straight to any of them, and each section is
+// addressable (/shop#skills) so a link can point at one shelf.
+export const SHOP_SECTIONS = [
+  { id: "skills", label: "Skills" },
+  { id: "pace", label: "Pace" },
+  { id: "companions", label: "Companions" },
+  { id: "auras", label: "Auras" },
+  { id: "offline", label: "Offline" },
+  { id: "tools", label: "Tools" },
+];
+
 export default function Shop({
   progress,
   focusProduct,
@@ -107,6 +119,17 @@ export default function Shop({
     dialog = useRef(null),
     returnFocus = useRef(null),
     returnKind = useRef(null);
+  function jumpTo(id) {
+    const target = document.getElementById(`shop-${id}`);
+    if (!target) return;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView({
+      behavior: reduce ? "instant" : "smooth",
+      block: "start",
+    });
+    target.focus({ preventScroll: true });
+    history.replaceState(null, "", `#${id}`);
+  }
   const settings = rollSettings(progress.owned);
   const { intervalMS: offlineInterval, cap: offlineCap } = offlineSettings(
     progress.owned,
@@ -115,6 +138,11 @@ export default function Shop({
   const goal = currentGoal(progress),
     suggested = recommendedGoal(progress),
     choices = availableGoals(progress);
+  useEffect(() => {
+    const id = location.hash.replace("#", "");
+    if (SHOP_SECTIONS.some((section) => section.id === id))
+      document.getElementById(`shop-${id}`)?.scrollIntoView({ block: "start" });
+  }, []);
   useEffect(() => {
     if (!focusProduct || !productById.has(focusProduct)) return;
     const frame = requestAnimationFrame(() => {
@@ -315,7 +343,8 @@ export default function Shop({
                 (!affordable || requires))
             }
             onClick={() => {
-              if (item.requiresProfile && !progress.profile) return openSignup();
+              if (item.requiresProfile && !progress.profile)
+                return openSignup();
               if (!owned)
                 return preferences.confirmPurchases
                   ? setSelected(item)
@@ -353,29 +382,27 @@ export default function Shop({
                 ? `Requires ${productById.get(item.requires).name}`
                 : !owned && !affordable
                   ? `${formatEP(item.price - progress.balance)} more EP needed`
-                    : owned
-                      ? aura
-                        ? "Equip whenever you like."
-                        : skill
-                          ? `${skillChargeOf(progress, item.id)} / ${item.charges} charged · ${
-                              equipped
-                                ? "in your rack"
-                                : "not in your rack yet"
-                            }.`
-                          : bay
-                            ? `Rack size: ${item.slots} skills. Swapping is always free.`
-                            : item.kind === "utility"
-                              ? item.id === "auto-roll"
-                                ? "Enable on the Roll page."
-                                : item.id === "offline-roller"
-                                  ? `Ready · one roll per ${offlineInterval / 60000} minutes away.`
-                                  : "Unlocked in History."
-                              : item.kind === "pace"
-                                ? `${progress.flywheelCharge ?? 0} / ${charges} charges · applies automatically.`
-                                : "Maximum level reached."
-                      : aura
-                        ? "One-time cosmetic purchase"
-                        : "One-time unlock · same odds and scores"}
+                  : owned
+                    ? aura
+                      ? "Equip whenever you like."
+                      : skill
+                        ? `${skillChargeOf(progress, item.id)} / ${item.charges} charged · ${
+                            equipped ? "in your rack" : "not in your rack yet"
+                          }.`
+                        : bay
+                          ? `Rack size: ${item.slots} skills. Swapping is always free.`
+                          : item.kind === "utility"
+                            ? item.id === "auto-roll"
+                              ? "Enable on the Roll page."
+                              : item.id === "offline-roller"
+                                ? `Ready · one roll per ${offlineInterval / 60000} minutes away.`
+                                : "Unlocked in History."
+                            : item.kind === "pace"
+                              ? `${progress.flywheelCharge ?? 0} / ${charges} charges · applies automatically.`
+                              : "Maximum level reached."
+                    : aura
+                      ? "One-time cosmetic purchase"
+                      : "One-time unlock · same odds and scores"}
           </small>
         </div>
       </article>
@@ -453,13 +480,52 @@ export default function Shop({
             : "Guest goals are temporary."}
         </small>
       </section>
-      <section className="shop-category">
+      <nav className="shop-jump" aria-label="Shop sections">
+        <span className="shop-jump-label">Jump to</span>
+        {SHOP_SECTIONS.map((section) => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            onClick={(event) => {
+              event.preventDefault();
+              jumpTo(section.id);
+            }}
+          >
+            {section.label}
+          </a>
+        ))}
+      </nav>
+      <section
+        className="shop-category skill-shelf"
+        id="shop-skills"
+        tabIndex={-1}
+      >
         <div className="shop-section-heading">
           <div>
-            <h2>Upgrade your pace</h2>
+            <h2>Skills</h2>
             <p>
-              One level at a time. Buy an upgrade to reveal the next one in its
-              path.
+              Charged effects. A circle fills as you roll; when it is full, the
+              next roll fires it. Flywheel sits in this shelf too — same charge,
+              same free roll. Your rack holds {skillSlots(progress.owned)}{" "}
+              {skillSlots(progress.owned) === 1 ? "skill" : "skills"}, equipping
+              and swapping is free, and every charge is kept.
+            </p>
+          </div>
+        </div>
+        <div className="shop-grid">
+          {card(nextUpgrade(progress.owned, "pace"))}
+          {shopProducts
+            .filter((item) => ["skill", "skill-slot"].includes(item.kind))
+            .map(card)}
+        </div>
+      </section>
+      <section className="shop-category" id="shop-pace" tabIndex={-1}>
+        <div className="shop-section-heading">
+          <div>
+            <h2>Pace</h2>
+            <p>
+              Shorter reveals and shorter cooldowns. One level at a time: buying
+              an upgrade reveals the next one in its path.
             </p>
           </div>
         </div>
@@ -467,7 +533,6 @@ export default function Shop({
           {["roll", "cooldown"].map((kind) =>
             card(nextUpgrade(progress.owned, kind)),
           )}
-          {card(nextUpgrade(progress.owned, "pace"))}
         </div>
       </section>
       {lastPurchase && (
@@ -492,7 +557,7 @@ export default function Shop({
         Timing upgrades apply when you start your next roll. An active reveal or
         cooldown is not shortened by a purchase.
       </p>
-      <section className="shop-category">
+      <section className="shop-category" id="shop-auras" tabIndex={-1}>
         <div className="shop-section-heading">
           <div>
             <h2>Roll auras</h2>
@@ -545,27 +610,7 @@ export default function Shop({
         </div>
       </section>
       <PetShelf progress={progress} onAction={onAction} notify={notify} />
-      <section className="shop-category skill-shelf">
-        <div className="shop-section-heading">
-          <div>
-            <h2>Skills</h2>
-            <p>
-              Charged effects. A circle fills as you roll; when it is full, the
-              next roll fires it. Your rack holds {skillSlots(progress.owned)}{" "}
-              {skillSlots(progress.owned) === 1 ? "skill" : "skills"} — Equipping
-              and swapping is free, and every charge is kept.
-            </p>
-          </div>
-        </div>
-        <div className="shop-grid">
-          {shopProducts
-            .filter((item) =>
-              ["skill", "skill-slot"].includes(item.kind),
-            )
-            .map(card)}
-        </div>
-      </section>
-      <section className="shop-category">
+      <section className="shop-category" id="shop-tools" tabIndex={-1}>
         <div className="shop-section-heading">
           <div>
             <h2>Tools</h2>
@@ -580,7 +625,7 @@ export default function Shop({
         </div>
       </section>
       {progress.owned.includes("offline-roller") && (
-        <section className="shop-category">
+        <section className="shop-category" id="shop-offline" tabIndex={-1}>
           <div className="shop-section-heading">
             <div>
               <h2>Offline upgrades</h2>
@@ -648,20 +693,20 @@ export default function Shop({
                   : selected.kind === "skill-slot"
                     ? `widens your rack to ${selected.slots} skill slots. Equipping and swapping skills stays free, and existing charge is kept.`
                     : selected.kind === "utility"
-                  ? selected.id === "auto-roll"
-                    ? "unlocks the Auto-Roll switch on the Roll page. It starts off and never skips the reveal or cooldown."
-                    : selected.id === "persistence-core"
-                      ? "makes Auto-Roll remember its switch after a reload and keep going while this tab is in the background. Timings, odds and settlement are unchanged."
-                      : selected.id === "offline-roller"
-                        ? "unlocks offline earnings: one normal roll per 10 minutes away, up to 144 rolls per absence. Calculated automatically on return; a local profile is required."
-                        : "unlocks advanced history search immediately."
-                  : selected.kind === "pace"
-                    ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge. Earned charge carries over up to this limit; a new Flywheel starts at zero charge. Reveals and scores are unchanged.`
-                    : selected.kind === "offline"
-                      ? `sets future offline earnings to one ordinary roll per ${selected.value / 60000} minutes. Your ${offlineCap}-roll cap per absence is unchanged. No retroactive rewards; committed batches must finish first.`
-                      : selected.kind === "offline-cap"
-                        ? `stores up to ${selected.value} offline rolls per absence instead of ${selected.from}. Rates, odds and EP are unchanged, and committed batches must finish first.`
-                        : "applies the upgrade to future rolls."}
+                      ? selected.id === "auto-roll"
+                        ? "unlocks the Auto-Roll switch on the Roll page. It starts off and never skips the reveal or cooldown."
+                        : selected.id === "persistence-core"
+                          ? "makes Auto-Roll remember its switch after a reload and keep going while this tab is in the background. Timings, odds and settlement are unchanged."
+                          : selected.id === "offline-roller"
+                            ? "unlocks offline earnings: one normal roll per 10 minutes away, up to 144 rolls per absence. Calculated automatically on return; a local profile is required."
+                            : "unlocks advanced history search immediately."
+                      : selected.kind === "pace"
+                        ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge. Earned charge carries over up to this limit; a new Flywheel starts at zero charge. Reveals and scores are unchanged.`
+                        : selected.kind === "offline"
+                          ? `sets future offline earnings to one ordinary roll per ${selected.value / 60000} minutes. Your ${offlineCap}-roll cap per absence is unchanged. No retroactive rewards; committed batches must finish first.`
+                          : selected.kind === "offline-cap"
+                            ? `stores up to ${selected.value} offline rolls per absence instead of ${selected.from}. Rates, odds and EP are unchanged, and committed batches must finish first.`
+                            : "applies the upgrade to future rolls."}
             </p>
             {!progress.profile && (
               <p className="guest-purchase-note">

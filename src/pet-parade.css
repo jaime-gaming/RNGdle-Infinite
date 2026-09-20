@@ -15,15 +15,15 @@
   top: var(--row);
   left: 0;
   display: block;
-  font-size: 21px;
-  opacity: 0.45;
+  font-size: 30px;
+  opacity: 0.5;
   filter: saturate(0.85);
   animation: pet-cross var(--duration) linear infinite;
   animation-delay: var(--delay);
 }
 .pet-drift.is-active {
-  font-size: 27px;
-  opacity: 0.8;
+  font-size: 40px;
+  opacity: 0.85;
   filter: none;
 }
 .pet-drift-body {

@@ -73,9 +73,9 @@ test("every skill states one effect, one charge cost and where it comes from", (
   // Every companion has exactly one signature, and every shop skill is sold.
   for (const pet of PETS) expect(skillForPet(pet.id)).toBeTruthy();
   for (const skill of shopSkills)
-    expect(shopProducts.some((p) => p.id === skill.id && p.kind === "skill")).toBe(
-      true,
-    );
+    expect(
+      shopProducts.some((p) => p.id === skill.id && p.kind === "skill"),
+    ).toBe(true);
   for (const step of REBIRTH_STEPS.map((_, index) => index + 1))
     if (step <= REBIRTH_TOTAL) expect(rebirthSkill(step)).toBeTruthy();
 });
@@ -91,26 +91,42 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
   expect(bay2.requires).toBe("skill-bay-1");
   expect(bay2.price / bay1.price).toBeLessThanOrEqual(4);
 
-  let p = fund(10000000, { owned: ["surge", "trail"], skills: ["surge", "trail"] });
+  let p = fund(10000000, {
+    owned: ["surge", "trail"],
+    skills: ["surge", "trail"],
+  });
   p = applyProgress(p, { type: "equip-skill", id: "surge", at: 1 });
   p = applyProgress(p, { type: "equip-skill", id: "trail", at: 1 });
   expect(p.equippedSkills).toEqual(["surge", "trail"]);
   const balance = p.balance;
   // A third skill does not fit until a bay is bought.
   expect(() =>
-    applyProgress({ ...p, owned: [...p.owned, "bounce"], skills: [...p.skills, "bounce"] }, {
-      type: "equip-skill",
-      id: "bounce",
-      at: 1,
-    }),
+    applyProgress(
+      { ...p, owned: [...p.owned, "bounce"], skills: [...p.skills, "bounce"] },
+      {
+        type: "equip-skill",
+        id: "bounce",
+        at: 1,
+      },
+    ),
   ).toThrow(/rack holds 2 skills/);
   // Unequipping and re-equipping spends nothing, and no charge is lost.
   const charged = { ...p, skillCharge: { surge: 4, trail: 2 } };
-  const swapped = applyProgress(charged, { type: "equip-skill", id: "surge", equipped: false, at: 1 });
+  const swapped = applyProgress(charged, {
+    type: "equip-skill",
+    id: "surge",
+    equipped: false,
+    at: 1,
+  });
   expect(swapped.equippedSkills).toEqual(["trail"]);
   expect(swapped.skillCharge.surge).toBe(4);
   expect(swapped.balance).toBe(balance);
-  const back = applyProgress(swapped, { type: "equip-skill", id: "surge", equipped: true, at: 1 });
+  const back = applyProgress(swapped, {
+    type: "equip-skill",
+    id: "surge",
+    equipped: true,
+    at: 1,
+  });
   expect(back.equippedSkills).toEqual(["trail", "surge"]);
 });
 
@@ -138,9 +154,9 @@ test("a companion's signature only exists while it is the active companion", () 
   );
   expect(forged.activePet).toBe("none");
   expect(forged.equippedSkills).toEqual([]);
-  expect(() => applyProgress(base, { type: "equip-skill", id: other.id, at: 1 })).toThrow(
-    /Equip this companion/,
-  );
+  expect(() =>
+    applyProgress(base, { type: "equip-skill", id: other.id, at: 1 }),
+  ).toThrow(/Equip this companion/);
 });
 
 test("circles charge on settled online rolls only, and firing empties them", () => {
@@ -150,19 +166,47 @@ test("circles charge on settled online rolls only, and firing empties them", () 
     equippedSkills: ["surge", "trail"],
   });
   // An offline settlement never charges a circle.
-  expect(chargeAfterSettlement({ ...base, pendingRoll: { id: "x", skills: ["surge"] } }, "x", "offline")).toEqual({});
+  expect(
+    chargeAfterSettlement(
+      { ...base, pendingRoll: { id: "x", skills: ["surge"] } },
+      "x",
+      "offline",
+    ),
+  ).toEqual({});
   // A settlement that does not match the committed roll charges nothing.
-  expect(chargeAfterSettlement({ ...base, pendingRoll: { id: "x", skills: [] } }, "y", "online")).toEqual({});
+  expect(
+    chargeAfterSettlement(
+      { ...base, pendingRoll: { id: "x", skills: [] } },
+      "y",
+      "online",
+    ),
+  ).toEqual({});
   // A committed online roll charges every equipped skill by one.
   const settled = applyProgress(
     { ...base, pendingRoll: roll("r1") },
-    { type: "complete", result: evaluate(1337), id: "r1", cooldownUntil: 100000, at: 2 },
+    {
+      type: "complete",
+      result: evaluate(1337),
+      id: "r1",
+      cooldownUntil: 100000,
+      at: 2,
+    },
   );
   expect(settled.skillCharge).toEqual({ surge: 1, trail: 1 });
   // Firing empties the circle that fired and charges the others.
   const fired = applyProgress(
-    { ...base, skillCharge: { surge: 6, trail: 3 }, pendingRoll: roll("r2", ["surge"]) },
-    { type: "complete", result: evaluate(1337), id: "r2", cooldownUntil: 100000, at: 2 },
+    {
+      ...base,
+      skillCharge: { surge: 6, trail: 3 },
+      pendingRoll: roll("r2", ["surge"]),
+    },
+    {
+      type: "complete",
+      result: evaluate(1337),
+      id: "r2",
+      cooldownUntil: 100000,
+      at: 2,
+    },
   );
   expect(fired.skillCharge).toEqual({ surge: 0, trail: 4 });
   // Turbo counts triple, for Flywheel and for the rack alike.
@@ -200,12 +244,15 @@ test("armed skills are the equipped, unlocked, full circles", () => {
   });
   expect(armedSkills(base)).toEqual(["surge"]);
   expect(skillArmed(base, "trail")).toBe(false);
-  expect(armedSkills({ ...base, skillCharge: { surge: 6, trail: 6 } })).toEqual([
-    "surge",
-    "trail",
-  ]);
+  expect(armedSkills({ ...base, skillCharge: { surge: 6, trail: 6 } })).toEqual(
+    ["surge", "trail"],
+  );
   // An equipped skill that is not unlocked never arms, whatever the charge says.
-  const forged = { ...base, skills: ["trail"], skillCharge: { surge: 6, trail: 6 } };
+  const forged = {
+    ...base,
+    skills: ["trail"],
+    skillCharge: { surge: 6, trail: 6 },
+  };
   expect(armedSkills(forged)).toEqual(["trail"]);
 });
 
@@ -250,7 +297,8 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
     { ...base, pendingRoll: roll("r2") },
     { type: "complete", result, id: "r2", cooldownUntil: 100000, at: 2 },
   );
-  const scored = (p, id) => p.history.find((e) => e.type === "roll" && e.id === id);
+  const scored = (p, id) =>
+    p.history.find((e) => e.type === "roll" && e.id === id);
   expect(scored(settled, "r1").ep).toBe(scored(plain, "r2").ep);
   expect(scored(settled, "r1").number).toBe(scored(plain, "r2").number);
   expect(scored(settled, "r1").tier).toBe(scored(plain, "r2").tier);
@@ -276,7 +324,9 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
     { type: "complete", result, id: "r3", cooldownUntil: 100000, at: 2 },
   );
   const multiplier = 2 * petById.get("dragonet").multiplier * (1 + 0.1 * 2);
-  expect(walletMultiplier({ activePet: "dragonet", ultraRebirths: 2 }, ["surge"])).toBeCloseTo(multiplier, 6);
+  expect(
+    walletMultiplier({ activePet: "dragonet", ultraRebirths: 2 }, ["surge"]),
+  ).toBeCloseTo(multiplier, 6);
   expect(combined.balance).toBe(Math.round(result.totalEP * multiplier));
   // And a reload keeps the receipt.
   const reloaded = parseProgress(JSON.stringify(combined));
@@ -290,7 +340,10 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   // Charge beyond a circle's limit is rejected outright.
   expect(() =>
     parseProgress(
-      JSON.stringify({ ...base, skillCharge: { surge: skillById.get("surge").charges + 1 } }),
+      JSON.stringify({
+        ...base,
+        skillCharge: { surge: skillById.get("surge").charges + 1 },
+      }),
     ),
   ).toThrow(/Invalid skill charge/);
   expect(() =>
@@ -342,9 +395,9 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
     parsePending(pending({ cooldownMS: 0, flywheel: "boost" })).cooldownMS,
   ).toBe(0);
   // Committed draws must belong to the plan that was charged for them.
-  expect(() =>
-    parsePending(pending({ draws: [604827, 12] })),
-  ).toThrow(/Invalid committed roll/);
+  expect(() => parsePending(pending({ draws: [604827, 12] }))).toThrow(
+    /Invalid committed roll/,
+  );
   expect(() =>
     parsePending(pending({ skills: ["twice"], draws: [604827, 12, 13] })),
   ).toThrow(/Invalid committed roll/);
@@ -377,7 +430,17 @@ test("rebirth keeps everything it earned, grants the ladder skill and clears the
     equippedSkills: ["surge"],
     skillCharge: { surge: 4 },
     flywheelCharge: 3,
-    history: [{ id: "old", type: "roll", at: 1, number: 5, tier: "trash", ep: 1, badges: [] }],
+    history: [
+      {
+        id: "old",
+        type: "roll",
+        at: 1,
+        number: 5,
+        tier: "trash",
+        ep: 1,
+        badges: [],
+      },
+    ],
     receipts: ["old"],
   });
   expect(REBIRTH_STEPS[0]).toBe(0.5);
@@ -467,14 +530,30 @@ test("the ultra-rebirth only exists at the top of the ladder and resets everythi
   expect(reborn.history[0]).toMatchObject({ type: "ultra-rebirth", count: 2 });
   // The bonus is permanent and multiplies banked EP only: +10% per ultra.
   expect(ULTRA_BONUS_PER_REBIRTH).toBe(0.1);
-  expect(walletMultiplier({ activePet: "none", ultraRebirths: 3 })).toBeCloseTo(1.3, 6);
+  expect(walletMultiplier({ activePet: "none", ultraRebirths: 3 })).toBeCloseTo(
+    1.3,
+    6,
+  );
   const result = evaluate(1337);
   const credited = applyProgress(
-    { ...reborn, balance: 0, totalEarned: 0, pendingRoll: { id: "u", number: 1337, startedAt: 1, rollMS: 45000, cooldownMS: 60000 } },
+    {
+      ...reborn,
+      balance: 0,
+      totalEarned: 0,
+      pendingRoll: {
+        id: "u",
+        number: 1337,
+        startedAt: 1,
+        rollMS: 45000,
+        cooldownMS: 60000,
+      },
+    },
     { type: "complete", result, id: "u", cooldownUntil: 2, at: 3 },
   );
   expect(credited.balance).toBe(Math.round(result.totalEP * 1.2));
-  expect(credited.history.find((e) => e.type === "roll").ep).toBe(result.totalEP);
+  expect(credited.history.find((e) => e.type === "roll").ep).toBe(
+    result.totalEP,
+  );
 });
 
 test("skill effects never touch the draw itself", () => {

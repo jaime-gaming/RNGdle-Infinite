@@ -191,7 +191,8 @@ export default function Rebirth({ progress, onAction, onDone }) {
                   +{Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1))}%
                   EP
                 </strong>{" "}
-                on every banked roll, forever. The next ladder starts again at 50%.
+                on every banked roll, forever. The next ladder starts again at
+                50%.
               </p>
             </>
           ) : (
@@ -206,9 +207,9 @@ export default function Rebirth({ progress, onAction, onDone }) {
                   the activity history.
                 </li>
                 <li>
-                  <strong>Keep:</strong> your EP, every upgrade, your companions,
-                  your skills and their charge, your profile and your rebirth
-                  count.
+                  <strong>Keep:</strong> your EP, every upgrade, your
+                  companions, your skills and their charge, your profile and
+                  your rebirth count.
                 </li>
               </ul>
               <p>
@@ -233,11 +234,9 @@ export default function Rebirth({ progress, onAction, onDone }) {
             />
           </label>
           {error && <p role="alert">{error}</p>}
-          {open === "ultra" ? (
-            ultraBlocker && <p role="status">{ultraBlocker}</p>
-          ) : (
-            blocker && <p role="status">{blocker}</p>
-          )}
+          {open === "ultra"
+            ? ultraBlocker && <p role="status">{ultraBlocker}</p>
+            : blocker && <p role="status">{blocker}</p>}
           <div className="purchase-actions">
             <button
               type="button"

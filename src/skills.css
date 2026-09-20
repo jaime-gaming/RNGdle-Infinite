@@ -79,7 +79,9 @@
   color: var(--ink);
 }
 .skill-slot.is-armed .skill-ring {
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--green) 55%, transparent));
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--green) 55%, transparent)
+  );
   animation: skill-ready 2.6s ease-in-out infinite;
 }
 .skill-slot.is-firing .skill-ring {
