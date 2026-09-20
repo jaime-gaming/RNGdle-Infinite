@@ -305,8 +305,11 @@ export default function ActivityFeed({
                   </>
                 ) : event.type === "rebirth" ? (
                   <p>
-                    New cycle started{event.skill ? ` · ${skillById.get(event.skill)?.name} unlocked` : ""}.
-                    The collection, auras and activity history reset; EP,
+                    New cycle started
+                    {event.skill
+                      ? ` · ${skillById.get(event.skill)?.name} unlocked`
+                      : ""}
+                    . The collection, auras and activity history reset; EP,
                     upgrades, companions and skills were kept.
                   </p>
                 ) : event.type === "ultra-rebirth" ? (

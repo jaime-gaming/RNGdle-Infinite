@@ -45,7 +45,8 @@ export default function About({ navigate }) {
       points: [
         "Quickwind shortens the reveal; Clockwork shortens the cooldown. Both are permanent and one-time.",
         "Flywheel grants a no-cooldown roll every few rolls. Tools add Auto-Roll, archive search and offline earnings.",
-        `${SKILLS.length} charged skills can be bought, won from companions or earned with a rebirth. A circle fills as you roll and the next roll fires it.`, 
+        `${SKILLS.length} charged skills can be bought, won from companions or earned with a rebirth. A circle fills as you roll and the next roll fires it.`,
+        "The shop is split into shelves — skills, pace, companions, auras, offline and tools — with a jump bar, and each shelf has its own link.",
         "Auras are purely cosmetic. Pick a goal and your savings towards it appear after each roll.",
         "Upgrades change timing and convenience only. They never touch your odds, your EP or your rank.",
       ],
@@ -88,6 +89,7 @@ export default function About({ navigate }) {
         "Signing up creates a local profile in this browser and starts a clean account — nothing from guest play carries over.",
         "There is no email, password, server or leaderboard. Clearing site data deletes the save.",
         "Refreshing resumes the same committed number and deadline. Tabs on one account share a single draw and reward.",
+        "Your profile shows how far you have come in this cycle, and you can export it as a file. There is no import — a file can never overwrite the game.",
       ],
     },
   ];

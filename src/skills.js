@@ -449,7 +449,9 @@ export function skillArmed(progress, id) {
 // Equipped, unlocked and full. These are the circles that fire on the next
 // committed roll, in rack order.
 export function armedSkills(progress) {
-  return (progress.equippedSkills ?? []).filter((id) => skillArmed(progress, id));
+  return (progress.equippedSkills ?? []).filter((id) =>
+    skillArmed(progress, id),
+  );
 }
 
 export function armedSkillDefs(progress) {
@@ -498,9 +500,7 @@ export function skillWalletMultiplier(ids = []) {
 export function skillChargeFactor(ids = []) {
   return ids.reduce((factor, id) => {
     const skill = skillById.get(id);
-    return skill?.kind === "overdrive"
-      ? Math.max(factor, skill.value)
-      : factor;
+    return skill?.kind === "overdrive" ? Math.max(factor, skill.value) : factor;
   }, 1);
 }
 
@@ -531,7 +531,8 @@ export function chargeAfterSettlement(progress, id, source) {
 // ---- Save validation ------------------------------------------------------
 export function validSkillCharge(skillCharge) {
   if (skillCharge == null) return true;
-  if (typeof skillCharge !== "object" || Array.isArray(skillCharge)) return false;
+  if (typeof skillCharge !== "object" || Array.isArray(skillCharge))
+    return false;
   return Object.entries(skillCharge).every(([id, value]) => {
     const skill = skillById.get(id);
     // An unknown key is not a value to trust or to punish: it is dropped on

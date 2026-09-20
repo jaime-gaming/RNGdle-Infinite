@@ -39,14 +39,18 @@ export default function PetShelf({ progress, onAction, notify }) {
   const slots = skillSlots(progress.owned);
   const signature = PETS.map((pet) => skillForPet(pet.id)).filter(Boolean);
   return (
-    <section className="shop-category pet-shelf">
+    <section
+      className="shop-category pet-shelf"
+      id="shop-companions"
+      tabIndex={-1}
+    >
       <div className="shop-section-heading">
         <div>
           <h2>Companions</h2>
           <p>
-            A bonus to the EP you bank and one exclusive skill of their own.
-            Buy one, or find one free at roughly 1 in {oneIn} rolls. Your rack
-            holds {slots} {slots === 1 ? "skill" : "skills"}.
+            A bonus to the EP you bank and one exclusive skill of their own. Buy
+            one, or find one free at roughly 1 in {oneIn} rolls. Your rack holds{" "}
+            {slots} {slots === 1 ? "skill" : "skills"}.
           </p>
         </div>
         <button
@@ -100,8 +104,7 @@ export default function PetShelf({ progress, onAction, notify }) {
                 {skillForPet(pet.id) && (
                   <p className="pet-skill">
                     <span className="pet-skill-name">
-                      <Sparkles size={11} />{" "}
-                      {skillForPet(pet.id).name}
+                      <Sparkles size={11} /> {skillForPet(pet.id).name}
                     </span>
                     {skillEffectSummary(skillForPet(pet.id))}
                   </p>
@@ -154,9 +157,9 @@ export default function PetShelf({ progress, onAction, notify }) {
         })}
       </ul>
       <p className="pet-footnote">
-        {owned.length} of {PETS.length} companions found, and{" "}
-        {signature.length} signature skills between them. Swapping between the
-        ones you own is always free.
+        {owned.length} of {PETS.length} companions found, and {signature.length}{" "}
+        signature skills between them. Swapping between the ones you own is
+        always free.
       </p>
     </section>
   );

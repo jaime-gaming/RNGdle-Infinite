@@ -720,6 +720,7 @@ function App() {
             {modal === "auth" && (
               <LocalProfile
                 profile={session.profile}
+                progress={session}
                 onAction={dispatch}
                 onClose={() => setModal(null)}
               />

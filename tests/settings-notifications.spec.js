@@ -139,8 +139,7 @@ test("every catalogue entry declares a known kind and late tiers stay optional",
     if (product.lateGame) expect(product.requires).toBeTruthy();
     if (product.requires) expect(productById.has(product.requires)).toBe(true);
     // Skills carry no payload of their own: skills.js is the single source.
-    if (product.kind === "skill")
-      expect(SKILL_IDS).toContain(product.skillId);
+    if (product.kind === "skill") expect(SKILL_IDS).toContain(product.skillId);
     if (product.kind === "skill-slot") expect(product.slots).toBeGreaterThan(2);
   }
 });

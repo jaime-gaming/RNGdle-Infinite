@@ -9,6 +9,8 @@ export const CHANGELOG = [
       "every companion carries its own exclusive skill, and the shop sells more.",
       "skills are circles in the top-left corner. full circle, next roll fires it.",
       "flywheel lives in the same rack now. same charge, same boost.",
+      "the shop has jump links now: skills, pace, companions, auras, offline, tools.",
+      "your profile shows how far you have come, and you can export it as a file.",
       "rebirth is a ladder: 30% shows it, 50% gets the first one, +10% per cycle after.",
       "finish all six and you can ultra-rebirth for a permanent +10% EP.",
     ],

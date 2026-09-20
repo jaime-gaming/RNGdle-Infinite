@@ -507,3 +507,62 @@ nav button:disabled,
 .aura-preview.aura-singularity {
   background: radial-gradient(ellipse at center, #a78bfa1c, var(--hover) 72%);
 }
+
+/* Section jump bar: the shop is a street of stands, and this is the signpost.
+   Each link is a real anchor (/shop#skills), so a shelf can be linked to. */
+.shop-jump {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 22px 0 4px;
+  padding: 10px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.shop-jump-label {
+  font: 500 10px var(--roll-font);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 2px;
+}
+.shop-jump a {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--secondary);
+  font: 500 12px var(--roll-font);
+  text-decoration: none;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.shop-jump a:hover,
+.shop-jump a:focus-visible {
+  color: var(--text);
+  border-color: var(--text);
+  background: var(--hover);
+}
+.shop-category {
+  scroll-margin-top: 96px;
+}
+.shop-category:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 6px;
+  border-radius: 6px;
+}
+@media (max-width: 640px) {
+  .shop-jump {
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .shop-jump a {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+}

@@ -9,7 +9,11 @@ import "../pet-parade.css";
 // reduced motion lines them up in a still row instead.
 const MAX_VISIBLE = 8;
 
-export default function PetParade({ pets = [], active = "none", reducedMotion }) {
+export default function PetParade({
+  pets = [],
+  active = "none",
+  reducedMotion,
+}) {
   if (!pets.length) return null;
   const ordered = [...pets].sort((a, b) =>
     a === active ? -1 : b === active ? 1 : 0,

@@ -47,9 +47,7 @@ const state = (extra = {}) => ({
 const action = { type: "rebirth", expectedRebirths: 0, at: 200000 };
 async function confirm(p, word = "REBIRTH") {
   await p.getByRole("button", { name: "Rebirth", exact: true }).click();
-  await p
-    .getByRole("textbox", { name: `Type ${word} to confirm` })
-    .fill(word);
+  await p.getByRole("textbox", { name: `Type ${word} to confirm` }).fill(word);
 }
 const scale = (p) =>
   p
@@ -71,8 +69,16 @@ test("the ladder climbs from half the collection to all of it", () => {
   expect(REBIRTH_VISIBLE_AT).toBe(71);
   expect(REBIRTH_STEPS).toEqual([0.5, 0.6, 0.7, 0.8, 0.9, 1]);
   expect(REBIRTH_TOTAL).toBe(6);
-  expect(rebirthRequirement(0)).toEqual({ rebirth: 1, percent: 50, badges: 118 });
-  expect(rebirthRequirement(1)).toEqual({ rebirth: 2, percent: 60, badges: 141 });
+  expect(rebirthRequirement(0)).toEqual({
+    rebirth: 1,
+    percent: 50,
+    badges: 118,
+  });
+  expect(rebirthRequirement(1)).toEqual({
+    rebirth: 2,
+    percent: 60,
+    badges: 141,
+  });
   expect(rebirthRequirement(2).badges).toBe(165);
   expect(rebirthRequirement(3).badges).toBe(188);
   expect(rebirthRequirement(4).badges).toBe(212);
@@ -101,10 +107,13 @@ test("the ladder climbs from half the collection to all of it", () => {
     applyProgress({ ...state(), cooldownUntil: 200001 }, action),
   ).toThrow("cooldown");
   expect(() =>
-    applyProgress({ ...state(), rebirths: 1, discovered: ids.slice(0, 140) }, {
-      ...action,
-      expectedRebirths: 1,
-    }),
+    applyProgress(
+      { ...state(), rebirths: 1, discovered: ids.slice(0, 140) },
+      {
+        ...action,
+        expectedRebirths: 1,
+      },
+    ),
   ).toThrow(/Discover 141 badges \(60%\)/);
   expect(rebirthBlocker(state(), 200000)).toBe("");
   expect(() => applyProgress({ ...state(), rebirths: 1 }, action)).toThrow(
@@ -237,12 +246,12 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
   expect(progress.equippedSkills).toContain("reborn-drive");
   // The ladder is complete: rebirth is finished, the ultra-rebirth is next.
   expect(rebirthRequirement(REBIRTH_TOTAL)).toBeNull();
-  expect(rebirthBlocker({ ...progress, rebirths: REBIRTH_TOTAL }, 300000)).toMatch(
-    /ladder is complete/,
-  );
-  expect(ultraRebirthBlocker({ ...progress, rebirths: REBIRTH_TOTAL }, 300000)).toBe(
-    "",
-  );
+  expect(
+    rebirthBlocker({ ...progress, rebirths: REBIRTH_TOTAL }, 300000),
+  ).toMatch(/ladder is complete/);
+  expect(
+    ultraRebirthBlocker({ ...progress, rebirths: REBIRTH_TOTAL }, 300000),
+  ).toBe("");
   expect(
     ultraRebirthAvailable({ ...progress, rebirths: REBIRTH_TOTAL }, 300000),
   ).toBe(true);

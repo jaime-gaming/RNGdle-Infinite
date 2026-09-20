@@ -35,7 +35,10 @@ function ChargeRing({ fraction, tint, size = 42, children }) {
   const radius = (size - 5) / 2,
     circumference = 2 * Math.PI * radius;
   return (
-    <span className={`skill-ring tint-${tint}`} style={{ width: size, height: size }}>
+    <span
+      className={`skill-ring tint-${tint}`}
+      style={{ width: size, height: size }}
+    >
       <svg viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         <circle
           className="skill-ring-track"
@@ -50,7 +53,8 @@ function ChargeRing({ fraction, tint, size = 42, children }) {
           r={radius}
           style={{
             strokeDasharray: circumference,
-            strokeDashoffset: circumference * (1 - Math.min(1, Math.max(0, fraction))),
+            strokeDashoffset:
+              circumference * (1 - Math.min(1, Math.max(0, fraction))),
           }}
         />
       </svg>
@@ -89,7 +93,10 @@ export default function SkillBar({ progress, firing = [], className = "" }) {
               tabIndex={0}
               aria-label={label}
             >
-              <ChargeRing fraction={required ? flywheelCharge / required : 0} tint="steel">
+              <ChargeRing
+                fraction={required ? flywheelCharge / required : 0}
+                tint="steel"
+              >
                 <Cog size={18} aria-hidden="true" />
               </ChargeRing>
               <span className="skill-tooltip" role="tooltip">
@@ -130,10 +137,7 @@ export default function SkillBar({ progress, firing = [], className = "" }) {
               armed ? "Ready — fires on your next roll." : "Charging."
             }`}
           >
-            <ChargeRing
-              fraction={charge / skill.charges}
-              tint={skill.tint}
-            >
+            <ChargeRing fraction={charge / skill.charges} tint={skill.tint}>
               <Icon size={17} aria-hidden="true" />
             </ChargeRing>
             <span className="skill-tooltip" role="tooltip">
@@ -142,7 +146,8 @@ export default function SkillBar({ progress, firing = [], className = "" }) {
                 {skillEffectSummary(skill)}
               </span>
               <span className="skill-tooltip-meta">
-                {charge} / {skill.charges} rolls · {skillSourceLabel(skill, petName)}
+                {charge} / {skill.charges} rolls ·{" "}
+                {skillSourceLabel(skill, petName)}
               </span>
               <span className="skill-tooltip-state">
                 {active
