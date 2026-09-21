@@ -9,6 +9,8 @@ export const PAGES = [
   "settings",
   "changelog",
   "about",
+  "profile",
+  "rebirth",
 ];
 export const HOME = "roll";
 

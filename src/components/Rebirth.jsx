@@ -79,7 +79,22 @@ export default function Rebirth({ progress, onAction, onDone }) {
       setPending(false);
     }
   }
-  if (!visible) return null;
+  if (!visible)
+    return (
+      <section
+        className="rebirth-option rebirth-locked"
+        aria-label="Rebirth"
+      >
+        <div>
+          <strong>Rebirth {rebirths + 1}</strong>
+          <p>
+            The rebirth ladder appears once you have discovered 30% of the
+            collection: {REBIRTH_VISIBLE_AT} of {BADGE_TOTAL} badges. You have{" "}
+            {count} so far — keep rolling.
+          </p>
+        </div>
+      </section>
+    );
   return (
     <section className="rebirth-option" aria-label="Rebirth">
       <div>

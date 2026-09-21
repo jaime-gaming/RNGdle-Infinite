@@ -1,6 +1,5 @@
 import React, { useRef, useState } from "react";
 import {
-  UserRound,
   Check,
   ArrowRight,
   Trash2,
@@ -112,7 +111,12 @@ function suggestName() {
   )}`;
 }
 
-export default function LocalProfile({ profile, progress, onAction, onClose }) {
+export default function LocalProfile({
+  profile,
+  progress,
+  onAction,
+  onContinue,
+}) {
   const [username, setUsername] = useState(""),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
@@ -157,8 +161,11 @@ export default function LocalProfile({ profile, progress, onAction, onClose }) {
     setError("");
     try {
       const result = await onAction({ type: "delete", profileId: profile.id });
-      if (result.ok) onClose();
-      else setError(result.message);
+      if (result.ok) {
+        // The page stays: with the profile gone, the sign-up form returns.
+        setDeleting(false);
+        setConfirmation("");
+      } else setError(result.message);
     } finally {
       busy.current = false;
       setPending(false);
@@ -167,10 +174,7 @@ export default function LocalProfile({ profile, progress, onAction, onClose }) {
   if (profile && deleting)
     return (
       <>
-        <div className="modal-symbol">
-          <Trash2 size={28} />
-        </div>
-        <h2 id="modal-title">Delete account &amp; progress</h2>{" "}
+        <h2>Delete account &amp; progress</h2>{" "}
         <form className="delete-confirm" onSubmit={deleteAccount}>
           <p>
             Delete <strong>{profile.username}</strong> and start over?
@@ -221,10 +225,7 @@ export default function LocalProfile({ profile, progress, onAction, onClose }) {
     );
   return (
     <>
-      <div className="modal-symbol">
-        {profile ? <Check size={28} /> : <UserRound size={28} />}
-      </div>
-      <h2 id="modal-title">
+      <h2>
         {profile
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
@@ -241,7 +242,7 @@ export default function LocalProfile({ profile, progress, onAction, onClose }) {
             site data removes the profile and its progress.
           </div>
           <div className="profile-actions">
-            <button className="primary-button" onClick={onClose}>
+            <button className="primary-button" onClick={onContinue}>
               Continue playing <ArrowRight size={16} />
             </button>
             <button

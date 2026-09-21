@@ -1,4 +1,9 @@
-/* The profile dialog also doubles as a look back at the current cycle. */
+/* Profile is its own page; the wrapper gives it the same measure the other
+   pages use. The "How far you have come" section doubles as the look back. */
+.profile-page {
+  width: min(100%, 640px);
+  margin: 0 auto;
+}
 .profile-history {
   margin-top: 18px;
   border-top: 1px solid var(--border);

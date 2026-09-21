@@ -196,23 +196,16 @@ try {
   await page.waitForTimeout(700);
   await shot(page, "shop");
 
-  // 5. The rebirth ladder.
-  await page.goto(`${BASE}/badges`);
-  await page.waitForSelector(".rebirth-nav, .rebirth-panel");
-  await page
-    .locator(".rebirth-panel, .rebirth, .badges-rebirth")
-    .first()
-    .scrollIntoViewIfNeeded()
-    .catch(() => {});
+  // 5. The rebirth ladder, on its own page.
+  await page.goto(`${BASE}/rebirth`);
+  await page.waitForSelector(".rebirth-option");
   await page.waitForTimeout(700);
   await shot(page, "rebirth");
 
-  // 6. The profile, with the derived history and the export button. A taller
-  //    viewport keeps the whole dialog in one frame.
+  // 6. The profile page, with the derived history and the export button. A
+  //    taller viewport keeps the whole page in one frame.
   await page.setViewportSize({ width: 1280, height: 1500 });
-  await page.goto(`${BASE}/`);
-  await page.getByRole("button", { name: /Your profile|Sign up/ }).click();
-  await hideAutoRoll(page);
+  await page.goto(`${BASE}/profile`);
   await page.waitForSelector(".profile-history");
   await page.waitForTimeout(600);
   await shot(page, "profile", { fullPage: false });

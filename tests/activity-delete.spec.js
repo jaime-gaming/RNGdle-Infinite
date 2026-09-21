@@ -17,9 +17,12 @@ const nav = (page, name) =>
     .getByRole("button", { name, exact: true })
     .click();
 async function register(page) {
+  // Profile is a page now: the button navigates to /profile.
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
   await page.getByRole("textbox", { name: "Username" }).fill("ActivityPlayer");
-  await page.getByRole("button", { name: "Create local profile" }).click();
+  await page
+    .getByRole("button", { name: "Start saving my progress" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Your profile, ActivityPlayer" }),
   ).toBeVisible();
@@ -291,9 +294,8 @@ test("failed deletion leaves the account and complete history intact and support
   }, PROGRESS_KEY);
   await openDelete(page);
   await confirmDelete(page);
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "Deletion failed",
-  );
+  // The error is page-level now: profile is a page, not a dialog.
+  await expect(page.getByRole("alert")).toContainText("Deletion failed");
   expect(await saved(page)).toEqual(before);
   await expect(
     page.getByRole("button", { name: "Your profile", exact: true }),
