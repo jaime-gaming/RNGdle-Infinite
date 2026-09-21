@@ -31,10 +31,11 @@ async function buy(page, id) {
   await expect(page.getByRole("dialog")).not.toBeVisible();
 }
 async function signup(page, name = "Lucky_Player") {
+  // Profile is a page: the button navigates to /profile.
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
   await page.getByRole("textbox", { name: "Username", exact: true }).fill(name);
   await page
-    .getByRole("button", { name: "Create local profile", exact: true })
+    .getByRole("button", { name: "Start saving my progress", exact: true })
     .click();
 }
 
@@ -159,10 +160,15 @@ test("invalid or failed signup never creates a profile or discards guest progres
   page,
 }) => {
   await showRoll(page, 604827);
-  await signup(page, "bad name");
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "3–20",
-  );
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("textbox", { name: "Username" }).fill("bad name");
+  // Live validation keeps submit disabled until the name is usable.
+  await expect(
+    page.getByRole("button", { name: "Start saving my progress" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Letters, numbers, underscores and hyphens only."),
+  ).toBeVisible();
   expect(await saved(page)).toBeNull();
   await page.evaluate((key) => {
     window.restoreStorage = Storage.prototype.setItem;
@@ -172,22 +178,35 @@ test("invalid or failed signup never creates a profile or discards guest progres
     };
   }, PROGRESS_KEY);
   await page.getByRole("textbox", { name: "Username" }).fill("Lucky_Retry");
-  await page.getByRole("button", { name: "Create local profile" }).click();
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+  await page
+    .getByRole("button", { name: "Start saving my progress" })
+    .click();
+  // The error is page-level now: profile is a page, not a dialog.
+  await expect(page.getByRole("alert")).toContainText(
     "guest progress is still available",
   );
   expect(await saved(page)).toBeNull();
   await expect(
     page.getByRole("button", { name: "Sign up", exact: true }),
   ).toBeVisible();
+  // The failed save left the guest session untouched.
+  await page.getByRole("button", { name: "Back to rolling" }).click();
+  await expect(page.getByTestId("wallet-balance")).toHaveText("4,663 EP");
   await page.evaluate(() => {
     Storage.prototype.setItem = window.restoreStorage;
   });
-  await page.getByRole("button", { name: "Create local profile" }).click();
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Username" })
+    .fill("Lucky_Retry");
+  await page
+    .getByRole("button", { name: "Start saving my progress" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Your profile, Lucky_Retry" }),
   ).toBeVisible();
-  expect((await saved(page)).balance).toBe(4663);
+  // A saved account starts fresh: no guest earnings are invented.
+  expect((await saved(page)).balance).toBe(0);
 });
 
 test("another tab signing up neither discards a guest game nor silently saves it", async ({
@@ -207,9 +226,8 @@ test("another tab signing up neither discards a guest game nor silently saves it
   expect((await saved(page)).balance).toBe(0);
   expect((await saved(page)).owned).toEqual([]);
   await signup(page, "GuestPlayer");
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "another tab",
-  );
+  // The error is page-level now: profile is a page, not a dialog.
+  await expect(page.getByRole("alert")).toContainText("another tab");
   expect((await saved(page)).profile.username).toBe("OtherPlayer");
   await other.close();
 });

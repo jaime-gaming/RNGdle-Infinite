@@ -39,7 +39,11 @@ function ChargeRing({ fraction, tint, size = 42, children }) {
       className={`skill-ring tint-${tint}`}
       style={{ width: size, height: size }}
     >
-      <svg viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+      <svg
+        className="skill-ring-svg"
+        viewBox={`0 0 ${size} ${size}`}
+        aria-hidden="true"
+      >
         <circle
           className="skill-ring-track"
           cx={size / 2}

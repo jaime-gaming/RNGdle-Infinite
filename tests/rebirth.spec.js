@@ -323,24 +323,27 @@ for (const [count, rebirths, expected] of [
   [140, 1, "disabled"],
   [141, 1, "ready"],
 ])
-  test(`rebirth at ${count} of 235 badges and ${rebirths} rebirths reads "${expected}" regardless of collection filters`, async ({
+  test(`rebirth at ${count} of 235 badges and ${rebirths} rebirths reads "${expected}" on its own page`, async ({
     page,
   }) => {
     await seedProgress(page, {
       discovered: ids.slice(0, count),
       rebirths,
     });
-    await page.goto("/#badges");
+    // Rebirth is its own page now; the state is driven by the save alone.
+    await page.goto("/#rebirth");
     const button = page.getByRole("button", { name: "Rebirth", exact: true });
-    if (expected === "hidden") await expect(button).toHaveCount(0);
-    else if (expected === "ready") await expect(button).toBeEnabled();
-    else await expect(button).toBeDisabled();
-    await page
-      .getByRole("textbox", { name: "Search badges" })
-      .fill("nothing matches this");
-    await expect(page.locator(".badge-card")).toHaveCount(0);
-    if (expected === "hidden") await expect(button).toHaveCount(0);
-    else await expect(button).toBeVisible();
+    if (expected === "hidden") {
+      await expect(button).toHaveCount(0);
+      await expect(page.locator(".rebirth-locked")).toBeVisible();
+    } else if (expected === "ready") {
+      await expect(button).toBeEnabled();
+    } else {
+      await expect(button).toBeDisabled();
+    }
+    await expect(
+      page.getByRole("heading", { name: "Rebirth", level: 1 }),
+    ).toBeVisible();
   });
 
 test("rebirth asks for typed confirmation, applies once, and keeps the wallet and the workshop", async ({
@@ -359,7 +362,7 @@ test("rebirth asks for typed confirmation, applies once, and keeps the wallet an
   initial.discovered = ids;
   await seedProgress(page, initial);
   await mockRandom(page, [604827]);
-  await page.goto("/#badges");
+  await page.goto("/#rebirth");
   await page.getByRole("button", { name: "Rebirth", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Keep:");
@@ -396,10 +399,11 @@ test("rebirth asks for typed confirmation, applies once, and keeps the wallet an
   await expect(page.locator('[data-event-type="rebirth"]')).toContainText(
     "Rebirth 1",
   );
-  await nav(page, "Badges");
+  await page.goto("/#rebirth");
   await expect(
     page.getByRole("button", { name: "Rebirth", exact: true }),
   ).toBeDisabled();
+  await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
   await page.unrouteAll({ behavior: "wait" });
   await mockRandom(page, [604827]);
@@ -421,7 +425,7 @@ test("a failed rebirth save leaves all progress intact and allows retry", async 
   page,
 }) => {
   await seedProgress(page, state());
-  await page.goto("/#badges");
+  await page.goto("/#rebirth");
   await expect
     .poll(async () => (await saved(page)).offline?.lastSeenAt)
     .toBeTruthy();
@@ -457,9 +461,9 @@ test("simultaneous rebirths are applied once and reset the other tab without del
   context,
 }) => {
   await seedProgress(page, state());
-  await page.goto("/#badges");
+  await page.goto("/#rebirth");
   const other = await context.newPage();
-  await other.goto("/#badges");
+  await other.goto("/#rebirth");
   await confirm(page);
   await confirm(other);
   await Promise.all([
@@ -484,7 +488,7 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   context,
 }) => {
   await seedProgress(page, state());
-  await page.goto("/#badges");
+  await page.goto("/#rebirth");
   const other = await context.newPage();
   await other.addInitScript(() =>
     window.addEventListener(
@@ -522,7 +526,7 @@ test("rebirth waits for cooldown and remains usable on mobile without motion", a
   await seedProgress(page, { ...state(), cooldownUntil: now + 10000 });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#badges");
+  await page.goto("/#rebirth");
   await expect(
     page.getByRole("button", { name: "Rebirth", exact: true }),
   ).toBeDisabled();
@@ -649,7 +653,7 @@ test("registered rebirth fails closed without Web Locks", async ({ page }) => {
   await page.addInitScript(() =>
     Object.defineProperty(navigator, "locks", { value: undefined }),
   );
-  await page.goto("/#badges");
+  await page.goto("/#rebirth");
   await confirm(page);
   await page
     .getByRole("button", { name: "Confirm rebirth", exact: true })
@@ -663,7 +667,7 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
   page,
 }) => {
   await seedProgress(page, { ...state(), profile: null, owned: [] });
-  await page.goto("/#badges");
+  await page.goto("/#rebirth");
   await page.evaluate(() => {
     const write = Storage.prototype.setItem;
     window.failGuard = true;
@@ -680,9 +684,10 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
   await expect(page.getByRole("dialog")).toContainText(
     "progress has not been reset",
   );
+  // The ladder still points at rung one: nothing was reset in memory.
   await expect(
-    page.getByRole("progressbar", { name: "Badge collection progress" }),
-  ).toHaveAttribute("value", "235");
+    page.locator(".rebirth-ladder .is-current .rebirth-rung"),
+  ).toHaveText("#1");
   await page.evaluate(() => {
     window.failGuard = false;
   });

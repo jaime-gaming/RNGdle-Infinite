@@ -57,6 +57,7 @@ export default function About({ navigate }) {
       points: [
         `${PETS.length} of them, adding between ${Math.round((PETS[0].multiplier - 1) * 100)}% and ${Math.round((PETS.at(-1).multiplier - 1) * 100)}% to the EP you bank.`,
         `Buy one in the shop, or find one free at roughly 1 in ${Math.round(1 / PET_DROP_CHANCE)} rolls.`,
+        "Only one companion is equipped at a time; the equipped one is the one that walks the roll screen. Swapping is free.",
         "The bonus applies to your wallet only. The number you rolled, its tier, its badges and its score are identical either way.",
         "Each companion also carries one exclusive skill. It is available while that companion is the active one and takes a slot in your rack.",
       ],

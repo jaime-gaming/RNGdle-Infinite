@@ -495,8 +495,14 @@ export default function RollExperience({
           ]}
         />
       )}
+      {/* Only the equipped companion walks the roll screen, so it is always
+          obvious which one is actually active. The rest stay on the shelf. */}
       <PetParade
-        pets={session.pets ?? []}
+        pets={
+          session.activePet && session.activePet !== "none"
+            ? [session.activePet]
+            : []
+        }
         active={session.activePet}
         reducedMotion={reducedMotion}
       />

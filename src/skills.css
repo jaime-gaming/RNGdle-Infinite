@@ -28,7 +28,10 @@
   display: grid;
   place-items: center;
 }
-.skill-ring svg {
+/* Only the ring's own svg: the skill icon is a nested svg too, and this
+   selector used to collapse it to 0×0 by abs-positioning it inside the
+   zero-sized .skill-ring-icon. */
+.skill-ring-svg {
   position: absolute;
   inset: 0;
   width: 100%;

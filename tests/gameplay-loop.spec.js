@@ -335,7 +335,7 @@ test("guest goals are temporary until signup; signup preserves the choice withou
     .getByRole("textbox", { name: "Username", exact: true })
     .fill("GoalKeeper");
   await page
-    .getByRole("button", { name: "Create local profile", exact: true })
+    .getByRole("button", { name: "Start saving my progress", exact: true })
     .click();
   await expect.poll(async () => (await saved(page))?.goalId).toBe("flywheel");
   expect((await saved(page)).balance).toBe(0);
@@ -428,7 +428,9 @@ test("a funded offline goal still explains the profile requirement instead of cl
     .click();
   await expect(page.locator('[data-product="offline-roller"]')).toBeFocused();
   await page.locator('[data-product="offline-roller"] button').click();
+  // No profile: the product button navigates to the profile page.
+  await expect(page.locator(".profile-page")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Create local profile", exact: true }),
+    page.getByRole("button", { name: "Start saving my progress", exact: true }),
   ).toBeVisible();
 });

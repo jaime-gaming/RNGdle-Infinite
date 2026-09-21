@@ -19,6 +19,8 @@ import {
   ArrowLeft,
   SlidersHorizontal,
   ScrollText,
+  UserRound,
+  Sparkles,
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
@@ -226,8 +228,10 @@ function App() {
     );
     setModal("badge");
   }
+  // Profile is a page (/profile), not a window: every "sign up" prompt in the
+  // game simply navigates there, and the page remembers itself in the URL.
   function openAuth() {
-    setModal("auth");
+    navigate("profile");
   }
   const offlineState = useOffline(session, dispatch);
   // One alert per finished cooldown, and never while a roll is still revealing.
@@ -317,8 +321,8 @@ function App() {
           )}
           <RebirthNav
             progress={session}
-            active={page === "badges"}
-            onClick={() => navigate("badges")}
+            active={page === "rebirth"}
+            onClick={() => navigate("rebirth")}
           />
           <button
             className="icon-button help-button"
@@ -477,6 +481,56 @@ function App() {
             <Changelog onSeen={() => setSeenVersion(LATEST_VERSION)} />
           </>
         )}
+        {page === "profile" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <UserRound size={25} />
+              </div>
+              <div>
+                <h1>Profile</h1>
+                <p>Your local save and how far you have come.</p>
+              </div>
+            </div>
+            <div className="profile-page">
+              <LocalProfile
+                key={epoch}
+                profile={session.profile}
+                progress={session}
+                onAction={dispatch}
+                onContinue={() => navigate("roll")}
+              />
+            </div>
+          </>
+        )}
+        {page === "rebirth" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <Sparkles size={25} />
+              </div>
+              <div>
+                <h1>Rebirth</h1>
+                <p>Start the collection over, keep everything else.</p>
+              </div>
+            </div>
+            <Rebirth
+              key={epoch}
+              progress={session}
+              onAction={dispatch}
+              onDone={(message) => {
+                navigate("roll");
+                notify(message ?? "Rebirth complete.");
+              }}
+            />
+          </>
+        )}
         {page === "shop" && (
           <Shop
             key={epoch}
@@ -533,15 +587,6 @@ function App() {
                 Rebirths: {session.rebirths.toLocaleString("en-US")}
               </p>
             )}
-            <Rebirth
-              key={epoch}
-              progress={session}
-              onAction={dispatch}
-              onDone={(message) => {
-                navigate("roll");
-                notify(message ?? "Rebirth complete.");
-              }}
-            />
             <div className="filters">
               <label className="search-field">
                 <Search size={17} />
@@ -717,14 +762,6 @@ function App() {
             >
               <X size={20} />
             </button>
-            {modal === "auth" && (
-              <LocalProfile
-                profile={session.profile}
-                progress={session}
-                onAction={dispatch}
-                onClose={() => setModal(null)}
-              />
-            )}
             {modal === "badge" && selectedBadge && (
               <>
                 <div

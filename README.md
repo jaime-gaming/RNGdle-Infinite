@@ -78,8 +78,10 @@ or find one free at roughly **1 in 250 rolls** — a lucky roll drops a random
 companion you do not own yet, and it is worn automatically if you do not already
 wear one.
 
-Companions are on the roll screen, not just in a list: they drift across the
-stage while you roll. Decorative and inert, and still under reduced motion.
+Only **one companion is equipped at a time** — and the equipped one is the one
+on the roll screen, not just in a list: it drifts across the stage while you
+roll. The rest wait on the shelf. Decorative and inert, and still under
+reduced motion.
 
 What a companion does is deliberately narrow: it multiplies **the EP that lands
 in your wallet**. The number you rolled, its tier, its badges, its score and its
@@ -194,14 +196,14 @@ cosmetic mark next to your profile. Both resets require typing the word
 ## Your profile, your data
 
 Signing up is just a local name for a save file in your browser — no email, no
-password, no server. Your profile dialog shows **how far you have come**, all of
+password, no server. Your profile page shows **how far you have come**, all of
 it derived live from your save and your activity log rather than stored twice:
 rolls completed, online vs offline, EP earned in this cycle, EP spent, your best
 roll, badges discovered, companions found free, skills unlocked, charged effects
 fired, Flywheel boosts used, rebirths and ultra-rebirths, and the date of your
 first and latest entry.
 
-![The profile dialog with the derived history and the one-way export](media/profile.png)
+![The profile page with the derived history and the one-way export](media/profile.png)
 
 **Export my data** downloads a JSON snapshot of the whole save — profile,
 figures and full activity history — so you can read it, archive it or keep it

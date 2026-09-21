@@ -48,9 +48,11 @@ export default function PetShelf({ progress, onAction, notify }) {
         <div>
           <h2>Companions</h2>
           <p>
-            A bonus to the EP you bank and one exclusive skill of their own. Buy
-            one, or find one free at roughly 1 in {oneIn} rolls. Your rack holds{" "}
-            {slots} {slots === 1 ? "skill" : "skills"}.
+            A bonus to the EP you bank and one exclusive skill of their own.
+            Only one can be equipped at a time, and the equipped one walks with
+            you on the roll screen; swapping is free. Buy one, or find one free
+            at roughly 1 in {oneIn} rolls. Your rack holds {slots}{" "}
+            {slots === 1 ? "skill" : "skills"}.
           </p>
         </div>
         <button
