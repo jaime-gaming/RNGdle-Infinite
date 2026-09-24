@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   applyProgress,
   emptyProgress,
@@ -6,6 +6,7 @@ import {
   PROGRESS_KEY,
 } from "../src/progress.js";
 import { shopProducts } from "../src/shop-data.js";
+import { formatEP } from "../src/roll-data.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom, showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
@@ -171,18 +172,24 @@ test("there is no button or keyboard shortcut to skip the reveal", async ({
 test("purchases require confirmation, deduct once, persist ownership, and equip without changing scores", async ({
   page,
 }) => {
-  await seedProgress(page, { balance: 50000, totalEarned: 50000 });
+  const starfall = shopProducts.find((item) => item.id === "starfall");
+  const priced = `Buy for ${formatEP(starfall.price)} EP`;
+  // Exactly enough for one starfall: the purchase must leave an empty wallet.
+  await seedProgress(page, {
+    balance: starfall.price,
+    totalEarned: starfall.price,
+  });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#shop");
   const card = page.locator('[data-product="starfall"]');
-  await card.getByRole("button", { name: "Buy for 50,000 EP" }).click();
+  await card.getByRole("button", { name: priced }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
-  expect((await saved(page)).balance).toBe(50000);
-  await card.getByRole("button", { name: "Buy for 50,000 EP" }).click();
+  expect((await saved(page)).balance).toBe(starfall.price);
+  await card.getByRole("button", { name: priced }).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .evaluate((b) => {
@@ -226,12 +233,19 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   page,
   context,
 }) => {
-  await seedProgress(page, { balance: 300000, totalEarned: 300000 });
+  // Two items that are each affordable alone but not together, so only one of
+  // the simultaneous purchases can be applied. Derived from the catalogue so a
+  // rebalance keeps the invariant under test.
+  const pair = ["aurora", "starfall"].map((id) =>
+    shopProducts.find((item) => item.id === id),
+  );
+  const wallet = pair[0].price + pair[1].price - 1;
+  await seedProgress(page, { balance: wallet, totalEarned: wallet });
   await page.goto("/#shop");
   const other = await context.newPage();
   await other.goto("/#shop");
-  await page.locator('[data-product="aurora"] button').click();
-  await other.locator('[data-product="starfall"] button').click();
+  await page.locator(`[data-product="${pair[0].id}"] button`).click();
+  await other.locator(`[data-product="${pair[1].id}"] button`).click();
   await Promise.all([
     page
       .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -243,7 +257,7 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   await expect.poll(async () => (await saved(page))?.owned.length).toBe(1);
   const p = await saved(page);
   const item = shopProducts.find((item) => item.id === p.owned[0]);
-  expect(p.balance).toBe(300000 - item.price);
+  expect(p.balance).toBe(wallet - item.price);
   await expect(other.getByTestId("wallet-balance")).toHaveText(
     `${p.balance.toLocaleString("en-US")} EP`,
   );

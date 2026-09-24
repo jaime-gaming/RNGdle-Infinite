@@ -3,10 +3,15 @@ import { expect } from "@playwright/test";
 // Test-only interception of the worker module; no seed/number input exists in
 // production. The real loader, gzip integrity checks, scoring, and UI still run.
 export async function mockRandom(page, words) {
-  await page.route("**/src/roll.worker.js*", async (route) => {
-    const response = await route.fetch();
+  // Matches the dev-served module and the built asset, so the same helper can
+  // drive either build. The body is fetched through the API request context
+  // instead of the intercepted response: a navigation can dispose that body,
+  // and a disposed response must never break the handler.
+  await page.route("**/roll.worker*.js*", async (route) => {
+    const response = await page.request.get(route.request().url());
     await route.fulfill({
-      response,
+      status: 200,
+      contentType: "text/javascript",
       body: `const testWords=${JSON.stringify(words)}; let testWord=0;
       Object.defineProperty(crypto,'getRandomValues',{value(array){array[0]=testWords[testWord++ % testWords.length];return array;}});\n${await response.text()}`,
     });
@@ -38,7 +43,6 @@ export async function startRoll(page, number) {
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(

@@ -610,6 +610,34 @@ export function skillEffectSummary(skill) {
   }
 }
 
+// The same effect as a short, numeric chip, so a shelf, a rack summary or a
+// receipt can state what a skill adds without a paragraph. The full sentence
+// stays in `skillEffectSummary` for tooltips and screen readers.
+export function skillEffectChips(skill) {
+  switch (skill.kind) {
+    case "wallet":
+      return [`×${skill.value} banked EP`, "multiplier, wallet only"];
+    case "waive":
+      return ["no cooldown", "full reveal still plays"];
+    case "best-of":
+      return [
+        `${skill.attempts} draws, best kept`,
+        "ordinary independent draws",
+      ];
+    case "floor":
+      return [
+        `never below ${skill.floor.toLocaleString("en-US")} EP`,
+        `up to ${skill.attempts} draws`,
+      ];
+    case "pet-luck":
+      return [`×${skill.value} companion luck`, "own random sample"];
+    case "overdrive":
+      return [`×${skill.value} charge`, "towards Flywheel and skills"];
+    default:
+      return [];
+  }
+}
+
 export function skillSourceLabel(skill, petName = "") {
   if (skill.source === "pet") return `${petName || "Companion"} signature`;
   if (skill.source === "rebirth") return `Rebirth ${skill.rebirth} reward`;

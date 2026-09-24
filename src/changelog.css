@@ -93,6 +93,13 @@
     padding: 4px 7px;
   }
 }
+@media (max-width: 420px) {
+  /* The smallest header keeps the ladder, the theme switch and the profile
+     button; the changelog stays one tap away in the footer. */
+  .version-flag {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .version-flag-dot {
     animation: none;

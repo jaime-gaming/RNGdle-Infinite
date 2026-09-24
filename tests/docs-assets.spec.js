@@ -2,21 +2,20 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { PETS } from "../src/pets.js";
+import { CREATURE_IDS } from "../src/components/game-icons.jsx";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 
-// Artwork and documentation are shipped assets too: a badge or companion that
-// falls back to a text glyph, or a README image that was never committed, is a
-// visible regression on the public page.
+// Artwork and documentation are shipped assets too: a badge that falls back to
+// a text glyph, a companion with no drawing of its own, or a README image that
+// was never committed, is a visible regression on the public page.
 const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
 const emojiMap = JSON.parse(fs.readFileSync("src/emoji-map.json", "utf8"));
 
-test("every badge and companion glyph has local artwork", () => {
+test("every badge glyph has local artwork", () => {
   const glyphs = new Set();
   for (const badge of allBadgeMetadata)
     for (const { segment } of segmenter.segment(badge.emoji ?? ""))
       glyphs.add(segment);
-  for (const pet of PETS)
-    for (const { segment } of segmenter.segment(pet.emoji)) glyphs.add(segment);
   expect(glyphs.size).toBeGreaterThan(150);
   for (const glyph of glyphs) {
     const file = emojiMap[glyph];
@@ -25,6 +24,24 @@ test("every badge and companion glyph has local artwork", () => {
       fs.existsSync(path.join("public", file.replace(/^\//, ""))),
       `missing artwork for ${glyph} (${file})`,
     ).toBe(true);
+  }
+});
+
+test("every companion has its own drawing, and no companion borrows another", () => {
+  // The interface draws companions itself instead of pasting emoji artwork, so
+  // each id needs a glyph and the glyphs must be distinct.
+  const icons = new Set(CREATURE_IDS);
+  for (const pet of PETS)
+    expect(icons.has(pet.id), `no icon for ${pet.id}`).toBe(true);
+  expect(
+    CREATURE_IDS.filter((id) => PETS.some((pet) => pet.id === id)),
+  ).toEqual(PETS.map((pet) => pet.id));
+  // The parade and the shelf both render that artwork, never an emoji glyph.
+  const parade = fs.readFileSync("src/components/PetParade.jsx", "utf8");
+  const shelf = fs.readFileSync("src/components/PetShelf.jsx", "utf8");
+  for (const source of [parade, shelf]) {
+    expect(source).toContain("PetIcon");
+    expect(source).not.toContain("Emoji");
   }
 });
 

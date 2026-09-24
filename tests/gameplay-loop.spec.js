@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   availableGoals,
   currentGoal,
@@ -13,9 +13,10 @@ import {
 } from "../src/progress.js";
 import { shopProducts } from "../src/shop-data.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
-import { seedProgress } from "./helpers/progress.js";
+import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { showRoll, mockRandom } from "./helpers/random-roll.js";
+import { productById } from "../src/shop-data.js";
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
 const nav = (p, name) =>
@@ -108,7 +109,9 @@ test("first visit keeps goals as plain links without dashboard cards or invented
   const progress = page.getByRole("region", { name: "Progress" });
   await expect(progress).toContainText("0 / 235 badges");
   await expect(progress).toContainText("Quickwind I");
-  await expect(progress).toContainText("0 / 35,000 EP");
+  await expect(progress).toContainText(
+    `0 / ${productById.get("quickwind-1").price.toLocaleString("en-US")} EP`,
+  );
   await expect(
     page.locator(".loop-hub,.loop-card,.loop-badge-chips"),
   ).toHaveCount(0);
@@ -120,7 +123,6 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
 }) => {
   await seedProgress(page);
   await mockRandom(page, [604827]);
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto("/");
   await page.locator(".generate").click();
@@ -136,7 +138,7 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
     `${evaluate(604827).badges.length} new in this roll`,
   );
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "4,663 / 35,000 EP",
+    `4,663 / ${productById.get("quickwind-1").price.toLocaleString("en-US")} EP`,
   );
 
   await page.locator(".result-badge-heading button").first().click();
@@ -151,7 +153,7 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
     "new in this roll",
   );
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "9,326 / 35,000 EP",
+    `9,326 / ${productById.get("quickwind-1").price.toLocaleString("en-US")} EP`,
   );
 });
 
@@ -173,7 +175,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   );
   await home(page);
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "35,000 / 35,000 EP",
+    `${productById.get("quickwind-1").price.toLocaleString("en-US")} / ${productById.get("quickwind-1").price.toLocaleString("en-US")} EP`,
   );
   await page.getByRole("button", { name: "Quickwind I", exact: true }).click();
   const card = page.locator('[data-product="quickwind-1"]');
@@ -189,7 +191,9 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   expect((await saved(page)).goalId).toBeNull();
-  expect((await saved(page)).balance).toBe(65000);
+  expect((await saved(page)).balance).toBe(
+    100000 - productById.get("quickwind-1").price,
+  );
   expect((await saved(page)).owned).toEqual(["quickwind-1"]);
   await expect(
     page.getByRole("complementary", { name: "Purchase complete" }),
@@ -197,12 +201,20 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   await page
     .getByRole("button", { name: "Continue rolling", exact: true })
     .click();
-  await expect(page.locator(".roll-progress-links")).toContainText(
-    "Clockwork I",
-  );
+  // With the goal bought, the recap falls back to the next recommended item.
+  // Both the name and its price come from the loop itself, so a repricing or a
+  // reordered catalogue shows up as a real behaviour change, not a stale pin.
+  const remaining = 100000 - productById.get("quickwind-1").price;
+  const next = recommendedGoal({
+    ...emptyProgress(),
+    profile: testProfile,
+    owned: ["quickwind-1"],
+    balance: remaining,
+  });
+  await expect(page.locator(".roll-progress-links")).toContainText(next.name);
   await expect(page.locator(".roll-hint")).toContainText("35s reveal");
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "60,000 / 60,000 EP",
+    `${Math.min(remaining, next.price).toLocaleString("en-US")} / ${next.price.toLocaleString("en-US")} EP`,
   );
 });
 
@@ -252,7 +264,6 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
 }) => {
   await seedProgress(page, { balance: 1000000, totalEarned: 1000000 });
   await mockRandom(page, [604827]);
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto("/");
   await page.locator(".generate").click();
@@ -271,7 +282,7 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
     .click();
   await expect(other.getByRole("dialog")).not.toBeVisible();
   const after = await saved(page);
-  expect(after.balance).toBe(950000);
+  expect(after.balance).toBe(1000000 - productById.get("starfall").price);
   expect(after.goalId).toBe("aurora");
   expect(after.pendingRoll).toEqual(before.pendingRoll);
   expect(after.cooldownUntil).toBe(before.cooldownUntil);
@@ -284,7 +295,6 @@ test("Auto-Roll pauses for badge inspection and resumes without replacing its co
   await seedProgress(page, { owned: ["auto-roll"] });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto("/");
   await expect(page.locator(".generate")).toBeEnabled();
@@ -342,6 +352,9 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   expect((await saved(page)).owned).toEqual([]);
   expect((await saved(page)).history).toHaveLength(0);
   await page.reload();
+  // The profile page has no goal control: the saved choice is read back where
+  // the picker lives.
+  await page.goto("/#shop");
   await expect(page.getByLabel("Track a goal", { exact: true })).toHaveValue(
     "flywheel",
   );
@@ -420,7 +433,7 @@ test("a funded offline goal still explains the profile requirement instead of cl
   );
 
   await expect(page.locator(".roll-progress-links")).not.toContainText(
-    "35,000 / 35,000 EP",
+    `${productById.get("quickwind-1").price.toLocaleString("en-US")} / ${productById.get("quickwind-1").price.toLocaleString("en-US")} EP`,
   );
   await expect(page.locator(".roll-progress-links")).not.toContainText("to go");
   await page

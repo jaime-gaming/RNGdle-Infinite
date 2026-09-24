@@ -336,9 +336,12 @@ export function applyProgress(state, action) {
       throw new Error("Invalid profile");
     // Guest play is a demo, not a save file. Signing up starts a genuinely
     // fresh account: nothing rolled, earned, discovered or bought beforehand
-    // carries over, so an account's history always matches what it did.
+    // carries over, so an account's history always matches what it did. The one
+    // exception is the tracked goal — a preference, like the theme, not a
+    // reward — which survives so the player keeps the target they picked.
     return {
       ...emptyProgress(),
+      goalId: state.goalId ?? null,
       profile: { id: action.id, username, createdAt: action.createdAt },
     };
   }

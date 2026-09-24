@@ -1110,3 +1110,14 @@ nav button.active {
   transition: none;
   border-radius: 0 0 5px 5px;
 }
+
+/* The idle hint states what the worn companion adds, next to the timings. */
+.roll-hint-pet {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--green);
+}
+.roll-hint-pet svg {
+  stroke-width: 1.8;
+}

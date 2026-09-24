@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   buildRevealTimeline,
   buildReferenceTimeline,
@@ -151,7 +151,6 @@ test("random rolls score zero, seven digits, and numbers outside the old sample 
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.install();
   for (const [i, number] of [0, 1000000, 123457].entries()) {
     await page
       .getByRole("button", { name: i ? "ROLL AGAIN" : "GENERATE", exact: true })
@@ -201,7 +200,7 @@ test("share format and actual badge details", async ({ page, context }) => {
   await showRoll(page, 1337);
   await page.getByRole("button", { name: "Share", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Copied!", exact: true }),
+    page.getByRole("button", { name: "Copied result + link!", exact: true }),
   ).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     buildShareText(sample),
@@ -226,7 +225,6 @@ test("all result tiers fit mobile, including a seven-digit result", async ({
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.install();
   for (const [i, number] of numbers.entries()) {
     await page
       .getByRole("button", { name: i ? "ROLL AGAIN" : "GENERATE", exact: true })
@@ -308,7 +306,6 @@ test("a delayed clipboard response cannot mark a different roll as copied", asyn
     "data-phase",
     "complete",
   );
-  await page.clock.install();
   await page.getByRole("button", { name: "Share", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-settled",
@@ -328,7 +325,7 @@ test("a delayed clipboard response cannot mark a different roll as copied", asyn
     page.getByRole("button", { name: "Share", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Copied!", exact: true }),
+    page.getByRole("button", { name: "Copied result + link!", exact: true }),
   ).toHaveCount(0);
 });
 

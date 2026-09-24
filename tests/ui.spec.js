@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { allBadgeMetadata as metadata } from "../src/infinite-badges.js";
 
@@ -11,7 +11,6 @@ test("home, random roll, cooldown, and badge breakdown", async ({ page }) => {
       name: "One roll per day? Not here. Roll as often as you like.",
     }),
   ).toBeVisible();
-  await page.clock.install();
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(
@@ -71,7 +70,8 @@ test("navigation, themes, help and local signup", async ({ page }) => {
     .getByRole("button", { name: "How to play", exact: true })
     .first()
     .click();
-  await expect(page.locator(".roll-view")).toHaveCount(0);
+  // The roll surface stays mounted but hidden behind the help page.
+  await expect(page.locator(".roll-view")).toBeHidden();
   await expect(
     page.getByRole("heading", { name: "How to play", level: 1 }),
   ).toBeVisible();
@@ -79,9 +79,7 @@ test("navigation, themes, help and local signup", async ({ page }) => {
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
   await expect(page.locator(".profile-page")).toBeVisible();
   await page.getByRole("textbox", { name: "Username" }).fill("LuckyPlayer");
-  await page
-    .getByRole("button", { name: "Start saving my progress" })
-    .click();
+  await page.getByRole("button", { name: "Start saving my progress" }).click();
   await expect(
     page.getByRole("heading", { name: "Your profile, LuckyPlayer" }),
   ).toBeVisible();

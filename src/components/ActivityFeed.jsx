@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   History,
@@ -7,12 +7,13 @@ import {
   ShoppingBag,
   Check,
   RotateCcw,
+  Share2,
   Infinity as InfinityIcon,
 } from "lucide-react";
 import NumberBox from "./NumberBox";
-import { skillById } from "../skills.js";
+import { skillById, skillEffectChips } from "../skills.js";
 import { badges } from "../badges";
-import { formatEP } from "../roll-data";
+import { formatEP, buildShareTextFromHistory } from "../roll-data";
 import "../activity.css";
 const byId = new Map(badges.map((b) => [b.canonicalId, b]));
 const filters = ["All activity", "Rolls", "Badge unlocks", "Shop", "Offline"];
@@ -41,9 +42,12 @@ export default function ActivityFeed({
   navigate,
   openSignup,
   openBadge,
+  notify,
 }) {
   const [filter, setFilter] = useState("All activity"),
     [limit, setLimit] = useState(50);
+  const [copiedId, setCopiedId] = useState("");
+  const copiedTimer = useRef(null);
   const [query, setQuery] = useState(""),
     [tier, setTier] = useState("all");
   const lens = progress.owned.includes("archive-lens");
@@ -72,6 +76,20 @@ export default function ActivityFeed({
         .reverse(),
     [history, filter, query, tier, lens],
   );
+  // Any archived roll can be shared later: the text is rebuilt from the entry
+  // the save kept, so it can only ever state what the roll actually earned.
+  async function shareRoll(event) {
+    try {
+      await navigator.clipboard.writeText(buildShareTextFromHistory(event));
+      setCopiedId(event.id);
+      clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedId(""), 2200);
+    } catch {
+      notify?.(
+        "Clipboard isn’t available. Try copying from a secure browser window.",
+      );
+    }
+  }
   return (
     <>
       <button className="back-link" onClick={() => navigate("roll")}>
@@ -282,12 +300,35 @@ export default function ActivityFeed({
                         </span>
                         {!!event.skills?.length && (
                           <span className="activity-skills">
-                            {event.skills
-                              .map((id) => skillById.get(id)?.name)
-                              .filter(Boolean)
-                              .join(" · ")}
+                            {event.skills.map((id) => {
+                              const skill = skillById.get(id);
+                              if (!skill) return null;
+                              // The receipt states what the skill actually
+                              // added to this roll, not just its name.
+                              return (
+                                <span className="activity-skill" key={id}>
+                                  <strong>{skill.name}</strong>
+                                  {skillEffectChips(skill)[0]}
+                                </span>
+                              );
+                            })}
                           </span>
                         )}
+                        <button
+                          type="button"
+                          className="activity-share"
+                          onClick={() => shareRoll(event)}
+                          aria-label={`Share roll ${event.number}`}
+                        >
+                          {copiedId === event.id ? (
+                            <Check size={13} />
+                          ) : (
+                            <Share2 size={13} />
+                          )}
+                          {copiedId === event.id
+                            ? "Copied result + link"
+                            : "Share this roll"}
+                        </button>
                       </div>
                     </div>
                     <details>

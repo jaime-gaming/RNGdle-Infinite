@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
@@ -30,7 +30,10 @@ test("shared number boxes cover the idle generator and cosmetic previews without
     .getByRole("navigation")
     .getByRole("button", { name: "Shop", exact: true })
     .click();
-  await expect(page.locator(".aura-preview .number-box")).toHaveCount(7);
+  const auraCount = shopProducts.filter((p) => p.kind === "aura").length;
+  await expect(page.locator(".aura-preview .number-box")).toHaveCount(
+    auraCount,
+  );
   for (const id of ["starfall", "aurora", "orbit"]) {
     const box = page.locator(`[data-product="${id}"] .number-box`);
     await expect(box).toHaveAttribute("data-cosmetic", id);
@@ -59,7 +62,6 @@ test("every roll tier uses the observed light/dark Box Lab palettes and shimmer 
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.install();
   const seen = new Set();
   for (const [i, number] of numbers.entries()) {
     await page
