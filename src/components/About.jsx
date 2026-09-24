@@ -13,14 +13,17 @@ import {
 import { BASE_ROLL_MS, BASE_COOLDOWN_MS, formatDuration } from "../shop-data";
 import { POPULATION } from "../probability.js";
 import { PETS, PET_DROP_CHANCE } from "../pets.js";
-import { BADGE_TOTAL, REBIRTH_TOTAL, REBIRTH_VISIBLE_AT } from "../rebirth.js";
+import { BADGE_TOTAL, REBIRTH_TOTAL, rebirthUnlocked } from "../rebirth.js";
 import { SKILLS } from "../skills.js";
 import { GAME_URL } from "../roll-data";
 import "../about.css";
 
 // The old help modal was one unreadable block of text. This is the same
 // information, grouped so a specific question can actually be found.
-export default function About({ navigate }) {
+export default function About({ navigate, progress }) {
+  // Rebirth explains itself only once the player has found it: before that the
+  // help page stays quiet about the ladder, exactly like the game does.
+  const showsRebirth = progress ? rebirthUnlocked(progress) : false;
   const steps = [
     {
       icon: Dices,
@@ -46,7 +49,8 @@ export default function About({ navigate }) {
         "Quickwind shortens the reveal; Clockwork shortens the cooldown. Both are permanent and one-time.",
         "Flywheel grants a no-cooldown roll every few rolls. Tools add Auto-Roll, archive search and offline earnings.",
         `${SKILLS.length} charged skills can be bought, won from companions or earned with a rebirth. A circle fills as you roll and the next roll fires it.`,
-        "The shop is split into shelves — skills, pace, companions, auras, offline and tools — with a jump bar, and each shelf has its own link.",
+        "The shop is one street of shelves — skills, pace, companions, auras, offline and tools — with a sticky jump bar, a search box and filters, and each shelf has its own link.",
+        "Rows, not walls of cards: every item states its effect, its price and whether you already own it, and long descriptions stay folded until you ask for them.",
         "Auras are purely cosmetic. Pick a goal and your savings towards it appear after each roll.",
         "Upgrades change timing and convenience only. They never touch your odds, your EP or your rank.",
       ],
@@ -57,7 +61,7 @@ export default function About({ navigate }) {
       points: [
         `${PETS.length} of them, adding between ${Math.round((PETS[0].multiplier - 1) * 100)}% and ${Math.round((PETS.at(-1).multiplier - 1) * 100)}% to the EP you bank.`,
         `Buy one in the shop, or find one free at roughly 1 in ${Math.round(1 / PET_DROP_CHANCE)} rolls.`,
-        "Only one companion is equipped at a time; the equipped one is the one that walks the roll screen. Swapping is free.",
+        "Only one companion is equipped at a time; the equipped one is the one that walks the roll screen, with its name and bonus on a plate. Swapping is free.",
         "The bonus applies to your wallet only. The number you rolled, its tier, its badges and its score are identical either way.",
         "Each companion also carries one exclusive skill. It is available while that companion is the active one and takes a slot in your rack.",
       ],
@@ -79,7 +83,11 @@ export default function About({ navigate }) {
         `Ranks compare your roll against all ${POPULATION.toLocaleString("en-US")} possible numbers, not against other players or your own session.`,
         "Top means the share scoring at least as much; Bottom means the share scoring at most as much. Both include ties.",
         "Labels are rounded; hover any rank to see the exact percentage and counts.",
-        `Rebirth unlocks step by step: its icon appears at ${Math.round((REBIRTH_VISIBLE_AT / BADGE_TOTAL) * 100)}% of the collection and the first step asks for half of it. Each of the ${REBIRTH_TOTAL} steps raises the bar by ten points, up to the whole collection, and an ultra-rebirth at the very top starts everything over for a permanent bonus. No purchase is ever required for it.`,
+        ...(showsRebirth
+          ? [
+              `Rebirth unlocks step by step: the first step asks for half of the collection, and each of the ${REBIRTH_TOTAL} steps raises the bar by ten points up to the whole collection. Every step hands over an exclusive skill, and an ultra-rebirth at the very top starts everything over for a permanent wallet bonus. No purchase is ever required for it.`,
+            ]
+          : []),
       ],
     },
     {

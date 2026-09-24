@@ -3,9 +3,9 @@ import { Sparkles, Infinity as InfinityIcon } from "lucide-react";
 import {
   BADGE_TOTAL,
   REBIRTH_TOTAL,
-  REBIRTH_VISIBLE_AT,
   discoveredCount,
   rebirthRequirement,
+  rebirthUnlocked,
   ultraRebirthAvailable,
 } from "../rebirth.js";
 import { gameNow } from "../game-clock.js";
@@ -20,8 +20,9 @@ export default function RebirthNav({ progress, active, onClick }) {
   const rebirths = progress.rebirths ?? 0;
   const ultras = progress.ultraRebirths ?? 0;
   const requirement = rebirthRequirement(rebirths);
-  const visible = count >= REBIRTH_VISIBLE_AT || rebirths > 0 || ultras > 0;
-  if (!visible) return null;
+  // Nothing at all before the unlock: no icon, no ring, no hint that rebirth
+  // exists. The ladder announces itself once the collection is far enough.
+  if (!rebirthUnlocked(progress)) return null;
   const target = requirement ? requirement.badges : BADGE_TOTAL;
   const fraction = Math.min(1, count / Math.max(1, target));
   const percent = Math.round(fraction * 100);

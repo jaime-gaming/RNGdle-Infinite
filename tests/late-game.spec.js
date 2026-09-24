@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   emptyProgress,
   applyProgress,
@@ -6,6 +6,7 @@ import {
   PROGRESS_KEY,
 } from "../src/progress.js";
 import {
+  productById,
   shopProducts,
   rollSettings,
   offlineSettings,
@@ -368,22 +369,32 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
   await page.goto("/#shop");
   for (const id of ["clockwork-5", "flywheel-3", "offline-clock-2"])
     await expect(page.locator(`[data-product="${id}"]`)).toHaveCount(0);
-  for (const id of [
+  const upgrades = [
     "clockwork-4",
     "clockwork-5",
     "flywheel-2",
     "flywheel-3",
     "offline-clock-1",
     "offline-clock-2",
-  ])
-    await purchase(page, id);
-  expect((await saved(page)).balance).toBe(119000000);
+  ];
+  for (const id of upgrades) await purchase(page, id);
+  // Each purchase is charged once, at the catalogue price.
+  expect((await saved(page)).balance).toBe(
+    200000000 -
+      upgrades.reduce((sum, id) => sum + productById.get(id).price, 0),
+  );
   await page.reload();
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:05");
   await expect(page.locator('[data-product="offline-roller"]')).toContainText(
     "5 minutes away",
   );
-  await expect(page.locator('[data-product="offline-clock-2"]')).toContainText(
+  // One level at a time: the bought clocks collapse and the next tier takes
+  // their place, so only a fully-owned path reads as complete.
+  await expect(page.locator('[data-product="offline-clock-3"]')).toContainText(
+    "Buy for",
+  );
+  await expect(page.locator('[data-product="offline-clock-2"]')).toHaveCount(0);
+  await expect(page.locator('[data-product="quickwind-4"]')).toContainText(
     "Maximum level reached",
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
@@ -426,17 +437,19 @@ test("a late cooldown purchase keeps the current 10-second commitment and uses 5
   expect((await saved(page)).pendingRoll).toEqual(current);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(async () => rows(await saved(page)).length).toBe(2);
+  // The stored window is the committed roll's own reservation: the reveal pace
+  // that was paid for, plus the cooldown tier in place when it was drawn.
+  const timing = rollSettings((await saved(page)).owned);
+  expect(current.rollMS).toBe(timing.rollMS);
   expect((await saved(page)).cooldownWindow).toEqual({
-    startsAt: current.startedAt + 15000,
-    endsAt: current.startedAt + 20000,
+    startsAt: current.startedAt + current.rollMS,
+    endsAt: current.startedAt + current.rollMS + current.cooldownMS,
   });
   await expect(page.locator(".generate")).toBeDisabled();
 });
 
-for (const [owned, count] of [
-  [clocks.slice(0, 2), 8],
-  [clocks, 12],
-])
+for (const owned of [clocks.slice(0, 2), clocks]) {
+  const count = Math.floor(3601000 / offlineSettings(owned).intervalMS);
   test(`an hour away earns ${count} ordinary rolls at the purchased offline rate, without Flywheel charge`, async ({
     page,
   }) => {
@@ -448,9 +461,10 @@ for (const [owned, count] of [
     });
     await mockRandom(page, [604827]);
     await page.goto("/");
+    // Whole rolls only, at the rate the owned clocks actually pay for.
+    const intervalMS = offlineSettings(owned).intervalMS;
     await collected(page, count);
-    const p = await saved(page),
-      intervalMS = offlineSettings(owned).intervalMS;
+    const p = await saved(page);
     expect(p.balance).toBe(count * 4663);
     expect(p.flywheelCharge).toBe(1);
     expect(rows(p).map((e) => e.at)).toEqual(
@@ -459,6 +473,7 @@ for (const [owned, count] of [
     await page.reload();
     expect(rows(await saved(page))).toHaveLength(count);
   });
+}
 
 for (const intervalMS of [undefined, 450000])
   test(`interrupted ${intervalMS ?? 600000}ms batches retain original timestamps even with the final clock owned`, async ({
@@ -525,7 +540,7 @@ test("two tabs cannot purchase a late Flywheel tier twice or lose the earned cha
     .poll(async () => (await saved(page)).owned.includes("flywheel-2"))
     .toBe(true);
   const p = await saved(page);
-  expect(p.balance).toBe(196000000);
+  expect(p.balance).toBe(200000000 - productById.get("flywheel-2").price);
   expect(p.flywheelCharge).toBe(2);
   expect(
     p.history.filter(
@@ -535,14 +550,16 @@ test("two tabs cannot purchase a late Flywheel tier twice or lose the earned cha
   await other.close();
 });
 
-test("final Flywheel boost survives reload and reduced motion still reserves all fifteen seconds", async ({
+test("final Flywheel boost survives reload and reduced motion still reserves the whole reveal", async ({
   page,
 }) => {
+  const timing = rollSettings([...timings, ...pace]);
   await seedProgress(page, { owned: [...timings, ...pace], flywheelCharge: 1 });
   await startRoll(page, 604827);
   const before = await saved(page);
+  // A boost waives the cooldown, never the reveal the pace tiers paid for.
   expect(before.pendingRoll).toMatchObject({
-    rollMS: 15000,
+    rollMS: timing.rollMS,
     cooldownMS: 0,
     flywheel: "boost",
   });
@@ -557,15 +574,17 @@ test("final Flywheel boost survives reload and reduced motion still reserves all
   await expect.poll(async () => rows(await saved(page)).length).toBe(1);
   expect((await saved(page)).balance).toBe(4663);
   expect((await saved(page)).cooldownUntil).toBe(
-    before.pendingRoll.startedAt + 15000,
+    before.pendingRoll.startedAt + timing.rollMS,
   );
   await expect(page.locator(".generate")).toBeDisabled();
-  await page.clock.fastForward(15100);
+  await page.clock.fastForward(timing.rollMS + 100);
   await page.locator(".generate").click();
   await expect.poll(async () => rows(await saved(page)).length).toBe(2);
   const p = await saved(page);
   expect(p.flywheelCharge).toBe(1);
-  expect(p.cooldownWindow.endsAt - p.cooldownWindow.startsAt).toBe(5000);
+  expect(p.cooldownWindow.endsAt - p.cooldownWindow.startsAt).toBe(
+    timing.cooldownMS,
+  );
   expect(rows(p)[1].flywheel).toBe("charge");
 });
 
@@ -615,7 +634,11 @@ test("failed late-tier saves leave wallet, charge and offline rate unchanged unt
   });
   await purchase(page, "flywheel-2");
   await purchase(page, "offline-clock-1");
-  expect((await saved(page)).balance).toBe(184000000);
+  expect((await saved(page)).balance).toBe(
+    200000000 -
+      productById.get("flywheel-2").price -
+      productById.get("offline-clock-1").price,
+  );
   expect((await saved(page)).flywheelCharge).toBe(2);
   await page.reload();
   expect((await saved(page)).owned).toEqual([

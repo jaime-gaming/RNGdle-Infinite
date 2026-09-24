@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   emptyProgress,
   parsePending,
@@ -261,7 +261,10 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
       '[data-product="quickwind-2"],[data-product="quickwind-3"],[data-product="clockwork-2"]',
     ),
   ).toHaveCount(0);
-  for (const id of ["quickwind-1", "quickwind-2", "quickwind-3"]) {
+  const rollTrack = shopProducts
+    .filter((product) => product.kind === "roll")
+    .map((product) => product.id);
+  for (const id of rollTrack) {
     await buy(page, id);
     await expect(
       page.locator(
@@ -272,17 +275,12 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
   await expect(
     page.locator('[data-product="quickwind-1"],[data-product="quickwind-2"]'),
   ).toHaveCount(0);
-  await expect(page.locator('[data-product="quickwind-3"]')).toContainText(
+  const maxed = rollTrack.at(-1);
+  await expect(page.locator(`[data-product="${maxed}"]`)).toContainText(
     "Maximum level reached",
   );
-  await expect(
-    page.locator('[data-product="quickwind-3"] button'),
-  ).toBeDisabled();
-  expect((await saved(page)).owned).toEqual([
-    "quickwind-1",
-    "quickwind-2",
-    "quickwind-3",
-  ]);
+  await expect(page.locator(`[data-product="${maxed}"] button`)).toBeDisabled();
+  expect((await saved(page)).owned).toEqual(rollTrack);
 });
 
 test("new cosmetics persist and Archive Lens searches the complete history without paywalling the feed", async ({
@@ -396,13 +394,21 @@ test("failed settlement is merged with later cross-tab spending rather than over
   await other.goto("/#shop");
   await buy(other, "starfall");
   await nav(page, "Shop");
-  await expect(page.getByTestId("wallet-balance")).toHaveText("454,663 EP");
+  const starfallPrice = shopProducts.find((p) => p.id === "starfall").price;
+  await expect(page.getByTestId("wallet-balance")).toHaveText(
+    `${(500000 - starfallPrice + 4663).toLocaleString("en-US")} EP`,
+  );
   await page.evaluate(() => {
     window.failSettlement = false;
   });
   await buy(page, "clockwork-1");
   const after = await saved(page);
-  expect(after.balance).toBe(394663);
+  expect(after.balance).toBe(
+    500000 -
+      starfallPrice -
+      shopProducts.find((p) => p.id === "clockwork-1").price +
+      4663,
+  );
   expect(after.owned).toEqual(["flywheel", "starfall", "clockwork-1"]);
   expect(after.flywheelCharge).toBe(4);
   expect(after.history.filter((e) => e.type === "roll")).toHaveLength(1);

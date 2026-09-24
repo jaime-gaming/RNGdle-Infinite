@@ -10,11 +10,14 @@
 //
 // The multipliers are deliberately modest — their signature skill is the real
 // prize — so the shop still costs what the balance pass decided it should.
+//
+// Companion artwork is drawn for the game rather than borrowed from an emoji
+// font: every id here has a matching glyph in `components/game-icons.jsx`, and a
+// test fails if the two ever drift apart.
 export const PETS = [
   {
     id: "pebble",
     name: "Pebble",
-    emoji: "🪨",
     multiplier: 1.05,
     price: 45000,
     dropWeight: 40,
@@ -24,7 +27,6 @@ export const PETS = [
   {
     id: "moth",
     name: "Lumen Moth",
-    emoji: "🦋",
     multiplier: 1.09,
     price: 120000,
     dropWeight: 30,
@@ -34,7 +36,6 @@ export const PETS = [
   {
     id: "kit",
     name: "Static Kit",
-    emoji: "🦊",
     multiplier: 1.13,
     price: 320000,
     dropWeight: 22,
@@ -44,7 +45,6 @@ export const PETS = [
   {
     id: "snail",
     name: "Lunar Snail",
-    emoji: "🐌",
     multiplier: 1.17,
     price: 560000,
     dropWeight: 16,
@@ -54,7 +54,6 @@ export const PETS = [
   {
     id: "jelly",
     name: "Tide Jelly",
-    emoji: "🪼",
     multiplier: 1.21,
     price: 900000,
     dropWeight: 12,
@@ -64,7 +63,6 @@ export const PETS = [
   {
     id: "bee",
     name: "Amber Bee",
-    emoji: "🐝",
     multiplier: 1.26,
     price: 1400000,
     dropWeight: 9,
@@ -74,7 +72,6 @@ export const PETS = [
   {
     id: "corvid",
     name: "Ledger Corvid",
-    emoji: "🐦‍⬛",
     multiplier: 1.31,
     price: 2100000,
     dropWeight: 7,
@@ -84,7 +81,6 @@ export const PETS = [
   {
     id: "owl",
     name: "Archive Owl",
-    emoji: "🦉",
     multiplier: 1.37,
     price: 3200000,
     dropWeight: 5,
@@ -94,7 +90,6 @@ export const PETS = [
   {
     id: "turtle",
     name: "Patient Turtle",
-    emoji: "🐢",
     multiplier: 1.43,
     price: 4800000,
     dropWeight: 4,
@@ -104,7 +99,6 @@ export const PETS = [
   {
     id: "griffin",
     name: "Storm Griffin",
-    emoji: "🦅",
     multiplier: 1.5,
     price: 7000000,
     dropWeight: 3,
@@ -114,7 +108,6 @@ export const PETS = [
   {
     id: "unicorn",
     name: "Astral Unicorn",
-    emoji: "🦄",
     multiplier: 1.6,
     price: 10000000,
     dropWeight: 2,
@@ -124,7 +117,6 @@ export const PETS = [
   {
     id: "serpent",
     name: "Void Serpent",
-    emoji: "🐍",
     multiplier: 1.7,
     price: 14000000,
     dropWeight: 1,
@@ -134,7 +126,6 @@ export const PETS = [
   {
     id: "dragonet",
     name: "Ember Dragonet",
-    emoji: "🐉",
     multiplier: 1.8,
     price: 20000000,
     dropWeight: 1,

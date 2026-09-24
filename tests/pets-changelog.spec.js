@@ -224,12 +224,17 @@ test("share text ends with the public game link", () => {
 });
 
 test("the changelog lists every release and flags an unseen version", () => {
-  expect(CHANGELOG.map((e) => e.version)).toEqual(["v0.3", "v0.2", "v0.1"]);
-  expect(LATEST_VERSION).toBe("v0.3");
-  expect(hasUnseenVersion("v0.2")).toBe(true);
+  expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.4",
+    "v0.3",
+    "v0.2",
+    "v0.1",
+  ]);
+  expect(LATEST_VERSION).toBe("v0.4");
+  expect(hasUnseenVersion("v0.3")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
-  expect(launch.body).toEqual(["so uhhhh we launched RNGdle infinite"]);
+  expect(launch.body[0]).toContain("RNGdle Infinite is live");
   for (const entry of CHANGELOG) expect(entry.body.length).toBeGreaterThan(0);
   // The flag shows until the newest version is acknowledged.
   expect(hasUnseenVersion("")).toBe(true);
@@ -268,20 +273,22 @@ test("ambient animations are subtle and fully disabled by reduced motion", () =>
   expect(styles).toContain("transition: none !important");
 });
 
-test("the changelog stays short and casual, and keeps the launch note verbatim", () => {
+test("the changelog reads like release notes, not like a chat log", () => {
   for (const entry of CHANGELOG) {
+    expect(entry.version).toMatch(/^v\d+\.\d+$/);
+    expect(entry.title.length).toBeGreaterThan(5);
     for (const line of entry.body) {
-      // Short, chatty lines rather than release-note paragraphs.
-      expect(line.length).toBeLessThanOrEqual(110);
-      // Casual tone: lines start lowercase rather than as formal sentences.
-      expect(line[0]).toBe(line[0].toLowerCase());
+      // One short line per change, always a finished sentence.
+      expect(line.length).toBeLessThanOrEqual(140);
+      // House style: a line opens lowercase unless it opens with a name or a
+      // figure ("13 companions…", "RNGdle Infinite is live…").
+      expect(line).toMatch(/^([a-z0-9]|RNGdle |Auto-Roll )/);
+      expect(line.trim().endsWith(".")).toBe(true);
+      // No placeholder chat register anywhere in the notes.
+      expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
     }
   }
   expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(8);
-  // The launch note is preserved exactly as written.
-  expect(CHANGELOG.at(-1).body).toEqual([
-    "so uhhhh we launched RNGdle infinite",
-  ]);
 });
 
 test("share is the single copy action and carries the link with it", () => {

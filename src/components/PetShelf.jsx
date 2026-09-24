@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Coins, Sparkles } from "lucide-react";
 import {
   PETS,
   petById,
@@ -9,14 +9,23 @@ import {
 } from "../pets.js";
 import { skillForPet, skillEffectSummary, skillSlots } from "../skills.js";
 import { useFormatEP } from "../use-settings.jsx";
-import Emoji from "./Emoji";
+import PetIcon from "./PetIcon.jsx";
+import { CompanionMark } from "./game-icons.jsx";
 import "../pets.css";
 
 // Companions: buy one, or be very lucky. Equipping is free and the bonus
 // applies to banked EP only — never to the number, its tier or its score.
-export default function PetShelf({ progress, onAction, notify }) {
+// Rows rather than a wall of cards: thirteen companions, one line each.
+export default function PetShelf({
+  progress,
+  onAction,
+  notify,
+  query = "",
+  filter = "all",
+}) {
   const formatEP = useFormatEP();
   const [pending, setPending] = useState("");
+  const [onlyMine, setOnlyMine] = useState(false);
   const busy = useRef(false);
   const owned = progress.pets ?? [];
   const active = progress.activePet ?? "none";
@@ -37,7 +46,19 @@ export default function PetShelf({ progress, onAction, notify }) {
 
   const oneIn = Math.round(1 / PET_DROP_CHANCE);
   const slots = skillSlots(progress.owned);
-  const signature = PETS.map((pet) => skillForPet(pet.id)).filter(Boolean);
+  const text = query.trim().toLowerCase();
+  const visible = PETS.filter((pet) => {
+    const isOwned = owned.includes(pet.id);
+    if (onlyMine && !isOwned) return false;
+    if (filter === "owned" && !isOwned) return false;
+    if (filter === "available" && isOwned) return false;
+    if (filter === "affordable" && (isOwned || progress.balance < pet.price))
+      return false;
+    if (!text) return true;
+    return `${pet.name} ${pet.description} ${skillForPet(pet.id)?.name ?? ""}`
+      .toLowerCase()
+      .includes(text);
+  });
   return (
     <section
       className="shop-category pet-shelf"
@@ -46,79 +67,94 @@ export default function PetShelf({ progress, onAction, notify }) {
     >
       <div className="shop-section-heading">
         <div>
-          <h2>Companions</h2>
+          <h2>
+            <CompanionMark size={16} /> Companions
+          </h2>
           <p>
             A bonus to the EP you bank and one exclusive skill of their own.
-            Only one can be equipped at a time, and the equipped one walks with
-            you on the roll screen; swapping is free. Buy one, or find one free
-            at roughly 1 in {oneIn} rolls. Your rack holds {slots}{" "}
-            {slots === 1 ? "skill" : "skills"}.
+            Only one companion is equipped at a time, and the equipped one walks
+            the roll screen with you; swapping is free. Find one free at roughly
+            1 in {oneIn} rolls, and each signature skill takes a slot in your{" "}
+            {slots}-slot rack.
           </p>
         </div>
-        <button
-          className="secondary-button"
-          disabled={active === "none" || !!pending}
-          onClick={() => run("equip-pet", "none", "Companion put away.")}
-        >
-          {active === "none" ? (
-            <>
-              <Check size={14} /> None equipped
-            </>
-          ) : (
-            "Put away companion"
-          )}
-        </button>
+        <div className="shop-section-actions">
+          <span className="shop-section-stat">
+            {owned.length} of {PETS.length} found
+          </span>
+          <button
+            type="button"
+            className="secondary-button"
+            aria-pressed={onlyMine}
+            onClick={() => setOnlyMine((value) => !value)}
+          >
+            {onlyMine ? "Show all" : "Only mine"}
+          </button>
+          <button
+            className="secondary-button"
+            disabled={active === "none" || !!pending}
+            onClick={() => run("equip-pet", "none", "Companion put away.")}
+          >
+            {active === "none" ? (
+              <>
+                <Check size={14} /> None equipped
+              </>
+            ) : (
+              "Put away companion"
+            )}
+          </button>
+        </div>
       </div>
       <p className="pet-disclaimer">
-        A companion multiplies only the EP added to your wallet. Its signature
-        skill is only available while that companion is the active one, and it
-        still needs a free slot in your rack. Your rolled number, its tier, its
-        badges and its score are completely unaffected, and your odds never
-        change.
+        A companion multiplies only the EP added to your wallet. Your rolled
+        number, its tier, its badges, its score and your odds are completely
+        unaffected.
       </p>
-      <ul className="pet-grid">
-        {PETS.map((pet) => {
-          const isOwned = owned.includes(pet.id);
-          const isActive = active === pet.id;
-          const affordable = progress.balance >= pet.price;
-          return (
-            <li
-              key={pet.id}
-              className={`pet-card ${isActive ? "is-active" : ""} ${
-                isOwned ? "is-owned" : ""
-              }`}
-              data-pet={pet.id}
-            >
-              <span
-                className={`pet-avatar ${isActive ? "is-active" : ""}`}
-                aria-hidden="true"
+      {visible.length ? (
+        <ul className="pet-grid">
+          {visible.map((pet) => {
+            const isOwned = owned.includes(pet.id);
+            const isActive = active === pet.id;
+            const affordable = progress.balance >= pet.price;
+            const signature = skillForPet(pet.id);
+            return (
+              <li
+                key={pet.id}
+                className={`pet-card ${isActive ? "is-active" : ""} ${
+                  isOwned ? "is-owned" : ""
+                }`}
+                data-pet={pet.id}
               >
-                <Emoji text={pet.emoji} />
-              </span>
-              <div className="pet-body">
-                <div className="pet-title">
-                  <strong>{pet.name}</strong>
-                  <span className="pet-multiplier">
-                    {formatMultiplier(pet.multiplier)}
-                  </span>
-                </div>
-                <p className="pet-description">{pet.description}</p>
-                {skillForPet(pet.id) && (
-                  <p className="pet-skill">
-                    <span className="pet-skill-name">
-                      <Sparkles size={11} /> {skillForPet(pet.id).name}
+                <PetIcon
+                  pet={pet.id}
+                  name={pet.name}
+                  multiplier={pet.multiplier}
+                  size={46}
+                  active={isActive}
+                />
+                <div className="pet-body">
+                  <div className="pet-title">
+                    <strong>{pet.name}</strong>
+                    <span className="pet-multiplier">
+                      {petBonusLabel(pet.multiplier)}
+                      <small>{formatMultiplier(pet.multiplier)}</small>
                     </span>
-                    {skillEffectSummary(skillForPet(pet.id))}
-                  </p>
-                )}
+                  </div>
+                  <p className="pet-description">{pet.description}</p>
+                  {signature && (
+                    <p className="pet-skill">
+                      <span className="pet-skill-name">
+                        <Sparkles size={11} /> {signature.name}
+                      </span>
+                      {skillEffectSummary(signature)}
+                    </p>
+                  )}
+                </div>
                 <div className="pet-actions">
-                  <span className="pet-bonus">
-                    {petBonusLabel(pet.multiplier)}
-                  </span>
                   {isOwned ? (
                     isActive ? (
                       <span className="pet-equipped">
-                        <Check size={13} /> Equipped
+                        <Check size={13} /> Walking with you
                       </span>
                     ) : (
                       <button
@@ -143,25 +179,29 @@ export default function PetShelf({ progress, onAction, notify }) {
                         )
                       }
                     >
-                      {affordable ? (
-                        <>
-                          <Sparkles size={13} /> {formatEP(pet.price)} EP
-                        </>
-                      ) : (
-                        `${formatEP(pet.price)} EP`
-                      )}
+                      <Coins size={13} /> {formatEP(pet.price)} EP
                     </button>
                   )}
+                  <small className="pet-note">
+                    {isOwned
+                      ? isActive
+                        ? "Its signature skill is available in your rack."
+                        : "Free to equip; charge is never lost."
+                      : affordable
+                        ? "Within reach of your wallet."
+                        : `${formatEP(pet.price - progress.balance)} more EP needed`}
+                  </small>
                 </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="shop-empty">No companions match this filter.</p>
+      )}
       <p className="pet-footnote">
-        {owned.length} of {PETS.length} companions found, and {signature.length}{" "}
-        signature skills between them. Swapping between the ones you own is
-        always free.
+        Companions are found, not won: a lucky roll drops one you do not own
+        yet, and a first companion is worn automatically.
       </p>
     </section>
   );

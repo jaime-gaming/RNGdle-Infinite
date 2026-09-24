@@ -1,153 +1,388 @@
-.rebirth-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 18px 0;
-  margin: 0 0 24px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-.rebirth-option p {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--secondary);
-  margin: 5px 0 0;
-}
-.rebirth-option > button {
-  flex-shrink: 0;
-  min-height: 40px;
-}
-.rebirth-confirm h2 {
-  font-size: 22px;
-  margin: 0 0 18px;
-}
-.rebirth-confirm p,
-.rebirth-confirm li {
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--secondary);
-}
-.rebirth-confirm ul {
-  padding-left: 20px;
-}
-.rebirth-confirm li + li {
-  margin-top: 10px;
-}
-.rebirth-confirm label {
-  display: block;
-  margin-top: 20px;
-  font-size: 12px;
-}
-.rebirth-confirm input {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  margin-top: 8px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 11px;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-}
-.rebirth-confirm [role="alert"] {
-  color: var(--danger);
-}
-.rebirth-locked {
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  padding: 18px 20px;
-  margin: 0 0 24px;
-  background: var(--hover);
-}
-.rebirth-locked strong {
-  color: var(--muted);
-}
-.rebirth-count {
-  font-size: 12px;
-  color: var(--secondary);
-  font-variant-numeric: tabular-nums;
-}
-@media (max-width: 480px) {
-  .rebirth-option {
-    gap: 12px;
-    align-items: flex-start;
-  }
-  .rebirth-confirm .purchase-actions {
-    flex-wrap: wrap;
-  }
-}
-
-/* The ladder, rung by rung: 50% to 100% of the collection. */
-.rebirth-ladder {
+/* The rebirth page: a milestone with figures, a ladder and the two lists that
+   answer "what do I lose, what do I keep". Nothing here renders before the
+   ladder unlocks. */
+.rebirth-page {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  max-width: 220px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  flex-shrink: 0;
+  gap: 22px;
+  margin-bottom: 40px;
 }
-.rebirth-ladder li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 3px 8px;
+.rebirth-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 24px;
+  padding: 24px 26px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 10px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      ellipse at 12% 0%,
+      color-mix(in srgb, var(--green) 12%, transparent),
+      transparent 62%
+    ),
+    var(--surface);
 }
-.rebirth-ladder li.is-done {
-  border-color: var(--green);
-  color: var(--green);
+.rebirth-hero-copy h2 {
+  margin: 6px 0 10px;
+  font-size: 26px;
 }
-.rebirth-ladder li.is-current {
-  border-color: var(--text);
-  color: var(--text);
-  font-weight: 650;
-}
-.rebirth-rung-percent {
-  font-family: "Space Mono", monospace;
+.rebirth-hero-copy p {
+  margin: 0 0 18px;
+  max-width: 56ch;
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--secondary);
 }
 .rebirth-actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
-.rebirth-ultra {
-  border-color: #d9a441;
-  color: #d9a441;
-}
-.rebirth-ultra:disabled {
-  border-color: var(--border);
-  color: var(--muted);
-}
-.rebirth-ultra-note {
-  font-size: 11px !important;
-  color: #b8860b !important;
-}
-/* The cosmetic mark an ultra-rebirth leaves on the header. */
-.ultra-mark {
+.rebirth-actions .primary-button,
+.rebirth-actions .secondary-button {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
-  border: 1px solid #d9a441;
-  border-radius: 999px;
-  background: color-mix(in srgb, #d9a441 12%, transparent);
-  font-family: "Space Mono", monospace;
+  gap: 7px;
+}
+.rebirth-blocker {
+  flex: 1 1 220px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.rebirth-hero-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.rebirth-gauge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--green) var(--fill, 0%),
+    color-mix(in srgb, var(--border) 100%, transparent) 0
+  );
+  transition: background 0.4s ease;
+}
+.rebirth-gauge::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.rebirth-gauge span,
+.rebirth-gauge small {
+  position: relative;
+  z-index: 1;
+}
+.rebirth-gauge span {
+  font: 700 30px/1 var(--roll-font);
+}
+.rebirth-gauge small {
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rebirth-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  width: 100%;
+  margin: 0;
+}
+.rebirth-figures div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rebirth-figures dt {
   font-size: 10px;
   letter-spacing: 0.05em;
-  color: #b8860b;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rebirth-figures dd {
+  margin: 0;
+  font: 700 15px/1.3 var(--roll-font);
+}
+.rebirth-block {
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.rebirth-block > header {
+  margin-bottom: 16px;
+}
+.rebirth-block h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.rebirth-block > header p {
+  margin: 0;
+  max-width: 74ch;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--secondary);
+}
+.rebirth-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+.rebirth-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rebirth-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--secondary);
+}
+.rebirth-list li > svg {
+  margin-top: 2px;
+  color: var(--green);
+}
+.rebirth-list.is-reset li > svg {
+  color: var(--warning);
+}
+.rebirth-list span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rebirth-list strong {
+  font-size: 12px;
+  color: var(--text);
+}
+.rebirth-list small {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* The ladder: six rungs, each with its requirement, its progress and the skill
+   it hands over. */
+.rebirth-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rebirth-ladder li {
+  display: grid;
+  grid-template-columns: 26px minmax(150px, 1fr) minmax(80px, 1.1fr) minmax(
+      0,
+      1.9fr
+    );
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg);
+}
+.rebirth-ladder li.is-current {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+  background: var(--green-bg);
+}
+.rebirth-ladder li.is-locked {
+  opacity: 0.72;
+}
+.rebirth-rung-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--surface);
+}
+.rebirth-ladder li.is-done .rebirth-rung-mark {
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+}
+.rebirth-ladder li.is-current .rebirth-rung-mark {
+  color: var(--text);
+  border-color: var(--text);
+}
+.rebirth-rung-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+.rebirth-rung-name {
+  font: 700 13px var(--roll-font);
+}
+.rebirth-rung-percent {
+  font-size: 11px;
+  color: var(--secondary);
+}
+.rebirth-rung-badges {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rebirth-rung-bar {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.rebirth-rung-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green);
+  transition: width 0.4s ease;
+}
+.rebirth-ladder li.is-locked .rebirth-rung-bar span {
+  background: var(--muted);
+}
+.rebirth-rung-skill {
+  min-width: 0;
+}
+.rebirth-reward {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.rebirth-reward-chip {
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 500 9.5px var(--roll-font);
   white-space: nowrap;
 }
-[data-theme="dark"] .ultra-mark {
-  color: #e8c268;
+.rebirth-reward-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.rebirth-reward-copy strong {
+  font-size: 12px;
+}
+.rebirth-reward-copy span {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.rebirth-reward > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.rebirth-reward.is-earned > svg {
+  color: var(--green);
+}
+
+/* Ultra-rebirth: the permanent bonus, explained where the ladder ends. */
+.rebirth-ultra-card {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.6fr);
+  gap: 22px;
+  align-items: start;
+}
+.rebirth-ultra-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--green) 30%, var(--border));
+  border-radius: 12px;
+  background: var(--green-bg);
+  text-align: center;
+}
+.rebirth-ultra-figure svg {
+  color: var(--green);
+}
+.rebirth-ultra-figure strong {
+  font: 700 24px/1.2 var(--roll-font);
+}
+.rebirth-ultra-figure span {
+  font-size: 10.5px;
+  color: var(--secondary);
+}
+.rebirth-ultra-state {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--secondary);
+}
+.rebirth-footnote,
+.rebirth-ultra-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--secondary);
+}
+.rebirth-footnote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rebirth-footnote svg {
+  color: var(--green);
+}
+.rebirth-ultra-note b {
+  font-family: var(--roll-font);
+}
+.rebirth-ultra {
+  background: var(--green-bg);
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 40%, var(--border));
+}
+@media (max-width: 900px) {
+  .rebirth-hero,
+  .rebirth-columns,
+  .rebirth-ultra-card {
+    grid-template-columns: 1fr;
+  }
+  .rebirth-ladder li {
+    grid-template-columns: 26px minmax(0, 1fr);
+    row-gap: 8px;
+  }
+  .rebirth-rung-bar,
+  .rebirth-rung-skill {
+    grid-column: 2;
+  }
+}
+@media (max-width: 560px) {
+  .rebirth-hero {
+    padding: 20px;
+  }
+  .rebirth-block {
+    padding: 18px;
+  }
+  .rebirth-figures {
+    grid-template-columns: 1fr 1fr;
+  }
 }

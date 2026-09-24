@@ -35,6 +35,17 @@ export function ultraRebirthMultiplier(ultraRebirths = 0) {
   return 1 + ULTRA_BONUS_PER_REBIRTH * Math.max(0, ultraRebirths);
 }
 
+// Rebirth stays completely out of sight until the ladder unlocks: no badge, no
+// teaser, no counter. The nav entry, the page and the help page all ask this one
+// question, so the reveal can never be half-done.
+export function rebirthUnlocked(progress) {
+  return (
+    discoveredCount(progress) >= REBIRTH_VISIBLE_AT ||
+    (progress.rebirths ?? 0) > 0 ||
+    (progress.ultraRebirths ?? 0) > 0
+  );
+}
+
 export function discoveredCount(progress) {
   return new Set(progress.discovered.filter((id) => badgeIds.has(id))).size;
 }

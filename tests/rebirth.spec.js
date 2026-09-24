@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   emptyProgress,
   parseProgress,
@@ -31,7 +31,6 @@ const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
 const nav = (p, name) =>
   p.getByRole("navigation").getByRole("button", { name, exact: true }).click();
-const balance = (p) => p.evaluate(() => document.documentElement.scrollWidth);
 const state = (extra = {}) => ({
   ...emptyProgress(),
   profile: testProfile,
@@ -56,7 +55,6 @@ const scale = (p) =>
 async function start(p, extra = {}) {
   await seedProgress(p, extra);
   await mockRandom(p, [604827]);
-  await p.clock.install();
   await p.clock.pauseAt(new Date(Date.now() + 1000));
   await p.goto("/");
   await p.locator(".generate").click();
@@ -334,9 +332,19 @@ for (const [count, rebirths, expected] of [
     await page.goto("/#rebirth");
     const button = page.getByRole("button", { name: "Rebirth", exact: true });
     if (expected === "hidden") {
+      // Rebirth says nothing at all before it unlocks: no ladder, no locked
+      // panel, and the direct link quietly returns to the roll page.
       await expect(button).toHaveCount(0);
-      await expect(page.locator(".rebirth-locked")).toBeVisible();
-    } else if (expected === "ready") {
+      await expect(page.locator(".rebirth-page, .rebirth-ladder")).toHaveCount(
+        0,
+      );
+      await expect(
+        page.getByRole("heading", { name: "Rebirth", level: 1 }),
+      ).toHaveCount(0);
+      await expect(page).toHaveURL(/\/(roll)?$/);
+      return;
+    }
+    if (expected === "ready") {
       await expect(button).toBeEnabled();
     } else {
       await expect(button).toBeDisabled();
@@ -520,7 +528,6 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
 test("rebirth waits for cooldown and remains usable on mobile without motion", async ({
   page,
 }) => {
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   const now = await page.evaluate(() => Date.now());
   await seedProgress(page, { ...state(), cooldownUntil: now + 10000 });
@@ -535,7 +542,13 @@ test("rebirth waits for cooldown and remains usable on mobile without motion", a
     page.getByRole("button", { name: "Rebirth", exact: true }),
   ).toBeEnabled();
   await confirm(page);
-  expect(await balance(page)).toBe(true);
+  // The dialog and the page behind it fit the smallest phone: no sideways
+  // scroll while the typed confirmation is on screen.
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
   expect((await saved(page)).rebirths).toBe(0);
@@ -686,7 +699,7 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
   );
   // The ladder still points at rung one: nothing was reset in memory.
   await expect(
-    page.locator(".rebirth-ladder .is-current .rebirth-rung"),
+    page.locator(".rebirth-ladder li.is-current .rebirth-rung-name"),
   ).toHaveText("#1");
   await page.evaluate(() => {
     window.failGuard = false;

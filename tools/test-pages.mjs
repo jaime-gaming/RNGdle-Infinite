@@ -1,6 +1,7 @@
 // Test real production output against a strict static server (no SPA fallback).
 // Both root/custom-domain and repository-subpath hosting must work, including
-// worker fetches, local emoji, fonts, hash navigation and browser-local saves.
+// worker fetches, local emoji, fonts, real routes through the 404.html
+// fallback, and browser-local saves.
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import http from "node:http";
@@ -30,6 +31,7 @@ try {
     const outDir = path.resolve(".cache/pages-smoke");
     await build({ base, build: { outDir, emptyOutDir: true } });
     const requests = [];
+    const fallbacks = new Set();
     const server = http.createServer(async (req, res) => {
       const pathname = decodeURIComponent(
         new URL(req.url, "http://test").pathname,
@@ -53,7 +55,16 @@ try {
         });
         res.end(body);
       } catch {
-        res.writeHead(404).end();
+        // GitHub Pages serves 404.html for paths that are not files, which is
+        // how a direct link or reload on a real route (/shop) boots the app.
+        try {
+          const body = await fs.readFile(path.join(outDir, "404.html"));
+          fallbacks.add(pathname);
+          res.writeHead(404, { "Content-Type": "text/html" });
+          res.end(body);
+        } catch {
+          res.writeHead(404).end();
+        }
       }
     });
     await new Promise((resolve) => server.listen(0, "0.0.0.0", resolve));
@@ -64,7 +75,10 @@ try {
         failures = [];
       page.on("pageerror", (error) => errors.push(error.message));
       page.on("response", (response) => {
-        if (response.status() >= 400) failures.push(response.url());
+        if (response.status() < 400) return;
+        // The route fallback above is expected; anything else is a break.
+        const { pathname } = new URL(response.url());
+        if (!fallbacks.has(pathname)) failures.push(response.url());
       });
       page.on("requestfailed", (request) => failures.push(request.url()));
       await page.addInitScript(
@@ -142,7 +156,8 @@ try {
         badges: "The badge collection",
         history: "Your activity",
       })) {
-        // A direct hash link or reload must load without any server rewrites.
+        // A legacy hash link still lands on its page, and a fresh load of it
+        // normalises the address bar to the real path a share would use.
         await page.goto(`${url}#${section}`);
         await expect(
           page.getByRole("heading", { name: title, exact: true }),
@@ -151,8 +166,21 @@ try {
         await expect(
           page.getByRole("heading", { name: title, exact: true }),
         ).toBeVisible();
-        assert.equal(new URL(page.url()).hash, `#${section}`);
+        assert.equal(new URL(page.url()).pathname, `${base}${section}`);
+        assert.equal(new URL(page.url()).hash, "");
         assert.equal((await saved()).balance, before.balance);
+      }
+      // A direct link to a route is exactly the request a static host answers
+      // with 404.html: the app must boot from that fallback, not a dead end.
+      for (const [section, title] of Object.entries({
+        badges: "The badge collection",
+        history: "Your activity",
+      })) {
+        await page.goto(`${url}${section}`);
+        await expect(
+          page.getByRole("heading", { name: title, exact: true }),
+        ).toBeVisible();
+        assert.equal(new URL(page.url()).pathname, `${base}${section}`);
       }
       await page.goto(url);
       await expect(page.locator(".generate")).toBeDisabled();
@@ -180,7 +208,7 @@ try {
       assert.deepEqual(errors, []);
       assert.deepEqual(failures, []);
       console.log(
-        `Pages smoke passed: ${base} — real RNG, worker/data, emoji/fonts, hash routes and saved reload`,
+        `Pages smoke passed: ${base} — real RNG, worker/data, emoji/fonts, route fallback and saved reload`,
       );
     } finally {
       await context.close();

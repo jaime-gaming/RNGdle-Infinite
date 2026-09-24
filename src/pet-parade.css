@@ -1,5 +1,6 @@
 /* Companions wander across the roll stage. Decorative only: the layer ignores
-   pointer events, carries no text, and is hidden from assistive tech. */
+   pointer events and is hidden from assistive tech, and nothing here changes the
+   document flow, so the reveal keeps its measured layout. */
 .roll-experience {
   position: relative;
 }
@@ -10,36 +11,106 @@
   pointer-events: none;
   z-index: 0;
 }
-.pet-drift {
+.pet-walker {
   position: absolute;
   top: var(--row);
   left: 0;
-  display: block;
-  font-size: 30px;
-  opacity: 0.5;
-  filter: saturate(0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   animation: pet-cross var(--duration) linear infinite;
   animation-delay: var(--delay);
 }
-.pet-drift.is-active {
-  font-size: 40px;
-  opacity: 0.85;
-  filter: none;
-}
-.pet-drift-body {
-  display: inline-block;
-  animation: pet-bob 2.8s ease-in-out infinite;
-}
-.pet-drift-body .emoji,
-.pet-drift-body img {
+.pet-walker-body {
+  position: relative;
   display: block;
+  animation: pet-bob 3.2s ease-in-out infinite;
+}
+.pet-walker.is-active .pet-walker-body {
+  animation-duration: 2.2s;
+}
+.pet-walker:not(.is-active) .pet-figure {
+  opacity: 0.72;
+}
+.pet-walker.phase-reveal .pet-walker-body {
+  animation-duration: 1.3s;
+}
+.pet-walker.phase-reveal {
+  animation-duration: calc(var(--duration) * 0.55);
+}
+.pet-walker.phase-cooldown .pet-figure {
+  opacity: 0.5;
+}
+/* The shadow keeps the walker grounded, and shrinks as it bobs up. */
+.pet-walker-ground {
+  width: 34px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--text) 22%, transparent),
+    transparent 72%
+  );
+  animation: pet-shadow 3.2s ease-in-out infinite;
+}
+.pet-nameplate {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+.pet-nameplate strong {
+  font-size: 10px;
+  color: var(--text);
+}
+.pet-nameplate span {
+  color: var(--green);
+  font-weight: 650;
+}
+.pet-walker-trail {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  display: block;
+  width: 34px;
+}
+.pet-walker-trail i {
+  position: absolute;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  color: color-mix(in srgb, var(--pet-grade, var(--muted)) 60%, transparent);
+  animation: pet-spark 1.6s linear infinite;
+}
+.pet-walker-trail i:nth-child(1) {
+  top: -8px;
+  animation-delay: 0s;
+}
+.pet-walker-trail i:nth-child(2) {
+  top: 2px;
+  animation-delay: 0.5s;
+}
+.pet-walker-trail i:nth-child(3) {
+  top: 12px;
+  animation-delay: 1s;
 }
 @keyframes pet-cross {
   from {
-    transform: translateX(-14vw);
+    transform: translateX(-22vw);
   }
   to {
-    transform: translateX(114vw);
+    transform: translateX(122vw);
   }
 }
 @keyframes pet-bob {
@@ -51,25 +122,178 @@
     transform: translateY(var(--bob));
   }
 }
-/* Reduced motion: no crossing, no bobbing. They simply stand about. */
+@keyframes pet-shadow {
+  0%,
+  100% {
+    transform: scale(0.86);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+@keyframes pet-spark {
+  0% {
+    transform: translateX(0) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(-30px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* A companion found on a roll gets its own entrance, then walks the stage with
+   the rest. Animation only: the state is cleared by the app after it plays. */
+.pet-arrival {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 22px 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 18px 44px var(--scrim-strong);
+  animation: pet-arrival 5.4s ease-out forwards;
+}
+.pet-arrival-rings {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  width: 74px;
+  height: 74px;
+  margin: -37px 0 0 -8px;
+  border: 1px solid var(--green);
+  border-radius: 50%;
+  opacity: 0;
+  animation: pet-arrival-ring 5.4s ease-out forwards;
+}
+.pet-arrival-figure {
+  --pet-size: 74px;
+  animation: pet-arrival-figure 5.4s ease-out forwards;
+}
+.pet-arrival-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pet-arrival-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 10px var(--roll-font);
+  letter-spacing: 1.4px;
+  color: var(--green);
+}
+.pet-arrival-copy strong {
+  font-size: 16px;
+}
+.pet-arrival-copy > span:last-child {
+  font-size: 11px;
+  color: var(--secondary);
+}
+@keyframes pet-arrival {
+  0% {
+    transform: translate(-50%, 18px) scale(0.94);
+    opacity: 0;
+  }
+  8% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -10px);
+    opacity: 0;
+  }
+}
+@keyframes pet-arrival-figure {
+  0% {
+    transform: scale(0.5) rotate(-8deg);
+  }
+  12% {
+    transform: scale(1.08) rotate(3deg);
+  }
+  20%,
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes pet-arrival-ring {
+  0% {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  12% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  40% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: no crossing, no bobbing, no entrance. The equipped companion
+   simply stands at the foot of the stage with its name plate. */
 .pet-parade.is-still {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 10px;
+  gap: 14px;
   inset: auto 0 12px;
 }
-.pet-parade.is-still .pet-drift {
+.pet-parade.is-still .pet-walker {
   position: static;
+  top: auto;
   animation: none;
-  opacity: 0.5;
 }
-.pet-parade.is-still .pet-drift-body {
+.pet-parade.is-still .pet-walker-body,
+.pet-parade.is-still .pet-walker-ground,
+.pet-parade.is-still .pet-walker-trail i {
   animation: none;
+}
+.pet-parade.is-still .pet-walker-trail {
+  display: none;
+}
+.pet-parade.is-still .pet-nameplate {
+  display: flex;
+}
+.pet-parade.is-still .pet-arrival {
+  display: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .pet-drift,
-  .pet-drift-body {
+  .pet-walker,
+  .pet-walker-body,
+  .pet-walker-ground,
+  .pet-walker-trail i,
+  .pet-arrival,
+  .pet-arrival-figure,
+  .pet-arrival-rings {
     animation: none;
+  }
+  .pet-arrival {
+    opacity: 0;
+  }
+}
+@media (max-width: 720px) {
+  .pet-walker.is-active .pet-figure {
+    --pet-size: 42px;
+  }
+  .pet-nameplate strong {
+    font-size: 9px;
   }
 }

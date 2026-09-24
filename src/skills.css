@@ -183,3 +183,169 @@
     animation: none;
   }
 }
+
+/* ---- What the rack adds up to ------------------------------------------- */
+/* Each armed circle states its own contribution next to the ring, and the Σ
+   button opens the only panel in this corner that does arithmetic. */
+.skill-contribution {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 500 9px/1.3 var(--roll-font);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.skill-bar:hover .skill-contribution,
+.skill-bar:focus-within .skill-contribution {
+  opacity: 0.35;
+}
+.skill-slot:hover .skill-contribution,
+.skill-slot:focus-visible .skill-contribution {
+  opacity: 1;
+}
+.skill-ability {
+  cursor: pointer;
+}
+.skill-ability.is-off .skill-ring-track {
+  fill: color-mix(in srgb, var(--bg) 60%, transparent);
+}
+.skill-ability.is-off .skill-ring-icon {
+  color: var(--muted);
+}
+.skill-ability.is-running .skill-ring-icon,
+.skill-ability.is-paused .skill-ring-icon {
+  color: var(--green);
+}
+.skill-ability.is-running .skill-ring-fill {
+  stroke: var(--green);
+}
+.skill-ability.is-paused .skill-ring-fill {
+  stroke: color-mix(in srgb, var(--green) 45%, var(--border));
+}
+.skill-ability.is-running .skill-ring {
+  animation: skill-ready 3.4s ease-in-out infinite;
+}
+.skill-summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 42px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 700 12px var(--roll-font);
+  cursor: pointer;
+}
+.skill-summary.is-armed {
+  color: var(--ink, var(--text));
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+}
+.skill-summary-count {
+  font-size: 9px;
+  color: var(--green);
+}
+.skill-summary:hover,
+.skill-summary:focus-visible,
+.skill-summary.is-open {
+  border-color: var(--text);
+  color: var(--text);
+}
+.rack-panel {
+  position: absolute;
+  top: -8px;
+  left: calc(100% + 12px);
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  width: 288px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 16%);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--secondary);
+  pointer-events: none;
+}
+.skill-summary:hover .rack-panel,
+.skill-summary:focus-visible .rack-panel,
+.skill-summary.is-open .rack-panel {
+  display: flex;
+}
+.rack-panel strong {
+  font-size: 12px;
+  color: var(--ink, var(--text));
+}
+.rack-panel-label {
+  margin-top: 4px;
+  font: 500 9px var(--roll-font);
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rack-panel-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rack-panel-row.is-part {
+  padding-left: 10px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.rack-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.rack-chip {
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--green) 35%, var(--border));
+  border-radius: 6px;
+  background: var(--green-bg);
+  color: var(--green);
+  font: 500 10px/1.4 var(--roll-font);
+}
+.rack-panel-empty {
+  color: var(--muted);
+  font-size: 10px;
+}
+.rack-panel-firing {
+  margin-top: 4px;
+  font: 500 9px var(--roll-font);
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.skill-tooltip-contribution {
+  color: var(--green);
+  font-size: 10px;
+}
+@media (max-width: 720px) {
+  .skill-contribution {
+    display: none;
+  }
+  .skill-summary {
+    width: 34px;
+    height: 22px;
+  }
+  .rack-panel {
+    left: 0;
+    top: calc(100% + 8px);
+    width: min(296px, calc(100vw - 24px));
+  }
+}

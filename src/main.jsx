@@ -43,9 +43,16 @@ import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
 import { petDrop, petById } from "./pets.js";
+import { rebirthUnlocked } from "./rebirth.js";
 import { skillPetLuck, skillById } from "./skills.js";
 import { randomUnit } from "./random.js";
 import Changelog from "./components/Changelog";
+import {
+  BadgeMark,
+  CompanionMark,
+  SkillMark,
+  RollMark,
+} from "./components/game-icons.jsx";
 import RebirthNav from "./components/RebirthNav";
 import About from "./components/About";
 import {
@@ -84,6 +91,8 @@ function App() {
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
+  // A companion found on a roll walks in with its own moment on the roll stage.
+  const [arrivalPet, setArrivalPet] = useState(null);
   const {
     progress: session,
     warning: progressWarning,
@@ -124,8 +133,12 @@ function App() {
       markSeen();
       setSeenVersion(LATEST_VERSION);
     }
-    if (outcome.ok && drop)
-      notify(`${petById.get(drop).emoji} ${petById.get(drop).name} appeared!`);
+    if (outcome.ok && drop) {
+      notify(`New companion: ${petById.get(drop).name} joined you.`);
+      setArrivalPet(drop);
+      clearTimeout(arrivalTimer.current);
+      arrivalTimer.current = setTimeout(() => setArrivalPet(null), 5600);
+    }
     if (!outcome.ok) notify(outcome.message);
     return outcome;
   }
@@ -134,6 +147,7 @@ function App() {
   const [group, setGroup] = useState("All sets");
   const [sort, setSort] = useState("Default");
   const toastTimer = useRef(null);
+  const arrivalTimer = useRef(null);
   const previousFocus = useRef(null);
   const modalRef = useRef(null);
   const notify = (text) => {
@@ -185,6 +199,7 @@ function App() {
   useEffect(
     () => () => {
       clearTimeout(toastTimer.current);
+      clearTimeout(arrivalTimer.current);
     },
     [],
   );
@@ -238,6 +253,12 @@ function App() {
   useReadyAlert(session.cooldownUntil, {
     blocked: !!session.pendingRoll || !!session.offline?.batch,
   });
+  const rebirthVisible = rebirthUnlocked(session);
+  // A direct link to a page that has not been unlocked yet simply goes home:
+  // no locked panel, no counter, nothing to explain the mystery early.
+  useEffect(() => {
+    if (page === "rebirth" && !rebirthVisible) navigate("roll");
+  }, [page, rebirthVisible]);
   const discoveredBadges = badges.filter((b) =>
     session.discovered.includes(b.canonicalId),
   );
@@ -401,13 +422,17 @@ function App() {
             onDraw={() => dispatch({ type: "draw" })}
             openSignup={openAuth}
             aura={session.equipped}
+            arrivalPet={arrivalPet}
           >
             <button
               className="discover-link"
               onClick={() => navigate("badges")}
             >
-              <span className="mini-badges">
-                <Emoji text="🍀 💎 🪐" />
+              <span className="mini-badges" aria-hidden="true">
+                <RollMark size={16} />
+                <BadgeMark size={16} />
+                <CompanionMark size={16} />
+                <SkillMark size={16} />
               </span>
               <span>
                 Every number has a story. <strong>Discover the badges</strong>
@@ -423,6 +448,7 @@ function App() {
             navigate={navigate}
             openSignup={openAuth}
             openBadge={openBadge}
+            notify={notify}
           />
         )}
         {page === "settings" && (
@@ -461,7 +487,7 @@ function App() {
                 <p>What the game is, and what it never does.</p>
               </div>
             </div>
-            <About navigate={navigate} />
+            <About navigate={navigate} progress={session} />
           </>
         )}
         {page === "changelog" && (
@@ -506,7 +532,7 @@ function App() {
             </div>
           </>
         )}
-        {page === "rebirth" && (
+        {page === "rebirth" && rebirthVisible && (
           <>
             <button className="back-link" onClick={() => navigate("roll")}>
               <ArrowLeft size={14} /> Back to rolling
