@@ -95,18 +95,22 @@ test("the skills shelf is where charged effects live, flywheel included", async 
   ).toHaveCount(1);
 });
 
-test("the shop is calmer by construction: rows, one sticky bar, search and filters", () => {
+test("the shop speaks one card language: preview, facts, price, one button", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
   const css = fs.readFileSync("src/shop.css", "utf8");
-  // Every product is a row with the same four facts, not a preview banner.
-  expect(shop).toContain("shop-card-effect");
-  expect(shop).toContain("shop-card-buy");
+  // Every product leads with a preview band that shows the change, then the
+  // same facts, the price and a single buy action.
+  expect(shop).toContain("upgrade-preview");
+  expect(shop).toContain("aura-preview");
+  expect(shop).toContain("shop-card-body");
+  expect(shop).toContain("shop-price");
+  expect(shop).toContain("shop-item-note");
   expect(shop).toContain("shop-tag");
-  // Long descriptions are folded to two quiet lines; no extra button competes
-  // with the buy action inside a row.
+  // Long descriptions are folded to a few quiet lines; no extra button competes
+  // with the buy action inside a card.
   expect(shop).toContain("shop-card-desc");
   expect(shop).not.toContain("shop-card-more");
-  expect(css).toContain("-webkit-line-clamp: 2");
+  expect(css).toContain("-webkit-line-clamp: 3");
   // One sticky bar holds shelves, search and filters.
   expect(shop).toContain('className="shop-controls"');
   expect(shop).toContain('aria-label="Search the shop"');
