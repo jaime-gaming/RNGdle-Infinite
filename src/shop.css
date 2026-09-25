@@ -229,52 +229,49 @@
   text-align: center;
 }
 
-/* ---- Rows ---------------------------------------------------------------- */
+/* ---- Cards ---------------------------------------------------------------
+   Every shelf speaks the same language: a preview band that shows the change
+   at a glance, the name with its state, the plain description, the price and
+   one black button. Nothing competes with the buy action. */
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 14px;
 }
 .shop-grid-upgrades {
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .shop-card {
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 14px;
-  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: 12px;
   background: var(--surface);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.shop-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--muted);
+  box-shadow: 0 8px 24px #00000009;
+}
+.shop-card:focus-within {
+  border-color: #a499d9;
 }
 .shop-card.is-owned {
-  background: color-mix(in srgb, var(--hover) 55%, var(--surface));
+  background: color-mix(in srgb, var(--hover) 45%, var(--surface));
 }
 .shop-card.is-equipped {
   border-color: color-mix(in srgb, var(--green) 45%, var(--border));
 }
-.shop-card-lead {
-  display: grid;
-  place-items: center;
-  min-height: 46px;
-}
-.shop-card-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--hover);
-  color: var(--secondary);
-}
-.shop-card.is-owned .shop-card-icon {
-  color: var(--green);
-  border-color: color-mix(in srgb, var(--green) 35%, var(--border));
-}
-.shop-card-main {
-  min-width: 0;
+.shop-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 18px;
 }
 .shop-item-title {
   display: flex;
@@ -283,18 +280,18 @@
   justify-content: space-between;
 }
 .shop-item-title h3 {
-  font-size: 14px;
+  font-size: 15px;
   margin: 0;
 }
 .shop-state {
   flex-shrink: 0;
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
+  padding: 3px 5px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 3px 5px;
+  color: var(--muted);
+  font: 500 9px var(--roll-font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .shop-state.is-owned {
   color: var(--secondary);
@@ -303,30 +300,28 @@
   color: var(--green);
   border-color: color-mix(in srgb, var(--green) 40%, var(--border));
 }
-.shop-card-effect {
-  margin: 6px 0 0;
-  font: 500 11.5px/1.5 var(--roll-font);
-  color: var(--text);
-}
 .shop-card-desc {
-  margin: 6px 0 0;
-  font-size: 11.5px;
-  line-height: 1.65;
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.75;
   color: var(--secondary);
-}
-/* Long flavour text is quietly folded to two lines: the effect line above it
-   is the fact, and the purchase dialog repeats the full sentence. */
-.shop-card-desc {
+  /* Three lines keep every card the same height without hiding the point: the
+     purchase dialog repeats the whole sentence. */
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.shop-skill-effect {
+  margin: 8px 0 0;
+  color: var(--text);
+  font: 500 11px/1.5 var(--roll-font);
 }
 .shop-card-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 .shop-tag {
   padding: 3px 7px;
@@ -344,25 +339,21 @@
   color: var(--warning);
   border-color: color-mix(in srgb, var(--warning) 30%, var(--border));
 }
-.shop-card-buy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 7px;
-  width: 168px;
-}
+/* The price and the button sit at the bottom, level across a row of cards. */
 .shop-price {
   display: flex;
-  gap: 6px;
+  gap: 7px;
   align-items: center;
-  font: 700 13px/18px var(--roll-font);
+  margin: auto 0 14px;
+  padding-top: 16px;
+  font: 700 14px/20px var(--roll-font);
 }
 .shop-card .primary-button,
 .shop-card .secondary-button {
   width: 100%;
   justify-content: center;
-  min-height: 36px;
-  font-size: 11.5px;
+  min-height: 42px;
+  font-size: 12px;
 }
 .shop-card button:disabled {
   opacity: 0.5;
@@ -370,11 +361,59 @@
 }
 .shop-item-note {
   display: block;
-  width: 100%;
-  text-align: right;
+  margin-top: 10px;
   font-size: 10px;
-  line-height: 15px;
+  line-height: 16px;
   color: var(--muted);
+  text-align: center;
+}
+/* ---- Preview bands ------------------------------------------------------- */
+.upgrade-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 124px;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at 50% 20%, #6b85ad28, transparent 80%);
+  color: var(--secondary);
+}
+.upgrade-cooldown {
+  background: radial-gradient(ellipse at 50% 20%, #5fd69b20, transparent 80%);
+  color: #7eb7a0;
+}
+.upgrade-pace {
+  background: linear-gradient(135deg, #fbbf2412, #a78bfa12);
+}
+.upgrade-skill,
+.upgrade-skill-slot {
+  background: linear-gradient(135deg, #a78bfa14, #38bdf80f);
+}
+.upgrade-offline,
+.upgrade-offline-cap {
+  background: radial-gradient(ellipse at 50% 20%, #38bdf81a, transparent 80%);
+}
+.upgrade-utility {
+  background: radial-gradient(ellipse at 50% 20%, #94a3b820, transparent 80%);
+}
+.upgrade-preview > span {
+  font: 500 22px var(--roll-font);
+  color: var(--muted);
+}
+.upgrade-preview b {
+  color: var(--text);
+}
+.upgrade-preview small {
+  padding-inline: 14px;
+  font: 500 9.5px var(--roll-font);
+  letter-spacing: 0.9px;
+  text-align: center;
+  color: var(--muted);
+}
+.shop-card.is-owned .upgrade-preview {
+  color: var(--green);
 }
 .shop-save-note {
   max-width: 620px;
@@ -384,28 +423,27 @@
   line-height: 20px;
   text-align: center;
 }
-/* Aura rows keep their preview: a compact number box, never a full banner. */
-.shop-card.is-aura {
-  grid-template-columns: 132px minmax(0, 1fr) auto;
-}
-.shop-card.is-aura .shop-card-lead {
-  min-height: 84px;
-  border-radius: 9px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
+/* Auras keep the full preview: the rarity box is the product. */
 .aura-preview {
   position: relative;
   isolation: isolate;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 152px;
+  padding: 24px 18px;
   overflow: hidden;
-  padding: 12px;
+  border-bottom: 1px solid var(--border);
   background: var(--hover);
 }
+.aura-preview > svg {
+  position: absolute;
+  right: 14px;
+  bottom: 13px;
+  color: var(--muted);
+}
 .aura-preview .number-box {
-  transform: scale(0.86);
+  transform: scale(0.88);
 }
 .aura-preview.aura-eclipse {
   background: radial-gradient(ellipse at center, #f59e0b15, var(--hover) 75%);
@@ -643,17 +681,6 @@
 .guest-purchase-note {
   font-size: 12px !important;
 }
-.shop-card {
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
-}
-.shop-card:hover {
-  border-color: var(--muted);
-}
-.shop-card:focus-within {
-  border-color: #a499d9;
-}
 nav button:disabled,
 .demo-best-footer button:disabled {
   opacity: 0.38;
@@ -670,37 +697,35 @@ nav button:disabled,
     scroll-margin-top: 168px;
   }
 }
-@media (max-width: 760px) {
-  .shop-card,
-  .shop-card.is-aura {
-    grid-template-columns: 46px minmax(0, 1fr);
+@media (max-width: 800px) {
+  /* Two columns fit a tablet; below them a card turns on its side so the
+     preview sits next to its facts instead of above them. */
+  .shop-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
-  .shop-card.is-aura {
-    grid-template-columns: 96px minmax(0, 1fr);
+  .shop-grid-upgrades {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .shop-card-buy {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
+}
+@media (max-width: 640px) {
+  .shop-grid,
+  .shop-grid-upgrades {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .shop-card-buy .primary-button,
-  .shop-card-buy .secondary-button {
-    width: auto;
-    padding-inline: 16px;
+  .shop-card {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.9fr) 1.4fr;
   }
-  .shop-item-note {
-    text-align: left;
-    flex-basis: 100%;
+  .upgrade-preview,
+  .aura-preview {
+    height: 100%;
+    min-height: 158px;
+    border-bottom: 0;
+    border-right: 1px solid var(--border);
   }
   .shop-section-heading {
     flex-direction: column;
     align-items: flex-start;
-  }
-  .shop-section-actions {
-    justify-content: flex-start;
   }
   .shop-wallet {
     padding: 20px;
@@ -711,12 +736,6 @@ nav button:disabled,
   }
 }
 @media (max-width: 560px) {
-  /* One column, never wider than the phone: a 340px minimum track would push
-     the whole page sideways on a 360px screen. */
-  .shop-grid,
-  .shop-grid-upgrades {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .shop-wallet {
     align-items: flex-start;
     flex-direction: column;
@@ -742,6 +761,18 @@ nav button:disabled,
     text-align: left;
   }
 }
+@media (max-width: 460px) {
+  /* The smallest phones stack the preview back on top of the facts. */
+  .shop-card {
+    display: flex;
+  }
+  .upgrade-preview,
+  .aura-preview {
+    min-height: 132px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+}
 @media (max-width: 420px) {
   .header {
     gap: 6px;
@@ -761,9 +792,6 @@ nav button:disabled,
   .header nav button {
     padding: 6px;
   }
-  .shop-card.is-aura {
-    grid-template-columns: 1fr;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .aura-layer,
@@ -773,5 +801,9 @@ nav button:disabled,
   }
   .shop-card {
     transition: none;
+  }
+  .shop-card:hover {
+    transform: none;
+    box-shadow: none;
   }
 }

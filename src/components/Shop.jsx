@@ -250,31 +250,95 @@ export default function Shop({
     if (filter === "affordable") return state.affordableNow;
     return true;
   };
-  function effectOf(item) {
+  // The preview band is the card's headline: the same shape on every shelf, so
+  // a glance tells you what a purchase changes before you read a word.
+  function preview(item, state) {
+    const Icon = icons[item.icon] ?? ShoppingBag;
+    const ownedNow = state.owned;
     if (item.kind === "pace")
-      return `${item.charges === 1 ? "Every" : `Every ${item.charges}`} online rolls charge a free roll — no cooldown after the reveal`;
+      return (
+        <>
+          <Icon size={28} />
+          <span>
+            <b>{item.charges}</b> {item.charges === 1 ? "roll" : "rolls"}{" "}
+            <small>→</small> charged
+          </span>
+          <small>NEXT ROLL · ZERO COOLDOWN</small>
+        </>
+      );
     if (item.kind === "offline-cap")
-      return `Offline storage ${item.from} → ${item.value} rolls per absence`;
+      return (
+        <>
+          <Icon size={25} />
+          <span>
+            {item.from} <small>→</small> <b>{item.value}</b>
+          </span>
+          <small>OFFLINE ROLLS STORED PER ABSENCE</small>
+        </>
+      );
     if (item.kind === "offline")
-      return `Offline rate ${item.from / 60000} → ${item.value / 60000} minutes per roll`;
+      return (
+        <>
+          <Icon size={25} />
+          <span>
+            {item.from / 60000} min <small>→</small>{" "}
+            <b>{item.value / 60000} min</b>
+          </span>
+          <small>OFFLINE INTERVAL · SAME ROLL CAP</small>
+        </>
+      );
+    if (item.kind === "skill")
+      return (
+        <>
+          <Icon size={25} />
+          <span>
+            <b>{item.charges}</b> {item.charges === 1 ? "roll" : "rolls"}{" "}
+            <small>→</small> ready
+          </span>
+          <small>
+            {ownedNow
+              ? `${skillChargeOf(progress, item.id)} / ${item.charges} CHARGED · FIRES ON ONE ROLL`
+              : "CHARGED EFFECT · FIRES ON ONE ROLL"}
+          </small>
+        </>
+      );
     if (item.kind === "skill-slot")
-      return `Rack size ${item.from} → ${item.slots} skills`;
-    if (item.kind === "skill") {
-      const skill = skillById.get(item.skillId ?? item.id);
-      return skill
-        ? `${skillEffectChips(skill).join(" · ")} · fires after ${item.charges} rolls`
-        : "";
-    }
-    if (item.kind === "aura") return "Cosmetic only · your odds never move";
-    if (item.id === "auto-roll")
-      return "Click the ability on the Roll page to roll on repeat";
-    if (item.id === "persistence-core")
-      return "Auto-Roll survives a reload and keeps running in the background";
-    if (item.id === "offline-roller")
-      return `${owned(item) ? offlineInterval / 60000 : 10} minutes per offline roll · ${owned(item) ? offlineCap : 144} stored`;
-    if (item.id === "archive-lens")
-      return "Number search and tier filters across the archive";
-    return "";
+      return (
+        <>
+          <Icon size={25} />
+          <span>
+            {item.from} <small>→</small> <b>{item.slots}</b>
+          </span>
+          <small>SKILL SLOTS · SWAPPING IS FREE</small>
+        </>
+      );
+    if (item.kind === "utility")
+      return (
+        <>
+          <Icon size={25} />
+          <span>{item.name}</span>
+          <small>
+            {item.id === "auto-roll"
+              ? "CLICK THE ABILITY · ROLL · REPEAT"
+              : item.id === "persistence-core"
+                ? "AUTO-ROLL · REMEMBERED · BACKGROUND"
+                : item.id === "offline-roller"
+                  ? `${ownedNow ? offlineInterval / 60000 : 10} MIN / ROLL · ${ownedNow ? offlineCap : 144} MAX`
+                  : "SEARCH · FILTER · DISCOVER"}
+          </small>
+        </>
+      );
+    return (
+      <>
+        <Icon size={25} />
+        <span>
+          {item.from / 1000}s <small>→</small> <b>{item.value / 1000}s</b>
+        </span>
+        <small>
+          {item.kind === "roll" ? "COMPLETE REVEAL" : "BETWEEN ROLLS"}
+        </small>
+      </>
+    );
   }
   const owned = (item) => progress.owned.includes(item.id);
   function card(item) {
@@ -289,8 +353,7 @@ export default function Shop({
           : false;
     const definition = skill ? skillById.get(item.skillId ?? item.id) : null;
     const Icon = icons[item.icon] ?? ShoppingBag;
-    const shown = matches(item, state);
-    if (!shown) return null;
+    if (!matches(item, state)) return null;
     return (
       <article
         className={`shop-card ${aura ? "is-aura" : ""} ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""}`}
@@ -302,22 +365,28 @@ export default function Shop({
         tabIndex={-1}
       >
         <div
-          className={`shop-card-lead ${aura ? `aura-preview aura-${item.id}` : ""}`}
+          className={
+            aura
+              ? `aura-preview aura-${item.id}`
+              : `upgrade-preview upgrade-${item.kind}`
+          }
+          aria-hidden="true"
         >
           {aura ? (
-            <NumberBox
-              value="??????"
-              tier={previewTier}
-              aura={item.id}
-              compact
-            />
+            <>
+              <NumberBox
+                value="??????"
+                tier={previewTier}
+                aura={item.id}
+                compact
+              />
+              <Icon size={21} />
+            </>
           ) : (
-            <span className="shop-card-icon">
-              <Icon size={20} />
-            </span>
+            preview(item, state)
           )}
         </div>
-        <div className="shop-card-main">
+        <div className="shop-card-body">
           <div className="shop-item-title">
             <h3>{item.name}</h3>
             <span
@@ -326,41 +395,41 @@ export default function Shop({
               {equipped ? "Equipped" : state.owned ? "Owned" : "Permanent"}
             </span>
           </div>
-          <p className="shop-card-effect">{effectOf(item)}</p>
           <p className="shop-card-desc">
             {item.id === "offline-roller" && state.owned
               ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum ${offlineCap} rolls per absence; unused fractions do not carry over.`
               : item.description}
           </p>
-          <div className="shop-card-tags">
-            {goal?.id === item.id && (
-              <span className="shop-tag is-goal">Your goal</span>
-            )}
-            {requiresName(item) && (
-              <span className="shop-tag is-locked">
-                Needs {requiresName(item)}
-              </span>
-            )}
-            {state.profileGated && (
-              <span className="shop-tag is-locked">Needs a profile</span>
-            )}
-            {skill && definition && (
-              <span className="shop-tag">
-                {skillChargeOf(progress, item.id)} / {item.charges} charged
-              </span>
-            )}
-            {item.kind === "pace" && (
-              <span className="shop-tag">
-                {progress.flywheelCharge ?? 0} / {charges} charges
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="shop-card-buy">
-          <span className="shop-price">
+          {/* What the skill adds, outside the folded description so the effect
+              is never the line that gets clipped. */}
+          {skill && definition && (
+            <p className="shop-skill-effect">
+              {skillEffectChips(definition).join(" · ")}
+            </p>
+          )}
+          {/* Only the cards that need a caveat carry one: a goal marker, a
+              prerequisite, or the profile gate. Everything else stays quiet. */}
+          {(goal?.id === item.id ||
+            requiresName(item) ||
+            state.profileGated) && (
+            <div className="shop-card-tags">
+              {goal?.id === item.id && (
+                <span className="shop-tag is-goal">Your goal</span>
+              )}
+              {requiresName(item) && (
+                <span className="shop-tag is-locked">
+                  Needs {requiresName(item)}
+                </span>
+              )}
+              {state.profileGated && (
+                <span className="shop-tag is-locked">Needs a profile</span>
+              )}
+            </div>
+          )}
+          <div className="shop-price">
             <Coins size={15} />
             {formatEP(item.price)} EP
-          </span>
+          </div>
           <button
             className={
               state.owned && !skill ? "secondary-button" : "primary-button"
