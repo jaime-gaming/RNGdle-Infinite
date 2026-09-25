@@ -53,7 +53,8 @@ test("Auto-Roll is a confirmed purchase that does not equip and persists as an o
     balance: autoRoll.price,
     totalEarned: autoRoll.price,
   });
-  await page.goto("/#shop");
+  // Auto-Roll is a tool: its shelf is its own page.
+  await page.goto("/shop/tools");
   const card = page.locator('[data-product="auto-roll"]');
   await card.getByRole("button").click();
   await expect(page.getByRole("dialog")).toContainText(`${autoRollPrice} EP`);

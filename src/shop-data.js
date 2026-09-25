@@ -452,6 +452,74 @@ export const shopProducts = [
   })),
   ...SKILL_SLOTS.map((bay) => ({ ...bay })),
 ];
+// The shop's six shelves. Each one is its own sub-page (/shop/skills and so
+// on) and every product lives on exactly one shelf, so the hub buttons, the
+// featured picks, a deep link and the back button can never disagree about
+// where an item is sold. Companions keep their shelf too; it is owned by the
+// companion component rather than by this catalogue.
+export const SHOP_SECTIONS = [
+  {
+    id: "skills",
+    label: "Skills",
+    icon: "skill",
+    blurb: "Charged effects and the rack that fires them.",
+  },
+  {
+    id: "pace",
+    label: "Pace",
+    icon: "pace",
+    blurb: "Shorter reveals and shorter cooldowns.",
+  },
+  {
+    id: "companions",
+    label: "Companions",
+    icon: "companion",
+    blurb: "Finders of EP, one worn at a time.",
+  },
+  {
+    id: "auras",
+    label: "Auras",
+    icon: "aura",
+    blurb: "Cosmetics for the rarity box, never odds.",
+  },
+  {
+    id: "offline",
+    label: "Offline",
+    icon: "offline",
+    blurb: "Earn while you are away, and store more.",
+  },
+  {
+    id: "tools",
+    label: "Tools",
+    icon: "automation",
+    blurb: "Automation and archive, same rules as always.",
+  },
+];
+
+// Which kinds of product each shelf sells. The order inside a shelf is the
+// catalogue order, so a shelf never reshuffles between visits.
+const SHELF_KINDS = {
+  skills: ["skill", "skill-slot", "pace"],
+  pace: ["roll", "cooldown"],
+  auras: ["aura"],
+  offline: ["offline", "offline-cap"],
+  tools: ["utility"],
+};
+
+export function shelfOfProduct(item) {
+  if (!item) return "";
+  const shelf = SHOP_SECTIONS.find((section) =>
+    (SHELF_KINDS[section.id] ?? []).includes(item.kind),
+  );
+  // Every product kind belongs to a shelf; pace is the catalogue's home track.
+  return shelf?.id ?? "pace";
+}
+
+export function productsOnShelf(id) {
+  const kinds = SHELF_KINDS[id];
+  return kinds ? shopProducts.filter((p) => kinds.includes(p.kind)) : [];
+}
+
 export function nextUpgrade(owned, kind) {
   const track = shopProducts.filter((p) => p.kind === kind);
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);

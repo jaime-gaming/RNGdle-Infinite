@@ -10,6 +10,7 @@ import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { evaluate } from "./helpers/index.js";
 import { shopProducts } from "../src/shop-data.js";
+import { openShelfFor } from "./helpers/shop.js";
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
 const rows = async (p) =>
@@ -198,7 +199,7 @@ test("a hidden tab earns on return but a visible Shop page does not count as off
   page,
 }) => {
   await away(page, 0);
-  await page.goto("/#shop");
+  await page.goto("/shop");
   await expect
     .poll(async () => (await saved(page)).offline.lastSeenAt)
     .toBeGreaterThan(Date.now() - 5000);
@@ -300,7 +301,7 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
   page,
 }) => {
   await seedProgress(page, { balance: 40000000, totalEarned: 40000000 });
-  await page.goto("/#shop");
+  await page.goto("/shop/auras");
   const auraCount = shopProducts.filter((p) => p.kind === "aura").length;
   await expect(page.locator(".aura-preview .number-box")).toHaveCount(
     auraCount,
@@ -310,6 +311,8 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
     auraCount,
   );
   for (const id of ["eclipse", "prism", "offline-roller"]) {
+    // Auras are on this shelf; the Offline Roller itself is a tool.
+    if (id === "offline-roller") await openShelfFor(page, id);
     await page.locator(`[data-product="${id}"] button`).click();
     await page
       .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -324,7 +327,8 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
       ),
   );
   expect((await saved(page)).equipped).toBe("prism");
-  await page.reload();
+  // Back to the shelf the auras were bought on: the roller lives in Tools.
+  await page.goto("/shop/auras");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
   for (const id of ["eclipse", "prism"]) {

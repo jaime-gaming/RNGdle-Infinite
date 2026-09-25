@@ -181,7 +181,8 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
   });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#shop");
+  // Auras are their own shelf page.
+  await page.goto("/shop/auras");
   const card = page.locator('[data-product="starfall"]');
   await card.getByRole("button", { name: priced }).click();
   await page
@@ -215,10 +216,12 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
   );
   await expect(page.locator(".roll-ep")).toHaveText("4,663 EP");
   await expect.poll(async () => (await saved(page))?.balance).toBe(4663);
+  // "Use original appearance" is the Auras shelf's own control.
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Shop", exact: true })
     .click();
+  await page.getByRole("link", { name: "Auras", exact: true }).click();
   await page.getByRole("button", { name: "Use original appearance" }).click();
   await expect.poll(async () => (await saved(page))?.equipped).toBe("none");
   expect((await saved(page)).balance).toBe(4663);
@@ -241,9 +244,9 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   );
   const wallet = pair[0].price + pair[1].price - 1;
   await seedProgress(page, { balance: wallet, totalEarned: wallet });
-  await page.goto("/#shop");
+  await page.goto("/shop/auras");
   const other = await context.newPage();
-  await other.goto("/#shop");
+  await other.goto("/shop/auras");
   await page.locator(`[data-product="${pair[0].id}"] button`).click();
   await other.locator(`[data-product="${pair[1].id}"] button`).click();
   await Promise.all([
@@ -286,7 +289,7 @@ test("a failed save does not spend EP or grant a purchase", async ({
       },
     },
   );
-  await page.goto("/#shop");
+  await page.goto("/shop/auras");
   await page.locator('[data-product="starfall"] button').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -308,14 +311,16 @@ test("malformed localStorage fails safely and shop layouts fit mobile", async ({
   );
   for (const width of [1200, 768, 390, 360]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/#shop");
-    await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
-    await expect(page.locator(".progress-warning")).toBeVisible();
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
+    for (const path of ["/shop", "/shop/skills", "/shop/auras"]) {
+      await page.goto(path);
+      await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
+      await expect(page.locator(".progress-warning")).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    }
   }
 });
 

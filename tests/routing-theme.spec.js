@@ -7,6 +7,8 @@ import {
   validPage,
   pageFromLocation,
   pathForPage,
+  pathForSubpage,
+  subpageFromLocation,
   isCurrentPath,
 } from "../src/router.js";
 import {
@@ -66,6 +68,40 @@ test("paths, legacy hashes and unknown routes all resolve without a dead end", (
   // Re-navigating to the current page must not push a duplicate history entry.
   expect(isCurrentPath("shop", { pathname: "/shop", hash: "" })).toBe(true);
   expect(isCurrentPath("shop", { pathname: "/badges", hash: "" })).toBe(false);
+});
+
+test("a shelf is a real sub-page of the shop, on every host", () => {
+  // Locally (/shop/skills) and on Pages (/RNGdle-Infinite/shop/skills).
+  expect(pathForSubpage("shop", "skills")).toBe("/shop/skills");
+  expect(pathForSubpage("shop", "auras", "/RNGdle-Infinite/")).toBe(
+    "/RNGdle-Infinite/shop/auras",
+  );
+  // The hub is the page itself, never a trailing slash or an empty segment.
+  expect(pathForSubpage("shop", "")).toBe("/shop");
+  expect(pathForSubpage("shop", "", "/RNGdle-Infinite/")).toBe(
+    "/RNGdle-Infinite/shop",
+  );
+  // A sub-segment is read from the path, and only the page's own segment counts.
+  expect(subpageFromLocation({ pathname: "/shop/skills", hash: "" })).toBe(
+    "skills",
+  );
+  expect(
+    subpageFromLocation(
+      { pathname: "/RNGdle-Infinite/shop/tools", hash: "" },
+      "/RNGdle-Infinite/",
+    ),
+  ).toBe("tools");
+  expect(subpageFromLocation({ pathname: "/shop", hash: "" })).toBe("");
+  // The page itself still resolves from its sub-path, so a shelf never 404s.
+  expect(pageFromLocation({ pathname: "/shop/skills", hash: "" })).toBe("shop");
+  expect(
+    pageFromLocation(
+      { pathname: "/RNGdle-Infinite/shop/offline", hash: "" },
+      "/RNGdle-Infinite/",
+    ),
+  ).toBe("shop");
+  // Slugs use the same alphabet pages do, so a crafted segment cannot break out.
+  expect(pathForSubpage("shop", "  Auras!../")).toBe("/shop/auras");
 });
 
 test("static hosting ships a 404 fallback so real URLs survive a direct load", () => {

@@ -153,25 +153,30 @@ pace before Flywheel — and with everything maxed, the average cycle is about
 
 ## The shop
 
-The shop is organised into shelves you can jump straight to — Skills, Pace,
-Companions, Auras, Offline and Tools — and each shelf is a real anchor, so
-`/shop#skills` opens the shop with the Skills shelf in view.
+`/shop` is the shop's front door: **six buttons**, one per shelf — Skills, Pace,
+Companions, Auras, Offline and Tools. Each button names what the shelf is for and
+carries the one number that matters on it (slots used, current reveal and
+cooldown, companions found, auras owned, the EP-per-roll rate, tools owned), and
+each one **opens the shelf as its own page**: `/shop/skills`, `/shop/auras` and
+so on, with its own address to bookmark or share.
 
-One **sticky bar** carries the whole map: the shelf links, a search box, and
-filters for _Available now_, _Affordable_ and _Owned_, with a running count of
-how many items match. Nothing is hidden by default — the filters only narrow the
-list when you ask — and every item is a single row: an icon, what it changes,
-its price and its state. Descriptions are held to two lines so a shelf reads as
-a list, not a wall of text.
+Above the shelves sit three **featured picks**, chosen from your tracked goal and
+your wallet — your goal, something within reach, a cosmetic — and each one is
+only a doorway to the shelf that sells it, with a meter against its price. A
+shelf keeps its own **sticky bar**: search, the same filters and a button back to
+all shelves. Filters only narrow what is drawn (`19 of 49 on this shelf`), and a
+description is held to three lines so a shelf reads as a list, not a wall of
+text. The old `#shop` bookmark still works, and `#auras` lands on that shelf.
 
-![The shop: wallet, timing, the section jump bar and the skills shelf](media/shop.png)
+![The shop front door: six shelf buttons with their numbers and three featured picks](media/shop.png)
+![One shelf as its own page: the breadcrumb, sticky bar and aura cards](media/shop-shelf.png)
 
 | Shelf          | What it sells                                                                      |
 | -------------- | ---------------------------------------------------------------------------------- |
 | **Skills**     | Seven charged effects, the two skill bays, and the Flywheel tiers                  |
 | **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time |
 | **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                    |
-| **Auras**      | Twelve cosmetic looks for your number box, equipped one at a time                  |
+| **Auras**      | Eighteen cosmetic looks for your number box, equipped one at a time                |
 | **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                 |
 | **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                    |
 

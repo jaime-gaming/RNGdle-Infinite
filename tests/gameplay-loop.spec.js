@@ -271,7 +271,7 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
   const before = await saved(page);
   await nav(page, "Shop");
   const other = await context.newPage();
-  await other.goto("/#shop");
+  await other.goto("/shop/auras");
   await page.getByLabel("Track a goal", { exact: true }).selectOption("aurora");
   await expect(other.getByLabel("Track a goal", { exact: true })).toHaveValue(
     "aurora",

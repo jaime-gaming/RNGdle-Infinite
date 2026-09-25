@@ -182,6 +182,24 @@ try {
         ).toBeVisible();
         assert.equal(new URL(page.url()).pathname, `${base}${section}`);
       }
+      // A shelf is a sub-page of the shop: the same 404 fallback has to boot it,
+      // and a legacy "#tools" bookmark has to normalise to the real path.
+      await page.goto(`${url}shop/auras`);
+      await expect(
+        page.getByRole("heading", { name: "Auras", exact: true }),
+      ).toBeVisible();
+      assert.equal(new URL(page.url()).pathname, `${base}shop/auras`);
+      await page.reload();
+      await expect(
+        page.getByRole("heading", { name: "Auras", exact: true }),
+      ).toBeVisible();
+      assert.equal(new URL(page.url()).pathname, `${base}shop/auras`);
+      await page.goto(`${url}shop#tools`);
+      await expect(
+        page.getByRole("heading", { name: "Tools", exact: true }),
+      ).toBeVisible();
+      assert.equal(new URL(page.url()).pathname, `${base}shop/tools`);
+      assert.equal(new URL(page.url()).hash, "");
       await page.goto(url);
       await expect(page.locator(".generate")).toBeDisabled();
       assert.equal(
