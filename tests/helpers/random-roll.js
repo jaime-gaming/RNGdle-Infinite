@@ -8,13 +8,21 @@ export async function mockRandom(page, words) {
   // instead of the intercepted response: a navigation can dispose that body,
   // and a disposed response must never break the handler.
   await page.route("**/roll.worker*.js*", async (route) => {
-    const response = await page.request.get(route.request().url());
-    await route.fulfill({
-      status: 200,
-      contentType: "text/javascript",
-      body: `const testWords=${JSON.stringify(words)}; let testWord=0;
-      Object.defineProperty(crypto,'getRandomValues',{value(array){array[0]=testWords[testWord++ % testWords.length];return array;}});\n${await response.text()}`,
-    });
+    try {
+      const response = await page.request.get(route.request().url());
+      const body = `const testWords=${JSON.stringify(words)}; let testWord=0;
+      Object.defineProperty(crypto,'getRandomValues',{value(array){array[0]=testWords[testWord++ % testWords.length];return array;}});\n${await response.text()}`;
+      await route.fulfill({
+        status: 200,
+        contentType: "text/javascript",
+        body,
+      });
+    } catch {
+      // A teardown can close the request context mid-flight; serving the real
+      // module then fails the test loudly on the number it draws, which is far
+      // better than a transport error in place of an assertion.
+      await route.continue().catch(() => {});
+    }
   });
 }
 export async function showRoll(page, number) {

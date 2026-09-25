@@ -1,38 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
-  ShoppingBag,
-  Sparkles,
-  Orbit,
-  Waves,
   Check,
   Coins,
-  X,
-  FastForward,
-  Clock3,
-  Snowflake,
-  Flame,
-  ScanSearch,
-  Repeat2,
-  Eclipse,
-  Gem,
-  MoonStar,
-  Cog,
-  Vault,
-  Waves as TideIcon,
-  Leaf,
-  CircuitBoard,
-  Triangle,
-  CircleDot,
-  Zap,
-  PawPrint,
-  Wind,
-  Layers,
-  Mountain,
-  Gauge,
-  Target,
   LayoutGrid,
   Search,
+  ShoppingBag,
+  X,
 } from "lucide-react";
 import {
   shopProducts,
@@ -50,59 +24,131 @@ import {
 import { rackReport } from "../rack.js";
 import "../progress-links.css";
 import PetShelf from "./PetShelf";
+import { PETS } from "../pets.js";
 import { flywheelRequired } from "../flywheel.js";
 import { skillById, skillChargeOf, skillEffectChips } from "../skills.js";
 import NumberBox from "./NumberBox";
 import {
+  AuraMark,
+  AuroraMark,
   AutomationMark,
+  BayMark,
+  BedrockMark,
+  BounceMark,
+  ChronoMark,
+  CircuitMark,
+  ClockMark,
+  CompanionMark,
   CoreMark,
+  EclipseMark,
+  EmberwakeMark,
+  FlywheelMark,
+  FrostglassMark,
+  GlitchMark,
   LensMark,
+  LumenMark,
+  MonolithMark,
+  NebulaMark,
+  ObsidianMark,
   OfflineMark,
+  OrbitMark,
   PaceMark,
+  PrismMark,
+  QuarryMark,
+  SingularityMark,
   SkillMark,
+  SolsticeMark,
+  SparkMark,
+  SpeedMark,
+  StarfallMark,
+  SurgeMark,
+  TidepoolMark,
+  TrailMark,
+  TurboMark,
+  TwiceMark,
   VaultMark,
+  VerdantMark,
 } from "./game-icons.jsx";
 import { useFormatEP, useSettings } from "../use-settings.jsx";
 import "../shop.css";
+// Every product icon is a hand-drawn mark from game-icons.jsx: one grid, one
+// stroke weight, one filled accent. No stock icon sets in the catalogue.
 const icons = {
-  stars: Sparkles,
-  aurora: Waves,
-  orbit: Orbit,
-  speed: FastForward,
-  clock: Clock3,
-  ice: Snowflake,
-  fire: Flame,
-  lens: LensMark,
-  auto: AutomationMark,
-  eclipse: Eclipse,
-  prism: Gem,
-  offline: MoonStar,
-  flywheel: Cog,
+  speed: SpeedMark,
+  clock: ClockMark,
+  flywheel: FlywheelMark,
+  stars: StarfallMark,
+  aurora: AuroraMark,
+  orbit: OrbitMark,
+  ice: FrostglassMark,
+  fire: EmberwakeMark,
+  eclipse: EclipseMark,
+  prism: PrismMark,
+  tide: TidepoolMark,
+  leaf: VerdantMark,
+  circuit: CircuitMark,
+  obsidian: ObsidianMark,
+  singularity: SingularityMark,
+  nebula: NebulaMark,
+  solstice: SolsticeMark,
+  lumen: LumenMark,
+  glitch: GlitchMark,
+  monolith: MonolithMark,
+  chrono: ChronoMark,
+  offline: OfflineMark,
   vault: VaultMark,
+  auto: AutomationMark,
   core: CoreMark,
-  tide: TideIcon,
-  leaf: Leaf,
-  circuit: CircuitBoard,
-  obsidian: Triangle,
-  singularity: CircleDot,
-  surge: Zap,
-  trail: PawPrint,
-  bounce: Wind,
-  twice: Layers,
-  bedrock: Mountain,
-  turbo: Gauge,
-  quarry: Target,
-  bay: LayoutGrid,
+  lens: LensMark,
+  surge: SurgeMark,
+  trail: TrailMark,
+  bounce: BounceMark,
+  twice: TwiceMark,
+  bedrock: BedrockMark,
+  turbo: TurboMark,
+  quarry: QuarryMark,
+  bay: BayMark,
+  spark: SparkMark,
 };
 // The shelves, in the order they are rendered. Each one is addressable
-// (/shop#skills) and the sticky bar links straight to it.
+// (/shop#skills), gets a button in the hub and is the target of its own link.
 export const SHOP_SECTIONS = [
-  { id: "skills", label: "Skills" },
-  { id: "pace", label: "Pace" },
-  { id: "companions", label: "Companions" },
-  { id: "auras", label: "Auras" },
-  { id: "offline", label: "Offline" },
-  { id: "tools", label: "Tools" },
+  {
+    id: "skills",
+    label: "Skills",
+    icon: SkillMark,
+    blurb: "Charged effects and the rack that fires them.",
+  },
+  {
+    id: "pace",
+    label: "Pace",
+    icon: PaceMark,
+    blurb: "Shorter reveals and shorter cooldowns.",
+  },
+  {
+    id: "companions",
+    label: "Companions",
+    icon: CompanionMark,
+    blurb: "Finders of EP, one worn at a time.",
+  },
+  {
+    id: "auras",
+    label: "Auras",
+    icon: AuraMark,
+    blurb: "Cosmetics for the rarity box, never odds.",
+  },
+  {
+    id: "offline",
+    label: "Offline",
+    icon: OfflineMark,
+    blurb: "Earn while you are away, and store more.",
+  },
+  {
+    id: "tools",
+    label: "Tools",
+    icon: AutomationMark,
+    blurb: "Automation and archive, same rules as always.",
+  },
 ];
 // The filter chips above the shelves. They only ever narrow what is drawn:
 // nothing is hidden by default, so the whole catalogue stays one glance away.
@@ -515,6 +561,88 @@ export default function Shop({
   }
   const shelfItems = (predicate) =>
     shopProducts.filter(predicate).map(card).filter(Boolean);
+  // Which shelf an item lives on, so a shortcut can land on the right one.
+  function shelfOf(item) {
+    if (item.kind === "aura") return "auras";
+    if (
+      item.kind === "skill" ||
+      item.kind === "skill-slot" ||
+      item.kind === "pace"
+    )
+      return "skills";
+    if (item.kind === "offline" || item.kind === "offline-cap")
+      return "offline";
+    if (item.kind === "utility") return "tools";
+    return "pace";
+  }
+  const shelfProducts = {
+    skills: shopProducts.filter((item) =>
+      ["skill", "skill-slot", "pace"].includes(item.kind),
+    ),
+    pace: shopProducts.filter((item) =>
+      ["roll", "cooldown"].includes(item.kind),
+    ),
+    auras: shopProducts.filter((item) => item.kind === "aura"),
+    offline: shopProducts.filter((item) =>
+      ["offline", "offline-cap"].includes(item.kind),
+    ),
+    tools: shopProducts.filter((item) => item.kind === "utility"),
+  };
+  // Every hub button answers one question: what is on that shelf right now?
+  function sectionStat(section) {
+    const items = shelfProducts[section.id];
+    if (section.id === "skills") return `${rack.used} / ${rack.slots} slots`;
+    if (section.id === "pace")
+      return `${settings.rollMS / 1000}s · ${formatDuration(settings.cooldownMS / 1000)}`;
+    if (section.id === "companions") {
+      const owned = progress.pets?.length ?? 0;
+      return `${owned} / ${PETS.length} found`;
+    }
+    if (section.id === "offline")
+      return progress.owned.includes("offline-roller")
+        ? `${offlineInterval / 60000} min / roll`
+        : "Locked";
+    const owned = items.filter((item) =>
+      progress.owned.includes(item.id),
+    ).length;
+    return `${owned} / ${items.length} owned`;
+  }
+  // The spotlight is a shop window, not a second catalogue: three picks, each
+  // one a link into the shelf that sells it. Distinct by construction so the
+  // same item is never advertised twice.
+  const featured = (() => {
+    const picks = [];
+    const take = (item, label) => {
+      if (item && !picks.some((pick) => pick.item.id === item.id))
+        picks.push({ item, label });
+    };
+    const open = shopProducts.filter((item) => {
+      const state = stateOf(item);
+      return !state.owned && !state.requires && !state.profileGated;
+    });
+    // A pick already in the window is never offered twice.
+    const unpicked = (items) =>
+      items.filter((item) => !picks.some((pick) => pick.item.id === item.id));
+    const cheapest = (items) => [...items].sort((a, b) => a.price - b.price)[0];
+    take(
+      currentGoal(progress),
+      progress.goalId ? "Your goal" : "Recommended next",
+    );
+    take(
+      cheapest(unpicked(open).filter((item) => stateOf(item).affordableNow)),
+      "Within reach now",
+    );
+    take(
+      cheapest(unpicked(open).filter((item) => item.kind === "aura")),
+      "Cosmetic pick",
+    );
+    take(
+      cheapest(unpicked(open).filter((item) => item.kind !== "aura")),
+      "Soonest upgrade",
+    );
+    take(cheapest(unpicked(open)), "Saving up for");
+    return picks.slice(0, 3);
+  })();
   const visibleCount = shopProducts.filter((item) =>
     matches(item, stateOf(item)),
   ).length;
@@ -599,23 +727,131 @@ export default function Shop({
             : "Guest goals are temporary."}
         </small>
       </section>
-      {/* One sticky bar holds the whole map: shelves, search and filters. */}
-      <div className="shop-controls">
+      {/* The hub: one button per shelf, each a real anchor, each carrying the
+          one number that tells you whether to open it. */}
+      <section className="shop-hub" id="shop-hub" aria-label="Shop shelves">
+        <div className="shop-section-heading">
+          <div>
+            <h2>
+              <LayoutGrid size={16} /> Pick a shelf
+            </h2>
+            <p>
+              The shop is six shelves: {shopProducts.length} things to buy,{" "}
+              {
+                shopProducts.filter((item) => progress.owned.includes(item.id))
+                  .length
+              }{" "}
+              already yours. Open one to see its items, or start from what is
+              featured below.
+            </p>
+          </div>
+          <span className="shop-section-stat">Shop · /shop</span>
+        </div>
         <nav className="shop-jump" aria-label="Shop sections">
-          <span className="shop-jump-label">Shelves</span>
-          {SHOP_SECTIONS.map((section) => (
-            <a
-              key={section.id}
-              href={`#${section.id}`}
-              onClick={(event) => {
-                event.preventDefault();
-                jumpTo(section.id);
-              }}
-            >
-              {section.label}
-            </a>
-          ))}
+          {SHOP_SECTIONS.map((section) => {
+            const Icon = section.icon;
+            return (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                aria-label={section.label}
+                className="shop-tile"
+                onClick={(event) => {
+                  event.preventDefault();
+                  jumpTo(section.id);
+                }}
+              >
+                <span className="shop-tile-icon" aria-hidden="true">
+                  <Icon size={20} />
+                </span>
+                <span className="shop-tile-body">
+                  <strong>{section.label}</strong>
+                  <small>{section.blurb}</small>
+                </span>
+                <span className="shop-tile-stat">{sectionStat(section)}</span>
+              </a>
+            );
+          })}
         </nav>
+      </section>
+      {/* A shop window, not a second catalogue: three picks that link into the
+          shelf that sells them, so nothing is listed twice. */}
+      {!!featured.length && (
+        <section
+          className="shop-featured"
+          aria-label="Featured items"
+          id="shop-featured"
+        >
+          <div className="shop-section-heading">
+            <div>
+              <h2>
+                <SparkMark size={16} /> Featured for you
+              </h2>
+              <p>
+                Chosen from your wallet and your goal, and only ever a doorway
+                to the shelf that sells it.
+              </p>
+            </div>
+          </div>
+          <div className="shop-spotlight">
+            {featured.map(({ item, label }) => {
+              const Icon = icons[item.icon] ?? ShoppingBag;
+              const held =
+                item.price > 0
+                  ? Math.min(
+                      100,
+                      Math.round((progress.balance / item.price) * 100),
+                    )
+                  : 0;
+              return (
+                <a
+                  key={item.id}
+                  className="spotlight"
+                  href={`#${shelfOf(item)}`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    jumpTo(shelfOf(item));
+                  }}
+                >
+                  <span className="spotlight-art" aria-hidden="true">
+                    {item.kind === "aura" ? (
+                      <NumberBox
+                        value="??????"
+                        tier={previewTier}
+                        aura={item.id}
+                        compact
+                      />
+                    ) : (
+                      <span className="spotlight-chip">
+                        <Icon size={24} />
+                      </span>
+                    )}
+                  </span>
+                  <span className="spotlight-body">
+                    <span className="spotlight-label">{label}</span>
+                    <strong>{item.name}</strong>
+                    <small>{item.description}</small>
+                    <span className="spotlight-meter">
+                      <i style={{ width: `${held}%` }} />
+                    </span>
+                    <span className="spotlight-cta">
+                      {progress.balance >= item.price
+                        ? `Affordable now · ${formatEP(item.price)} EP`
+                        : `${formatEP(item.price - progress.balance)} EP to go`}
+                      {" · open "}
+                      {SHOP_SECTIONS.find(
+                        (section) => section.id === shelfOf(item),
+                      )?.label ?? "the shop"}
+                    </span>
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      )}
+      {/* One sticky bar holds search and filters for the shelves below. */}
+      <div className="shop-controls">
         <div className="shop-filters" role="group" aria-label="Shop filters">
           <label className="shop-search">
             <Search size={15} />
@@ -649,6 +885,13 @@ export default function Shop({
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="shop-back"
+            onClick={() => jumpTo("hub")}
+          >
+            <LayoutGrid size={14} /> Shelves
+          </button>
           <span className="shop-filter-count" role="status">
             {visibleCount} of {shopProducts.length} items
           </span>
@@ -797,7 +1040,7 @@ export default function Shop({
         <div className="shop-section-heading">
           <div>
             <h2>
-              <Sparkles size={16} /> Auras
+              <AuraMark size={16} /> Auras
             </h2>
             <p>
               Cosmetic only, and equipped one at a time. Every aura keeps your

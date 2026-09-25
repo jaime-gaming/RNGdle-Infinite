@@ -146,8 +146,20 @@ test("every catalogue entry declares a known kind and late tiers stay optional",
 
 test("new auras are cosmetic, uniquely priced and renderable by the shared number box", async () => {
   const auras = shopProducts.filter((p) => p.kind === "aura");
-  expect(auras).toHaveLength(12);
-  const added = ["tidepool", "verdant", "circuit", "obsidian", "singularity"];
+  expect(auras).toHaveLength(18);
+  const added = [
+    "tidepool",
+    "verdant",
+    "circuit",
+    "obsidian",
+    "singularity",
+    "nebula",
+    "solstice",
+    "lumen",
+    "glitch",
+    "monolith",
+    "chrono",
+  ];
   for (const id of added) {
     const aura = productById.get(id);
     expect(aura.kind).toBe("aura");

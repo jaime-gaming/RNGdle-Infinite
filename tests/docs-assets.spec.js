@@ -73,11 +73,13 @@ test("the README is a player guide whose images really exist", () => {
   expect(body).not.toMatch(/src\/[\w-]+\.jsx?/);
 });
 
-test("the shop's jump links match the sections it renders", () => {
+test("the shop hub links match the sections it renders", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
   const companion = fs.readFileSync("src/components/PetShelf.jsx", "utf8");
   const source = `${shop}\n${companion}`;
-  const ids = [...shop.matchAll(/\{ id: "([a-z-]+)", label: "([^"]+)" \}/g)];
+  const ids = [
+    ...shop.matchAll(/\bid: "([a-z-]+)",\s*\n\s*label: "([^"]+)",/g),
+  ];
   expect(ids.length).toBeGreaterThanOrEqual(6);
   const seen = new Set();
   for (const [, id, label] of ids) {
