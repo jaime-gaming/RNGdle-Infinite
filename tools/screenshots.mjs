@@ -188,17 +188,23 @@ try {
   await page.waitForTimeout(500);
   await shot(page, "skills", { clip: await rack.boundingBox() });
 
-  // 4. The shop, from the jump bar down through the skills shelf.
+  // 4. The shop front door: the six shelf buttons and the featured picks, then
+  //    one shelf page to show that a shelf is its own address.
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`${BASE}/shop`);
-  await page.waitForSelector(".shop-jump");
+  await page.waitForSelector(".shop-hub");
   await hideAutoRoll(page);
   await page.waitForTimeout(700);
   await shot(page, "shop");
+  await page.goto(`${BASE}/shop/auras`);
+  await page.waitForSelector(".shop-crumb");
+  await page.waitForTimeout(700);
+  await shot(page, "shop-shelf");
 
   // 5. The rebirth ladder, on its own page.
   await page.goto(`${BASE}/rebirth`);
-  await page.waitForSelector(".rebirth-option");
+  // The ladder and its rungs live on the rebirth page itself.
+  await page.waitForSelector(".rebirth-page");
   await page.waitForTimeout(700);
   await shot(page, "rebirth");
 

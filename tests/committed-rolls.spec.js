@@ -11,6 +11,7 @@ import { seedProgress } from "./helpers/progress.js";
 import { startRoll, showRoll, mockRandom } from "./helpers/random-roll.js";
 import { evaluate, inflate } from "./helpers/index.js";
 import { shopProducts } from "../src/shop-data.js";
+import { openShelfFor } from "./helpers/shop.js";
 import manifest from "../src/data/game-index.json" with { type: "json" };
 const guestKey = "rng-infinite-guest-roll-v1";
 const saved = (page) =>
@@ -28,6 +29,7 @@ const nav = (page, name) =>
     .getByRole("button", { name, exact: true })
     .click();
 async function buy(page, id) {
+  await openShelfFor(page, id);
   await page.locator(`[data-product="${id}"] button`).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -250,7 +252,8 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
   page,
 }) => {
   await seedProgress(page, { balance: 10000000, totalEarned: 10000000 });
-  await page.goto("/#shop");
+  // Quickwind and Clockwork are the Pace shelf's two tracks.
+  await page.goto("/shop/pace");
   await expect(
     page.locator(
       '.shop-grid-upgrades .shop-card[data-kind="roll"], .shop-grid-upgrades .shop-card[data-kind="cooldown"]',
@@ -391,7 +394,7 @@ test("failed settlement is merged with later cross-tab spending rather than over
   expect((await saved(page)).flywheelCharge).toBe(3);
   expect((await saved(page)).pendingRoll).not.toBeNull();
   const other = await context.newPage();
-  await other.goto("/#shop");
+  await other.goto("/shop/auras");
   await buy(other, "starfall");
   await nav(page, "Shop");
   const starfallPrice = shopProducts.find((p) => p.id === "starfall").price;

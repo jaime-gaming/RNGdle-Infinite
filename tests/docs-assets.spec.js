@@ -73,12 +73,15 @@ test("the README is a player guide whose images really exist", () => {
   expect(body).not.toMatch(/src\/[\w-]+\.jsx?/);
 });
 
-test("the shop hub links match the sections it renders", () => {
+test("the shop hub links match the shelf pages it renders", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
+  const data = fs.readFileSync("src/shop-data.js", "utf8");
   const companion = fs.readFileSync("src/components/PetShelf.jsx", "utf8");
   const source = `${shop}\n${companion}`;
+  // The sections are catalogue data: routing, the hub and the featured picks
+  // all read the one list.
   const ids = [
-    ...shop.matchAll(/\bid: "([a-z-]+)",\s*\n\s*label: "([^"]+)",/g),
+    ...data.matchAll(/\bid: "([a-z-]+)",\s*\n\s*label: "([^"]+)",/g),
   ];
   expect(ids.length).toBeGreaterThanOrEqual(6);
   const seen = new Set();
@@ -86,9 +89,12 @@ test("the shop hub links match the sections it renders", () => {
     expect(seen.has(id)).toBe(false);
     seen.add(id);
     expect(label).toMatch(/^[A-Z]/);
+    // Each shelf renders its own anchor on its own page…
     expect(source).toContain(`id="shop-${id}"`);
-    // Every link is a real anchor, so a shelf can be linked to and shared.
-    expect(shop).toContain("href={`#${section.id}`}");
+    // …and every hub button is a real link to that page, so a shelf can be
+    // linked to, bookmarked and shared.
+    expect(shop).toContain('pathForSubpage("shop", entry.id)');
+    expect(shop).toContain('id="shop-hub"');
   }
   expect(seen).toEqual(
     new Set(["skills", "pace", "companions", "auras", "offline", "tools"]),

@@ -505,7 +505,7 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
       true,
     ),
   );
-  await other.goto("/#shop");
+  await other.goto("/shop/auras");
   await other
     .getByRole("button", { name: "Use original appearance", exact: true })
     .click();
@@ -571,7 +571,9 @@ test("the moving bar uses the cooldown only, is smooth between seconds, survives
   const fraction = await scale(page);
   await page.clock.runFor(300);
   expect(await scale(page)).toBeGreaterThan(fraction);
+  // Clockwork is a pace tier: the shop's Pace shelf sells it.
   await nav(page, "Shop");
+  await page.getByRole("link", { name: "Pace", exact: true }).click();
   await page.locator('[data-product="clockwork-1"] button').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })

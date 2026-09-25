@@ -64,9 +64,24 @@ import {
 import {
   pageFromLocation,
   pathForPage,
+  pathForSubpage,
+  subpageFromLocation,
   isCurrentPath,
   validPage,
 } from "./router.js";
+import { SHOP_SECTIONS, shelfOfProduct, productById } from "./shop-data.js";
+
+// A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
+// Anything else under /shop is not a shelf and falls back to the hub.
+function shopSectionFromLocation(target) {
+  if (pageFromLocation(target) !== "shop") return "";
+  // A legacy "#auras" bookmark names the shelf itself; a real sub-page carries
+  // it in the path. Anything else lands on the hub.
+  const named = (name) =>
+    SHOP_SECTIONS.some((section) => section.id === name) ? name : "";
+  const hash = String(target.hash || "").replace(/^#/, "");
+  return named(hash) || named(subpageFromLocation(target));
+}
 
 function App() {
   const [page, setPage] = useState(() => pageFromLocation(location));
@@ -88,6 +103,9 @@ function App() {
   const [seenVersion, setSeenVersion] = useState(readSeenVersion);
   const showVersionFlag = hasUnseenVersion(seenVersion);
   const [shopFocus, setShopFocus] = useState(null);
+  const [shopSection, setShopSection] = useState(() =>
+    shopSectionFromLocation(location),
+  );
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
@@ -155,24 +173,67 @@ function App() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 3500);
   };
-  const navigate = (next, productId = null) => {
-    setShopFocus(next === "shop" ? productId : null);
-    setPage((next = validPage(next)));
-    // Real URLs, so a page can be linked, bookmarked and reloaded directly.
-    if (!isCurrentPath(next, location))
-      history.pushState({ page: next }, "", pathForPage(next));
+  // Real URLs, so a page and its shelf can be linked, bookmarked and reloaded
+  // directly. The address bar is the source of truth, never component state.
+  const push = (target, path, section = "") => {
+    const here = new URL(path, location.origin).pathname;
+    if (here !== location.pathname || location.hash)
+      history.pushState({ page: target, section }, "", path);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const navigate = (next, focusProduct = null) => {
+    const target = validPage(next);
+    // Opening the shop on a product (a goal link, a recap) opens the shelf that
+    // sells it, so the card is on screen when the page renders.
+    const section =
+      target === "shop" && productById.has(focusProduct)
+        ? shelfOfProduct(productById.get(focusProduct))
+        : "";
+    setShopFocus(target === "shop" ? focusProduct : null);
+    setShopSection(section);
+    setPage(target);
+    push(
+      target,
+      target === "shop" && section
+        ? pathForSubpage("shop", section)
+        : pathForPage(target),
+      section,
+    );
+  };
+  const openShelf = (id) => {
+    const section = SHOP_SECTIONS.some((entry) => entry.id === id) ? id : "";
+    setShopFocus(null);
+    setShopSection(section);
+    setPage("shop");
+    push(
+      "shop",
+      section ? pathForSubpage("shop", section) : pathForPage("shop"),
+      section,
+    );
   };
   useEffect(() => {
     // Back/forward must move between pages, and a legacy #shop link or a
     // 404.html fallback landing must be normalised to its real path once.
-    const update = () => setPage(pageFromLocation(location));
+    const update = () => {
+      setPage(pageFromLocation(location));
+      setShopSection(shopSectionFromLocation(location));
+    };
     update();
-    if (location.hash || !isCurrentPath(pageFromLocation(location), location))
+    const landed = pageFromLocation(location);
+    const section = shopSectionFromLocation(location);
+    // A legacy "#shop" bookmark keeps working, a "#skills" one lands on the
+    // shelf, and an unknown sub-path is normalised back to the shop hub.
+    if (
+      location.hash ||
+      !isCurrentPath(landed, location) ||
+      (landed === "shop" && subpageFromLocation(location) !== section)
+    )
       history.replaceState(
-        { page: pageFromLocation(location) },
+        { page: landed, section },
         "",
-        pathForPage(pageFromLocation(location)),
+        landed === "shop" && section
+          ? pathForSubpage("shop", section)
+          : pathForPage(landed),
       );
     window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
@@ -559,8 +620,10 @@ function App() {
         )}
         {page === "shop" && (
           <Shop
-            key={epoch}
+            key={`${epoch}:${shopSection}`}
             progress={session}
+            section={shopSection}
+            onOpenShelf={openShelf}
             focusProduct={shopFocus}
             onAction={dispatch}
             openSignup={openAuth}

@@ -19,6 +19,7 @@ import { recommendedGoal } from "../src/gameplay-loop.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom, startRoll } from "./helpers/random-roll.js";
+import { gotoShelfFor, openShelfFor } from "./helpers/shop.js";
 const timings = shopProducts
   .filter((p) => ["roll", "cooldown"].includes(p.kind))
   .map((p) => p.id);
@@ -43,6 +44,8 @@ const buy = (p, id, at = 1000) => applyProgress(p, { type: "buy", id, at });
 const nav = (p, name) =>
   p.getByRole("navigation").getByRole("button", { name, exact: true }).click();
 async function purchase(page, id) {
+  // Each tier lives on the shelf that tracks it; open it without reloading.
+  await openShelfFor(page, id);
   await page.locator(`[data-product="${id}"] button`).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -366,9 +369,13 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
   await seedProgress(page, rich({ owned }));
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#shop");
-  for (const id of ["clockwork-5", "flywheel-3", "offline-clock-2"])
-    await expect(page.locator(`[data-product="${id}"]`)).toHaveCount(0);
+  // Each late tier lives on the shelf that tracks it.
+  await page.goto("/shop/pace");
+  await expect(page.locator('[data-product="clockwork-5"]')).toHaveCount(0);
+  await gotoShelfFor(page, "flywheel-3");
+  await expect(page.locator('[data-product="flywheel-3"]')).toHaveCount(0);
+  await gotoShelfFor(page, "offline-clock-2");
+  await expect(page.locator('[data-product="offline-clock-2"]')).toHaveCount(0);
   const upgrades = [
     "clockwork-4",
     "clockwork-5",
@@ -385,15 +392,18 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
   );
   await page.reload();
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:05");
+  await gotoShelfFor(page, "offline-roller");
   await expect(page.locator('[data-product="offline-roller"]')).toContainText(
     "5 minutes away",
   );
   // One level at a time: the bought clocks collapse and the next tier takes
   // their place, so only a fully-owned path reads as complete.
+  await gotoShelfFor(page, "offline-clock-3");
   await expect(page.locator('[data-product="offline-clock-3"]')).toContainText(
     "Buy for",
   );
   await expect(page.locator('[data-product="offline-clock-2"]')).toHaveCount(0);
+  await gotoShelfFor(page, "quickwind-4");
   await expect(page.locator('[data-product="quickwind-4"]')).toContainText(
     "Maximum level reached",
   );
@@ -526,9 +536,9 @@ test("two tabs cannot purchase a late Flywheel tier twice or lose the earned cha
   context,
 }) => {
   await seedProgress(page, rich({ owned: ["flywheel"], flywheelCharge: 3 }));
-  await page.goto("/#shop");
+  await page.goto("/shop/skills");
   const other = await context.newPage();
-  await other.goto("/#shop");
+  await other.goto("/shop/skills");
   for (const p of [page, other])
     await p.locator('[data-product="flywheel-2"] button').click();
   await Promise.all(
@@ -595,7 +605,7 @@ test("failed late-tier saves leave wallet, charge and offline rate unchanged unt
     page,
     rich({ owned: ["flywheel", "offline-roller"], flywheelCharge: 3 }),
   );
-  await page.goto("/#shop");
+  await page.goto("/shop/skills");
   await expect
     .poll(async () => (await saved(page)).offline?.lastSeenAt)
     .toBeTruthy();
@@ -615,6 +625,8 @@ test("failed late-tier saves leave wallet, charge and offline rate unchanged unt
     };
   }, PROGRESS_KEY);
   for (const id of ["flywheel-2", "offline-clock-1"]) {
+    // Skills and Offline are separate shelves, so walk to each one.
+    await openShelfFor(page, id);
     await page.locator(`[data-product="${id}"] button`).click();
     await page
       .getByRole("button", { name: "Confirm purchase", exact: true })

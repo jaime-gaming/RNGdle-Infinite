@@ -14,6 +14,7 @@ import manifest from "../src/data/game-index.json" with { type: "json" };
 import { evaluate, inflate } from "./helpers/index.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
+import { openShelfFor } from "./helpers/shop.js";
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
 const rolls = (p) => p.history.filter((e) => e.type === "roll");
@@ -390,7 +391,8 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#shop");
+  // Flywheel is a skill, so it lives on the Skills shelf.
+  await page.goto("/shop/skills");
   const card = page.locator('[data-product="flywheel"]');
   await expect(card).toContainText(
     `${productById.get("flywheel").price.toLocaleString("en-US")} EP`,
@@ -497,6 +499,7 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
   const before = await saved(page);
   expect(before.pendingRoll.flywheel).toBeUndefined();
   await nav(page, "Shop");
+  await openShelfFor(page, "flywheel");
   await page.locator('[data-product="flywheel"] button').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })

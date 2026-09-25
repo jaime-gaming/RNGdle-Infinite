@@ -4,9 +4,9 @@ import { emptyProgress } from "../src/progress.js";
 import { shopProducts } from "../src/shop-data.js";
 import { seedProgress } from "./helpers/progress.js";
 
-// The shop is a street of shelves: the jump bar reaches each one, every shelf
-// is a real anchor, and the flywheel tiers live on the Skills shelf because
-// Flywheel is a skill.
+// The shop is a street of sub-pages: the hub is an index of six buttons, each
+// one opening its own URL (/shop/skills, /shop/auras …), and the flywheel tiers
+// live on the Skills shelf because Flywheel is a skill.
 
 const funded = {
   ...emptyProgress(),
@@ -15,35 +15,35 @@ const funded = {
   owned: ["offline-roller"],
 };
 
-// The jump is a smooth scroll, so the shelf arrives rather than being
-// teleported: its top edge ends up on screen, never below the fold.
-async function visible(page, id, label) {
+// Clicking a shelf button is a real navigation: the URL changes, the hub is
+// gone, that shelf is on screen, and the same URL still works after a reload.
+async function openShelf(page, id, label) {
   await page.getByRole("link", { name: label, exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`#${id}$`));
-  await expect
-    .poll(
-      async () => {
-        const box = await page.locator(`#shop-${id}`).boundingBox();
-        const height = await page.evaluate(() => window.innerHeight);
-        if (!box) return -1;
-        return box.y >= 0 && box.y < height - 120 ? box.y : -1;
-      },
-      { message: `${label} should scroll into view` },
-    )
-    .toBeGreaterThanOrEqual(0);
+  await expect(page).toHaveURL(new RegExp(`/shop/${id}$`));
+  await expect(page.locator(".shop-hub")).toHaveCount(0);
+  await expect(page.locator(`#shop-${id}`)).toBeVisible();
   await expect(
     page.getByRole("heading", { name: label, exact: true, level: 2 }),
   ).toBeInViewport();
+  await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText(
+    label,
+  );
 }
 
-test("the jump bar reaches every shelf and survives a deep link", async ({
+test("the hub is an index of shelf buttons, and each one is its own page", async ({
   page,
 }) => {
   await seedProgress(page, funded);
   await page.goto("/shop");
-  const jump = page.getByRole("navigation", { name: "Shop sections" });
-  await expect(jump).toBeVisible();
-  await expect(jump.getByRole("link")).toHaveCount(6);
+  const hub = page.getByRole("navigation", { name: "Shop sections" });
+  await expect(hub).toBeVisible();
+  await expect(hub.getByRole("link")).toHaveCount(6);
+  // The hub is a front door: no catalogue rows behind it, only doors.
+  await expect(page.locator(".shop-card[data-product]")).toHaveCount(0);
+  await expect(
+    hub.getByRole("link", { name: "Auras", exact: true }),
+  ).toHaveAttribute("href", "/shop/auras");
+
   for (const [id, label] of [
     ["skills", "Skills"],
     ["pace", "Pace"],
@@ -51,22 +51,53 @@ test("the jump bar reaches every shelf and survives a deep link", async ({
     ["auras", "Auras"],
     ["offline", "Offline"],
     ["tools", "Tools"],
-  ])
-    await visible(page, id, label);
+  ]) {
+    await openShelf(page, id, label);
+    // The shelf's own URL is what a share would use.
+    await page.reload();
+    await expect(page.locator(`#shop-${id}`)).toBeVisible();
+    await page.getByRole("button", { name: "All shelves" }).click();
+    await expect(page).toHaveURL(/\/shop$/);
+    await expect(page.locator(".shop-hub")).toHaveCount(1);
+  }
+});
 
-  // A shared link lands on its shelf without any clicking.
+test("deep links and legacy shelf hashes land on the right shelf", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  // A shared legacy link lands on its shelf, normalised to the real path.
   await page.goto("/shop#tools");
-  await page.waitForSelector("#shop-tools");
-  await expect
-    .poll(async () => (await page.locator("#shop-tools").boundingBox()).y)
-    .toBeLessThan(200);
+  await expect(page).toHaveURL(/\/shop\/tools$/);
+  await expect(page.locator("#shop-tools")).toBeVisible();
+  await expect(page.getByTestId("cooldown-duration")).toBeVisible();
+
+  // A shelf is entered from the hub and left with the browser's own back.
+  await page.goto("/shop");
+  await page.getByRole("link", { name: "Pace", exact: true }).click();
+  await expect(page).toHaveURL(/\/shop\/pace$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/shop$/);
+  await expect(page.locator(".shop-hub")).toBeVisible();
+
+  // The other five shelves are one click away from any shelf.
+  await page.getByRole("link", { name: "Auras", exact: true }).click();
+  const others = page.getByRole("navigation", { name: "Other shelves" });
+  await expect(others.getByRole("link")).toHaveCount(5);
+  await others.getByRole("link", { name: "Offline", exact: true }).click();
+  await expect(page).toHaveURL(/\/shop\/offline$/);
+
+  // Nonsense under /shop is not a shelf: it normalises back to the hub.
+  await page.goto("/shop/not-a-shelf");
+  await expect(page).toHaveURL(/\/shop$/);
+  await expect(page.locator(".shop-hub")).toBeVisible();
 });
 
 test("the skills shelf is where charged effects live, flywheel included", async ({
   page,
 }) => {
   await seedProgress(page, funded);
-  await page.goto("/shop");
+  await page.goto("/shop/skills");
   const shelf = page.locator("#shop-skills");
   await expect(shelf.getByRole("heading", { name: "Skills" })).toBeVisible();
   await expect(shelf).toContainText("Flywheel lives in this shelf");
@@ -86,10 +117,12 @@ test("the skills shelf is where charged effects live, flywheel included", async 
     await expect(shelf.locator(`[data-product="${id}"]`)).toHaveCount(1);
   // Timing tracks are not on this shelf any more: they moved to Pace.
   await expect(shelf.locator('[data-product="quickwind-1"]')).toHaveCount(0);
+  await page.goto("/shop/pace");
   await expect(
     page.locator("#shop-pace [data-product='quickwind-1']"),
   ).toHaveCount(1);
-  // Companions keep their own shelf, owned by the companion component.
+  // Companions keep their own shelf page, owned by the companion component.
+  await page.goto("/shop/companions");
   await expect(
     page.locator("#shop-companions [data-pet='pebble']"),
   ).toHaveCount(1);
@@ -153,14 +186,20 @@ test("every product icon is a hand-drawn mark, and the hub is buttons", () => {
   expect(shop).not.toMatch(
     /from "lucide-react"[\s\S]{0,200}(Gauge|Mountain|Wind|Layers|Target)/,
   );
-  // The shop opens as buttons: one link per shelf, each carrying its own stat.
+  // The shop opens as buttons: one link per shelf, each carrying its own stat
+  // and each pointing at the shelf's own page.
+  const data = fs.readFileSync("src/shop-data.js", "utf8");
   expect(shop).toContain("shop-hub");
   expect(shop).toContain('className="shop-tile"');
-  expect(shop).toContain("sectionStat(section)");
-  expect(shop).toContain("jumpTo(section.id)");
+  expect(shop).toContain("sectionStat(entry)");
+  expect(shop).toContain('pathForSubpage("shop", entry.id)');
+  expect(shop).toContain("onOpenShelf(entry.id)");
+  // …and every product knows its shelf through the catalogue, not a second list.
+  expect(data).toContain("export function shelfOfProduct(item)");
+  expect(data).toContain("export function productsOnShelf(id)");
   // …and featured picks that only ever open the shelf that sells them.
   expect(shop).toContain("shop-featured");
-  expect(shop).toContain("shelfOf(item)");
+  expect(shop).toContain("shelfOfProduct(item)");
 });
 
 test("the skills shelf states what the rack adds up to", () => {

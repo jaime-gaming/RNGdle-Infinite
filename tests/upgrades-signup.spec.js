@@ -16,6 +16,7 @@ import {
 } from "../src/roll-timeline.js";
 import { showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
+import { gotoShelfFor, openShelfFor } from "./helpers/shop.js";
 const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
 const nav = (page, name) =>
@@ -24,6 +25,8 @@ const nav = (page, name) =>
     .getByRole("button", { name, exact: true })
     .click();
 async function buy(page, id) {
+  // The shop is a street of sub-pages: open the shelf that sells it first.
+  await openShelfFor(page, id);
   await page.locator(`[data-product="${id}"] button`).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -117,6 +120,7 @@ test("guest rewards and purchases stay in memory and disappear on reload", async
   await page.reload();
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
   await expect(page.getByTestId("roll-duration")).toHaveText("45s");
+  await gotoShelfFor(page, "starfall");
   await expect(page.locator('[data-product="starfall"] button')).toBeDisabled();
   await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
@@ -267,7 +271,7 @@ test("the first three tiers produce a fifteen-second reveal and fifteen-second c
   page,
 }) => {
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
-  await page.goto("/#shop");
+  await page.goto("/shop/pace");
   await expect(page.locator('[data-product="quickwind-2"] button')).toHaveCount(
     0,
   );

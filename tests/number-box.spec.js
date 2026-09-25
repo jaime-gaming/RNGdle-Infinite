@@ -26,10 +26,8 @@ test("shared number boxes cover the idle generator and cosmetic previews without
     "??????",
   );
   await expect(page.locator(".best-number, .profile-number")).toHaveCount(0);
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Shop", exact: true })
-    .click();
+  // Auras are their own shelf now: /shop/auras, not the shop's front page.
+  await page.goto("/shop/auras");
   const auraCount = shopProducts.filter((p) => p.kind === "aura").length;
   await expect(page.locator(".aura-preview .number-box")).toHaveCount(
     auraCount,
@@ -107,7 +105,7 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   await mockRandom(page, [1000000]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto("/#shop");
+  await page.goto("/shop/auras");
   await expect(page.getByTestId("roll-duration")).toHaveText("35s");
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:45");
   for (const [i, id] of ["starfall", "aurora", "orbit"].entries()) {
@@ -131,10 +129,7 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(360);
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "Shop", exact: true })
-      .click();
+    await page.goto("/shop/auras");
   }
   await page.getByRole("button", { name: "Back to rolling" }).click();
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();

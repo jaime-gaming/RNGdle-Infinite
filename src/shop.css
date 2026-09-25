@@ -124,6 +124,68 @@
 }
 
 /* ---- Featured: a shop window, three picks, three doorways ----------------- */
+/* ---- Sub-pages -------------------------------------------------------------
+   Each shelf is its own page, so it says where it sits (breadcrumb, right under
+   the shop heading) and offers the other five on the way out. */
+.shop-crumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 -4px;
+  font: 500 11.5px var(--roll-font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.shop-crumb button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.shop-crumb button:hover,
+.shop-crumb button:focus-visible {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.shop-crumb span {
+  color: var(--text);
+}
+.shop-others {
+  margin-top: 34px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.shop-others-label {
+  display: block;
+  margin-bottom: 12px;
+  font: 500 11px var(--roll-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* A shelf nobody can shop yet states the one door that opens it. */
+.shop-locked-heading {
+  align-items: flex-start;
+  gap: 18px;
+}
+.shop-locked-heading p {
+  max-width: 62ch;
+}
+.shop-locked-heading .secondary-button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
 .shop-featured {
   margin-top: 30px;
 }

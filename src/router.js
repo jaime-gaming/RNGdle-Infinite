@@ -37,6 +37,29 @@ export function pageFromLocation(location, base) {
   return PAGES.includes(segment) ? segment : HOME;
 }
 
+// A page can own sub-pages: /shop/skills, /shop/auras and so on. The
+// sub-segment is read from the address bar and resolved against the same
+// build-time base, so a shelf link works locally and on Pages alike.
+export function subpageFromLocation(location, base) {
+  const prefix = basePath(base);
+  let path = String(location.pathname || "/");
+  if (prefix && path.toLowerCase().startsWith(prefix.toLowerCase()))
+    path = path.slice(prefix.length);
+  const [, second = ""] = path.split("/").filter(Boolean);
+  return second.toLowerCase();
+}
+
+export function pathForSubpage(page, sub, base) {
+  const prefix = basePath(base);
+  const name = validPage(page);
+  // Sub-pages share the page's own slug alphabet: [a-z0-9-].
+  const clean = String(sub || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "");
+  const suffix = clean ? `/${clean}` : "";
+  return `${prefix}/${name}${suffix}`.replace(/\/{2,}/g, "/");
+}
+
 export function pathForPage(page, base) {
   const prefix = basePath(base);
   const name = validPage(page);
