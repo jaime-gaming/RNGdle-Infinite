@@ -60,37 +60,167 @@
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
+/* ---- The hub: the shop as buttons -----------------------------------------
+   Six tiles, one per shelf. Each is a real anchor (/shop#skills) and each
+   carries the one number that says whether it is worth opening. */
+.shop-hub {
+  margin: 26px 0 2px;
+}
 .shop-jump {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(244px, 1fr));
+  gap: 10px;
+}
+.shop-tile {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: center;
-  gap: 8px;
-}
-.shop-jump-label {
-  font: 500 10px var(--roll-font);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-right: 2px;
-}
-.shop-jump a {
-  padding: 5px 12px;
+  padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--secondary);
-  font: 500 12px var(--roll-font);
+  border-radius: 12px;
+  background: var(--surface);
+  color: inherit;
   text-decoration: none;
   transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease;
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
-.shop-jump a:hover,
-.shop-jump a:focus-visible {
-  color: var(--text);
-  border-color: var(--text);
+.shop-tile:hover,
+.shop-tile:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--muted);
+  box-shadow: 0 8px 20px #00000009;
+}
+.shop-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   background: var(--hover);
+  color: var(--secondary);
 }
+.shop-tile-body {
+  min-width: 0;
+}
+.shop-tile-body strong {
+  display: block;
+  font-size: 13.5px;
+}
+.shop-tile-body small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--secondary);
+}
+.shop-tile-stat {
+  font: 500 10.5px var(--roll-font);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ---- Featured: a shop window, three picks, three doorways ----------------- */
+.shop-featured {
+  margin-top: 30px;
+}
+.shop-spotlight {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+  gap: 12px;
+}
+.spotlight {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.spotlight:hover,
+.spotlight:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--muted);
+  box-shadow: 0 8px 20px #00000009;
+}
+.spotlight-art {
+  display: grid;
+  place-items: center;
+  min-height: 86px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.spotlight-art .number-box {
+  transform: scale(0.62);
+}
+.spotlight-chip {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--secondary);
+}
+.spotlight-body {
+  min-width: 0;
+}
+.spotlight-label {
+  display: block;
+  font: 500 9.5px var(--roll-font);
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.spotlight-body strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+}
+.spotlight-body small {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+.spotlight-meter {
+  display: block;
+  height: 4px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.spotlight-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+.spotlight-cta {
+  display: block;
+  margin-top: 8px;
+  font: 500 10.5px var(--roll-font);
+  color: var(--muted);
+}
+
 .shop-filters {
   display: flex;
   flex-wrap: wrap;
@@ -151,6 +281,21 @@
 .shop-filter-chips button.active {
   border-color: var(--text);
   background: var(--hover);
+  color: var(--text);
+}
+.shop-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 500 11.5px var(--roll-font);
+}
+.shop-back:hover {
+  border-color: var(--muted);
   color: var(--text);
 }
 .shop-filter-count {
@@ -466,6 +611,29 @@
 .aura-preview.aura-singularity {
   background: radial-gradient(ellipse at center, #a78bfa1c, var(--hover) 72%);
 }
+.aura-preview.aura-nebula {
+  background:
+    radial-gradient(ellipse at 28% 32%, #7c3aed22, transparent 60%),
+    radial-gradient(ellipse at 74% 70%, #2563eb1f, transparent 62%),
+    var(--hover);
+}
+.aura-preview.aura-solstice {
+  background: radial-gradient(ellipse at center, #fb923c1f, var(--hover) 74%);
+}
+.aura-preview.aura-lumen {
+  background: radial-gradient(ellipse at center, #fbbf2417, var(--hover) 76%);
+}
+.aura-preview.aura-glitch {
+  background:
+    linear-gradient(90deg, #f8717112, transparent 34%),
+    linear-gradient(270deg, #22d3ee12, transparent 34%), var(--hover);
+}
+.aura-preview.aura-monolith {
+  background: linear-gradient(to top, #0f172a18, var(--hover) 68%);
+}
+.aura-preview.aura-chrono {
+  background: radial-gradient(ellipse at center, #0ea5e91c, var(--hover) 74%);
+}
 .aura-preview-controls {
   display: flex;
   justify-content: space-between;
@@ -712,6 +880,21 @@ nav button:disabled,
   .shop-grid-upgrades {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* Phones keep the same cards, just less air: a shorter preview band and two
+     lines of copy, so a shelf of eighteen auras stays walkable. */
+  .upgrade-preview {
+    height: 104px;
+  }
+  .shop-card-desc {
+    -webkit-line-clamp: 2;
+  }
+  .shop-card-body {
+    padding: 15px;
+  }
+  .shop-price {
+    padding-top: 12px;
+    margin-bottom: 12px;
+  }
   .shop-card {
     display: grid;
     grid-template-columns: minmax(150px, 0.9fr) 1.4fr;
@@ -751,6 +934,16 @@ nav button:disabled,
   }
   .shop-filter-count {
     margin-left: 0;
+  }
+  .shop-jump {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shop-spotlight {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .spotlight,
+  .spotlight-art {
+    min-height: 0;
   }
   .aura-preview-controls {
     align-items: flex-start;

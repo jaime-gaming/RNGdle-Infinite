@@ -115,6 +115,13 @@ svg {
   display: flex;
   flex-direction: column;
 }
+/* One filled accent per line mark: at 16px a solid shape is what makes a
+   glyph legible, and it keeps the set on a single visual system. */
+svg .tone {
+  fill: currentColor;
+  stroke: none;
+}
+
 .header {
   height: 79px;
   padding: 0 39px;

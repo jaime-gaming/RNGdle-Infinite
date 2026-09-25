@@ -275,6 +275,60 @@ export const shopProducts = [
       "A collapsing accretion disc bends light around your number, with an event-horizon ring and infalling sparks.",
   },
   {
+    id: "nebula",
+    kind: "aura",
+    name: "Nebula Drift",
+    price: 520000,
+    icon: "nebula",
+    description:
+      "Slow violet and indigo clouds drift behind the number while a scatter of newborn stars winks in and out.",
+  },
+  {
+    id: "solstice",
+    kind: "aura",
+    name: "Solstice Ring",
+    price: 780000,
+    icon: "solstice",
+    description:
+      "A warm ring of midsummer light turns around the box, trailing a soft lens flare across the frame.",
+  },
+  {
+    id: "lumen",
+    kind: "aura",
+    name: "Lumen Filigree",
+    price: 1050000,
+    icon: "lumen",
+    description:
+      "Hair-thin gold filigree draws itself into the corners, lit by a champagne glow that never washes out your rarity.",
+  },
+  {
+    id: "glitch",
+    kind: "aura",
+    name: "Glitchwave",
+    price: 1650000,
+    icon: "glitch",
+    description:
+      "Scanlines tear sideways in red, green and blue, and the frame skews for a heartbeat before it snaps back.",
+  },
+  {
+    id: "monolith",
+    kind: "aura",
+    name: "Monolith",
+    price: 2700000,
+    icon: "monolith",
+    description:
+      "A heavy carved slab with a single seam of cold light, humming steady while the space around it darkens.",
+  },
+  {
+    id: "chrono",
+    kind: "aura",
+    name: "Chrono Dial",
+    price: 4200000,
+    icon: "chrono",
+    description:
+      "Sixty engraved ticks ring the number and a single hand sweeps them, marking a second that never quite ends.",
+  },
+  {
     id: "offline-roller",
     kind: "utility",
     name: "Offline Roller",

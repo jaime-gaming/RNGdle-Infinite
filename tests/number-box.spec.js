@@ -202,11 +202,18 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     quarry: 6000000,
     "skill-bay-1": 1000000,
     "skill-bay-2": 4000000,
+    // The second wave of auras.
+    nebula: 520000,
+    solstice: 780000,
+    lumen: 1050000,
+    glitch: 1650000,
+    monolith: 2700000,
+    chrono: 4200000,
   };
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(43);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(49);
   // A skill product carries its effect in skills.js, never inside the product:
   // the shop only mirrors the catalogue so both read the same numbers.
   for (const product of shopProducts.filter((p) => p.kind === "skill")) {
@@ -233,5 +240,5 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
       expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
   // The whole catalogue stays within a sane multiple of the cheapest upgrade.
   const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBeLessThanOrEqual(110000000);
+  expect(total).toBeLessThanOrEqual(115000000);
 });

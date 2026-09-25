@@ -126,11 +126,11 @@ test("light mode keeps a single source of truth for the palette", () => {
 
 test("rebalanced prices keep the catalogue shape and every chain affordable", () => {
   const price = Object.fromEntries(shopProducts.map((p) => [p.id, p.price]));
-  // 34 upgrades plus the nine v0.3 skills and bays, cheaper curve: the grind
-  // shrank without losing content.
-  expect(shopProducts).toHaveLength(43);
+  // 34 upgrades, the nine v0.3 skills and bays, and the six late auras that
+  // close the cosmetic shelf: cheaper curve, more content than launch.
+  expect(shopProducts).toHaveLength(49);
   const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBe(96350000);
+  expect(total).toBe(107250000);
   expect(total).toBeLessThan(131145000);
   // The first upgrade of each visible chain stays reachable early.
   expect(price["quickwind-1"]).toBeLessThanOrEqual(30000);

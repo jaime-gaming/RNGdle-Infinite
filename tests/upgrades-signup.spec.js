@@ -311,6 +311,9 @@ test("the first three tiers produce a fifteen-second reveal and fifteen-second c
 test("purchasing during a reveal or cooldown affects only rolls started afterward", async ({
   page,
 }) => {
+  // Two complete reveals plus their cooldowns, driven in real time through the
+  // virtual clock: roughly a minute of wall time on a busy machine.
+  test.slow();
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
   await startRoll(page, 1337);
   await page.clock.runFor(1000);

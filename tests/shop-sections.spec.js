@@ -128,6 +128,41 @@ test("the shop speaks one card language: preview, facts, price, one button", () 
     expect(shop).toContain(`data-product={item.id}`);
 });
 
+test("every product icon is a hand-drawn mark, and the hub is buttons", () => {
+  const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
+  const marks = fs.readFileSync("src/components/game-icons.jsx", "utf8");
+  // The catalogue never borrows a stock icon: each product's glyph is drawn in
+  // game-icons.jsx on the shared grid, and the mark set exports every aura.
+  for (const item of shopProducts) {
+    expect(
+      new RegExp(`^\\s*${item.icon}: \\w+Mark,`, "m").test(shop),
+      `no hand-drawn mark mapped for ${item.icon}`,
+    ).toBe(true);
+  }
+  // Each aura also has its own mark in that set, so the shelf, the hub tile and
+  // the worn box all describe the same effect.
+  const auraMarks = [...marks.matchAll(/export const (\w+Mark) = /g)].map(
+    (match) => match[1],
+  );
+  expect(auraMarks.length).toBeGreaterThanOrEqual(20);
+  for (const aura of shopProducts.filter((item) => item.kind === "aura")) {
+    const wired = new RegExp(`^\\s*${aura.icon}: (\\w+Mark),`, "m").exec(shop);
+    expect(wired, `no mark wired for the ${aura.id} aura`).toBeTruthy();
+    expect(auraMarks).toContain(wired[1]);
+  }
+  expect(shop).not.toMatch(
+    /from "lucide-react"[\s\S]{0,200}(Gauge|Mountain|Wind|Layers|Target)/,
+  );
+  // The shop opens as buttons: one link per shelf, each carrying its own stat.
+  expect(shop).toContain("shop-hub");
+  expect(shop).toContain('className="shop-tile"');
+  expect(shop).toContain("sectionStat(section)");
+  expect(shop).toContain("jumpTo(section.id)");
+  // …and featured picks that only ever open the shelf that sells them.
+  expect(shop).toContain("shop-featured");
+  expect(shop).toContain("shelfOf(item)");
+});
+
 test("the skills shelf states what the rack adds up to", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
   // The shelf quotes the shared rack report instead of recomputing anything.
