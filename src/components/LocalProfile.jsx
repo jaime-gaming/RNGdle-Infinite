@@ -1,14 +1,103 @@
 import React, { useRef, useState } from "react";
 import {
-  UserRound,
   Check,
   ArrowRight,
   Trash2,
   ShieldCheck,
   X,
   Dices,
+  Download,
+  History,
 } from "lucide-react";
 import { validUsername } from "../progress.js";
+import {
+  accountStats,
+  exportFileName,
+  exportPayload,
+} from "../profile-stats.js";
+import "../profile.css";
+
+// A one-way export: the browser saves a JSON snapshot of this local save so it
+// can be read or archived. There is no import anywhere, by design — a file you
+// downloaded can never overwrite the game you are playing.
+function downloadExport(progress) {
+  const payload = exportPayload(progress);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = exportFileName(progress);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function formatStatEP(value) {
+  return `${Math.round(value).toLocaleString("en-US")} EP`;
+}
+
+function when(at) {
+  if (!at) return "—";
+  return new Date(at).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function ProfileHistory({ progress }) {
+  const stats = accountStats(progress);
+  const items = [
+    ["Rolls completed", stats.rolls.toLocaleString("en-US")],
+    [
+      "Online · offline",
+      `${stats.onlineRolls.toLocaleString("en-US")} · ${stats.offlineRolls.toLocaleString("en-US")}`,
+    ],
+    ["EP earned in this cycle", formatStatEP(stats.totalEarned)],
+    ["EP spent", formatStatEP(stats.spent)],
+    [
+      "Best roll",
+      stats.bestRoll
+        ? `${stats.bestRoll.number.toLocaleString("en-US")} · ${formatStatEP(stats.bestRoll.ep)}`
+        : "—",
+    ],
+    ["Badges discovered", `${stats.uniqueBadges} of ${stats.badgesTotal}`],
+    [
+      "Companions",
+      `${stats.companions} of ${stats.companionsTotal} · ${stats.companionsFound} found free`,
+    ],
+    ["Skills unlocked", `${stats.skills} of ${stats.skillsTotal}`],
+    ["Charged effects fired", stats.skillsUsed.toLocaleString("en-US")],
+    ["Flywheel boosts used", stats.boostsUsed.toLocaleString("en-US")],
+    ["Rebirths · ultra-rebirths", `${stats.rebirths} · ${stats.ultraRebirths}`],
+    [
+      "First · latest entry",
+      `${when(stats.firstEventAt)} · ${when(stats.lastEventAt)}`,
+    ],
+  ];
+  return (
+    <section className="profile-history" aria-label="How far you have come">
+      <h3>
+        <History size={15} aria-hidden="true" /> How far you have come
+      </h3>
+      <dl>
+        {items.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="profile-history-note">
+        Read from your activity log and current save — these figures are not
+        stored on their own, and the log starts over with each rebirth.
+      </p>
+    </section>
+  );
+}
 
 // Suggestions are cosmetic only: a starting point for the name field.
 const NAME_PARTS = [
@@ -22,7 +111,12 @@ function suggestName() {
   )}`;
 }
 
-export default function LocalProfile({ profile, onAction, onClose }) {
+export default function LocalProfile({
+  profile,
+  progress,
+  onAction,
+  onContinue,
+}) {
   const [username, setUsername] = useState(""),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
@@ -67,8 +161,11 @@ export default function LocalProfile({ profile, onAction, onClose }) {
     setError("");
     try {
       const result = await onAction({ type: "delete", profileId: profile.id });
-      if (result.ok) onClose();
-      else setError(result.message);
+      if (result.ok) {
+        // The page stays: with the profile gone, the sign-up form returns.
+        setDeleting(false);
+        setConfirmation("");
+      } else setError(result.message);
     } finally {
       busy.current = false;
       setPending(false);
@@ -77,10 +174,7 @@ export default function LocalProfile({ profile, onAction, onClose }) {
   if (profile && deleting)
     return (
       <>
-        <div className="modal-symbol">
-          <Trash2 size={28} />
-        </div>
-        <h2 id="modal-title">Delete account &amp; progress</h2>{" "}
+        <h2>Delete account &amp; progress</h2>{" "}
         <form className="delete-confirm" onSubmit={deleteAccount}>
           <p>
             Delete <strong>{profile.username}</strong> and start over?
@@ -131,10 +225,7 @@ export default function LocalProfile({ profile, onAction, onClose }) {
     );
   return (
     <>
-      <div className="modal-symbol">
-        {profile ? <Check size={28} /> : <UserRound size={28} />}
-      </div>
-      <h2 id="modal-title">
+      <h2>
         {profile
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
@@ -150,9 +241,24 @@ export default function LocalProfile({ profile, onAction, onClose }) {
             There is no password, cloud backup, or cross-device login. Clearing
             site data removes the profile and its progress.
           </div>
-          <button className="primary-button" onClick={onClose}>
-            Continue playing <ArrowRight size={16} />
-          </button>
+          <div className="profile-actions">
+            <button className="primary-button" onClick={onContinue}>
+              Continue playing <ArrowRight size={16} />
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => downloadExport(progress)}
+            >
+              <Download size={15} aria-hidden="true" /> Export my data
+            </button>
+          </div>
+          <p className="profile-export-note">
+            One-way export: a JSON file you can read or keep. There is no
+            import, so a downloaded save can never overwrite the game in this
+            browser.
+          </p>
+          {progress && <ProfileHistory progress={progress} />}
           <div className="account-danger">
             <button
               className="danger-button"
@@ -202,6 +308,7 @@ export default function LocalProfile({ profile, onAction, onClose }) {
                 required
                 minLength={3}
                 maxLength={20}
+                aria-label="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Your lucky alias"

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { allBadgeMetadata as metadata } from "../src/infinite-badges.js";
 
@@ -11,7 +11,6 @@ test("home, random roll, cooldown, and badge breakdown", async ({ page }) => {
       name: "One roll per day? Not here. Roll as often as you like.",
     }),
   ).toBeVisible();
-  await page.clock.install();
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(
@@ -71,16 +70,21 @@ test("navigation, themes, help and local signup", async ({ page }) => {
     .getByRole("button", { name: "How to play", exact: true })
     .first()
     .click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("button", { name: "Close dialog" }).click();
+  // The roll surface stays mounted but hidden behind the help page.
+  await expect(page.locator(".roll-view")).toBeHidden();
+  await expect(
+    page.getByRole("heading", { name: "How to play", level: 1 }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Back to rolling" }).click();
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await expect(page.locator(".profile-page")).toBeVisible();
   await page.getByRole("textbox", { name: "Username" }).fill("LuckyPlayer");
-  await page.getByRole("button", { name: "Create local profile" }).click();
+  await page.getByRole("button", { name: "Start saving my progress" }).click();
   await expect(
     page.getByRole("heading", { name: "Your profile, LuckyPlayer" }),
   ).toBeVisible();
-  await expect(page.getByRole("dialog")).toContainText("not an online account");
-  await page.keyboard.press("Escape");
+  await expect(page.getByText("not an online account")).toBeVisible();
+  await page.getByRole("button", { name: "Continue playing" }).click();
   await expect(
     page.getByRole("navigation").getByRole("button", { name: "Leaderboard" }),
   ).toHaveCount(0);
@@ -94,7 +98,18 @@ test("navigation, themes, help and local signup", async ({ page }) => {
 test("desktop and mobile layouts do not overflow", async ({ page }) => {
   for (const width of [1440, 768, 390, 360]) {
     await page.setViewportSize({ width, height: 1000 });
-    for (const hash of ["", "#badges", "#shop", "#history", "#leaderboard"]) {
+    for (const hash of [
+      "",
+      "#badges",
+      "#shop",
+      "#history",
+      "#leaderboard",
+      "#profile",
+      "#rebirth",
+      "#changelog",
+      "#settings",
+      "#about",
+    ]) {
       await page.goto("/" + hash);
       expect(
         await page.evaluate(

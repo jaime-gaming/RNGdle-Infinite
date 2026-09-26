@@ -907,6 +907,326 @@ button.number-box.number-box:hover {
   box-shadow: 0 0 6px #c4b5fd;
   animation: box-infall 4.5s ease-in infinite;
 }
+/* Fourth-generation auras. Same contract as the third: every layer sits behind
+   the number's ink, keeps the rarity palette visible underneath, uses only the
+   decorative layers, and is stilled by reduced motion. */
+.number-box[data-cosmetic="nebula"] .box-halo {
+  display: block;
+  inset: -18px;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 30% 35%, #7c3aed59, transparent 62%),
+    radial-gradient(ellipse at 72% 68%, #2563eb4d, transparent 66%);
+  filter: blur(10px);
+  animation: aura-drift 11s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="nebula"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 25% 60%, #a78bfa2e, transparent 55%),
+    radial-gradient(ellipse at 78% 30%, #38bdf822, transparent 58%);
+  background-size: 160% 160%;
+  animation: box-drift-cloud 16s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="nebula"] .aura-trace {
+  inset: -2px;
+  border: 1px solid #c4b5fd55;
+  border-top-color: transparent;
+  border-bottom-color: #818cf866;
+}
+.number-box[data-cosmetic="nebula"] .box-particles i {
+  background: #ede9fe;
+  width: 3px !important;
+  height: 3px !important;
+  filter: drop-shadow(0 0 4px #a78bfa);
+  animation: box-twinkle 4.6s ease-in-out infinite;
+}
+
+.number-box[data-cosmetic="solstice"] .box-halo {
+  display: block;
+  inset: -15px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(ellipse, #fb923c3d, transparent 70%);
+  filter: blur(9px);
+  animation: box-halo-pulse 7s ease-in-out infinite;
+}
+.number-box[data-cosmetic="solstice"] .box-ornament {
+  inset: -8px;
+  border-radius: 14px;
+  background: conic-gradient(
+    from 0deg,
+    #f59e0b00 0deg,
+    #fbbf2466 60deg,
+    #fb718599 120deg,
+    #f59e0b00 190deg,
+    #fbbf2440 280deg,
+    #f59e0b00 360deg
+  );
+  mask: radial-gradient(
+    closest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+  -webkit-mask: radial-gradient(
+    closest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+  animation: box-spin 9s linear infinite;
+}
+.number-box[data-cosmetic="solstice"] .box-comet {
+  display: block;
+  width: 46%;
+  height: 2px;
+  top: 12%;
+  left: 6%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #fed7aa, transparent);
+  filter: blur(0.4px) drop-shadow(0 0 6px #fb923c);
+  animation: box-flare 6s ease-in-out infinite;
+}
+.number-box[data-cosmetic="solstice"] .box-particles i {
+  background: #fde68a;
+  width: 3px !important;
+  height: 3px !important;
+  filter: drop-shadow(0 0 4px #f97316);
+}
+
+.number-box[data-cosmetic="lumen"] .box-halo {
+  display: block;
+  inset: -13px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(ellipse, #fcd34d33, transparent 72%);
+  filter: blur(7px);
+}
+.number-box[data-cosmetic="lumen"] .box-ornament {
+  inset: -7px;
+  border: 0;
+}
+.number-box[data-cosmetic="lumen"] .box-ornament::before {
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(#fbbf24aa, #fbbf24aa) left top / 14px 1px no-repeat,
+    linear-gradient(#fbbf24aa, #fbbf24aa) left top / 1px 14px no-repeat,
+    linear-gradient(#fbbf24aa, #fbbf24aa) right top / 14px 1px no-repeat,
+    linear-gradient(#fbbf24aa, #fbbf24aa) right top / 1px 14px no-repeat,
+    linear-gradient(#fbbf24aa, #fbbf24aa) left bottom / 14px 1px no-repeat,
+    linear-gradient(#fbbf24aa, #fbbf24aa) left bottom / 1px 14px no-repeat,
+    linear-gradient(#fbbf24aa, #fbbf24aa) right bottom / 14px 1px no-repeat,
+    linear-gradient(#fbbf24aa, #fbbf24aa) right bottom / 1px 14px no-repeat;
+  animation: box-halo-pulse 8s ease-in-out infinite;
+}
+.number-box[data-cosmetic="lumen"] .aura-trace {
+  inset: 1px;
+  background: linear-gradient(
+    120deg,
+    transparent 44%,
+    #fffbeb70 50%,
+    transparent 56%
+  );
+  background-size: 240% 100%;
+  animation: box-sweep 11s ease-in-out infinite;
+}
+.number-box[data-cosmetic="lumen"] .box-particles i {
+  background: #fde68a;
+  width: 2px !important;
+  height: 2px !important;
+  filter: drop-shadow(0 0 3px #f59e0b);
+}
+
+.number-box[data-cosmetic="glitch"] .box-halo {
+  display: block;
+  inset: -14px;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, #ef444438, transparent 32%),
+    linear-gradient(270deg, #22d3ee33, transparent 32%);
+  filter: blur(6px);
+  animation: box-glitch-shift 3.4s steps(2, end) infinite;
+}
+.number-box[data-cosmetic="glitch"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    to bottom,
+    #ffffff12 0 1px,
+    transparent 1px 4px
+  );
+  mix-blend-mode: overlay;
+}
+.number-box[data-cosmetic="glitch"] .box-ornament {
+  inset: -5px;
+  border: 1px solid #f0abfc66;
+  animation: box-glitch-skew 5.5s steps(3, end) infinite;
+}
+.number-box[data-cosmetic="glitch"] .box-ornament::after {
+  inset: 1px;
+  border-radius: inherit;
+  border-left: 1px solid #f8717188;
+  border-right: 1px solid #22d3ee88;
+}
+.number-box[data-cosmetic="glitch"] .box-particles i {
+  background: #f5d0fe;
+  width: 12px !important;
+  height: 2px !important;
+  clip-path: none;
+  animation: box-tear 2.8s steps(4, end) infinite;
+}
+
+.number-box[data-cosmetic="monolith"] .box-halo {
+  display: block;
+  inset: -20px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(ellipse, #0f172a99, transparent 72%);
+  filter: blur(10px);
+}
+.number-box[data-cosmetic="monolith"] .box-ornament {
+  inset: -9px;
+  border-radius: 6px;
+  border: 1px solid #334155cc;
+  box-shadow:
+    inset 0 0 0 1px #0b1220,
+    0 6px 18px #0b122080;
+}
+.number-box[data-cosmetic="monolith"] .box-ornament::before {
+  inset: 3px;
+  border-radius: 3px;
+  border: 1px solid #38bdf840;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  animation: box-halo-pulse 9s ease-in-out infinite;
+}
+.number-box[data-cosmetic="monolith"] .aura-trace {
+  inset: -9px;
+  border-left: 2px solid #38bdf866;
+  border-right: 2px solid #38bdf866;
+  animation: box-halo-pulse 7s ease-in-out infinite;
+}
+
+.number-box[data-cosmetic="chrono"] .box-halo {
+  display: block;
+  inset: -16px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(ellipse, #0ea5e929, transparent 74%);
+  filter: blur(8px);
+  animation: box-halo-pulse 8s ease-in-out infinite;
+}
+.number-box[data-cosmetic="chrono"] .box-ornament {
+  inset: -9px;
+  border-radius: 50% / 26%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    #7dd3fc80 0 0.6deg,
+    transparent 0.6deg 6deg
+  );
+  mask: radial-gradient(
+    closest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 4px)
+  );
+  -webkit-mask: radial-gradient(
+    closest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 4px)
+  );
+}
+.number-box[data-cosmetic="chrono"] .box-ornament::after {
+  width: 4px;
+  height: 4px;
+  left: 50%;
+  top: -1px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  box-shadow: 0 0 6px #38bdf8;
+}
+.number-box[data-cosmetic="chrono"] .aura-trace {
+  inset: -9px;
+  border-radius: 50% / 26%;
+  background: conic-gradient(
+    from 0deg,
+    #38bdf800 0deg,
+    #38bdf8cc 22deg,
+    #38bdf800 46deg
+  );
+  animation: box-spin 6s linear infinite;
+}
+
+@keyframes box-drift-cloud {
+  from {
+    background-position:
+      0% 20%,
+      100% 80%;
+  }
+  to {
+    background-position:
+      30% 60%,
+      60% 10%;
+  }
+}
+@keyframes box-flare {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-30%) scaleX(0.6);
+  }
+  40% {
+    opacity: 1;
+    transform: translateX(30%) scaleX(1);
+  }
+  70% {
+    opacity: 0.2;
+  }
+}
+@keyframes box-glitch-shift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+@keyframes box-glitch-skew {
+  0%,
+  92%,
+  100% {
+    transform: skewX(0deg);
+  }
+  94% {
+    transform: skewX(-6deg) translateX(-3px);
+  }
+  96% {
+    transform: skewX(4deg) translateX(2px);
+  }
+}
+@keyframes box-tear {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  74% {
+    opacity: 1;
+    transform: translateX(18px);
+  }
+  82% {
+    opacity: 0.6;
+    transform: translateX(-12px);
+  }
+}
+
 @keyframes box-tide {
   from {
     background-position: 0 100%;

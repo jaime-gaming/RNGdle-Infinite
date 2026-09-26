@@ -13,13 +13,17 @@ import {
 import { BASE_ROLL_MS, BASE_COOLDOWN_MS, formatDuration } from "../shop-data";
 import { POPULATION } from "../probability.js";
 import { PETS, PET_DROP_CHANCE } from "../pets.js";
-import { BADGE_TOTAL } from "../rebirth.js";
+import { BADGE_TOTAL, REBIRTH_TOTAL, rebirthUnlocked } from "../rebirth.js";
+import { SKILLS } from "../skills.js";
 import { GAME_URL } from "../roll-data";
 import "../about.css";
 
 // The old help modal was one unreadable block of text. This is the same
 // information, grouped so a specific question can actually be found.
-export default function About({ navigate }) {
+export default function About({ navigate, progress }) {
+  // Rebirth explains itself only once the player has found it: before that the
+  // help page stays quiet about the ladder, exactly like the game does.
+  const showsRebirth = progress ? rebirthUnlocked(progress) : false;
   const steps = [
     {
       icon: Dices,
@@ -44,6 +48,9 @@ export default function About({ navigate }) {
       points: [
         "Quickwind shortens the reveal; Clockwork shortens the cooldown. Both are permanent and one-time.",
         "Flywheel grants a no-cooldown roll every few rolls. Tools add Auto-Roll, archive search and offline earnings.",
+        `${SKILLS.length} charged skills can be bought, won from companions or earned with a rebirth. A circle fills as you roll and the next roll fires it.`,
+        "The shop is one street of shelves — skills, pace, companions, auras, offline and tools — with a sticky jump bar, a search box and filters, and each shelf has its own link.",
+        "Rows, not walls of cards: every item states its effect, its price and whether you already own it, and long descriptions stay folded until you ask for them.",
         "Auras are purely cosmetic. Pick a goal and your savings towards it appear after each roll.",
         "Upgrades change timing and convenience only. They never touch your odds, your EP or your rank.",
       ],
@@ -54,7 +61,19 @@ export default function About({ navigate }) {
       points: [
         `${PETS.length} of them, adding between ${Math.round((PETS[0].multiplier - 1) * 100)}% and ${Math.round((PETS.at(-1).multiplier - 1) * 100)}% to the EP you bank.`,
         `Buy one in the shop, or find one free at roughly 1 in ${Math.round(1 / PET_DROP_CHANCE)} rolls.`,
+        "Only one companion is equipped at a time; the equipped one is the one that walks the roll screen, with its name and bonus on a plate. Swapping is free.",
         "The bonus applies to your wallet only. The number you rolled, its tier, its badges and its score are identical either way.",
+        "Each companion also carries one exclusive skill. It is available while that companion is the active one and takes a slot in your rack.",
+      ],
+    },
+    {
+      icon: Sparkles,
+      title: "Skills and the rack",
+      points: [
+        `A skill charges over its own number of completed online rolls; offline rolls never charge it.`,
+        "Charging is automatic and free. Swapping skills in and out of the rack costs nothing.",
+        "Draw skills only ever pick between numbers you genuinely rolled — each draw is an ordinary, independent roll. Wallet skills multiply banked EP alone.",
+        "The rack starts at two slots and grows to four with the two Skill Bays in the shop.",
       ],
     },
     {
@@ -64,7 +83,11 @@ export default function About({ navigate }) {
         `Ranks compare your roll against all ${POPULATION.toLocaleString("en-US")} possible numbers, not against other players or your own session.`,
         "Top means the share scoring at least as much; Bottom means the share scoring at most as much. Both include ties.",
         "Labels are rounded; hover any rank to see the exact percentage and counts.",
-        `Discover all ${BADGE_TOTAL} badges to unlock Rebirth, which starts a fresh cycle. No purchase is ever required for it.`,
+        ...(showsRebirth
+          ? [
+              `Rebirth unlocks step by step: the first step asks for half of the collection, and each of the ${REBIRTH_TOTAL} steps raises the bar by ten points up to the whole collection. Every step hands over an exclusive skill, and an ultra-rebirth at the very top starts everything over for a permanent wallet bonus. No purchase is ever required for it.`,
+            ]
+          : []),
       ],
     },
     {
@@ -75,6 +98,7 @@ export default function About({ navigate }) {
         "Signing up creates a local profile in this browser and starts a clean account — nothing from guest play carries over.",
         "There is no email, password, server or leaderboard. Clearing site data deletes the save.",
         "Refreshing resumes the same committed number and deadline. Tabs on one account share a single draw and reward.",
+        "Your profile shows how far you have come in this cycle, and you can export it as a file. There is no import — a file can never overwrite the game.",
       ],
     },
   ];

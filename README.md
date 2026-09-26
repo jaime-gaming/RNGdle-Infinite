@@ -1,488 +1,360 @@
 # RNGdle Infinite
 
-A browser-based RNGdle Infinite game, built with React 19 and Vite. Roll random numbers, discover badges, upgrade your pace, and follow your personal activity feed. The game runs locally; no backend, API keys, or environment variables are required.
+**Roll a number from 0 to 1,000,000. Find out what makes it special.**
 
-## Run
+RNGdle Infinite is a browser game about rolling numbers, scoring EP, discovering
+badges, buying upgrades and starting over — with infinite patience, no energy
+meters and no daily limit.
+
+**[▶ Play it](https://jaime-gaming.github.io/RNGdle-Infinite/)** — free, no
+account, works on desktop and mobile.
+
+![The roll screen with a charged skill explaining itself](media/roll.png)
+
+## Table of contents
+
+- [How a roll works](#how-a-roll-works)
+- [What makes a number special](#what-makes-a-number-special)
+- [Companions](#companions)
+- [Skills and the rack](#skills-and-the-rack)
+- [Flywheel](#flywheel)
+- [The shop](#the-shop)
+- [Rebirth and ultra-rebirth](#rebirth-and-ultra-rebirth)
+- [Your profile, your data](#your-profile-your-data)
+- [Fairness](#fairness)
+- [Saving, privacy and guests](#saving-privacy-and-guests)
+- [Settings, themes and accessibility](#settings-themes-and-accessibility)
+- [Questions people actually ask](#questions-people-actually-ask)
+- [Credits](#credits)
+- [Running it locally](#running-it-locally)
+
+## How a roll works
+
+Three steps, over and over:
+
+1. **Roll.** Press **GENERATE**. The game draws a uniformly random whole number
+   between 0 and 1,000,000 — every value equally likely, including the number
+   you just rolled.
+2. **Score.** The number is revealed digit by digit, then its EP value, its
+   rarity tier and its rank against the whole population. Every badge the number
+   earns is listed with how much EP it added.
+3. **Wait.** A reveal and a cooldown keep the rhythm honest. The base cycle is a
+   45-second reveal plus a 60-second cooldown, and both can be bought down to a
+   10-second reveal and a 2-second cooldown. Both are snapshotted when you press
+   the button, so buying something mid-roll never shortens the roll in flight.
+
+Your EP is a real wallet. Roll, earn, spend it on upgrades and cosmetics, roll
+faster.
+
+![A finished roll: the number, its tier, rank, EP and badge breakdown](media/result.png)
+
+## What makes a number special
+
+A number earns **badges** for its digit patterns: pairs, triples, runs, mirrored
+digits, repeating blocks, lucky sevens, round numbers and the two **Infinite
+Originals** that exist only here (Pendulum and Last Second). Each badge is worth
+EP, and only the best badge in a family counts towards the total, so 777777 pays
+once rather than five times.
+
+There are **235 badges across 18 sets**, split into six rarities from Common to
+Mythic, plus the **GODLY** tier for the very top scores. The collection is
+discovery-only: you see a badge only once you have earned it, and each new one
+is a permanent mark on your collection page. Nothing is ever taken away except
+by a rebirth, which is a decision you make on purpose.
+
+| What you see | What it means                                                              |
+| ------------ | -------------------------------------------------------------------------- |
+| **Number**   | The exact number drawn this roll. It is never editable.                    |
+| **Tier**     | Trash, Common, Uncommon, Rare, Epic, Anomaly, Mythic or GODLY.             |
+| **Rank**     | Where this number sits in the full population of 1,000,001, ties included. |
+| **EP**       | The score, added to your wallet exactly once.                              |
+| **Badges**   | Everything the number earned, lowest to highest, with each EP bonus.       |
+
+## Companions
+
+There are **13 companions**, from Pebble at **+5%** to Ember Dragonet at
+**+80%**, priced from 45,000 EP to 20,000,000 EP. You can buy one in the shop,
+or find one free at roughly **1 in 250 rolls** — a lucky roll drops a random
+companion you do not own yet, and it is worn automatically if you do not already
+wear one.
+
+Only **one companion is equipped at a time** — and the equipped one is the one
+on the roll screen, not just in a list: it walks the stage while you roll, with
+its sign and its bonus right there, and it moves a little quicker while a number
+is revealing. A companion found on a roll walks in with its own entrance before
+it joins the parade. The rest wait on the shelf. The layer is decorative and
+inert, and reduced motion replaces the walk with a still row.
+
+What a companion does is deliberately narrow: it multiplies **the EP that lands
+in your wallet**. The number you rolled, its tier, its badges, its score and its
+rank are untouched. Two players rolling the same number always score the same;
+a companion just means you reach the next upgrade sooner.
+
+Companions can be swapped for free at any time, and each one carries an
+exclusive skill.
+
+## Skills and the rack
+
+Skills are charged, one-shot effects. The rack sits in the **top-left corner of
+the Roll page** — every slot is an icon inside a ring, and the ring fills as you
+complete online rolls. When it is full the skill is _armed_, and **the next roll
+fires it**. Hover, focus or use a screen reader to read the name, the exact
+effect and the charge state.
+
+Two things in that corner keep the arithmetic out of your head: an armed circle
+shows **what it adds** ("×2 banked EP", "2 draws, best kept"), and the **Σ
+button** opens the total — every equipped skill with its charge, the banked-EP
+multiplier with each part named (companion, ultra-rebirth bonus, wallet skills),
+the draw plan for the next roll, and whether it is cooldown-free. The same
+figures appear in the shop's Skills shelf, so both places always agree.
+
+![The skill rack: three charged circles, one explaining itself on hover](media/skills.png)
+
+Seven skills are bought in the shop, thirteen belong to companions (each
+companion teaches one skill that exists nowhere else and only works while that
+companion is worn), and six are handed out by the rebirth ladder — one per rung.
+
+| Skill             |        Price | Charges | Effect                                                  |
+| ----------------- | -----------: | ------: | ------------------------------------------------------- |
+| **Surge**         |   180,000 EP |       6 | The next roll banks double EP                           |
+| **Trail**         |   320,000 EP |       6 | The next roll finds companions four times as often      |
+| **Bounce**        |   500,000 EP |       5 | The next roll has no cooldown (the reveal still plays)  |
+| **Double Vision** |   900,000 EP |      10 | Draws two numbers and keeps the one that scores more EP |
+| **Bedrock**       | 1,600,000 EP |       8 | Redraws to at least 25,000 EP, at most four draws       |
+| **Turbo**         | 2,600,000 EP |      10 | The next roll counts three times towards charging       |
+| **Big Game**      | 6,000,000 EP |      18 | Redraws to at least 100,000 EP, at most five draws      |
+
+Every effect stays inside the honest-roll rule: **a skill may touch the roll,
+but never the scoring table.** Wallet multipliers only multiply banked EP, and
+draw skills compare the already-verified scores of numbers actually drawn and
+are capped at eight draws. When a skill fires, the effect is written into the
+committed roll, so a reload, a second tab or a retry can never re-fire it or
+re-roll for something better.
+
+The rack starts with **two slots**. Skill Bay I (**1,000,000 EP**) widens it to
+three, Skill Bay II (**4,000,000 EP**) to four. Equipping, unequipping and
+swapping skills is **free** — the bays are the purchase, the loadout is not.
+
+## Flywheel
+
+Flywheel is the pace skill, and it lives in the same rack as a cog ring, so one
+glance covers every charged effect on your account.
+
+- **Flywheel — 450,000 EP:** four completed online rolls charge it, and the
+  fifth roll keeps its full reveal but has **zero cooldown**.
+- **Flywheel II — 1,500,000 EP:** two charging rolls, then a boosted third.
+- **Flywheel III — 3,600,000 EP:** one charging roll, so every other roll is
+  boosted.
+
+Boosted rolls do not charge the next cycle, and offline rolls neither charge nor
+consume it. A full five-roll cycle averages 93 seconds per roll at the fastest
+pace before Flywheel — and with everything maxed, the average cycle is about
+**11 seconds per roll**.
+
+## The shop
+
+`/shop` is the shop's front door: **six buttons**, one per shelf — Skills, Pace,
+Companions, Auras, Offline and Tools. Each button names what the shelf is for and
+carries the one number that matters on it (slots used, current reveal and
+cooldown, companions found, auras owned, the EP-per-roll rate, tools owned), and
+each one **opens the shelf as its own page**: `/shop/skills`, `/shop/auras` and
+so on, with its own address to bookmark or share.
+
+Above the shelves sit three **featured picks**, chosen from your tracked goal and
+your wallet — your goal, something within reach, a cosmetic — and each one is
+only a doorway to the shelf that sells it, with a meter against its price. A
+shelf keeps its own **sticky bar**: search, the same filters and a button back to
+all shelves. Filters only narrow what is drawn (`19 of 49 on this shelf`), and a
+description is held to three lines so a shelf reads as a list, not a wall of
+text. The old `#shop` bookmark still works, and `#auras` lands on that shelf.
+
+![The shop front door: six shelf buttons with their numbers and three featured picks](media/shop.png)
+![One shelf as its own page: the breadcrumb, sticky bar and aura cards](media/shop-shelf.png)
+
+| Shelf          | What it sells                                                                      |
+| -------------- | ---------------------------------------------------------------------------------- |
+| **Skills**     | Seven charged effects, the two skill bays, and the Flywheel tiers                  |
+| **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time |
+| **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                    |
+| **Auras**      | Eighteen cosmetic looks for your number box, equipped one at a time                |
+| **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                 |
+| **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                    |
+
+**Auto-Roll is an ability**, not a settings switch: once bought it appears in
+the corner rack as its own circle. One click arms it, another click stands it
+down, and the ring and its label state whether it is running, paused or off. It
+never skips a reveal, a cooldown or a draw, and without Persistence Core it
+starts off again after a reload.
+
+Every purchase is confirmed, costs EP once, and never changes odds or scores.
+The whole catalogue comes to 96.35 M EP, and no upgrade costs more than four
+times its own prerequisite.
+
+## Rebirth and ultra-rebirth
+
+Rebirth is a **ladder**, not a single wall, and it is driven by the badge
+collection alone — never by shop ownership.
+
+| Rung | Required | Badges | Granted skill  |
+| ---: | -------: | -----: | -------------- |
+|    1 |      50% |    118 | Reborn Drive   |
+|    2 |      60% |    141 | Reborn Tempo   |
+|    3 |      70% |    165 | Reborn Depth   |
+|    4 |      80% |    188 | Reborn Vault   |
+|    5 |      90% |    212 | Reborn Omen    |
+|    6 |     100% |    235 | Reborn Paragon |
+
+Rebirth says **nothing at all before it unlocks**: no header entry, no counter,
+no teaser, and a direct link to `/rebirth` simply goes home. From **30% (71
+badges)** the ring appears in the header and fills towards the rung you are on,
+turning green and reading _Ready_ when it is met. The rebirth page then lays the
+whole thing out: the six rungs with the badges each one asks for and the skill
+it grants, the figures for the current step, what a rebirth keeps, what it
+resets, and the permanent ultra-rebirth bonus with its own explanation. Each
+rebirth:
+
+- **keeps** your EP, every upgrade, your companions, your skills and your
+  profile, and
+- **resets** the badge collection to zero (so the next rung's percentage is
+  rediscovered from scratch), the equipped aura, and the activity history.
+
+![The rebirth ladder: collection progress, the current rung and all six steps](media/rebirth.png)
+
+Finish the sixth rung and **ultra-rebirth** unlocks: a genuine full reset — EP,
+badges, purchases, companions, skills and the rebirth counter — in exchange for
+a **permanent, stackable +10% to banked EP** for every ultra-rebirth, and a
+cosmetic mark next to your profile. Both resets require typing the word
+(`REBIRTH` or `ULTRA`) and cannot be undone.
+
+## Your profile, your data
+
+Signing up is just a local name for a save file in your browser — no email, no
+password, no server. Your profile page shows **how far you have come**, all of
+it derived live from your save and your activity log rather than stored twice:
+rolls completed, online vs offline, EP earned in this cycle, EP spent, your best
+roll, badges discovered, companions found free, skills unlocked, charged effects
+fired, Flywheel boosts used, rebirths and ultra-rebirths, and the date of your
+first and latest entry.
+
+![The profile page with the derived history and the one-way export](media/profile.png)
+
+**Export my data** downloads a JSON snapshot of the whole save — profile,
+figures and full activity history — so you can read it, archive it or keep it
+somewhere safe. It is deliberately **one-way**: there is no import anywhere, so
+a downloaded file can never overwrite the game you are playing. Delete account &
+progress remains the only way to remove it.
+
+## Fairness
+
+- **Uniform randomness.** Every number from 0 to 1,000,000 is equally likely,
+  drawn with the browser's cryptographic RNG and rejection sampling. There is no
+  number editor, no preset picker, no seed setting and no pity counter.
+- **Honest scoring.** The EP value, badges and tier of a number are fixed by the
+  rules, and ranks are computed against the complete population of 1,000,001
+  numbers with ties included. Nothing a player owns changes what a number is
+  worth.
+- **Bonuses stay in the wallet.** Companions, wallet skills and ultra-rebirth
+  bonuses multiply only the EP that lands in your wallet. Scored EP, tier and
+  rank are identical for everyone.
+- **No pay-to-win, no real money.** Everything costs in-game EP only.
+- **One-shot effects stay one-shot.** A charged skill is snapshotted into the
+  committed roll, so nothing can be re-fired, re-rolled or double-credited.
+
+RNGdle Infinite is a frontend-only game: saves live in your browser, which means
+a determined person can edit them, exactly as with any offline game. The
+architecture is built to make accidental loss — not cheating — the real
+difficulty: atomic saves, single-credit receipts, cross-tab locks and
+failed-write recovery.
+
+## Saving, privacy and guests
+
+- **Guests can play everything**, but guest progress is not saved and clears on
+  reload. Registration starts a clean, genuinely saved account.
+- **A local profile** saves your wallet, discoveries, upgrades, aura, companions,
+  skills, cooldowns and activity log in `localStorage` on this browser and
+  origin only. There is no cloud backup and no cross-device sync.
+- **Multi-tab safe.** Tabs share one save through storage events and Web Locks:
+  simultaneous rolls join the same draw, purchases cannot overspend, and a
+  second rebirth cannot apply twice.
+- **Nothing is sent anywhere.** No analytics, no accounts, no backend, no
+  runtime CDN. The only network requests are the game's own asset files.
+
+## Settings, themes and accessibility
+
+Settings are presentation only — nothing there changes odds, EP, prices or
+timings. You can turn desktop notifications and the ready chime on, force
+reduced motion, hide the skill bar, hide the goal recap, use compact EP numbers,
+skip purchase confirmations, or make the Auto-Roll ability start armed.
+
+Light, dark and system themes are all real palettes with contrast-checked
+colours. Reduced motion completes a reveal instantly while still reserving the
+full committed deadline, so accessibility never becomes a shortcut. The whole
+game is keyboard reachable, dialogs trap focus, and every result is announced to
+screen readers.
+
+## Questions people actually ask
+
+**Is there a roll limit?** No. Roll as often as you like, as long as the reveal
+and cooldown have finished. No energy, no waiting rooms, no paywall.
+
+**Can I get a specific number on purpose?** No. There is no seed, editor or
+preset, and none is planned.
+
+**Does a companion make my rolls luckier?** No — it multiplies banked EP only.
+Trail and Drift are the exception by design: they raise the chance of finding a
+companion, and they use their own random sample rather than the roll's.
+
+**Do offline rolls count towards skills and Flywheel?** No. Offline rolls pay
+their EP and count in your history, but charging is online-only.
+
+**What happens to my purchases when I rebirth?** They stay. Only the badge
+collection, the aura, the activity history and the cycle's own bookkeeping are
+cleared. An ultra-rebirth is the one that hands everything back.
+
+**Is this the official RNGdle?** No. It is an independent recreation, built from
+public rules and reference data. See credits below.
+
+## Credits
+
+- [RNGdle](https://www.rngdle.com/), created by Cam / sparrowpatch. RNGdle
+  Infinite is an independent frontend recreation and is not the official
+  service.
+- [RNGdle Tools](https://rng.cubityfir.st/) and its [badge
+  catalogue](https://rng.cubityfir.st/badges), [Luck
+  page](https://rng.cubityfir.st/luck) and [documented roll
+  timings](https://github.com/CubityFirst/rngdle-ep-calculator) — the pinned
+  full-range indexes the scoring and ranks are derived from.
+- [Box Lab](https://rng.cubityfir.st/beta/boxes) for the scoring-box palette
+  reference.
+- Badge artwork: [Twemoji](https://github.com/jdecked/twemoji), Twitter, Inc.
+  and other contributors, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- Fonts: Inter and Space Mono via Fontsource, SIL Open Font License.
+- Interface icons: [Lucide](https://lucide.dev/), ISC license, plus the
+  original marks and companion artwork drawn for this project (one 24×24 grid,
+  one stroke weight) in `src/components/game-icons.jsx`.
+
+## Running it locally
+
+For anyone who wants to tinker:
 
 ```sh
 npm install
+npm run dev             # http://localhost:5173
+npm test                # Playwright suite (needs a Chromium binary)
+npm run audit:economy   # reproducible price and roll-distribution audit
+npm run build           # production build
+npm run pages:publish   # rebuild docs/, which is what GitHub Pages serves
+```
+
+The screenshots in this README are generated from the running game rather than
+made by hand:
+
+```sh
 npm run dev
+CHROMIUM_PATH=/path/to/chrome npm run screenshots   # writes media/
+npm run vendor:emoji                                # check local emoji artwork
 ```
 
-The development server listens on `0.0.0.0:5173` and accepts Arena preview hosts.
-
-```sh
-npm run build   # Production build in dist/
-npm run preview
-```
-
-## Deploy to GitHub Pages
-
-This is a static site: GitHub Pages hosts the built HTML, JavaScript, local fonts,
-emoji, and verified scoring data. No backend, custom server, API key, or paid
-service is needed. Use Node.js 22 for builds and tests.
-
-Deployment is configured **from a branch, not from GitHub Actions**: Pages serves
-the prebuilt site committed to the **`main` branch, `/docs` folder**
-(Settings → Pages → Source: _Deploy from a branch_, branch `main`, folder
-`/docs`). There is no deploy workflow and no `gh-pages` branch — the
-_pages build and deployment_ entries that may appear in the Actions tab are
-GitHub's built-in builder for branch sources, not a workflow in this
-repository.
-
-### Publish an update
-
-```sh
-npm ci
-npm run pages:publish   # rebuilds docs/ with base /RNGdle-Infinite/
-git add docs
-git commit -m "Update Pages build"
-git push origin main    # Pages rebuilds from main automatically
-```
-
-`npm run pages:publish` empties and rebuilds `docs/` with the
-`/RNGdle-Infinite/` base and writes the `.nojekyll` marker so the files are
-served as-is. `docs/` is committed on purpose — it is what GitHub Pages serves.
-
-### Check the Pages build locally
-
-```sh
-npm ci
-npm run build:pages  # dist/ built for /RNGdle-Infinite/
-npm run preview -- --base=/RNGdle-Infinite/
-# Open http://localhost:4173/RNGdle-Infinite/
-```
-
-For a renamed repository or another static host, use
-`npm run build -- --base=/YOUR-REPOSITORY/` and preview with the same `--base`.
-For a root/custom domain, use the ordinary `npm run build`. Do not set the base
-only to `./`: the scoring worker needs the deployment base, not its own asset
-folder. The development server and ordinary production build still use `/`.
-
-```sh
-npx playwright install --with-deps chromium  # Once, for browser checks
-npm run test:pages
-```
-
-The smoke check independently builds and serves both `/` and
-`/RNGdle-Infinite/` on a strict static server, with no SPA fallback. It checks a
-real roll, the scoring worker and both data downloads, emoji/fonts/favicon,
-direct links and reloads, and exactly-once saved progress. Temporary test
-builds stay in ignored `.cache/`; deployable files are built into ignored
-`dist/`. Sections are **real paths** — `/shop`, `/badges`, `/history`,
-`/settings` — so the build also emits `404.html` (a copy of `index.html`), which
-is what GitHub Pages serves for unknown paths. That makes a direct link or a
-reload land on the right page with no server rewrite. Legacy `#shop` style links
-still resolve and are rewritten to their real path on arrival. Open via HTTP(S),
-not `file://`.
-
-**Saved games remain browser-local.** GitHub Pages does not add accounts or cloud
-sync. Moving from an Arena preview to Pages (or changing domains) changes the
-browser origin, so existing saves do not transfer automatically. HTTPS Pages
-supports the secure browser APIs used by the game; use a current browser with
-Web Crypto, Web Locks, and gzip decompression support.
-
-## Included
-
-- Text-only RNGdle wordmark with INFINITE beneath it (no logo icon), plus a text-based favicon, **Shop → Badges → History** navigation, and RNGdle-style light/dark layout, local **Inter + Space Mono** fonts, shared, tier-aware number boxes, and a colour-cycling Generate button.
-- **Random-only generation across 0–1,000,000 inclusive**, using Web Crypto with rejection sampling. Every number is equally likely, including a repeat of the previous roll. There is no number editor, preset picker, seed setting, or arbitrary-number preview.
-- Exact EP and earned/superseded badge membership for all **1,000,001** possible numbers, using pinned full-range factual indexes from RNGdle Tools plus two independently authored Infinite badge bonuses.
-- Full-population rank percentages with ties included and reference-style rounded rank labels, also used in share text. Rank tooltips retain precise percentages and integer counts. Badge details show full-population percentages, approximate “1 in” frequencies, and exact outcome counts. Chances stay independent; no pity counter is implied.
-- Staged progressive digit reveals, settle animations, two card pulses, vignette, lowest-to-highest EP badge stream, delayed rank, animated EP, and contributor highlights.
-- No Skip Reveal button or keyboard skipping. The reference choreography plays on the selected reveal schedule; the browser’s reduced-motion preference still completes it immediately for accessibility.
-- A **45-second base reveal** plus **60-second base cooldown**, with permanent timing upgrades. The next-roll deadline is fixed at draw start: **105 seconds base**, or **20 seconds with both timing tracks maxed**, before Flywheel. A charged Flywheel waives only that roll’s cooldown, leaving a 45s/15s reveal deadline. Reduced motion reveals instantly for accessibility but never advances this deadline.
-- **EP is spendable currency.** Each completed roll credits its full score exactly once. The existing EP counter shows the wallet balance. Completed rolls appear in your activity feed. There are no replay controls, presets, or number editing.
-- **Discovery-only collection:** 235 possible badges across 18 sets, but only earned badges appear in the collection, search results, details, and activity feed. An accessible progress bar tracks unique discoveries against all 235 badges, independent of search filters. Badge details stay in-game without external reference buttons. Completing a roll discovers all its earned badges, including superseded badges.
-- **Leaderboard disabled**, including direct `#leaderboard` navigation. The History navigation replaces the inactive leaderboard. Today’s Best Roll, fake player data, and UI Preview labeling have been removed.
-- **Sign up to save:** a local username profile retains guest progress and enables automatic browser saves. No passwords, email collection, online authentication, or backend.
-- Light, dark, and system themes. Registered profiles persist wallet, discoveries, upgrades, equipped aura, and cooldown in localStorage; guest wallets and history stay in memory; a narrow sessionStorage guard retains only the committed draw and cooldown across refreshes. Theme preference can persist without signing up.
-- Responsive layouts, accessible dialogs, local emoji assets, and no runtime CDN dependency.
-
-## Presentation and progression
-
-The reference-style number, rank, EP, share/roll controls and badge breakdown form one uninterrupted sequence. The added dashboard cards, duplicate reward recap and promotional goal copy have been removed. Collection and optional goal links remain as small text below the original content; the Shop retains a compact goal selector and plain purchase confirmation. Fonts, rarity palettes, reveal effects and optional owned cosmetics remain unchanged.
-
-**Next Roll bar:** each committed draw now records a cosmetic `cooldownWindow` (`startsAt`, `endsAt`) alongside the enforced deadline. The fill measures only the cooldown: zero at the end of the reveal, half at the middle of the cooldown, and full at readiness. A compositor animation is periodically synchronised to `gameNow()` instead of using rounded display seconds or a per-frame React loop. It restores after reload and does not change when an upgrade is bought mid-roll. Reduced motion uses discrete updates and never skips the reserved reveal time. A Flywheel roll has no cooldown bar, but still reserves its full reveal. Older saves without a reconstructable window retain the exact countdown without inventing a fill percentage.
-
-Goals remain optional and free. Recommendations respect prerequisites; a chosen goal persists with a local profile and clears after its purchase. Choosing or viewing a goal never spends EP.
-
-**Goal recap after each roll.** Once a reveal finishes and its result is credited, a compact panel shows how much closer that roll brought you to your chosen goal: the EP it paid, a savings bar, the exact `saved / price` figures, the percentage, and what is left. It appears only on a **settled** roll — never mid-reveal, never before the EP is actually in your wallet — and it reads the existing wallet and catalogue price, so it is a view over the economy rather than a second reward. When the goal becomes affordable the panel switches to a "goal reached" state linking to the shop. The remaining-rolls figure is derived from the **median** roll (5,801 EP), labelled as an estimate, because rolls are independent and can repeat; it is never presented as a schedule. It can be turned off in Settings. Auto-Roll pauses while browsing other pages, hidden tabs or dialogs, and remains off after reload unless Persistence Core is owned. These conveniences do not modify randomness, scoring or timing.
-
-## How to play page
-
-The `?` icon in the header opens a dedicated **/about** page instead of the old single-block help modal. It is deliberately not a regular navigation entry: the header keeps only the play-critical destinations, and the icon button carries `aria-current="page"` while the page is open. The content is grouped so a specific question can be answered without reading everything: three numbered steps (roll, score, wait), four topic cards (shop, companions, scores and ranks, saving and privacy), and a highlighted fairness statement. Figures — population size, badge total, base reveal and cooldown, companion count and drop rate — are read from the game modules, so the page cannot drift from the rules it documents.
-
-**The countdown shows the cooldown only.** The enforced wait is unchanged: a roll still reserves its full reveal and then its cooldown, and eligibility is still governed solely by `cooldownUntil`. Only the displayed number changed, via `displayedCooldownSeconds(window, deadline, now)`: while the number is being revealed it holds steady at the cooldown length rather than counting reveal plus cooldown, then ticks down normally. Saves without a reconstructable window fall back to the exact remaining time.
-
-**Timing integrity.** The displayed countdown is clamped at zero: past the deadline it must read a falsy `0` so the button returns to **ROLL AGAIN**, never a negative value that would strand it on `NEXT ROLL IN 0:00`. The reveal is paced by `gameNow()` rather than a raw `performance.now()`, so the same hardened clock drives both halves of the wait. A committed roll's deadline is also reconstructed from the roll itself (`startedAt + rollMS + cooldownMS`) and can only be extended, never shortened, so an edited save cannot keep its number while truncating or zeroing `cooldownUntil`.
-
-A committed roll may never be faster than the timings its own save has paid for: `parsePending` cross-checks `rollMS`/`cooldownMS` against `rollSettings(owned)`, so an edited save or a page-script extension can no longer grant an upgrade-free profile the fastest reveal and cooldown. Slower snapshots stay valid, because buying an upgrade mid-roll must not invalidate the roll already in flight, and a genuine Flywheel boost may still commit a zero cooldown. `game-clock.js` captures `performance.now`, `Date.now` and `timeOrigin` at module load and keeps a monotonic ceiling, so reassigning those functions afterwards cannot rewind the clock or skip a wait. This raises the cost of casual tampering; as with all frontend-only progress, a server-authoritative implementation remains the only complete answer.
-
-## Rebirth
-
-Rebirth is based on **all 235 discovered badges**, not shop ownership. The option is entirely hidden below **141/235 (60%)**, appears disabled from 141 to 234, and unlocks at **235/235** on the Badges page. Filtering the catalogue does not change eligibility.
-
-Confirming requires typing **REBIRTH** and cannot be undone. As requested:
-
-- **Reset:** EP balance and cycle earnings, discovered badges, every shop purchase (including cosmetics, Auto-Roll and Offline Roller), equipped aura, tracked goal, Flywheel charge, offline ledger and completed cooldown state.
-- **Keep:** local profile, full activity history and an incremented rebirth count. Theme preference also remains. Guest progress is still temporary until signup.
-- Each rebirth is recorded in History; previous roll rewards and purchase prices remain archived. Badges may be rediscovered and items repurchased in the new cycle. No luck or EP multiplier is added.
-
-A pending online roll, committed offline batch or unexpired next-roll deadline blocks rebirth: it cannot discard an unwanted number or skip a wait. Registered resets use the same Web Lock and an atomic save. Failed saves leave progress intact. Rebirth count also acts as a cycle guard: other tabs cancel old work and reset their live reveal/automation state, and failed-settlement recovery cannot restore earnings from a previous cycle. New fields default safely for older version-1 saves. As with all frontend-only progress, deliberate storage/code tampering requires a future server-authoritative implementation to prevent.
-
-## EP shop and local progress
-
-The shop has sequential Quickwind, Clockwork, Flywheel, Offline Clock and Offline Vault upgrade paths, twelve cosmetic auras, and four utilities (34 products total). Offline Clock appears after Offline Roller is owned, and Offline Vault after Offline Clock I. Only the **next available upgrade per track** is shown; buying it replaces its card with the next level. The final owned card remains with a clear maximum-level state. All items cost in-game EP, require purchase confirmation, and can be purchased only once.
-
-| Upgrade       |        Price | Effect             | Prerequisite  |
-| ------------- | -----------: | ------------------ | ------------- |
-| Quickwind I   |    30,000 EP | 45s → 35s reveal   | None          |
-| Quickwind II  |   110,000 EP | 35s → 25s reveal   | Quickwind I   |
-| Quickwind III |   380,000 EP | 25s → 15s reveal   | Quickwind II  |
-| Quickwind IV  |   620,000 EP | 15s → 10s reveal   | Quickwind III |
-| Clockwork I   |    40,000 EP | 60s → 45s cooldown | None          |
-| Clockwork II  |   180,000 EP | 45s → 30s cooldown | Clockwork I   |
-| Clockwork III |   620,000 EP | 30s → 15s cooldown | Clockwork II  |
-| Clockwork IV  | 1,700,000 EP | 15s → 10s cooldown | Clockwork III |
-| Clockwork V   | 3,800,000 EP | 10s → 5s cooldown  | Clockwork IV  |
-| Clockwork VI  | 5,320,000 EP | 5s → 2s cooldown   | Clockwork V   |
-
-Timing upgrades activate automatically. Both timings are snapshotted when Generate is pressed: buying during a reveal does not restart or shorten it, and does not shorten its upcoming cooldown. Buying during a cooldown does not change its deadline. Upgrades apply to rolls started afterward. They never change uniform random odds, badge rules, or EP scoring.
-
-| Aura            |        Price | Effect                                                                                                  |
-| --------------- | -----------: | ------------------------------------------------------------------------------------------------------- |
-| Starfall        |    40,000 EP | A living constellation: golden twinkles and a drifting comet sweep across your rarity box.              |
-| Aurora Veil     |   200,000 EP | Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours. |
-| Frostglass      |   320,000 EP | Glacial facets, an icy sweep, and softly drifting crystal flecks.                                       |
-| Emberwake       |   440,000 EP | Rising embers and a molten rim over the original rarity palette.                                        |
-| Eclipse Crown   | 1,380,000 EP | A golden corona, crescent rings, and orbiting stardust.                                                 |
-| Prismatic Bloom | 2,300,000 EP | Spectral petals, layered prism outlines, and drifting light motes.                                      |
-| Orbital Halo    |   620,000 EP | A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.                |
-| Tidepool        |   100,000 EP | Slow turquoise swells and rising bubbles, like light through shallow water.                             |
-| Verdant Bloom   |   440,000 EP | Creeping vines frame the box while pollen motes drift upward in a soft green glow.                      |
-| Circuit Bloom   |   620,000 EP | Etched traces pulse with cyan data packets that race the border and flash at each corner node.          |
-| Obsidian Edge   | 1,380,000 EP | A matte volcanic-glass frame with a razor-thin magenta edge light and slow drifting ash.                |
-| Singularity     | 3,380,000 EP | A collapsing accretion disc with an event-horizon ring and infalling sparks.                            |
-
-**Five auras were added** — Tidepool, Verdant Bloom, Circuit Bloom, Obsidian Edge and Singularity — spread deliberately across the price ladder so there is a fresh look to chase at 100,000 EP as well as at 3,380,000 EP. Each renders through the same shared `NumberBox` layers as the originals, keeps the rarity palette visible beneath, and is fully disabled by reduced motion. Auras are cosmetic only. Buying equips the aura; owned auras can be re-equipped for free. One aura can be equipped at a time, and the original appearance is always free to restore. Timing upgrades, Flywheel, and utilities do not occupy the aura slot. Prices have been rebalanced around ordinary rolls rather than the jackpot-inflated average. Existing purchases remain owned without another charge; their updated visual effects and timing settings apply automatically. No saved wallet or discovery is reset. Old purchase records retain the price actually paid; repricing does not retroactively refund or debit EP.
-
-**Archive Lens — 100,000 EP:** permanently unlocks number-substring search and a roll-tier filter in History. Search runs over the entire archive before pagination. The basic feed, event-type filters, and all older entries remain free to access. It changes neither luck nor EP.
-
-**Auto-Roll — 1,700,000 EP:** permanently unlocks an accessible on/off switch on the Roll page. It defaults to off, including after reload, and does not equip an aura. When enabled, it starts the next roll after the complete reveal-plus-cooldown deadline, using the same persisted draw, verified scoring, single-credit settlement, and cross-tab locks as manual rolls. Turning it off does not cancel a committed number. Auto-Roll pauses when another section or a hidden browser tab is open, resumes when the Roll page is visible again, and switches off on draw/settlement errors. Auto-Roll has no special speed advantage over manual rolls and does not perform offline catch-up; Flywheel benefits both equally.
-
-**Persistence Core — 4,800,000 EP (requires Auto-Roll):** a late-game convenience that makes the Auto-Roll switch survive a reload and keep running while its tab is in the background. The switch position is stored per profile under `rng-infinite-auto-roll-v1:`, outside saved progress, and is cleared on account deletion. Every roll it starts still uses the same committed draw, full reveal, cooldown deadline, verified scoring, single-credit settlement and cross-tab locks. It grants no extra speed, EP, luck or offline catch-up; without it, Auto-Roll keeps its original pause-when-hidden, off-after-reload behaviour.
-
-### Flywheel — 440,000 EP; II — 1,380,000 EP; III — 3,800,000 EP
-
-A permanent pace upgrade with an automatic **four-charge / fifth-roll** rhythm. Four completed online rolls begun after purchase charge it; the fifth roll retains its full reveal but has **zero cooldown afterward**. Boosted rolls do not charge the next cycle. Auto-Roll counts normally; offline rolls never charge or consume it. Normal cooldowns still apply to the four charging rolls, including the fourth. A full five-roll cycle averages 93 seconds per roll at base timings, or 27 seconds at the previous 15s-reveal / 15s-cooldown ceiling, excluding user/UI delays.
-
-**Flywheel II** needs two charging rolls before a boosted third roll; **Flywheel III** needs one, so every other roll is boosted. Each requires its predecessor. Buying a tier preserves earned charge up to the new limit, without changing any already-committed roll. With Clockwork VI, Quickwind IV and Flywheel III, the average cycle is **11 seconds** (10s full reveal plus an alternating 2s/0s cooldown). That is an ideal ~327 rolls/hour before processing or user delays—not a promise of EP income.
-
-Charge is visible on the Roll page and persisted with a local profile. The draw snapshots a `flywheel: "charge" | "boost"` flag, and consuming a charged boost is atomic with committing the next number and its deadline. Failed draws keep the charge; refresh restores the same boosted number, not a replacement. Eligible settlement adds exactly one charge; duplicate receipts and failed-write recovery cannot add it twice. Reduced motion still reserves the full reveal deadline. Buying during a reveal does not retrospectively count that roll, and all existing timing upgrades stack without changing EP or probability. Existing version-1 saves default to zero charge.
-
-### Price audit
-
-`npm run audit:economy` reproduces the complete 1,000,001-number distribution, the catalogue price comparison, and reproducible pace/offline milestones. Including the two originals, the **median is 5,801 EP**, versus a jackpot-inflated **mean of 21,548.40 EP**; **748,167 outcomes pay less than 10,000 EP**. All balancing is measured against the median, never the mean.
-
-The current curve:
-
-| Milestone                                         |      Cost | Average cycle | Ideal rolls/hour |
-| ------------------------------------------------- | --------: | ------------: | ---------------: |
-| Base                                              |         0 |         105 s |               34 |
-| First useful pair (Quickwind I + Clockwork I)     | 95,000 EP |          80 s |               45 |
-| Mid ceiling (all three original tiers + Flywheel) | 2.48 M EP |          27 s |              133 |
-| Late workshop (Clockwork V + Flywheel II)         | 13.4 M EP |        18.3 s |              196 |
-| Final online pace (everything)                    | 39.2 M EP |          11 s |              327 |
-
-**What changed in this rebalance.** The mid-game walls were the problem: the original three timing tiers and the first Flywheel gated an ordinary player behind hundreds of median rolls before anything felt different. Quickwind II/III, Clockwork II/III, Flywheel II/III, the auras, Auto-Roll and Offline Roller are all cheaper, and the steepest jumps are gone: **no upgrade now costs more than four times its own prerequisite**, which `tests/number-box.spec.js` enforces. Auto-Roll fell from 5,000,000 to 1,700,000 EP and Offline Roller from 10,000,000 to 2,440,000 EP, so the tools that change how you play arrive during the mid game rather than after it.
-
-The freed headroom went into **new late-game content** rather than inflation: Quickwind IV (10s reveal), Clockwork VI (2s cooldown), Offline Clock III (3-minute interval), Offline Vault I/II (216 and 288 offline rolls per absence) and Persistence Core. The online ceiling still moves from ~206 to ~327 ideal rolls/hour, and the offline ceiling from 144 to 288 rolls per absence — both behind prices that only a deep late-game wallet reaches. Median-roll equivalents range from 5 (Quickwind I) to 1,896 (Offline Vault II).
-
-Late tiers keep deliberately diminishing returns: each one costs more per second saved than the tier before it, so the endgame is a long tail rather than a cliff, and the complete catalogue totals 79.25 M EP. Recommendations compare all eligible pace/earning tools by price, so an expensive clock never hides a cheaper tool. Reference EP rewards, the two original bonuses, badge rules and uniform RNG are untouched. Repricing never refunds or debits an existing wallet, and historical purchase records keep the price actually paid.
-
-### Offline Roller — 2,440,000 EP
-
-A permanent tool for saved local profiles. It earns **one normal random roll for each full 10 minutes away**, capped at **24 hours / 144 rolls per absence**, as requested. Online reveal/cooldown upgrades do not speed up this interval. It activates on purchase without retroactive credit for time before purchase. No further purchase or claim fee is required.
-
-| Offline upgrade   |         Price | Interval | Cap | Rolls after 8h | Time to fill cap |
-| ----------------- | ------------: | -------: | --: | -------------: | ---------------: |
-| Offline Roller    |  2,440,000 EP |   10 min | 144 |             48 |              24h |
-| Offline Clock I   |  3,800,000 EP |  7.5 min | 144 |             64 |              18h |
-| Offline Clock II  |  5,320,000 EP |    5 min | 144 |             96 |              12h |
-| Offline Clock III |  8,380,000 EP |    3 min | 144 |            144 |             7.2h |
-| Offline Vault I   |  3,800,000 EP |        — | 216 |              — |                — |
-| Offline Vault II  | 11,000,000 EP |        — | 288 |              — |                — |
-
-Clocks change **how fast** offline rolls accrue; vaults change **how many** a single absence can store. Vault I requires Offline Clock I, and Vault II requires Vault I. With Offline Clock III and Offline Vault II, a 14.4-hour absence fills the maximum 288 rolls. Neither track changes the value, odds or badge rules of an individual offline roll.
-
-Each tier requires the previous one and a local profile. **Clock tiers never raise the cap:** with the base 144-roll vault, checking only once every 24 hours gives no extra rolls from any clock tier. Clocks make shorter absences more productive; only an Offline Vault raises the per-absence maximum, and neither makes individual rolls more valuable. Purchase starts a new future-rate anchor; owed whole intervals or a pending batch must be settled first, and already-paid summaries remain available. Partial intervals do not carry over or receive retroactive credit. Committed batches snapshot their interval for reload-safe history timestamps; legacy batches without the field retain their original ten-minute spacing.
-
-**Browser-only implementation:** closed pages cannot execute a worker. On return, the game calculates the earned roll count, commits all chosen numbers before showing rewards, and then settles ten rolls per saved transaction. Each roll uses the same uniform RNG, verified scores, badge rules, discoveries, and history as an online roll. The welcome-back summary shows rewards already credited—not an unclaimed balance. The free **Offline** history filter shows every recorded offline roll.
-
-The tool tracks **absence from all visible tabs of the same local account**, not simply leaving the Roll section. Visible tabs heartbeat every 15 seconds; hiding a tab records a transition. Closing/crashing a browser may miss the final write, so timing can fall back to its last successful heartbeat (approximately 15-second granularity in normal operation). Whole-period rounding occurs per absence; fractional periods do not carry forward. Presence leases expire after 45 seconds to recover from abruptly closed tabs. A stalled or modified browser cannot be distinguished perfectly from an absent one without a backend.
-
-The saved `offline` ledger contains the last seen timestamp, a bounded committed batch (up to the owned vault size — 144, 216 or 288 numbers — with IDs and a saved index), and an optional reward summary. A batch larger than the vault actually owned is rejected on load. Interrupted batches resume the same numbers, without replacing another pending manual roll or its cooldown. Web Locks serialize catch-up across tabs. Failed settlement writes leave the committed batch available to retry; no extra EP is exposed as credited. Account deletion clears the ledger and profile-scoped `rng-infinite-presence-v1:` entries. Deliberate save/clock tampering remains outside frontend security guarantees; authoritative offline rewards need server time and storage.
-
-### Cosmetic workshop
-
-Existing aura owners receive the new effects free: constellation tracery for Starfall, additional Aurora ribbons, an extra orbital plane, faceted Frostglass edges, and a brighter Emberwake rim. Eclipse Crown and Prismatic Bloom add permanent premium options. The shop's rarity selector previews every aura on the selected scoring palette using question marks, never editable or fabricated rolls. Core tier colours, GODLY's supplied recipe, and RNG remain unchanged; reduced motion disables all animated layers. The same upgraded number-box component is used in the live game.
-
-### Infinite Originals
-
-Two new badges join the original 233 in the **Infinite Originals** set:
-
-| Badge       | Rule                                                                                               | Bonus EP | Earning numbers | Probability |
-| ----------- | -------------------------------------------------------------------------------------------------- | -------: | --------------: | ----------: |
-| Pendulum    | Six digits alternating two different digits, ABABAB, with A from 1–9 and B from 0–9.               |   25,000 |              81 |     0.0081% |
-| Last Second | Six-digit HH5959 with HH from 10 through 23: the last second of an hour. No padded leading zeroes. |   75,000 |              14 |     0.0014% |
-
-These are independent scoring badges (no supersession family), with supporting-digit diagrams, normal discovery/history entries, and saved unlocks. Badge rarities are Anomaly and Mythic respectively. The pinned upstream files, original badge rules, and original EP contributions remain intact; the runtime adds these bonuses before sorting the **entire population** for ranks and updating tier counts. Thus total scores and ranks can differ from the reference. Old wallets and recorded rolls are not repriced, and old history does not retroactively unlock either badge. Collection progress now uses 235.
-
-### Number boxes and cosmetics
-
-A single `NumberBox` component renders the idle generator, generated results, historical rolls, and every cosmetic preview. Its original seven rarity palettes use the light/dark scoring-box colour and shadow tokens observed in [Box Lab](https://rng.cubityfir.st/beta/boxes): 3px borders, 12px corners, gradients, gloss, tier-specific glows, and shimmer only from Uncommon upward. Neutral/unrevealed boxes do not disclose the outcome. The requested **GODLY tier starts at 380,000 EP**: gold `#fde68a → #fffbeb → #fde68a` gradient, `#f59e0b` border, 20px outer glow and inset highlight, 12px radius, 3px border, `#78350f` ink with gradient digits, shimmer, ten shadowed star particles generated with seed 1234, and a three-second breathing cycle. GODLY splits the old Mythic population without changing any scores or badge odds (2,075 of 1,000,001 numbers, approximately 0.2075%). Legacy high-EP history boxes migrate to GODLY.
-
-The component and animations are independently implemented. Starfall adds twinkling stars and a comet; Aurora adds drifting ribbons and a holographic layer; Orbital Halo adds a five-colour halo, orbital rings, and satellite lights; Frostglass adds icy facets; Emberwake adds rising sparks. They decorate the box without replacing the score's underlying rarity palette. Reduced motion disables animated layers throughout the app, including shop previews. Cosmetics never change the original badge rules or the two Infinite Originals; all badge probabilities and roll ranks use the complete population.
-
-### Personal activity feed
-
-History (`#history`) records completed rolls with the number, tier, EP, earned badges, and timestamp; first-time badge unlocks grouped by roll; shop purchases with the actual price paid; and free aura equipment changes. Events appear newest first, with filters for rolls, badge unlocks, and shop activity. Historical number boxes are read-only, and earned badges open their normal detail dialogs. Repeated numbers are distinct rolls, but repeat discoveries do not create another unlock event. Failed or cancelled purchases do not create transactions.
-
-All recorded entries are retained, with 50-at-a-time display pagination rather than a rolling data cutoff. Old saves migrate without losing EP or purchases, but rolls from before tracking was introduced cannot be reconstructed and are not fabricated. Guest activity remains in memory and is saved together with current progress on sign-up.
-
-The entire log is stored with progress in localStorage, whose capacity is browser-dependent. If writing fails or storage fills up, existing saved activity is left intact, new draws are refused before their number is exposed, a warning appears, and purchases are refused. An already committed result may settle temporarily in the current tab; retry/recovery retains the committed number and merges missing roll receipts into the latest saved wallet without undoing another tab’s purchases. No saved history is silently truncated to make room.
-
-### Delete account and progress
-
-Profile → **Delete account & progress** opens a separate confirmation step requiring the exact word **DELETE**. A successful deletion removes the account, wallet, cumulative EP, discoveries, owned/equipped items, cooldown, pending draw, guest guard, receipt list, and entire activity log from this browser/origin. Theme preference is kept. Deletion can be cancelled before submission; a storage-removal failure leaves the account intact and allows retry.
-
-Registered tabs synchronize deletion. Active reveals and pending draws are cancelled by resetting the game instance. Queued actions carry a game-generation token, and writes always check the saved profile identity inside the lock—even after a failed save—so a stale completion cannot resurrect a deleted account or credit a newly created profile. Signing up again starts fresh. There is no remote account to delete.
-
-### Local sign-up and persistence
-
-Guests can roll, discover badges, and buy items, but these changes exist **only in the current tab’s memory** and disappear on reload. The exception is a temporary anti-reroll guard under `rng-infinite-guest-roll-v1` in sessionStorage: it stores only the pending number, ID, start time, snapshotted timings, and next-roll deadline. Refreshing resumes that draw without saving the guest wallet/history. A guest guard belongs to a tab/session, not an identity across fresh browser sessions. Creating a local profile saves the entire current guest game atomically, then enables automatic saves. The username accepts 3–20 letters, numbers, underscores, or hyphens. No email, password, or other credential is requested or stored. This is **not online authentication**, and usernames are not globally reserved.
-
-`rng-infinite-progress-v1` stores a versioned object with local `profile` (ID, username, creation timestamp), spendable `balance`, cumulative `totalEarned`, discovered badge IDs, owned product IDs, equipped aura, cooldown deadline, `pendingRoll` commitment, a bounded recent receipt list, optional `goalId`, `cooldownWindow`, `rebirths`, `flywheelCharge` (0–4), and the complete `history` activity log. Roll IDs in history also prevent duplicate credits after the recent receipt window expires. Theme remains under `rng-theme`. Existing profileless saves from the earlier prototype can be loaded into guest memory, but new changes are not persisted until sign-up.
-
-Writes are serialized in each tab and use **Web Locks** to protect shared balances and coordinate registered draws across tabs. A registered draw is refused without Web Locks support. Storage events synchronize registered tabs. A guest tab does not silently join a profile created in another tab or lose its guest game; attempting sign-up then explains the conflict instead of overwriting the other profile. Simultaneous account tabs join the same pending draw, and canonical settlement recomputes the score and credits its ID only once.
-
-Invalid saves recover to safe defaults with a warning. If the chosen number and original deadline cannot be committed, no new result is revealed. An existing commitment remains recoverable even if a subsequent settlement write fails; a purchase/equipment change is refused rather than spending EP that cannot be saved. Failed sign-up leaves the current guest game intact and allows retry. Guests require writable sessionStorage for the anti-reroll guard.
-
-Progress belongs to the browser **and origin**. Clearing site data removes the local profile and progress. Switching browsers, devices, or preview hostnames does not carry saves across. No cloud backup or real money is involved.
-
-## Settings and desktop notifications
-
-**Settings** (`#settings`, from the header slider icon or the footer link) is a real page, not a dialog. Preferences live in `rng-infinite-settings-v1`, entirely separate from saved progress: they are never part of a rebirth, never touched by a purchase, and deliberately survive account deletion. Unknown, missing or malformed fields fall back to their defaults field by field, so a corrupted preference can never break the game or discard a save. Changes apply immediately and synchronize across tabs via the `storage` event; if writing fails, a warning explains the settings apply only until reload.
-
-| Setting                         | Default      | Effect                                                                               |
-| ------------------------------- | ------------ | ------------------------------------------------------------------------------------ |
-| Desktop notification when ready | Off          | Browser notification once a cooldown has finished, only while the tab is hidden      |
-| Chime when ready                | Off          | Short two-tone WebAudio chime under the same conditions                              |
-| Reveal motion                   | Match system | Force full animation or reduced motion, overriding `prefers-reduced-motion`          |
-| Show the Flywheel meter         | On           | Hides the meter only; charge still accrues and applies                               |
-| Compact large EP numbers        | Off          | Displays 12.5M instead of 12,500,000; exact EP is still spent and recorded           |
-| Confirm every purchase          | On           | Off buys in one click; prices, prerequisites and history are unchanged               |
-| Start Auto-Roll enabled         | Off          | Applies when Auto-Roll is owned; Persistence Core overrides it with your last switch |
-
-## Companions, changelog and honest guest play
-
-**Companions (pets) are a small multiplier on banked EP.** Six of them, from
-Pebble at +4% to Ember Dragonet at +20%. The boundary is deliberate and
-enforced by tests: a companion multiplies **only the EP that lands in your
-wallet**. The number you rolled, its tier, its badges, its score and its rank
-are untouched, so two players who roll the same number always score the same —
-prices stay exactly where the balance pass put them, you just reach them a
-little sooner. You can buy one in the shop, or find one free at roughly **1 in
-250 rolls**; the drop is sampled from its own random source so companion luck
-never consumes or biases the roll's own randomness. A found companion is worn
-only if you are not already wearing one, and swapping is always free.
-
-**Rebirth moved into the top bar** as a progress ring that fills with your
-badge collection, showing `141/235` as you go and switching to a green "Ready"
-state when the collection is complete. It is styled apart from the ordinary
-page buttons, and stays hidden until rebirth is a realistic prospect.
-
-**Guest play is no longer pretend-saved.** It never really persisted, but the
-wording implied it did and signing up appeared to adopt whatever you had
-rolled. Now it is explicit: guest rolls, EP and discoveries are not saved, and
-**registering starts a genuinely clean account** at 0 EP with an empty
-collection. An account's history now always matches what that account actually
-did.
-
-**A changelog lives at `/changelog`**, linked from the footer. A small "New
-Version" flag appears in the header while the newest entry has not been read,
-and it clears when you either open the changelog or simply roll.
-
-**Ambient animations** were added throughout: page sections rise a few pixels
-on entry, cards lift under the pointer, the nav underline grows from the
-centre, an equipped companion drifts, and the savings bar fills rather than
-jumping. Nothing moves more than 8px or shifts layout, and the global
-`prefers-reduced-motion` reset disables all of it.
-
-**Share carries the link.** There is one copy action, not two: pressing Share
-copies the result _and_ `https://jaime-gaming.github.io/RNGdle-Infinite`
-together, and the button confirms with "Copied result + link!".
-
-**The goal savings marker is just a ring.** It sits directly above the badge
-breakdown as a small progress ring holding the goal icon, followed by a link
-into the shop. The exact figures — saved, price and percentage — are no longer
-drawn on screen but remain available on hover and to screen readers through the
-ring's label, so nothing was lost for assistive technology.
-
-**Sign-up was reworked.** It now validates the name as you type (saying whether
-it is too short or has invalid characters, and confirming when it is fine)
-using the _same_ validator the reducer enforces, so the form and the rules can
-never disagree. Submission stays disabled until the name is valid, there is a
-dice button to suggest one, and the panel states plainly what is saved from
-that moment on and what is not carried over from guest play.
-
-## Real URLs, light mode and a lighter economy
-
-**Every top-bar destination is its own page with its own URL.** Shop, Badges,
-History and Settings are `/shop`, `/badges`, `/history` and `/settings` instead
-of hash fragments, so each one can be linked, bookmarked, opened in a new tab
-and reached with browser back/forward. Unknown paths fall back to the roll page
-rather than a blank screen, and old `#`-style links keep working.
-
-**Light mode was genuinely broken, not just unpolished.** `roll.css` is imported
-after `styles.css` and redefined `--text`, `--secondary`, `--muted`, `--border`
-and `--hover` in an **unscoped `:root`**, silently replacing the light palette
-with a second, different one. Those overrides now live only in the dark block.
-Hardcoded status colours (danger red, the offline warning, the rank percentile
-scale, modal scrims) became themed tokens — `--danger`, `--warning`,
-`--rank-*`, `--scrim` — with light values picked to clear the WCAG AA 4.5:1
-contrast ratio against the page background; several of the old ones sat as low
-as 1.8:1 and were effectively unreadable. `--muted` and `--green` were darkened
-for the same reason.
-
-**Rebirth no longer depends on the shop.** It is a collection milestone, so
-auras, Auto-Roll, Archive Lens, Offline Roller, Persistence Core and the vaults
-are all excluded: a complete badge collection unlocks rebirth with an entirely
-empty shop, and owning all 34 products with one badge missing does not. The
-dialog says so explicitly.
-
-**Prices were rebalanced against the real game.** RNGdle proper reports about
-1,538 EP per roll (112,146,596 EP over 72,931 rolls), while Infinite averages
-21,548 — scoring is a fixed invariant, so instead of changing EP the catalogue
-was repriced so the _number of rolls_ an upgrade costs feels like the real game.
-Every price fell: the catalogue went from 131.1 M to **79.25 M EP**, about
-6,086 → **3,678** average rolls to own everything (−40%), with the deepest cuts
-in the late game (Clockwork VI −50%, the offline tiers −40%). The chain shape,
-the `price / prices[requires] <= 4` rule and one-time confirmed purchases are
-unchanged, and repricing never refunds or debits an existing wallet.
-
-**Savings now lead the result.** The post-roll goal progress sits at the very
-top of a finished roll, above the badge breakdown, and is no longer a bordered
-card — no panel background, no shadow — so it reads as part of the result.
-
-The footer links to the **real game** at [rngdle.com](https://www.rngdle.com/).
-
-**Wardrobe.** Settings also holds an aura wardrobe: every aura you already own, previewed live on any rarity you pick, equippable in one click without walking back to the shop. It lists the original appearance first and marks the equipped entry. Equipping is free and cosmetic — it spends no EP, buys nothing, and cannot show an aura you do not own. With none owned it explains what auras are and links to the shop instead.
-
-**Nothing in Settings is a gameplay advantage.** No option changes randomness, EP scoring, badge rules, prices, reveal length, cooldown length or the offline rate. Reduced motion completes a reveal instantly but still reserves the full committed deadline, exactly as the system preference always has. Compact numbers are presentation only — every purchase, balance check, history entry and save uses exact EP. Turning off purchase confirmation removes a dialog, not a cost.
-
-### Desktop notifications
-
-Notifications are **opt-in and permission-gated**. The switch requests permission when you enable it; if the browser blocks or does not support notifications, the switch stays off and explains why rather than silently failing. A single alert fires per cooldown deadline, tagged `rngdle-infinite-ready` so a new alert replaces an old one instead of stacking, and never while the tab is visible — the countdown in front of you is already the notification. Clicking one focuses the tab. A committed reveal still running, or an offline batch still settling, suppresses it.
-
-The alert is **purely an announcement**: it does not start a roll, credit EP, extend or shorten a deadline, or work while the browser is fully closed (a frontend-only game has no service worker or server push). The **Test your alerts** button sends exactly the alert you would receive, so you can verify the permission and volume without waiting for a cooldown. The chime is synthesized with WebAudio, needs no asset download, and respects browsers that require a prior interaction before playing audio.
-
-## Randomness, scoring, and percentages
-
-The reference’s [Luck page](https://rng.cubityfir.st/luck) uses the full score distribution rather than a sample. Infinite uses that same full population:
-
-- `percentile = 100 × count(EP ≤ this EP) / 1,000,001`
-- **Top** = percentage scoring **at least** this EP; **Bottom** = percentage scoring **at most** this EP. Both include ties. Top is shown when the inclusive percentile is at least 50.
-- Visible rank labels match the reference: rounded whole percentages, with **<1%** when the rounded value would be zero. Hovering shows the precise percentage (up to six decimal places), exact integer counts, and tie policy. Badge odds retain three-significant-digit formatting.
-- A badge’s percentage counts every number earning it, even if another badge in its family supersedes it. Only the highest-EP badge in each family contributes to the total score.
-- Badge rarity and total-roll rarity use different thresholds. Rarity tooltips use exact tier counts recomputed from the final score distribution, never cached manifest counts. Rounding never changes a nonzero chance to 0% or a non-certain chance to 100%.
-
-The two scoring indexes total approximately **2.5 MB compressed**. They are delivered as versioned, ASCII-safe JSON envelopes (approximately **3.3 MB** before HTTP compression) so preview proxies cannot reinterpret the binary gzip payload. A shared Web Worker decodes and decompresses them, then verifies the **canonical decompressed SHA-256 and exact size** before indexing. Gzip metadata/recompression changes do not cause false failures; changed scores still fail. Content-addressed URLs and cache revalidation avoid stale data/manifest mismatches. Generate stays disabled while loading. Failed or corrupt data produces a visible retry action, never a fallback sample or invented score.
-
-The worker accepts initialization, uniform random draws, and internal restoration of an already committed number. Restoration does not consume RNG; it is not exposed as a number-entry control. The old fifty reference snapshots are **test fixtures only**, not a production roll pool. The upstream executable engine is not shipped. See [`src/data/README.md`](src/data/README.md) for provenance, formats, and animation details.
-
-### Frontend boundary
-
-Randomness and scoring run locally in the browser. Serve over HTTPS (localhost is also permitted for development) for Web Crypto. Current browsers are recommended; decoding the scoring payloads requires `DecompressionStream` support.
-
-This is **not a server-authoritative or tamper-proof game**: client-side state and cooldowns cannot enforce competitive fairness. Online accounts, cross-device sync, live rankings, and server-enforced cooldowns remain unimplemented. Reloading preserves completed progress only after local sign-up, but resumes the same pending draw for both registered players and guests in the same tab session. Its ID, start time, and next-roll deadline do not reset. Navigating between sections keeps the reveal running. An open tab uses a monotonic clock, so changing wall time cannot skip its cooldown; deliberately modifying storage/code or clock time across reloads is still outside the frontend trust boundary. A guest can also clear storage or create a fresh session; preventing that requires a backend identity. A future backend can replace `src/roll-client.js` while retaining the result/animation interface.
-
-## Tests
-
-```sh
-npx playwright install --with-deps chromium
-npm test
-npm run prepare:data # Recompute odds, tier counts, and integrity manifest from pinned indexes
-```
-
-The **201 tests** cover:
-
-- Goal recommendations/prerequisites, backward-compatible goal saves, failed-write retry, cross-tab preservation, guest/signup gating, confirmed purchase → next goal, plain progress links, duplicate-roll discoveries, Auto-Roll dialog pausing, completed-workshop states, profile-required goals and narrow-screen themes.
-- Rebirth visibility at 140/141/234/235 badges, unique-badge eligibility, filters, typed confirmation/cancel, complete resets and preserved history, repurchases/rediscovery, failed local/session saves, simultaneous tabs, missed storage events, stale-cycle recovery, Web Locks, pending-roll/offline/cooldown guards and mobile dialogs.
-- Cooldown-only fill arithmetic, fractional progression, reload and mid-cooldown purchases, reduced-motion reveal reservation and zero-cooldown Flywheel rolls.
-- Every late tier’s prerequisite chain and deep orphan pruning, historical prices, recommendation ordering, 2s/5s/10s snapshots, 4/2/1-charge rhythms, rate changes without retroactive rewards, snapshotted legacy batches, all three offline caps, concurrent tier purchases and failed-save rollback.
-- Settings defaults, field-by-field validation of corrupt preferences, separation from saved progress, compact-EP formatting that never changes a spent amount, Offline Vault caps, Persistence Core prerequisites, catalogue kinds and the four-times-prerequisite price ceiling.
-- The changelog staying short and lowercase with the launch note preserved verbatim, Share being a single copy action that includes the link, the goal recap rendering as a ring that still announces its figures, and sign-up sharing one validator with the reducer.
-- Companions multiplying banked EP without altering the scored roll, ordered and capped multipliers, purchase/equip/validation rules, forged-save rejection, and rare weighted drops that never duplicate or auto-swap; guest play saving nothing and sign-up starting a clean account; the share link; the changelog's entries and unseen-version flag including unavailable storage; and ambient motion staying small and reduced-motion safe.
-- Real-path routing for all six pages including subpath deployment, legacy hash links, unknown-route fallback and duplicate-history suppression; the `404.html` static fallback; rebirth unlocking on badges alone with an empty shop and refusing with a full shop; light mode having a single palette source and themed semantic tokens; and the rebalanced catalogue's total, early prices and prerequisite ratios.
-- All twelve auras carrying no gameplay payload, distinct prices, renderer coverage for every catalogue aura, purchase-equips/free-re-equip behaviour, refusal to equip an unowned aura, and goal-recap savings that cap at the price and estimate from the median.
-- Flywheel’s two-cycle accounting, zero-cooldown validation, mid-reveal purchase snapshots, full base/upgraded reveal deadlines, reload restoration, concurrent single consumption, failed commit/recovery, offline exclusion, Auto-Roll compatibility, mobile display, and legacy price preservation.
-- Exact chance/frequency formatting at rare and near-certain boundaries, and full-population tier odds despite stale manifest counts.
-- Every legal number’s base score versus its highest-EP family memberships, all 233 pinned badge probabilities and data hashes, plus exhaustive independent checks of both Infinite Originals, their bonuses, adjusted ranks and tier counts.
-- Agreement with fifty independent reference snapshots, exact inclusive rank tails, rare percentages, both range endpoints, and rejection-sampling boundaries/repeats.
-- Real worker loading, text-safe versioned delivery, changed gzip metadata/recompression, HTTP-compressed JSON, corrupt-data retry, bounded decompression, double-click protection, and read-only numbers.
-- Activity filtering and pagination, complete history persistence, first unlocks only, immutable transaction prices, deduplication beyond 128 rolls, confirmation/cancel/retry deletion, cross-tab reveal cancellation, missed deletion events, and queued-completion safety.
-- Guest save gating and reload resets, atomic local sign-up, failed signup/retry, cross-tab profile conflicts, 45s/60s base timings, 15s/15s upgraded timings, sequential prerequisites, mid-reveal/cooldown upgrade snapshots, disabled leaderboard, persistent wallet/cooldown, hidden undiscovered badges, purchase confirmation and affordability, duplicate/cross-tab purchase protection, ownership/equipment reloads, corrupt/blocked storage, sharing, reduced motion, navigation during reveals, dialogs, themes, and mobile overflow.
-- Committed registered/guest reloads, concurrent account draws and single rewards, failed commit protection, missing Web Locks, failed-settlement recovery preserving other-tab spending, monotonic in-tab time, and unchanged reduced-motion cadence.
-- Progressive/maxed upgrade cards, Archive Lens search before pagination, new cosmetic purchases and mobile filters.
-- Shared number-box coverage, all seven original light/dark palettes plus GODLY boundary/count/palette/particles, rarity-gated shimmer, upgraded cosmetics, legacy ownership after repricing, and reduced-motion/mobile rendering.
-- Offline ten-minute arithmetic, the 144-roll base cap and larger vault batches, concurrent return single credit, visible-tab exclusion, heartbeat/visibility transitions, interruption/retry, preserved manual commitments, free offline history, deletion, profile-gated purchase, and mobile/reduced-motion premium previews.
-- Auto-Roll price/confirmation/persistence, off-by-default state, timing upgrades and reduced-motion cadence, pausing, stopping during a reveal, failed commits, account deletion and multi-tab single rewards; new badge discovery/history/details and non-retroactive migration.
-- Text-only logo/home navigation and keyboard order, empty/partial/complete collection progress, saved discoveries after reload, removed reference buttons, and responsive light/dark layouts.
-- Measured generated-roll desktop geometry (including superseded rows), persistent digit nodes, first-EP tween, reveal gating, accessible instant completion, contributor agreement with all fifty fixtures, shared chip-loop timing, and rank overshoot.
-
-Deterministic browser tests intercept the worker’s crypto source in Playwright only; there is no production test seed or number input. To use an existing Chromium binary, set `CHROMIUM_PATH`.
-
-## Main files
-
-- `src/main.jsx` — navigation, discovered-only catalogue, dialogs, and progress integration
-- `src/progress.js`, `src/use-progress.js` — versioned local saves, wallet/discovery rules, idempotent credits, and serialized transactions
-- `src/shop-data.js`, `src/components/Shop.jsx`, `src/shop.css` — cosmetic products, confirmation/equipment UI, and opt-in auras
-- `src/components/NumberBox.jsx`, `src/number-box*.css` — shared number boxes, theme-aware scoring palettes, and cosmetic effects
-- `src/components/LocalProfile.jsx` — local-only sign-up, saved profile details, and confirmed account deletion
-- `src/components/ActivityFeed.jsx`, `src/activity.css` — filtered, paginated personal activity
-- `src/components/RollExperience.jsx` — asynchronous generation, reveal controller and sharing
-- `src/roll-client.js`, `src/roll.worker.js` — worker lifecycle, loading/retry, and random-roll messages
-- `src/load-index.js` — text-safe data transport, bounded decompression, and canonical integrity checks
-- `src/offline.js`, `src/use-offline.js`, `src/components/OfflineRewards.jsx` — offline accounting, shared presence, catch-up scheduling and reward summary
-- `src/gameplay-loop.js`, `src/components/RollProgress.jsx`, `src/progress-links.css` — optional goals and plain collection/progression links
-- `src/components/GoalRecap.jsx`, `src/goal-recap.css` — the settled-roll goal savings panel
-- `src/components/AuraWardrobe.jsx`, `src/wardrobe.css` — owned-aura previews and free equipping
-- `src/settings.js`, `src/use-settings.jsx`, `src/components/Settings.jsx`, `src/settings.css` — validated local preferences, the settings page and the shared motion/format helpers
-- `src/notifications.js`, `src/use-ready-alert.js` — permission-gated desktop notifications, the WebAudio chime and one-per-deadline announcement
-- `src/auto-roll.js` — the Persistence Core switch position, stored per profile outside saved progress
-- `src/rebirth.js`, `src/components/Rebirth.jsx` — collection eligibility and typed reset confirmation
-- `src/cooldown.js`, `src/components/CooldownFill.jsx` — persisted cooldown windows and monotonic, compositor-driven fill
-- `src/flywheel.js`, `src/components/FlywheelMeter.jsx` — snapshotted charge rules and accessible pace progress
-- `tools/audit-economy.mjs` — reproducible score distribution and price audit
-- `src/infinite-badges.js` — two original badge rules/memberships, EP bonuses, exact odds, and combined metadata
-- `src/game-clock.js` — wall-anchored monotonic in-tab time
-- `src/random.js` — unbiased Web Crypto rejection sampling
-- `src/game-index.js` — indexed scoring, badge families, and roll tiers
-- `src/probability.js` — exact full-population rank counts and percentage formatting
-- `src/contributors.js` — independent presentation-only supporting-digit/formula helpers
-- `src/components/BadgeBreakdown.jsx`, `src/chip-motion.js` — badge groups and contributor animations
-- `src/roll-timeline.js`, `src/components/RankSummary.jsx` — reveal timing and rank entrances
-- `src/roll-data.js` — presentation grouping and share text
-- `src/roll.css`, `src/styles.css` — roll presentation, shared page styles, and themes
-- `src/badges.js`, `src/data/`, `public/data/` — catalogue, factual indexes, and provenance
-- `tests/`, `tools/prepare-game-data.mjs` — browser/data checks and data preparation
-
-## References and credits
-
-- [RNGdle](https://www.rngdle.com/), created by Cam / sparrowpatch. This is an independent frontend recreation, not the official service.
-- [RNGdle Tools](https://rng.cubityfir.st/), its [badge catalogue](https://rng.cubityfir.st/badges), [Luck page](https://rng.cubityfir.st/luck), and [documented roll timings](https://github.com/CubityFirst/rngdle-ep-calculator/blob/8190166af9f259a9d3a0a941b2c9902bfbbe713f/site/README.md#roll-timings). Full-range factual indexes are pinned to commit `8190166af9f259a9d3a0a941b2c9902bfbbe713f`; the upstream runtime and stylesheets are **not** bundled.
-- [Box Lab](https://rng.cubityfir.st/beta/boxes): scoring-box visual reference, including the `SCORE_TIERS` factual palette table in [`src/beta.js`](https://github.com/CubityFirst/rngdle-ep-calculator/blob/8190166af9f259a9d3a0a941b2c9902bfbbe713f/src/beta.js). Only observed colour/shadow values are retained; no upstream renderer or stylesheet is bundled.
-- Emoji artwork: [Twemoji](https://github.com/jdecked/twemoji), Twitter, Inc. and other contributors, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Included SVGs are unmodified; license in `public/emoji/LICENSE`.
-- Fonts: Inter and Space Mono, distributed via Fontsource under the SIL Open Font License.
-- Icons: Lucide, ISC license.
+To use an existing Chromium binary instead of downloading one, set
+`CHROMIUM_PATH`. The publishing flow, data preparation and the deeper
+implementation notes live in `src/data/README.md` and the code itself.

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   applyProgress,
   emptyProgress,
@@ -9,6 +9,7 @@ import { evaluate } from "./helpers/index.js";
 import { showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { productById } from "../src/shop-data.js";
+import { openShelfFor } from "./helpers/shop.js";
 const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
 const nav = (page, name) =>
@@ -17,9 +18,10 @@ const nav = (page, name) =>
     .getByRole("button", { name, exact: true })
     .click();
 async function register(page) {
+  // Profile is a page now: the button navigates to /profile.
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
   await page.getByRole("textbox", { name: "Username" }).fill("ActivityPlayer");
-  await page.getByRole("button", { name: "Create local profile" }).click();
+  await page.getByRole("button", { name: "Start saving my progress" }).click();
   await expect(
     page.getByRole("heading", { name: "Your profile, ActivityPlayer" }),
   ).toBeVisible();
@@ -38,6 +40,8 @@ async function confirmDelete(page) {
     .click();
 }
 async function buy(page, id) {
+  // The shop is a street of sub-pages: open the shelf that sells it first.
+  await openShelfFor(page, id);
   await page.locator(`[data-product="${id}"] button`).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -126,7 +130,7 @@ test("old saves gain an empty feed without invented history, malformed entries c
   expect(p.history).toEqual([valid]);
 });
 
-test("guest feed, filters, badge details, shop transactions and repeated rolls persist together at signup", async ({
+test("guest feed, filters, badge details and shop transactions stay a demo; signup starts a clean feed", async ({
   page,
 }) => {
   await showRoll(page, 1337);
@@ -153,34 +157,39 @@ test("guest feed, filters, badge details, shop transactions and repeated rolls p
   await nav(page, "History");
   await page.getByRole("button", { name: "Shop", exact: true }).last().click();
   await expect(page.locator(".activity-event")).toHaveCount(2);
+  // Price comes from the catalogue so a rebalance cannot stale the assertion.
   await expect(page.locator('[data-event-type="purchase"]')).toContainText(
-    "−50,000 EP",
+    `−${productById.get("starfall").price.toLocaleString("en-US")} EP`,
   );
   await expect(page.locator('[data-event-type="equip"]')).toContainText(
     "No EP spent",
   );
   await register(page);
   const before = await saved(page);
-  expect(before.history).toHaveLength(4);
+  // Signing up starts a clean account: nothing the guest did above is carried
+  // into the save file, so the feed begins empty.
+  expect(before.history).toEqual([]);
+  expect(before.balance).toBe(0);
+  expect(before.owned).toEqual([]);
   await page.reload();
-  expect((await saved(page)).history).toEqual(before.history);
-  await page.getByRole("button", { name: "Back to rolling" }).click();
-  await page.clock.install();
-  await page.clock.fastForward(105100);
+  expect((await saved(page)).history).toEqual([]);
+  // The saved account starts from a clean slate: no pending roll, no cooldown,
+  // so skipping ahead on the clock is neither needed nor safe while the
+  // scoring data is still loading.
+  await page.goto("/");
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
     "complete",
   );
   await nav(page, "History");
-  await expect(page.locator('[data-event-type="roll"]')).toHaveCount(2);
+  // Only the account's own first roll is in its feed.
+  await expect(page.locator('[data-event-type="roll"]')).toHaveCount(1);
   await expect(page.locator('[data-event-type="unlock"]')).toHaveCount(1);
-  await expect(page.locator(".activity-event").first()).toHaveAttribute(
-    "data-event-type",
-    "roll",
-  );
+  // The account's own roll is the one it earned, not the guest's number.
+  await expect(page.locator(".activity-roll .number-box")).toHaveText("1337");
   await page.getByRole("button", { name: "Rolls", exact: true }).click();
-  await expect(page.locator(".activity-event")).toHaveCount(2);
+  await expect(page.locator(".activity-event")).toHaveCount(1);
   await page.locator("summary").first().click();
   await expect(
     page.locator(".activity-event").first().locator(".badge-pill"),
@@ -227,8 +236,11 @@ test("the entire feed is accessible through pagination and works on mobile", asy
 test("deletion requires confirmation, supports cancellation, clears every game field and permits fresh signup", async ({
   page,
 }) => {
-  await showRoll(page, 1337);
+  await page.goto("/");
   await register(page);
+  // Roll on the saved account: signing up starts clean, so the deletion below
+  // has real earned fields (wallet, discoveries, a purchase) to clear.
+  await showRoll(page, 1337);
   await nav(page, "Shop");
   await buy(page, "starfall");
   const before = await saved(page);
@@ -251,7 +263,10 @@ test("deletion requires confirmation, supports cancellation, clears every game f
     page.getByRole("button", { name: "Sign up", exact: true }),
   ).toBeVisible();
   expect(await saved(page)).toBeNull();
+  // The wallet lives in the shop: after the account is gone it reads empty.
+  await nav(page, "Shop");
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
+  await openShelfFor(page, "starfall");
   await expect(page.locator('[data-product="starfall"] button')).toBeDisabled();
   await nav(page, "History");
   await expect(page.locator(".activity-event")).toHaveCount(0);
@@ -270,7 +285,7 @@ test("deletion requires confirmation, supports cancellation, clears every game f
     cooldownUntil: 0,
     equipped: "none",
   });
-  await page.getByRole("button", { name: "Back to rolling" }).click();
+  await page.goto("/");
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -291,9 +306,8 @@ test("failed deletion leaves the account and complete history intact and support
   }, PROGRESS_KEY);
   await openDelete(page);
   await confirmDelete(page);
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "Deletion failed",
-  );
+  // The error is page-level now: profile is a page, not a dialog.
+  await expect(page.getByRole("alert")).toContainText("Deletion failed");
   expect(await saved(page)).toEqual(before);
   await expect(
     page.getByRole("button", { name: "Your profile", exact: true }),
@@ -394,6 +408,7 @@ test("failed purchases add no transactions; failed draw commits reveal no new nu
     };
   }, PROGRESS_KEY);
   await nav(page, "Shop");
+  await openShelfFor(page, "starfall");
   await page.locator('[data-product="starfall"] button').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -404,7 +419,6 @@ test("failed purchases add no transactions; failed draw commits reveal no new nu
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(await saved(page)).toEqual(before);
   await page.getByRole("button", { name: "Back to rolling" }).click();
-  await page.clock.install();
   await page.clock.fastForward(105100);
   await page.getByRole("button", { name: "ROLL AGAIN", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(

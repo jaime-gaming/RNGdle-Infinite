@@ -4,6 +4,7 @@ import {
   ShoppingBag,
   History,
   Medal,
+  Infinity as InfinityIcon,
   Sun,
   Moon,
   Monitor,
@@ -18,6 +19,8 @@ import {
   ArrowLeft,
   SlidersHorizontal,
   ScrollText,
+  UserRound,
+  Sparkles,
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
@@ -40,8 +43,16 @@ import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
 import { petDrop, petById } from "./pets.js";
+import { rebirthUnlocked } from "./rebirth.js";
+import { skillPetLuck, skillById } from "./skills.js";
 import { randomUnit } from "./random.js";
 import Changelog from "./components/Changelog";
+import {
+  BadgeMark,
+  CompanionMark,
+  SkillMark,
+  RollMark,
+} from "./components/game-icons.jsx";
 import RebirthNav from "./components/RebirthNav";
 import About from "./components/About";
 import {
@@ -53,9 +64,24 @@ import {
 import {
   pageFromLocation,
   pathForPage,
+  pathForSubpage,
+  subpageFromLocation,
   isCurrentPath,
   validPage,
 } from "./router.js";
+import { SHOP_SECTIONS, shelfOfProduct, productById } from "./shop-data.js";
+
+// A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
+// Anything else under /shop is not a shelf and falls back to the hub.
+function shopSectionFromLocation(target) {
+  if (pageFromLocation(target) !== "shop") return "";
+  // A legacy "#auras" bookmark names the shelf itself; a real sub-page carries
+  // it in the path. Anything else lands on the hub.
+  const named = (name) =>
+    SHOP_SECTIONS.some((section) => section.id === name) ? name : "";
+  const hash = String(target.hash || "").replace(/^#/, "");
+  return named(hash) || named(subpageFromLocation(target));
+}
 
 function App() {
   const [page, setPage] = useState(() => pageFromLocation(location));
@@ -77,9 +103,14 @@ function App() {
   const [seenVersion, setSeenVersion] = useState(readSeenVersion);
   const showVersionFlag = hasUnseenVersion(seenVersion);
   const [shopFocus, setShopFocus] = useState(null);
+  const [shopSection, setShopSection] = useState(() =>
+    shopSectionFromLocation(location),
+  );
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
+  // A companion found on a roll walks in with its own moment on the roll stage.
+  const [arrivalPet, setArrivalPet] = useState(null);
   const {
     progress: session,
     warning: progressWarning,
@@ -99,7 +130,14 @@ function App() {
     // Companion luck is sampled here, independently of the number itself.
     let drop = null;
     try {
-      drop = petDrop(randomUnit(), session.pets);
+      // Trail and Drift widen the companion window for the roll they fire on.
+      // It is still its own sample, drawn after the number, so it can never
+      // bias the roll itself.
+      drop = petDrop(
+        randomUnit(),
+        session.pets,
+        skillPetLuck(session.pendingRoll?.skills),
+      );
     } catch {}
     const outcome = await dispatch({
       type: "complete",
@@ -113,8 +151,12 @@ function App() {
       markSeen();
       setSeenVersion(LATEST_VERSION);
     }
-    if (outcome.ok && drop)
-      notify(`${petById.get(drop).emoji} ${petById.get(drop).name} appeared!`);
+    if (outcome.ok && drop) {
+      notify(`New companion: ${petById.get(drop).name} joined you.`);
+      setArrivalPet(drop);
+      clearTimeout(arrivalTimer.current);
+      arrivalTimer.current = setTimeout(() => setArrivalPet(null), 5600);
+    }
     if (!outcome.ok) notify(outcome.message);
     return outcome;
   }
@@ -123,6 +165,7 @@ function App() {
   const [group, setGroup] = useState("All sets");
   const [sort, setSort] = useState("Default");
   const toastTimer = useRef(null);
+  const arrivalTimer = useRef(null);
   const previousFocus = useRef(null);
   const modalRef = useRef(null);
   const notify = (text) => {
@@ -130,24 +173,67 @@ function App() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 3500);
   };
-  const navigate = (next, productId = null) => {
-    setShopFocus(next === "shop" ? productId : null);
-    setPage((next = validPage(next)));
-    // Real URLs, so a page can be linked, bookmarked and reloaded directly.
-    if (!isCurrentPath(next, location))
-      history.pushState({ page: next }, "", pathForPage(next));
+  // Real URLs, so a page and its shelf can be linked, bookmarked and reloaded
+  // directly. The address bar is the source of truth, never component state.
+  const push = (target, path, section = "") => {
+    const here = new URL(path, location.origin).pathname;
+    if (here !== location.pathname || location.hash)
+      history.pushState({ page: target, section }, "", path);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const navigate = (next, focusProduct = null) => {
+    const target = validPage(next);
+    // Opening the shop on a product (a goal link, a recap) opens the shelf that
+    // sells it, so the card is on screen when the page renders.
+    const section =
+      target === "shop" && productById.has(focusProduct)
+        ? shelfOfProduct(productById.get(focusProduct))
+        : "";
+    setShopFocus(target === "shop" ? focusProduct : null);
+    setShopSection(section);
+    setPage(target);
+    push(
+      target,
+      target === "shop" && section
+        ? pathForSubpage("shop", section)
+        : pathForPage(target),
+      section,
+    );
+  };
+  const openShelf = (id) => {
+    const section = SHOP_SECTIONS.some((entry) => entry.id === id) ? id : "";
+    setShopFocus(null);
+    setShopSection(section);
+    setPage("shop");
+    push(
+      "shop",
+      section ? pathForSubpage("shop", section) : pathForPage("shop"),
+      section,
+    );
   };
   useEffect(() => {
     // Back/forward must move between pages, and a legacy #shop link or a
     // 404.html fallback landing must be normalised to its real path once.
-    const update = () => setPage(pageFromLocation(location));
+    const update = () => {
+      setPage(pageFromLocation(location));
+      setShopSection(shopSectionFromLocation(location));
+    };
     update();
-    if (location.hash || !isCurrentPath(pageFromLocation(location), location))
+    const landed = pageFromLocation(location);
+    const section = shopSectionFromLocation(location);
+    // A legacy "#shop" bookmark keeps working, a "#skills" one lands on the
+    // shelf, and an unknown sub-path is normalised back to the shop hub.
+    if (
+      location.hash ||
+      !isCurrentPath(landed, location) ||
+      (landed === "shop" && subpageFromLocation(location) !== section)
+    )
       history.replaceState(
-        { page: pageFromLocation(location) },
+        { page: landed, section },
         "",
-        pathForPage(pageFromLocation(location)),
+        landed === "shop" && section
+          ? pathForSubpage("shop", section)
+          : pathForPage(landed),
       );
     window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
@@ -174,6 +260,7 @@ function App() {
   useEffect(
     () => () => {
       clearTimeout(toastTimer.current);
+      clearTimeout(arrivalTimer.current);
     },
     [],
   );
@@ -217,14 +304,22 @@ function App() {
     );
     setModal("badge");
   }
+  // Profile is a page (/profile), not a window: every "sign up" prompt in the
+  // game simply navigates there, and the page remembers itself in the URL.
   function openAuth() {
-    setModal("auth");
+    navigate("profile");
   }
   const offlineState = useOffline(session, dispatch);
   // One alert per finished cooldown, and never while a roll is still revealing.
   useReadyAlert(session.cooldownUntil, {
     blocked: !!session.pendingRoll || !!session.offline?.batch,
   });
+  const rebirthVisible = rebirthUnlocked(session);
+  // A direct link to a page that has not been unlocked yet simply goes home:
+  // no locked panel, no counter, nothing to explain the mystery early.
+  useEffect(() => {
+    if (page === "rebirth" && !rebirthVisible) navigate("roll");
+  }, [page, rebirthVisible]);
   const discoveredBadges = badges.filter((b) =>
     session.discovered.includes(b.canonicalId),
   );
@@ -295,10 +390,21 @@ function App() {
               <span>New Version</span>
             </button>
           )}
+          {session.ultraRebirths > 0 && (
+            <span
+              className="ultra-mark"
+              title={`Ultra-rebirth ${session.ultraRebirths} · +${Math.round(
+                session.ultraRebirths * 10,
+              )}% EP on every banked roll`}
+            >
+              <InfinityIcon size={13} aria-hidden="true" /> Ultra ×
+              {session.ultraRebirths}
+            </span>
+          )}
           <RebirthNav
             progress={session}
-            active={page === "badges"}
-            onClick={() => navigate("badges")}
+            active={page === "rebirth"}
+            onClick={() => navigate("rebirth")}
           />
           <button
             className="icon-button help-button"
@@ -377,13 +483,17 @@ function App() {
             onDraw={() => dispatch({ type: "draw" })}
             openSignup={openAuth}
             aura={session.equipped}
+            arrivalPet={arrivalPet}
           >
             <button
               className="discover-link"
               onClick={() => navigate("badges")}
             >
-              <span className="mini-badges">
-                <Emoji text="🍀 💎 🪐" />
+              <span className="mini-badges" aria-hidden="true">
+                <RollMark size={16} />
+                <BadgeMark size={16} />
+                <CompanionMark size={16} />
+                <SkillMark size={16} />
               </span>
               <span>
                 Every number has a story. <strong>Discover the badges</strong>
@@ -399,6 +509,7 @@ function App() {
             navigate={navigate}
             openSignup={openAuth}
             openBadge={openBadge}
+            notify={notify}
           />
         )}
         {page === "settings" && (
@@ -437,7 +548,7 @@ function App() {
                 <p>What the game is, and what it never does.</p>
               </div>
             </div>
-            <About navigate={navigate} />
+            <About navigate={navigate} progress={session} />
           </>
         )}
         {page === "changelog" && (
@@ -457,10 +568,62 @@ function App() {
             <Changelog onSeen={() => setSeenVersion(LATEST_VERSION)} />
           </>
         )}
+        {page === "profile" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <UserRound size={25} />
+              </div>
+              <div>
+                <h1>Profile</h1>
+                <p>Your local save and how far you have come.</p>
+              </div>
+            </div>
+            <div className="profile-page">
+              <LocalProfile
+                key={epoch}
+                profile={session.profile}
+                progress={session}
+                onAction={dispatch}
+                onContinue={() => navigate("roll")}
+              />
+            </div>
+          </>
+        )}
+        {page === "rebirth" && rebirthVisible && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <Sparkles size={25} />
+              </div>
+              <div>
+                <h1>Rebirth</h1>
+                <p>Start the collection over, keep everything else.</p>
+              </div>
+            </div>
+            <Rebirth
+              key={epoch}
+              progress={session}
+              onAction={dispatch}
+              onDone={(message) => {
+                navigate("roll");
+                notify(message ?? "Rebirth complete.");
+              }}
+            />
+          </>
+        )}
         {page === "shop" && (
           <Shop
-            key={epoch}
+            key={`${epoch}:${shopSection}`}
             progress={session}
+            section={shopSection}
+            onOpenShelf={openShelf}
             focusProduct={shopFocus}
             onAction={dispatch}
             openSignup={openAuth}
@@ -513,17 +676,6 @@ function App() {
                 Rebirths: {session.rebirths.toLocaleString("en-US")}
               </p>
             )}
-            <Rebirth
-              key={epoch}
-              progress={session}
-              onAction={dispatch}
-              onDone={() => {
-                navigate("roll");
-                notify(
-                  "Rebirth complete. Your collection and shop progress have been reset.",
-                );
-              }}
-            />
             <div className="filters">
               <label className="search-field">
                 <Search size={17} />
@@ -699,13 +851,6 @@ function App() {
             >
               <X size={20} />
             </button>
-            {modal === "auth" && (
-              <LocalProfile
-                profile={session.profile}
-                onAction={dispatch}
-                onClose={() => setModal(null)}
-              />
-            )}
             {modal === "badge" && selectedBadge && (
               <>
                 <div

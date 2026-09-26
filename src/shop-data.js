@@ -1,3 +1,5 @@
+import { SKILLS, SKILL_SLOTS } from "./skills.js";
+
 // Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
 export const BASE_COOLDOWN_MS = 60000;
@@ -273,6 +275,60 @@ export const shopProducts = [
       "A collapsing accretion disc bends light around your number, with an event-horizon ring and infalling sparks.",
   },
   {
+    id: "nebula",
+    kind: "aura",
+    name: "Nebula Drift",
+    price: 520000,
+    icon: "nebula",
+    description:
+      "Slow violet and indigo clouds drift behind the number while a scatter of newborn stars winks in and out.",
+  },
+  {
+    id: "solstice",
+    kind: "aura",
+    name: "Solstice Ring",
+    price: 780000,
+    icon: "solstice",
+    description:
+      "A warm ring of midsummer light turns around the box, trailing a soft lens flare across the frame.",
+  },
+  {
+    id: "lumen",
+    kind: "aura",
+    name: "Lumen Filigree",
+    price: 1050000,
+    icon: "lumen",
+    description:
+      "Hair-thin gold filigree draws itself into the corners, lit by a champagne glow that never washes out your rarity.",
+  },
+  {
+    id: "glitch",
+    kind: "aura",
+    name: "Glitchwave",
+    price: 1650000,
+    icon: "glitch",
+    description:
+      "Scanlines tear sideways in red, green and blue, and the frame skews for a heartbeat before it snaps back.",
+  },
+  {
+    id: "monolith",
+    kind: "aura",
+    name: "Monolith",
+    price: 2700000,
+    icon: "monolith",
+    description:
+      "A heavy carved slab with a single seam of cold light, humming steady while the space around it darkens.",
+  },
+  {
+    id: "chrono",
+    kind: "aura",
+    name: "Chrono Dial",
+    price: 4200000,
+    icon: "chrono",
+    description:
+      "Sixty engraved ticks ring the number and a single hand sweeps them, marking a second that never quite ends.",
+  },
+  {
     id: "offline-roller",
     kind: "utility",
     name: "Offline Roller",
@@ -381,7 +437,89 @@ export const shopProducts = [
     description:
       "Unlock number search and roll-tier filters across your entire activity archive. Your basic feed stays free.",
   },
+  // Skills are charged one-shot effects; every one is defined in skills.js so
+  // the shop, the save file and the roll engine read the same numbers.
+  ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({
+    id: skill.id,
+    kind: "skill",
+    skillId: skill.id,
+    name: skill.name,
+    price: skill.price,
+    icon: skill.icon,
+    tint: skill.tint,
+    charges: skill.charges,
+    description: skill.description,
+  })),
+  ...SKILL_SLOTS.map((bay) => ({ ...bay })),
 ];
+// The shop's six shelves. Each one is its own sub-page (/shop/skills and so
+// on) and every product lives on exactly one shelf, so the hub buttons, the
+// featured picks, a deep link and the back button can never disagree about
+// where an item is sold. Companions keep their shelf too; it is owned by the
+// companion component rather than by this catalogue.
+export const SHOP_SECTIONS = [
+  {
+    id: "skills",
+    label: "Skills",
+    icon: "skill",
+    blurb: "Charged effects and the rack that fires them.",
+  },
+  {
+    id: "pace",
+    label: "Pace",
+    icon: "pace",
+    blurb: "Shorter reveals and shorter cooldowns.",
+  },
+  {
+    id: "companions",
+    label: "Companions",
+    icon: "companion",
+    blurb: "Finders of EP, one worn at a time.",
+  },
+  {
+    id: "auras",
+    label: "Auras",
+    icon: "aura",
+    blurb: "Cosmetics for the rarity box, never odds.",
+  },
+  {
+    id: "offline",
+    label: "Offline",
+    icon: "offline",
+    blurb: "Earn while you are away, and store more.",
+  },
+  {
+    id: "tools",
+    label: "Tools",
+    icon: "automation",
+    blurb: "Automation and archive, same rules as always.",
+  },
+];
+
+// Which kinds of product each shelf sells. The order inside a shelf is the
+// catalogue order, so a shelf never reshuffles between visits.
+const SHELF_KINDS = {
+  skills: ["skill", "skill-slot", "pace"],
+  pace: ["roll", "cooldown"],
+  auras: ["aura"],
+  offline: ["offline", "offline-cap"],
+  tools: ["utility"],
+};
+
+export function shelfOfProduct(item) {
+  if (!item) return "";
+  const shelf = SHOP_SECTIONS.find((section) =>
+    (SHELF_KINDS[section.id] ?? []).includes(item.kind),
+  );
+  // Every product kind belongs to a shelf; pace is the catalogue's home track.
+  return shelf?.id ?? "pace";
+}
+
+export function productsOnShelf(id) {
+  const kinds = SHELF_KINDS[id];
+  return kinds ? shopProducts.filter((p) => kinds.includes(p.kind)) : [];
+}
+
 export function nextUpgrade(owned, kind) {
   const track = shopProducts.filter((p) => p.kind === kind);
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);

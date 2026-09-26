@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   emptyProgress,
   applyProgress,
@@ -6,7 +6,7 @@ import {
   PROGRESS_KEY,
 } from "../src/progress.js";
 import { flywheelForDraw } from "../src/flywheel.js";
-import { shopProducts } from "../src/shop-data.js";
+import { productById, shopProducts } from "../src/shop-data.js";
 import { chanceLabels, formatPercent, POPULATION } from "../src/probability.js";
 import { createGameIndex } from "../src/game-index.js";
 import { originalsByNumber } from "../src/infinite-badges.js";
@@ -14,6 +14,7 @@ import manifest from "../src/data/game-index.json" with { type: "json" };
 import { evaluate, inflate } from "./helpers/index.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
+import { openShelfFor } from "./helpers/shop.js";
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
 const rolls = (p) => p.history.filter((e) => e.type === "roll");
@@ -205,7 +206,6 @@ test("four online completions charge a full-length fifth reveal with no cooldown
   test.setTimeout(60000);
   await seedProgress(page, { owned: ["flywheel"] });
   await mockRandom(page, [604827]);
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto("/");
   for (let n = 0; n < 6; n++) {
@@ -260,9 +260,7 @@ test("concurrent tabs restore one boosted commitment, consume one charge and set
 }) => {
   await seedProgress(page, { owned: ["flywheel"], flywheelCharge: 4 });
   const other = await context.newPage();
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
-  await other.clock.install();
   await other.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto("/");
   await other.goto("/");
@@ -358,7 +356,6 @@ test("Auto-Roll uses Flywheel but reduced motion still reserves the full reveal 
   });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto("/");
   await expect(page.locator(".generate")).toBeEnabled();
@@ -394,9 +391,12 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#shop");
+  // Flywheel is a skill, so it lives on the Skills shelf.
+  await page.goto("/shop/skills");
   const card = page.locator('[data-product="flywheel"]');
-  await expect(card).toContainText("600,000 EP");
+  await expect(card).toContainText(
+    `${productById.get("flywheel").price.toLocaleString("en-US")} EP`,
+  );
   await card.getByRole("button").click();
   await expect(page.getByRole("dialog")).toContainText("zero charge");
   await page
@@ -404,7 +404,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   const p = await saved(page);
-  expect(p.balance).toBe(400000);
+  expect(p.balance).toBe(1000000 - productById.get("flywheel").price);
   expect(p.equipped).toBe("starfall");
   expect(p.flywheelCharge).toBe(0);
   await expect(page.getByTestId("roll-duration")).toHaveText("45s");
@@ -423,7 +423,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   ).toHaveAttribute("value", "0");
   expect(
     await page
-      .locator(".flywheel-meter>svg")
+      .locator(".skill-bar .skill-ring")
       .evaluate((e) => getComputedStyle(e).animationName),
   ).toBe("none");
   expect(
@@ -449,7 +449,6 @@ test("a boosted reveal survives reload with its committed number and fifteen-sec
     flywheelCharge: 4,
   });
   await mockRandom(page, [604827]);
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto("/");
   await page.locator(".generate").click();
@@ -493,7 +492,6 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
 }) => {
   await seedProgress(page, { balance: 1000000, totalEarned: 1000000 });
   await mockRandom(page, [604827]);
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto("/");
   await page.locator(".generate").click();
@@ -501,6 +499,7 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
   const before = await saved(page);
   expect(before.pendingRoll.flywheel).toBeUndefined();
   await nav(page, "Shop");
+  await openShelfFor(page, "flywheel");
   await page.locator('[data-product="flywheel"] button').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -514,7 +513,9 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
   await settled(page);
   const after = await saved(page);
   expect(after.flywheelCharge).toBe(0);
-  expect(after.balance).toBe(404663);
+  expect(after.balance).toBe(
+    1000000 - productById.get("flywheel").price + 4663,
+  );
   expect(after.cooldownUntil).toBe(before.cooldownUntil);
   await expect(page.locator(".generate")).toBeDisabled();
 });

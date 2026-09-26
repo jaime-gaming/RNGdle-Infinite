@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom, showRoll, startRoll } from "./helpers/random-roll.js";
 import { evaluate, inflate } from "./helpers/index.js";
@@ -34,7 +34,6 @@ async function readyAuto(p, words = [604827, 1337]) {
   await expect(
     p.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await p.clock.install();
   await p.clock.pauseAt(new Date(Date.now() + 1000));
 }
 async function enable(p) {
@@ -54,7 +53,8 @@ test("Auto-Roll is a confirmed purchase that does not equip and persists as an o
     balance: autoRoll.price,
     totalEarned: autoRoll.price,
   });
-  await page.goto("/#shop");
+  // Auto-Roll is a tool: its shelf is its own page.
+  await page.goto("/shop/tools");
   const card = page.locator('[data-product="auto-roll"]');
   await card.getByRole("button").click();
   await expect(page.getByRole("dialog")).toContainText(`${autoRollPrice} EP`);
@@ -189,7 +189,6 @@ test("two account tabs using Auto-Roll share one committed draw and one reward",
   await expect(
     other.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await other.clock.install();
   await other.clock.pauseAt(new Date(Date.now() + 1000));
   await Promise.all([auto(page).click(), auto(other).click()]);
   await Promise.all([page.clock.runFor(300), other.clock.runFor(300)]);
@@ -317,7 +316,6 @@ test("Auto-Roll uses purchased timings and Last Second appears in the actual bad
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.install();
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await auto(page).click();
   await page.clock.runFor(300);

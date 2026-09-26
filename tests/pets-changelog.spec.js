@@ -24,6 +24,7 @@ import {
   readSeenVersion,
 } from "../src/changelog.js";
 import { buildShareText, GAME_URL } from "../src/roll-data.js";
+import { skillForPet } from "../src/skills.js";
 import { evaluate } from "./helpers/index.js";
 
 const fund = (balance) => ({
@@ -59,12 +60,24 @@ test("a companion multiplies banked EP only, never the scored roll", () => {
   expect(withPet.discovered).toEqual(plain.discovered);
 });
 
-test("companion multipliers stay small and ordered, and never reach the draw", () => {
-  expect(PETS).toHaveLength(6);
+test("companion multipliers stay ordered, and never reach the draw", () => {
+  expect(PETS).toHaveLength(13);
   const multipliers = PETS.map((p) => p.multiplier);
   expect(Math.min(...multipliers)).toBeGreaterThanOrEqual(1.01);
-  // A deliberate ceiling: companions nudge the economy, they do not replace it.
-  expect(Math.max(...multipliers)).toBeLessThanOrEqual(1.25);
+  // A deliberate ceiling, raised in v0.3: companions are meant to feel strong
+  // now, but they still only multiply the EP that reaches the wallet.
+  expect(Math.max(...multipliers)).toBeLessThanOrEqual(1.8);
+  // Every companion carries exactly one exclusive skill, and no two share one.
+  const signatures = PETS.map((p) => skillForPet(p.id)?.id);
+  expect(signatures.every(Boolean)).toBe(true);
+  expect(new Set(signatures).size).toBe(PETS.length);
+  for (const signature of PETS.map((p) => skillForPet(p.id))) {
+    expect(signature.source).toBe("pet");
+    expect(signature.charges).toBeGreaterThan(0);
+  }
+  // Drop weights fall as the reward grows, so a rarer companion is rarer.
+  const weights = PETS.map((p) => p.dropWeight);
+  expect([...weights].sort((a, b) => b - a)).toEqual(weights);
   expect([...multipliers].sort((a, b) => a - b)).toEqual(multipliers);
   expect(PETS.map((p) => p.price).sort((a, b) => a - b)).toEqual(
     PETS.map((p) => p.price),
@@ -210,12 +223,15 @@ test("share text ends with the public game link", () => {
   expect(text).toContain("RNGdle Infinite");
 });
 
-test("the changelog lists both releases and flags an unseen version", () => {
-  expect(CHANGELOG.map((e) => e.version)).toEqual(["v0.2", "v0.1"]);
-  expect(LATEST_VERSION).toBe("v0.2");
+test("the changelog lists every release and flags an unseen version", () => {
+  // One release so far beyond the launch line: everything shipped under the
+  // same v0.3 entry rather than inventing a version for it.
+  expect(CHANGELOG.map((e) => e.version)).toEqual(["v0.3", "v0.2", "v0.1"]);
+  expect(LATEST_VERSION).toBe("v0.3");
+  expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
-  expect(launch.body).toEqual(["so uhhhh we launched RNGdle infinite"]);
+  expect(launch.body[0]).toContain("RNGdle Infinite is live");
   for (const entry of CHANGELOG) expect(entry.body.length).toBeGreaterThan(0);
   // The flag shows until the newest version is acknowledged.
   expect(hasUnseenVersion("")).toBe(true);
@@ -254,20 +270,27 @@ test("ambient animations are subtle and fully disabled by reduced motion", () =>
   expect(styles).toContain("transition: none !important");
 });
 
-test("the changelog stays short and casual, and keeps the launch note verbatim", () => {
+test("the changelog reads like release notes, not like a chat log", () => {
   for (const entry of CHANGELOG) {
+    expect(entry.version).toMatch(/^v\d+\.\d+$/);
+    expect(entry.title.length).toBeGreaterThan(5);
     for (const line of entry.body) {
-      // Short, chatty lines rather than release-note paragraphs.
-      expect(line.length).toBeLessThanOrEqual(110);
-      // Casual tone: lines start lowercase rather than as formal sentences.
-      expect(line[0]).toBe(line[0].toLowerCase());
+      // One short line per change, always a finished sentence.
+      expect(line.length).toBeLessThanOrEqual(140);
+      // House style: a line opens lowercase unless it opens with a name or a
+      // figure ("13 companions…", "RNGdle Infinite is live…").
+      expect(line).toMatch(/^([a-z0-9]|RNGdle |Auto-Roll )/);
+      expect(line.trim().endsWith(".")).toBe(true);
+      // No placeholder chat register anywhere in the notes.
+      expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
     }
   }
-  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(8);
-  // The launch note is preserved exactly as written.
-  expect(CHANGELOG.at(-1).body).toEqual([
-    "so uhhhh we launched RNGdle infinite",
-  ]);
+  // One release carries the whole shop/rack/rebirth wave, so the newest entry
+  // is allowed to be longer than the launch-era entries that follow it.
+  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(16);
+  expect(CHANGELOG.slice(1).every((entry) => entry.body.length <= 8)).toBe(
+    true,
+  );
 });
 
 test("share is the single copy action and carries the link with it", () => {
