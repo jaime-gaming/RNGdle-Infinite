@@ -188,12 +188,16 @@ svg .tone {
   font-weight: 550;
   color: var(--secondary);
 }
-.header nav button:hover,
-.header nav button.active {
+.header nav button:hover {
   color: var(--text);
+  background: var(--hover);
+  box-shadow: none;
 }
-.header nav button.active {
-  box-shadow: 0 2px var(--text);
+.header nav button.active,
+.header nav button.active:hover {
+  color: var(--text);
+  background: transparent;
+  box-shadow: 0 2px var(--green);
 }
 .header-right {
   gap: 18px;
@@ -209,6 +213,12 @@ svg .tone {
 .icon-button:hover {
   background: var(--hover);
   color: var(--text);
+}
+.icon-button.active,
+.icon-button.active:hover {
+  background: transparent;
+  color: var(--text);
+  box-shadow: 0 2px var(--green);
 }
 .theme-switch {
   display: flex;

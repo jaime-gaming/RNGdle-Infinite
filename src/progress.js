@@ -16,6 +16,7 @@ import {
 import { validGoal } from "./gameplay-loop.js";
 import {
   rebirthBlocker,
+  rebirthMultiplier,
   ultraRebirthBlocker,
   nextRebirthSkill,
   ultraRebirthMultiplier,
@@ -43,15 +44,17 @@ export const PROGRESS_KEY = "rng-infinite-progress-v1";
 const badgeIds = new Set(metadata.map((b) => b.id));
 const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
 
-// The wallet multiplier of a settled roll: companions, ultra-rebirth bonus and
-// any wallet skill that fired. It only ever scales the EP that reaches the
-// wallet — the scored roll, its tier and its rank never move.
+// The wallet multiplier of a settled roll: companions, rebirth and
+// ultra-rebirth bonuses, and any wallet skill that fired. It only ever scales
+// the EP that reaches the wallet — the scored roll, its tier and its rank
+// never move.
 export function walletMultiplier(
   progress,
   skillIds = progress.pendingRoll?.skills,
 ) {
   return (
     petMultiplier(progress.activePet) *
+    rebirthMultiplier(progress.rebirths ?? 0) *
     ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
     skillWalletMultiplier(skillIds ?? [])
   );
@@ -241,12 +244,11 @@ export function applyProgress(state, action) {
     if (!validAmount(count + 1))
       throw new Error("Rebirth count limit reached.");
     const granted = nextRebirthSkill(count);
-    // Everything you earned stays: EP, upgrades, companions and skills. What
-    // restarts is the collection itself, together with the aura wardrobe —
-    // the cosmetic price of a new cycle.
-    const owned = state.owned.filter(
-      (id) => productById.get(id)?.kind !== "aura",
-    );
+    // Everything you earned stays: EP, every purchase — auras included —,
+    // companions and skills. What restarts is the collection itself; the
+    // worn aura comes off so the new cycle starts with the plain box, but it
+    // stays in the wardrobe and re-equipping is free.
+    const owned = state.owned;
     const skills = granted
       ? [...new Set([...(state.skills ?? []), granted.id])]
       : [...(state.skills ?? [])];
@@ -374,13 +376,14 @@ export function applyProgress(state, action) {
       state.history?.some((e) => e.id === id && e.type === "roll")
     )
       return state;
-    // Companions, ultra-rebirth bonuses and wallet skills multiply only banked
-    // EP. result.totalEP — the scored value shown, ranked and recorded — is
-    // never modified.
+    // Companions, rebirth bonuses and wallet skills multiply only banked EP.
+    // result.totalEP — the scored value shown, ranked and recorded — is never
+    // modified.
     const fired = firedSkills(state, id, action.source);
     const petFactor = petMultiplier(state.activePet);
     const multiplier =
       petFactor *
+      rebirthMultiplier(state.rebirths ?? 0) *
       ultraRebirthMultiplier(state.ultraRebirths ?? 0) *
       skillWalletMultiplier(fired);
     const credited =

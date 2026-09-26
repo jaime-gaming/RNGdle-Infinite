@@ -66,15 +66,34 @@ test("a firing companion skill pins the companion to the number's corner", () =>
   expect(read("roll.css")).toContain(".artifact-companion");
 });
 
-test("the roll states the wallet's own sum as it applies the EP", () => {
+test("the roll names the wallet bonus only when there is one", () => {
   const roll = read("components/RollExperience.jsx");
-  // The same settlement formula names the banked credit — the floating +EP
-  // and the balance counter must quote what actually lands, and the bonus
-  // line itemises every multiplier that added to it.
+  // The settlement formula still drives the balance counter, but the visible
+  // line only exists when a multiplier adds EP beyond the score: it quotes the
+  // extra and its parts, never repeats the number, never says "banked".
   expect(roll).toContain("walletMultiplier(session, firedSkills)");
   expect(roll).toContain("creditedEP");
+  expect(roll).toContain("digitsDone && bonusEP > 0");
   expect(roll).toContain("roll-credit");
+  expect(roll).not.toContain("EP banked");
+  expect(roll).not.toContain("roll-credit-total");
   expect(read("roll.css")).toContain(".roll-credit");
+  expect(read("roll.css")).not.toContain(".roll-credit-total");
+});
+
+test("the header marks the current page, and hover can never impersonate it", () => {
+  const styles = read("styles.css");
+  // Hover is a background plus the ink colour; the selected page owns the
+  // green underline — and keeps it while hovered.
+  expect(styles).toContain(".header nav button.active,");
+  expect(styles).toContain(".header nav button.active:hover");
+  expect(styles).toContain("box-shadow: 0 2px var(--green)");
+  // The icon buttons (help, settings) opt into the same state with a class,
+  // not just aria-current.
+  expect(styles).toContain(".icon-button.active,");
+  const main = read("main.jsx");
+  expect(main).toContain('page === "about" ? "active" : ""');
+  expect(main).toContain('page === "settings" ? "active" : ""');
 });
 
 test("skill ring icons render: the ring keeps its own svg class", () => {
@@ -166,10 +185,14 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
     page.getByRole("heading", { name: "Rebirth", level: 1 }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: /The ladder/ })).toBeVisible();
-  // Six rungs, each with the badges it asks for and the skill it hands over.
+  // Six rungs, each with the badges it asks for and the skill it hands over —
+  // plus the permanent +2% wallet bonus every rung pays.
   await expect(page.locator(".rebirth-ladder > li")).toHaveCount(6);
   await expect(page.locator(".rebirth-ladder > li.is-current")).toHaveCount(1);
   await expect(page.locator(".rebirth-reward")).toHaveCount(6);
+  await expect(page.locator(".rebirth-reward-chip").first()).toContainText(
+    "+2% EP forever",
+  );
   // What is kept and what is reset are both stated.
   await expect(
     page.getByRole("heading", { name: /What a rebirth keeps/ }),

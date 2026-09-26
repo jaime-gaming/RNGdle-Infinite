@@ -224,15 +224,10 @@ test("share text ends with the public game link", () => {
 });
 
 test("the changelog lists every release and flags an unseen version", () => {
-  // v0.4 is the skill stall and price order; everything before it shipped
-  // under v0.3 rather than inventing a version for it.
-  expect(CHANGELOG.map((e) => e.version)).toEqual([
-    "v0.4",
-    "v0.3",
-    "v0.2",
-    "v0.1",
-  ]);
-  expect(LATEST_VERSION).toBe("v0.4");
+  // v0.3 is the shop/rack/rebirth wave: the stall, the price order and the
+  // companion pin all shipped inside it rather than inventing a version.
+  expect(CHANGELOG.map((e) => e.version)).toEqual(["v0.3", "v0.2", "v0.1"]);
+  expect(LATEST_VERSION).toBe("v0.3");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
@@ -290,12 +285,11 @@ test("the changelog reads like release notes, not like a chat log", () => {
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
     }
   }
-  // One release carries the whole shop/rack/rebirth wave, so the v0.3 entry
-  // is allowed to be longer than the compact entries around it — but it is
-  // the only one, and the newest entry stays compact.
-  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(8);
+  // v0.3 is the newest release and also the big shop/rack/rebirth wave: it is
+  // the one entry allowed past eight lines, and even it stays within sixteen.
   const waves = CHANGELOG.filter((entry) => entry.body.length > 8);
   expect(waves.map((entry) => entry.version)).toEqual(["v0.3"]);
+  expect(waves[0]).toBe(CHANGELOG[0]);
   expect(waves[0].body.length).toBeLessThanOrEqual(16);
 });
 

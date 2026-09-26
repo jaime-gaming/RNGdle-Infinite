@@ -407,7 +407,7 @@ function App() {
             onClick={() => navigate("rebirth")}
           />
           <button
-            className="icon-button help-button"
+            className={`icon-button help-button ${page === "about" ? "active" : ""}`}
             aria-label="How to play"
             aria-current={page === "about" ? "page" : undefined}
             onClick={() => navigate("about")}
@@ -415,7 +415,7 @@ function App() {
             <CircleHelp size={18} />
           </button>
           <button
-            className="icon-button help-button"
+            className={`icon-button help-button ${page === "settings" ? "active" : ""}`}
             aria-label="Settings"
             aria-current={page === "settings" ? "page" : undefined}
             onClick={() => navigate("settings")}

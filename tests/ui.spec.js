@@ -8,7 +8,7 @@ test("home, random roll, cooldown, and badge breakdown", async ({ page }) => {
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "One roll per day? Not here. Roll as often as you like.",
+      name: "One number. What will yours be?",
     }),
   ).toBeVisible();
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();

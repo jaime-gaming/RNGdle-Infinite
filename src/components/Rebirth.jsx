@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import {
   BADGE_TOTAL,
+  REBIRTH_BONUS_PER_REBIRTH,
   REBIRTH_STEPS,
   REBIRTH_TOTAL,
   REBIRTH_VISIBLE_AT,
@@ -31,7 +32,6 @@ import {
   skillEffectSummary,
 } from "../skills.js";
 import { gameNow } from "../game-clock.js";
-import { Sparkles as SparkleMark } from "lucide-react";
 import { LegendMark, InfinityMark } from "./game-icons.jsx";
 import "../rebirth.css";
 
@@ -45,9 +45,12 @@ import "../rebirth.css";
 function Reward({ step, earned, current }) {
   const skill = rebirthSkill(step);
   if (!skill) return null;
+  const bonus = Math.round(REBIRTH_BONUS_PER_REBIRTH * 100);
   return (
     <span className={`rebirth-reward ${earned ? "is-earned" : ""}`}>
-      <span className="rebirth-reward-chip">{skillEffectChips(skill)[0]}</span>
+      <span className="rebirth-reward-chip">
+        {skillEffectChips(skill)[0]} · +{bonus}% EP forever
+      </span>
       <span className="rebirth-reward-copy">
         <strong>{skill.name}</strong>
         <span>{skillEffectSummary(skill)}</span>
@@ -113,8 +116,8 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           ultra
             ? `Ultra-rebirth ${ultras + 1}. Your permanent bonus is now +${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1))}% EP.`
             : granted
-              ? `Rebirth ${rebirths + 1} complete. ${granted} unlocked and equipped.`
-              : `Rebirth ${rebirths + 1} complete. Your collection starts over.`,
+              ? `Rebirth ${rebirths + 1} complete: ${granted} unlocked, +${Math.round(REBIRTH_BONUS_PER_REBIRTH * 100)}% EP forever.`
+              : `Rebirth ${rebirths + 1} complete. +${Math.round(REBIRTH_BONUS_PER_REBIRTH * 100)}% EP forever.`,
         );
       } else setError(result.message);
     } finally {
@@ -134,14 +137,14 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   const reward = nextRebirthSkill(rebirths);
   const ultraPercent = Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1));
   const keeps = [
-    ["Wallet and every purchase", "EP, timing upgrades, tools and skill bays"],
-    ["Companions", "including the one you have equipped"],
-    ["Skills and their charge", "circles keep the charge they are holding"],
+    ["Wallet and every purchase", "EP, upgrades, tools — and your auras"],
+    ["Companions and skills", "charge kept, the equipped ones stay"],
+    ["Rebirth bonuses", "+2% EP per finished step, forever"],
   ];
   const resets = [
-    ["Badge collection", "rediscover them in the new cycle"],
-    ["Activity history", "the feed starts empty"],
-    ["Equipped aura", "cosmetics are re-equipped in the shop"],
+    ["Badge collection", "rediscover it in the new cycle"],
+    ["Activity history", "the feed starts with this rebirth"],
+    ["Worn aura", "unequips; re-equipping is free"],
   ];
   return (
     <section className="rebirth-page" aria-label="Rebirth">
@@ -158,9 +161,8 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               : `Rebirth ${rebirths + 1}`}
           </h2>
           <p>
-            A rebirth starts your badge collection over and keeps the rest of
-            your account: wallet, upgrades, companions and skills all stay. The
-            reward for each step is permanent.
+            The badge collection starts over; wallet, purchases, companions and
+            skills stay. Every step pays a skill and +2% EP — forever.
           </p>
           <div className="rebirth-actions">
             {ladderComplete && (
@@ -225,8 +227,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <div>
               <dt>Permanent EP bonus</dt>
               <dd>
-                {ultras > 0
-                  ? `+${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}%`
+                {rebirths + ultras > 0
+                  ? `+${Math.round(
+                      REBIRTH_BONUS_PER_REBIRTH * 100 * rebirths +
+                        ULTRA_BONUS_PER_REBIRTH * 100 * ultras,
+                    )}%`
                   : "—"}
               </dd>
             </div>
@@ -240,9 +245,8 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <LegendMark size={16} /> The ladder
           </h3>
           <p>
-            Each step asks for 10 points more of the collection, and each one
-            hands over a skill that exists nowhere else. No purchase is ever
-            required for a rebirth.
+            Each step asks for 10 points more and grants a skill found nowhere
+            else, plus a permanent +2% EP. No purchase is ever required.
           </p>
         </header>
         <ol className="rebirth-ladder">
@@ -298,12 +302,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
 
       <div className="rebirth-columns">
         <section className="rebirth-block" aria-labelledby="rebirth-keep-title">
-          <header>
-            <h3 id="rebirth-keep-title">
-              <ShieldCheck size={16} /> What a rebirth keeps
-            </h3>
-            <p>Everything except the collection and its bookkeeping.</p>
-          </header>
+        <header>
+          <h3 id="rebirth-keep-title">
+            <ShieldCheck size={16} /> What a rebirth keeps
+          </h3>
+          <p>Everything but the collection.</p>
+        </header>
           <ul className="rebirth-list is-keep">
             {keeps.map(([title, detail]) => (
               <li key={title}>
@@ -324,7 +328,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <h3 id="rebirth-reset-title">
               <RotateCcw size={16} /> What it resets
             </h3>
-            <p>Deliberately small, and the reason the ladder exists.</p>
+            <p>Deliberately small.</p>
           </header>
           <ul className="rebirth-list is-reset">
             {resets.map(([title, detail]) => (
@@ -346,8 +350,9 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <Sparkles size={16} /> After the ladder: ultra-rebirth
           </h3>
           <p>
-            Finish all {REBIRTH_TOTAL} steps and you can start everything over,
-            including upgrades and companions, for a bonus that never resets.
+            Finish all {REBIRTH_TOTAL} steps and everything — upgrades,
+            companions, the rebirth bonus — can start over for one that never
+            resets.
           </p>
         </header>
         <div className="rebirth-ultra-card">
@@ -373,8 +378,8 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <span>
                 <strong>Wallet only</strong>
                 <small>
-                  Exactly like a companion: it multiplies banked EP, never the
-                  number, its tier, its badges or its rank.
+                  Like a companion: it multiplies banked EP, never the number
+                  or its rank.
                 </small>
               </span>
             </li>
@@ -399,13 +404,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
         </div>
       </section>
 
-      {reward && (
-        <p className="rebirth-footnote">
-          <SparkleMark size={13} /> Rebirth {rebirths + 1} unlocks{" "}
-          <strong>{reward.name}</strong> — {skillEffectSummary(reward)} It goes
-          straight into your rack if a slot is free.
-        </p>
-      )}
       {ultras > 0 && (
         <p className="rebirth-ultra-note">
           Ultra-rebirths: <b>{ultras}</b> · permanent wallet bonus{" "}
@@ -437,52 +435,47 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               </p>
               <ul>
                 <li>
-                  <strong>Reset:</strong> all EP, discovered badges, upgrades,
-                  companions, skills, cosmetics, the tracked goal and your{" "}
-                  {REBIRTH_TOTAL} rebirths.
+                  <strong>Reset:</strong> all EP, badges, upgrades, companions,
+                  skills, cosmetics and your {REBIRTH_TOTAL} rebirths.
                 </li>
                 <li>
-                  <strong>Keep:</strong> your profile, your ultra-rebirth count
-                  and the permanent bonus.
+                  <strong>Keep:</strong> your profile and the permanent bonus.
+                </li>
+                <li>
+                  <strong>Gain:</strong>{" "}
+                  <strong>
+                    +{Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1))}%
+                    EP
+                  </strong>{" "}
+                  on every banked roll, forever.
                 </li>
               </ul>
-              <p>
-                Permanent bonus after this one:{" "}
-                <strong>
-                  +{Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1))}%
-                  EP
-                </strong>{" "}
-                on every banked roll, forever. The next ladder starts again at
-                50%.
-              </p>
             </>
           ) : (
             <>
-              <p>
-                This starts your badge collection over. Everything you earned
-                besides the collection stays with you.
-              </p>
+              <p>The collection starts over; everything else stays.</p>
               <ul>
                 <li>
-                  <strong>Reset:</strong> discovered badges, equipped auras and
+                  <strong>Reset:</strong> discovered badges, the worn aura and
                   the activity history.
                 </li>
                 <li>
-                  <strong>Keep:</strong> your EP, every upgrade, your
-                  companions, your skills and their charge, your profile and
-                  your rebirth count.
+                  <strong>Keep:</strong> EP, every purchase, companions, skills
+                  and their charge.
+                </li>
+                <li>
+                  <strong>Gain:</strong>{" "}
+                  {reward ? (
+                    <>
+                      <strong>{reward.name}</strong> and{" "}
+                    </>
+                  ) : (
+                    ""
+                  )}
+                  +{Math.round(REBIRTH_BONUS_PER_REBIRTH * 100)}% EP on every
+                  banked roll, forever.
                 </li>
               </ul>
-              {reward && (
-                <p>
-                  Reward: <strong>{reward.name}</strong> —{" "}
-                  {skillEffectSummary(reward)}
-                </p>
-              )}
-              <p>
-                Odds and EP rewards stay the same. The next rung of the ladder
-                asks for 10 points more.
-              </p>
             </>
           )}
           {!progress.profile && (

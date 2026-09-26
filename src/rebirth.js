@@ -35,6 +35,16 @@ export function ultraRebirthMultiplier(ultraRebirths = 0) {
   return 1 + ULTRA_BONUS_PER_REBIRTH * Math.max(0, ultraRebirths);
 }
 
+// Every finished rung also pays a permanent wallet bonus: +2% per rebirth,
+// stacking to +12% when the ladder is complete. It is earned forever, so
+// rebirth itself never removes it; the ultra-rebirth is the only reset, and
+// it pays for that with its own larger bonus.
+export const REBIRTH_BONUS_PER_REBIRTH = 0.02;
+
+export function rebirthMultiplier(rebirths = 0) {
+  return 1 + REBIRTH_BONUS_PER_REBIRTH * Math.max(0, rebirths);
+}
+
 // Rebirth stays completely out of sight until the ladder unlocks: no badge, no
 // teaser, no counter. The nav entry, the page and the help page all ask this one
 // question, so the reveal can never be half-done.

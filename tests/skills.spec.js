@@ -315,7 +315,8 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
   expect(scored(settled, "r1").walletMultiplier).toBe(2);
   expect(scored(settled, "r1").walletBonus).toBe(result.totalEP);
   expect(scored(settled, "r1").skills).toEqual(["surge"]);
-  // A companion, a skill and the ultra bonus all multiply banked EP together.
+  // A companion, a skill and both rebirth bonuses all multiply banked EP
+  // together.
   const combined = applyProgress(
     {
       ...fund(0, {
@@ -324,15 +325,20 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
         equippedSkills: ["surge"],
         pets: ["dragonet"],
         activePet: "dragonet",
+        rebirths: 3,
         ultraRebirths: 2,
       }),
       pendingRoll: roll("r3", ["surge"]),
     },
     { type: "complete", result, id: "r3", cooldownUntil: 100000, at: 2 },
   );
-  const multiplier = 2 * petById.get("dragonet").multiplier * (1 + 0.1 * 2);
+  const multiplier =
+    2 * petById.get("dragonet").multiplier * (1 + 0.02 * 3) * (1 + 0.1 * 2);
   expect(
-    walletMultiplier({ activePet: "dragonet", ultraRebirths: 2 }, ["surge"]),
+    walletMultiplier(
+      { activePet: "dragonet", rebirths: 3, ultraRebirths: 2 },
+      ["surge"],
+    ),
   ).toBeCloseTo(multiplier, 6);
   expect(combined.balance).toBe(Math.round(result.totalEP * multiplier));
   // And a reload keeps the receipt.
@@ -425,7 +431,7 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   ).toThrow(/do not match your upgrades/);
 });
 
-test("rebirth keeps everything it earned, grants the ladder skill and clears the auras", () => {
+test("rebirth keeps everything it earned — auras included — grants the ladder skill and unequips the worn aura", () => {
   const state = fund(5000000, {
     profile: { id: "p", username: "Tester", createdAt: 1 },
     discovered: ids.slice(0, Math.ceil(BADGE_TOTAL * 0.5)),
@@ -459,7 +465,20 @@ test("rebirth keeps everything it earned, grants the ladder skill and clears the
   });
   expect(reborn.rebirths).toBe(1);
   expect(reborn.balance).toBe(5000000);
-  expect(reborn.owned).toEqual(["quickwind-1", "flywheel", "skill-bay-1"]);
+  // Every finished rung pays a permanent +2% on banked EP, on top of the
+  // equipped companion.
+  expect(walletMultiplier(reborn, [])).toBeCloseTo(
+    petById.get("pebble").multiplier * 1.02,
+    6,
+  );
+  // Purchased auras stay in the wardrobe; only the worn one comes off, and
+  // re-equipping costs nothing.
+  expect(reborn.owned).toEqual([
+    "quickwind-1",
+    "starfall",
+    "flywheel",
+    "skill-bay-1",
+  ]);
   expect(reborn.equipped).toBe("none");
   expect(reborn.pets).toEqual(["pebble"]);
   expect(reborn.skillCharge).toEqual({ surge: 4 });

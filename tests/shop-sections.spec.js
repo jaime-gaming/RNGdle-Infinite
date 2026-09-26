@@ -228,21 +228,19 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   expect(leaking).toEqual([]);
 });
 
-test("the skills shelf is a stall: two skills in stock, hardware always listed", async ({
+test("the skills shelf is a stall: two skills buyable, the rest under a green aura", async ({
   page,
 }) => {
   await seedProgress(page, funded);
   await page.goto("/shop/skills");
   const shelf = page.locator("#shop-skills");
   await expect(shelf.getByRole("heading", { name: "Skills" })).toBeVisible();
-  await expect(shelf).toContainText("Flywheel lives in this shelf");
-  // Only the stall's rotating pair is on sale — the skills the save does not
-  // own and that sit at the head of this window's own order.
+  await expect(shelf).toContainText("rotates every five minutes");
+  // The whole catalogue is listed: the stall's rotating pair is on sale, the
+  // other skills wait dimmed under the green restock aura.
   const stock = skillStock(skillStockWindow(Date.now()), funded.owned);
   expect(stock).toHaveLength(2);
-  for (const id of stock)
-    await expect(shelf.locator(`[data-product="${id}"]`)).toHaveCount(1);
-  for (const id of [
+  const rest = [
     "surge",
     "trail",
     "bounce",
@@ -250,12 +248,23 @@ test("the skills shelf is a stall: two skills in stock, hardware always listed",
     "bedrock",
     "turbo",
     "quarry",
-  ].filter((id) => !stock.includes(id)))
-    await expect(shelf.locator(`[data-product="${id}"]`)).toHaveCount(0);
-  // The stall states when the pair restocks.
-  await expect(shelf.locator(".skill-stock")).toContainText(
-    "2 of 2 skills in stock",
-  );
+  ].filter((id) => !stock.includes(id));
+  for (const id of stock) {
+    const card = shelf.locator(`[data-product="${id}"]`);
+    await expect(card).toHaveCount(1);
+    await expect(card).not.toHaveClass(/is-restocking/);
+    await expect(card).toContainText("In stock");
+    await expect(card.getByRole("button")).toBeEnabled();
+  }
+  for (const id of rest) {
+    const card = shelf.locator(`[data-product="${id}"]`);
+    await expect(card).toHaveCount(1);
+    await expect(card).toHaveClass(/is-restocking/);
+    await expect(card.getByRole("button")).toBeDisabled();
+  }
+  // The stall states how full it is and when the pair restocks — never the
+  // names, which the cards already carry.
+  await expect(shelf.locator(".skill-stock")).toContainText("2 of 2 in stock");
   await expect(page.getByTestId("skill-stock-timer")).toContainText(
     /^\d:\d{2}$/,
   );
@@ -266,7 +275,7 @@ test("the skills shelf is a stall: two skills in stock, hardware always listed",
   const prices = (
     await shelf.locator(".shop-card[data-product] .shop-price").allInnerTexts()
   ).map((text) => Number(text.replace(/[^0-9]/g, "")));
-  expect(prices.length).toBe(5);
+  expect(prices.length).toBe(10);
   expect([...prices].sort((a, b) => a - b)).toEqual(prices);
   // Timing tracks are not on this shelf any more: they moved to Pace, which
   // reads cheapest first as well.
@@ -341,7 +350,7 @@ test("every product icon is a hand-drawn mark, and the hub is buttons", () => {
     expect(auraMarks).toContain(wired[1]);
   }
   expect(shop).not.toMatch(
-    /from "lucide-react"[\s\S]{0,200}(Gauge|Mountain|Wind|Layers|Target)/,
+    /from "lucide-react"[\s\S]{0,200}\b(Gauge|Mountain|Wind|Layers|Target)\b/,
   );
   // The shop opens as buttons: one link per shelf, each carrying its own stat
   // and each pointing at the shelf's own page.
@@ -359,14 +368,14 @@ test("every product icon is a hand-drawn mark, and the hub is buttons", () => {
   expect(shop).toContain("shelfOfProduct(item)");
 });
 
-test("the skills shelf states what the rack adds up to", () => {
+test("the rack's arithmetic is stated once, in the skill bar's panel", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
-  // The shelf quotes the shared rack report instead of recomputing anything.
+  // The shelf still reads the shared rack report for its own numbers, but the
+  // itemised "what it adds up to" panel lives only in the skill bar — the
+  // shop used to repeat it on the skills shelf, which was the same text twice.
   expect(shop).toContain("rackReport(progress)");
-  expect(shop).toContain("rack-report");
-  expect(shop).toContain("Your rack, added up");
-  expect(shop).toContain("Banked EP multiplier");
-  expect(shop).toContain("rack-report-chips");
+  expect(shop).not.toContain("rack-report");
+  expect(shop).not.toContain("Your rack, added up");
   // …and the confirmation dialog repeats the exact chip, not a paraphrase.
   expect(shop).toContain("skillEffectChips");
   expect(shop).toContain("purchase-effect");
@@ -374,8 +383,8 @@ test("the skills shelf states what the rack adds up to", () => {
 
 test("the auto-roll tool is described as an ability, not as a setting", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
-  expect(shop).toContain("One click arms it, another stands it down");
-  expect(shop).toContain("Click the ability in the rack to turn it on.");
+  expect(shop).toContain("one click arms it, one stands it down");
+  expect(shop).toContain("Arm it from the rack.");
   const bar = fs.readFileSync("src/components/SkillBar.jsx", "utf8");
   expect(bar).toContain('role="switch"');
   expect(bar).toContain('aria-label="Auto-Roll"');
