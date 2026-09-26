@@ -93,6 +93,132 @@ test("deep links and legacy shelf hashes land on the right shelf", async ({
   await expect(page.locator(".shop-hub")).toBeVisible();
 });
 
+test("the shelf's status line counts the cards on screen, and the exit is a block", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  // Pace shows one level per path: two cards, so the line says two, not ten.
+  await page.goto("/shop/pace");
+  await expect(page.locator(".shop-filter-count")).toHaveText(
+    "2 of 2 on this shelf",
+  );
+  await expect(page.locator(".shop-card[data-product]")).toHaveCount(2);
+  // The funded fixture owns the roller but no clock: one card, so one is what
+  // the line says.
+  await page.goto("/shop/offline");
+  await expect(page.locator(".shop-filter-count")).toHaveText(
+    "1 of 1 on this shelf",
+  );
+  await expect(page.locator(".shop-card[data-product]")).toHaveCount(1);
+  // The invariant, on every shelf that can hide cards: the first number in the
+  // status line is the number of cards drawn.
+  for (const path of [
+    "/shop/skills",
+    "/shop/pace",
+    "/shop/offline",
+    "/shop/auras",
+    "/shop/tools",
+  ]) {
+    await page.goto(path);
+    const drawn = await page.locator(".shop-card[data-product]").count();
+    const [shown] = (
+      await page.locator(".shop-filter-count").innerText()
+    ).match(/\d+/);
+    expect(Number(shown), `${path} status line`).toBe(drawn);
+  }
+  // Companions are drawn by their own component and counted their own way.
+  await page.goto("/shop/companions");
+  await expect(page.locator(".shop-filter-count")).toHaveText(
+    /^\d+ \/ 13 found$/,
+  );
+  // A search that matches nothing says so, in words and in numbers.
+  await page.goto("/shop/auras");
+  await page.getByLabel("Search the shop").fill("zzz-nothing");
+  await expect(page.locator(".shop-filter-count")).toHaveText(
+    "0 of 18 on this shelf",
+  );
+  await expect(page.locator(".shop-empty")).toContainText(
+    "Nothing on this shelf matches",
+  );
+  // A shelf with nothing to sell says Locked rather than counting zero.
+  await page.getByLabel("Search the shop").fill("");
+  await page.goto("/shop/offline");
+  await expect(page.locator(".shop-locked-heading")).toHaveCount(0);
+});
+
+test("a locked shelf reads Locked, and the header's nav rules stay in the header", async ({
+  page,
+}) => {
+  // No Offline Roller: nothing on that shelf can be bought yet.
+  await seedProgress(page, { ...funded, owned: [] });
+  await page.goto("/shop/offline");
+  await expect(page.locator(".shop-locked-heading")).toBeVisible();
+  await expect(page.locator(".shop-filter-count")).toHaveText("Locked");
+  await expect(page.locator(".shop-card[data-product]")).toHaveCount(0);
+
+  // The header sets nav { display:flex; gap } for its own bar. Those element
+  // selectors must never reach the shop's own navigation regions, or a shelf's
+  // exit and its breadcrumb inherit the header's layout.
+  await page.goto("/shop/skills");
+  const layout = await page.evaluate(() => {
+    const others = document.querySelector('nav[aria-label="Other shelves"]');
+    const label = others.querySelector(".shop-others-label");
+    const tile = others.querySelector(".shop-tile");
+    const jump = others.querySelector(".shop-jump");
+    return {
+      display: getComputedStyle(others).display,
+      gap: getComputedStyle(jump).gap,
+      labelAbove:
+        label.getBoundingClientRect().bottom <=
+        tile.getBoundingClientRect().top + 1,
+      tilesPerRow: [...jump.children].filter(
+        (child) =>
+          child.getBoundingClientRect().top ===
+          tile.getBoundingClientRect().top,
+      ).length,
+    };
+  });
+  expect(layout.display).toBe("block");
+  expect(layout.gap).toBe("10px");
+  expect(layout.labelAbove).toBe(true);
+  expect(layout.tilesPerRow).toBeGreaterThan(1);
+  // Same story at phone width: the header shrinks its own gaps, never ours.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        () =>
+          getComputedStyle(
+            document.querySelector(
+              'nav[aria-label="Other shelves"] .shop-jump',
+            ),
+          ).gap,
+      ),
+    )
+    .toBe("10px");
+  const source = fs.readFileSync("src/styles.css", "utf8");
+  // A standalone `nav` element selector would leak again: every navigation
+  // style in the global sheet is scoped to the header's own bar. (`.nav-divider`
+  // is a class of its own, not a bare element selector.)
+  const leaking = [...source.matchAll(/^\s*([^{}]*)\{/gm)].flatMap((match) =>
+    match[1]
+      .split(",")
+      .map((selector) => selector.trim())
+      .filter(Boolean)
+      .flatMap((selector) => {
+        const parts = selector.split(/\s+/);
+        return parts
+          .map((part, index) =>
+            part === "nav" && !parts[index - 1]?.startsWith(".header")
+              ? selector
+              : "",
+          )
+          .filter(Boolean);
+      }),
+  );
+  expect(leaking).toEqual([]);
+});
+
 test("the skills shelf is where charged effects live, flywheel included", async ({
   page,
 }) => {
