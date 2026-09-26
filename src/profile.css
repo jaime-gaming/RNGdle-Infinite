@@ -56,6 +56,10 @@
   gap: 10px;
   margin-top: 16px;
 }
+/* The sign-up form's single action owns the width of the form it submits. */
+.profile-page form > .primary-button {
+  width: 100%;
+}
 .profile-actions .primary-button,
 .profile-actions .secondary-button {
   display: inline-flex;
