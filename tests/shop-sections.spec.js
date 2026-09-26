@@ -1,12 +1,18 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import { emptyProgress } from "../src/progress.js";
-import { shopProducts } from "../src/shop-data.js";
+import {
+  shopProducts,
+  skillStock,
+  skillStockWindow,
+} from "../src/shop-data.js";
 import { seedProgress } from "./helpers/progress.js";
 
 // The shop is a street of sub-pages: the hub is an index of six buttons, each
-// one opening its own URL (/shop/skills, /shop/auras …), and the flywheel tiers
-// live on the Skills shelf because Flywheel is a skill.
+// one opening its own URL (/shop/skills, /shop/auras …), the flywheel tiers
+// live on the Skills shelf because Flywheel is a skill, and the shop skills
+// themselves are a rotating stall — two on sale, refreshed every five minutes.
+// Every shelf reads from the cheapest item upwards.
 
 const funded = {
   ...emptyProgress(),
@@ -222,7 +228,7 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   expect(leaking).toEqual([]);
 });
 
-test("the skills shelf is where charged effects live, flywheel included", async ({
+test("the skills shelf is a stall: two skills in stock, hardware always listed", async ({
   page,
 }) => {
   await seedProgress(page, funded);
@@ -230,9 +236,13 @@ test("the skills shelf is where charged effects live, flywheel included", async 
   const shelf = page.locator("#shop-skills");
   await expect(shelf.getByRole("heading", { name: "Skills" })).toBeVisible();
   await expect(shelf).toContainText("Flywheel lives in this shelf");
-  // Flywheel and its tiers, the shop skills and the two bays.
+  // Only the stall's rotating pair is on sale — the skills the save does not
+  // own and that sit at the head of this window's own order.
+  const stock = skillStock(skillStockWindow(Date.now()), funded.owned);
+  expect(stock).toHaveLength(2);
+  for (const id of stock)
+    await expect(shelf.locator(`[data-product="${id}"]`)).toHaveCount(1);
   for (const id of [
-    "flywheel",
     "surge",
     "trail",
     "bounce",
@@ -240,16 +250,34 @@ test("the skills shelf is where charged effects live, flywheel included", async 
     "bedrock",
     "turbo",
     "quarry",
-    "skill-bay-1",
-    "skill-bay-2",
-  ])
+  ].filter((id) => !stock.includes(id)))
+    await expect(shelf.locator(`[data-product="${id}"]`)).toHaveCount(0);
+  // The stall states when the pair restocks.
+  await expect(shelf.locator(".skill-stock")).toContainText(
+    "2 of 2 skills in stock",
+  );
+  await expect(page.getByTestId("skill-stock-timer")).toContainText(
+    /^\d:\d{2}$/,
+  );
+  // Flywheel and the two bays are rack hardware, not stock: always listed.
+  for (const id of ["flywheel", "skill-bay-1", "skill-bay-2"])
     await expect(shelf.locator(`[data-product="${id}"]`)).toHaveCount(1);
-  // Timing tracks are not on this shelf any more: they moved to Pace.
+  // Every card on the shelf reads cheapest first.
+  const prices = (
+    await shelf.locator(".shop-card[data-product] .shop-price").allInnerTexts()
+  ).map((text) => Number(text.replace(/[^0-9]/g, "")));
+  expect(prices.length).toBe(5);
+  expect([...prices].sort((a, b) => a - b)).toEqual(prices);
+  // Timing tracks are not on this shelf any more: they moved to Pace, which
+  // reads cheapest first as well.
   await expect(shelf.locator('[data-product="quickwind-1"]')).toHaveCount(0);
   await page.goto("/shop/pace");
-  await expect(
-    page.locator("#shop-pace [data-product='quickwind-1']"),
-  ).toHaveCount(1);
+  const pacePrices = (
+    await page
+      .locator("#shop-pace .shop-card[data-product] .shop-price")
+      .allInnerTexts()
+  ).map((text) => Number(text.replace(/[^0-9]/g, "")));
+  expect([...pacePrices].sort((a, b) => a - b)).toEqual(pacePrices);
   // Companions keep their own shelf page, owned by the companion component.
   await page.goto("/shop/companions");
   await expect(

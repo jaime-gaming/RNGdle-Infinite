@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Coins,
   LayoutGrid,
+  Repeat,
   Search,
   ShoppingBag,
   X,
@@ -19,7 +20,12 @@ import {
   nextUpgrade,
   SHOP_SECTIONS,
   shelfOfProduct,
+  skillStock,
+  skillStockWindow,
+  SKILL_STOCK_SIZE,
+  SKILL_STOCK_WINDOW_MS,
 } from "../shop-data";
+import { gameNow } from "../game-clock.js";
 import { pathForSubpage } from "../router.js";
 import {
   availableGoals,
@@ -166,7 +172,23 @@ export default function Shop({
   const rack = rackReport(progress);
   const goal = currentGoal(progress),
     suggested = recommendedGoal(progress),
-    choices = availableGoals(progress);
+    // The same cheap-first order as the shelves themselves.
+    choices = [...availableGoals(progress)].sort((a, b) => a.price - b.price);
+  // The skill stall: two shop skills on sale at a time, rotating every five
+  // minutes on the shared game clock, so every tab and the purchase guard
+  // agree on the pair. The one-second ticker only runs on this shelf.
+  const [clock, setClock] = useState(() => gameNow());
+  useEffect(() => {
+    if (shelf?.id !== "skills") return;
+    const timer = setInterval(() => setClock(gameNow()), 1000);
+    return () => clearInterval(timer);
+  }, [shelf?.id]);
+  const stockWindow = skillStockWindow(clock);
+  const stock = skillStock(stockWindow, progress.owned);
+  const stockSecondsLeft = Math.max(
+    0,
+    Math.ceil(((stockWindow + 1) * SKILL_STOCK_WINDOW_MS - clock) / 1000),
+  );
   useEffect(() => {
     if (!focusProduct || !productById.has(focusProduct)) return;
     const frame = requestAnimationFrame(() => {
@@ -580,6 +602,9 @@ export default function Shop({
     };
     const open = shopProducts.filter((item) => {
       const state = stateOf(item);
+      // A featured pick must be openable: out-of-stock skills stay out of the
+      // window until the stall offers them again.
+      if (item.kind === "skill" && !stock.includes(item.id)) return false;
       return !state.owned && !state.requires && !state.profileGated;
     });
     // A pick already in the window is never offered twice.
@@ -608,18 +633,29 @@ export default function Shop({
   // What a shelf actually puts on screen. Pace and Offline deliberately show
   // one level per path rather than the whole track, so the status line counts
   // these, never the catalogue size: a shelf must never claim to be showing ten
-  // items while two cards are drawn.
+  // items while two cards are drawn. Every shelf reads cheapest first.
+  const byPrice = (a, b) => a.price - b.price;
   const shelfItemsNow = (() => {
     if (!shelf) return [];
     if (shelf.id === "skills")
+      // The stall: Flywheel, the bays and owned skills are always there; the
+      // skills you do not own only appear while the rotation stocks them.
       return [
         nextUpgrade(progress.owned, "pace"),
-        ...productsOnShelf("skills").filter((item) => item.kind !== "pace"),
-      ];
+        ...productsOnShelf("skills").filter(
+          (item) =>
+            item.kind !== "skill" ||
+            progress.owned.includes(item.id) ||
+            stock.includes(item.id),
+        ),
+      ]
+        .filter(Boolean)
+        .sort(byPrice);
     if (shelf.id === "pace")
-      return ["roll", "cooldown"].map((kind) =>
-        nextUpgrade(progress.owned, kind),
-      );
+      return ["roll", "cooldown"]
+        .map((kind) => nextUpgrade(progress.owned, kind))
+        .filter(Boolean)
+        .sort(byPrice);
     if (shelf.id === "offline")
       return progress.owned.includes("offline-roller")
         ? [
@@ -628,10 +664,12 @@ export default function Shop({
               ? [nextUpgrade(progress.owned, "offline-cap")]
               : []),
           ]
+            .filter(Boolean)
+            .sort(byPrice)
         : [];
     // Companions are drawn by their own component, with their own count.
     if (shelf.id === "companions") return [];
-    return productsOnShelf(shelf.id);
+    return productsOnShelf(shelf.id).slice().sort(byPrice);
   })();
   const visibleCount = shelfItemsNow.filter((item) =>
     matches(item, stateOf(item)),
@@ -918,7 +956,9 @@ export default function Shop({
               <p>
                 Charged effects. A circle fills as you roll online; when it is
                 full, the next roll fires it. Flywheel lives in this shelf too.
-                Your rack holds {rack.slots}{" "}
+                The stall only stocks {SKILL_STOCK_SIZE} skills at a time and
+                the pair rotates every five minutes; the ones you own stay
+                listed so you can rack them. Your rack holds {rack.slots}{" "}
                 {rack.slots === 1 ? "skill" : "skills"}, and equipping or
                 swapping is always free.
               </p>
@@ -926,6 +966,30 @@ export default function Shop({
             <span className="shop-section-stat">
               {rack.used} / {rack.slots} slots used
             </span>
+          </div>
+          {/* The stall itself: what is on sale now, and when it restocks. */}
+          <div
+            className={`skill-stock ${stock.length ? "" : "is-empty"}`}
+            role="status"
+          >
+            <Repeat size={14} aria-hidden="true" />
+            {stock.length ? (
+              <span>
+                <strong>
+                  {stock.length} of {SKILL_STOCK_SIZE} skills in stock
+                </strong>
+                {" — "}
+                {stock.map((id) => skillById.get(id)?.name ?? id).join(" · ")} ·
+                new stock in{" "}
+                <b data-testid="skill-stock-timer">
+                  {formatDuration(stockSecondsLeft)}
+                </b>
+              </span>
+            ) : (
+              <span>
+                You own every shop skill — the stall has nothing left to sell.
+              </span>
+            )}
           </div>
           {/* The indicator of what skills are worth: every contribution, named. */}
           <div className="rack-report" aria-label="What your rack adds up to">
