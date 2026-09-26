@@ -221,14 +221,13 @@ test("reveal and badge breakdown geometry match the reference without dashboard 
   expect(positions[".number-artifact"].height).toBe(106);
   expect(positions[".result-rank"].top).toBe(226);
   expect(positions[".roll-ep"]).toEqual({ top: 266, width: 166, height: 34 });
-  // The wallet-credit line sits between the EP pill and the session total
-  // (10px of margin plus its own 20px line), and the goal recap lives inside
-  // the session total, so the share row, the button and everything under them
-  // start one credit line and one recap lower than the bare reference.
-  expect(positions[".share-row"].top).toBe(429);
-  expect(positions[".generate"]).toEqual({ top: 487, width: 320, height: 72 });
-  expect(positions[".badge-breakdown"].top).toBe(607);
-  expect(positions[".result-badge"].top).toBe(667);
+  // A score-only roll draws no wallet-credit line, so the only extra below
+  // the EP pill is the goal recap living inside the session total; everything
+  // under it sits at the bare reference positions again.
+  expect(positions[".share-row"].top).toBe(399);
+  expect(positions[".generate"]).toEqual({ top: 457, width: 320, height: 72 });
+  expect(positions[".badge-breakdown"].top).toBe(577);
+  expect(positions[".result-badge"].top).toBe(637);
   await expect(page.locator(".loop-hub,.loop-card")).toHaveCount(0);
   expect(positions[".result-badge"].height).toBe(105);
   expect(positions[".badge-breakdown"].height).toBe(1812);

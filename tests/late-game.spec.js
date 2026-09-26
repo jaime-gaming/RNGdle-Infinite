@@ -11,6 +11,8 @@ import {
   rollSettings,
   offlineSettings,
   nextUpgrade,
+  skillStock,
+  SKILL_STOCK_WINDOW_MS,
 } from "../src/shop-data.js";
 import { flywheelForDraw, flywheelRequired } from "../src/flywheel.js";
 import { offlinePlan, parseOffline } from "../src/offline.js";
@@ -76,7 +78,15 @@ test("every late tier requires its predecessor, charges exactly once and preserv
     expect(() => buy(p, item.id)).toThrow("Requires");
   for (const item of shopProducts) {
     const before = p.balance;
-    p = buy(p, item.id);
+    let at = 1000;
+    if (item.kind === "skill") {
+      // The stall rotates its stock every five minutes: a skill is only sold
+      // in the windows that stock it, so buy it in one of those.
+      let window = 0;
+      while (!skillStock(window, p.owned).includes(item.id)) window += 1;
+      at = window * SKILL_STOCK_WINDOW_MS + 500;
+    }
+    p = buy(p, item.id, at);
     expect(p.balance).toBe(before - item.price);
     expect(() => buy(p, item.id)).toThrow("already own");
     p = parseProgress(JSON.stringify(p));
@@ -405,7 +415,7 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
   await expect(page.locator('[data-product="offline-clock-2"]')).toHaveCount(0);
   await gotoShelfFor(page, "quickwind-4");
   await expect(page.locator('[data-product="quickwind-4"]')).toContainText(
-    "Maximum level reached",
+    "Maximum level.",
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
     360,

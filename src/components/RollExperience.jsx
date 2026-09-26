@@ -596,7 +596,7 @@ export default function RollExperience({
             aura={aura}
             aria-label="Your random number awaits"
           />
-          <h1>One roll per day? Not here. Roll as often as you like.</h1>
+          <h1>One number. What will yours be?</h1>
           <button
             ref={generateButton}
             className={`generate ${cooldown || reserving || loading || drawing ? "cooling" : ""}`}
@@ -674,7 +674,7 @@ export default function RollExperience({
                   ? `Number ${result.number}. Revealing badges.`
                   : `${result.number}, ${result.tier}, ${formatEP(result.totalEP)} EP.${
                       bonusEP
-                        ? ` ${formatEP(creditedEP)} EP banked with ${formatEP(bonusEP)} EP extra from your multipliers.`
+                        ? ` +${formatEP(bonusEP)} EP extra from your multipliers.`
                         : ""
                     }`}
             </div>
@@ -709,30 +709,24 @@ export default function RollExperience({
                   )}{" "}
                   EP
                 </div>
-                {/* The wallet's own arithmetic, as the roll applies it:
-                    what actually lands in the EP, and — when skills or
-                    multipliers add to it — the extra and every named part. */}
-                {digitsDone && (
+                {/* When skills or multipliers add to the wallet, the roll says
+                    so once: the extra and every named part of it. A plain roll
+                    needs no line — the EP counter already is the total. */}
+                {digitsDone && bonusEP > 0 && (
                   <div
-                    className={`roll-credit ${elapsed >= timeline.sessionShow ? "is-visible" : ""} ${bonusEP ? "has-bonus" : ""}`}
+                    className={`roll-credit ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
                     aria-hidden={elapsed < timeline.sessionShow}
                     data-testid="roll-credit"
                   >
-                    <span className="roll-credit-total">
-                      +{formatEP(creditedEP)} EP banked
+                    <span className="roll-credit-bonus">
+                      <strong>+{formatEP(bonusEP)} EP extra</strong> ·{" "}
+                      {bonusParts
+                        .map(
+                          (part) =>
+                            `${part.label} ×${Number(part.value.toFixed(2))}`,
+                        )
+                        .join(" · ")}
                     </span>
-                    {bonusEP > 0 && (
-                      <small className="roll-credit-bonus">
-                        {formatEP(result.totalEP)} scored +{" "}
-                        <strong>+{formatEP(bonusEP)} extra</strong> ·{" "}
-                        {bonusParts
-                          .map(
-                            (part) =>
-                              `${part.label} ×${Number(part.value.toFixed(2))}`,
-                          )
-                          .join(" · ")}
-                      </small>
-                    )}
                   </div>
                 )}
                 {digitsDone && (

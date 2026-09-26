@@ -246,20 +246,24 @@ export default function Shop({
     }
   }
   // Every product knows how it is doing at a glance: owned, affordable, missing
-  // its prerequisite or waiting on a local profile.
+  // its prerequisite or waiting on a local profile. A skill the stall does not
+  // stock right now is visible but not available.
   function stateOf(item) {
     const owned = progress.owned.includes(item.id);
     const requires = !!(
       item.requires && !progress.owned.includes(item.requires)
     );
     const profileGated = !!(item.requiresProfile && !progress.profile);
+    const stocked = item.kind !== "skill" || stock.includes(item.id);
     return {
       owned,
       requires,
       profileGated,
+      stocked,
       affordable: progress.balance >= item.price,
-      available: !owned && !requires && !profileGated,
-      affordableNow: !owned && !requires && progress.balance >= item.price,
+      available: !owned && !requires && !profileGated && stocked,
+      affordableNow:
+        !owned && !requires && stocked && progress.balance >= item.price,
     };
   }
   const matches = (item, state) => {
@@ -382,12 +386,15 @@ export default function Shop({
         : skill
           ? (progress.equippedSkills ?? []).includes(item.id)
           : false;
+    // Out of the stall's rotation: still listed, dimmed under a green aura,
+    // with the next restock counting down.
+    const restocking = skill && !state.owned && !state.stocked;
     const definition = skill ? skillById.get(item.skillId ?? item.id) : null;
     const Icon = icons[item.icon] ?? ShoppingBag;
     if (!matches(item, state)) return null;
     return (
       <article
-        className={`shop-card ${aura ? "is-aura" : ""} ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""}`}
+        className={`shop-card ${aura ? "is-aura" : ""} ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""}`}
         key={item.id}
         data-product={item.id}
         data-kind={item.kind}
@@ -421,9 +428,17 @@ export default function Shop({
           <div className="shop-item-title">
             <h3>{item.name}</h3>
             <span
-              className={`shop-state ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""}`}
+              className={`shop-state ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""}`}
             >
-              {equipped ? "Equipped" : state.owned ? "Owned" : "Permanent"}
+              {equipped
+                ? "Equipped"
+                : state.owned
+                  ? "Owned"
+                  : restocking
+                    ? "Back soon"
+                    : skill
+                      ? "In stock"
+                      : "Permanent"}
             </span>
           </div>
           <p className="shop-card-desc">
@@ -467,6 +482,7 @@ export default function Shop({
             }
             disabled={
               pending ||
+              restocking ||
               (equipped && aura) ||
               (state.owned && !aura && !skill) ||
               (!state.owned &&
@@ -487,6 +503,8 @@ export default function Shop({
           >
             {state.profileGated ? (
               "Sign up to unlock"
+            ) : restocking ? (
+              `Back in ${formatDuration(stockSecondsLeft)}`
             ) : equipped ? (
               <>
                 <Check size={14} /> Equipped
@@ -505,7 +523,12 @@ export default function Shop({
               `Buy for ${formatEP(item.price)} EP`
             )}
           </button>
-          <small className="shop-item-note">{noteFor(item, state)}</small>
+          {(() => {
+            const note = restocking
+              ? "Out of the stall's rotation right now."
+              : noteFor(item, state);
+            return note ? <small className="shop-item-note">{note}</small> : null;
+          })()}
         </div>
       </article>
     );
@@ -514,35 +537,32 @@ export default function Shop({
     return item.requires ? productById.get(item.requires)?.name : "";
   }
   function noteFor(item, state) {
-    if (state.profileGated)
-      return "Offline progress needs a saved local profile.";
+    if (state.profileGated) return "Needs a saved local profile.";
     if (state.requires) return `Requires ${requiresName(item)} first.`;
     if (!state.owned && !state.affordable)
       return `${formatEP(item.price - progress.balance)} more EP needed`;
     if (state.owned) {
-      if (item.kind === "aura") return "Equip whenever you like.";
+      if (item.kind === "aura") return "";
       if (item.kind === "skill")
-        return `${skillChargeOf(progress, item.id)} / ${item.charges} charged · ${
+        return `${skillChargeOf(progress, item.id)} / ${item.charges} charged${
           (progress.equippedSkills ?? []).includes(item.id)
-            ? "in your rack"
-            : "not in your rack yet"
-        }.`;
-      if (item.kind === "skill-slot")
-        return `Rack size: ${item.slots} skills. Swapping is always free.`;
+            ? ""
+            : " · not in your rack"
+        }`;
+      if (item.kind === "skill-slot") return `Rack size: ${item.slots} skills.`;
       if (item.kind === "utility")
         return item.id === "auto-roll"
-          ? "Click the ability in the rack to turn it on."
+          ? "Arm it from the rack."
           : item.id === "offline-roller"
-            ? `Ready · one roll per ${offlineInterval / 60000} minutes away.`
+            ? `One roll per ${offlineInterval / 60000} minutes away.`
             : item.id === "archive-lens"
-              ? "Unlocked in History."
-              : "Keeps Auto-Roll armed between visits.";
+              ? "In History."
+              : "Auto-Roll remembered.";
       if (item.kind === "pace")
-        return `${progress.flywheelCharge ?? 0} / ${charges} charges · applies automatically.`;
-      return "Maximum level reached.";
+        return `${progress.flywheelCharge ?? 0} / ${charges} charges.`;
+      return "Maximum level.";
     }
-    if (item.kind === "aura") return "One-time cosmetic purchase";
-    return "One-time unlock · same odds and scores";
+    return "";
   }
   // A shelf button: a real link to its own sub-page, carrying the one number
   // that says whether it is worth opening.
@@ -638,17 +658,10 @@ export default function Shop({
   const shelfItemsNow = (() => {
     if (!shelf) return [];
     if (shelf.id === "skills")
-      // The stall: Flywheel, the bays and owned skills are always there; the
-      // skills you do not own only appear while the rotation stocks them.
-      return [
-        nextUpgrade(progress.owned, "pace"),
-        ...productsOnShelf("skills").filter(
-          (item) =>
-            item.kind !== "skill" ||
-            progress.owned.includes(item.id) ||
-            stock.includes(item.id),
-        ),
-      ]
+      // The whole skill catalogue shows cheap-first; the two the stall stocks
+      // right now are buyable, the others wait dimmed under the green restock
+      // aura. Flywheel and the bays are shelf fixtures.
+      return [nextUpgrade(progress.owned, "pace"), ...productsOnShelf("skills")]
         .filter(Boolean)
         .sort(byPrice);
     if (shelf.id === "pace")
@@ -787,13 +800,13 @@ export default function Shop({
                   <LayoutGrid size={16} /> Pick a shelf
                 </h2>
                 <p>
-                  The shop is six shelves: {shopProducts.length} things to buy,{" "}
+                  {shopProducts.length} things to buy,{" "}
                   {
                     shopProducts.filter((item) =>
                       progress.owned.includes(item.id),
                     ).length
                   }{" "}
-                  already yours. Each button opens its shelf on its own page.
+                  already yours.
                 </p>
               </div>
               <span className="shop-section-stat">Shop · /shop</span>
@@ -815,10 +828,7 @@ export default function Shop({
                   <h2>
                     <SparkMark size={16} /> Featured for you
                   </h2>
-                  <p>
-                    Chosen from your wallet and your goal, and only ever a
-                    doorway to the shelf that sells it.
-                  </p>
+                  <p>Three picks from your wallet and your goal.</p>
                 </div>
               </div>
               <div className="shop-spotlight">
@@ -954,20 +964,16 @@ export default function Shop({
                 <SkillMark size={16} /> Skills
               </h2>
               <p>
-                Charged effects. A circle fills as you roll online; when it is
-                full, the next roll fires it. Flywheel lives in this shelf too.
-                The stall only stocks {SKILL_STOCK_SIZE} skills at a time and
-                the pair rotates every five minutes; the ones you own stay
-                listed so you can rack them. Your rack holds {rack.slots}{" "}
-                {rack.slots === 1 ? "skill" : "skills"}, and equipping or
-                swapping is always free.
+                Charged effects: fill the circle, the next roll fires it. The
+                stall stocks {SKILL_STOCK_SIZE} at a time and rotates every
+                five minutes; equipping is always free.
               </p>
             </div>
             <span className="shop-section-stat">
               {rack.used} / {rack.slots} slots used
             </span>
           </div>
-          {/* The stall itself: what is on sale now, and when it restocks. */}
+          {/* The stall itself: how full, and when the pair rotates. */}
           <div
             className={`skill-stock ${stock.length ? "" : "is-empty"}`}
             role="status"
@@ -976,89 +982,19 @@ export default function Shop({
             {stock.length ? (
               <span>
                 <strong>
-                  {stock.length} of {SKILL_STOCK_SIZE} skills in stock
+                  {stock.length} of {SKILL_STOCK_SIZE} in stock
                 </strong>
-                {" — "}
-                {stock.map((id) => skillById.get(id)?.name ?? id).join(" · ")} ·
-                new stock in{" "}
+                {" · new stock in "}
                 <b data-testid="skill-stock-timer">
                   {formatDuration(stockSecondsLeft)}
                 </b>
               </span>
             ) : (
-              <span>
-                You own every shop skill — the stall has nothing left to sell.
-              </span>
+              <span>You own every shop skill.</span>
             )}
           </div>
-          {/* The indicator of what skills are worth: every contribution, named. */}
-          <div className="rack-report" aria-label="What your rack adds up to">
-            <div className="rack-report-head">
-              <strong>Your rack, added up</strong>
-              <span>
-                {rack.next.chips.length
-                  ? `${rack.armed.length} armed · applies to your next roll`
-                  : "Nothing charged yet — rolling online fills these circles."}
-              </span>
-            </div>
-            {!!rack.next.chips.length && (
-              <div className="rack-report-chips">
-                {rack.next.chips.map((chip) => (
-                  <span className="rack-chip" key={chip}>
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="rack-report-columns">
-              <div>
-                <span className="rack-report-label">Equipped skills</span>
-                {rack.equipped.length ? (
-                  <ul className="rack-report-list">
-                    {rack.equipped.map((skill) => (
-                      <li
-                        key={skill.id}
-                        className={skill.armed ? "is-armed" : ""}
-                      >
-                        <span>{skill.name}</span>
-                        <span>
-                          {skill.chip} · {skill.charge}/{skill.charges}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="rack-report-empty">
-                    No skills equipped. Buying one unlocks it for good, and it
-                    takes a free slot automatically.
-                  </p>
-                )}
-              </div>
-              <div>
-                <span className="rack-report-label">Banked EP multiplier</span>
-                <ul className="rack-report-list">
-                  <li className="is-total">
-                    <span>Total</span>
-                    <span>
-                      ×{Number(rack.next.walletMultiplier.toFixed(2))}
-                    </span>
-                  </li>
-                  {rack.next.walletParts.map((part) => (
-                    <li key={part.id}>
-                      <span>{part.label}</span>
-                      <span>×{Number(part.value.toFixed(2))}</span>
-                    </li>
-                  ))}
-                  {!rack.next.walletParts.length && (
-                    <li className="is-muted">
-                      <span>A companion or a wallet skill raises this</span>
-                      <span>×1.00</span>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            </div>
-          </div>
+          {/* What the rack adds up to is stated once — in the Σ panel of the
+              skill bar — not repeated here. */}
           <div className="shop-grid shop-grid-rows">
             {shelfItemsNow.map(card)}
           </div>
@@ -1072,9 +1008,8 @@ export default function Shop({
                 <PaceMark size={16} /> Pace
               </h2>
               <p>
-                Shorter reveals and shorter cooldowns. One level at a time:
-                buying an upgrade reveals the next one in its path. Timing is
-                applied to your next roll, never to one already in flight.
+                Shorter reveals and cooldowns, one level at a time; a purchase
+                applies to your next roll.
               </p>
             </div>
             <span className="shop-section-stat">
@@ -1094,10 +1029,7 @@ export default function Shop({
               <h2>
                 <AuraMark size={16} /> Auras
               </h2>
-              <p>
-                Cosmetic only, and equipped one at a time. Every aura keeps your
-                rarity colour readable underneath.
-              </p>
+              <p>Cosmetic only; wear one at a time.</p>
             </div>
             <button
               className="secondary-button"
@@ -1136,10 +1068,7 @@ export default function Shop({
                 ))}
               </select>
             </label>
-            <span>
-              Same rarity, your signature look. Existing owners get the upgraded
-              effects free.
-            </span>
+            <span>Same rarity — your look.</span>
           </div>
           <div className="shop-grid shop-grid-rows">
             {shelfItemsNow.map(card)}
@@ -1163,9 +1092,8 @@ export default function Shop({
                 <AutomationMark size={16} /> Tools
               </h2>
               <p>
-                Convenience, not luck: automations and archive tools use exactly
-                the same draws, odds and EP rules as pressing the button
-                yourself.
+                Automation and archive tools. Same draws, odds and EP as
+                rolling yourself.
               </p>
             </div>
           </div>
@@ -1183,11 +1111,7 @@ export default function Shop({
                   <h2>
                     <OfflineMark size={16} /> Offline
                   </h2>
-                  <p>
-                    Earn offline rolls sooner, and store more of them. Currently
-                    one roll per {offlineInterval / 60000} minutes, up to{" "}
-                    {offlineCap} per absence.
-                  </p>
+                  <p>Earn offline rolls sooner, and store more per absence.</p>
                 </div>
                 <span className="shop-section-stat">
                   {offlineInterval / 60000} min / roll · {offlineCap} max
@@ -1206,9 +1130,8 @@ export default function Shop({
                   <OfflineMark size={16} /> Offline
                 </h2>
                 <p>
-                  This shelf is locked. The Offline Roller in Tools is what
-                  unlocks earning while you are away; the clocks and vaults that
-                  make those rolls come faster live here once it is yours.
+                  Locked. The Offline Roller in Tools unlocks earning while you
+                  are away.
                 </p>
               </div>
               <button
@@ -1253,12 +1176,10 @@ export default function Shop({
         </nav>
       )}
       <p className="shop-save-note">
-        Timing upgrades apply when you start your next roll. An active reveal or
-        cooldown is not shortened by a purchase.{" "}
+        Purchases are permanent and cost in-game EP only.{" "}
         {progress.profile
-          ? `Saved locally as ${progress.profile.username}. Clearing site data removes your profile and progress.`
-          : "Sign up for a local profile to keep your wallet, discoveries, upgrades, and cosmetics."}{" "}
-        No real money or cloud account is involved.
+          ? `Saved locally as ${progress.profile.username}.`
+          : "Sign up to keep your wallet across reloads."}
       </p>
       <dialog
         className="shop-confirm"
@@ -1300,23 +1221,23 @@ export default function Shop({
               {selected.kind === "aura"
                 ? "equips your new aura."
                 : selected.kind === "skill"
-                  ? `unlocks ${selected.name} permanently and puts it in your rack if a slot is free. It charges over ${selected.charges} completed online rolls and then fires on one roll. Offline rolls never charge it.`
+                  ? `unlocks ${selected.name} permanently — it charges over ${selected.charges} online rolls, then fires once.`
                   : selected.kind === "skill-slot"
-                    ? `widens your rack to ${selected.slots} skill slots. Equipping and swapping skills stays free, and existing charge is kept.`
+                    ? `widens your rack to ${selected.slots} slots; existing charge is kept.`
                     : selected.kind === "utility"
                       ? selected.id === "auto-roll"
-                        ? "unlocks Auto-Roll as an ability in the corner rack. One click arms it, another stands it down, and it never skips a reveal or a cooldown."
+                        ? "adds Auto-Roll to the rack: one click arms it, one stands it down."
                         : selected.id === "persistence-core"
-                          ? "makes Auto-Roll remember its switch after a reload and keep going while this tab is in the background. Timings, odds and settlement are unchanged."
+                          ? "lets Auto-Roll remember its switch and run in background tabs."
                           : selected.id === "offline-roller"
-                            ? "unlocks offline earnings: one normal roll per 10 minutes away, up to 144 rolls per absence. Calculated automatically on return; a local profile is required."
-                            : "unlocks advanced history search immediately."
+                            ? "earns one roll per 10 minutes away, up to 144 per absence. A local profile is required."
+                            : "unlocks advanced history search."
                       : selected.kind === "pace"
-                        ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge. Earned charge carries over up to this limit; a new Flywheel starts at zero charge. Reveals and scores are unchanged.`
+                        ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge.`
                         : selected.kind === "offline"
-                          ? `sets future offline earnings to one ordinary roll per ${selected.value / 60000} minutes. Your ${offlineCap}-roll cap per absence is unchanged. No retroactive rewards; committed batches must finish first.`
+                          ? `earns one offline roll per ${selected.value / 60000} minutes; the ${offlineCap}-roll cap stays.`
                           : selected.kind === "offline-cap"
-                            ? `stores up to ${selected.value} offline rolls per absence instead of ${selected.from}. Rates, odds and EP are unchanged, and committed batches must finish first.`
+                            ? `stores up to ${selected.value} offline rolls per absence.`
                             : "applies the upgrade to future rolls."}
             </p>
             {!!skillEffectChips(

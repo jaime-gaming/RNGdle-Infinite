@@ -13,7 +13,10 @@ import {
 } from "./skills.js";
 import { flywheelRequired } from "./flywheel.js";
 import { petById } from "./pets.js";
-import { ULTRA_BONUS_PER_REBIRTH } from "./rebirth.js";
+import {
+  REBIRTH_BONUS_PER_REBIRTH,
+  ULTRA_BONUS_PER_REBIRTH,
+} from "./rebirth.js";
 
 // What the rack adds up to.
 //
@@ -44,6 +47,13 @@ export function walletParts(progress, armed) {
       id: `pet:${pet.id}`,
       label: `${pet.name} companion`,
       value: pet.multiplier,
+    });
+  const rebirths = progress.rebirths ?? 0;
+  if (rebirths > 0)
+    parts.push({
+      id: "rebirth",
+      label: `Rebirths ×${rebirths}`,
+      value: 1 + REBIRTH_BONUS_PER_REBIRTH * rebirths,
     });
   const ultras = progress.ultraRebirths ?? 0;
   if (ultras > 0)

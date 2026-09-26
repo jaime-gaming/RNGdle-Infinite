@@ -280,7 +280,7 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
   ).toHaveCount(0);
   const maxed = rollTrack.at(-1);
   await expect(page.locator(`[data-product="${maxed}"]`)).toContainText(
-    "Maximum level reached",
+    "Maximum level.",
   );
   await expect(page.locator(`[data-product="${maxed}"] button`)).toBeDisabled();
   expect((await saved(page)).owned).toEqual(rollTrack);

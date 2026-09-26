@@ -59,8 +59,8 @@ once rather than five times.
 There are **235 badges across 18 sets**, split into six rarities from Common to
 Mythic, plus the **GODLY** tier for the very top scores. The collection is
 discovery-only: you see a badge only once you have earned it, and each new one
-is a permanent mark on your collection page. Nothing is ever taken away except
-by a rebirth, which is a decision you make on purpose.
+is a permanent mark on your collection page. A rebirth restarts the collection
+itself — and only because you decided it should.
 
 | What you see | What it means                                                              |
 | ------------ | -------------------------------------------------------------------------- |
@@ -106,21 +106,22 @@ effect and the charge state.
 Two things in that corner keep the arithmetic out of your head: an armed circle
 shows **what it adds** ("×2 banked EP", "2 draws, best kept"), and the **Σ
 button** opens the total — every equipped skill with its charge, the banked-EP
-multiplier with each part named (companion, ultra-rebirth bonus, wallet skills),
-the draw plan for the next roll, and whether it is cooldown-free. The same
-figures appear in the shop's Skills shelf, so both places always agree.
+multiplier with each part named (companion, rebirth and ultra-rebirth bonuses,
+wallet skills), the draw plan for the next roll, and whether it is
+cooldown-free. That panel is the only place the total is written out, so it is
+never contradicted.
 
-And when the roll itself applies the money, the result states the wallet's own
-sum: the banked EP total, the scored EP, the **extra** added by companions and
-multipliers, and every part named — so a skill's effect is something you see,
-not something you have to take on trust.
+And when the roll itself applies the money, a bonus shows once: the **extra**
+EP added beyond the score and every part that produced it, named. A plain roll
+states nothing extra — the EP counter already is the total.
 
 ![The skill rack: three charged circles, one explaining itself on hover](media/skills.png)
 
 Seven skills are bought in the shop — but the shelf is a **stall**: only **two
 are on sale at a time**, and the pair rotates every **five minutes** like a
-shop's stock (a timer on the shelf says when it refreshes; the ones you already
-own stay listed). Thirteen belong to companions (each companion teaches one
+shop's stock. A timer on the shelf says when it refreshes, and the skills that
+are out of the rotation stay listed, dimmed under a **green restock aura** with
+the countdown on the button. Thirteen belong to companions (each companion teaches one
 skill that exists nowhere else and only works while that companion is worn),
 and six are handed out by the rebirth ladder — one per rung.
 
@@ -221,23 +222,26 @@ Rebirth says **nothing at all before it unlocks**: no header entry, no counter,
 no teaser, and a direct link to `/rebirth` simply goes home. From **30% (71
 badges)** the ring appears in the header and fills towards the rung you are on,
 turning green and reading _Ready_ when it is met. The rebirth page then lays the
-whole thing out: the six rungs with the badges each one asks for and the skill
-it grants, the figures for the current step, what a rebirth keeps, what it
-resets, and the permanent ultra-rebirth bonus with its own explanation. Each
+whole thing out: the six rungs with the badges each one asks for and the
+rewards it grants, the figures for the current step, what a rebirth keeps,
+what it resets, and the permanent bonuses with their own explanation. Each
 rebirth:
 
-- **keeps** your EP, every upgrade, your companions, your skills and your
-  profile, and
+- **grants** the rung's skill plus a **permanent, stackable +2% to banked
+  EP** (up to +12% with the ladder complete),
+- **keeps** your EP and **every purchase — auras included —**, your
+  companions, your skills and your profile, and
 - **resets** the badge collection to zero (so the next rung's percentage is
-  rediscovered from scratch), the equipped aura, and the activity history.
+  rediscovered from scratch), unequips the worn aura, and clears the activity
+  history.
 
 ![The rebirth ladder: collection progress, the current rung and all six steps](media/rebirth.png)
 
 Finish the sixth rung and **ultra-rebirth** unlocks: a genuine full reset — EP,
-badges, purchases, companions, skills and the rebirth counter — in exchange for
-a **permanent, stackable +10% to banked EP** for every ultra-rebirth, and a
-cosmetic mark next to your profile. Both resets require typing the word
-(`REBIRTH` or `ULTRA`) and cannot be undone.
+badges, purchases, companions, skills, the rebirth counter and its +2% rung
+bonuses — in exchange for a **permanent, stackable +10% to banked EP** for
+every ultra-rebirth, and a cosmetic mark next to your profile. Both resets
+require typing the word (`REBIRTH` or `ULTRA`) and cannot be undone.
 
 ## Your profile, your data
 
@@ -266,9 +270,9 @@ progress remains the only way to remove it.
   rules, and ranks are computed against the complete population of 1,000,001
   numbers with ties included. Nothing a player owns changes what a number is
   worth.
-- **Bonuses stay in the wallet.** Companions, wallet skills and ultra-rebirth
-  bonuses multiply only the EP that lands in your wallet. Scored EP, tier and
-  rank are identical for everyone.
+- **Bonuses stay in the wallet.** Companions, wallet skills and the rebirth and
+  ultra-rebirth bonuses multiply only the EP that lands in your wallet. Scored
+  EP, tier and rank are identical for everyone.
 - **No pay-to-win, no real money.** Everything costs in-game EP only.
 - **One-shot effects stay one-shot.** A charged skill is snapshotted into the
   committed roll, so nothing can be re-fired, re-rolled or double-credited.

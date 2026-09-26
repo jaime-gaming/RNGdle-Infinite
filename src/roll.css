@@ -396,9 +396,8 @@ nav button.active {
   margin-left: 4px;
   animation: ep-float calc(1.5s * var(--reveal-scale, 1)) ease-out forwards;
 }
-/* The wallet's own sum, stated as the roll applies it: what lands in the EP,
-   and when a companion, a skill or the ultra bonus adds more, the extra with
-   every part named. */
+/* The wallet bonus, stated once: only when a companion, a skill or a rebirth
+   bonus adds EP beyond the score does the roll name the extra and its parts. */
 .roll-credit {
   display: flex;
   flex-direction: column;
@@ -414,24 +413,16 @@ nav button.active {
   animation: summary-rise calc(0.4s * var(--reveal-scale, 1)) var(--ease-reveal)
     both;
 }
-.roll-credit-total {
-  font-family: var(--roll-font);
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--green);
-}
-.roll-credit.has-bonus .roll-credit-total {
-  font-size: 15px;
-}
 .roll-credit-bonus {
   max-width: 420px;
-  font-size: 11.5px;
-  line-height: 15px;
+  font-family: var(--roll-font);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  line-height: 17px;
   color: var(--muted);
 }
 .roll-credit-bonus strong {
+  font-size: 14px;
   color: var(--green);
   font-weight: 650;
 }

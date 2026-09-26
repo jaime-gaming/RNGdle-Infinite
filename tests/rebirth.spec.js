@@ -119,7 +119,7 @@ test("the ladder climbs from half the collection to all of it", () => {
   );
 });
 
-test("rebirth keeps the wallet, the workshop, the companions and the skills", () => {
+test("rebirth keeps the wallet, the workshop, the companions, the skills and the wardrobe", () => {
   const old = applyProgress(
     { ...state(), discovered: [] },
     {
@@ -152,7 +152,8 @@ test("rebirth keeps the wallet, the workshop, the companions and the skills", ()
     flywheelCharge: 4,
     profile: testProfile,
     rebirths: 1,
-    // Cleared: the collection, the auras, the history and the cycle's bookkeeping.
+    // Cleared: the collection, the worn aura, the history and the cycle's
+    // bookkeeping. Purchased auras stay in the wardrobe, ready to re-equip.
     discovered: [],
     equipped: "none",
     goalId: null,
@@ -161,7 +162,7 @@ test("rebirth keeps the wallet, the workshop, the companions and the skills", ()
     cooldownWindow: null,
     receipts: [],
   });
-  expect(next.owned).not.toContain("prism");
+  expect(next.owned).toContain("starfall");
   expect(next.owned).toContain("quickwind-1");
   expect(next.skills).toContain("surge");
   // Rebirth 1 grants its ladder skill and puts it in a free slot.
@@ -395,11 +396,11 @@ test("rebirth asks for typed confirmation, applies once, and keeps the wallet an
     });
   await expect.poll(async () => (await saved(page)).rebirths).toBe(1);
   const after = await saved(page);
-  // The wallet and every non-cosmetic upgrade survive the cycle.
+  // The wallet and every purchase survive the cycle — cosmetics included.
   expect(after.balance).toBe(initial.balance);
   expect(after.owned).toContain("quickwind-1");
-  expect(after.owned).not.toContain("prism");
-  // The collection, the aura and the activity history start over.
+  expect(after.owned).toContain("prism");
+  // The collection, the worn aura and the activity history start over.
   expect(after.discovered).toEqual([]);
   expect(after.equipped).toBe("none");
   expect(after.history).toHaveLength(1);
@@ -517,9 +518,10 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   await expect.poll(async () => (await saved(page)).rebirths).toBe(1);
   await other.locator('[data-product="starfall"] button').click();
   await expect(other.locator(".toast")).toContainText("changed");
-  // The stale tab neither spent EP nor resurrected the old aura.
+  // The stale tab neither spent EP nor revived an old purchase: the rebirth
+  // kept the aura, and the save still holds exactly one of it.
   const after = await saved(page);
-  expect(after.owned).not.toContain("starfall");
+  expect(after.owned.filter((id) => id === "starfall")).toHaveLength(1);
   expect(after.owned).toContain("quickwind-1");
   expect(after.balance).toBe(50000000);
   await other.close();
@@ -627,7 +629,7 @@ test("a committed zero-cooldown Flywheel reveal never shows a moving cooldown ba
   await expect(page.locator(".generate")).toBeEnabled();
 });
 
-test("a new cycle starts a fresh history and a rebuy is credited at the catalogue price", () => {
+test("a new cycle starts a fresh history and a later purchase is credited at the catalogue price", () => {
   const first = applyProgress(
     { ...emptyProgress(), balance: 100000, totalEarned: 100000 },
     { type: "buy", id: "starfall", at: 1000 },
@@ -636,20 +638,25 @@ test("a new cycle starts a fresh history and a rebuy is credited at the catalogu
     { ...first, discovered: ids, balance: 100000 },
     action,
   );
-  // The aura is gone and so is the purchase that bought it.
-  expect(reborn.owned).not.toContain("starfall");
+  // The aura survives the rebirth now; the history records only the rebirth.
+  expect(reborn.owned).toContain("starfall");
   expect(reborn.history.map((e) => e.type)).toEqual(["rebirth"]);
+  // A duplicate sale is refused: the wardrobe already holds it.
+  expect(() =>
+    applyProgress({ ...reborn, balance: 100000 }, { type: "buy", id: "starfall", at: 2000 }),
+  ).toThrow();
+  // A genuinely new purchase in the new cycle credits the catalogue price.
   const second = applyProgress(
-    { ...reborn, balance: 100000, totalEarned: 100000 },
-    { type: "buy", id: "starfall", at: 300000 },
+    { ...reborn, balance: 5000000, totalEarned: 5000000 },
+    { type: "buy", id: "prism", at: 300000 },
   );
   const purchases = parseProgress(JSON.stringify(second)).history.filter(
     (e) => e.type === "purchase",
   );
   expect(purchases).toHaveLength(1);
   expect(purchases[0]).toMatchObject({
-    productId: "starfall",
-    ep: shopProducts.find((p) => p.id === "starfall").price,
+    productId: "prism",
+    ep: shopProducts.find((p) => p.id === "prism").price,
   });
 });
 

@@ -85,7 +85,7 @@ export default function About({ navigate, progress }) {
         "Labels are rounded; hover any rank to see the exact percentage and counts.",
         ...(showsRebirth
           ? [
-              `Rebirth unlocks step by step: the first step asks for half of the collection, and each of the ${REBIRTH_TOTAL} steps raises the bar by ten points up to the whole collection. Every step hands over an exclusive skill, and an ultra-rebirth at the very top starts everything over for a permanent wallet bonus. No purchase is ever required for it.`,
+              `Rebirth unlocks step by step: the first step asks for half of the collection, and each of the ${REBIRTH_TOTAL} steps raises the bar by ten points. Every step grants an exclusive skill and a permanent +2% on banked EP, and everything you bought — auras included — stays; only the collection and the worn aura reset. An ultra-rebirth at the top starts everything over for a larger permanent bonus. No purchase is ever required for it.`,
             ]
           : []),
       ],

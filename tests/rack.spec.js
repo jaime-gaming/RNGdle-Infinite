@@ -10,7 +10,10 @@ import {
 import { rackReport } from "../src/rack.js";
 import { emptyProgress } from "../src/progress.js";
 import { PETS, petById } from "../src/pets.js";
-import { ULTRA_BONUS_PER_REBIRTH } from "../src/rebirth.js";
+import {
+  REBIRTH_BONUS_PER_REBIRTH,
+  ULTRA_BONUS_PER_REBIRTH,
+} from "../src/rebirth.js";
 
 // The rack report is the single place that adds the active effects up: the
 // corner summary on the Roll page and the skills shelf in the shop both read
@@ -80,6 +83,35 @@ test("the rack adds up its own effects, and only for the skills it holds", () =>
   expect(charging.armed).toEqual([]);
   expect(charging.next.walletMultiplier).toBe(1);
   expect(charging.next.chips).toEqual([]);
+});
+
+test("rebirth bonuses are named parts of the wallet total", () => {
+  // Two finished rungs: the +2% per rebirth shows up as its own part.
+  const reborn = rackReport(armed({ rebirths: 2 }));
+  expect(reborn.next.walletMultiplier).toBeCloseTo(
+    1 + REBIRTH_BONUS_PER_REBIRTH * 2,
+    6,
+  );
+  expect(reborn.next.walletParts).toEqual([
+    {
+      id: "rebirth",
+      label: "Rebirths ×2",
+      value: 1 + REBIRTH_BONUS_PER_REBIRTH * 2,
+    },
+  ]);
+  // It stacks with a companion and the ultra bonus, each part still named.
+  const stacked = rackReport(
+    armed({ rebirths: 1, ultraRebirths: 1, pets: ["pebble"], activePet: "pebble" }),
+  );
+  expect(stacked.next.walletParts.map((part) => part.id)).toEqual([
+    "pet:pebble",
+    "rebirth",
+    "ultra",
+  ]);
+  expect(stacked.next.walletMultiplier).toBeCloseTo(
+    petById.get("pebble").multiplier * 1.02 * 1.1,
+    6,
+  );
 });
 
 test("a companion and an ultra-rebirth bonus are part of the same total", () => {
