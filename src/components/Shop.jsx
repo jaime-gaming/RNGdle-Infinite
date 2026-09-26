@@ -522,8 +522,6 @@ export default function Shop({
     if (item.kind === "aura") return "One-time cosmetic purchase";
     return "One-time unlock · same odds and scores";
   }
-  const shelfItems = (predicate) =>
-    shopProducts.filter(predicate).map(card).filter(Boolean);
   // A shelf button: a real link to its own sub-page, carrying the one number
   // that says whether it is worth opening.
   function shelfTile(entry) {
@@ -607,11 +605,46 @@ export default function Shop({
     take(cheapest(unpicked(open)), "Saving up for");
     return picks.slice(0, 3);
   })();
-  // Search and the filter chips only ever narrow the shelf being read.
-  const shelfProducts = shelf ? productsOnShelf(shelf.id) : [];
-  const visibleCount = shelfProducts.filter((item) =>
+  // What a shelf actually puts on screen. Pace and Offline deliberately show
+  // one level per path rather than the whole track, so the status line counts
+  // these, never the catalogue size: a shelf must never claim to be showing ten
+  // items while two cards are drawn.
+  const shelfItemsNow = (() => {
+    if (!shelf) return [];
+    if (shelf.id === "skills")
+      return [
+        nextUpgrade(progress.owned, "pace"),
+        ...productsOnShelf("skills").filter((item) => item.kind !== "pace"),
+      ];
+    if (shelf.id === "pace")
+      return ["roll", "cooldown"].map((kind) =>
+        nextUpgrade(progress.owned, kind),
+      );
+    if (shelf.id === "offline")
+      return progress.owned.includes("offline-roller")
+        ? [
+            nextUpgrade(progress.owned, "offline"),
+            ...(progress.owned.includes("offline-clock-1")
+              ? [nextUpgrade(progress.owned, "offline-cap")]
+              : []),
+          ]
+        : [];
+    // Companions are drawn by their own component, with their own count.
+    if (shelf.id === "companions") return [];
+    return productsOnShelf(shelf.id);
+  })();
+  const visibleCount = shelfItemsNow.filter((item) =>
     matches(item, stateOf(item)),
   ).length;
+  // A locked shelf already explains itself, and companions carry their own
+  // count, so only the shelves that can go empty get this line.
+  const emptyNote =
+    shelf &&
+    !visibleCount &&
+    shelf.id !== "companions" &&
+    !(shelf.id === "offline" && !progress.owned.includes("offline-roller"))
+      ? "Nothing on this shelf matches your search and filters."
+      : "";
   const affordableCount = shopProducts.filter(
     (item) => stateOf(item).affordableNow,
   ).length;
@@ -794,13 +827,18 @@ export default function Shop({
                           <i style={{ width: `${held}%` }} />
                         </span>
                         <span className="spotlight-cta">
-                          {progress.balance >= item.price
-                            ? `Affordable now · ${formatEP(item.price)} EP`
-                            : `${formatEP(item.price - progress.balance)} EP to go`}
-                          {" · open "}
-                          {SHOP_SECTIONS.find(
-                            (section) => section.id === shelfOfProduct(item),
-                          )?.label ?? "the shop"}
+                          <span className="spotlight-price">
+                            {progress.balance >= item.price
+                              ? `Ready now · ${formatEP(item.price)} EP`
+                              : `${formatEP(item.price - progress.balance)} EP to go`}
+                          </span>
+                          <span className="spotlight-open">
+                            Open{" "}
+                            {SHOP_SECTIONS.find(
+                              (section) => section.id === shelfOfProduct(item),
+                            )?.label ?? "shop"}
+                            <ChevronRight size={12} />
+                          </span>
                         </span>
                       </span>
                     </a>
@@ -855,7 +893,13 @@ export default function Shop({
               <LayoutGrid size={14} /> All shelves
             </button>
             <span className="shop-filter-count" role="status">
-              {visibleCount} of {shelfProducts.length} on this shelf
+              {shelf.id === "companions"
+                ? `${progress.pets?.length ?? 0} / ${PETS.length} found`
+                : !shelfItemsNow.length
+                  ? // A locked shelf has nothing to count; its own panel says
+                    // why, and a second "0 of 0" would only be noise.
+                    "Locked"
+                  : `${visibleCount} of ${shelfItemsNow.length} on this shelf`}
             </span>
           </div>
         </div>
@@ -952,14 +996,8 @@ export default function Shop({
             </div>
           </div>
           <div className="shop-grid shop-grid-rows">
-            {card(nextUpgrade(progress.owned, "pace"))}
-            {shelfItems((item) => ["skill", "skill-slot"].includes(item.kind))}
+            {shelfItemsNow.map(card)}
           </div>
-          {!shelfItems((item) => ["skill", "skill-slot"].includes(item.kind))
-            .length &&
-            progress.owned.includes(
-              nextUpgrade(progress.owned, "pace")?.id,
-            ) && <p className="shop-empty">No skills match this filter.</p>}
         </section>
       )}
       {shelf?.id === "pace" && (
@@ -981,9 +1019,7 @@ export default function Shop({
             </span>
           </div>
           <div className="shop-grid shop-grid-rows shop-grid-upgrades">
-            {["roll", "cooldown"].map((kind) =>
-              card(nextUpgrade(progress.owned, kind)),
-            )}
+            {shelfItemsNow.map(card)}
           </div>
         </section>
       )}
@@ -1042,7 +1078,7 @@ export default function Shop({
             </span>
           </div>
           <div className="shop-grid shop-grid-rows">
-            {shopProducts.filter((item) => item.kind === "aura").map(card)}
+            {shelfItemsNow.map(card)}
           </div>
         </section>
       )}
@@ -1070,7 +1106,7 @@ export default function Shop({
             </div>
           </div>
           <div className="shop-grid shop-grid-rows">
-            {shopProducts.filter((p) => p.kind === "utility").map(card)}
+            {shelfItemsNow.map(card)}
           </div>
         </section>
       )}
@@ -1094,9 +1130,7 @@ export default function Shop({
                 </span>
               </div>
               <div className="shop-grid shop-grid-rows">
-                {card(nextUpgrade(progress.owned, "offline"))}
-                {progress.owned.includes("offline-clock-1") &&
-                  card(nextUpgrade(progress.owned, "offline-cap"))}
+                {shelfItemsNow.map(card)}
               </div>
             </>
           ) : (
@@ -1124,6 +1158,7 @@ export default function Shop({
           )}
         </section>
       )}
+      {emptyNote && <p className="shop-empty">{emptyNote}</p>}
       {lastPurchase && (
         <>
           <div className="purchase-return-space" aria-hidden="true" />

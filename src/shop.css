@@ -68,7 +68,7 @@
 }
 .shop-jump {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(244px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(282px, 1fr));
   gap: 10px;
 }
 .shop-tile {
@@ -118,7 +118,10 @@
   color: var(--secondary);
 }
 .shop-tile-stat {
+  align-self: center;
+  padding-left: 4px;
   font: 500 10.5px var(--roll-font);
+  text-align: right;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -159,6 +162,7 @@
   color: var(--text);
 }
 .shop-others {
+  display: block;
   margin-top: 34px;
   padding-top: 22px;
   border-top: 1px solid var(--border);
@@ -196,9 +200,9 @@
 }
 .spotlight {
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr);
-  gap: 14px;
-  padding: 16px;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 13px;
+  padding: 15px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
@@ -218,7 +222,7 @@
 .spotlight-art {
   display: grid;
   place-items: center;
-  min-height: 86px;
+  min-height: 72px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--hover);
@@ -238,6 +242,8 @@
   color: var(--secondary);
 }
 .spotlight-body {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 .spotlight-label {
@@ -266,6 +272,7 @@
   display: block;
   height: 4px;
   margin-top: 10px;
+  margin-bottom: 2px;
   border-radius: 999px;
   background: var(--hover);
   overflow: hidden;
@@ -277,10 +284,37 @@
   background: var(--green);
 }
 .spotlight-cta {
-  display: block;
-  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-top: auto;
+  padding-top: 10px;
   font: 500 10.5px var(--roll-font);
   color: var(--muted);
+}
+/* The price never breaks mid-number, and the door is always the last thing on
+   the card: it is where the click leads. */
+.spotlight-price {
+  white-space: nowrap;
+}
+/* A number and its unit (110,000 EP, 25s, 4 rolls) are one token on the preview
+   band: a wrap between them reads as two different facts. */
+.upgrade-preview span,
+.upgrade-preview small {
+  white-space: nowrap;
+}
+.spotlight-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  color: var(--text);
+  white-space: nowrap;
+}
+.spotlight:hover .spotlight-open,
+.spotlight:focus-visible .spotlight-open {
+  text-decoration: underline;
 }
 
 .shop-filters {
@@ -911,7 +945,7 @@
 .guest-purchase-note {
   font-size: 12px !important;
 }
-nav button:disabled,
+.header nav button:disabled,
 .demo-best-footer button:disabled {
   opacity: 0.38;
   cursor: not-allowed;
@@ -1000,12 +1034,28 @@ nav button:disabled,
   .shop-jump {
     grid-template-columns: minmax(0, 1fr);
   }
+  .shop-tile {
+    grid-template-columns: 38px minmax(0, 1fr);
+    row-gap: 8px;
+  }
+  .shop-tile-stat {
+    grid-column: 2;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--border);
+    text-align: left;
+  }
   .shop-spotlight {
     grid-template-columns: minmax(0, 1fr);
   }
-  .spotlight,
+  .spotlight {
+    grid-template-columns: 64px minmax(0, 1fr);
+    min-height: 0;
+  }
   .spotlight-art {
     min-height: 0;
+  }
+  .spotlight-art .number-box {
+    transform: scale(0.5);
   }
   .aura-preview-controls {
     align-items: flex-start;
