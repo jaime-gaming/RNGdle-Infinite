@@ -84,16 +84,6 @@ nav button.active {
   margin: 0 0 32px;
   letter-spacing: normal;
 }
-@property --cta-a {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: #ec4899;
-}
-@property --cta-b {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: #a855f7;
-}
 .roll-experience .generate {
   position: relative;
   width: 320px;
@@ -108,43 +98,31 @@ nav button.active {
   font-family: "Inter Variable", sans-serif;
   font-size: 30px;
   line-height: 36px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  box-shadow:
-    0 0 14px color-mix(in srgb, var(--cta-a) 32%, transparent),
-    0 0 36px color-mix(in srgb, var(--cta-b) 15%, transparent);
-  animation: cta-ring-cycle 14s linear infinite;
-  transition: transform 0.15s;
-}
-.roll-experience .generate::before {
-  inset: -2px;
-  border-radius: 8px;
-  background: linear-gradient(100deg, var(--cta-a), var(--cta-b));
-  opacity: 1;
-}
-.roll-experience .generate::after {
-  background: #090909;
-  border-radius: 6px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 1px 2px #1018281f;
+  /* The ring cycled through five colours behind the site's main action. It is
+     one ink block now: the press is the effect, not a moving halo. */
+  transition:
+    background 0.18s,
+    box-shadow 0.18s,
+    transform 0.15s;
 }
 .roll-experience .generate:hover:not(:disabled) {
-  transform: scale(1.01);
+  transform: translateY(-1px);
   color: #fff;
-  box-shadow:
-    0 0 22px color-mix(in srgb, var(--cta-a) 48%, transparent),
-    0 0 52px color-mix(in srgb, var(--cta-b) 26%, transparent);
+  background: #0e0f14;
+  box-shadow: 0 6px 14px #10182824;
 }
 .roll-experience .generate:active:not(:disabled) {
   transform: scale(0.98);
 }
 .roll-experience .generate.cooling {
-  animation-play-state: paused;
+  transform: none;
   box-shadow: none;
   font-size: 17px;
   letter-spacing: 0.04em;
-  color: #a1a1aa;
-}
-.roll-experience .generate.cooling::before {
-  opacity: 0.35;
+  color: #c5c6d0;
 }
 .roll-experience .roll-hint {
   color: var(--input-hint);
@@ -229,8 +207,10 @@ nav button.active {
     0 0 12px 4px #94a3b84d,
     0 0 24px 8px #94a3b826;
 }
+/* The plate settles once as the reveal lands and then stays still. A headline
+   number that keeps scaling in and out forever is motion for its own sake. */
 .number-artifact.is-breathing {
-  animation: artifact-breathing 3s ease-in-out infinite;
+  animation: artifact-settle calc(1.1s * var(--reveal-scale, 1)) ease-out both;
 }
 .number-artifact.pulse-digits {
   animation: artifact-pop-neutral calc(0.7s * var(--reveal-scale, 1)) ease-out;
@@ -736,7 +716,7 @@ nav button.active {
   border-color: #92400e80;
 }
 .best-number {
-  animation: artifact-breathing 3s ease-in-out infinite;
+  animation: artifact-settle 1.1s ease-out both;
 }
 .roll-experience.is-instant .number-artifact,
 .roll-experience.is-instant .artifact-digits,
@@ -764,29 +744,6 @@ nav button.active {
     background-position: -200% 0;
   }
 }
-@keyframes cta-ring-cycle {
-  0%,
-  100% {
-    --cta-a: #ec4899;
-    --cta-b: #a855f7;
-  }
-  20% {
-    --cta-a: #a855f7;
-    --cta-b: #3b82f6;
-  }
-  40% {
-    --cta-a: #3b82f6;
-    --cta-b: #10b981;
-  }
-  60% {
-    --cta-a: #10b981;
-    --cta-b: #f97316;
-  }
-  80% {
-    --cta-a: #f97316;
-    --cta-b: #ec4899;
-  }
-}
 @keyframes digit-land {
   from {
     transform: scale(1.5);
@@ -797,13 +754,12 @@ nav button.active {
     text-shadow: 0 1px 2px #ffffff80;
   }
 }
-@keyframes artifact-breathing {
-  0%,
-  100% {
-    transform: scale(1);
+@keyframes artifact-settle {
+  from {
+    transform: scale(1.012);
   }
-  50% {
-    transform: scale(1.015);
+  to {
+    transform: scale(1);
   }
 }
 @keyframes artifact-pop-neutral {
@@ -1098,17 +1054,30 @@ nav button.active {
 }
 /* The bar measures the cooldown window, not reveal + cooldown. Transform updates
    are driven by the same monotonic clock as eligibility; no delayed CSS tween. */
+/* A track and its fill, both inside the button: at the very edge the fill's
+   corners met the button's radius and left a grey notch in the ink every time
+   a cooldown started. */
+.roll-experience .generate.cooling::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 5px;
+  height: 3px;
+  border-radius: 2px;
+  background: #ffffff1f;
+}
 .roll-experience .cooldown-fill {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
+  left: 7px;
+  right: 7px;
+  bottom: 5px;
   height: 3px;
-  background: #8b8b94;
+  border-radius: 2px;
+  background: #e4e4e7;
   transform-origin: left;
   pointer-events: none;
   transition: none;
-  border-radius: 0 0 5px 5px;
 }
 
 /* The idle hint states what the worn companion adds, next to the timings. */

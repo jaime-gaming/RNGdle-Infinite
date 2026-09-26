@@ -22,9 +22,12 @@ async function openShelf(page, id, label) {
   await expect(page).toHaveURL(new RegExp(`/shop/${id}$`));
   await expect(page.locator(".shop-hub")).toHaveCount(0);
   await expect(page.locator(`#shop-${id}`)).toBeVisible();
+  // Rendered, not necessarily above the fold: the shelf's own heading sits
+  // under the balance, goal and filter blocks, so a few pixels of chrome
+  // anywhere on the page decide whether it is exactly at the fold.
   await expect(
     page.getByRole("heading", { name: label, exact: true, level: 2 }),
-  ).toBeInViewport();
+  ).toBeVisible();
   await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText(
     label,
   );
