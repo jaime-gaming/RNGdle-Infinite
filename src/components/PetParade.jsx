@@ -11,14 +11,14 @@ import "../pet-parade.css";
 // it up as a still row with the same name plate.
 const MAX_VISIBLE = 8;
 
-function Walker({ pet, active, reducedMotion, phase }) {
+function Walker({ pet, active, reducedMotion, phase, docked = false }) {
   const definition = petById.get(pet);
   if (!definition) return null;
   const seed = PETS.findIndex((entry) => entry.id === pet);
   const row = 34 + (seed % 5) * 9;
   return (
     <span
-      className={`pet-walker ${active ? "is-active" : ""} phase-${phase}`}
+      className={`pet-walker ${active ? "is-active" : ""} ${docked ? "is-docked" : ""} phase-${phase}`}
       data-pet={pet}
       style={{
         "--row": `${row}%`,
@@ -84,6 +84,10 @@ export default function PetParade({
   reducedMotion,
   arrival = null,
   phase = "idle",
+  // True while the active companion's signature skill is firing on the roll
+  // in flight: it leaves the stage (the number box carries its mark instead)
+  // and resumes its walk untouched once the roll settles.
+  docked = false,
 }) {
   if (!pets.length && !arrival) return null;
   const ordered = [...pets].sort((a, b) =>
@@ -102,6 +106,7 @@ export default function PetParade({
           active={id === active}
           reducedMotion={reducedMotion}
           phase={phase}
+          docked={docked && id === active}
         />
       ))}
       {arrival && <Arrival pet={arrival} />}

@@ -765,6 +765,37 @@
 }
 
 /* ---- The rack report: what the skills add up to -------------------------- */
+/* The skill stall's own line: what the five-minute rotation is selling right
+   now and when the pair changes. */
+.skill-stock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--secondary);
+}
+.skill-stock svg {
+  flex: none;
+  color: var(--green);
+}
+.skill-stock strong {
+  color: var(--text);
+  font-weight: 650;
+}
+.skill-stock b {
+  font-family: var(--roll-font);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.skill-stock.is-empty {
+  color: var(--muted);
+}
 .rack-report {
   display: flex;
   flex-direction: column;

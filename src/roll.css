@@ -207,6 +207,60 @@ nav button.active {
     0 0 12px 4px #94a3b84d,
     0 0 24px 8px #94a3b826;
 }
+.artifact-stage {
+  position: relative;
+}
+/* The little mark a companion leaves while its signature skill fires: pinned
+   to a corner of the number box, tinted like the skill it carries, and gone
+   the moment the roll settles. It pins once and then holds still — the house
+   rule is no decorative loops on the roll screen. */
+.artifact-companion {
+  position: absolute;
+  top: -13px;
+  right: -13px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--companion-tint, #d9a441);
+  box-shadow:
+    0 4px 14px rgb(0 0 0 / 0.22),
+    0 0 10px 2px
+      color-mix(in srgb, var(--companion-tint, #d9a441) 55%, transparent);
+  animation: companion-pin calc(0.35s * var(--reveal-scale, 1))
+    var(--ease-reveal) both;
+}
+.artifact-companion.tint-gold {
+  --companion-tint: #d9a441;
+}
+.artifact-companion.tint-pink {
+  --companion-tint: #d97ba6;
+}
+.artifact-companion.tint-cyan {
+  --companion-tint: #4bb3c4;
+}
+.artifact-companion.tint-violet {
+  --companion-tint: #8a7ad9;
+}
+.artifact-companion.tint-green {
+  --companion-tint: var(--green);
+}
+.artifact-companion.tint-orange {
+  --companion-tint: #d98241;
+}
+@keyframes companion-pin {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
 /* The plate settles once as the reveal lands and then stays still. A headline
    number that keeps scaling in and out forever is motion for its own sake. */
 .number-artifact.is-breathing {
@@ -341,6 +395,45 @@ nav button.active {
   white-space: nowrap;
   margin-left: 4px;
   animation: ep-float calc(1.5s * var(--reveal-scale, 1)) ease-out forwards;
+}
+/* The wallet's own sum, stated as the roll applies it: what lands in the EP,
+   and when a companion, a skill or the ultra bonus adds more, the extra with
+   every part named. */
+.roll-credit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: 10px;
+  visibility: hidden;
+  opacity: 0;
+}
+.roll-credit.is-visible {
+  visibility: visible;
+  opacity: 1;
+  animation: summary-rise calc(0.4s * var(--reveal-scale, 1)) var(--ease-reveal)
+    both;
+}
+.roll-credit-total {
+  font-family: var(--roll-font);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--green);
+}
+.roll-credit.has-bonus .roll-credit-total {
+  font-size: 15px;
+}
+.roll-credit-bonus {
+  max-width: 420px;
+  font-size: 11.5px;
+  line-height: 15px;
+  color: var(--muted);
+}
+.roll-credit-bonus strong {
+  color: var(--green);
+  font-weight: 650;
 }
 .share-row {
   display: flex;

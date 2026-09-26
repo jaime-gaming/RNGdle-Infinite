@@ -496,8 +496,9 @@ export const SHOP_SECTIONS = [
   },
 ];
 
-// Which kinds of product each shelf sells. The order inside a shelf is the
-// catalogue order, so a shelf never reshuffles between visits.
+// Which kinds of product each shelf sells. The catalogue keeps its own order;
+// the shelves themselves always read from the cheapest product upwards, and a
+// move between shelves never reshuffles a shelf you are standing on.
 const SHELF_KINDS = {
   skills: ["skill", "skill-slot", "pace"],
   pace: ["roll", "cooldown"],
@@ -518,6 +519,50 @@ export function shelfOfProduct(item) {
 export function productsOnShelf(id) {
   const kinds = SHELF_KINDS[id];
   return kinds ? shopProducts.filter((p) => kinds.includes(p.kind)) : [];
+}
+
+// ---- Skill stock ----------------------------------------------------------
+// The skills shelf sells its charged effects like a stall, not a catalogue:
+// only two shop skills are on sale at once, and the pair rotates every five
+// minutes. The rotation is deterministic — every tab, reload and the purchase
+// guard derive the same pair from the clock, never from a stored list. Skill
+// bays, Flywheel and anything you already own are not stock: they stay on the
+// shelf permanently.
+export const SKILL_STOCK_WINDOW_MS = 300000; // Five minutes.
+export const SKILL_STOCK_SIZE = 2;
+
+export function skillStockWindow(now) {
+  return Math.floor(now / SKILL_STOCK_WINDOW_MS);
+}
+
+// A seeded shuffle (mulberry32) of one window: the same index always produces
+// the same order, with no shared state that two tabs could desynchronise.
+function shuffledShopSkills(windowIndex) {
+  const ids = SKILLS.filter((skill) => skill.source === "shop").map(
+    (skill) => skill.id,
+  );
+  let state = Math.imul(windowIndex + 1, 2654435761) >>> 0 || 1;
+  const random = () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
+  };
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids;
+}
+
+// What the stall has on sale: the first `size` unowned skills in the window's
+// own order, so buying one mid-window slides the next one into view without
+// reshuffling the rest. Owning every shop skill sells the stall out.
+export function skillStock(windowIndex, owned = [], size = SKILL_STOCK_SIZE) {
+  return shuffledShopSkills(windowIndex)
+    .filter((id) => !owned.includes(id))
+    .slice(0, size);
 }
 
 export function nextUpgrade(owned, kind) {

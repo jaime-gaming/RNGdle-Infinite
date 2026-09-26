@@ -42,6 +42,13 @@
 .pet-walker.phase-cooldown .pet-figure {
   opacity: 0.5;
 }
+/* While the companion's signature skill fires on a roll, it steps off the
+   stage: the number box carries a small corner mark instead, and the walk
+   resumes from this exact spot once the roll settles. */
+.pet-walker.is-docked {
+  visibility: hidden;
+  animation-play-state: paused;
+}
 /* The shadow keeps the walker grounded, and shrinks as it bobs up. */
 .pet-walker-ground {
   width: 34px;

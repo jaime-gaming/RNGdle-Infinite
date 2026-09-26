@@ -35,7 +35,8 @@ export function skillEffectChip(skill) {
 }
 
 // The multiplier a roll actually banks, and where every part of it comes from.
-function walletParts(progress, armed) {
+// Exported so the roll result can itemise the same bonus the rack quotes.
+export function walletParts(progress, armed) {
   const parts = [];
   const pet = petById.get(progress.activePet);
   if (pet && pet.multiplier > 1)

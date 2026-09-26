@@ -91,7 +91,9 @@ rank are untouched. Two players rolling the same number always score the same;
 a companion just means you reach the next upgrade sooner.
 
 Companions can be swapped for free at any time, and each one carries an
-exclusive skill.
+exclusive skill. When that skill fires on a roll, the companion steps off the
+stage for the duration of the roll and appears as a small mark on the corner of
+your number; once the roll settles, the mark is gone and the walk continues.
 
 ## Skills and the rack
 
@@ -108,11 +110,19 @@ multiplier with each part named (companion, ultra-rebirth bonus, wallet skills),
 the draw plan for the next roll, and whether it is cooldown-free. The same
 figures appear in the shop's Skills shelf, so both places always agree.
 
+And when the roll itself applies the money, the result states the wallet's own
+sum: the banked EP total, the scored EP, the **extra** added by companions and
+multipliers, and every part named — so a skill's effect is something you see,
+not something you have to take on trust.
+
 ![The skill rack: three charged circles, one explaining itself on hover](media/skills.png)
 
-Seven skills are bought in the shop, thirteen belong to companions (each
-companion teaches one skill that exists nowhere else and only works while that
-companion is worn), and six are handed out by the rebirth ladder — one per rung.
+Seven skills are bought in the shop — but the shelf is a **stall**: only **two
+are on sale at a time**, and the pair rotates every **five minutes** like a
+shop's stock (a timer on the shelf says when it refreshes; the ones you already
+own stay listed). Thirteen belong to companions (each companion teaches one
+skill that exists nowhere else and only works while that companion is worn),
+and six are handed out by the rebirth ladder — one per rung.
 
 | Skill             |        Price | Charges | Effect                                                  |
 | ----------------- | -----------: | ------: | ------------------------------------------------------- |
@@ -166,19 +176,22 @@ only a doorway to the shelf that sells it, with a meter against its price. A
 shelf keeps its own **sticky bar**: search, the same filters and a button back to
 all shelves. Filters only narrow what is drawn (`19 of 49 on this shelf`), and a
 description is held to three lines so a shelf reads as a list, not a wall of
-text. The old `#shop` bookmark still works, and `#auras` lands on that shelf.
+text. Every shelf reads **from the cheapest item upwards**, and the Skills shelf
+adds its own twist: a rotating stall that only ever stocks two shop skills at a
+time, with a countdown to the next pair. The old `#shop` bookmark still works,
+and `#auras` lands on that shelf.
 
 ![The shop front door: six shelf buttons with their numbers and three featured picks](media/shop.png)
 ![One shelf as its own page: the breadcrumb, sticky bar and aura cards](media/shop-shelf.png)
 
-| Shelf          | What it sells                                                                      |
-| -------------- | ---------------------------------------------------------------------------------- |
-| **Skills**     | Seven charged effects, the two skill bays, and the Flywheel tiers                  |
-| **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time |
-| **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                    |
-| **Auras**      | Eighteen cosmetic looks for your number box, equipped one at a time                |
-| **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                 |
-| **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                    |
+| Shelf          | What it sells                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Skills**     | Seven charged effects (two on sale at a time, restocked every 5 minutes), the two skill bays, and the Flywheel tiers |
+| **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time                                   |
+| **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                                                      |
+| **Auras**      | Eighteen cosmetic looks for your number box, equipped one at a time                                                  |
+| **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                                                   |
+| **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                                                      |
 
 **Auto-Roll is an ability**, not a settings switch: once bought it appears in
 the corner rack as its own circle. One click arms it, another click stands it

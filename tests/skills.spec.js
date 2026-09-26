@@ -35,7 +35,14 @@ import {
 } from "../src/rebirth.js";
 import { PETS, petById } from "../src/pets.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
-import { shopProducts, productById } from "../src/shop-data.js";
+import {
+  shopProducts,
+  productById,
+  skillStock,
+  skillStockWindow,
+  SKILL_STOCK_SIZE,
+  SKILL_STOCK_WINDOW_MS,
+} from "../src/shop-data.js";
 import { evaluate } from "./helpers/index.js";
 
 const ids = allBadgeMetadata.map((b) => b.id);
@@ -554,6 +561,83 @@ test("the ultra-rebirth only exists at the top of the ladder and resets everythi
   expect(credited.history.find((e) => e.type === "roll").ep).toBe(
     result.totalEP,
   );
+});
+
+test("the skill stall sells two skills at a time and rotates every five minutes", () => {
+  const ids = shopSkills.map((skill) => skill.id);
+  expect(SKILL_STOCK_SIZE).toBe(2);
+  expect(SKILL_STOCK_WINDOW_MS).toBe(5 * 60 * 1000);
+  // The window is the clock, not a stored list.
+  expect(skillStockWindow(0)).toBe(0);
+  expect(skillStockWindow(SKILL_STOCK_WINDOW_MS - 1)).toBe(0);
+  expect(skillStockWindow(SKILL_STOCK_WINDOW_MS)).toBe(1);
+  // One window, one pair — deterministic, so two tabs can never disagree.
+  const pair = skillStock(42);
+  expect(pair).toEqual(skillStock(42));
+  expect(pair).toHaveLength(SKILL_STOCK_SIZE);
+  expect(new Set(pair).size).toBe(SKILL_STOCK_SIZE);
+  for (const id of pair) expect(ids).toContain(id);
+  // Owning one slides it out of the stall and the next into view, without
+  // reshuffling the rest of the window's order.
+  const [first, second] = pair;
+  const restocked = skillStock(42, [first]);
+  expect(restocked).toHaveLength(SKILL_STOCK_SIZE);
+  expect(restocked[0]).toBe(second);
+  expect(restocked).not.toContain(first);
+  const finalSlot = skillStock(
+    42,
+    ids.filter((id) => id !== first),
+  );
+  expect(finalSlot).toEqual([first]);
+  // Owning everything sells the stall out completely.
+  expect(skillStock(42, ids)).toEqual([]);
+  // Across windows the pair rotates and every shop skill gets its turn.
+  const pairs = new Set(),
+    seen = new Set();
+  for (let index = 0; index < 25; index++) {
+    const window = skillStock(index);
+    pairs.add(window.join("+"));
+    window.forEach((id) => seen.add(id));
+  }
+  expect(pairs.size).toBeGreaterThan(4);
+  expect([...seen].sort()).toEqual([...ids].sort());
+});
+
+test("only the stocked skills can be bought, and buying one does not reshuffle the rest", () => {
+  const ids = shopSkills.map((skill) => skill.id);
+  const at = 7 * SKILL_STOCK_WINDOW_MS + 1000; // Firmly inside window 7.
+  const stocked = skillStock(7);
+  const away = ids.filter((id) => !stocked.includes(id));
+  expect(away.length).toBeGreaterThan(0);
+  const base = fund(100000000);
+  // The stall refuses an out-of-stock purchase, politely and without a sale.
+  for (const id of away)
+    expect(() => applyProgress(base, { type: "buy", id, at })).toThrow(
+      /out of stock/,
+    );
+  expect(base.owned).toEqual([]);
+  // The stocked pair sells exactly as before: unlock, rack slot, one purchase.
+  const bought = applyProgress(base, {
+    type: "buy",
+    id: stocked[0],
+    at,
+    eventId: "b1",
+  });
+  expect(bought.owned).toEqual([stocked[0]]);
+  expect(bought.skills).toEqual([stocked[0]]);
+  expect(bought.equippedSkills).toEqual([stocked[0]]);
+  expect(bought.balance).toBe(100000000 - productById.get(stocked[0]).price);
+  // The other slot keeps its skill: the stall slides the next one in behind
+  // it rather than dealing a brand-new pair mid-window.
+  const after = skillStock(7, bought.owned);
+  expect(after).toHaveLength(SKILL_STOCK_SIZE);
+  expect(after).toContain(stocked[1]);
+  expect(after).not.toContain(stocked[0]);
+  // The arriving skill is buyable too, in the same window.
+  const newcomer = after.find((id) => id !== stocked[1]);
+  expect(() =>
+    applyProgress(bought, { type: "buy", id: newcomer, at }),
+  ).not.toThrow();
 });
 
 test("skill effects never touch the draw itself", () => {

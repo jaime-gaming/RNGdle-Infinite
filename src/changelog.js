@@ -2,6 +2,17 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.4",
+    title:
+      "the skill stall, cheap-first shelves and the wallet's own arithmetic",
+    body: [
+      "the skills shelf is a stall now: two shop skills on sale at a time, and the stock rotates every five minutes.",
+      "every shelf reads from the cheapest item upwards, and the goal list follows the same order.",
+      "a firing companion skill steps the companion off the stage and pins it to the corner of your number until the roll settles.",
+      "the roll states the wallet's own sum as it applies: banked EP, scored EP, the extra from skills and multipliers, each named.",
+    ],
+  },
+  {
     version: "v0.3",
     title: "one release: the shop, the rack, rebirth and the shelves",
     body: [

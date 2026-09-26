@@ -23,6 +23,9 @@ import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
 import { petById, petBonusLabel } from "../pets.js";
+import { skillForPet } from "../skills.js";
+import { walletMultiplier } from "../progress.js";
+import { walletParts } from "../rack.js";
 import { CreatureIcon } from "./game-icons.jsx";
 import "../roll.css";
 
@@ -62,6 +65,7 @@ const NumberArtifact = memo(function NumberArtifact({
   timeline,
   reducedMotion,
   aura,
+  dockedPet = null,
 }) {
   const target = String(run.result.number),
     pad = timeline.slots - target.length;
@@ -99,8 +103,23 @@ const NumberArtifact = memo(function NumberArtifact({
     return () => clearInterval(timer);
   }, [run.id, spinning, reducedMotion]);
   const tier = rarityKnown && run.result.tier ? run.result.tier : "neutral";
+  const dockedSkill = dockedPet ? skillForPet(dockedPet) : null;
+  const dockedName = dockedPet ? (petById.get(dockedPet)?.name ?? "") : "";
   return (
     <div className={`artifact-stage aura-${aura}`} data-aura={aura}>
+      {/* While the worn companion's signature skill fires, the companion steps
+          off the stage and pins itself here, on the corner of the number box,
+          until the roll settles and it can go back to walking. */}
+      {dockedPet && dockedSkill && (
+        <span
+          className={`artifact-companion tint-${dockedSkill.tint}`}
+          role="img"
+          aria-label={`${dockedName}: its skill ${dockedSkill.name} is firing on this roll`}
+          title={`${dockedName} — ${dockedSkill.name}`}
+        >
+          <CreatureIcon pet={dockedPet} size={19} aria-hidden="true" />
+        </span>
+      )}
       <NumberBox
         tier={tier}
         aura={aura}
@@ -241,6 +260,26 @@ export default function RollExperience({
   const awaitingSettlement =
     !!run && session.pendingRoll?.id === run.id && !runSettled;
   const busy = !!run && elapsed < timeline.end;
+  // While the worn companion's signature skill fires on this roll, the
+  // companion steps off the stage and shows as a small mark on the number
+  // box; it goes back to walking the moment the roll settles.
+  const companionSkill = skillForPet(session.activePet);
+  const companionSkillFiring =
+    !!run &&
+    !runSettled &&
+    !!companionSkill &&
+    (run.skills ?? []).includes(companionSkill.id);
+  // What actually lands in the wallet: the settlement's own formula, so the
+  // on-screen sum matches the credit to the EP — companion, ultra-rebirth and
+  // every wallet skill that fired, never the scored number itself.
+  const firedSkills = run?.skills ?? [];
+  const bankedMultiplier = result ? walletMultiplier(session, firedSkills) : 1;
+  const creditedEP =
+    result && result.totalEP !== null
+      ? Math.round(result.totalEP * bankedMultiplier)
+      : 0;
+  const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0));
+  const bonusParts = bonusEP > 0 ? walletParts(session, firedSkills) : [];
   const cooldownWindow =
     session.cooldownWindow ??
     parseCooldownWindow(
@@ -534,7 +573,9 @@ export default function RollExperience({
         />
       )}
       {/* Only the equipped companion walks the roll screen, so it is always
-          obvious which one is actually active. The rest stay on the shelf. */}
+          obvious which one is actually active. The rest stay on the shelf.
+          While its signature skill fires it steps off the stage entirely and
+          lives on the corner of the number until the roll settles. */}
       <PetParade
         pets={
           session.activePet && session.activePet !== "none"
@@ -544,6 +585,7 @@ export default function RollExperience({
         active={session.activePet}
         reducedMotion={reducedMotion}
         arrival={arrivalPet}
+        docked={companionSkillFiring}
         phase={!run ? "idle" : busy ? "reveal" : "cooldown"}
       />
       {!run ? (
@@ -623,13 +665,18 @@ export default function RollExperience({
             <NumberArtifact
               key={run.id}
               {...{ run, elapsed, timeline, reducedMotion, aura }}
+              dockedPet={companionSkillFiring ? session.activePet : null}
             />
             <div className="roll-announcement sr-only" role="status">
               {!digitsDone
                 ? `Revealing your number. ${timeline.digitTimes.filter((t) => elapsed >= t).length} of ${timeline.slots} digits settled.`
                 : busy
                   ? `Number ${result.number}. Revealing badges.`
-                  : `${result.number}, ${result.tier}, ${formatEP(result.totalEP)} EP.`}
+                  : `${result.number}, ${result.tier}, ${formatEP(result.totalEP)} EP.${
+                      bonusEP
+                        ? ` ${formatEP(creditedEP)} EP banked with ${formatEP(bonusEP)} EP extra from your multipliers.`
+                        : ""
+                    }`}
             </div>
             {result.totalEP !== null && (
               <div
@@ -662,6 +709,32 @@ export default function RollExperience({
                   )}{" "}
                   EP
                 </div>
+                {/* The wallet's own arithmetic, as the roll applies it:
+                    what actually lands in the EP, and — when skills or
+                    multipliers add to it — the extra and every named part. */}
+                {digitsDone && (
+                  <div
+                    className={`roll-credit ${elapsed >= timeline.sessionShow ? "is-visible" : ""} ${bonusEP ? "has-bonus" : ""}`}
+                    aria-hidden={elapsed < timeline.sessionShow}
+                    data-testid="roll-credit"
+                  >
+                    <span className="roll-credit-total">
+                      +{formatEP(creditedEP)} EP banked
+                    </span>
+                    {bonusEP > 0 && (
+                      <small className="roll-credit-bonus">
+                        {formatEP(result.totalEP)} scored +{" "}
+                        <strong>+{formatEP(bonusEP)} extra</strong> ·{" "}
+                        {bonusParts
+                          .map(
+                            (part) =>
+                              `${part.label} ×${Number(part.value.toFixed(2))}`,
+                          )
+                          .join(" · ")}
+                      </small>
+                    )}
+                  </div>
+                )}
                 {digitsDone && (
                   <div
                     className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
@@ -672,7 +745,7 @@ export default function RollExperience({
                         value={
                           session.balance +
                           (elapsed >= timeline.sessionCount && !runSettled
-                            ? result.totalEP
+                            ? creditedEP
                             : 0)
                         }
                         duration={1500 * timeline.scale}
@@ -683,7 +756,7 @@ export default function RollExperience({
                         elapsed < timeline.end &&
                         !instant && (
                           <span className="floating-ep">
-                            +{formatEP(result.totalEP)}
+                            +{formatEP(creditedEP)}
                           </span>
                         )}
                     </span>

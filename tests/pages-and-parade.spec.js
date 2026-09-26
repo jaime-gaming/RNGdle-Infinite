@@ -48,6 +48,35 @@ test("only the equipped companion walks the roll screen", () => {
   expect(shelf).toMatch(/only one.*equipped/i);
 });
 
+test("a firing companion skill pins the companion to the number's corner", () => {
+  const roll = read("components/RollExperience.jsx");
+  // While the worn companion's signature skill is one of the roll's fired
+  // skills, the walker steps off the stage (docked) and the number box
+  // carries a small corner mark until the roll settles.
+  expect(roll).toContain("skillForPet(session.activePet)");
+  expect(roll).toContain("companionSkillFiring");
+  expect(roll).toContain("docked={companionSkillFiring}");
+  expect(roll).toContain(
+    "dockedPet={companionSkillFiring ? session.activePet : null}",
+  );
+  const parade = read("components/PetParade.jsx");
+  expect(parade).toContain("is-docked");
+  expect(read("pet-parade.css")).toContain(".pet-walker.is-docked");
+  expect(roll).toContain("artifact-companion");
+  expect(read("roll.css")).toContain(".artifact-companion");
+});
+
+test("the roll states the wallet's own sum as it applies the EP", () => {
+  const roll = read("components/RollExperience.jsx");
+  // The same settlement formula names the banked credit — the floating +EP
+  // and the balance counter must quote what actually lands, and the bonus
+  // line itemises every multiplier that added to it.
+  expect(roll).toContain("walletMultiplier(session, firedSkills)");
+  expect(roll).toContain("creditedEP");
+  expect(roll).toContain("roll-credit");
+  expect(read("roll.css")).toContain(".roll-credit");
+});
+
 test("skill ring icons render: the ring keeps its own svg class", () => {
   // The collapse bug: `.skill-ring svg` also matched the inner lucide icon,
   // which sat absolutely positioned inside the 0×0 icon box and vanished.

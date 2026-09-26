@@ -5,6 +5,8 @@ import {
   ROLL_DURATIONS,
   COOLDOWN_DURATIONS,
   rollSettings,
+  skillStock,
+  skillStockWindow,
 } from "./shop-data.js";
 import {
   FLYWHEEL_CHARGES,
@@ -499,6 +501,19 @@ export function applyProgress(state, action) {
     )
       throw new Error(
         "Restore offline rewards before upgrading offline earnings. No EP was spent.",
+      );
+    // The skills shelf only ever sells the stall's rotating pair. The guard
+    // reads the same clock windows as the shelf itself, so a card that was
+    // buyable when the dialog opened simply sells out past the rotation.
+    if (
+      item.kind === "skill" &&
+      !skillStock(
+        skillStockWindow(action.at ?? Math.ceil(Date.now())),
+        state.owned,
+      ).includes(item.id)
+    )
+      throw new Error(
+        `${item.name} is out of stock. The skill shelf restocks every five minutes; no EP was spent.`,
       );
     if (state.balance < item.price)
       throw new Error("Not enough EP for this item.");
