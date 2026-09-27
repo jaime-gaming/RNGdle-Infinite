@@ -79,6 +79,40 @@ button.number-box.number-box:hover {
   margin: 0 auto 64px;
   animation: none;
 }
+/* The original RNGdle idle is plain type: six huge marks and no box at all.
+   An equipped aura opts back into the painted tile it previews. */
+:root {
+  --question-ink: #c6c6ce;
+}
+:root[data-theme="dark"] {
+  --question-ink: #d3d3da;
+}
+.number-box.question-number[data-cosmetic="none"] {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  font-size: 112px;
+  color: var(--question-ink);
+}
+.number-box.question-number[data-cosmetic="none"]
+  :is(.box-gloss, .box-shimmer, .box-particles) {
+  display: none;
+}
+.number-box.question-number[data-cosmetic="none"] .number-box-content {
+  text-shadow: none;
+}
+@media (max-width: 640px) {
+  .number-box.question-number[data-cosmetic="none"] {
+    font-size: 76px;
+  }
+}
+@media (max-width: 420px) {
+  .number-box.question-number[data-cosmetic="none"] {
+    font-size: 56px;
+  }
+}
 .number-box.best-number {
   margin: 21px auto 14px;
 }

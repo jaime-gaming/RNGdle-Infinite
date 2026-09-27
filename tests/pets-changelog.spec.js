@@ -285,12 +285,10 @@ test("the changelog reads like release notes, not like a chat log", () => {
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
     }
   }
-  // v0.3 is the newest release and also the big shop/rack/rebirth wave: it is
-  // the one entry allowed past eight lines, and even it stays within sixteen.
-  const waves = CHANGELOG.filter((entry) => entry.body.length > 8);
-  expect(waves.map((entry) => entry.version)).toEqual(["v0.3"]);
-  expect(waves[0]).toBe(CHANGELOG[0]);
-  expect(waves[0].body.length).toBeLessThanOrEqual(16);
+  // Every release, v0.3's shop/rack/rebirth wave included, fits the same
+  // compact budget: eight lines at most.
+  for (const entry of CHANGELOG)
+    expect(entry.body.length).toBeLessThanOrEqual(8);
 });
 
 test("share is the single copy action and carries the link with it", () => {
