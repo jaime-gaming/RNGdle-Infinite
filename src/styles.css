@@ -32,13 +32,14 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #131419;
-  --surface: #1a1b22;
+  /* The original RNGdle dark mode: a near-black page with neutral greys. */
+  --bg: #0e0f13;
+  --surface: #16171d;
   --text: #ededf1;
-  --muted: #898a96;
-  --secondary: #b0b0bb;
-  --border: #2c2d36;
-  --hover: #252630;
+  --muted: #8f8f9b;
+  --secondary: #b7b7c2;
+  --border: #272832;
+  --hover: #1e1f27;
   --green: #89c4a8;
   --green-bg: #1b2e26;
   --danger: #f0a5a5;

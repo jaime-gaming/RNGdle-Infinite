@@ -11,14 +11,16 @@
   --input-hint: #6b7280;
 }
 :root[data-theme="dark"] {
-  --bg: oklch(17.8% 0.014 295);
-  --surface: oklch(25.7% 0.014 295);
-  --hover: oklch(31.1% 0.014 295);
-  --border: oklch(39.5% 0.014 295);
-  --text: #f0f0f0;
-  --secondary: #c4c4c4;
-  --muted: #9a9a9a;
-  --input-hint: #9a9a9a;
+  /* The original RNGdle dark mode is a near-black page with neutral greys,
+     not the tinted one the Tools skin carried. */
+  --bg: #0e0f13;
+  --surface: #16171d;
+  --hover: #1e1f27;
+  --border: #272832;
+  --text: #f0f0f2;
+  --secondary: #c2c2cb;
+  --muted: #8f8f9b;
+  --input-hint: #8a8a96;
 }
 body {
   -webkit-font-smoothing: antialiased;
@@ -113,6 +115,20 @@ nav button.active {
   color: #fff;
   background: #0e0f14;
   box-shadow: 0 6px 14px #10182824;
+}
+/* On the near-black page the original's button reads as an ink slab with a
+   faint rim light around it. */
+:root[data-theme="dark"] .roll-experience .generate:not(:disabled):not(.cooling) {
+  border-color: #ffffff1a;
+  box-shadow:
+    0 0 0 1px #ffffff0d,
+    0 12px 44px -12px #ffffff2e;
+}
+:root[data-theme="dark"] .roll-experience .generate:hover:not(:disabled) {
+  background: #14151b;
+  box-shadow:
+    0 0 0 1px #ffffff14,
+    0 14px 48px -12px #ffffff38;
 }
 .roll-experience .generate:active:not(:disabled) {
   transform: scale(0.98);
