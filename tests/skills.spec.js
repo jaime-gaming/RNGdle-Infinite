@@ -40,6 +40,7 @@ import {
   productById,
   skillStock,
   skillStockWindow,
+  nextSkillStockOffset,
   SKILL_STOCK_SIZE,
   SKILL_STOCK_WINDOW_MS,
 } from "../src/shop-data.js";
@@ -620,6 +621,28 @@ test("the skill stall sells two skills at a time and rotates every five minutes"
   }
   expect(pairs.size).toBeGreaterThan(4);
   expect([...seen].sort()).toEqual([...ids].sort());
+});
+
+test("the stall can say exactly when an out-of-stock skill comes back", () => {
+  const ids = shopSkills.map((skill) => skill.id);
+  for (let window = 40; window < 60; window++) {
+    for (const id of ids) {
+      const offset = nextSkillStockOffset(window, [], id);
+      // The rotation carries every skill back within the two-hour horizon.
+      expect(offset).toBeGreaterThanOrEqual(1);
+      expect(offset).toBeLessThanOrEqual(24);
+      // …and the answer is exact: that window has it, no earlier one does.
+      expect(skillStock(window + offset)).toContain(id);
+      for (let earlier = 1; earlier < offset; earlier++)
+        expect(skillStock(window + earlier)).not.toContain(id);
+    }
+  }
+  // An owned skill never comes back on the stall, so there is no answer.
+  expect(nextSkillStockOffset(40, ["surge"], "surge")).toBeNull();
+  // The answer is deterministic: every tab quotes the same window.
+  expect(nextSkillStockOffset(41, [], "twice")).toBe(
+    nextSkillStockOffset(41, [], "twice"),
+  );
 });
 
 test("only the stocked skills can be bought, and buying one does not reshuffle the rest", () => {

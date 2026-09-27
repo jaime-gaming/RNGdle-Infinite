@@ -22,6 +22,7 @@ import {
   shelfOfProduct,
   skillStock,
   skillStockWindow,
+  nextSkillStockOffset,
   SKILL_STOCK_SIZE,
   SKILL_STOCK_WINDOW_MS,
 } from "../shop-data";
@@ -37,7 +38,12 @@ import "../progress-links.css";
 import PetShelf from "./PetShelf";
 import { PETS } from "../pets.js";
 import { flywheelRequired } from "../flywheel.js";
-import { skillById, skillChargeOf, skillEffectChips } from "../skills.js";
+import {
+  skillArmed,
+  skillById,
+  skillChargeOf,
+  skillEffectChips,
+} from "../skills.js";
 import NumberBox from "./NumberBox";
 import {
   AuraMark,
@@ -189,6 +195,19 @@ export default function Shop({
     0,
     Math.ceil(((stockWindow + 1) * SKILL_STOCK_WINDOW_MS - clock) / 1000),
   );
+  // The rotation is deterministic, so the upcoming pair is already known.
+  const nextPair = skillStock(stockWindow + 1, progress.owned);
+  // When one out-of-stock skill comes back — the moment it is on sale again,
+  // not the next pair rotation, which may not carry it.
+  function restockLabel(id) {
+    const offset = nextSkillStockOffset(stockWindow, progress.owned, id);
+    if (offset == null) return "Back later";
+    const seconds = Math.max(
+      0,
+      Math.ceil(((stockWindow + offset) * SKILL_STOCK_WINDOW_MS - clock) / 1000),
+    );
+    return `Back in ${formatDuration(seconds)}`;
+  }
   useEffect(() => {
     if (!focusProduct || !productById.has(focusProduct)) return;
     const frame = requestAnimationFrame(() => {
@@ -504,7 +523,7 @@ export default function Shop({
             {state.profileGated ? (
               "Sign up to unlock"
             ) : restocking ? (
-              `Back in ${formatDuration(stockSecondsLeft)}`
+              restockLabel(item.id)
             ) : equipped ? (
               <>
                 <Check size={14} /> Equipped
@@ -524,9 +543,9 @@ export default function Shop({
             )}
           </button>
           {(() => {
-            const note = restocking
-              ? "Out of the stall's rotation right now."
-              : noteFor(item, state);
+            // The button on an out-of-stock card already says when the skill
+            // returns; a second sentence under it would only repeat it.
+            const note = restocking ? "" : noteFor(item, state);
             return note ? <small className="shop-item-note">{note}</small> : null;
           })()}
         </div>
@@ -543,12 +562,15 @@ export default function Shop({
       return `${formatEP(item.price - progress.balance)} more EP needed`;
     if (state.owned) {
       if (item.kind === "aura") return "";
-      if (item.kind === "skill")
+      if (item.kind === "skill") {
+        if (skillArmed(progress, item.id))
+          return "Ready — fires on your next roll";
         return `${skillChargeOf(progress, item.id)} / ${item.charges} charged${
           (progress.equippedSkills ?? []).includes(item.id)
             ? ""
             : " · not in your rack"
         }`;
+      }
       if (item.kind === "skill-slot") return `Rack size: ${item.slots} skills.`;
       if (item.kind === "utility")
         return item.id === "auto-roll"
@@ -988,6 +1010,16 @@ export default function Shop({
                 <b data-testid="skill-stock-timer">
                   {formatDuration(stockSecondsLeft)}
                 </b>
+                {/* The rotation is deterministic, so the pair that replaces
+                    this one is already knowable — say it. */}
+                {!!nextPair.length && (
+                  <em className="skill-stock-next">
+                    {" · next: "}
+                    {nextPair
+                      .map((id) => skillById.get(id)?.name ?? id)
+                      .join(", ")}
+                  </em>
+                )}
               </span>
             ) : (
               <span>You own every shop skill.</span>
