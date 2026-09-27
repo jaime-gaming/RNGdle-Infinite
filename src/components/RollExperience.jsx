@@ -270,8 +270,8 @@ export default function RollExperience({
     !!companionSkill &&
     (run.skills ?? []).includes(companionSkill.id);
   // What actually lands in the wallet: the settlement's own formula, so the
-  // on-screen sum matches the credit to the EP — companion, ultra-rebirth and
-  // every wallet skill that fired, never the scored number itself.
+  // on-screen sum matches the credit to the EP — companion, rebirth bonuses,
+  // ultra-rebirth and every wallet skill that fired, never the score.
   const firedSkills = run?.skills ?? [];
   const bankedMultiplier = result ? walletMultiplier(session, firedSkills) : 1;
   const creditedEP =

@@ -821,6 +821,10 @@
 .skill-stock.is-empty {
   color: var(--muted);
 }
+.skill-stock-next {
+  font-style: normal;
+  color: var(--muted);
+}
 /* ---- Purchase confirmation ---------------------------------------------- */
 .shop-confirm {
   position: fixed;

@@ -565,6 +565,17 @@ export function skillStock(windowIndex, owned = [], size = SKILL_STOCK_SIZE) {
     .slice(0, size);
 }
 
+// When a skill is next on sale, counted in windows from `windowIndex` (1 is
+// the upcoming restock), or null if the current owned set keeps it off the
+// stall for the next two hours. Same deterministic input as the stall, so an
+// out-of-stock card can honestly say when the skill comes back.
+export function nextSkillStockOffset(windowIndex, owned, skillId) {
+  for (let offset = 1; offset <= 24; offset++)
+    if (skillStock(windowIndex + offset, owned).includes(skillId))
+      return offset;
+  return null;
+}
+
 export function nextUpgrade(owned, kind) {
   const track = shopProducts.filter((p) => p.kind === kind);
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);

@@ -7,7 +7,7 @@ import {
   formatMultiplier,
   PET_DROP_CHANCE,
 } from "../pets.js";
-import { skillForPet, skillEffectSummary, skillSlots } from "../skills.js";
+import { skillForPet, skillEffectSummary } from "../skills.js";
 import { useFormatEP } from "../use-settings.jsx";
 import PetIcon from "./PetIcon.jsx";
 import { CompanionMark } from "./game-icons.jsx";
@@ -45,7 +45,6 @@ export default function PetShelf({
   }
 
   const oneIn = Math.round(1 / PET_DROP_CHANCE);
-  const slots = skillSlots(progress.owned);
   const text = query.trim().toLowerCase();
   const visible = PETS.filter((pet) => {
     const isOwned = owned.includes(pet.id);
@@ -71,11 +70,9 @@ export default function PetShelf({
             <CompanionMark size={16} /> Companions
           </h2>
           <p>
-            A bonus to the EP you bank and one exclusive skill of their own.
-            Only one companion is equipped at a time, and the equipped one walks
-            the roll screen with you; swapping is free. Find one free at roughly
-            1 in {oneIn} rolls, and each signature skill takes a slot in your{" "}
-            {slots}-slot rack.
+            One equipped at a time, free to swap, walking the roll screen with
+            you. Each carries a banked-EP bonus and its own skill — or find one
+            free at roughly 1 in {oneIn} rolls.
           </p>
         </div>
         <div className="shop-section-actions">
@@ -106,9 +103,7 @@ export default function PetShelf({
         </div>
       </div>
       <p className="pet-disclaimer">
-        A companion multiplies only the EP added to your wallet. Your rolled
-        number, its tier, its badges, its score and your odds are completely
-        unaffected.
+        Wallet-only: never your odds, number or score.
       </p>
       {visible.length ? (
         <ul className="pet-grid">
@@ -200,8 +195,7 @@ export default function PetShelf({
         <p className="shop-empty">No companions match this filter.</p>
       )}
       <p className="pet-footnote">
-        Companions are found, not won: a lucky roll drops one you do not own
-        yet, and a first companion is worn automatically.
+        A lucky roll drops a companion you do not own yet, already worn.
       </p>
     </section>
   );

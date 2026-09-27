@@ -262,9 +262,10 @@ test("the skills shelf is a stall: two skills buyable, the rest under a green au
     await expect(card).toHaveClass(/is-restocking/);
     await expect(card.getByRole("button")).toBeDisabled();
   }
-  // The stall states how full it is and when the pair restocks — never the
-  // names, which the cards already carry.
+  // The stall states how full it is and when the pair restocks — and, since
+  // the rotation is deterministic, which pair comes next.
   await expect(shelf.locator(".skill-stock")).toContainText("2 of 2 in stock");
+  await expect(shelf.locator(".skill-stock")).toContainText("next:");
   await expect(page.getByTestId("skill-stock-timer")).toContainText(
     /^\d:\d{2}$/,
   );
