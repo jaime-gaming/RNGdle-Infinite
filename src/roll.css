@@ -11,16 +11,14 @@
   --input-hint: #6b7280;
 }
 :root[data-theme="dark"] {
-  /* The original RNGdle dark mode is a near-black page with neutral greys,
-     not the tinted one the Tools skin carried. */
-  --bg: #0e0f13;
-  --surface: #16171d;
-  --hover: #1e1f27;
-  --border: #272832;
-  --text: #f0f0f2;
-  --secondary: #c2c2cb;
-  --muted: #8f8f9b;
-  --input-hint: #8a8a96;
+  --bg: oklch(17.8% 0.014 295);
+  --surface: oklch(25.7% 0.014 295);
+  --hover: oklch(31.1% 0.014 295);
+  --border: oklch(39.5% 0.014 295);
+  --text: #f0f0f0;
+  --secondary: #c4c4c4;
+  --muted: #9a9a9a;
+  --input-hint: #9a9a9a;
 }
 body {
   -webkit-font-smoothing: antialiased;
@@ -86,6 +84,39 @@ nav button.active {
   margin: 0 0 32px;
   letter-spacing: normal;
 }
+@property --cta-a {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ec4899;
+}
+@property --cta-b {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #a855f7;
+}
+@keyframes cta-ring-cycle {
+  0%,
+  100% {
+    --cta-a: #ec4899;
+    --cta-b: #a855f7;
+  }
+  20% {
+    --cta-a: #a855f7;
+    --cta-b: #3b82f6;
+  }
+  40% {
+    --cta-a: #3b82f6;
+    --cta-b: #10b981;
+  }
+  60% {
+    --cta-a: #10b981;
+    --cta-b: #f97316;
+  }
+  80% {
+    --cta-a: #f97316;
+    --cta-b: #ec4899;
+  }
+}
 .roll-experience .generate {
   position: relative;
   width: 320px;
@@ -100,45 +131,43 @@ nav button.active {
   font-family: "Inter Variable", sans-serif;
   font-size: 30px;
   line-height: 36px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  box-shadow: 0 1px 2px #1018281f;
-  /* The ring cycled through five colours behind the site's main action. It is
-     one ink block now: the press is the effect, not a moving halo. */
-  transition:
-    background 0.18s,
-    box-shadow 0.18s,
-    transform 0.15s;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--cta-a) 32%, transparent),
+    0 0 36px color-mix(in srgb, var(--cta-b) 15%, transparent);
+  animation: cta-ring-cycle 14s linear infinite;
+  transition: transform 0.15s;
+}
+.roll-experience .generate::before {
+  inset: -2px;
+  border-radius: 8px;
+  background: linear-gradient(100deg, var(--cta-a), var(--cta-b));
+  opacity: 1;
+}
+.roll-experience .generate::after {
+  background: #090909;
+  border-radius: 6px;
 }
 .roll-experience .generate:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: scale(1.01);
   color: #fff;
-  background: #0e0f14;
-  box-shadow: 0 6px 14px #10182824;
-}
-/* On the near-black page the original's button reads as an ink slab with a
-   faint rim light around it. */
-:root[data-theme="dark"] .roll-experience .generate:not(:disabled):not(.cooling) {
-  border-color: #ffffff1a;
   box-shadow:
-    0 0 0 1px #ffffff0d,
-    0 12px 44px -12px #ffffff2e;
-}
-:root[data-theme="dark"] .roll-experience .generate:hover:not(:disabled) {
-  background: #14151b;
-  box-shadow:
-    0 0 0 1px #ffffff14,
-    0 14px 48px -12px #ffffff38;
+    0 0 22px color-mix(in srgb, var(--cta-a) 48%, transparent),
+    0 0 52px color-mix(in srgb, var(--cta-b) 26%, transparent);
 }
 .roll-experience .generate:active:not(:disabled) {
   transform: scale(0.98);
 }
 .roll-experience .generate.cooling {
-  transform: none;
+  animation-play-state: paused;
   box-shadow: none;
   font-size: 17px;
   letter-spacing: 0.04em;
-  color: #c5c6d0;
+  color: #a1a1aa;
+}
+.roll-experience .generate.cooling::before {
+  opacity: 0.35;
 }
 .roll-experience .roll-hint {
   color: var(--input-hint);
@@ -1157,27 +1186,17 @@ nav button.active {
 /* A track and its fill, both inside the button: at the very edge the fill's
    corners met the button's radius and left a grey notch in the ink every time
    a cooldown started. */
-.roll-experience .generate.cooling::after {
-  content: "";
-  position: absolute;
-  left: 7px;
-  right: 7px;
-  bottom: 5px;
-  height: 3px;
-  border-radius: 2px;
-  background: #ffffff1f;
-}
 .roll-experience .cooldown-fill {
   position: absolute;
-  left: 7px;
-  right: 7px;
-  bottom: 5px;
+  left: 0;
+  bottom: 0;
+  width: 100%;
   height: 3px;
-  border-radius: 2px;
-  background: #e4e4e7;
+  background: #8b8b94;
   transform-origin: left;
   pointer-events: none;
   transition: none;
+  border-radius: 0 0 5px 5px;
 }
 
 /* The idle hint states what the worn companion adds, next to the timings. */
