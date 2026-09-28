@@ -9,14 +9,10 @@ import {
   recoverUnsavedRolls,
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
+import { runDrawPlan } from "./draw-plan.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
-import {
-  armedSkills,
-  drawPlanFor,
-  skillWaivesCooldown,
-  SKILL_MAX_DRAWS,
-} from "./skills.js";
+import { armedSkills, drawPlanFor, skillWaivesCooldown } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings, offlineSettings, productById } from "./shop-data.js";
 import {
@@ -355,22 +351,17 @@ export function useProgress() {
           const plan = drawPlanFor(armed);
           if (flywheel === "boost" || skillWaivesCooldown(armed))
             timing.cooldownMS = 0;
+          // Every draw is an ordinary, independent roll scored by the verified
+          // index; the plan only says how many to take and when to stop early.
           let result,
             draws = null;
           if (!plan) result = await generateRoll();
-          else {
-            draws = [];
-            let best = null;
-            const attempts = Math.min(plan.attempts, SKILL_MAX_DRAWS);
-            for (let attempt = 0; attempt < attempts; attempt++) {
-              const draw = await generateRoll();
-              draws.push(draw.number);
-              const scored = await restoreRoll(draw.number);
-              if (!best || scored.totalEP > best.totalEP) best = scored;
-              if (plan.floor > 0 && scored.totalEP >= plan.floor) break;
-            }
-            result = best;
-          }
+          else
+            ({ draws, result } = await runDrawPlan(
+              plan,
+              async () => (await generateRoll()).number,
+              restoreRoll,
+            ));
           // No digits reach the UI until the draw has been committed below.
           if (token !== generation.current)
             throw new Error("This game was reset. The draw was cancelled.");

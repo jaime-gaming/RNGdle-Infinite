@@ -20,6 +20,7 @@ import {
   ultraRebirthBlocker,
   nextRebirthSkill,
   ultraRebirthMultiplier,
+  cycleStarterEp,
 } from "./rebirth.js";
 import { petById, PET_IDS, petMultiplier } from "./pets.js";
 import {
@@ -253,8 +254,9 @@ export function validUsername(value) {
 // earned and the profile all stay.
 //
 // `granted` is the ladder skill this rebirth pays, which is earned rather than
-// bought and so joins the skills that survived.
-function startNewCycle(state, granted = null) {
+// bought and so joins the skills that survived, and `starter` is the EP the new
+// cycle begins with — paid by the rungs and ultra-rebirths the account keeps.
+function startNewCycle(state, { granted = null, starter = 0 } = {}) {
   const owned = [];
   // Shop skills are purchases: they go back on the stall. Ladder skills were
   // paid for by the rebirths the cycle keeps, so they stay unlocked.
@@ -284,7 +286,11 @@ function startNewCycle(state, granted = null) {
     ...base,
     equippedSkills,
     skillCharge,
-    balance: 0,
+    // The wallet empties and the ladder refills it: the starting sum is paid
+    // into both figures at once, so the balance can never outgrow what the
+    // account has been given.
+    balance: starter,
+    totalEarned: state.totalEarned + starter,
     discovered: [],
     equipped: "none",
     // The tracked goal is a preference, not a reward: it survives when it is
@@ -313,12 +319,13 @@ export function applyProgress(state, action) {
     if (!validAmount(count + 1))
       throw new Error("Rebirth count limit reached.");
     const granted = nextRebirthSkill(count);
+    const starter = cycleStarterEp(count + 1, state.ultraRebirths ?? 0);
     // The run starts over — collection, everything bought, companions and the
     // wallet — while the account keeps its history, its rebirths and every
     // bonus it earned. Receipts stay too, so a roll from an earlier cycle can
     // never be settled twice into the new one.
     return {
-      ...startNewCycle(state, granted),
+      ...startNewCycle(state, { granted, starter }),
       profile: state.profile,
       rebirths: count + 1,
       history: appendHistory(state.history, [
@@ -328,6 +335,7 @@ export function applyProgress(state, action) {
           at: now,
           count: count + 1,
           ...(granted ? { skill: granted.id } : {}),
+          ...(starter ? { grant: starter } : {}),
         },
       ]),
     };
@@ -349,8 +357,9 @@ export function applyProgress(state, action) {
     // with the whole collection in hand. It costs the run, never the account:
     // history, rebirths, ladder skills and every permanent bonus stay, and the
     // ultra-rebirth adds ten more points forever.
+    const starter = cycleStarterEp(state.rebirths ?? 0, count + 1);
     return {
-      ...startNewCycle(state),
+      ...startNewCycle(state, { starter }),
       profile: state.profile,
       ultraRebirths: count + 1,
       history: appendHistory(state.history, [
@@ -359,6 +368,7 @@ export function applyProgress(state, action) {
           type: "ultra-rebirth",
           at: now,
           count: count + 1,
+          ...(starter ? { grant: starter } : {}),
         },
       ]),
     };
@@ -452,6 +462,14 @@ export function applyProgress(state, action) {
       ),
     ];
     const unlocked = earned.filter((id) => !state.discovered.includes(id));
+    // Only the committed roll itself knows how many numbers it took, and only
+    // when the roll is the one settling — never on a replay or an offline one.
+    const drawCount =
+      state.pendingRoll?.id === id &&
+      Array.isArray(state.pendingRoll.draws) &&
+      state.pendingRoll.draws.length > 1
+        ? Math.min(state.pendingRoll.draws.length, SKILL_MAX_DRAWS)
+        : 0;
     const at = action.at ?? Math.ceil(Date.now());
     const events = [
       {
@@ -466,6 +484,10 @@ export function applyProgress(state, action) {
           ? { walletBonus: bonus, walletMultiplier: multiplier }
           : {}),
         ...(fired.length ? { skills: fired } : {}),
+        // How many numbers the roll actually took, when a skill paid for more
+        // than one: the history can then say the number was kept out of
+        // several, and that only the best of them was paid.
+        ...(drawCount > 1 ? { draws: drawCount } : {}),
         badges: earned,
         ...(action.source === "offline" ? { source: "offline" } : {}),
         ...(action.source !== "offline" &&
@@ -799,6 +821,11 @@ function parseHistory(value) {
           ...(Array.isArray(e.skills)
             ? { skills: e.skills.filter((id) => skillById.has(id)) }
             : {}),
+          // A draw skill's receipt: the roll took this many numbers and kept
+          // the best. Two or more, and never more than the shelf allows.
+          ...(e.draws >= 2 && e.draws <= SKILL_MAX_DRAWS
+            ? { draws: Math.floor(e.draws) }
+            : {}),
         };
       }
     } else if (e.type === "rebirth") {
@@ -807,10 +834,15 @@ function parseHistory(value) {
         ...base,
         count: e.count,
         ...(skillById.has(e.skill) ? { skill: e.skill } : {}),
+        ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
       };
     } else if (e.type === "ultra-rebirth") {
       if (!validAmount(e.count) || e.count < 1) return [];
-      next = { ...base, count: e.count };
+      next = {
+        ...base,
+        count: e.count,
+        ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
+      };
     } else if (["purchase", "equip"].includes(e.type)) {
       if (
         typeof e.productId !== "string" ||

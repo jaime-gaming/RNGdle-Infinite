@@ -255,6 +255,11 @@ nav button.active {
 .artifact-stage {
   position: relative;
 }
+/* While a draw skill's split screen is playing, the number itself waits behind
+   it: it takes the stage the moment the best draw is chosen. */
+.artifact-stage.is-behind {
+  opacity: 0;
+}
 /* The little mark a companion leaves while its signature skill fires: pinned
    to a corner of the number box, tinted like the skill it carries, and gone
    the moment the roll settles. It pins once and then holds still — the house

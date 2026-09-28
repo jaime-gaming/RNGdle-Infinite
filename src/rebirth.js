@@ -45,6 +45,21 @@ export function rebirthMultiplier(rebirths = 0) {
   return 1 + REBIRTH_BONUS_PER_REBIRTH * Math.max(0, rebirths);
 }
 
+// A cycle starts with empty pockets, and an empty wallet with 45-second
+// reveals is a dead end rather than a restart: every finished rung also pays a
+// starting sum, so the new cycle can buy its first upgrades straight away
+// instead of waiting on the slowest rolls in the game. It grows with the
+// ladder, and every ultra-rebirth pays its own larger sum on top.
+export const REBIRTH_STARTER_EP = 250000;
+export const ULTRA_STARTER_EP = 1000000;
+
+export function cycleStarterEp(rebirths = 0, ultraRebirths = 0) {
+  return (
+    REBIRTH_STARTER_EP * Math.max(0, rebirths) +
+    ULTRA_STARTER_EP * Math.max(0, ultraRebirths)
+  );
+}
+
 // Rebirth stays completely out of sight until the ladder unlocks: no badge, no
 // teaser, no counter. The nav entry, the page and the help page all ask this one
 // question, so the reveal can never be half-done.

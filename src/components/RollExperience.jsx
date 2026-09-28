@@ -22,6 +22,7 @@ import { rollSettings, formatDuration } from "../shop-data";
 import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
+import DrawStage from "./DrawStage";
 import { petById, petBonusLabel } from "../pets.js";
 import { skillForPet } from "../skills.js";
 import { walletMultiplier } from "../progress.js";
@@ -66,6 +67,7 @@ const NumberArtifact = memo(function NumberArtifact({
   reducedMotion,
   aura,
   dockedPet = null,
+  behind = false,
 }) {
   const target = String(run.result.number),
     pad = timeline.slots - target.length;
@@ -106,7 +108,10 @@ const NumberArtifact = memo(function NumberArtifact({
   const dockedSkill = dockedPet ? skillForPet(dockedPet) : null;
   const dockedName = dockedPet ? (petById.get(dockedPet)?.name ?? "") : "";
   return (
-    <div className={`artifact-stage aura-${aura}`} data-aura={aura}>
+    <div
+      className={`artifact-stage aura-${aura} ${behind ? "is-behind" : ""}`}
+      data-aura={aura}
+    >
       {/* While the worn companion's signature skill fires, the companion steps
           off the stage and pins itself here, on the corner of the number box,
           until the roll settles and it can go back to walking. */}
@@ -289,6 +294,11 @@ export default function RollExperience({
     );
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
+  // A draw skill took more than one number: show them all, then keep the best.
+  const splitDraws = run && (run.draws ?? []).length > 1 ? run.draws : null;
+  const splitPlaying =
+    !!splitDraws && elapsed < timeline.collapse + timeline.pulseMS;
+  const splitDecided = !!splitDraws && elapsed >= timeline.collapse;
   const rankKnown = !!run && elapsed >= timeline.rarity;
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
   const visibleGroups = groups.slice(-visibleCount || groups.length);
@@ -662,14 +672,24 @@ export default function RollExperience({
       ) : (
         <>
           <section className="active-roll" aria-label="Your roll">
+            {/* Every draw the roll took, side by side, until the best of them
+                takes the centre and becomes the number that pays. */}
+            {splitPlaying && (
+              <DrawStage
+                key={run.id}
+                {...{ run, elapsed, timeline, reducedMotion, aura }}
+                leaving={splitDecided}
+              />
+            )}
             <NumberArtifact
               key={run.id}
               {...{ run, elapsed, timeline, reducedMotion, aura }}
+              behind={!!splitDraws && !splitDecided}
               dockedPet={companionSkillFiring ? session.activePet : null}
             />
             <div className="roll-announcement sr-only" role="status">
               {!digitsDone
-                ? `Revealing your number. ${timeline.digitTimes.filter((t) => elapsed >= t).length} of ${timeline.slots} digits settled.`
+                ? `Revealing ${splitDraws ? `${splitDraws.length} numbers` : "your number"}. ${timeline.digitTimes.filter((t) => elapsed >= t).length} of ${timeline.slots} digits settled.`
                 : busy
                   ? `Number ${result.number}. Revealing badges.`
                   : `${result.number}, ${result.tier}, ${formatEP(result.totalEP)} EP.${

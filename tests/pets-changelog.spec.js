@@ -224,15 +224,17 @@ test("share text ends with the public game link", () => {
 });
 
 test("the changelog lists every release and flags an unseen version", () => {
-  // v0.4 restyles the cycle: the shop/rack/rebirth wave of v0.3 shipped as
-  // one release rather than inventing a version for each part.
+  // v0.5 makes the skills honest and pays a new cycle; v0.4 restyles the
+  // cycle: the shop/rack/rebirth wave of v0.3 shipped as one release rather
+  // than inventing a version for each part.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.5",
     "v0.4",
     "v0.3",
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.4");
+  expect(LATEST_VERSION).toBe("v0.5");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
@@ -290,8 +292,8 @@ test("the changelog reads like release notes, not like a chat log", () => {
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
     }
   }
-  // Every release, v0.4's cycle rework and v0.3's shop wave included, fits the
-  // same compact budget: eight lines at most.
+  // Every release, v0.5's skill honesty, v0.4's cycle rework and v0.3's shop
+  // wave included, fits the same compact budget: eight lines at most.
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);
 });

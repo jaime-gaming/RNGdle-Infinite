@@ -268,8 +268,9 @@
 }
 .rebirth-reward {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
   min-width: 0;
 }
 .rebirth-reward-chip {
@@ -301,6 +302,126 @@
 }
 .rebirth-reward.is-earned > svg {
   color: var(--green);
+}
+
+/* This cycle, in the player's own numbers: what the run they are about to hand
+   back has actually done. */
+.rebirth-cycle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.rebirth-cycle div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.rebirth-cycle dt {
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rebirth-cycle dd {
+  margin: 0;
+  font: 700 12.5px/1.4 var(--roll-font);
+  overflow-wrap: anywhere;
+}
+
+/* What the button would do to this save, right now. */
+.rebirth-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.rebirth-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.rebirth-preview-card h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+.rebirth-preview-card.is-reset h4 {
+  color: var(--warning);
+}
+.rebirth-preview-card.is-keep h4 {
+  color: var(--green);
+}
+.rebirth-preview-card.is-gain h4 {
+  color: var(--green);
+}
+.rebirth-preview-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rebirth-preview-card li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rebirth-preview-card strong {
+  font: 700 13px/1.3 var(--roll-font);
+  overflow-wrap: anywhere;
+}
+.rebirth-preview-card small {
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* The starting sum each rung pays, on the same line as its reward. */
+.rebirth-reward-starter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font: 500 10px var(--roll-font);
+  color: var(--secondary);
+  white-space: nowrap;
+}
+.rebirth-reward-starter svg {
+  color: var(--muted);
+}
+.rebirth-reward.is-earned .rebirth-reward-starter {
+  color: var(--green);
+}
+
+.rebirth-history-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--secondary);
+}
+.rebirth-history-note svg {
+  flex-shrink: 0;
+  color: var(--muted);
 }
 
 /* Ultra-rebirth: the permanent bonus, explained where the ladder ends. */
@@ -366,6 +487,12 @@
   .rebirth-ultra-card {
     grid-template-columns: 1fr;
   }
+  .rebirth-preview-grid {
+    grid-template-columns: 1fr;
+  }
+  .rebirth-cycle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .rebirth-ladder li {
     grid-template-columns: 26px minmax(0, 1fr);
     row-gap: 8px;
@@ -384,5 +511,24 @@
   }
   .rebirth-figures {
     grid-template-columns: 1fr 1fr;
+  }
+  /* Two columns of figures and a smaller ring keep the hero inside a phone. */
+  .rebirth-gauge {
+    width: 112px;
+    height: 112px;
+  }
+  .rebirth-gauge span {
+    font-size: 25px;
+  }
+  .rebirth-cycle {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    padding: 10px 12px;
+  }
+  .rebirth-preview-card {
+    padding: 14px;
+  }
+  .rebirth-hero-copy h2 {
+    font-size: 22px;
   }
 }

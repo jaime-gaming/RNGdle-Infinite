@@ -8,9 +8,12 @@ import {
 } from "../src/progress.js";
 import {
   BADGE_TOTAL,
+  REBIRTH_STARTER_EP,
   REBIRTH_STEPS,
   REBIRTH_TOTAL,
   REBIRTH_VISIBLE_AT,
+  ULTRA_STARTER_EP,
+  cycleStarterEp,
   discoveredCount,
   rebirthBlocker,
   rebirthRequirement,
@@ -144,13 +147,14 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
   const next = applyProgress(before, action);
   expect(next).toMatchObject({
     // Kept: the account's story, the ladder and everything it earned.
-    totalEarned: before.totalEarned,
     profile: testProfile,
     rebirths: 1,
     receipts: ["old"],
     // Reset: the run itself — the collection, the shelf, the companions and
-    // the wallet. The worn aura comes off with the shelf it came from.
-    balance: 0,
+    // the wallet. The worn aura comes off with the shelf it came from, and the
+    // wallet restarts at the sum rung one pays.
+    balance: REBIRTH_STARTER_EP,
+    totalEarned: before.totalEarned + REBIRTH_STARTER_EP,
     owned: [],
     equipped: "none",
     discovered: [],
@@ -179,6 +183,7 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
     type: "rebirth",
     count: 1,
     skill: "reborn-drive",
+    grant: REBIRTH_STARTER_EP,
   });
   expect(parseProgress(JSON.stringify(next))).toEqual(next);
   expect(recoverUnsavedRolls(next, before)).toBe(next);
@@ -238,10 +243,11 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
       expect(following.percent).toBe(requirement.percent + 10);
     }
     expect(discoveredCount(next)).toBe(0);
-    // The shelf, the companions and the wallet go back with the collection.
+    // The shelf, the companions and the wallet go back with the collection:
+    // what refills the wallet is the starting sum of the rung just climbed.
     expect(next.owned).toEqual([]);
     expect(next.pets).toEqual([]);
-    expect(next.balance).toBe(0);
+    expect(next.balance).toBe(REBIRTH_STARTER_EP * (step + 1));
     if (next.history.at(-1).skill) granted.push(next.history.at(-1).skill);
     progress = { ...next, discovered: ids };
   }
@@ -272,6 +278,47 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
   expect(
     ultraRebirthBlocker({ ...progress, rebirths: REBIRTH_TOTAL - 2 }, 300000),
   ).toMatch(/ladder first/);
+});
+
+test("every cycle starts with the EP its rungs and ultra-rebirths paid", () => {
+  expect(REBIRTH_STARTER_EP).toBe(250000);
+  expect(ULTRA_STARTER_EP).toBe(1000000);
+  // One rung, one share; the ladder tops out at six, and an ultra-rebirth adds
+  // its own larger share on top of the rungs the account keeps.
+  expect(cycleStarterEp(0, 0)).toBe(0);
+  expect(cycleStarterEp(1, 0)).toBe(250000);
+  expect(cycleStarterEp(REBIRTH_TOTAL, 0)).toBe(1500000);
+  expect(cycleStarterEp(REBIRTH_TOTAL, 2)).toBe(3500000);
+  let progress = { ...state(), pets: [], skills: [], equippedSkills: [] };
+  for (let step = 0; step < REBIRTH_TOTAL; step++) {
+    const next = applyProgress(progress, {
+      type: "rebirth",
+      expectedRebirths: step,
+      at: 200000 + step,
+      eventId: `g${step + 1}`,
+    });
+    // The wallet restarts on the starting sum, never empty and never richer
+    // than what the account has actually been given.
+    expect(next.balance).toBe(cycleStarterEp(step + 1, 0));
+    expect(next.balance).toBeLessThanOrEqual(next.totalEarned);
+    expect(next.history.at(-1).grant).toBe(cycleStarterEp(step + 1, 0));
+    expect(parseProgress(JSON.stringify(next)).balance).toBe(next.balance);
+    progress = { ...next, discovered: ids };
+  }
+  // An ultra at the top pays the ladder's sum and its own.
+  const ultra = applyProgress(progress, {
+    type: "ultra-rebirth",
+    expectedUltraRebirths: 0,
+    at: 300000,
+    eventId: "u1",
+  });
+  expect(ultra.rebirths).toBe(REBIRTH_TOTAL);
+  expect(ultra.ultraRebirths).toBe(1);
+  expect(ultra.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 1));
+  expect(ultra.balance).toBeLessThanOrEqual(ultra.totalEarned);
+  expect(parseProgress(JSON.stringify(ultra)).history.at(-1).grant).toBe(
+    cycleStarterEp(REBIRTH_TOTAL, 1),
+  );
 });
 
 test("old saves default to zero rebirths and ultra-rebirths, and optional bar snapshots cannot shorten a deadline", () => {
@@ -410,8 +457,9 @@ test("rebirth asks for typed confirmation, applies once, and restarts the run wi
     });
   await expect.poll(async () => (await saved(page)).rebirths).toBe(1);
   const after = await saved(page);
-  // The run starts over: the wallet and everything it bought are handed back.
-  expect(after.balance).toBe(0);
+  // The run starts over: the wallet and everything it bought are handed back,
+  // and rung one refills the wallet with its starting sum.
+  expect(after.balance).toBe(REBIRTH_STARTER_EP);
   expect(after.owned).toEqual([]);
   expect(after.equipped).toBe("none");
   expect(after.discovered).toEqual([]);
@@ -436,11 +484,11 @@ test("rebirth asks for typed confirmation, applies once, and restarts the run wi
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.getByRole("button", { name: "RNGdle Infinite home" }).click();
   await page.locator(".generate").click();
-  // The new cycle banks into an empty wallet, already earning the +2% the
-  // rebirth just paid.
+  // The new cycle banks into the sum the rung paid, already earning the +2%
+  // the rebirth just granted.
   await expect
     .poll(async () => (await saved(page)).balance)
-    .toBe(Math.round(evaluate(604827).totalEP * 1.02));
+    .toBe(REBIRTH_STARTER_EP + Math.round(evaluate(604827).totalEP * 1.02));
   expect((await saved(page)).discovered).toHaveLength(
     evaluate(604827).badges.length,
   );
@@ -535,10 +583,11 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   await other.locator('[data-product="starfall"] button').click();
   await expect(other.locator(".toast")).toContainText("changed");
   // The stale tab neither spent EP nor revived an old purchase: the rebirth
-  // handed the shelf back, so the wallet is empty and nothing was sold.
+  // handed the shelf back, so nothing was sold and the wallet holds only the
+  // sum the new cycle started with.
   const after = await saved(page);
   expect(after.owned).toEqual([]);
-  expect(after.balance).toBe(0);
+  expect(after.balance).toBe(REBIRTH_STARTER_EP);
   expect(after.rebirths).toBe(1);
   await other.close();
 });
@@ -654,11 +703,12 @@ test("a new cycle buys the shelf again and is credited at the catalogue price", 
     { ...first, discovered: ids, balance: 100000 },
     action,
   );
-  // The aura went back on the shelf, and the wallet it was bought with is
-  // empty again — but the purchase stays in the account's history, and the
+  // The aura went back on the shelf, and the wallet restarts on the sum rung
+  // one pays — but the purchase stays in the account's history, and the
   // rebirth joins it there.
   expect(reborn.owned).toEqual([]);
-  expect(reborn.balance).toBe(0);
+  expect(reborn.balance).toBe(REBIRTH_STARTER_EP);
+  expect(reborn.totalEarned).toBe(100000 + REBIRTH_STARTER_EP);
   expect(reborn.history.map((e) => e.type)).toEqual(["purchase", "rebirth"]);
   // So buying it back in the new cycle is a real sale, at the catalogue price.
   const second = applyProgress(

@@ -294,6 +294,9 @@ export default function ActivityFeed({
                         <span>
                           {event.tier.toUpperCase()} · {event.badges.length}{" "}
                           badges earned
+                          {event.draws > 1
+                            ? ` · best of ${event.draws} draws`
+                            : ""}
                           {event.walletBonus
                             ? ` · +${formatEP(event.walletBonus)} EP extra`
                             : ""}
@@ -352,14 +355,16 @@ export default function ActivityFeed({
                       : ""}
                     . The collection, every purchase, the companions and the
                     wallet reset; the history, the rebirths and every permanent
-                    bonus were kept.
+                    bonus were kept, and the cycle began with{" "}
+                    {formatEP(event.grant ?? 0)} EP.
                   </p>
                 ) : event.type === "ultra-rebirth" ? (
                   <p>
                     The run started over from the top of the ladder: the
                     collection, every purchase, the companions and the wallet
-                    reset. History, rebirths and bonuses stayed, and the
-                    permanent wallet bonus grew by 10 points.
+                    reset. History, rebirths and bonuses stayed, the cycle began
+                    with {formatEP(event.grant ?? 0)} EP, and the permanent
+                    wallet bonus grew by 10 points.
                   </p>
                 ) : (
                   <p className="activity-transaction">

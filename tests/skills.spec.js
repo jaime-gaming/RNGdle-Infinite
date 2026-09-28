@@ -29,9 +29,11 @@ import {
 } from "../src/skills.js";
 import {
   BADGE_TOTAL,
+  REBIRTH_STARTER_EP,
   REBIRTH_STEPS,
   REBIRTH_TOTAL,
   ULTRA_BONUS_PER_REBIRTH,
+  cycleStarterEp,
 } from "../src/rebirth.js";
 import { PETS, petById } from "../src/pets.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
@@ -336,10 +338,9 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
   const multiplier =
     2 * petById.get("dragonet").multiplier * (1 + 0.02 * 3) * (1 + 0.1 * 2);
   expect(
-    walletMultiplier(
-      { activePet: "dragonet", rebirths: 3, ultraRebirths: 2 },
-      ["surge"],
-    ),
+    walletMultiplier({ activePet: "dragonet", rebirths: 3, ultraRebirths: 2 }, [
+      "surge",
+    ]),
   ).toBeCloseTo(multiplier, 6);
   expect(combined.balance).toBe(Math.round(result.totalEP * multiplier));
   // And a reload keeps the receipt.
@@ -466,8 +467,9 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
   });
   expect(reborn.rebirths).toBe(1);
   // The run is handed back: the wallet, the shelf, the companions and the
-  // collection all start from nothing.
-  expect(reborn.balance).toBe(0);
+  // collection all start over, and the wallet restarts on the sum the rung
+  // just paid.
+  expect(reborn.balance).toBe(REBIRTH_STARTER_EP);
   expect(reborn.owned).toEqual([]);
   expect(reborn.pets).toEqual([]);
   expect(reborn.equipped).toBe("none");
@@ -478,7 +480,7 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
   expect(reborn.cooldownUntil).toBe(0);
   // The wallet keeps its balance of EP earned all-time and the +2% the rung
   // just paid — the companion that went back with the run does not count.
-  expect(reborn.totalEarned).toBe(5000000);
+  expect(reborn.totalEarned).toBe(5000000 + REBIRTH_STARTER_EP);
   expect(walletMultiplier(reborn, [])).toBeCloseTo(1.02, 6);
   // The ladder skill is earned, not bought: it arrives unlocked and takes the
   // rack's slot, while the shop skill went back on the stall.
@@ -543,7 +545,7 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   expect(reborn.profile).toEqual(top.profile);
   // The same fresh start a rebirth gives: wallet, collection, shelf and
   // companions go back, and the shop skill with them.
-  expect(reborn.balance).toBe(0);
+  expect(reborn.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 2));
   expect(reborn.discovered).toEqual([]);
   expect(reborn.owned).toEqual([]);
   expect(reborn.pets).toEqual([]);
@@ -552,7 +554,7 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   expect(reborn.skillCharge).toEqual({});
   // It costs the run, never the account: the ladder and its bonuses stay.
   expect(reborn.rebirths).toBe(REBIRTH_TOTAL);
-  expect(reborn.totalEarned).toBe(9000000);
+  expect(reborn.totalEarned).toBe(9000000 + cycleStarterEp(REBIRTH_TOTAL, 2));
   expect(reborn.history).toHaveLength(1);
   expect(reborn.history[0]).toMatchObject({ type: "ultra-rebirth", count: 2 });
   // The bonus is permanent and multiplies banked EP only: +10% per ultra.

@@ -142,6 +142,15 @@ are capped at eight draws. When a skill fires, the effect is written into the
 committed roll, so a reload, a second tab or a retry can never re-fire it or
 re-roll for something better.
 
+A draw skill does its work where you can watch it. Every draw it takes lands on
+its own side of the screen **at the same time**, each with the EP it would have
+banked, and when the digits settle the numbers it discards fade where they stand
+while the best one is pulled into the centre and becomes the roll. Only that
+number is scored, ranked and paid: the draws you did not keep are shown with
+what they would have earned and then dropped, so a best-of skill never quietly
+banks two rolls at once. The activity feed keeps the receipt — _best of 3
+draws_ — next to the number that was kept.
+
 The rack starts with **two slots**. Skill Bay I (**1,000,000 EP**) widens it to
 three, Skill Bay II (**4,000,000 EP**) to four. Equipping, unequipping and
 swapping skills is **free** — the bays are the purchase, the loadout is not.
@@ -201,9 +210,9 @@ never skips a reveal, a cooldown or a draw, and without Persistence Core it
 starts off again after a reload.
 
 Every purchase is confirmed, costs EP once, and never changes odds or scores.
-The whole catalogue comes to 96.35 M EP, and no upgrade costs more than four
-times its own prerequisite. Everything you buy is yours for the rest of the
-cycle: a rebirth puts the whole catalogue back on the shelf.
+The 49 products in the catalogue come to 107.25 M EP, and the most expensive of
+them costs 11 M. Everything you buy is yours for the rest of the cycle: a
+rebirth puts the whole catalogue back on the shelf.
 
 ## Rebirth and ultra-rebirth
 
@@ -230,6 +239,10 @@ rebirth:
 
 - **grants** the rung's skill plus a **permanent, stackable +2% to banked
   EP** (up to +12% with the ladder complete),
+- **pays a new cycle**: **250,000 EP for every rung you have climbed** waits in
+  your wallet when the next one starts (250,000 after the first, 1,500,000 after
+  the sixth), so a fresh run begins rolling instead of waiting on a slow first
+  minute,
 - **resets the run**: the badge collection, **every purchase** (upgrades,
   auras, tools and shop skills), the companions and the EP in your wallet, and
 - **keeps the account**: the activity history, the rebirths you have done with
@@ -241,9 +254,16 @@ rebirth:
 Finish the sixth rung and **ultra-rebirth** unlocks: the same clean slate,
 taken from a complete collection, in exchange for a **permanent, stackable
 +10% to banked EP** for every ultra-rebirth, and a cosmetic mark next to your
-profile. It costs the run, never the account — history, rebirths and their +2%
-rung bonuses all stay. Both resets require typing the word (`REBIRTH` or
-`ULTRA`) and cannot be undone.
+profile. It pays its own **1,000,000 EP** on top of the rungs you keep — a
+ladder-complete ultra-rebirth starts the next cycle with 2,500,000 EP. It costs
+the run, never the account — history, rebirths and their +2% rung bonuses all
+stay. Both resets require typing the word (`REBIRTH` or `ULTRA`) and cannot be
+undone.
+
+The page speaks in your own numbers before you commit: how long this cycle has
+run, how many rolls and badges it produced, its best number and the EP those
+rolls earned, and a preview of the three things the button does — what you hand
+back, what you keep, and what you gain, starting sum included.
 
 ## Your profile, your data
 
