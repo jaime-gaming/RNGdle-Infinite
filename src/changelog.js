@@ -2,6 +2,16 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.4",
+    title: "rebirth restarts the run, not the account",
+    body: [
+      "a rebirth now hands the run back: every purchase, the companions, the wallet and the badge collection start over.",
+      "your account keeps its story — the activity history, the rebirths you have done with their skills, every permanent bonus and the EP earned all-time.",
+      "the ultra-rebirth gives the same fresh start from a complete collection, and no longer wipes the history or the ladder you climbed.",
+      "the profile reports figures for the whole account instead of a single cycle.",
+    ],
+  },
+  {
     version: "v0.3",
     title: "one release: the shop, the rack, rebirth and the shelves",
     body: [

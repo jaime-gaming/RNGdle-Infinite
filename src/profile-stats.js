@@ -7,8 +7,8 @@ import { LATEST_VERSION } from "./changelog.js";
 //
 // Every figure here is derived from the saved game and its activity history —
 // nothing is stored twice, so the summary can never drift from the log it
-// reads. The log restarts with each rebirth (that is what a new cycle means),
-// so these are the figures for the current cycle, not for all time.
+// reads. A rebirth restarts the run, not the account: the log keeps every
+// cycle, so these are the figures for the whole account.
 export function accountStats(progress = {}) {
   const history = Array.isArray(progress.history) ? progress.history : [];
   const rolls = history.filter((event) => event.type === "roll");

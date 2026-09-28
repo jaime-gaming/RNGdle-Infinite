@@ -137,14 +137,16 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   const reward = nextRebirthSkill(rebirths);
   const ultraPercent = Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1));
   const keeps = [
-    ["Wallet and every purchase", "EP, upgrades, tools — and your auras"],
-    ["Companions and skills", "charge kept, the equipped ones stay"],
-    ["Rebirth bonuses", "+2% EP per finished step, forever"],
+    ["Activity history", "every roll, unlock and purchase, cycle after cycle"],
+    ["Rebirth ladder", "your rebirths, their skills and the +2% EP each"],
+    ["Ultra-rebirth bonus", "+10% EP per ultra-rebirth, forever"],
+    ["Profile and all-time EP", "your account's story is never rewritten"],
   ];
   const resets = [
     ["Badge collection", "rediscover it in the new cycle"],
-    ["Activity history", "the feed starts with this rebirth"],
-    ["Worn aura", "unequips; re-equipping is free"],
+    ["Everything you bought", "upgrades, auras, tools and shop skills"],
+    ["Companions", "found or bought, they start over too"],
+    ["Wallet EP", "the balance resets to zero"],
   ];
   return (
     <section className="rebirth-page" aria-label="Rebirth">
@@ -161,8 +163,9 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               : `Rebirth ${rebirths + 1}`}
           </h2>
           <p>
-            The badge collection starts over; wallet, purchases, companions and
-            skills stay. Every step pays a skill and +2% EP — forever.
+            The collection and everything you bought start over — the wallet,
+            the upgrades, the companions. Your history, your rebirths and every
+            permanent bonus stay. Each step pays a skill and +2% EP — forever.
           </p>
           <div className="rebirth-actions">
             {ladderComplete && (
@@ -350,9 +353,9 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <Sparkles size={16} /> After the ladder: ultra-rebirth
           </h3>
           <p>
-            Finish all {REBIRTH_TOTAL} steps and everything — upgrades,
-            companions, the rebirth bonus — can start over for one that never
-            resets.
+            Finish all {REBIRTH_TOTAL} steps and every badge, and you can take
+            the same fresh start at the top of the ladder — for a bonus that
+            never resets.
           </p>
         </header>
         <div className="rebirth-ultra-card">
@@ -430,16 +433,18 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           {open === "ultra" ? (
             <>
               <p>
-                The last rebirth is a full reset. Everything starts over, and
-                you get something permanent in return.
+                The run starts over again, and you get something permanent in
+                return.
               </p>
               <ul>
                 <li>
-                  <strong>Reset:</strong> all EP, badges, upgrades, companions,
-                  skills, cosmetics and your {REBIRTH_TOTAL} rebirths.
+                  <strong>Reset:</strong> your EP, your badges, every upgrade,
+                  aura, tool, shop skill and companion.
                 </li>
                 <li>
-                  <strong>Keep:</strong> your profile and the permanent bonus.
+                  <strong>Keep:</strong> your profile, your activity history,
+                  your {REBIRTH_TOTAL} rebirths with their skills, and every
+                  permanent bonus.
                 </li>
                 <li>
                   <strong>Gain:</strong>{" "}
@@ -453,15 +458,15 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             </>
           ) : (
             <>
-              <p>The collection starts over; everything else stays.</p>
+              <p>The run starts over; the account keeps everything it did.</p>
               <ul>
                 <li>
-                  <strong>Reset:</strong> discovered badges, the worn aura and
-                  the activity history.
+                  <strong>Reset:</strong> the badge collection, every purchase,
+                  the companions and the EP in your wallet.
                 </li>
                 <li>
-                  <strong>Keep:</strong> EP, every purchase, companions, skills
-                  and their charge.
+                  <strong>Keep:</strong> the activity history, your rebirths
+                  with their skills, and every permanent EP bonus.
                 </li>
                 <li>
                   <strong>Gain:</strong>{" "}

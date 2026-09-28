@@ -69,6 +69,19 @@ function firedSkills(state, id, source) {
   );
 }
 
+// The activity log is the account's story, so a new cycle never clears it:
+// rebirths, rolls, purchases and unlocks from every past cycle stay readable.
+// It is capped instead — the oldest entries go first, and only for accounts
+// long enough to have collected thousands of them, so the save cannot outgrow
+// the browser's storage.
+export const HISTORY_LIMIT = 5000;
+function appendHistory(history, events = []) {
+  const merged = [...(history ?? []), ...events];
+  return merged.length > HISTORY_LIMIT
+    ? merged.slice(merged.length - HISTORY_LIMIT)
+    : merged;
+}
+
 // Equipping is free. A newly unlocked skill takes a free slot instead of
 // silently doing nothing; a full rack is left exactly as the player set it.
 function autoEquip(equipped, progress, id) {
@@ -229,6 +242,62 @@ export function parseProgress(raw) {
 export function validUsername(value) {
   return typeof value === "string" && /^[\p{L}\p{N}_-]{3,20}$/u.test(value);
 }
+
+// What a new cycle hands back, shared by a rebirth and an ultra-rebirth.
+//
+// A cycle restarts the run, not the account: the badge collection, everything
+// the wallet bought — upgrades, auras, tools and shop skills —, the companions
+// and the EP in the wallet start over. What the account *did* is never undone:
+// the activity history, the rebirth and ultra-rebirth counters with their
+// permanent bonuses, the skills the ladder already granted, the all-time EP
+// earned and the profile all stay.
+//
+// `granted` is the ladder skill this rebirth pays, which is earned rather than
+// bought and so joins the skills that survived.
+function startNewCycle(state, granted = null) {
+  const owned = [];
+  // Shop skills are purchases: they go back on the stall. Ladder skills were
+  // paid for by the rebirths the cycle keeps, so they stay unlocked.
+  const kept = (state.skills ?? []).filter(
+    (id) => skillById.get(id)?.source !== "shop",
+  );
+  const skills = granted ? [...new Set([...kept, granted.id])] : kept;
+  const base = {
+    ...state,
+    owned,
+    pets: [],
+    activePet: "none",
+    skills,
+  };
+  // The rack is rebuilt rather than repaired: the skill this rebirth pays takes
+  // a slot first, then whatever the cycle kept, until the rack is full.
+  let equippedSkills = autoEquip([], base, granted?.id);
+  for (const id of skills) equippedSkills = autoEquip(equippedSkills, base, id);
+  // Charge belongs to the skill it fills: what went back on the shelf — and
+  // the companions' signature skills — take their charge with them.
+  const skillCharge = Object.fromEntries(
+    Object.entries(state.skillCharge ?? {}).filter(([id]) =>
+      skills.includes(id),
+    ),
+  );
+  return {
+    ...base,
+    equippedSkills,
+    skillCharge,
+    balance: 0,
+    discovered: [],
+    equipped: "none",
+    // The tracked goal is a preference, not a reward: it survives when it is
+    // still reachable from an empty workshop.
+    goalId: validGoal(state.goalId, owned) ? state.goalId : null,
+    flywheelCharge: 0,
+    // Offline earnings are a tool, and the tool was handed back.
+    offline: null,
+    pendingRoll: null,
+    cooldownUntil: 0,
+    cooldownWindow: null,
+  };
+}
 export function applyProgress(state, action) {
   if (action.type === "rebirth") {
     const count = state.rebirths ?? 0;
@@ -244,39 +313,15 @@ export function applyProgress(state, action) {
     if (!validAmount(count + 1))
       throw new Error("Rebirth count limit reached.");
     const granted = nextRebirthSkill(count);
-    // Everything you earned stays: EP, every purchase — auras included —,
-    // companions and skills. What restarts is the collection itself; the
-    // worn aura comes off so the new cycle starts with the plain box, but it
-    // stays in the wardrobe and re-equipping is free.
-    const owned = state.owned;
-    const skills = granted
-      ? [...new Set([...(state.skills ?? []), granted.id])]
-      : [...(state.skills ?? [])];
-    const equippedSkills = autoEquip(
-      state.equippedSkills ?? [],
-      { ...state, owned, skills },
-      granted?.id,
-    );
+    // The run starts over — collection, everything bought, companions and the
+    // wallet — while the account keeps its history, its rebirths and every
+    // bonus it earned. Receipts stay too, so a roll from an earlier cycle can
+    // never be settled twice into the new one.
     return {
-      ...state,
+      ...startNewCycle(state, granted),
       profile: state.profile,
       rebirths: count + 1,
-      discovered: [],
-      owned,
-      equipped: "none",
-      goalId: null,
-      skills,
-      equippedSkills,
-      pendingRoll: null,
-      cooldownUntil: 0,
-      cooldownWindow: null,
-      receipts: [],
-      // Offline earnings are a tool, so the tool stays; the absence it had
-      // already banked belongs to the cycle that just ended.
-      offline: state.offline
-        ? { lastSeenAt: now, batch: null, report: null }
-        : null,
-      history: [
+      history: appendHistory(state.history, [
         {
           id: action.eventId ?? `rebirth:${count + 1}`,
           type: "rebirth",
@@ -284,7 +329,7 @@ export function applyProgress(state, action) {
           count: count + 1,
           ...(granted ? { skill: granted.id } : {}),
         },
-      ],
+      ]),
     };
   }
   if (action.type === "ultra-rebirth") {
@@ -300,20 +345,22 @@ export function applyProgress(state, action) {
     if (blocked) throw new Error(blocked);
     if (!validAmount(count + 1))
       throw new Error("Ultra-rebirth limit reached.");
-    // The full reset: everything the ladder kept is handed back for a fresh
-    // run, and the permanent wallet bonus grows by ten points.
+    // The same fresh start a rebirth gives, taken at the top of the ladder
+    // with the whole collection in hand. It costs the run, never the account:
+    // history, rebirths, ladder skills and every permanent bonus stay, and the
+    // ultra-rebirth adds ten more points forever.
     return {
-      ...emptyProgress(),
+      ...startNewCycle(state),
       profile: state.profile,
       ultraRebirths: count + 1,
-      history: [
+      history: appendHistory(state.history, [
         {
           id: action.eventId ?? `ultra:${count + 1}`,
           type: "ultra-rebirth",
           at: now,
           count: count + 1,
         },
-      ],
+      ]),
     };
   }
   if (action.type === "goal") {
@@ -452,7 +499,7 @@ export function applyProgress(state, action) {
       });
     return {
       ...state,
-      history: [...(state.history ?? []), ...events],
+      history: appendHistory(state.history, events),
       pendingRoll: null,
       // Turbo makes the settled roll count more than once towards Flywheel.
       flywheelCharge: flywheelAfterSettlement(
@@ -522,8 +569,7 @@ export function applyProgress(state, action) {
       throw new Error("Not enough EP for this item.");
     return {
       ...state,
-      history: [
-        ...(state.history ?? []),
+      history: appendHistory(state.history, [
         {
           id:
             action.eventId ??
@@ -534,7 +580,7 @@ export function applyProgress(state, action) {
           name: item.name,
           ep: item.price,
         },
-      ],
+      ]),
       balance: state.balance - item.price,
       goalId: state.goalId === item.id ? null : (state.goalId ?? null),
       ...(item.kind === "pace"
@@ -588,8 +634,7 @@ export function applyProgress(state, action) {
       ),
       // Buying a companion equips it, matching how auras behave.
       activePet: pet.id,
-      history: [
-        ...(state.history ?? []),
+      history: appendHistory(state.history, [
         {
           id:
             action.eventId ??
@@ -600,7 +645,7 @@ export function applyProgress(state, action) {
           name: pet.name,
           ep: pet.price,
         },
-      ],
+      ]),
     };
   }
   if (action.type === "equip-pet") {
@@ -664,8 +709,7 @@ export function applyProgress(state, action) {
     return {
       ...state,
       equipped: action.id,
-      history: [
-        ...(state.history ?? []),
+      history: appendHistory(state.history, [
         {
           id:
             action.eventId ??
@@ -675,7 +719,7 @@ export function applyProgress(state, action) {
           productId: action.id,
           name: productById.get(action.id)?.name ?? "Original appearance",
         },
-      ],
+      ]),
     };
   }
   throw new Error("Unknown progress action");
@@ -855,7 +899,12 @@ export function parsePending(p, owned = null) {
 // Only roll settlement can succeed in memory after a failed write. Reapply those
 // receipts to the latest shared wallet instead of overwriting other tabs' spending.
 export function recoverUnsavedRolls(stored, temporary) {
-  if ((stored.rebirths ?? 0) !== (temporary.rebirths ?? 0)) return stored;
+  // A roll from an earlier cycle can never be replayed into a later one.
+  if (
+    (stored.rebirths ?? 0) !== (temporary.rebirths ?? 0) ||
+    (stored.ultraRebirths ?? 0) !== (temporary.ultraRebirths ?? 0)
+  )
+    return stored;
   let merged = stored;
   for (const event of temporary.history ?? []) {
     if (

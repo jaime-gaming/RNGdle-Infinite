@@ -457,7 +457,7 @@ export default function Shop({
                     ? "Back soon"
                     : skill
                       ? "In stock"
-                      : "Permanent"}
+                      : "Kept"}
             </span>
           </div>
           <p className="shop-card-desc">
@@ -1208,7 +1208,7 @@ export default function Shop({
         </nav>
       )}
       <p className="shop-save-note">
-        Purchases are permanent and cost in-game EP only.{" "}
+        Purchases cost in-game EP only, and they are yours until you rebirth.{" "}
         {progress.profile
           ? `Saved locally as ${progress.profile.username}.`
           : "Sign up to keep your wallet across reloads."}
@@ -1236,7 +1236,7 @@ export default function Shop({
               <ShoppingBag size={26} />
             </div>
             <p className="eyebrow">
-              PERMANENT{" "}
+              KEPT TILL REBIRTH{" "}
               {selected.kind === "aura"
                 ? "COSMETIC"
                 : selected.kind === "skill"
@@ -1253,7 +1253,7 @@ export default function Shop({
               {selected.kind === "aura"
                 ? "equips your new aura."
                 : selected.kind === "skill"
-                  ? `unlocks ${selected.name} permanently — it charges over ${selected.charges} online rolls, then fires once.`
+                  ? `unlocks ${selected.name} until you rebirth — it charges over ${selected.charges} online rolls, then fires once.`
                   : selected.kind === "skill-slot"
                     ? `widens your rack to ${selected.slots} slots; existing charge is kept.`
                     : selected.kind === "utility"

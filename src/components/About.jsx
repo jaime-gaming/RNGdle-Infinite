@@ -85,7 +85,7 @@ export default function About({ navigate, progress }) {
         "Labels are rounded; hover any rank to see the exact percentage and counts.",
         ...(showsRebirth
           ? [
-              `Rebirth unlocks step by step: the first step asks for half of the collection, and each of the ${REBIRTH_TOTAL} steps raises the bar by ten points. Every step grants an exclusive skill and a permanent +2% on banked EP, and everything you bought — auras included — stays; only the collection and the worn aura reset. An ultra-rebirth at the top starts everything over for a larger permanent bonus. No purchase is ever required for it.`,
+              `Rebirth unlocks step by step: the first step asks for half of the collection, and each of the ${REBIRTH_TOTAL} steps raises the bar by ten points. Every step grants an exclusive skill and a permanent +2% on banked EP, and it starts the run over — the badge collection, everything you bought, your companions and your EP — while your activity history, your rebirths and every permanent bonus stay. An ultra-rebirth at the top does the same from a completed collection for a larger permanent bonus. No purchase is ever required for it.`,
             ]
           : []),
       ],
@@ -98,7 +98,7 @@ export default function About({ navigate, progress }) {
         "Signing up creates a local profile in this browser and starts a clean account — nothing from guest play carries over.",
         "There is no email, password, server or leaderboard. Clearing site data deletes the save.",
         "Refreshing resumes the same committed number and deadline. Tabs on one account share a single draw and reward.",
-        "Your profile shows how far you have come in this cycle, and you can export it as a file. There is no import — a file can never overwrite the game.",
+        "Your profile shows how far you have come since the account was created, and you can export it as a file. There is no import — a file can never overwrite the game.",
       ],
     },
   ];

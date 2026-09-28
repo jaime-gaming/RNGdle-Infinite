@@ -86,7 +86,8 @@ export function useProgress() {
         const next = parseProgress(localStorage.getItem(PROGRESS_KEY));
         if (
           next.profile?.id !== current.current.profile.id ||
-          next.rebirths !== current.current.rebirths
+          next.rebirths !== current.current.rebirths ||
+          next.ultraRebirths !== current.current.ultraRebirths
         )
           reset(next);
         else {
@@ -131,7 +132,8 @@ export function useProgress() {
             // never resurrect a deleted account or spend another profile's EP.
             if (
               stored.profile?.id !== previous.profile.id ||
-              stored.rebirths !== previous.rebirths
+              stored.rebirths !== previous.rebirths ||
+              stored.ultraRebirths !== previous.ultraRebirths
             ) {
               reset(stored);
               return {
@@ -442,7 +444,8 @@ export function useProgress() {
               const latest = parseProgress(localStorage.getItem(PROGRESS_KEY));
               if (
                 latest.profile?.id !== previous.profile.id ||
-                latest.rebirths !== previous.rebirths
+                latest.rebirths !== previous.rebirths ||
+                latest.ultraRebirths !== previous.ultraRebirths
               ) {
                 reset(latest);
                 return {

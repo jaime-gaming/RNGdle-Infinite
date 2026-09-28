@@ -60,7 +60,7 @@ There are **235 badges across 18 sets**, split into six rarities from Common to
 Mythic, plus the **GODLY** tier for the very top scores. The collection is
 discovery-only: you see a badge only once you have earned it, and each new one
 is a permanent mark on your collection page. A rebirth restarts the collection
-itself — and only because you decided it should.
+and the run around it — and only because you decided it should.
 
 | What you see | What it means                                                              |
 | ------------ | -------------------------------------------------------------------------- |
@@ -202,7 +202,8 @@ starts off again after a reload.
 
 Every purchase is confirmed, costs EP once, and never changes odds or scores.
 The whole catalogue comes to 96.35 M EP, and no upgrade costs more than four
-times its own prerequisite.
+times its own prerequisite. Everything you buy is yours for the rest of the
+cycle: a rebirth puts the whole catalogue back on the shelf.
 
 ## Rebirth and ultra-rebirth
 
@@ -229,26 +230,27 @@ rebirth:
 
 - **grants** the rung's skill plus a **permanent, stackable +2% to banked
   EP** (up to +12% with the ladder complete),
-- **keeps** your EP and **every purchase — auras included —**, your
-  companions, your skills and your profile, and
-- **resets** the badge collection to zero (so the next rung's percentage is
-  rediscovered from scratch), unequips the worn aura, and clears the activity
-  history.
+- **resets the run**: the badge collection, **every purchase** (upgrades,
+  auras, tools and shop skills), the companions and the EP in your wallet, and
+- **keeps the account**: the activity history, the rebirths you have done with
+  the skills they granted, every permanent bonus, the EP you have earned
+  all-time, and your profile.
 
 ![The rebirth ladder: collection progress, the current rung and all six steps](media/rebirth.png)
 
-Finish the sixth rung and **ultra-rebirth** unlocks: a genuine full reset — EP,
-badges, purchases, companions, skills, the rebirth counter and its +2% rung
-bonuses — in exchange for a **permanent, stackable +10% to banked EP** for
-every ultra-rebirth, and a cosmetic mark next to your profile. Both resets
-require typing the word (`REBIRTH` or `ULTRA`) and cannot be undone.
+Finish the sixth rung and **ultra-rebirth** unlocks: the same clean slate,
+taken from a complete collection, in exchange for a **permanent, stackable
++10% to banked EP** for every ultra-rebirth, and a cosmetic mark next to your
+profile. It costs the run, never the account — history, rebirths and their +2%
+rung bonuses all stay. Both resets require typing the word (`REBIRTH` or
+`ULTRA`) and cannot be undone.
 
 ## Your profile, your data
 
 Signing up is just a local name for a save file in your browser — no email, no
 password, no server. Your profile page shows **how far you have come**, all of
 it derived live from your save and your activity log rather than stored twice:
-rolls completed, online vs offline, EP earned in this cycle, EP spent, your best
+rolls completed, online vs offline, EP earned all-time, EP spent, your best
 roll, badges discovered, companions found free, skills unlocked, charged effects
 fired, Flywheel boosts used, rebirths and ultra-rebirths, and the date of your
 first and latest entry.
@@ -324,9 +326,11 @@ companion, and they use their own random sample rather than the roll's.
 **Do offline rolls count towards skills and Flywheel?** No. Offline rolls pay
 their EP and count in your history, but charging is online-only.
 
-**What happens to my purchases when I rebirth?** They stay. Only the badge
-collection, the aura, the activity history and the cycle's own bookkeeping are
-cleared. An ultra-rebirth is the one that hands everything back.
+**What happens to my purchases when I rebirth?** They go back on the shelf:
+a rebirth restarts the run — every purchase, the companions, the badge
+collection and the EP in your wallet. Your history, your rebirths, the skills
+the ladder granted and every permanent bonus stay. An ultra-rebirth gives the
+same fresh start from a complete collection, for a bigger bonus.
 
 **Is this the official RNGdle?** No. It is an independent recreation, built from
 public rules and reference data. See credits below.

@@ -119,7 +119,7 @@ test("the ladder climbs from half the collection to all of it", () => {
   );
 });
 
-test("rebirth keeps the wallet, the workshop, the companions, the skills and the wardrobe", () => {
+test("rebirth restarts the run — purchases, companions and wallet — and keeps the account's history, rebirths and bonuses", () => {
   const old = applyProgress(
     { ...state(), discovered: [] },
     {
@@ -143,34 +143,39 @@ test("rebirth keeps the wallet, the workshop, the companions, the skills and the
   };
   const next = applyProgress(before, action);
   expect(next).toMatchObject({
-    // Kept: everything the ladder is not about.
-    balance: before.balance,
+    // Kept: the account's story, the ladder and everything it earned.
     totalEarned: before.totalEarned,
-    pets: ["pebble"],
-    activePet: "pebble",
-    skillCharge: { surge: 4 },
-    flywheelCharge: 4,
     profile: testProfile,
     rebirths: 1,
-    // Cleared: the collection, the worn aura, the history and the cycle's
-    // bookkeeping. Purchased auras stay in the wardrobe, ready to re-equip.
-    discovered: [],
+    receipts: ["old"],
+    // Reset: the run itself — the collection, the shelf, the companions and
+    // the wallet. The worn aura comes off with the shelf it came from.
+    balance: 0,
+    owned: [],
     equipped: "none",
+    discovered: [],
+    pets: [],
+    activePet: "none",
+    flywheelCharge: 0,
     goalId: null,
     pendingRoll: null,
     cooldownUntil: 0,
     cooldownWindow: null,
-    receipts: [],
+    offline: null,
+    skillCharge: {},
   });
-  expect(next.owned).toContain("starfall");
-  expect(next.owned).toContain("quickwind-1");
-  expect(next.skills).toContain("surge");
-  // Rebirth 1 grants its ladder skill and puts it in a free slot.
-  expect(next.skills).toContain("reborn-drive");
-  expect(next.equippedSkills).toContain("reborn-drive");
-  // The activity feed restarts with the rebirth that opened the cycle.
-  expect(next.history).toHaveLength(1);
-  expect(next.history[0]).toMatchObject({
+  // A shop skill is a purchase, so it goes back on the stall; the ladder skill
+  // is earned by the rebirth and takes the rack's base slot.
+  expect(next.skills).toEqual(["reborn-drive"]);
+  expect(next.equippedSkills).toEqual(["reborn-drive"]);
+  // The activity history belongs to the account, not to the cycle: the roll
+  // from the previous cycle is still there, and the rebirth joins its end.
+  expect(next.history.map((e) => e.type)).toEqual([
+    "roll",
+    "unlock",
+    "rebirth",
+  ]);
+  expect(next.history.at(-1)).toMatchObject({
     type: "rebirth",
     count: 1,
     skill: "reborn-drive",
@@ -178,11 +183,10 @@ test("rebirth keeps the wallet, the workshop, the companions, the skills and the
   expect(parseProgress(JSON.stringify(next))).toEqual(next);
   expect(recoverUnsavedRolls(next, before)).toBe(next);
   expect(rollReceipt(next)).toBeNull();
-  // The cycle's committed roll and its receipts are gone, so there is nothing
-  // left to settle: a stale receipt cannot be replayed into the new cycle.
+  // The cycle's committed roll is gone, so there is nothing left to settle —
+  // but its receipt is remembered, so it can never be settled twice.
   expect(next.pendingRoll).toBeNull();
-  expect(next.receipts).toEqual([]);
-  expect(next.history.some((e) => e.id === "old")).toBe(false);
+  expect(next.history.some((e) => e.id === "old")).toBe(true);
   // And a new cycle rolls normally.
   const repeated = applyProgress(next, {
     type: "complete",
@@ -200,7 +204,6 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
     ...state(),
     pets: ["moth"],
     activePet: "moth",
-    // Start with a full rack so the ladder skills have to wait their turn.
     skills: ["surge", "trail"],
     equippedSkills: ["surge", "trail"],
     owned: [...shopProducts.map((p) => p.id)],
@@ -219,9 +222,12 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
       eventId: `r${step + 1}`,
     });
     expect(next.rebirths).toBe(step + 1);
-    expect(next.history).toEqual([
-      expect.objectContaining({ type: "rebirth", count: step + 1 }),
-    ]);
+    // Every rebirth joins the account's history instead of replacing it.
+    expect(next.history).toHaveLength(step + 1);
+    expect(next.history.at(-1)).toMatchObject({
+      type: "rebirth",
+      count: step + 1,
+    });
     // The next rung asks for ten points more, and the collection is empty
     // again: rediscovery is the work, everything else is kept.
     const following = rebirthRequirement(next.rebirths);
@@ -232,17 +238,25 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
       expect(following.percent).toBe(requirement.percent + 10);
     }
     expect(discoveredCount(next)).toBe(0);
-    if (next.history[0].skill) granted.push(next.history[0].skill);
+    // The shelf, the companions and the wallet go back with the collection.
+    expect(next.owned).toEqual([]);
+    expect(next.pets).toEqual([]);
+    expect(next.balance).toBe(0);
+    if (next.history.at(-1).skill) granted.push(next.history.at(-1).skill);
     progress = { ...next, discovered: ids };
   }
   expect(granted).toHaveLength(REBIRTH_TOTAL);
   expect(new Set(granted).size).toBe(REBIRTH_TOTAL);
   for (const id of granted) expect(progress.skills).toContain(id);
-  // The rack never grows past its slots: with both bays owned that is four,
-  // and later ladder skills simply wait until the player swaps them in.
-  expect(skillSlots(progress.owned)).toBe(4);
-  expect(progress.equippedSkills).toHaveLength(4);
-  expect(progress.equippedSkills).toContain("reborn-drive");
+  // Every cycle hands the shop back, so the rack is back to its base two
+  // slots: the last rung's skill takes one, the first rung's keeps the other,
+  // and the rest of the ladder waits in the rack.
+  expect(progress.owned).toEqual([]);
+  expect(skillSlots(progress.owned)).toBe(2);
+  expect(progress.equippedSkills).toHaveLength(2);
+  expect(progress.equippedSkills).toContain(granted.at(-1));
+  expect(progress.equippedSkills).toContain(granted[0]);
+  expect(progress.skills).toHaveLength(REBIRTH_TOTAL);
   // The ladder is complete: rebirth is finished, the ultra-rebirth is next.
   expect(rebirthRequirement(REBIRTH_TOTAL)).toBeNull();
   expect(
@@ -355,7 +369,7 @@ for (const [count, rebirths, expected] of [
     ).toBeVisible();
   });
 
-test("rebirth asks for typed confirmation, applies once, and keeps the wallet and the workshop", async ({
+test("rebirth asks for typed confirmation, applies once, and restarts the run without touching the history", async ({
   page,
 }) => {
   const initial = applyProgress(
@@ -396,14 +410,15 @@ test("rebirth asks for typed confirmation, applies once, and keeps the wallet an
     });
   await expect.poll(async () => (await saved(page)).rebirths).toBe(1);
   const after = await saved(page);
-  // The wallet and every purchase survive the cycle — cosmetics included.
-  expect(after.balance).toBe(initial.balance);
-  expect(after.owned).toContain("quickwind-1");
-  expect(after.owned).toContain("prism");
-  // The collection, the worn aura and the activity history start over.
-  expect(after.discovered).toEqual([]);
+  // The run starts over: the wallet and everything it bought are handed back.
+  expect(after.balance).toBe(0);
+  expect(after.owned).toEqual([]);
   expect(after.equipped).toBe("none");
-  expect(after.history).toHaveLength(1);
+  expect(after.discovered).toEqual([]);
+  // The account keeps its history: the roll from the previous cycle is still
+  // readable, with the rebirth recorded after it.
+  expect(after.history.filter((e) => e.type === "roll")).toHaveLength(1);
+  expect(after.history.filter((e) => e.type === "rebirth")).toHaveLength(1);
   await nav(page, "History");
   await expect(page.locator('[data-event-type="rebirth"]')).toContainText(
     "Rebirth 1",
@@ -421,10 +436,11 @@ test("rebirth asks for typed confirmation, applies once, and keeps the wallet an
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.getByRole("button", { name: "RNGdle Infinite home" }).click();
   await page.locator(".generate").click();
-  // Rolled EP still lands in the kept wallet, unchanged by the cycle.
+  // The new cycle banks into an empty wallet, already earning the +2% the
+  // rebirth just paid.
   await expect
     .poll(async () => (await saved(page)).balance)
-    .toBe(after.balance + evaluate(604827).totalEP);
+    .toBe(Math.round(evaluate(604827).totalEP * 1.02));
   expect((await saved(page)).discovered).toHaveLength(
     evaluate(604827).badges.length,
   );
@@ -519,11 +535,11 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   await other.locator('[data-product="starfall"] button').click();
   await expect(other.locator(".toast")).toContainText("changed");
   // The stale tab neither spent EP nor revived an old purchase: the rebirth
-  // kept the aura, and the save still holds exactly one of it.
+  // handed the shelf back, so the wallet is empty and nothing was sold.
   const after = await saved(page);
-  expect(after.owned.filter((id) => id === "starfall")).toHaveLength(1);
-  expect(after.owned).toContain("quickwind-1");
-  expect(after.balance).toBe(50000000);
+  expect(after.owned).toEqual([]);
+  expect(after.balance).toBe(0);
+  expect(after.rebirths).toBe(1);
   await other.close();
 });
 
@@ -629,7 +645,7 @@ test("a committed zero-cooldown Flywheel reveal never shows a moving cooldown ba
   await expect(page.locator(".generate")).toBeEnabled();
 });
 
-test("a new cycle starts a fresh history and a later purchase is credited at the catalogue price", () => {
+test("a new cycle buys the shelf again and is credited at the catalogue price", () => {
   const first = applyProgress(
     { ...emptyProgress(), balance: 100000, totalEarned: 100000 },
     { type: "buy", id: "starfall", at: 1000 },
@@ -638,36 +654,45 @@ test("a new cycle starts a fresh history and a later purchase is credited at the
     { ...first, discovered: ids, balance: 100000 },
     action,
   );
-  // The aura survives the rebirth now; the history records only the rebirth.
-  expect(reborn.owned).toContain("starfall");
-  expect(reborn.history.map((e) => e.type)).toEqual(["rebirth"]);
-  // A duplicate sale is refused: the wardrobe already holds it.
-  expect(() =>
-    applyProgress({ ...reborn, balance: 100000 }, { type: "buy", id: "starfall", at: 2000 }),
-  ).toThrow();
-  // A genuinely new purchase in the new cycle credits the catalogue price.
+  // The aura went back on the shelf, and the wallet it was bought with is
+  // empty again — but the purchase stays in the account's history, and the
+  // rebirth joins it there.
+  expect(reborn.owned).toEqual([]);
+  expect(reborn.balance).toBe(0);
+  expect(reborn.history.map((e) => e.type)).toEqual(["purchase", "rebirth"]);
+  // So buying it back in the new cycle is a real sale, at the catalogue price.
   const second = applyProgress(
     { ...reborn, balance: 5000000, totalEarned: 5000000 },
-    { type: "buy", id: "prism", at: 300000 },
+    { type: "buy", id: "starfall", at: 300000 },
   );
+  expect(second.owned).toEqual(["starfall"]);
   const purchases = parseProgress(JSON.stringify(second)).history.filter(
     (e) => e.type === "purchase",
   );
-  expect(purchases).toHaveLength(1);
-  expect(purchases[0]).toMatchObject({
-    productId: "prism",
-    ep: shopProducts.find((p) => p.id === "prism").price,
+  expect(purchases).toHaveLength(2);
+  expect(purchases.at(-1)).toMatchObject({
+    productId: "starfall",
+    ep: shopProducts.find((p) => p.id === "starfall").price,
   });
 });
 
-test("the pet a rebirth keeps still brings its signature skill", () => {
+test("a rebirth hands the companions back and their signature skills go with them", () => {
+  const signature = skillForPet("pebble").id;
   const next = applyProgress(
-    { ...state(), pets: ["pebble"], activePet: "pebble" },
+    {
+      ...state(),
+      pets: ["pebble"],
+      activePet: "pebble",
+      equippedSkills: [signature],
+    },
     action,
   );
-  expect(next.pets).toEqual(["pebble"]);
-  expect(skillForPet("pebble")).toBeTruthy();
-  expect(parseProgress(JSON.stringify(next)).activePet).toBe("pebble");
+  expect(next.pets).toEqual([]);
+  expect(next.activePet).toBe("none");
+  // No companion, no signature skill: the ladder skill owns the rack instead.
+  expect(next.skills).toEqual(["reborn-drive"]);
+  expect(next.equippedSkills).toEqual(["reborn-drive"]);
+  expect(parseProgress(JSON.stringify(next)).activePet).toBe("none");
 });
 
 test("registered rebirth fails closed without Web Locks", async ({ page }) => {

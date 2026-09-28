@@ -350,20 +350,23 @@ export default function ActivityFeed({
                     {event.skill
                       ? ` · ${skillById.get(event.skill)?.name} unlocked`
                       : ""}
-                    . The collection, auras and activity history reset; EP,
-                    upgrades, companions and skills were kept.
+                    . The collection, every purchase, the companions and the
+                    wallet reset; the history, the rebirths and every permanent
+                    bonus were kept.
                   </p>
                 ) : event.type === "ultra-rebirth" ? (
                   <p>
-                    Everything reset, including the rebirth ladder. The
+                    The run started over from the top of the ladder: the
+                    collection, every purchase, the companions and the wallet
+                    reset. History, rebirths and bonuses stayed, and the
                     permanent wallet bonus grew by 10 points.
                   </p>
                 ) : (
                   <p className="activity-transaction">
                     {event.type === "purchase" ? (
                       <>
-                        <strong>−{formatEP(event.ep)} EP</strong> · Permanent
-                        purchase
+                        <strong>−{formatEP(event.ep)} EP</strong> · Kept until
+                        your next rebirth
                       </>
                     ) : (
                       <>Free equipment change · No EP spent</>

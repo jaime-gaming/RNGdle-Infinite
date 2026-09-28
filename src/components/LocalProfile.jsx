@@ -56,7 +56,7 @@ function ProfileHistory({ progress }) {
       "Online · offline",
       `${stats.onlineRolls.toLocaleString("en-US")} · ${stats.offlineRolls.toLocaleString("en-US")}`,
     ],
-    ["EP earned in this cycle", formatStatEP(stats.totalEarned)],
+    ["EP earned all-time", formatStatEP(stats.totalEarned)],
     ["EP spent", formatStatEP(stats.spent)],
     [
       "Best roll",
@@ -93,7 +93,8 @@ function ProfileHistory({ progress }) {
       </dl>
       <p className="profile-history-note">
         Read from your activity log and current save — these figures are not
-        stored on their own, and the log starts over with each rebirth.
+        stored on their own, and the log keeps every cycle, not just the current
+        one.
       </p>
     </section>
   );

@@ -36,9 +36,9 @@ export function ultraRebirthMultiplier(ultraRebirths = 0) {
 }
 
 // Every finished rung also pays a permanent wallet bonus: +2% per rebirth,
-// stacking to +12% when the ladder is complete. It is earned forever, so
-// rebirth itself never removes it; the ultra-rebirth is the only reset, and
-// it pays for that with its own larger bonus.
+// stacking to +12% when the ladder is complete. It is earned forever, so no
+// cycle ever removes it — a rebirth restarts the run, not the account, and the
+// ultra-rebirth adds its own larger bonus on top of the rungs it keeps.
 export const REBIRTH_BONUS_PER_REBIRTH = 0.02;
 
 export function rebirthMultiplier(rebirths = 0) {
@@ -104,12 +104,14 @@ export function rebirthReady(progress, now) {
 
 // An ultra-rebirth needs the last rung of the ladder and a complete
 // collection. It is optional: a completed ladder is a legitimate resting
-// place, and the button only ever appears once the requirement is met.
+// place, and the button only ever appears once the requirement is met. It
+// gives the same fresh run a rebirth does — collection, purchases, companions
+// and wallet — and keeps the account's history, rebirths and bonuses.
 export function ultraRebirthBlocker(progress, now) {
   if ((progress.rebirths ?? 0) < REBIRTH_TOTAL)
     return `Finish the whole rebirth ladder first: ${REBIRTH_TOTAL - (progress.rebirths ?? 0)} rebirths to go.`;
   if (discoveredCount(progress) !== BADGE_TOTAL)
-    return `An ultra-rebirth starts everything over. Discover all ${BADGE_TOTAL} badges first.`;
+    return `An ultra-rebirth starts the run over: the wallet, every purchase and every companion. Discover all ${BADGE_TOTAL} badges first.`;
   return commitmentBlocker(progress, now);
 }
 
