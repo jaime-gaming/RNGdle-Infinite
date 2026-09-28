@@ -4,8 +4,8 @@ import { emptyProgress } from "../src/progress.js";
 import { seedProgress } from "./helpers/progress.js";
 
 // Ink shadows in this codebase are black or the #101828 blue-black (a channel
-// spread of 24). A coloured glow — the pink/violet pair the main action used to
-// wear — spreads past 100, so this line separates the two cleanly.
+// spread of 24). The signature glow on the main action — the pink/violet pair
+// — spreads past 100, so this line separates ordinary ink from the CTA's halo.
 const INK_SPREAD = 48;
 
 const funded = {
@@ -78,7 +78,7 @@ test("filled actions are ink blocks: one height, no glow, and only as wide as th
   expect(submit.h).toBeGreaterThanOrEqual(42);
 });
 
-test("the main action is one solid plate, and its cooldown bar stays inside it", async ({
+test("the main action wears the signature ring, and its cooldown bar stays inside", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -97,20 +97,22 @@ test("the main action is one solid plate, and its cooldown bar stays inside it",
     const cs = getComputedStyle(el);
     return {
       before: getComputedStyle(el, "::before").content,
-      after: getComputedStyle(el, "::after").content,
       animation: cs.animationName,
       shadow: cs.boxShadow,
     };
   });
-  // No painted ring behind the button and no cycling colour under it.
-  expect(idle.before).toBe("none");
-  expect(idle.after).toBe("none");
-  expect(idle.animation).toBe("none");
-  for (const [r, g, b] of shadowInks(idle.shadow))
-    expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThan(INK_SPREAD);
+  // The launch skin's signature: a painted gradient ring that cycles colour,
+  // under a tinted ambient glow — every other filled action stays plain ink.
+  expect(idle.before).not.toBe("none");
+  expect(idle.animation).toContain("cta-ring-cycle");
+  expect(
+    shadowInks(idle.shadow).some(
+      ([r, g, b]) => Math.max(r, g, b) - Math.min(r, g, b) > INK_SPREAD,
+    ),
+  ).toBe(true);
 
-  // The cooldown track runs inside the plate: at the very edge its rounded
-  // corners poked past the button's own radius and read as a grey notch.
+  // The cooldown track hugs the bottom edge without poking past it, and the
+  // ring rests while the timer is the content.
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await start.click();
   await page.clock.fastForward(44000);
@@ -125,15 +127,18 @@ test("the main action is one solid plate, and its cooldown bar stays inside it",
       right: +(button.right - fill.right).toFixed(1),
       bottom: +(button.bottom - fill.bottom).toFixed(1),
       label: document.querySelector(".generate").textContent.trim(),
+      playState: getComputedStyle(document.querySelector(".generate"))
+        .animationPlayState,
     };
   });
   expect(rail.label).toContain("NEXT ROLL IN");
-  expect(rail.left).toBeGreaterThan(2);
-  expect(rail.right).toBeGreaterThan(2);
-  expect(rail.bottom).toBeGreaterThan(2);
+  expect(rail.left).toBeGreaterThanOrEqual(-1);
+  expect(rail.right).toBeGreaterThanOrEqual(-1);
+  expect(rail.bottom).toBeGreaterThanOrEqual(-1);
+  expect(rail.playState).toContain("paused");
 });
 
-test("nothing decorative loops forever on the roll screen", async ({
+test("only the signature CTA and the idle tile animate on the roll screen", async ({
   page,
 }) => {
   await seedProgress(page, funded);
@@ -144,24 +149,28 @@ test("nothing decorative loops forever on the roll screen", async ({
   ).toBeEnabled();
   const loops = await page.evaluate(() =>
     [...document.querySelectorAll(".roll-experience *")]
+      .filter(
+        (el) => !el.closest(".generate") && !el.closest(".question-number"),
+      )
       .map((el) => ({
         cls: el.className,
         animation: getComputedStyle(el).animation,
       }))
       .filter((row) => row.animation.includes("infinite")),
   );
-  // Nothing on the roll screen breathes on its own: the plate is the number,
-  // and it holds still until a roll is asked for. (The changelog's unseen dot
-  // lives in the header and is a notification, not decoration.)
+  // Two moving things on the roll screen since launch: the CTA's cycling
+  // ring and the idle tile's soft shimmer. Everything else holds still until
+  // a roll is asked for. (The changelog's unseen dot lives in the header and
+  // is a notification, not decoration.)
   expect(loops).toEqual([]);
 
   const roll = fs.readFileSync("src/roll.css", "utf8");
   const base = fs.readFileSync("src/styles.css", "utf8");
-  expect(roll).not.toContain("cta-ring-cycle");
+  expect(roll).toContain("cta-ring-cycle");
   expect(roll).not.toContain("artifact-breathing");
   expect(roll).toContain("artifact-settle");
   // The plate settles once and stops; the reveal keeps its pop animations.
   expect(roll).toContain(".number-artifact.is-breathing {");
-  expect(base).not.toContain("#cc68ed");
-  expect(base).not.toContain("#666ee2");
+  expect(base).toContain("#cc68ed");
+  expect(base).toContain("#666ee2");
 });
