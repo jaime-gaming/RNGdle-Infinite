@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import {
   applyProgress,
   emptyProgress,
@@ -16,6 +16,7 @@ import {
 } from "../src/roll-timeline.js";
 import { showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
+import { gotoShelfFor, openShelfFor } from "./helpers/shop.js";
 const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
 const nav = (page, name) =>
@@ -24,6 +25,8 @@ const nav = (page, name) =>
     .getByRole("button", { name, exact: true })
     .click();
 async function buy(page, id) {
+  // The shop is a street of sub-pages: open the shelf that sells it first.
+  await openShelfFor(page, id);
   await page.locator(`[data-product="${id}"] button`).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -31,10 +34,11 @@ async function buy(page, id) {
   await expect(page.getByRole("dialog")).not.toBeVisible();
 }
 async function signup(page, name = "Lucky_Player") {
+  // Profile is a page: the button navigates to /profile.
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
   await page.getByRole("textbox", { name: "Username", exact: true }).fill(name);
   await page
-    .getByRole("button", { name: "Create local profile", exact: true })
+    .getByRole("button", { name: "Start saving my progress", exact: true })
     .click();
 }
 
@@ -116,13 +120,14 @@ test("guest rewards and purchases stay in memory and disappear on reload", async
   await page.reload();
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
   await expect(page.getByTestId("roll-duration")).toHaveText("45s");
+  await gotoShelfFor(page, "starfall");
   await expect(page.locator('[data-product="starfall"] button')).toBeDisabled();
   await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
   expect(await saved(page)).toBeNull();
 });
 
-test("signup saves existing guest rewards, purchases, discoveries, equipment and cooldown together", async ({
+test("signup names a clean account and never invents guest earnings", async ({
   page,
 }) => {
   await showRoll(page, 1337);
@@ -130,6 +135,7 @@ test("signup saves existing guest rewards, purchases, discoveries, equipment and
   await buy(page, "quickwind-1");
   await buy(page, "clockwork-1");
   await buy(page, "aurora");
+  // Guest play is a demo: nothing is written until a name is chosen.
   expect(await saved(page)).toBeNull();
   await signup(page);
   await expect(
@@ -137,32 +143,41 @@ test("signup saves existing guest rewards, purchases, discoveries, equipment and
   ).toBeVisible();
   const p = await saved(page);
   expect(p.profile.username).toBe("Lucky_Player");
-  expect(p.balance).toBe(99782458);
-  expect(p.totalEarned).toBe(100177458);
-  expect(p.discovered).toHaveLength(17);
-  expect(p.owned).toEqual(["quickwind-1", "clockwork-1", "aurora"]);
-  expect(p.equipped).toBe("aurora");
-  expect(p.receipts).toHaveLength(1);
-  expect(p.cooldownUntil).toBeGreaterThan(Date.now());
+  // The first save is an honest one: the profile starts empty rather than
+  // claiming rolls, badges or purchases the guest session made.
+  expect(p.balance).toBe(0);
+  expect(p.totalEarned).toBe(0);
+  expect(p.history).toEqual([]);
+  expect(p.discovered).toEqual([]);
+  expect(p.owned).toEqual([]);
+  expect(p.equipped).toBe("none");
+  expect(p.receipts).toEqual([]);
+  expect(p.cooldownUntil).toBe(0);
   await page.reload();
   expect(await saved(page)).toEqual(p);
-  await expect(page.getByTestId("roll-duration")).toHaveText("35s");
-  await expect(page.getByTestId("cooldown-duration")).toHaveText("0:45");
+  await nav(page, "Shop");
+  await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
+  await expect(page.getByTestId("roll-duration")).toHaveText("45s");
   await expect(
     page.getByRole("button", { name: "Your profile", exact: true }),
   ).toBeVisible();
   await nav(page, "Badges");
-  await expect(page.locator(".badge-card")).toHaveCount(17);
+  await expect(page.locator(".badge-card")).toHaveCount(0);
 });
 
 test("invalid or failed signup never creates a profile or discards guest progress; retry saves it", async ({
   page,
 }) => {
   await showRoll(page, 604827);
-  await signup(page, "bad name");
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "3–20",
-  );
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("textbox", { name: "Username" }).fill("bad name");
+  // Live validation keeps submit disabled until the name is usable.
+  await expect(
+    page.getByRole("button", { name: "Start saving my progress" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Letters, numbers, underscores and hyphens only."),
+  ).toBeVisible();
   expect(await saved(page)).toBeNull();
   await page.evaluate((key) => {
     window.restoreStorage = Storage.prototype.setItem;
@@ -172,22 +187,30 @@ test("invalid or failed signup never creates a profile or discards guest progres
     };
   }, PROGRESS_KEY);
   await page.getByRole("textbox", { name: "Username" }).fill("Lucky_Retry");
-  await page.getByRole("button", { name: "Create local profile" }).click();
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+  await page.getByRole("button", { name: "Start saving my progress" }).click();
+  // The error is page-level now: profile is a page, not a dialog.
+  await expect(page.getByRole("alert")).toContainText(
     "guest progress is still available",
   );
   expect(await saved(page)).toBeNull();
   await expect(
     page.getByRole("button", { name: "Sign up", exact: true }),
   ).toBeVisible();
+  // The failed save left the guest session untouched.
+  await page.getByRole("button", { name: "Back to rolling" }).click();
+  await nav(page, "Shop");
+  await expect(page.getByTestId("wallet-balance")).toHaveText("4,663 EP");
   await page.evaluate(() => {
     Storage.prototype.setItem = window.restoreStorage;
   });
-  await page.getByRole("button", { name: "Create local profile" }).click();
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("textbox", { name: "Username" }).fill("Lucky_Retry");
+  await page.getByRole("button", { name: "Start saving my progress" }).click();
   await expect(
     page.getByRole("heading", { name: "Your profile, Lucky_Retry" }),
   ).toBeVisible();
-  expect((await saved(page)).balance).toBe(4663);
+  // A saved account starts fresh: no guest earnings are invented.
+  expect((await saved(page)).balance).toBe(0);
 });
 
 test("another tab signing up neither discards a guest game nor silently saves it", async ({
@@ -207,9 +230,8 @@ test("another tab signing up neither discards a guest game nor silently saves it
   expect((await saved(page)).balance).toBe(0);
   expect((await saved(page)).owned).toEqual([]);
   await signup(page, "GuestPlayer");
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "another tab",
-  );
+  // The error is page-level now: profile is a page, not a dialog.
+  await expect(page.getByRole("alert")).toContainText("another tab");
   expect((await saved(page)).profile.username).toBe("OtherPlayer");
   await other.close();
 });
@@ -249,18 +271,20 @@ test("the first three tiers produce a fifteen-second reveal and fifteen-second c
   page,
 }) => {
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
-  await page.goto("/#shop");
+  await page.goto("/shop/pace");
   await expect(page.locator('[data-product="quickwind-2"] button')).toHaveCount(
     0,
   );
   await expect(page.locator('[data-product="clockwork-3"] button')).toHaveCount(
     0,
   );
-  for (const p of shopProducts.filter(
+  const tiers = shopProducts.filter(
     (p) => ["roll", "cooldown"].includes(p.kind) && !p.lateGame,
-  ))
-    await buy(page, p.id);
-  expect((await saved(page)).balance).toBe(11730000);
+  );
+  for (const p of tiers) await buy(page, p.id);
+  expect((await saved(page)).balance).toBe(
+    15000000 - tiers.reduce((sum, p) => sum + p.price, 0),
+  );
   expect((await saved(page)).equipped).toBe("none");
   await page.reload();
   await expect(page.getByTestId("roll-duration")).toHaveText("15s");
@@ -291,6 +315,9 @@ test("the first three tiers produce a fifteen-second reveal and fifteen-second c
 test("purchasing during a reveal or cooldown affects only rolls started afterward", async ({
   page,
 }) => {
+  // Two complete reveals plus their cooldowns, driven in real time through the
+  // virtual clock: roughly a minute of wall time on a busy machine.
+  test.slow();
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
   await startRoll(page, 1337);
   await page.clock.runFor(1000);

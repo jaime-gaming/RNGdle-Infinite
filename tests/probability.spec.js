@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
@@ -187,7 +187,6 @@ test("repeated random results each earn EP once and double-clicking cannot bypas
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.install();
   await page
     .getByRole("button", { name: "GENERATE", exact: true })
     .evaluate((b) => {
@@ -281,9 +280,14 @@ test("loading disables generation without blocking help, and badge odds explain 
     .getByRole("button", { name: "How to play", exact: true })
     .first()
     .click();
-  await expect(page.getByRole("dialog")).toContainText("Both include ties");
+  // Help is a page of its own, and it opens while the roll data is still
+  // loading; the pending draw only unblocks once the data arrives.
+  await expect(
+    page.getByRole("heading", { name: "How to play", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText("Both include ties")).toBeVisible();
   release();
-  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.getByRole("button", { name: "Back to rolling" }).click();
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();

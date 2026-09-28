@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import { buildChipPlan, chipLoopFrames } from "../src/chip-motion.js";
 import {
   rankPopFrames,
@@ -221,10 +221,13 @@ test("reveal and badge breakdown geometry match the reference without dashboard 
   expect(positions[".number-artifact"].height).toBe(106);
   expect(positions[".result-rank"].top).toBe(226);
   expect(positions[".roll-ep"]).toEqual({ top: 266, width: 166, height: 34 });
-  expect(positions[".share-row"].top).toBe(368);
-  expect(positions[".generate"]).toEqual({ top: 426, width: 320, height: 72 });
-  expect(positions[".badge-breakdown"].top).toBe(546);
-  expect(positions[".result-badge"].top).toBe(606);
+  // A score-only roll draws no wallet-credit line, so the only extra below
+  // the EP pill is the goal recap living inside the session total; everything
+  // under it sits at the bare reference positions again.
+  expect(positions[".share-row"].top).toBe(399);
+  expect(positions[".generate"]).toEqual({ top: 457, width: 320, height: 72 });
+  expect(positions[".badge-breakdown"].top).toBe(577);
+  expect(positions[".result-badge"].top).toBe(637);
   await expect(page.locator(".loop-hub,.loop-card")).toHaveCount(0);
   expect(positions[".result-badge"].height).toBe(105);
   expect(positions[".badge-breakdown"].height).toBe(1812);

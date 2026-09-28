@@ -9,7 +9,7 @@ export const defaultSettings = {
   // Presentation
   reduceMotion: "system", // "system" | "on" | "off"
   compactNumbers: false,
-  showFlywheelMeter: true,
+  showSkillBar: true,
   showGoalRecap: true,
   confirmPurchases: true,
   // Gameplay conveniences (never a reward or odds change)
@@ -20,7 +20,7 @@ const booleans = [
   "notifyReady",
   "notifySound",
   "compactNumbers",
-  "showFlywheelMeter",
+  "showSkillBar",
   "showGoalRecap",
   "confirmPurchases",
   "autoRollDefault",
@@ -38,6 +38,13 @@ export function parseSettings(raw) {
   const next = { ...defaultSettings };
   for (const key of booleans)
     if (typeof value[key] === "boolean") next[key] = value[key];
+  // v0.2 saves stored the Flywheel meter toggle under its old name; the rack
+  // that replaced it keeps the same preference.
+  if (
+    typeof value.showFlywheelMeter === "boolean" &&
+    value.showSkillBar == null
+  )
+    next.showSkillBar = value.showFlywheelMeter;
   if (["system", "on", "off"].includes(value.reduceMotion))
     next.reduceMotion = value.reduceMotion;
   return next;

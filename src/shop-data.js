@@ -1,3 +1,5 @@
+import { SKILLS, SKILL_SLOTS } from "./skills.js";
+
 // Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
 export const BASE_COOLDOWN_MS = 60000;
@@ -273,6 +275,60 @@ export const shopProducts = [
       "A collapsing accretion disc bends light around your number, with an event-horizon ring and infalling sparks.",
   },
   {
+    id: "nebula",
+    kind: "aura",
+    name: "Nebula Drift",
+    price: 520000,
+    icon: "nebula",
+    description:
+      "Slow violet and indigo clouds drift behind the number while a scatter of newborn stars winks in and out.",
+  },
+  {
+    id: "solstice",
+    kind: "aura",
+    name: "Solstice Ring",
+    price: 780000,
+    icon: "solstice",
+    description:
+      "A warm ring of midsummer light turns around the box, trailing a soft lens flare across the frame.",
+  },
+  {
+    id: "lumen",
+    kind: "aura",
+    name: "Lumen Filigree",
+    price: 1050000,
+    icon: "lumen",
+    description:
+      "Hair-thin gold filigree draws itself into the corners, lit by a champagne glow that never washes out your rarity.",
+  },
+  {
+    id: "glitch",
+    kind: "aura",
+    name: "Glitchwave",
+    price: 1650000,
+    icon: "glitch",
+    description:
+      "Scanlines tear sideways in red, green and blue, and the frame skews for a heartbeat before it snaps back.",
+  },
+  {
+    id: "monolith",
+    kind: "aura",
+    name: "Monolith",
+    price: 2700000,
+    icon: "monolith",
+    description:
+      "A heavy carved slab with a single seam of cold light, humming steady while the space around it darkens.",
+  },
+  {
+    id: "chrono",
+    kind: "aura",
+    name: "Chrono Dial",
+    price: 4200000,
+    icon: "chrono",
+    description:
+      "Sixty engraved ticks ring the number and a single hand sweeps them, marking a second that never quite ends.",
+  },
+  {
     id: "offline-roller",
     kind: "utility",
     name: "Offline Roller",
@@ -381,7 +437,145 @@ export const shopProducts = [
     description:
       "Unlock number search and roll-tier filters across your entire activity archive. Your basic feed stays free.",
   },
+  // Skills are charged one-shot effects; every one is defined in skills.js so
+  // the shop, the save file and the roll engine read the same numbers.
+  ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({
+    id: skill.id,
+    kind: "skill",
+    skillId: skill.id,
+    name: skill.name,
+    price: skill.price,
+    icon: skill.icon,
+    tint: skill.tint,
+    charges: skill.charges,
+    description: skill.description,
+  })),
+  ...SKILL_SLOTS.map((bay) => ({ ...bay })),
 ];
+// The shop's six shelves. Each one is its own sub-page (/shop/skills and so
+// on) and every product lives on exactly one shelf, so the hub buttons, the
+// featured picks, a deep link and the back button can never disagree about
+// where an item is sold. Companions keep their shelf too; it is owned by the
+// companion component rather than by this catalogue.
+export const SHOP_SECTIONS = [
+  {
+    id: "skills",
+    label: "Skills",
+    icon: "skill",
+    blurb: "Charged effects and the rack that fires them.",
+  },
+  {
+    id: "pace",
+    label: "Pace",
+    icon: "pace",
+    blurb: "Shorter reveals and shorter cooldowns.",
+  },
+  {
+    id: "companions",
+    label: "Companions",
+    icon: "companion",
+    blurb: "Finders of EP, one worn at a time.",
+  },
+  {
+    id: "auras",
+    label: "Auras",
+    icon: "aura",
+    blurb: "Cosmetics for the rarity box, never odds.",
+  },
+  {
+    id: "offline",
+    label: "Offline",
+    icon: "offline",
+    blurb: "Earn while you are away, and store more.",
+  },
+  {
+    id: "tools",
+    label: "Tools",
+    icon: "automation",
+    blurb: "Automation and archive, same rules as always.",
+  },
+];
+
+// Which kinds of product each shelf sells. The catalogue keeps its own order;
+// the shelves themselves always read from the cheapest product upwards, and a
+// move between shelves never reshuffles a shelf you are standing on.
+const SHELF_KINDS = {
+  skills: ["skill", "skill-slot", "pace"],
+  pace: ["roll", "cooldown"],
+  auras: ["aura"],
+  offline: ["offline", "offline-cap"],
+  tools: ["utility"],
+};
+
+export function shelfOfProduct(item) {
+  if (!item) return "";
+  const shelf = SHOP_SECTIONS.find((section) =>
+    (SHELF_KINDS[section.id] ?? []).includes(item.kind),
+  );
+  // Every product kind belongs to a shelf; pace is the catalogue's home track.
+  return shelf?.id ?? "pace";
+}
+
+export function productsOnShelf(id) {
+  const kinds = SHELF_KINDS[id];
+  return kinds ? shopProducts.filter((p) => kinds.includes(p.kind)) : [];
+}
+
+// ---- Skill stock ----------------------------------------------------------
+// The skills shelf sells its charged effects like a stall, not a catalogue:
+// only two shop skills are on sale at once, and the pair rotates every five
+// minutes. The rotation is deterministic — every tab, reload and the purchase
+// guard derive the same pair from the clock, never from a stored list. Skill
+// bays, Flywheel and anything you already own are not stock: they stay on the
+// shelf permanently.
+export const SKILL_STOCK_WINDOW_MS = 300000; // Five minutes.
+export const SKILL_STOCK_SIZE = 2;
+
+export function skillStockWindow(now) {
+  return Math.floor(now / SKILL_STOCK_WINDOW_MS);
+}
+
+// A seeded shuffle (mulberry32) of one window: the same index always produces
+// the same order, with no shared state that two tabs could desynchronise.
+function shuffledShopSkills(windowIndex) {
+  const ids = SKILLS.filter((skill) => skill.source === "shop").map(
+    (skill) => skill.id,
+  );
+  let state = Math.imul(windowIndex + 1, 2654435761) >>> 0 || 1;
+  const random = () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
+  };
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids;
+}
+
+// What the stall has on sale: the first `size` unowned skills in the window's
+// own order, so buying one mid-window slides the next one into view without
+// reshuffling the rest. Owning every shop skill sells the stall out.
+export function skillStock(windowIndex, owned = [], size = SKILL_STOCK_SIZE) {
+  return shuffledShopSkills(windowIndex)
+    .filter((id) => !owned.includes(id))
+    .slice(0, size);
+}
+
+// When a skill is next on sale, counted in windows from `windowIndex` (1 is
+// the upcoming restock), or null if the current owned set keeps it off the
+// stall for the next two hours. Same deterministic input as the stall, so an
+// out-of-stock card can honestly say when the skill comes back.
+export function nextSkillStockOffset(windowIndex, owned, skillId) {
+  for (let offset = 1; offset <= 24; offset++)
+    if (skillStock(windowIndex + offset, owned).includes(skillId))
+      return offset;
+  return null;
+}
+
 export function nextUpgrade(owned, kind) {
   const track = shopProducts.filter((p) => p.kind === kind);
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);

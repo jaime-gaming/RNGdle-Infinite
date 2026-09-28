@@ -7,10 +7,13 @@ import {
   validPage,
   pageFromLocation,
   pathForPage,
+  pathForSubpage,
+  subpageFromLocation,
   isCurrentPath,
 } from "../src/router.js";
 import {
   BADGE_TOTAL,
+  REBIRTH_STEPS,
   REBIRTH_OPTIONAL_KINDS,
   rebirthOptionalProducts,
   rebirthRelevantPurchases,
@@ -29,6 +32,8 @@ test("every top navigation destination is a real path, not a hash fragment", () 
     "settings",
     "changelog",
     "about",
+    "profile",
+    "rebirth",
   ]);
   expect(pathForPage("roll")).toBe("/");
   for (const page of PAGES.filter((p) => p !== HOME))
@@ -65,34 +70,74 @@ test("paths, legacy hashes and unknown routes all resolve without a dead end", (
   expect(isCurrentPath("shop", { pathname: "/badges", hash: "" })).toBe(false);
 });
 
+test("a shelf is a real sub-page of the shop, on every host", () => {
+  // Locally (/shop/skills) and on Pages (/RNGdle-Infinite/shop/skills).
+  expect(pathForSubpage("shop", "skills")).toBe("/shop/skills");
+  expect(pathForSubpage("shop", "auras", "/RNGdle-Infinite/")).toBe(
+    "/RNGdle-Infinite/shop/auras",
+  );
+  // The hub is the page itself, never a trailing slash or an empty segment.
+  expect(pathForSubpage("shop", "")).toBe("/shop");
+  expect(pathForSubpage("shop", "", "/RNGdle-Infinite/")).toBe(
+    "/RNGdle-Infinite/shop",
+  );
+  // A sub-segment is read from the path, and only the page's own segment counts.
+  expect(subpageFromLocation({ pathname: "/shop/skills", hash: "" })).toBe(
+    "skills",
+  );
+  expect(
+    subpageFromLocation(
+      { pathname: "/RNGdle-Infinite/shop/tools", hash: "" },
+      "/RNGdle-Infinite/",
+    ),
+  ).toBe("tools");
+  expect(subpageFromLocation({ pathname: "/shop", hash: "" })).toBe("");
+  // The page itself still resolves from its sub-path, so a shelf never 404s.
+  expect(pageFromLocation({ pathname: "/shop/skills", hash: "" })).toBe("shop");
+  expect(
+    pageFromLocation(
+      { pathname: "/RNGdle-Infinite/shop/offline", hash: "" },
+      "/RNGdle-Infinite/",
+    ),
+  ).toBe("shop");
+  // Slugs use the same alphabet pages do, so a crafted segment cannot break out.
+  expect(pathForSubpage("shop", "  Auras!../")).toBe("/shop/auras");
+});
+
 test("static hosting ships a 404 fallback so real URLs survive a direct load", () => {
   const config = fs.readFileSync("vite.config.js", "utf8");
   expect(config).toContain("404.html");
 });
 
-test("rebirth depends on badges alone, never on auras or tools", () => {
+test("the rebirth ladder depends on the collection alone, never on auras or tools", () => {
   expect(BADGE_TOTAL).toBe(allBadgeMetadata.length);
   expect(REBIRTH_OPTIONAL_KINDS).toContain("aura");
-  // Every aura and every optional tool is excluded from the requirement.
+  // No purchase is ever part of a rung: shekels can buy the shop, not the ladder.
   const auras = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
   for (const id of auras) expect(rebirthOptionalProducts).toContain(id);
   for (const id of ["auto-roll", "archive-lens", "offline-roller"])
     expect(rebirthOptionalProducts).toContain(id);
   expect(rebirthRelevantPurchases([...auras, "auto-roll"])).toEqual([]);
 
-  // A full collection unlocks rebirth with an empty shop; an all-owned shop
-  // with an incomplete collection still cannot.
+  // Rung 1 wants half the collection; owning nothing else is fine.
   const ids = allBadgeMetadata.map((b) => b.id);
-  const broke = { ...emptyProgress(), discovered: ids, owned: [] };
+  const rungOne = ids.slice(0, Math.ceil(REBIRTH_STEPS[0] * BADGE_TOTAL));
+  const broke = {
+    ...emptyProgress(),
+    discovered: rungOne,
+    owned: [],
+  };
   expect(rebirthBlocker(broke, 0)).toBe("");
+  // An all-owned shop with three badges missing from the rung still cannot.
   const rich = {
     ...emptyProgress(),
-    discovered: ids.slice(0, -1),
+    discovered: rungOne.slice(0, -1),
     owned: shopProducts.map((p) => p.id),
   };
-  expect(rebirthBlocker(rich, 0)).toContain(`Discover all ${BADGE_TOTAL}`);
+  expect(rebirthBlocker(rich, 0)).toContain(
+    `Discover ${rungOne.length} badges`,
+  );
 });
-
 test("light mode keeps a single source of truth for the palette", () => {
   // roll.css is imported after styles.css, so an unscoped :root palette there
   // silently overrides light mode. Theme overrides must be theme-scoped.
@@ -117,10 +162,11 @@ test("light mode keeps a single source of truth for the palette", () => {
 
 test("rebalanced prices keep the catalogue shape and every chain affordable", () => {
   const price = Object.fromEntries(shopProducts.map((p) => [p.id, p.price]));
-  // Same 34 products, cheaper curve: the grind shrank without losing content.
-  expect(shopProducts).toHaveLength(34);
+  // 34 upgrades, the nine v0.3 skills and bays, and the six late auras that
+  // close the cosmetic shelf: cheaper curve, more content than launch.
+  expect(shopProducts).toHaveLength(49);
   const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBe(79250000);
+  expect(total).toBe(107250000);
   expect(total).toBeLessThan(131145000);
   // The first upgrade of each visible chain stays reachable early.
   expect(price["quickwind-1"]).toBeLessThanOrEqual(30000);

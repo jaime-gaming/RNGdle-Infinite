@@ -164,11 +164,11 @@ export default function Settings({ notify, progress, onAction, navigate }) {
           </select>
         </div>
         <Toggle
-          id="setting-flywheel-meter"
-          label="Show the Flywheel meter"
-          description="Hide the charge meter on the Roll page. Charge keeps accumulating either way."
-          checked={settings.showFlywheelMeter}
-          onChange={(next) => update({ showFlywheelMeter: next })}
+          id="setting-skill-bar"
+          label="Show the skill bar"
+          description="Hide the charged circles in the top-left corner of the Roll page. Charge keeps accumulating either way, and Flywheel stays in the rack."
+          checked={settings.showSkillBar}
+          onChange={(next) => update({ showSkillBar: next })}
         />
         <Toggle
           id="setting-goal-recap"

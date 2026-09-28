@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   History,
@@ -7,10 +7,13 @@ import {
   ShoppingBag,
   Check,
   RotateCcw,
+  Share2,
+  Infinity as InfinityIcon,
 } from "lucide-react";
 import NumberBox from "./NumberBox";
+import { skillById, skillEffectChips } from "../skills.js";
 import { badges } from "../badges";
-import { formatEP } from "../roll-data";
+import { formatEP, buildShareTextFromHistory } from "../roll-data";
 import "../activity.css";
 const byId = new Map(badges.map((b) => [b.canonicalId, b]));
 const filters = ["All activity", "Rolls", "Badge unlocks", "Shop", "Offline"];
@@ -39,9 +42,12 @@ export default function ActivityFeed({
   navigate,
   openSignup,
   openBadge,
+  notify,
 }) {
   const [filter, setFilter] = useState("All activity"),
     [limit, setLimit] = useState(50);
+  const [copiedId, setCopiedId] = useState("");
+  const copiedTimer = useRef(null);
   const [query, setQuery] = useState(""),
     [tier, setTier] = useState("all");
   const lens = progress.owned.includes("archive-lens");
@@ -54,7 +60,8 @@ export default function ActivityFeed({
             filter === "All activity" ||
             (filter === "Rolls" && e.type === "roll") ||
             (filter === "Offline" && e.source === "offline") ||
-            (filter === "Rebirths" && e.type === "rebirth") ||
+            (filter === "Rebirths" &&
+              ["rebirth", "ultra-rebirth"].includes(e.type)) ||
             (filter === "Badge unlocks" && e.type === "unlock") ||
             (filter === "Shop" && ["purchase", "equip"].includes(e.type)),
         )
@@ -69,6 +76,20 @@ export default function ActivityFeed({
         .reverse(),
     [history, filter, query, tier, lens],
   );
+  // Any archived roll can be shared later: the text is rebuilt from the entry
+  // the save kept, so it can only ever state what the roll actually earned.
+  async function shareRoll(event) {
+    try {
+      await navigator.clipboard.writeText(buildShareTextFromHistory(event));
+      setCopiedId(event.id);
+      clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedId(""), 2200);
+    } catch {
+      notify?.(
+        "Clipboard isn’t available. Try copying from a secure browser window.",
+      );
+    }
+  }
   return (
     <>
       <button className="back-link" onClick={() => navigate("roll")}>
@@ -225,6 +246,8 @@ export default function ActivityFeed({
                   <ShoppingBag size={19} />
                 ) : event.type === "rebirth" ? (
                   <RotateCcw size={19} />
+                ) : event.type === "ultra-rebirth" ? (
+                  <InfinityIcon size={19} />
                 ) : (
                   <Check size={19} />
                 )}
@@ -244,7 +267,9 @@ export default function ActivityFeed({
                           ? `Purchased ${event.name}`
                           : event.type === "rebirth"
                             ? `Rebirth ${event.count}`
-                            : `Equipped ${event.name}`}
+                            : event.type === "ultra-rebirth"
+                              ? `Ultra-rebirth ${event.count}`
+                              : `Equipped ${event.name}`}
                   </h2>
                   <time dateTime={new Date(event.at).toISOString()}>
                     {new Date(event.at).toLocaleString(undefined, {
@@ -269,7 +294,41 @@ export default function ActivityFeed({
                         <span>
                           {event.tier.toUpperCase()} · {event.badges.length}{" "}
                           badges earned
+                          {event.walletBonus
+                            ? ` · +${formatEP(event.walletBonus)} EP extra`
+                            : ""}
                         </span>
+                        {!!event.skills?.length && (
+                          <span className="activity-skills">
+                            {event.skills.map((id) => {
+                              const skill = skillById.get(id);
+                              if (!skill) return null;
+                              // The receipt states what the skill actually
+                              // added to this roll, not just its name.
+                              return (
+                                <span className="activity-skill" key={id}>
+                                  <strong>{skill.name}</strong>
+                                  {skillEffectChips(skill)[0]}
+                                </span>
+                              );
+                            })}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="activity-share"
+                          onClick={() => shareRoll(event)}
+                          aria-label={`Share roll ${event.number}`}
+                        >
+                          {copiedId === event.id ? (
+                            <Check size={13} />
+                          ) : (
+                            <Share2 size={13} />
+                          )}
+                          {copiedId === event.id
+                            ? "Copied result + link"
+                            : "Share this roll"}
+                        </button>
                       </div>
                     </div>
                     <details>
@@ -287,8 +346,17 @@ export default function ActivityFeed({
                   </>
                 ) : event.type === "rebirth" ? (
                   <p>
-                    All badges collected. EP, collection and shop items reset.
-                    Profile and history kept.
+                    New cycle started
+                    {event.skill
+                      ? ` · ${skillById.get(event.skill)?.name} unlocked`
+                      : ""}
+                    . The collection, auras and activity history reset; EP,
+                    upgrades, companions and skills were kept.
+                  </p>
+                ) : event.type === "ultra-rebirth" ? (
+                  <p>
+                    Everything reset, including the rebirth ladder. The
+                    permanent wallet bonus grew by 10 points.
                   </p>
                 ) : (
                   <p className="activity-transaction">
