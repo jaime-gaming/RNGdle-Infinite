@@ -6,6 +6,11 @@ import {
   PROGRESS_KEY,
 } from "../src/progress.js";
 import { shopProducts } from "../src/shop-data.js";
+import {
+  skillStockWindow,
+  nextSkillStockOffset,
+  SKILL_STOCK_WINDOW_MS,
+} from "../src/shop-data.js";
 import { formatEP } from "../src/roll-data.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom, showRoll, startRoll } from "./helpers/random-roll.js";
@@ -52,7 +57,20 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   state = applyProgress(state, { ...action, id: "second-test-roll" });
   for (const item of shopProducts) {
     const before = state.balance;
-    state = applyProgress(state, { type: "buy", id: item.id });
+    // The stall sells two skills at a time, rotating every five minutes, so a
+    // plain buy for an unstocked skill legitimately throws. The rotation is
+    // deterministic: buy each skill in the soonest window that stocks it
+    // (recomputed after earlier purchases, which slide the order).
+    const at =
+      item.kind === "skill"
+        ? (() => {
+            const window = skillStockWindow(Date.now());
+            const offset = nextSkillStockOffset(window, state.owned, item.id);
+            expect(offset, `a stock window for ${item.id}`).not.toBeNull();
+            return (window + offset) * SKILL_STOCK_WINDOW_MS + 1;
+          })()
+        : undefined;
+    state = applyProgress(state, { type: "buy", id: item.id, at });
     expect(state.balance).toBe(before - item.price);
     if (item.kind === "aura") expect(state.equipped).toBe(item.id);
     else

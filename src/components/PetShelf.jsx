@@ -70,9 +70,9 @@ export default function PetShelf({
             <CompanionMark size={16} /> Companions
           </h2>
           <p>
-            One equipped at a time, free to swap, walking the roll screen with
-            you. Each carries a banked-EP bonus and its own skill — or find one
-            free at roughly 1 in {oneIn} rolls.
+            Only one is equipped at a time, free to swap, and it walks the
+            roll screen with you. Each carries a banked-EP bonus and its own
+            skill — or find one free at roughly 1 in {oneIn} rolls.
           </p>
         </div>
         <div className="shop-section-actions">
