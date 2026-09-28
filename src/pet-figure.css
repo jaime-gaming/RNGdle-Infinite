@@ -1,0 +1,90 @@
+/* Companion faces. One token shape, five grades: the grade follows the wallet
+   bonus, so a shelf of thirteen still reads as one collection. */
+.pet-figure {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: var(--pet-size, 42px);
+  height: var(--pet-size, 42px);
+  border: 1px solid var(--pet-grade, var(--border));
+  border-radius: 50%;
+  color: var(--pet-grade, var(--secondary));
+  background:
+    radial-gradient(
+      circle at 50% 18%,
+      color-mix(in srgb, var(--pet-grade, var(--border)) 22%, transparent),
+      transparent 70%
+    ),
+    var(--surface);
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.pet-figure-halo {
+  position: absolute;
+  inset: -6px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--pet-grade, transparent) 26%, transparent),
+    transparent 68%
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+.pet-figure svg {
+  display: block;
+  stroke-width: 1.6;
+}
+.pet-figure.grade-1 {
+  --pet-grade: var(--secondary);
+}
+.pet-figure.grade-2 {
+  --pet-grade: #2f7d5f;
+}
+.pet-figure.grade-3 {
+  --pet-grade: #2f6f9e;
+}
+.pet-figure.grade-4 {
+  --pet-grade: #6b52c4;
+}
+.pet-figure.grade-5 {
+  --pet-grade: #a97319;
+}
+:root[data-theme="dark"] .pet-figure.grade-2 {
+  --pet-grade: #71c9a4;
+}
+:root[data-theme="dark"] .pet-figure.grade-3 {
+  --pet-grade: #7cbede;
+}
+:root[data-theme="dark"] .pet-figure.grade-4 {
+  --pet-grade: #b3a1f2;
+}
+:root[data-theme="dark"] .pet-figure.grade-5 {
+  --pet-grade: #e6bd6a;
+}
+.pet-figure.is-active {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pet-grade) 35%, transparent);
+}
+.pet-figure.is-active .pet-figure-halo {
+  opacity: 0.9;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pet-figure.is-active .pet-figure-halo {
+    animation: pet-halo 3.4s ease-in-out infinite;
+  }
+  @keyframes pet-halo {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.75;
+    }
+    50% {
+      transform: scale(1.08);
+      opacity: 0.95;
+    }
+  }
+}

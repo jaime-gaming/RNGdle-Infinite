@@ -11,6 +11,12 @@ import {
 import { generateRoll, restoreRoll } from "./roll-client.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
+import {
+  armedSkills,
+  drawPlanFor,
+  skillWaivesCooldown,
+  SKILL_MAX_DRAWS,
+} from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings, offlineSettings, productById } from "./shop-data.js";
 import {
@@ -143,12 +149,14 @@ export function useProgress() {
           }
         }
         if (
-          action.type === "rebirth" &&
+          ["rebirth", "ultra-rebirth"].includes(action.type) &&
           previous.profile &&
           (!readable || !navigator.locks?.request)
         )
           throw new Error(
-            "Rebirth requires working local storage and Web Locks support.",
+            action.type === "ultra-rebirth"
+              ? "Ultra-rebirth requires working local storage and Web Locks support."
+              : "Rebirth requires working local storage and Web Locks support.",
           );
         if (action.type === "delete") {
           if (!previous.profile || previous.profile.id !== action.profileId)
@@ -337,8 +345,30 @@ export function useProgress() {
           }
           const timing = rollSettings(previous.owned);
           const flywheel = flywheelForDraw(previous);
-          if (flywheel === "boost") timing.cooldownMS = 0;
-          const result = await generateRoll();
+          // Every circle that is full fires on this roll. The plan only says
+          // how many ordinary draws to take and when to stop early; each draw
+          // is still an independent, uniform crypto roll scored by the
+          // verified index, and the number that is committed is one of them.
+          const armed = armedSkills(previous);
+          const plan = drawPlanFor(armed);
+          if (flywheel === "boost" || skillWaivesCooldown(armed))
+            timing.cooldownMS = 0;
+          let result,
+            draws = null;
+          if (!plan) result = await generateRoll();
+          else {
+            draws = [];
+            let best = null;
+            const attempts = Math.min(plan.attempts, SKILL_MAX_DRAWS);
+            for (let attempt = 0; attempt < attempts; attempt++) {
+              const draw = await generateRoll();
+              draws.push(draw.number);
+              const scored = await restoreRoll(draw.number);
+              if (!best || scored.totalEP > best.totalEP) best = scored;
+              if (plan.floor > 0 && scored.totalEP >= plan.floor) break;
+            }
+            result = best;
+          }
           // No digits reach the UI until the draw has been committed below.
           if (token !== generation.current)
             throw new Error("This game was reset. The draw was cancelled.");
@@ -355,6 +385,8 @@ export function useProgress() {
             number: result.number,
             startedAt: Math.ceil(gameNow()),
             ...timing,
+            ...(armed.length ? { skills: armed } : {}),
+            ...(draws ? { draws } : {}),
             ...(flywheel ? { flywheel } : {}),
           };
           next = {
@@ -434,22 +466,24 @@ export function useProgress() {
                 message:
                   action.type === "rebirth"
                     ? "Rebirth could not be saved. Your progress has not been reset."
-                    : action.type.startsWith("offline-")
-                      ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
-                      : action.type === "register"
-                        ? "Sign-up could not be saved. Your guest progress is still available in this tab."
-                        : action.type === "draw"
-                          ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
-                          : action.type === "goal"
-                            ? "Your goal could not be saved. Your previous goal and EP are unchanged."
-                            : "Purchase or equipment change not saved. Your EP has not been spent.",
+                    : action.type === "ultra-rebirth"
+                      ? "Ultra-rebirth could not be saved. Your progress has not been reset."
+                      : action.type.startsWith("offline-")
+                        ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
+                        : action.type === "register"
+                          ? "Sign-up could not be saved. Your guest progress is still available in this tab."
+                          : action.type === "draw"
+                            ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
+                            : action.type === "goal"
+                              ? "Your goal could not be saved. Your previous goal and EP are unchanged."
+                              : "Purchase or equipment change not saved. Your EP has not been spent.",
               };
           }
         }
         if (
           next !== previous &&
           !next.profile &&
-          ["draw", "complete", "rebirth"].includes(action.type)
+          ["draw", "complete", "rebirth", "ultra-rebirth"].includes(action.type)
         ) {
           try {
             sessionStorage.setItem(
@@ -479,12 +513,13 @@ export function useProgress() {
             sessionStorage.removeItem(GUEST_ROLL_KEY);
           } catch {}
         }
-        if (action.type === "rebirth") {
+        if (action.type === "rebirth" || action.type === "ultra-rebirth") {
           try {
-            if (previous.profile) clearPresence(previous.profile.id);
+            if (previous.profile && action.type === "rebirth")
+              clearPresence(previous.profile.id);
           } catch {}
           reset(next);
-          return { ok: true };
+          return { ok: true, granted: next.history.at(-1)?.skill ?? null };
         }
         current.current = next;
         setProgress(next);

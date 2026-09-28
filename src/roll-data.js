@@ -43,29 +43,68 @@ export function formatEPCompact(value) {
   return formatEP(rounded);
 }
 export const GAME_URL = "https://jaime-gaming.github.io/RNGdle-Infinite";
-export function buildShareText(result) {
-  const squares = {
-    trash: "🟫",
-    common: "⬜",
-    uncommon: "🟩",
-    rare: "🟦",
-    epic: "🟪",
-    anomaly: "🟧",
-    mythic: "🟥",
-    godly: "🟨",
-  };
+// One palette for every shared roll, so a result shared live and the same roll
+// shared later from History read identically.
+const TIER_SQUARES = {
+  trash: "\u{1F7EB}",
+  common: "\u2B1C",
+  uncommon: "\u{1F7E9}",
+  rare: "\u{1F7E6}",
+  epic: "\u{1F7EA}",
+  anomaly: "\u{1F7E7}",
+  mythic: "\u{1F7E5}",
+  godly: "\u{1F7E8}",
+};
+
+function shareLines(number, tier, badges, ep, extra = "") {
   return [
-    `RNGdle Infinite 🎲 ${result.number}`,
+    `RNGdle Infinite \u{1F3B2} ${number}`,
     "",
-    `${squares[result.tier]} ${result.tier.toUpperCase()} • ${formatPercentile(result)}`,
+    `${TIER_SQUARES[tier] ?? ""} ${tier.toUpperCase()}${extra}`,
     "",
-    ...result.badges
+    ...badges
       .slice(0, 3)
-      .map((b) => `${squares[b.rarity]} ${b.emoji} ${b.name}`),
-    ...(result.badges.length > 3 ? [`+${result.badges.length - 3} more`] : []),
+      .map(
+        (badge) =>
+          `${TIER_SQUARES[badge.rarity] ?? ""} ${badge.emoji} ${badge.name}`,
+      ),
+    ...(badges.length > 3 ? [`+${badges.length - 3} more`] : []),
     "",
-    `${formatEP(result.totalEP)} EP`,
+    `${formatEP(ep)} EP`,
     "",
     GAME_URL,
   ].join("\n");
+}
+
+export function buildShareText(result) {
+  // The rank line only exists for a freshly scored roll: History keeps the
+  // number, the tier and the EP, so an archived share simply omits it.
+  return shareLines(
+    result.number,
+    result.tier,
+    result.badges,
+    result.totalEP,
+    ` \u2022 ${formatPercentile(result)}`,
+  );
+}
+
+// Sharing an old roll from History: same shape, built from what the save
+// actually kept (number, tier, EP, badges, wallet bonus) instead of a live
+// result object. Nothing here can invent a figure the roll did not have.
+export function buildShareTextFromHistory(event) {
+  const badges = (event.badges ?? [])
+    .map((id) => badgeMetadata.get(id))
+    .filter(Boolean);
+  const bonus = event.petBonus ?? 0;
+  return shareLines(
+    event.number,
+    event.tier,
+    badges,
+    event.ep,
+    event.source === "offline"
+      ? " \u2022 OFFLINE ROLL"
+      : bonus > 0
+        ? ` \u2022 +${formatEP(bonus)} EP companion bonus`
+        : "",
+  );
 }

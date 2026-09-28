@@ -9,10 +9,12 @@
     "build:pages": "vite build --base=/RNGdle-Infinite/",
     "pages:publish": "node tools/publish-pages.mjs",
     "test:pages": "node tools/test-pages.mjs",
+    "screenshots": "node tools/screenshots.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",
     "format": "prettier --write src tests *.js *.json index.html README.md",
     "prepare:data": "node tools/prepare-game-data.mjs",
+    "vendor:emoji": "node tools/vendor-emoji.mjs",
     "audit:economy": "node tools/audit-economy.mjs"
   },
   "dependencies": {
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@twemoji/svg": "^15.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "prettier": "^3.9.6",
     "vite": "^6.1.0"

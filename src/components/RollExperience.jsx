@@ -4,7 +4,8 @@ import RollProgress from "./RollProgress";
 import GoalRecap from "./GoalRecap";
 import CooldownFill from "./CooldownFill";
 import { parseCooldownWindow, displayedCooldownSeconds } from "../cooldown.js";
-import FlywheelMeter from "./FlywheelMeter";
+import SkillBar from "./SkillBar";
+import PetParade from "./PetParade";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
 import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
 import {
@@ -21,6 +22,11 @@ import { rollSettings, formatDuration } from "../shop-data";
 import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
+import { petById, petBonusLabel } from "../pets.js";
+import { skillForPet } from "../skills.js";
+import { walletMultiplier } from "../progress.js";
+import { walletParts } from "../rack.js";
+import { CreatureIcon } from "./game-icons.jsx";
 import "../roll.css";
 
 const AnimatedCount = memo(function AnimatedCount({
@@ -59,6 +65,7 @@ const NumberArtifact = memo(function NumberArtifact({
   timeline,
   reducedMotion,
   aura,
+  dockedPet = null,
 }) {
   const target = String(run.result.number),
     pad = timeline.slots - target.length;
@@ -96,8 +103,23 @@ const NumberArtifact = memo(function NumberArtifact({
     return () => clearInterval(timer);
   }, [run.id, spinning, reducedMotion]);
   const tier = rarityKnown && run.result.tier ? run.result.tier : "neutral";
+  const dockedSkill = dockedPet ? skillForPet(dockedPet) : null;
+  const dockedName = dockedPet ? (petById.get(dockedPet)?.name ?? "") : "";
   return (
     <div className={`artifact-stage aura-${aura}`} data-aura={aura}>
+      {/* While the worn companion's signature skill fires, the companion steps
+          off the stage and pins itself here, on the corner of the number box,
+          until the roll settles and it can go back to walking. */}
+      {dockedPet && dockedSkill && (
+        <span
+          className={`artifact-companion tint-${dockedSkill.tint}`}
+          role="img"
+          aria-label={`${dockedName}: its skill ${dockedSkill.name} is firing on this roll`}
+          title={`${dockedName} — ${dockedSkill.name}`}
+        >
+          <CreatureIcon pet={dockedPet} size={19} aria-hidden="true" />
+        </span>
+      )}
       <NumberBox
         tier={tier}
         aura={aura}
@@ -146,6 +168,7 @@ export default function RollExperience({
   aura,
   openSignup,
   navigate,
+  arrivalPet = null,
 }) {
   const settings = rollSettings(session.owned);
   const { settings: preferences } = useSettings();
@@ -164,6 +187,9 @@ export default function RollExperience({
   );
   const autoAction = useRef(null);
   autoAction.current = generate;
+  // The switch only runs on the visible Roll page unless Persistence Core is
+  // owned. The rack states the same thing in words, so the two can never drift.
+  const autoRollRunning = autoRoll && active && (visible || persistsAutoRoll);
   useEffect(() => {
     const update = () => setVisible(document.visibilityState === "visible");
     document.addEventListener("visibilitychange", update);
@@ -191,7 +217,20 @@ export default function RollExperience({
       gameNow(),
     ),
   );
+  // Time left on the committed reservation, separate from the cooldown shown
+  // by the button: a zero-cooldown boost (or a cooldown-waiving skill) still
+  // reserves its whole reveal, so `reserving` stays true until the deadline
+  // actually passes and the next roll cannot start on top of a live one.
+  const [remainingMS, setRemainingMS] = useState(() =>
+    Math.max(
+      0,
+      Math.max(session.cooldownUntil ?? 0, localCooldownUntil ?? 0) - gameNow(),
+    ),
+  );
+  const reserving = remainingMS > 0;
+  const reservedSeconds = Math.ceil(remainingMS / 1000);
   const reducedMotion = useMotionPreference();
+  const activeCompanion = petById.get(session.activePet) ?? null;
   const finishedRun = useRef(null);
   const shareButton = useRef(null);
   const creditCallback = useRef(onComplete);
@@ -221,6 +260,26 @@ export default function RollExperience({
   const awaitingSettlement =
     !!run && session.pendingRoll?.id === run.id && !runSettled;
   const busy = !!run && elapsed < timeline.end;
+  // While the worn companion's signature skill fires on this roll, the
+  // companion steps off the stage and shows as a small mark on the number
+  // box; it goes back to walking the moment the roll settles.
+  const companionSkill = skillForPet(session.activePet);
+  const companionSkillFiring =
+    !!run &&
+    !runSettled &&
+    !!companionSkill &&
+    (run.skills ?? []).includes(companionSkill.id);
+  // What actually lands in the wallet: the settlement's own formula, so the
+  // on-screen sum matches the credit to the EP — companion, rebirth bonuses,
+  // ultra-rebirth and every wallet skill that fired, never the score.
+  const firedSkills = run?.skills ?? [];
+  const bankedMultiplier = result ? walletMultiplier(session, firedSkills) : 1;
+  const creditedEP =
+    result && result.totalEP !== null
+      ? Math.round(result.totalEP * bankedMultiplier)
+      : 0;
+  const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0));
+  const bonusParts = bonusEP > 0 ? walletParts(session, firedSkills) : [];
   const cooldownWindow =
     session.cooldownWindow ??
     parseCooldownWindow(
@@ -241,9 +300,7 @@ export default function RollExperience({
       return;
     }
     if (
-      !autoRoll ||
-      !active ||
-      (!visible && !persistsAutoRoll) ||
+      !autoRollRunning ||
       loading ||
       drawing ||
       busy ||
@@ -255,14 +312,23 @@ export default function RollExperience({
       return;
     // Use the same serialized, persisted draw path as the manual button. Cleanup
     // cancels a queued auto-start when switching it off or leaving the page.
-    const timer = setTimeout(() => autoAction.current(), 250);
+    // Never queue a start inside the window this roll is still reserving: the
+    // wait is measured from the game clock, not from a display tick, so a paused
+    // or throttled countdown cannot fire the next roll early or stall the loop.
+    const remaining =
+      Math.max(
+        0,
+        Math.max(session.cooldownUntil ?? 0, localCooldownUntil ?? 0) -
+          gameNow(),
+      ) + 120;
+    const timer = setTimeout(
+      () => autoAction.current(),
+      Math.max(250, Math.ceil(remaining)),
+    );
     return () => clearTimeout(timer);
   }, [
-    autoRoll,
+    autoRollRunning,
     ownsAutoRoll,
-    active,
-    visible,
-    persistsAutoRoll,
     loading,
     drawing,
     busy,
@@ -270,6 +336,7 @@ export default function RollExperience({
     awaitingSettlement,
     session.pendingRoll,
     session.offline?.batch,
+    localCooldownUntil,
     error,
     settleError,
   ]);
@@ -280,8 +347,11 @@ export default function RollExperience({
     // still governed by `until`, so the actual wait is unchanged.
     const window =
       session.cooldownWindow ?? parseCooldownWindow(null, until, run);
-    const update = () =>
-      setCooldown(displayedCooldownSeconds(window, until, gameNow()));
+    const update = () => {
+      const now = gameNow();
+      setCooldown(displayedCooldownSeconds(window, until, now));
+      setRemainingMS(Math.max(0, until - now));
+    };
     update();
     if (until <= gameNow()) return;
     const timer = setInterval(() => {
@@ -481,41 +551,43 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
-      {preferences.showFlywheelMeter && (
-        <FlywheelMeter
+      {/* The corner rack: charged circles, Flywheel, and Auto-Roll as one more
+          ability you click on or off. A full circle fires on the next roll, and
+          during that roll it shows as firing; the Σ button states what the
+          whole rack adds up to. */}
+      {preferences.showSkillBar && (
+        <SkillBar
           progress={session}
-          boosted={!!run && run.flywheel === "boost" && !runSettled}
+          firing={[
+            ...(run && !runSettled ? (run.skills ?? []) : []),
+            ...(run && run.flywheel === "boost" && !runSettled
+              ? ["flywheel"]
+              : []),
+          ]}
+          phase={!run ? "idle" : busy ? "reveal" : "cooldown"}
+          autoRoll={ownsAutoRoll && autoRoll}
+          autoRollState={
+            !autoRoll ? "off" : autoRollRunning ? "running" : "paused"
+          }
+          onToggleAutoRoll={() => setAutoRoll((enabled) => !enabled)}
         />
       )}
-      {ownsAutoRoll && (
-        <div className="auto-roll-control">
-          <div className="auto-roll-heading">
-            <span>Auto-Roll</span>
-            <button
-              type="button"
-              role="switch"
-              aria-label="Auto-Roll"
-              aria-checked={autoRoll}
-              disabled={!!error || !!settleError}
-              onClick={() => setAutoRoll((enabled) => !enabled)}
-            >
-              <span className="auto-roll-thumb" aria-hidden="true" />
-              {autoRoll ? "On" : "Off"}
-            </button>
-          </div>
-          <p>
-            {autoRoll
-              ? active && (visible || persistsAutoRoll)
-                ? "Starts your next roll when it’s ready."
-                : "Paused while you browse. Your current roll will finish."
-              : "Enable to roll automatically at your current pace."}{" "}
-            {persistsAutoRoll
-              ? "Persistence Core keeps this switch after a reload and while this tab is in the background."
-              : "Pauses away from this page; off after reload."}{" "}
-            Stopping keeps your current roll.
-          </p>
-        </div>
-      )}
+      {/* Only the equipped companion walks the roll screen, so it is always
+          obvious which one is actually active. The rest stay on the shelf.
+          While its signature skill fires it steps off the stage entirely and
+          lives on the corner of the number until the roll settles. */}
+      <PetParade
+        pets={
+          session.activePet && session.activePet !== "none"
+            ? [session.activePet]
+            : []
+        }
+        active={session.activePet}
+        reducedMotion={reducedMotion}
+        arrival={arrivalPet}
+        docked={companionSkillFiring}
+        phase={!run ? "idle" : busy ? "reveal" : "cooldown"}
+      />
       {!run ? (
         <section className="idle-roll" aria-label="Number generator">
           <NumberBox
@@ -524,12 +596,12 @@ export default function RollExperience({
             aura={aura}
             aria-label="Your random number awaits"
           />
-          <h1>One roll per day? Not here. Roll as often as you like.</h1>
+          <h1>One number. What will yours be?</h1>
           <button
             ref={generateButton}
-            className={`generate ${cooldown || loading || drawing ? "cooling" : ""}`}
+            className={`generate ${cooldown || reserving || loading || drawing ? "cooling" : ""}`}
             disabled={
-              loading || drawing || cooldown > 0 || !!session.offline?.batch
+              loading || drawing || reserving || !!session.offline?.batch
             }
             onClick={generate}
           >
@@ -537,8 +609,8 @@ export default function RollExperience({
               ? "LOADING ROLL DATA…"
               : drawing
                 ? "DRAWING…"
-                : cooldown
-                  ? `NEXT ROLL IN ${formatDuration(cooldown)}`
+                : cooldown || reserving
+                  ? `NEXT ROLL IN ${formatDuration(cooldown || reservedSeconds)}`
                   : error
                     ? "RETRY & ROLL"
                     : "GENERATE"}
@@ -564,6 +636,17 @@ export default function RollExperience({
               ? "no"
               : formatDuration(settings.cooldownMS / 1000)}{" "}
             cooldown
+            {/* What the worn companion adds, stated where the timings are. */}
+            {activeCompanion && (
+              <>
+                <span>·</span>{" "}
+                <span className="roll-hint-pet">
+                  <CreatureIcon pet={activeCompanion.id} size={13} />
+                  {activeCompanion.name}{" "}
+                  {petBonusLabel(activeCompanion.multiplier)}
+                </span>
+              </>
+            )}
           </p>
           <p className="signup-note">
             {session.profile ? (
@@ -582,13 +665,18 @@ export default function RollExperience({
             <NumberArtifact
               key={run.id}
               {...{ run, elapsed, timeline, reducedMotion, aura }}
+              dockedPet={companionSkillFiring ? session.activePet : null}
             />
             <div className="roll-announcement sr-only" role="status">
               {!digitsDone
                 ? `Revealing your number. ${timeline.digitTimes.filter((t) => elapsed >= t).length} of ${timeline.slots} digits settled.`
                 : busy
                   ? `Number ${result.number}. Revealing badges.`
-                  : `${result.number}, ${result.tier}, ${formatEP(result.totalEP)} EP.`}
+                  : `${result.number}, ${result.tier}, ${formatEP(result.totalEP)} EP.${
+                      bonusEP
+                        ? ` +${formatEP(bonusEP)} EP extra from your multipliers.`
+                        : ""
+                    }`}
             </div>
             {result.totalEP !== null && (
               <div
@@ -621,6 +709,26 @@ export default function RollExperience({
                   )}{" "}
                   EP
                 </div>
+                {/* When skills or multipliers add to the wallet, the roll says
+                    so once: the extra and every named part of it. A plain roll
+                    needs no line — the EP counter already is the total. */}
+                {digitsDone && bonusEP > 0 && (
+                  <div
+                    className={`roll-credit ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
+                    aria-hidden={elapsed < timeline.sessionShow}
+                    data-testid="roll-credit"
+                  >
+                    <span className="roll-credit-bonus">
+                      <strong>+{formatEP(bonusEP)} EP extra</strong> ·{" "}
+                      {bonusParts
+                        .map(
+                          (part) =>
+                            `${part.label} ×${Number(part.value.toFixed(2))}`,
+                        )
+                        .join(" · ")}
+                    </span>
+                  </div>
+                )}
                 {digitsDone && (
                   <div
                     className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
@@ -631,7 +739,7 @@ export default function RollExperience({
                         value={
                           session.balance +
                           (elapsed >= timeline.sessionCount && !runSettled
-                            ? result.totalEP
+                            ? creditedEP
                             : 0)
                         }
                         duration={1500 * timeline.scale}
@@ -642,7 +750,7 @@ export default function RollExperience({
                         elapsed < timeline.end &&
                         !instant && (
                           <span className="floating-ep">
-                            +{formatEP(result.totalEP)}
+                            +{formatEP(creditedEP)}
                           </span>
                         )}
                     </span>
@@ -672,9 +780,10 @@ export default function RollExperience({
                     <span>
                       {busy ? (
                         "REVEALING YOUR ROLL"
-                      ) : cooldown ? (
+                      ) : cooldown || reserving ? (
                         <>
-                          NEXT ROLL IN <b>{formatDuration(cooldown)}</b>
+                          NEXT ROLL IN{" "}
+                          <b>{formatDuration(cooldown || reservedSeconds)}</b>
                         </>
                       ) : awaitingSettlement ? (
                         "SETTLING YOUR RESULT"
@@ -693,12 +802,12 @@ export default function RollExperience({
             >
               <button
                 ref={generateButton}
-                className={`generate ${cooldown || loading || drawing ? "cooling" : ""}`}
+                className={`generate ${cooldown || reserving || loading || drawing ? "cooling" : ""}`}
                 disabled={
                   loading ||
                   drawing ||
                   busy ||
-                  cooldown > 0 ||
+                  reserving ||
                   awaitingSettlement ||
                   !!session.offline?.batch ||
                   !!settleError
@@ -714,6 +823,11 @@ export default function RollExperience({
                       window={cooldownWindow}
                       reducedMotion={reducedMotion}
                     />
+                  </>
+                ) : reserving ? (
+                  <>
+                    <Clock3 size={18} /> NEXT ROLL IN{" "}
+                    {formatDuration(reservedSeconds)}
                   </>
                 ) : awaitingSettlement ? (
                   "RESULT PENDING"

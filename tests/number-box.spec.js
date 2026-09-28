@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
@@ -26,11 +26,12 @@ test("shared number boxes cover the idle generator and cosmetic previews without
     "??????",
   );
   await expect(page.locator(".best-number, .profile-number")).toHaveCount(0);
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Shop", exact: true })
-    .click();
-  await expect(page.locator(".aura-preview .number-box")).toHaveCount(7);
+  // Auras are their own shelf now: /shop/auras, not the shop's front page.
+  await page.goto("/shop/auras");
+  const auraCount = shopProducts.filter((p) => p.kind === "aura").length;
+  await expect(page.locator(".aura-preview .number-box")).toHaveCount(
+    auraCount,
+  );
   for (const id of ["starfall", "aurora", "orbit"]) {
     const box = page.locator(`[data-product="${id}"] .number-box`);
     await expect(box).toHaveAttribute("data-cosmetic", id);
@@ -59,7 +60,6 @@ test("every roll tier uses the observed light/dark Box Lab palettes and shimmer 
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.install();
   const seen = new Set();
   for (const [i, number] of numbers.entries()) {
     await page
@@ -105,7 +105,7 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   await mockRandom(page, [1000000]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto("/#shop");
+  await page.goto("/shop/auras");
   await expect(page.getByTestId("roll-duration")).toHaveText("35s");
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:45");
   for (const [i, id] of ["starfall", "aurora", "orbit"].entries()) {
@@ -129,10 +129,7 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(360);
-    await page
-      .getByRole("navigation")
-      .getByRole("button", { name: "Shop", exact: true })
-      .click();
+    await page.goto("/shop/auras");
   }
   await page.getByRole("button", { name: "Back to rolling" }).click();
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
@@ -190,11 +187,35 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     "offline-clock-3": 8500000,
     "offline-vault-1": 6000000,
     "offline-vault-2": 11000000,
+    // v0.3 skills and the two rack upgrades.
+    surge: 180000,
+    trail: 320000,
+    bounce: 500000,
+    twice: 900000,
+    bedrock: 1600000,
+    turbo: 2600000,
+    quarry: 6000000,
+    "skill-bay-1": 1000000,
+    "skill-bay-2": 4000000,
+    // The second wave of auras.
+    nebula: 520000,
+    solstice: 780000,
+    lumen: 1050000,
+    glitch: 1650000,
+    monolith: 2700000,
+    chrono: 4200000,
   };
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(34);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(49);
+  // A skill product carries its effect in skills.js, never inside the product:
+  // the shop only mirrors the catalogue so both read the same numbers.
+  for (const product of shopProducts.filter((p) => p.kind === "skill")) {
+    expect(typeof product.skillId).toBe("string");
+    expect(product.value).toBeUndefined();
+    expect(product.floor).toBeUndefined();
+  }
   // Every aura is cosmetic: none may carry a timing, charge or cap payload.
   for (const aura of shopProducts.filter((p) => p.kind === "aura")) {
     expect(aura.value).toBeUndefined();
@@ -214,5 +235,5 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
       expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
   // The whole catalogue stays within a sane multiple of the cheapest upgrade.
   const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBeLessThanOrEqual(90000000);
+  expect(total).toBeLessThanOrEqual(115000000);
 });

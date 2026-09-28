@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { showRoll } from "./helpers/random-roll.js";
 import { evaluate } from "./helpers/index.js";
@@ -28,7 +28,7 @@ test("new logo loads, links home, and navigation follows Shop–Badges–History
   }
   for (const name of ["Shop", "Badges", "History"]) {
     await nav.getByRole("button", { name, exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`#${name.toLowerCase()}$`));
+    await expect(page).toHaveURL(new RegExp(`/${name.toLowerCase()}$`));
     await expect(
       nav.getByRole("button", { name, exact: true }),
     ).toHaveAttribute("aria-current", "page");

@@ -17,8 +17,9 @@ const about = fs.readFileSync("src/components/About.jsx", "utf8");
 test("the help icon opens a real About page that is not a top navigation entry", () => {
   expect(validPage("about")).toBe("about");
   expect(pathForPage("about")).toBe("/about");
-  // Reached from the ? icon button, never from the main nav list.
-  expect(main).toContain('className="icon-button help-button"');
+  // Reached from the ? icon button, never from the main nav list; the button
+  // wears the header's shared selected state when the page is open.
+  expect(main).toContain('icon-button help-button ${page === "about"');
   expect(main).toMatch(/help-button[\s\S]{0,200}navigate\("about"\)/);
   expect(main).toContain('{page === "about" && (');
   // The old single-block help modal is gone.

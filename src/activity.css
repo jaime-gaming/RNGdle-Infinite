@@ -248,3 +248,56 @@
   text-decoration: underline;
   padding: 0;
 }
+
+/* Which charged skills fired on a historical roll. */
+.activity-skills {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: "Space Mono", monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+/* A roll can be shared later, straight from the feed. */
+.activity-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 500 10.5px var(--roll-font);
+}
+.activity-share:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+/* What each fired skill actually added to that roll. */
+.activity-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.activity-skill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--green) 30%, var(--border));
+  border-radius: 5px;
+  background: var(--green-bg);
+  color: var(--secondary);
+  font: 500 10px/1.4 var(--roll-font);
+}
+.activity-skill strong {
+  color: var(--green);
+}
