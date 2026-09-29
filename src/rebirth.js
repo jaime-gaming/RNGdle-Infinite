@@ -1,6 +1,7 @@
 import { allBadgeMetadata } from "./infinite-badges.js";
 import { shopProducts } from "./shop-data.js";
 import { rebirthSkills } from "./skills.js";
+import { formatEP } from "./roll-data.js";
 
 export const BADGE_TOTAL = allBadgeMetadata.length;
 const badgeIds = new Set(allBadgeMetadata.map((b) => b.id));
@@ -18,13 +19,29 @@ export function rebirthRelevantPurchases(owned = []) {
   return owned.filter((id) => !optional.has(id));
 }
 
-// The ladder used to demand all 235 badges at once, which made it effectively
-// unreachable. It now climbs: the icon appears at 30% of the collection, the
-// first rebirth is available at 50%, and every finished cycle raises the bar
-// by ten points until the collection itself is the requirement.
-export const REBIRTH_VISIBLE_AT = Math.ceil(BADGE_TOTAL * 0.3);
-export const REBIRTH_STEPS = [0.5, 0.6, 0.7, 0.8, 0.9, 1];
+// A rung asks for two things: a slice of the collection and EP the current
+// cycle has earned. Badges alone made the late rungs a wall — the last few
+// dozen are the rarest in the game, so the ladder used to end where nobody
+// could reach it — while EP is something every roll works towards. The
+// collection still sets the pace of the ladder; the EP is the second half of
+// the price, and it roughly doubles from rung to rung.
+//
+// The icon appears at 15% of the collection, the first rung opens at 20%, and
+// the ladder closes at 45% — where the old one only started.
+export const REBIRTH_VISIBLE_AT = Math.ceil(BADGE_TOTAL * 0.15);
+export const REBIRTH_STEPS = [
+  { badges: 0.2, ep: 100000 },
+  { badges: 0.25, ep: 250000 },
+  { badges: 0.3, ep: 500000 },
+  { badges: 0.35, ep: 1250000 },
+  { badges: 0.4, ep: 3000000 },
+  { badges: 0.45, ep: 7000000 },
+];
 export const REBIRTH_TOTAL = REBIRTH_STEPS.length;
+// The ultra-rebirth closes the ladder: half the collection and a cycle that
+// has earned real EP. Asking for all 235 badges asked for a collection nobody
+// could finish.
+export const ULTRA_REBIRTH_STEP = { badges: 0.5, ep: 15000000 };
 
 // Everything an ultra-rebirth grants on top of the cosmetic mark: a permanent,
 // always-on wallet bonus. It multiplies banked EP only, exactly like a
@@ -75,16 +92,41 @@ export function discoveredCount(progress) {
   return new Set(progress.discovered.filter((id) => badgeIds.has(id))).size;
 }
 
-// How many badges the next rebirth needs, and what that is in percent. Null
-// once the whole ladder is complete.
+// How many badges and how much cycle EP the next rebirth needs. Null once the
+// whole ladder is complete.
 export function rebirthRequirement(rebirths = 0) {
   const step = REBIRTH_STEPS[rebirths];
   if (step == null) return null;
   return {
     rebirth: rebirths + 1,
-    percent: Math.round(step * 100),
-    badges: Math.ceil(BADGE_TOTAL * step),
+    percent: Math.round(step.badges * 100),
+    badges: Math.ceil(BADGE_TOTAL * step.badges),
+    ep: step.ep,
   };
+}
+
+export function ultraRebirthRequirement() {
+  return {
+    percent: Math.round(ULTRA_REBIRTH_STEP.badges * 100),
+    badges: Math.ceil(BADGE_TOTAL * ULTRA_REBIRTH_STEP.badges),
+    ep: ULTRA_REBIRTH_STEP.ep,
+  };
+}
+
+// What the cycle in play has earned: the scored EP of every roll since the
+// last rebirth. It is a gate, not a spend — a rebirth empties the wallet
+// anyway, so charging the balance would only punish buying things with EP
+// that is about to be handed back.
+export function cycleEarnedEp(progress) {
+  const history = Array.isArray(progress?.history) ? progress.history : [];
+  const start = history.findLastIndex(
+    (event) => event.type === "rebirth" || event.type === "ultra-rebirth",
+  );
+  const events = start >= 0 ? history.slice(start + 1) : history;
+  let total = 0;
+  for (const event of events)
+    if (event?.type === "roll") total += event.ep ?? 0;
+  return total;
 }
 
 export function nextRebirthSkill(rebirths = 0) {
@@ -101,18 +143,25 @@ function commitmentBlocker(progress, now) {
 
 export function rebirthBlocker(progress, now) {
   const requirement = rebirthRequirement(progress.rebirths ?? 0);
-  if (!requirement)
-    return `The rebirth ladder is complete. Ultra-rebirth is unlocked at ${BADGE_TOTAL} badges.`;
+  if (!requirement) {
+    const ultra = ultraRebirthRequirement();
+    return `The rebirth ladder is complete. Ultra-rebirth is unlocked at ${ultra.badges} badges and ${formatEP(ultra.ep)} EP earned in a cycle.`;
+  }
   const count = discoveredCount(progress);
   if (count < requirement.badges)
     return `Discover ${requirement.badges} badges (${requirement.percent}%) to rebirth. ${requirement.badges - count} to go.`;
+  const earned = cycleEarnedEp(progress);
+  if (earned < requirement.ep)
+    return `Earn ${formatEP(requirement.ep)} EP this cycle to rebirth. ${formatEP(requirement.ep - earned)} to go.`;
   return commitmentBlocker(progress, now);
 }
 
 export function rebirthReady(progress, now) {
+  const requirement = rebirthRequirement(progress.rebirths ?? 0);
+  if (!requirement) return false;
   return (
-    discoveredCount(progress) >=
-      (rebirthRequirement(progress.rebirths ?? 0)?.badges ?? BADGE_TOTAL) &&
+    discoveredCount(progress) >= requirement.badges &&
+    cycleEarnedEp(progress) >= requirement.ep &&
     !commitmentBlocker(progress, now)
   );
 }
@@ -125,15 +174,22 @@ export function rebirthReady(progress, now) {
 export function ultraRebirthBlocker(progress, now) {
   if ((progress.rebirths ?? 0) < REBIRTH_TOTAL)
     return `Finish the whole rebirth ladder first: ${REBIRTH_TOTAL - (progress.rebirths ?? 0)} rebirths to go.`;
-  if (discoveredCount(progress) !== BADGE_TOTAL)
-    return `An ultra-rebirth starts the run over: the wallet, every purchase and every companion. Discover all ${BADGE_TOTAL} badges first.`;
+  const requirement = ultraRebirthRequirement();
+  const count = discoveredCount(progress);
+  if (count < requirement.badges)
+    return `An ultra-rebirth starts the run over: the wallet, every purchase and every companion. Discover ${requirement.badges} badges (${requirement.percent}%) first — ${requirement.badges - count} to go.`;
+  const earned = cycleEarnedEp(progress);
+  if (earned < requirement.ep)
+    return `Earn ${formatEP(requirement.ep)} EP this cycle to ultra-rebirth. ${formatEP(requirement.ep - earned)} to go.`;
   return commitmentBlocker(progress, now);
 }
 
 export function ultraRebirthAvailable(progress, now) {
+  const requirement = ultraRebirthRequirement();
   return (
     (progress.rebirths ?? 0) >= REBIRTH_TOTAL &&
-    discoveredCount(progress) === BADGE_TOTAL &&
+    discoveredCount(progress) >= requirement.badges &&
+    cycleEarnedEp(progress) >= requirement.ep &&
     !commitmentBlocker(progress, now)
   );
 }

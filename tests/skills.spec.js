@@ -34,6 +34,7 @@ import {
   REBIRTH_TOTAL,
   ULTRA_BONUS_PER_REBIRTH,
   cycleStarterEp,
+  ultraRebirthRequirement,
 } from "../src/rebirth.js";
 import { PETS, petById } from "../src/pets.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
@@ -436,7 +437,7 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
 test("rebirth hands back the run — shelf, companions and wallet — grants the ladder skill and keeps the history", () => {
   const state = fund(5000000, {
     profile: { id: "p", username: "Tester", createdAt: 1 },
-    discovered: ids.slice(0, Math.ceil(BADGE_TOTAL * 0.5)),
+    discovered: ids.slice(0, REBIRTH_STEPS[0].badges * BADGE_TOTAL),
     owned: ["quickwind-1", "starfall", "flywheel", "skill-bay-1"],
     equipped: "starfall",
     pets: ["pebble"],
@@ -445,6 +446,8 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
     equippedSkills: ["surge"],
     skillCharge: { surge: 4 },
     flywheelCharge: 3,
+    // The rung's other half: EP this cycle has scored. It is a mark of
+    // progress, not a spend, so the wallet is untouched by it.
     history: [
       {
         id: "old",
@@ -455,10 +458,21 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
         ep: 1,
         badges: [],
       },
+      {
+        id: "old2",
+        type: "roll",
+        at: 2,
+        number: 604827,
+        tier: "common",
+        ep: REBIRTH_STEPS[0].ep,
+        badges: [],
+      },
     ],
     receipts: ["old"],
   });
-  expect(REBIRTH_STEPS[0]).toBe(0.5);
+  // The ladder's first rung: a fifth of the collection and 100,000 EP the
+  // cycle earned — both are met by this account.
+  expect(REBIRTH_STEPS[0]).toEqual({ badges: 0.2, ep: 100000 });
   const reborn = applyProgress(state, {
     type: "rebirth",
     expectedRebirths: 0,
@@ -489,7 +503,11 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
   expect(reborn.equippedSkills).toEqual([granted.id]);
   // The activity history is the account's, so the old roll stays and the
   // rebirth is recorded after it.
-  expect(reborn.history.map((e) => e.type)).toEqual(["roll", "rebirth"]);
+  expect(reborn.history.map((e) => e.type)).toEqual([
+    "roll",
+    "roll",
+    "rebirth",
+  ]);
   expect(reborn.history.at(-1)).toMatchObject({
     id: "ev1",
     type: "rebirth",
@@ -497,9 +515,9 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
     skill: granted.id,
   });
   expect(parseProgress(JSON.stringify(reborn)).skills).toContain(granted.id);
-  // The next rung asks for ten points more, and the collection has to be
-  // rediscovered before it can be claimed.
-  expect(REBIRTH_STEPS[1]).toBe(0.6);
+  // The next rung asks for more badges and more EP, and the cycle has to
+  // rediscover the collection before it can be claimed.
+  expect(REBIRTH_STEPS[1]).toEqual({ badges: 0.25, ep: 250000 });
   expect(() =>
     applyProgress(reborn, { type: "rebirth", expectedRebirths: 1, at: 200000 }),
   ).toThrow(/Discover/);
@@ -509,6 +527,18 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   const top = fund(9000000, {
     profile: { id: "p", username: "Tester", createdAt: 1 },
     discovered: ids,
+    // The ultra-rebirth asks for the cycle's EP as well as the badges.
+    history: [
+      {
+        id: "old",
+        type: "roll",
+        at: 1,
+        number: 604827,
+        tier: "common",
+        ep: ultraRebirthRequirement().ep,
+        badges: [],
+      },
+    ],
     owned: ["quickwind-1", "starfall"],
     equipped: "starfall",
     pets: ["pebble"],
@@ -528,13 +558,20 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
       { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
     ),
   ).toThrow(/ladder/);
-  // And not without the whole collection.
+  // And not without half the collection back.
   expect(() =>
     applyProgress(
       { ...top, discovered: ids.slice(0, 10) },
       { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
     ),
-  ).toThrow(/Discover all/);
+  ).toThrow(/Discover 118 badges/);
+  // Nor without the EP the cycle has to have earned.
+  expect(() =>
+    applyProgress(
+      { ...top, history: [] },
+      { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
+    ),
+  ).toThrow(/Earn 15,000,000 EP/);
   const reborn = applyProgress(top, {
     type: "ultra-rebirth",
     expectedUltraRebirths: 1,
@@ -555,8 +592,11 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   // It costs the run, never the account: the ladder and its bonuses stay.
   expect(reborn.rebirths).toBe(REBIRTH_TOTAL);
   expect(reborn.totalEarned).toBe(9000000 + cycleStarterEp(REBIRTH_TOTAL, 2));
-  expect(reborn.history).toHaveLength(1);
-  expect(reborn.history[0]).toMatchObject({ type: "ultra-rebirth", count: 2 });
+  // The roll that paid for it stays in the log, and the ultra-rebirth is
+  // recorded after it: the history is the account's, never the cycle's.
+  expect(reborn.history).toHaveLength(2);
+  expect(reborn.history[0]).toMatchObject({ type: "roll" });
+  expect(reborn.history[1]).toMatchObject({ type: "ultra-rebirth", count: 2 });
   // The bonus is permanent and multiplies banked EP only: +10% per ultra.
   expect(ULTRA_BONUS_PER_REBIRTH).toBe(0.1);
   expect(walletMultiplier({ activePet: "none", ultraRebirths: 3 })).toBeCloseTo(
@@ -584,7 +624,8 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   expect(credited.balance).toBe(
     Math.round(result.totalEP * 1.2 * (1 + 0.02 * REBIRTH_TOTAL)),
   );
-  expect(credited.history.find((e) => e.type === "roll").ep).toBe(
+  // The roll this settlement wrote, not the one that paid for the ultra.
+  expect(credited.history.findLast((e) => e.type === "roll").ep).toBe(
     result.totalEP,
   );
 });

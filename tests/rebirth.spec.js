@@ -13,12 +13,14 @@ import {
   REBIRTH_TOTAL,
   REBIRTH_VISIBLE_AT,
   ULTRA_STARTER_EP,
+  cycleEarnedEp,
   cycleStarterEp,
   discoveredCount,
   rebirthBlocker,
   rebirthRequirement,
   ultraRebirthAvailable,
   ultraRebirthBlocker,
+  ultraRebirthRequirement,
 } from "../src/rebirth.js";
 import { cooldownFraction, parseCooldownWindow } from "../src/cooldown.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
@@ -47,6 +49,20 @@ const state = (extra = {}) => ({
   ...extra,
 });
 const action = { type: "rebirth", expectedRebirths: 0, at: 200000 };
+// The EP half of a rung's price is what the cycle in play has scored, read
+// from the log itself. These entries build a cycle that has earned that much.
+const earned = (ep, at = 150000) => [
+  {
+    id: `ep:${at}:${ep}`,
+    type: "roll",
+    at,
+    number: 604827,
+    tier: "godly",
+    ep,
+    badges: [],
+  },
+];
+const funded = (extra = {}) => state({ history: earned(20000000), ...extra });
 async function confirm(p, word = "REBIRTH") {
   await p.getByRole("button", { name: "Rebirth", exact: true }).click();
   await p.getByRole("textbox", { name: `Type ${word} to confirm` }).fill(word);
@@ -64,60 +80,120 @@ async function start(p, extra = {}) {
   await expect.poll(async () => !!(await saved(p)).pendingRoll).toBe(true);
 }
 
-test("the ladder climbs from half the collection to all of it", () => {
+test("the ladder climbs in badges and in EP, from a fifth of the collection", () => {
   expect(BADGE_TOTAL).toBe(235);
-  // The icon shows up at 30%, the first rebirth asks for 50%.
-  expect(REBIRTH_VISIBLE_AT).toBe(71);
-  expect(REBIRTH_STEPS).toEqual([0.5, 0.6, 0.7, 0.8, 0.9, 1]);
+  // The icon shows up at 15%; the first rebirth asks for 20% of the collection
+  // and 100,000 EP earned in the cycle, and both halves grow from there.
+  expect(REBIRTH_VISIBLE_AT).toBe(36);
+  expect(REBIRTH_STEPS).toEqual([
+    { badges: 0.2, ep: 100000 },
+    { badges: 0.25, ep: 250000 },
+    { badges: 0.3, ep: 500000 },
+    { badges: 0.35, ep: 1250000 },
+    { badges: 0.4, ep: 3000000 },
+    { badges: 0.45, ep: 7000000 },
+  ]);
   expect(REBIRTH_TOTAL).toBe(6);
   expect(rebirthRequirement(0)).toEqual({
     rebirth: 1,
-    percent: 50,
-    badges: 118,
+    percent: 20,
+    badges: 47,
+    ep: 100000,
   });
   expect(rebirthRequirement(1)).toEqual({
     rebirth: 2,
-    percent: 60,
-    badges: 141,
+    percent: 25,
+    badges: 59,
+    ep: 250000,
   });
-  expect(rebirthRequirement(2).badges).toBe(165);
-  expect(rebirthRequirement(3).badges).toBe(188);
-  expect(rebirthRequirement(4).badges).toBe(212);
+  expect(rebirthRequirement(2).badges).toBe(71);
+  expect(rebirthRequirement(3).badges).toBe(83);
+  expect(rebirthRequirement(4).badges).toBe(94);
   expect(rebirthRequirement(5)).toEqual({
     rebirth: 6,
-    percent: 100,
-    badges: 235,
+    percent: 45,
+    badges: 106,
+    ep: 7000000,
   });
   expect(rebirthRequirement(6)).toBeNull();
+  // The ultra-rebirth closes the ladder at half the collection — asking for
+  // all 235 badges asked for a collection nobody could finish.
+  expect(ultraRebirthRequirement()).toEqual({
+    percent: 50,
+    badges: 118,
+    ep: 15000000,
+  });
+  // Fewer badges than the old ladder asked for at every single rung.
+  for (let step = 1; step < REBIRTH_TOTAL; step++) {
+    expect(rebirthRequirement(step).badges).toBeGreaterThan(
+      rebirthRequirement(step - 1).badges,
+    );
+    expect(rebirthRequirement(step).ep).toBeGreaterThan(
+      rebirthRequirement(step - 1).ep,
+    );
+  }
   // Only unique, real badges count.
   expect(
     discoveredCount({ ...state(), discovered: Array(235).fill(ids[0]) }),
   ).toBe(1);
   // Below the current rung the panel says exactly how many are left.
-  const below = { ...state(), discovered: ids.slice(0, 117) };
-  expect(rebirthBlocker(below, 200000)).toMatch(/Discover 118 badges \(50%\)/);
+  const below = { ...funded(), discovered: ids.slice(0, 46) };
+  expect(rebirthBlocker(below, 200000)).toMatch(/Discover 47 badges \(20%\)/);
   expect(() => applyProgress(below, action)).toThrow(/Discover/);
+  // Badges met but the cycle has not earned enough: the EP is the missing
+  // half, and it says how much is left.
+  const short = {
+    ...state(),
+    discovered: ids.slice(0, 47),
+    history: earned(40000),
+  };
+  expect(cycleEarnedEp(short)).toBe(40000);
+  expect(rebirthBlocker(short, 200000)).toMatch(
+    /Earn 100,000 EP this cycle to rebirth\. 60,000 to go\./,
+  );
+  expect(() => applyProgress(short, action)).toThrow(/Earn 100,000 EP/);
+  // The EP is a mark of progress, not a spend: it is never taken from the
+  // wallet, and buying things with it cannot lock the ladder.
+  const met = {
+    ...state(),
+    discovered: ids.slice(0, 47),
+    history: earned(100000),
+    balance: 0,
+  };
+  expect(rebirthBlocker(met, 200000)).toBe("");
+  const paid = applyProgress(met, action);
+  expect(paid.rebirths).toBe(1);
+  expect(paid.history.at(-1)).toMatchObject({ cost: 100000 });
   // A committed roll, an offline batch or a running cooldown still blocks it.
   expect(() =>
-    applyProgress({ ...state(), pendingRoll: { id: "pending" } }, action),
+    applyProgress({ ...funded(), pendingRoll: { id: "pending" } }, action),
   ).toThrow("committed");
   expect(() =>
-    applyProgress({ ...state(), offline: { batch: { id: "batch" } } }, action),
+    applyProgress({ ...funded(), offline: { batch: { id: "batch" } } }, action),
   ).toThrow("committed");
   expect(() =>
-    applyProgress({ ...state(), cooldownUntil: 200001 }, action),
+    applyProgress({ ...funded(), cooldownUntil: 200001 }, action),
   ).toThrow("cooldown");
   expect(() =>
     applyProgress(
-      { ...state(), rebirths: 1, discovered: ids.slice(0, 140) },
+      { ...funded(), rebirths: 1, discovered: ids.slice(0, 58) },
       {
         ...action,
         expectedRebirths: 1,
       },
     ),
-  ).toThrow(/Discover 141 badges \(60%\)/);
-  expect(rebirthBlocker(state(), 200000)).toBe("");
-  expect(() => applyProgress({ ...state(), rebirths: 1 }, action)).toThrow(
+  ).toThrow(/Discover 59 badges \(25%\)/);
+  expect(() =>
+    applyProgress(
+      { ...state(), rebirths: 1, discovered: ids.slice(0, 59) },
+      {
+        ...action,
+        expectedRebirths: 1,
+      },
+    ),
+  ).toThrow(/Earn 250,000 EP/);
+  expect(rebirthBlocker(funded(), 200000)).toBe("");
+  expect(() => applyProgress({ ...funded(), rebirths: 1 }, action)).toThrow(
     "older cycle",
   );
 });
@@ -133,8 +209,17 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
       result: evaluate(604827),
     },
   );
-  const before = {
+  // 604827 is a poor roll, and a rung asks for 100,000 EP earned in the cycle:
+  // this account's one roll is worth more than that, so the log keeps its
+  // shape — under 500,000 EP it keeps its tier too — and pays for the rung.
+  const banked = {
     ...old,
+    history: old.history.map((event) =>
+      event.type === "roll" ? { ...event, ep: 200000 } : event,
+    ),
+  };
+  const before = {
+    ...banked,
     owned: ["quickwind-1", "starfall", "flywheel", "surge", "skill-bay-1"],
     discovered: ids,
     pets: ["pebble"],
@@ -206,7 +291,7 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
 
 test("every rung of the ladder grants its own skill, and the last one opens the ultra-rebirth", () => {
   let progress = {
-    ...state(),
+    ...funded(),
     pets: ["moth"],
     activePet: "moth",
     skills: ["surge", "trail"],
@@ -216,10 +301,13 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
   const granted = [];
   for (let step = 0; step < REBIRTH_TOTAL; step++) {
     const requirement = rebirthRequirement(step);
-    expect(requirement.percent).toBe(50 + step * 10);
+    expect(requirement.percent).toBe(20 + step * 5);
     expect(discoveredCount(progress)).toBeGreaterThanOrEqual(
       requirement.badges,
     );
+    // A new cycle has earned nothing yet, so every rung has to be paid for
+    // again: the EP the cycle scored is part of the ladder's price.
+    expect(cycleEarnedEp(progress)).toBeGreaterThanOrEqual(requirement.ep);
     const next = applyProgress(progress, {
       type: "rebirth",
       expectedRebirths: step,
@@ -227,20 +315,23 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
       eventId: `r${step + 1}`,
     });
     expect(next.rebirths).toBe(step + 1);
-    // Every rebirth joins the account's history instead of replacing it.
-    expect(next.history).toHaveLength(step + 1);
+    // Every rebirth joins the account's history instead of replacing it — one
+    // entry for the roll that paid for it, one for the rebirth itself.
+    expect(next.history).toHaveLength(2 * (step + 1));
     expect(next.history.at(-1)).toMatchObject({
       type: "rebirth",
       count: step + 1,
+      cost: requirement.ep,
     });
-    // The next rung asks for ten points more, and the collection is empty
-    // again: rediscovery is the work, everything else is kept.
+    // The next rung asks for more badges and more EP, and the collection is
+    // empty again: rediscovery is the work, everything else is kept.
     const following = rebirthRequirement(next.rebirths);
     if (following) {
-      // Ten points more is 23 or 24 badges, depending on the rounding.
+      // Five points more is 11 or 12 badges, depending on the rounding.
       expect(following.badges).toBeGreaterThan(requirement.badges);
-      expect(following.badges).toBeLessThanOrEqual(requirement.badges + 24);
-      expect(following.percent).toBe(requirement.percent + 10);
+      expect(following.badges).toBeLessThanOrEqual(requirement.badges + 12);
+      expect(following.percent).toBe(requirement.percent + 5);
+      expect(following.ep).toBeGreaterThan(requirement.ep);
     }
     expect(discoveredCount(next)).toBe(0);
     // The shelf, the companions and the wallet go back with the collection:
@@ -249,7 +340,11 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
     expect(next.pets).toEqual([]);
     expect(next.balance).toBe(REBIRTH_STARTER_EP * (step + 1));
     if (next.history.at(-1).skill) granted.push(next.history.at(-1).skill);
-    progress = { ...next, discovered: ids };
+    progress = {
+      ...next,
+      discovered: ids,
+      history: [...next.history, ...earned(20000000, 160000 + step)],
+    };
   }
   expect(granted).toHaveLength(REBIRTH_TOTAL);
   expect(new Set(granted).size).toBe(REBIRTH_TOTAL);
@@ -271,6 +366,24 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
   expect(
     ultraRebirthBlocker({ ...progress, rebirths: REBIRTH_TOTAL }, 300000),
   ).toBe("");
+  // An ultra-rebirth also wants the cycle's EP; half the collection alone is
+  // not enough any more.
+  const top = { ...progress, rebirths: REBIRTH_TOTAL };
+  expect(
+    ultraRebirthBlocker({ ...top, history: earned(14999999, 170000) }, 300000),
+  ).toMatch(/Earn 15,000,000 EP this cycle/);
+  expect(
+    ultraRebirthAvailable(
+      { ...top, history: earned(14999999, 170000) },
+      300000,
+    ),
+  ).toBe(false);
+  expect(
+    ultraRebirthAvailable(
+      { ...top, history: earned(15000000, 170000) },
+      300000,
+    ),
+  ).toBe(true);
   expect(
     ultraRebirthAvailable({ ...progress, rebirths: REBIRTH_TOTAL }, 300000),
   ).toBe(true);
@@ -289,7 +402,12 @@ test("every cycle starts with the EP its rungs and ultra-rebirths paid", () => {
   expect(cycleStarterEp(1, 0)).toBe(250000);
   expect(cycleStarterEp(REBIRTH_TOTAL, 0)).toBe(1500000);
   expect(cycleStarterEp(REBIRTH_TOTAL, 2)).toBe(3500000);
-  let progress = { ...state(), pets: [], skills: [], equippedSkills: [] };
+  let progress = {
+    ...funded(),
+    pets: [],
+    skills: [],
+    equippedSkills: [],
+  };
   for (let step = 0; step < REBIRTH_TOTAL; step++) {
     const next = applyProgress(progress, {
       type: "rebirth",
@@ -303,7 +421,12 @@ test("every cycle starts with the EP its rungs and ultra-rebirths paid", () => {
     expect(next.balance).toBeLessThanOrEqual(next.totalEarned);
     expect(next.history.at(-1).grant).toBe(cycleStarterEp(step + 1, 0));
     expect(parseProgress(JSON.stringify(next)).balance).toBe(next.balance);
-    progress = { ...next, discovered: ids };
+    // The next cycle has earned nothing yet, so it has to pay its own way.
+    progress = {
+      ...next,
+      discovered: ids,
+      history: [...next.history, ...earned(20000000, 160000 + step)],
+    };
   }
   // An ultra at the top pays the ladder's sum and its own.
   const ultra = applyProgress(progress, {
@@ -430,6 +553,9 @@ test("rebirth asks for typed confirmation, applies once, and restarts the run wi
     },
   );
   initial.discovered = ids;
+  // 604827 barely scores, and the rung asks for 100,000 EP earned in this
+  // cycle, so the seed carries a cycle that has already earned it.
+  initial.history = [...initial.history, ...earned(200000, 2000)];
   await seedProgress(page, initial);
   await mockRandom(page, [604827]);
   await page.goto("/#rebirth");
@@ -465,7 +591,7 @@ test("rebirth asks for typed confirmation, applies once, and restarts the run wi
   expect(after.discovered).toEqual([]);
   // The account keeps its history: the roll from the previous cycle is still
   // readable, with the rebirth recorded after it.
-  expect(after.history.filter((e) => e.type === "roll")).toHaveLength(1);
+  expect(after.history.filter((e) => e.type === "roll")).toHaveLength(2);
   expect(after.history.filter((e) => e.type === "rebirth")).toHaveLength(1);
   await nav(page, "History");
   await expect(page.locator('[data-event-type="rebirth"]')).toContainText(
@@ -497,7 +623,7 @@ test("rebirth asks for typed confirmation, applies once, and restarts the run wi
 test("a failed rebirth save leaves all progress intact and allows retry", async ({
   page,
 }) => {
-  await seedProgress(page, state());
+  await seedProgress(page, funded());
   await page.goto("/#rebirth");
   await expect
     .poll(async () => (await saved(page)).offline?.lastSeenAt)
@@ -533,7 +659,7 @@ test("simultaneous rebirths are applied once and reset the other tab without del
   page,
   context,
 }) => {
-  await seedProgress(page, state());
+  await seedProgress(page, funded());
   await page.goto("/#rebirth");
   const other = await context.newPage();
   await other.goto("/#rebirth");
@@ -560,7 +686,7 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   page,
   context,
 }) => {
-  await seedProgress(page, state());
+  await seedProgress(page, funded());
   await page.goto("/#rebirth");
   const other = await context.newPage();
   await other.addInitScript(() =>
@@ -597,7 +723,10 @@ test("rebirth waits for cooldown and remains usable on mobile without motion", a
 }) => {
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   const now = await page.evaluate(() => Date.now());
-  await seedProgress(page, { ...state(), cooldownUntil: now + 10000 });
+  await seedProgress(page, {
+    ...funded(),
+    cooldownUntil: now + 10000,
+  });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#rebirth");
@@ -700,7 +829,12 @@ test("a new cycle buys the shelf again and is credited at the catalogue price", 
     { type: "buy", id: "starfall", at: 1000 },
   );
   const reborn = applyProgress(
-    { ...first, discovered: ids, balance: 100000 },
+    {
+      ...first,
+      discovered: ids,
+      balance: 100000,
+      history: [...first.history, ...earned(100000)],
+    },
     action,
   );
   // The aura went back on the shelf, and the wallet restarts on the sum rung
@@ -709,7 +843,13 @@ test("a new cycle buys the shelf again and is credited at the catalogue price", 
   expect(reborn.owned).toEqual([]);
   expect(reborn.balance).toBe(REBIRTH_STARTER_EP);
   expect(reborn.totalEarned).toBe(100000 + REBIRTH_STARTER_EP);
-  expect(reborn.history.map((e) => e.type)).toEqual(["purchase", "rebirth"]);
+  // The roll that paid for the rung is part of the log, so the rebirth still
+  // lands after everything the cycle did.
+  expect(reborn.history.map((e) => e.type)).toEqual([
+    "purchase",
+    "roll",
+    "rebirth",
+  ]);
   // So buying it back in the new cycle is a real sale, at the catalogue price.
   const second = applyProgress(
     { ...reborn, balance: 5000000, totalEarned: 5000000 },
@@ -734,6 +874,7 @@ test("a rebirth hands the companions back and their signature skills go with the
       pets: ["pebble"],
       activePet: "pebble",
       equippedSkills: [signature],
+      history: earned(100000),
     },
     action,
   );
@@ -746,7 +887,7 @@ test("a rebirth hands the companions back and their signature skills go with the
 });
 
 test("registered rebirth fails closed without Web Locks", async ({ page }) => {
-  await seedProgress(page, { ...state(), owned: [] });
+  await seedProgress(page, { ...funded(), owned: [] });
   await page.addInitScript(() =>
     Object.defineProperty(navigator, "locks", { value: undefined }),
   );
@@ -763,7 +904,7 @@ test("registered rebirth fails closed without Web Locks", async ({ page }) => {
 test("guest rebirth refuses a failed guard write instead of partially resetting memory", async ({
   page,
 }) => {
-  await seedProgress(page, { ...state(), profile: null, owned: [] });
+  await seedProgress(page, { ...funded(), profile: null, owned: [] });
   await page.goto("/#rebirth");
   await page.evaluate(() => {
     const write = Storage.prototype.setItem;

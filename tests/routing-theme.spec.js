@@ -119,20 +119,41 @@ test("the rebirth ladder depends on the collection alone, never on auras or tool
     expect(rebirthOptionalProducts).toContain(id);
   expect(rebirthRelevantPurchases([...auras, "auto-roll"])).toEqual([]);
 
-  // Rung 1 wants half the collection; owning nothing else is fine.
+  // Rung 1 wants a fifth of the collection and 100,000 EP the cycle earned;
+  // owning nothing else is fine, and the EP is never something you can buy.
   const ids = allBadgeMetadata.map((b) => b.id);
-  const rungOne = ids.slice(0, Math.ceil(REBIRTH_STEPS[0] * BADGE_TOTAL));
+  const rungOne = ids.slice(
+    0,
+    Math.ceil(REBIRTH_STEPS[0].badges * BADGE_TOTAL),
+  );
+  const earned = [
+    {
+      id: "ep",
+      type: "roll",
+      at: 1000,
+      number: 604827,
+      tier: "common",
+      ep: REBIRTH_STEPS[0].ep,
+      badges: [],
+    },
+  ];
   const broke = {
     ...emptyProgress(),
     discovered: rungOne,
     owned: [],
+    history: earned,
   };
   expect(rebirthBlocker(broke, 0)).toBe("");
-  // An all-owned shop with three badges missing from the rung still cannot.
+  // Shekels cannot buy the EP half either: a full wallet changes nothing.
+  expect(
+    rebirthBlocker({ ...broke, balance: 100000000, history: [] }, 0),
+  ).toContain("Earn 100,000 EP");
+  // An all-owned shop with one badge missing from the rung still cannot.
   const rich = {
     ...emptyProgress(),
     discovered: rungOne.slice(0, -1),
     owned: shopProducts.map((p) => p.id),
+    history: earned,
   };
   expect(rebirthBlocker(rich, 0)).toContain(
     `Discover ${rungOne.length} badges`,

@@ -21,6 +21,8 @@ import {
   nextRebirthSkill,
   ultraRebirthMultiplier,
   cycleStarterEp,
+  rebirthRequirement,
+  ultraRebirthRequirement,
 } from "./rebirth.js";
 import { petById, PET_IDS, petMultiplier } from "./pets.js";
 import {
@@ -320,6 +322,9 @@ export function applyProgress(state, action) {
       throw new Error("Rebirth count limit reached.");
     const granted = nextRebirthSkill(count);
     const starter = cycleStarterEp(count + 1, state.ultraRebirths ?? 0);
+    // The rung's price — badges and the EP this cycle earned — is written into
+    // the log entry, so the history can say what a cycle was bought with.
+    const cost = rebirthRequirement(count);
     // The run starts over — collection, everything bought, companions and the
     // wallet — while the account keeps its history, its rebirths and every
     // bonus it earned. Receipts stay too, so a roll from an earlier cycle can
@@ -336,6 +341,7 @@ export function applyProgress(state, action) {
           count: count + 1,
           ...(granted ? { skill: granted.id } : {}),
           ...(starter ? { grant: starter } : {}),
+          ...(cost ? { cost: cost.ep } : {}),
         },
       ]),
     };
@@ -358,6 +364,7 @@ export function applyProgress(state, action) {
     // history, rebirths, ladder skills and every permanent bonus stay, and the
     // ultra-rebirth adds ten more points forever.
     const starter = cycleStarterEp(state.rebirths ?? 0, count + 1);
+    const cost = ultraRebirthRequirement();
     return {
       ...startNewCycle(state, { starter }),
       profile: state.profile,
@@ -369,6 +376,7 @@ export function applyProgress(state, action) {
           at: now,
           count: count + 1,
           ...(starter ? { grant: starter } : {}),
+          ...(cost ? { cost: cost.ep } : {}),
         },
       ]),
     };
@@ -835,6 +843,7 @@ function parseHistory(value) {
         count: e.count,
         ...(skillById.has(e.skill) ? { skill: e.skill } : {}),
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
+        ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
       };
     } else if (e.type === "ultra-rebirth") {
       if (!validAmount(e.count) || e.count < 1) return [];
@@ -842,6 +851,7 @@ function parseHistory(value) {
         ...base,
         count: e.count,
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
+        ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
       };
     } else if (["purchase", "equip"].includes(e.type)) {
       if (

@@ -10,6 +10,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Sparkles,
+  Target,
   Unlock,
   Wallet,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import {
   rebirthUnlocked,
   ultraRebirthAvailable,
   ultraRebirthBlocker,
+  ultraRebirthRequirement,
 } from "../rebirth.js";
 import {
   rebirthSkill,
@@ -45,9 +47,9 @@ import { gameNow } from "../game-clock.js";
 import { LegendMark, InfinityMark } from "./game-icons.jsx";
 import "../rebirth.css";
 
-// The ladder, step by step: 50%, then +10 points per completed cycle until the
-// whole collection is the requirement. An ultra-rebirth only appears once the
-// last rung is done, and it is the only action that pays more than a rung.
+// The ladder, step by step: a slice of the collection and EP the cycle earned,
+// both growing with every rung. An ultra-rebirth only appears once the last
+// rung is done, and it is the only action that pays more than a rung.
 //
 // Nothing here renders before the ladder unlocks — the page, the header entry
 // and the help page all stay silent, so rebirth is a discovery rather than a
@@ -67,6 +69,7 @@ function Reward({ step, earned, current }) {
       </span>
       <span className="rebirth-reward-starter">
         <Wallet size={12} aria-hidden="true" />
+        {formatEPCompact(REBIRTH_STEPS[step - 1].ep)} EP earned in the cycle ·{" "}
         {formatEPCompact(REBIRTH_STARTER_EP * step)} EP to start
       </span>
       {earned ? (
@@ -117,7 +120,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     else dialog.current?.close();
   }, [open]);
   const word = open === "ultra" ? "ULTRA" : "REBIRTH";
-  const target = requirement ? requirement.badges : BADGE_TOTAL;
+  // A step asks for two things: a slice of the collection and EP earned in the
+  // cycle that is asking. The page reads both off the save.
+  const step = requirement ?? ultraRebirthRequirement();
+  const target = step.badges;
+  const epTarget = step.ep;
   const remaining = Math.max(0, target - count);
   const percent = Math.min(
     100,
@@ -132,6 +139,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   // What this exact account would hand back and what it would be paid for it,
   // read from the save rather than described in general terms.
   const cycle = cycleStats(progress);
+  const cycleEp = cycle.earned;
+  const epRemaining = Math.max(0, epTarget - cycleEp);
+  const epPercent = Math.min(
+    100,
+    Math.round((cycleEp / Math.max(1, epTarget)) * 100),
+  );
   const owned = progress.owned ?? [];
   const ownedValue = owned.reduce(
     (sum, id) => sum + (productById.get(id)?.price ?? 0),
@@ -215,7 +228,9 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             The collection and everything you bought start over — the wallet,
             the upgrades, the companions. Your history, your rebirths and every
             permanent bonus stay, and each rung pays a skill, +2% EP forever and
-            the EP to start the next cycle.
+            the EP to start the next cycle. This step asks for{" "}
+            <b>{target} badges</b> and <b>{formatEP(epTarget)} EP</b> earned in
+            this cycle.
           </p>
           <div className="rebirth-actions">
             {ladderComplete && (
@@ -296,6 +311,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <dd>{remaining}</dd>
             </div>
             <div>
+              <dt>EP earned this cycle</dt>
+              <dd>
+                {formatEPCompact(cycleEp)} / {formatEPCompact(epTarget)}
+              </dd>
+            </div>
+            <div>
               <dt>Rebirths done</dt>
               <dd>
                 {rebirths} / {REBIRTH_TOTAL}
@@ -306,6 +327,19 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <dd>{bonusNow > 0 ? `+${bonusNow}%` : "—"}</dd>
             </div>
           </dl>
+          <div className="rebirth-meter">
+            <div className="rebirth-meter-head">
+              <span>
+                {epRemaining
+                  ? `${formatEP(epRemaining)} EP still to earn`
+                  : "EP earned this cycle: done"}
+              </span>
+              <span>{epPercent}%</span>
+            </div>
+            <span className="rebirth-meter-bar" aria-hidden="true">
+              <span style={{ width: `${epPercent}%` }} />
+            </span>
+          </div>
         </div>
       </div>
 
@@ -421,6 +455,14 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             </ul>
           </article>
         </div>
+        <p className="rebirth-preview-note">
+          <Target size={13} aria-hidden="true" /> This step asks for{" "}
+          <b>{target} badges</b> ({count} found) and{" "}
+          <b>{formatEP(epTarget)} EP</b> earned in this cycle —{" "}
+          {formatEP(cycleEp)} scored by {cycle.rolls}{" "}
+          {cycle.rolls === 1 ? "roll" : "rolls"}. The EP is a mark of progress,
+          not a spend: the wallet restarts on the starting sum either way.
+        </p>
       </section>
 
       <section className="rebirth-block" aria-labelledby="rebirth-ladder-title">
@@ -429,26 +471,27 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <LegendMark size={16} /> The ladder
           </h3>
           <p>
-            Each step asks for 10 points more and grants a skill found nowhere
-            else, a permanent +2% EP and the sum the next cycle starts with. No
-            purchase is ever required.
+            Each step asks for a slice of the collection and EP the cycle has
+            earned, and grants a skill found nowhere else, a permanent +2% EP
+            and the sum the next cycle starts with. No purchase is ever
+            required.
           </p>
         </header>
         <ol className="rebirth-ladder">
-          {REBIRTH_STEPS.map((step, index) => {
+          {REBIRTH_STEPS.map((rung, index) => {
             const state =
               index < rebirths
                 ? "is-done"
                 : index === rebirths
                   ? "is-current"
                   : "is-locked";
-            const needed = Math.ceil(BADGE_TOTAL * step);
+            const needed = Math.ceil(BADGE_TOTAL * rung.badges);
             const stepPercent = Math.min(
               100,
               Math.round((count / needed) * 100),
             );
             return (
-              <li key={step} className={state}>
+              <li key={index} className={state}>
                 <span className="rebirth-rung-mark">
                   {index < rebirths ? (
                     <Check size={13} />
@@ -461,9 +504,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 <span className="rebirth-rung-head">
                   <span className="rebirth-rung-name">#{index + 1}</span>
                   <span className="rebirth-rung-percent">
-                    {Math.round(step * 100)}% of the collection
+                    {Math.round(rung.badges * 100)}% of the collection
                   </span>
-                  <span className="rebirth-rung-badges">{needed} badges</span>
+                  <span className="rebirth-rung-badges">
+                    {needed} badges · {formatEPCompact(rung.ep)} EP earned
+                  </span>
                 </span>
                 <span className="rebirth-rung-bar" aria-hidden="true">
                   <span
@@ -535,9 +580,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <Sparkles size={16} /> After the ladder: ultra-rebirth
           </h3>
           <p>
-            Finish all {REBIRTH_TOTAL} steps and every badge, and you can take
-            the same fresh start at the top of the ladder — for a bonus that
-            never resets, and a bigger sum to begin with.
+            Finish all {REBIRTH_TOTAL} steps, then find{" "}
+            {ultraRebirthRequirement().badges} badges and earn{" "}
+            {formatEPCompact(ultraRebirthRequirement().ep)} EP in one cycle, and
+            you can take the same fresh start at the top of the ladder — for a
+            bonus that never resets, and a bigger sum to begin with.
           </p>
         </header>
         <div className="rebirth-ultra-card">
@@ -586,7 +633,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 <strong>Optional</strong>
                 <small>
                   A completed ladder is a fine place to stop. The button only
-                  appears when every badge is back in the collection.
+                  appears once the badges and the EP are both there.
                 </small>
               </span>
             </li>
@@ -594,7 +641,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           {ladderComplete && (
             <p className="rebirth-ultra-state" role="status">
               {ultraReady
-                ? `Ultra-rebirth ${ultras + 1} is ready: every badge is discovered.`
+                ? `Ultra-rebirth ${ultras + 1} is ready: the badges and the EP are both there.`
                 : ultraBlocker}
             </p>
           )}
@@ -635,7 +682,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <>
               <p>
                 The run starts over again, from the top of the ladder, and you
-                get something permanent in return.
+                get something permanent in return. It costs{" "}
+                {ultraRebirthRequirement().badges} badges and{" "}
+                {formatEP(ultraRebirthRequirement().ep)} EP earned in this
+                cycle.
               </p>
               <ul>
                 <li>
@@ -661,7 +711,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             </>
           ) : (
             <>
-              <p>The run starts over; the account keeps everything it did.</p>
+              <p>
+                The run starts over; the account keeps everything it did. This
+                step costs {target} badges and {formatEP(epTarget)} EP earned in
+                this cycle — both are already met.
+              </p>
               <ul>
                 <li>
                   <strong>Reset:</strong> the badge collection, every purchase,

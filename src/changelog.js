@@ -2,25 +2,18 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
-    version: "v0.5",
-    title: "every skill does what it says, and rebirth pays a new cycle",
-    body: [
-      "a draw skill now shows every draw it takes: the numbers land side by side, the best one is pulled to the centre, and only that one pays.",
-      "unkept draws are shown with what they would have scored, then discarded — a best-of skill never banks two rolls at once.",
-      "rolls saved in History state how many numbers they took, so a best of 3 stays visible after the reveal.",
-      "rebirth pays a starting sum: 250,000 EP per rung you have climbed, so a new cycle begins rolling instead of waiting.",
-      "the ultra-rebirth pays 1,000,000 EP on top, and the activity feed records what each new cycle was granted.",
-      "the rebirth page states your own numbers: what the cycle earned, its best roll, and exactly what the button hands over.",
-    ],
-  },
-  {
     version: "v0.4",
-    title: "rebirth restarts the run, not the account",
+    title:
+      "a cheaper ladder, a cycle that gets paid, and a history that keeps every run",
     body: [
-      "a rebirth now hands the run back: every purchase, the companions, the wallet and the badge collection start over.",
+      "a rebirth hands the run back: every purchase, the companions, the wallet and the badge collection start over.",
       "your account keeps its story: the activity history, the rebirths with their skills, every permanent bonus and the EP earned all-time.",
-      "the ultra-rebirth gives the same fresh start from a complete collection, and no longer wipes the history or the ladder you climbed.",
-      "the profile reports figures for the whole account instead of a single cycle.",
+      "the ladder asks for far fewer badges: a fifth of the collection for the first rung instead of half, and it closes at 45%, not 100%.",
+      "a rung also asks for EP the cycle earned, from 100,000 EP to 7,000,000 EP: a mark of progress, not a spend, as the wallet restarts anyway.",
+      "every cycle begins with a starting sum: 250,000 EP for each rung climbed, plus 1,000,000 EP per ultra-rebirth.",
+      "the ultra-rebirth closes the ladder at half the collection — all 235 badges was a collection nobody could finish — and pays a bigger sum.",
+      "history is never rewritten: a dotted line marks where each rebirth opened a new cycle, and every past roll stays readable.",
+      "a draw skill now shows every draw it takes side by side, and only the best of them is scored, ranked and paid.",
     ],
   },
   {

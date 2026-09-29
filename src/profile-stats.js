@@ -1,4 +1,4 @@
-import { BADGE_TOTAL, discoveredCount } from "./rebirth.js";
+import { BADGE_TOTAL, cycleEarnedEp, discoveredCount } from "./rebirth.js";
 import { PETS } from "./pets.js";
 import { SKILLS, skillSlots } from "./skills.js";
 import { LATEST_VERSION } from "./changelog.js";
@@ -83,7 +83,8 @@ export function cycleStats(progress = {}) {
         : (progress.profile?.createdAt ?? history[0]?.at ?? null),
     rebirths: progress.rebirths ?? 0,
     rolls: rolls.length,
-    earned: rolls.reduce((sum, event) => sum + (event.ep ?? 0), 0),
+    // The gate a rebirth reads: EP this cycle scored, straight from the log.
+    earned: cycleEarnedEp(progress),
     spent: events
       .filter((event) => event.type === "purchase")
       .reduce((sum, event) => sum + (event.ep ?? 0), 0),

@@ -1,8 +1,16 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import { buildShareTextFromHistory, GAME_URL } from "../src/roll-data.js";
-import { emptyProgress } from "../src/progress.js";
-import { seedProgress } from "./helpers/progress.js";
+import {
+  emptyProgress,
+  applyProgress,
+  parseProgress,
+} from "../src/progress.js";
+import { cycleEarnedEp, rebirthRequirement } from "../src/rebirth.js";
+import { allBadgeMetadata } from "../src/infinite-badges.js";
+import { seedProgress, testProfile } from "./helpers/progress.js";
+
+const ids = allBadgeMetadata.map((b) => b.id);
 
 // Old rolls are shareable long after the reveal: History rebuilds the text from
 // the entry the save kept, so it can only ever state what that roll earned.
@@ -93,4 +101,65 @@ test("the archive share reuses the palette of the live share control", () => {
   // The live share button stays the only share control on the roll page.
   const roll = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
   expect(roll.match(/async function share\(/g)).toHaveLength(1);
+});
+
+test("a rebirth opens a new cycle in the log without erasing the old one", () => {
+  const first = rebirthRequirement(0);
+  const rolled = applyProgress(
+    {
+      ...emptyProgress(),
+      profile: testProfile,
+      discovered: ids.slice(0, first.badges),
+    },
+    {
+      type: "complete",
+      id: "roll:1",
+      at: 1000,
+      cooldownUntil: 106000,
+      result: { number: 777777, totalEP: first.ep, tier: "godly", badges: [] },
+    },
+  );
+  const reborn = applyProgress(rolled, {
+    type: "rebirth",
+    expectedRebirths: 0,
+    at: 200000,
+    eventId: "reb:1",
+  });
+  // The log is the account's, not the cycle's: the roll from before the
+  // rebirth is still there, and the rebirth joins it.
+  expect(reborn.history.map((e) => e.type)).toEqual(["roll", "rebirth"]);
+  expect(reborn.history[0].number).toBe(777777);
+  expect(reborn.history.at(-1)).toMatchObject({
+    type: "rebirth",
+    count: 1,
+    cost: first.ep,
+  });
+  // A new cycle has earned nothing yet, so it pays its own way again.
+  expect(cycleEarnedEp(rolled)).toBe(first.ep);
+  expect(cycleEarnedEp(reborn)).toBe(0);
+  // And the whole story survives a save and a load.
+  const parsed = parseProgress(JSON.stringify(reborn));
+  expect(parsed.history.map((e) => e.type)).toEqual(["roll", "rebirth"]);
+  expect(parsed.history.at(-1).cost).toBe(first.ep);
+});
+
+test("the feed draws a dotted line where each rebirth began a cycle", () => {
+  const feed = fs.readFileSync("src/components/ActivityFeed.jsx", "utf8");
+  const css = fs.readFileSync("src/activity.css", "utf8");
+  // The line comes from the log itself: every rebirth and ultra-rebirth entry
+  // opens a cycle, and it is labelled with the one it was.
+  expect(feed).toContain('className="activity-divider"');
+  expect(feed).toMatch(
+    /event\.type === "rebirth"[\s\S]{0,240}activity-divider/,
+  );
+  expect(feed).toContain("Ultra-rebirth ${event.count}");
+  expect(feed).toContain("Rebirth ${event.count}");
+  // Dotted, not solid: a boundary drawn in the log's own hand.
+  expect(css).toContain(".activity-divider");
+  expect(css).toMatch(/border-top: 1px dotted/);
+  // Nothing clears the log to make room for it: a rebirth appends, and the
+  // cycle it restarts never rewrites the history.
+  const progress = fs.readFileSync("src/progress.js", "utf8");
+  expect(progress).toContain("appendHistory(state.history");
+  expect(progress).not.toMatch(/startNewCycle[\s\S]{0,900}history: \[\]/);
 });

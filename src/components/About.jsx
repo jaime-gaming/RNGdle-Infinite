@@ -85,7 +85,7 @@ export default function About({ navigate, progress }) {
         "Labels are rounded; hover any rank to see the exact percentage and counts.",
         ...(showsRebirth
           ? [
-              `Rebirth unlocks step by step: the first step asks for half of the collection, and each of the ${REBIRTH_TOTAL} steps raises the bar by ten points. Every step grants an exclusive skill and a permanent +2% on banked EP, and it starts the run over — the badge collection, everything you bought, your companions and your EP — while your activity history, your rebirths and every permanent bonus stay. An ultra-rebirth at the top does the same from a completed collection for a larger permanent bonus. No purchase is ever required for it.`,
+              `Rebirth unlocks step by step: the first asks for a fifth of the collection and 100,000 EP earned in the cycle, and each of the ${REBIRTH_TOTAL} steps raises both halves of the price. Every step grants an exclusive skill and a permanent +2% on banked EP, and it starts the run over — the badge collection, everything you bought, your companions and your EP — while your activity history, your rebirths and every permanent bonus stay. An ultra-rebirth at the top of the ladder does the same for a larger permanent bonus. No purchase is ever required for it.`,
             ]
           : []),
       ],

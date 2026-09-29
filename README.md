@@ -216,26 +216,32 @@ rebirth puts the whole catalogue back on the shelf.
 
 ## Rebirth and ultra-rebirth
 
-Rebirth is a **ladder**, not a single wall, and it is driven by the badge
-collection alone — never by shop ownership.
+Rebirth is a **ladder**, not a single wall, and it is driven by the run you are
+playing: a slice of the badge collection **and** EP the current cycle has
+earned. No shop purchase is ever part of a rung.
 
-| Rung | Required | Badges | Granted skill  |
-| ---: | -------: | -----: | -------------- |
-|    1 |      50% |    118 | Reborn Drive   |
-|    2 |      60% |    141 | Reborn Tempo   |
-|    3 |      70% |    165 | Reborn Depth   |
-|    4 |      80% |    188 | Reborn Vault   |
-|    5 |      90% |    212 | Reborn Omen    |
-|    6 |     100% |    235 | Reborn Paragon |
+| Rung | Required | Badges |  Cycle EP | Granted skill  |
+| ---: | -------: | -----: | --------: | -------------- |
+|    1 |      20% |     47 |   100,000 | Reborn Drive   |
+|    2 |      25% |     59 |   250,000 | Reborn Tempo   |
+|    3 |      30% |     71 |   500,000 | Reborn Depth   |
+|    4 |      35% |     83 | 1,250,000 | Reborn Vault   |
+|    5 |      40% |     94 | 3,000,000 | Reborn Omen    |
+|    6 |      45% |    106 | 7,000,000 | Reborn Paragon |
+
+The EP is **a mark of progress, not a spend**: it is never taken from your
+wallet, so buying an upgrade can never lock you out of a rung — the wallet
+empties on rebirth either way. It counts the EP this cycle's rolls scored, so
+every cycle pays its own way.
 
 Rebirth says **nothing at all before it unlocks**: no header entry, no counter,
-no teaser, and a direct link to `/rebirth` simply goes home. From **30% (71
-badges)** the ring appears in the header and fills towards the rung you are on,
-turning green and reading _Ready_ when it is met. The rebirth page then lays the
-whole thing out: the six rungs with the badges each one asks for and the
-rewards it grants, the figures for the current step, what a rebirth keeps,
-what it resets, and the permanent bonuses with their own explanation. Each
-rebirth:
+no teaser, and a direct link to `/rebirth` simply goes home. From **15% (36
+badges)** the ring appears in the header and fills towards whichever half of
+the rung is furthest from done — badges or EP — turning green and reading
+_Ready_ when both are met. The rebirth page then lays the whole thing out: the
+six rungs with the badges and EP each one asks for and the rewards it grants,
+the figures for the current step, what a rebirth keeps, what it resets, and the
+permanent bonuses with their own explanation. Each rebirth:
 
 - **grants** the rung's skill plus a **permanent, stackable +2% to banked
   EP** (up to +12% with the ladder complete),
@@ -252,18 +258,22 @@ rebirth:
 ![The rebirth ladder: collection progress, the current rung and all six steps](media/rebirth.png)
 
 Finish the sixth rung and **ultra-rebirth** unlocks: the same clean slate,
-taken from a complete collection, in exchange for a **permanent, stackable
-+10% to banked EP** for every ultra-rebirth, and a cosmetic mark next to your
-profile. It pays its own **1,000,000 EP** on top of the rungs you keep — a
-ladder-complete ultra-rebirth starts the next cycle with 2,500,000 EP. It costs
-the run, never the account — history, rebirths and their +2% rung bonuses all
-stay. Both resets require typing the word (`REBIRTH` or `ULTRA`) and cannot be
-undone.
+taken from **50% of the collection (118 badges) and 15,000,000 EP** earned in
+the cycle, in exchange for a **permanent, stackable +10% to banked EP** for
+every ultra-rebirth, and a cosmetic mark next to your profile. It pays its own
+**1,000,000 EP** on top of the rungs you keep — a ladder-complete ultra-rebirth
+starts the next cycle with 2,500,000 EP. It costs the run, never the account —
+history, rebirths and their +2% rung bonuses all stay. Both resets require
+typing the word (`REBIRTH` or `ULTRA`) and cannot be undone.
 
 The page speaks in your own numbers before you commit: how long this cycle has
 run, how many rolls and badges it produced, its best number and the EP those
 rolls earned, and a preview of the three things the button does — what you hand
 back, what you keep, and what you gain, starting sum included.
+
+Nothing is ever erased from the activity history. Every cycle stays readable
+roll by roll, and a **dotted line** marks the point where a rebirth handed the
+run back and a new cycle began: _Rebirth 1_, _Rebirth 2_, _Ultra-rebirth 1_.
 
 ## Your profile, your data
 
