@@ -285,7 +285,9 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
   const banked = {
     ...old,
     history: old.history.map((event) =>
-      event.type === "roll" ? { ...event, ep: 200000 } : event,
+      event.type === "roll"
+        ? { ...event, ep: 200000, tier: "mythic" }
+        : event,
     ),
   };
   const before = {
