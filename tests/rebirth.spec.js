@@ -571,20 +571,22 @@ test("bar maths starts at zero after the reveal, reaches one only at readiness, 
   expect(cooldownFraction({ startsAt: 15000, endsAt: 30000 }, 22500)).toBe(0.5);
 });
 
-for (const [count, rebirths, expected] of [
-  [70, 0, "hidden"],
-  [71, 0, "disabled"],
-  [117, 0, "disabled"],
-  [118, 0, "ready"],
-  [140, 1, "disabled"],
-  [141, 1, "ready"],
+for (const [count, rebirths, ep, expected] of [
+  [35, 0, 0, "hidden"],
+  [36, 0, 0, "disabled"],
+  [46, 0, 100000, "disabled"],
+  [47, 0, 100000, "ready"],
+  [58, 1, 250000, "disabled"],
+  [59, 1, 250000, "ready"],
 ])
-  test(`rebirth at ${count} of 235 badges and ${rebirths} rebirths reads "${expected}" on its own page`, async ({
+  test(`rebirth at ${count} of 235 badges, ${ep} EP and ${rebirths} rebirths reads "${expected}" on its own page`, async ({
     page,
   }) => {
     await seedProgress(page, {
       discovered: ids.slice(0, count),
       rebirths,
+      history: ep ? earned(ep) : [],
+      cycleEarnedEP: ep,
     });
     // Rebirth is its own page now; the state is driven by the save alone.
     await page.goto("/#rebirth");
