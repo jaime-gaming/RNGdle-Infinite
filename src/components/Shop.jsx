@@ -204,7 +204,9 @@ export default function Shop({
     if (offset == null) return "Back later";
     const seconds = Math.max(
       0,
-      Math.ceil(((stockWindow + offset) * SKILL_STOCK_WINDOW_MS - clock) / 1000),
+      Math.ceil(
+        ((stockWindow + offset) * SKILL_STOCK_WINDOW_MS - clock) / 1000,
+      ),
     );
     return `Back in ${formatDuration(seconds)}`;
   }
@@ -546,7 +548,9 @@ export default function Shop({
             // The button on an out-of-stock card already says when the skill
             // returns; a second sentence under it would only repeat it.
             const note = restocking ? "" : noteFor(item, state);
-            return note ? <small className="shop-item-note">{note}</small> : null;
+            return note ? (
+              <small className="shop-item-note">{note}</small>
+            ) : null;
           })()}
         </div>
       </article>
@@ -990,8 +994,8 @@ export default function Shop({
               </h2>
               <p>
                 Charged effects: fill the circle, the next roll fires it. The
-                stall stocks {SKILL_STOCK_SIZE} at a time and rotates every
-                five minutes; equipping is always free.
+                stall stocks {SKILL_STOCK_SIZE} at a time and rotates every five
+                minutes; equipping is always free.
               </p>
             </div>
             <span className="shop-section-stat">
@@ -1127,8 +1131,8 @@ export default function Shop({
                 <AutomationMark size={16} /> Tools
               </h2>
               <p>
-                Automation and archive tools. Same draws, odds and EP as
-                rolling yourself.
+                Automation and archive tools. Same draws, odds and EP as rolling
+                yourself.
               </p>
             </div>
           </div>

@@ -20,9 +20,7 @@ const funded = {
 function shadowInks(value) {
   return [...String(value).matchAll(/rgba?\(([^)]+)\)|color\(srgb ([^)]+)\)/g)]
     .map(([, legacy, modern]) => {
-      const channels = (legacy ?? modern)
-        .split(/[,/\s]+/)
-        .map(Number);
+      const channels = (legacy ?? modern).split(/[,/\s]+/).map(Number);
       const scale = modern ? 255 : 1;
       return [
         channels[0] * scale,

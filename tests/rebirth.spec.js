@@ -238,7 +238,9 @@ test("cycle EP survives history pruning and historical tiers follow the scoring 
 
   const legacy = { ...progress };
   delete legacy.cycleEarnedEP;
-  expect(parseProgress(JSON.stringify(legacy)).cycleEarnedEP).toBe(HISTORY_LIMIT);
+  expect(parseProgress(JSON.stringify(legacy)).cycleEarnedEP).toBe(
+    HISTORY_LIMIT,
+  );
 
   const tiers = parseProgress(
     JSON.stringify({
@@ -285,9 +287,7 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
   const banked = {
     ...old,
     history: old.history.map((event) =>
-      event.type === "roll"
-        ? { ...event, ep: 200000, tier: "mythic" }
-        : event,
+      event.type === "roll" ? { ...event, ep: 200000, tier: "mythic" } : event,
     ),
   };
   const before = {
