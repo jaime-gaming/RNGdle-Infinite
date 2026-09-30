@@ -18,8 +18,19 @@ const funded = {
 // Colours that make up a shadow, as numbers: a decorative glow is any channel
 // that is not grey (and, being a shadow, not fully transparent).
 function shadowInks(value) {
-  return [...String(value).matchAll(/rgba?\(([^)]+)\)/g)]
-    .map((match) => match[1].split(/[,/]/).map((n) => Number(n.trim())))
+  return [...String(value).matchAll(/rgba?\(([^)]+)\)|color\(srgb ([^)]+)\)/g)]
+    .map(([, legacy, modern]) => {
+      const channels = (legacy ?? modern)
+        .split(/[,/\s]+/)
+        .map(Number);
+      const scale = modern ? 255 : 1;
+      return [
+        channels[0] * scale,
+        channels[1] * scale,
+        channels[2] * scale,
+        channels[3] ?? 1,
+      ];
+    })
     .filter(([, , , alpha = 1]) => alpha > 0.01);
 }
 

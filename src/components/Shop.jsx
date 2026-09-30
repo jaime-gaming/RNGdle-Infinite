@@ -683,7 +683,10 @@ export default function Shop({
       // The whole skill catalogue shows cheap-first; the two the stall stocks
       // right now are buyable, the others wait dimmed under the green restock
       // aura. Flywheel and the bays are shelf fixtures.
-      return [nextUpgrade(progress.owned, "pace"), ...productsOnShelf("skills")]
+      return [
+        nextUpgrade(progress.owned, "pace"),
+        ...productsOnShelf("skills").filter((item) => item.kind !== "pace"),
+      ]
         .filter(Boolean)
         .sort(byPrice);
     if (shelf.id === "pace")
