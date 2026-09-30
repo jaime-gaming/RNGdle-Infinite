@@ -9,7 +9,7 @@ export const CHANGELOG = [
       "rebirth resets purchases, companions, wallet and collection; your account, history, rebirth-earned skills and permanent bonuses stay.",
       "the six rungs now ask for 20–45% of badges and 100,000–7,000,000 cycle EP; ultra-rebirth asks for 50% and 15,000,000.",
       "each rung starts the next cycle with 250,000 EP and adds +2% banked EP; ultra-rebirth adds 1,000,000 EP and +10%.",
-      "Quickwind now reaches a 10-second reveal and Clockwork a 2-second cooldown; draw skills show every draw, but only the best is paid.",
+      "pace upgrades now reach a 10-second reveal and a 2-second cooldown; draw skills show every draw, but pay only the best.",
       "history keeps every cycle, tiers stay accurate, and the shop and narrow-screen layouts are polished.",
     ],
   },
