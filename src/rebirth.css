@@ -579,4 +579,9 @@
   .rebirth-preview-note {
     font-size: 11.5px;
   }
+  .rebirth-reward-starter {
+    min-width: 0;
+    flex-shrink: 1;
+    white-space: normal;
+  }
 }

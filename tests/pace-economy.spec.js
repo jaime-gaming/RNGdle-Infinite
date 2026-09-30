@@ -398,7 +398,9 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
     `${productById.get("flywheel").price.toLocaleString("en-US")} EP`,
   );
   await card.getByRole("button").click();
-  await expect(page.getByRole("dialog")).toContainText("zero charge");
+  await expect(page.getByRole("dialog")).toContainText(
+    "4 online rolls per charge",
+  );
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();

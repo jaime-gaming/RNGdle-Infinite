@@ -125,8 +125,14 @@ export function cycleEarnedEp(progress) {
   const events = start >= 0 ? history.slice(start + 1) : history;
   let total = 0;
   for (const event of events)
-    if (event?.type === "roll") total += event.ep ?? 0;
-  return total;
+    if (
+      event?.type === "roll" &&
+      Number.isSafeInteger(event.ep) &&
+      event.ep >= 0
+    )
+      total = Math.min(Number.MAX_SAFE_INTEGER, total + event.ep);
+  const saved = progress?.cycleEarnedEP;
+  return Math.max(total, Number.isSafeInteger(saved) && saved >= 0 ? saved : 0);
 }
 
 export function nextRebirthSkill(rebirths = 0) {

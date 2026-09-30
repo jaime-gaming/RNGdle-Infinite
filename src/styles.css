@@ -1829,6 +1829,30 @@ footer button:hover,
     gap: 22px;
   }
 }
+@media (max-width: 360px) {
+  .header {
+    gap: 8px;
+    padding: 0 10px;
+  }
+  .header-left {
+    gap: 10px;
+  }
+  .header nav {
+    gap: 8px;
+  }
+  .header-right {
+    gap: 4px;
+  }
+  .sign-in {
+    padding: 7px;
+  }
+  .sign-in span {
+    display: none;
+  }
+  .sign-in svg {
+    display: block;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

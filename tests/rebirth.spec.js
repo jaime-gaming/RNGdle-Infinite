@@ -4,6 +4,7 @@ import {
   parseProgress,
   applyProgress,
   recoverUnsavedRolls,
+  HISTORY_LIMIT,
   PROGRESS_KEY,
 } from "../src/progress.js";
 import {
@@ -198,6 +199,77 @@ test("the ladder climbs in badges and in EP, from a fifth of the collection", ()
   );
 });
 
+test("cycle EP survives history pruning and historical tiers follow the scoring table", () => {
+  const result = evaluate(604827);
+  const online = applyProgress(state(), {
+    type: "complete",
+    id: "online-cycle-roll",
+    at: 1,
+    cooldownUntil: 0,
+    result,
+  });
+  expect(online.cycleEarnedEP).toBe(result.totalEP);
+  const offline = applyProgress(state(), {
+    type: "complete",
+    id: "offline-cycle-roll",
+    source: "offline",
+    at: 1,
+    cooldownUntil: 0,
+    result,
+  });
+  expect(offline.cycleEarnedEP).toBe(result.totalEP);
+
+  const history = Array.from({ length: HISTORY_LIMIT }, (_, index) => ({
+    id: `cycle-roll-${index}`,
+    type: "roll",
+    at: index,
+    number: 1,
+    tier: "trash",
+    ep: 1,
+    badges: [],
+  }));
+  const progress = {
+    ...state(),
+    history,
+    cycleEarnedEP: 7000000,
+  };
+  expect(cycleEarnedEp(progress)).toBe(7000000);
+  expect(parseProgress(JSON.stringify(progress)).cycleEarnedEP).toBe(7000000);
+
+  const legacy = { ...progress };
+  delete legacy.cycleEarnedEP;
+  expect(parseProgress(JSON.stringify(legacy)).cycleEarnedEP).toBe(
+    HISTORY_LIMIT,
+  );
+
+  const tiers = parseProgress(
+    JSON.stringify({
+      ...emptyProgress(),
+      history: [
+        {
+          id: "stale-high-tier",
+          type: "roll",
+          at: 1,
+          number: 1,
+          tier: "common",
+          ep: 500000,
+          badges: [],
+        },
+        {
+          id: "stale-low-tier",
+          type: "roll",
+          at: 2,
+          number: 1,
+          tier: "godly",
+          ep: 1,
+          badges: [],
+        },
+      ],
+    }),
+  );
+  expect(tiers.history.map((event) => event.tier)).toEqual(["godly", "trash"]);
+});
+
 test("rebirth restarts the run — purchases, companions and wallet — and keeps the account's history, rebirths and bonuses", () => {
   const old = applyProgress(
     { ...state(), discovered: [] },
@@ -215,7 +287,7 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
   const banked = {
     ...old,
     history: old.history.map((event) =>
-      event.type === "roll" ? { ...event, ep: 200000 } : event,
+      event.type === "roll" ? { ...event, ep: 200000, tier: "mythic" } : event,
     ),
   };
   const before = {
@@ -240,6 +312,7 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
     // wallet restarts at the sum rung one pays.
     balance: REBIRTH_STARTER_EP,
     totalEarned: before.totalEarned + REBIRTH_STARTER_EP,
+    cycleEarnedEP: 0,
     owned: [],
     equipped: "none",
     discovered: [],
@@ -498,20 +571,22 @@ test("bar maths starts at zero after the reveal, reaches one only at readiness, 
   expect(cooldownFraction({ startsAt: 15000, endsAt: 30000 }, 22500)).toBe(0.5);
 });
 
-for (const [count, rebirths, expected] of [
-  [70, 0, "hidden"],
-  [71, 0, "disabled"],
-  [117, 0, "disabled"],
-  [118, 0, "ready"],
-  [140, 1, "disabled"],
-  [141, 1, "ready"],
+for (const [count, rebirths, ep, expected] of [
+  [35, 0, 0, "hidden"],
+  [36, 0, 0, "disabled"],
+  [46, 0, 100000, "disabled"],
+  [47, 0, 100000, "ready"],
+  [58, 1, 250000, "disabled"],
+  [59, 1, 250000, "ready"],
 ])
-  test(`rebirth at ${count} of 235 badges and ${rebirths} rebirths reads "${expected}" on its own page`, async ({
+  test(`rebirth at ${count} of 235 badges, ${ep} EP and ${rebirths} rebirths reads "${expected}" on its own page`, async ({
     page,
   }) => {
     await seedProgress(page, {
       discovered: ids.slice(0, count),
       rebirths,
+      history: ep ? earned(ep) : [],
+      cycleEarnedEP: ep,
     });
     // Rebirth is its own page now; the state is driven by the save alone.
     await page.goto("/#rebirth");

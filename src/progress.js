@@ -21,10 +21,12 @@ import {
   nextRebirthSkill,
   ultraRebirthMultiplier,
   cycleStarterEp,
+  cycleEarnedEp,
   rebirthRequirement,
   ultraRebirthRequirement,
 } from "./rebirth.js";
 import { petById, PET_IDS, petMultiplier } from "./pets.js";
+import manifest from "./data/game-index.json" with { type: "json" };
 import {
   chargeAfterSettlement,
   drawPlanFor,
@@ -108,6 +110,7 @@ export function emptyProgress() {
     cooldownUntil: 0,
     receipts: [],
     history: [],
+    cycleEarnedEP: 0,
     pendingRoll: null,
     offline: null,
     flywheelCharge: 0,
@@ -160,6 +163,8 @@ export function parseProgress(raw) {
     throw new Error("Invalid rebirth count");
   if (p.ultraRebirths != null && !validAmount(p.ultraRebirths))
     throw new Error("Invalid ultra-rebirth count");
+  if (p.cycleEarnedEP != null && !validAmount(p.cycleEarnedEP))
+    throw new Error("Invalid cycle EP total");
   if (!validSkillCharge(p.skillCharge)) throw new Error("Invalid skill charge");
   if (p.pets != null && !Array.isArray(p.pets))
     throw new Error("Invalid pet collection");
@@ -204,9 +209,14 @@ export function parseProgress(raw) {
       )
     : p.cooldownUntil;
   if (!validAmount(cooldownUntil)) throw new Error("Invalid save values");
+  const history = parseHistory(p.history);
   return {
     version: 1,
-    history: parseHistory(p.history),
+    history,
+    cycleEarnedEP: cycleEarnedEp({
+      history,
+      ...(p.cycleEarnedEP != null ? { cycleEarnedEP: p.cycleEarnedEP } : {}),
+    }),
     pendingRoll,
     cooldownWindow: parseCooldownWindow(
       p.cooldownWindow,
@@ -304,6 +314,7 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
     pendingRoll: null,
     cooldownUntil: 0,
     cooldownWindow: null,
+    cycleEarnedEP: 0,
   };
 }
 export function applyProgress(state, action) {
@@ -462,7 +473,12 @@ export function applyProgress(state, action) {
         : Math.round(result.totalEP * petFactor) - result.totalEP;
     const balance = state.balance + credited,
       totalEarned = state.totalEarned + credited;
-    if (!validAmount(balance) || !validAmount(totalEarned))
+    const cycleEP = cycleEarnedEp(state) + result.totalEP;
+    if (
+      !validAmount(balance) ||
+      !validAmount(totalEarned) ||
+      !validAmount(cycleEP)
+    )
       throw new Error("EP balance limit reached.");
     const earned = [
       ...new Set(
@@ -541,6 +557,7 @@ export function applyProgress(state, action) {
       skillCharge: chargeAfterSettlement(state, id, action.source),
       balance,
       totalEarned,
+      cycleEarnedEP: cycleEP,
       discovered: [
         ...new Set([
           ...state.discovered,
@@ -803,7 +820,8 @@ function parseHistory(value) {
         next = {
           ...next,
           ep: e.ep,
-          tier: e.ep >= 500000 ? "godly" : e.tier,
+          tier:
+            manifest.tiers.findLast((tier) => e.ep >= tier.minEP)?.id ?? e.tier,
           ...(e.source === "offline" ? { source: "offline" } : {}),
           ...(["boost", "charge"].includes(e.flywheel)
             ? { flywheel: e.flywheel }

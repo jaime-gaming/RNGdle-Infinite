@@ -4,16 +4,13 @@ export const CHANGELOG = [
   {
     version: "v0.4",
     title:
-      "a cheaper ladder, a cycle that gets paid, and a history that keeps every run",
+      "rebirth rebalanced, faster pacing, and a history that keeps every run",
     body: [
-      "a rebirth hands the run back: every purchase, the companions, the wallet and the badge collection start over.",
-      "your account keeps its story: the activity history, the rebirths with their skills, every permanent bonus and the EP earned all-time.",
-      "the ladder asks for far fewer badges: a fifth of the collection for the first rung instead of half, and it closes at 45%, not 100%.",
-      "a rung also asks for EP the cycle earned, from 100,000 EP to 7,000,000 EP: a mark of progress, not a spend, as the wallet restarts anyway.",
-      "every cycle begins with a starting sum: 250,000 EP for each rung climbed, plus 1,000,000 EP per ultra-rebirth.",
-      "the ultra-rebirth closes the ladder at half the collection — all 235 badges was a collection nobody could finish — and pays a bigger sum.",
-      "history is never rewritten: a dotted line marks where each rebirth opened a new cycle, and every past roll stays readable.",
-      "a draw skill now shows every draw it takes side by side, and only the best of them is scored, ranked and paid.",
+      "rebirth resets purchases, companions, wallet and collection; your account, history, rebirth-earned skills and permanent bonuses stay.",
+      "the six rungs now ask for 20–45% of badges and 100,000–7,000,000 cycle EP; ultra-rebirth asks for 50% and 15,000,000.",
+      "each rung starts the next cycle with 250,000 EP and adds +2% banked EP; ultra-rebirth adds 1,000,000 EP and +10%.",
+      "pace upgrades now reach a 10-second reveal and a 2-second cooldown; draw skills show every draw, but pay only the best.",
+      "history keeps every cycle, tiers stay accurate, and the shop and narrow-screen layouts are polished.",
     ],
   },
   {
@@ -25,7 +22,7 @@ export const CHANGELOG = [
       "skills charge in the corner rack: a full circle fires on your next roll, and Flywheel lives beside them.",
       "13 companions, one worn at a time: a firing signature skill pins it to the corner of your number until the roll settles.",
       "rebirth has its own page — a six-step ladder; every step grants an exclusive skill and a permanent +2% on banked EP.",
-      "rebirth keeps every purchase, auras included; at the top, the ultra-rebirth starts everything over for +10% each.",
+      "each of six rebirth rungs grants an exclusive skill and a permanent +2% banked-EP bonus; ultra-rebirth adds +10%.",
       "Auto-Roll is an ability in the rack, and any archived roll can be shared from History with what it actually earned.",
       "the whole interface speaks one hand-drawn icon set, and the aura ladder grows to eighteen.",
     ],

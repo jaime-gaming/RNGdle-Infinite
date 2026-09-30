@@ -19,7 +19,7 @@ const archived = {
   type: "roll",
   at: 1700000000000,
   number: 604827,
-  tier: "epic",
+  tier: "rare",
   ep: 12000,
   badges: ["NEIGHBORS"],
 };
@@ -27,7 +27,7 @@ const archived = {
 test("an archived roll shares its number, tier, badges, EP and link", () => {
   const text = buildShareTextFromHistory(archived);
   expect(text).toContain("RNGdle Infinite 🎲 604827");
-  expect(text).toContain("EPIC");
+  expect(text).toContain("RARE");
   expect(text).toContain("12,000 EP");
   expect(text.trim().endsWith(GAME_URL)).toBe(true);
   // A roll shared from the archive carries no live rank claim: the save never
