@@ -38,7 +38,7 @@ export default function About({ navigate, progress }) {
     {
       icon: Clock3,
       title: "Wait a little, roll again",
-      body: `A reveal takes ${formatDuration(BASE_ROLL_MS / 1000)} and the cooldown that follows is ${formatDuration(BASE_COOLDOWN_MS / 1000)}. The countdown shows the cooldown itself. Upgrades shorten both, permanently.`,
+      body: `A reveal takes ${formatDuration(BASE_ROLL_MS / 1000)} and the cooldown that follows is ${formatDuration(BASE_COOLDOWN_MS / 1000)}. The countdown shows the cooldown itself. Upgrades shorten both for this run; rebirth resets them.`,
     },
   ];
   const topics = [
@@ -46,7 +46,7 @@ export default function About({ navigate, progress }) {
       icon: ShoppingBag,
       title: "The shop",
       points: [
-        "Quickwind shortens the reveal; Clockwork shortens the cooldown. Both are permanent and one-time.",
+        "Quickwind shortens the reveal to as little as 10 seconds; Clockwork shortens the cooldown to 2 seconds. Both reset at rebirth.",
         "Flywheel grants a no-cooldown roll every few rolls. Tools add Auto-Roll, archive search and offline earnings.",
         `${SKILLS.length} charged skills can be bought, won from companions or earned with a rebirth. A circle fills as you roll and the next roll fires it.`,
         "The shop is one street of shelves — skills, pace, companions, auras, offline and tools — with a sticky jump bar, a search box and filters, and each shelf has its own link.",
@@ -85,7 +85,7 @@ export default function About({ navigate, progress }) {
         "Labels are rounded; hover any rank to see the exact percentage and counts.",
         ...(showsRebirth
           ? [
-              `Rebirth unlocks step by step: the first asks for a fifth of the collection and 100,000 EP earned in the cycle, and each of the ${REBIRTH_TOTAL} steps raises both halves of the price. Every step grants an exclusive skill and a permanent +2% on banked EP, and it starts the run over — the badge collection, everything you bought, your companions and your EP — while your activity history, your rebirths and every permanent bonus stay. An ultra-rebirth at the top of the ladder does the same for a larger permanent bonus. No purchase is ever required for it.`,
+              `Rebirth unlocks step by step: the first asks for a fifth of the collection and 100,000 EP earned this cycle; the final rung asks for 45% and 7,000,000 EP. Each of the ${REBIRTH_TOTAL} steps grants an exclusive skill, a permanent +2% banked-EP bonus and 250,000 EP to start the next cycle. Ultra-rebirth asks for half the collection and 15,000,000 cycle EP, then adds a permanent +10% bonus and 1,000,000 starting EP. Resets clear the run, not your activity history or permanent bonuses.`,
             ]
           : []),
       ],

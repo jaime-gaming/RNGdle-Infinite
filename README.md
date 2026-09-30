@@ -39,7 +39,7 @@ Three steps, over and over:
    rarity tier and its rank against the whole population. Every badge the number
    earns is listed with how much EP it added.
 3. **Wait.** A reveal and a cooldown keep the rhythm honest. The base cycle is a
-   45-second reveal plus a 60-second cooldown, and both can be bought down to a
+   45-second reveal plus a 60-second cooldown, and upgrades can reduce these to a
    10-second reveal and a 2-second cooldown. Both are snapshotted when you press
    the button, so buying something mid-roll never shortens the roll in flight.
 
@@ -360,7 +360,8 @@ their EP and count in your history, but charging is online-only.
 a rebirth restarts the run — every purchase, the companions, the badge
 collection and the EP in your wallet. Your history, your rebirths, the skills
 the ladder granted and every permanent bonus stay. An ultra-rebirth gives the
-same fresh start from a complete collection, for a bigger bonus.
+same fresh start after half the collection and 15,000,000 cycle EP, for a
+bigger bonus.
 
 **Is this the official RNGdle?** No. It is an independent recreation, built from
 public rules and reference data. See credits below.
