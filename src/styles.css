@@ -121,6 +121,16 @@ svg .tone {
   fill: currentColor;
   stroke: none;
 }
+/* The other half of the same system: a mark drawn as a solid silhouette needs
+   its details cut back out of it, and the surface behind it is the paint. */
+svg .cut {
+  fill: var(--surface);
+  stroke: none;
+}
+svg .cut-line {
+  fill: none;
+  stroke: var(--surface);
+}
 
 .header {
   height: 79px;
