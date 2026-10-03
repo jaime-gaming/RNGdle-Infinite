@@ -65,14 +65,28 @@ import {
   pageFromLocation,
   pathForPage,
   pathForSubpage,
+  pathForShelfFamily,
   subpageFromLocation,
+  familyFromLocation,
   isCurrentPath,
   validPage,
 } from "./router.js";
-import { SHOP_SECTIONS, shelfOfProduct, productById } from "./shop-data.js";
+import {
+  SHOP_SECTIONS,
+  AURA_FAMILIES,
+  shelfOfProduct,
+  productById,
+} from "./shop-data.js";
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
+// Only the auras shelf owns families, and only a family that exists counts.
+function shopFamilyFromLocation(target) {
+  // The router only reads a family off the auras shelf.
+  const family = familyFromLocation(target);
+  return AURA_FAMILIES.some((entry) => entry.id === family) ? family : "";
+}
+
 function shopSectionFromLocation(target) {
   if (pageFromLocation(target) !== "shop") return "";
   // A legacy "#auras" bookmark names the shelf itself; a real sub-page carries
@@ -104,8 +118,11 @@ function App() {
   const showVersionFlag = hasUnseenVersion(seenVersion);
   const [shopFocus, setShopFocus] = useState(null);
   const [shopSection, setShopSection] = useState(() =>
-    shopSectionFromLocation(location),
-  );
+      shopSectionFromLocation(location),
+    ),
+    [shopFamily, setShopFamily] = useState(() =>
+      shopFamilyFromLocation(location),
+    );
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
@@ -204,6 +221,7 @@ function App() {
     const section = SHOP_SECTIONS.some((entry) => entry.id === id) ? id : "";
     setShopFocus(null);
     setShopSection(section);
+    setShopFamily("");
     setPage("shop");
     push(
       "shop",
@@ -211,28 +229,39 @@ function App() {
       section,
     );
   };
+  const openFamily = (id) => {
+    const family = AURA_FAMILIES.some((entry) => entry.id === id) ? id : "";
+    setShopFocus(null);
+    setShopSection("auras");
+    setShopFamily(family);
+    setPage("shop");
+    push("shop", pathForShelfFamily("shop", "auras", family), "auras");
+  };
   useEffect(() => {
     // Back/forward must move between pages, and a legacy #shop link or a
     // 404.html fallback landing must be normalised to its real path once.
     const update = () => {
       setPage(pageFromLocation(location));
       setShopSection(shopSectionFromLocation(location));
+      setShopFamily(shopFamilyFromLocation(location));
     };
     update();
     const landed = pageFromLocation(location);
     const section = shopSectionFromLocation(location);
+    const family = shopFamilyFromLocation(location);
     // A legacy "#shop" bookmark keeps working, a "#skills" one lands on the
     // shelf, and an unknown sub-path is normalised back to the shop hub.
     if (
       location.hash ||
       !isCurrentPath(landed, location) ||
-      (landed === "shop" && subpageFromLocation(location) !== section)
+      (landed === "shop" && subpageFromLocation(location) !== section) ||
+      (section === "auras" && familyFromLocation(location) !== family)
     )
       history.replaceState(
-        { page: landed, section },
+        { page: landed, section, family },
         "",
         landed === "shop" && section
-          ? pathForSubpage("shop", section)
+          ? pathForShelfFamily("shop", section, family)
           : pathForPage(landed),
       );
     window.addEventListener("popstate", update);
@@ -620,10 +649,12 @@ function App() {
         )}
         {page === "shop" && (
           <Shop
-            key={`${epoch}:${shopSection}`}
+            key={`${epoch}:${shopSection}:${shopFamily}`}
             progress={session}
             section={shopSection}
+            family={shopFamily}
             onOpenShelf={openShelf}
+            onOpenFamily={openFamily}
             focusProduct={shopFocus}
             onAction={dispatch}
             openSignup={openAuth}

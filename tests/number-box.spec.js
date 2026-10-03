@@ -27,9 +27,19 @@ test("shared number boxes cover the idle generator and cosmetic previews without
     "??????",
   );
   await expect(page.locator(".best-number, .profile-number")).toHaveCount(0);
-  // Auras are their own shelf now: /shop/auras, not the shop's front page.
+  // Auras are their own shelf now, and each family is a page of its own:
+  // /shop/auras is the index of banners, /shop/auras/celestial is a set.
   await page.goto("/shop/auras");
-  const auraCount = shopProducts.filter((p) => p.kind === "aura").length;
+  await expect(page.locator(".aura-family-banner")).toHaveCount(
+    AURA_FAMILIES.length,
+  );
+  await expect(page.locator(".aura-family-samples .number-box")).toHaveCount(
+    AURA_FAMILIES.length * 3,
+  );
+  await page.goto("/shop/auras/celestial");
+  const auraCount = shopProducts.filter(
+    (p) => p.kind === "aura" && p.family === "celestial",
+  ).length;
   await expect(page.locator(".aura-preview .number-box")).toHaveCount(
     auraCount,
   );

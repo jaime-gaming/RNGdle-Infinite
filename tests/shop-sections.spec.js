@@ -3,9 +3,11 @@ import fs from "node:fs";
 import { emptyProgress } from "../src/progress.js";
 import {
   shopProducts,
+  productUnlocked,
   skillStock,
   skillStockWindow,
   SKILL_STOCK_SIZE,
+  AURA_FAMILIES,
 } from "../src/shop-data.js";
 import { seedProgress } from "./helpers/progress.js";
 
@@ -127,7 +129,7 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
     "/shop/skills",
     "/shop/pace",
     "/shop/offline",
-    "/shop/auras",
+    "/shop/auras/celestial",
     "/shop/tools",
   ]) {
     await page.goto(path);
@@ -143,10 +145,10 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
     /^\d+ \/ 13 found$/,
   );
   // A search that matches nothing says so, in words and in numbers.
-  await page.goto("/shop/auras");
+  await page.goto("/shop/auras/celestial");
   await page.getByLabel("Search the shop").fill("zzz-nothing");
   await expect(page.locator(".shop-filter-count")).toHaveText(
-    "0 of 18 on this shelf",
+    "0 of 8 on this shelf",
   );
   await expect(page.locator(".shop-empty")).toContainText(
     "Nothing on this shelf matches",
@@ -447,4 +449,65 @@ test("a rack can be saved on the skills shelf and put back in one click", async 
   await page.getByRole("button", { name: "Delete Bounce" }).click();
   await expect(book.locator(".skill-rack")).toHaveCount(1);
   await expect(book).toContainText("Surge + Trail");
+});
+
+test("an aura family is a page of its own, reached from its banner", async ({
+  page,
+}) => {
+  await seedProgress(page, { ...funded, balance: 200000000 });
+  await page.goto("/shop/auras");
+  // The index is four banners, each one a real link to the set it fronts.
+  await expect(page.locator(".aura-family-banner")).toHaveCount(
+    AURA_FAMILIES.length,
+  );
+  for (const family of AURA_FAMILIES) {
+    const banner = page.locator(
+      `.aura-family-banner[data-family="${family.id}"]`,
+    );
+    await expect(banner).toContainText(family.label);
+    await expect(banner).toHaveAttribute("href", `/shop/auras/${family.id}`);
+    // Every banner shows three previews and its own typeface.
+    await expect(banner.locator(".number-box")).toHaveCount(3);
+    const font = await banner
+      .locator(".aura-family-copy strong")
+      .evaluate((el) => getComputedStyle(el).fontFamily);
+    expect(font.toLowerCase()).toContain(
+      family.font.includes("Space Mono") ? "space mono" : "georgia",
+    );
+  }
+  // Opening one is a real navigation, and the breadcrumb grows a step.
+  await page.locator('.aura-family-banner[data-family="celestial"]').click();
+  await expect(page).toHaveURL(/\/shop\/auras\/celestial$/);
+  await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText(
+    "Sky and starlight",
+  );
+  await expect(page.locator(".shop-card[data-product]")).toHaveCount(
+    shopProducts.filter((p) => p.family === "celestial").length,
+  );
+  await page.goBack();
+  await expect(page).toHaveURL(/\/shop\/auras$/);
+});
+
+test("nothing on a shelf waits behind a purchase you have not made", async ({
+  page,
+}) => {
+  // Persistence Core needs Auto-Roll; without it, it is not on the shelf.
+  await seedProgress(page, { ...funded, owned: [] });
+  await page.goto("/shop/tools");
+  await expect(page.locator('[data-product="auto-roll"]')).toHaveCount(1);
+  await expect(page.locator('[data-product="persistence-core"]')).toHaveCount(
+    0,
+  );
+  // Buying the prerequisite is what puts it on the shelf.
+  await seedProgress(page, { ...funded, owned: ["auto-roll"] });
+  await page.goto("/shop/tools");
+  await expect(page.locator('[data-product="persistence-core"]')).toHaveCount(
+    1,
+  );
+  // The rule is the catalogue's, not the page's.
+  for (const product of shopProducts)
+    if (product.requires) {
+      expect(productUnlocked(product, [])).toBe(false);
+      expect(productUnlocked(product, [product.requires])).toBe(true);
+    } else expect(productUnlocked(product, [])).toBe(true);
 });

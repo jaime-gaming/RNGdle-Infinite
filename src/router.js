@@ -60,6 +60,35 @@ export function pathForSubpage(page, sub, base) {
   return `${prefix}/${name}${suffix}`.replace(/\/{2,}/g, "/");
 }
 
+// A shelf can own sub-pages of its own: /shop/auras/celestial. The shelf is
+// the second segment and the family the third, so a family page is a real
+// address a player can bookmark, share or go back to. Only the shelf asked
+// for owns families, so /shop/skills/x is the skills shelf with nothing
+// dangling after it.
+export function familyFromLocation(location, base, shelf = "auras") {
+  const prefix = basePath(base);
+  let path = String(location.pathname || "/");
+  if (prefix && path.toLowerCase().startsWith(prefix.toLowerCase()))
+    path = path.slice(prefix.length);
+  const [page = "", sub = "", family = ""] = path.split("/").filter(Boolean);
+  if (page !== validPage("shop") || sub.toLowerCase() !== shelf) return "";
+  return family.toLowerCase().replace(/[^a-z0-9-]/g, "");
+}
+
+export function pathForShelfFamily(page, shelf, family, base) {
+  const prefix = basePath(base);
+  const name = validPage(page);
+  const clean = (value) =>
+    String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "");
+  const parts = [clean(shelf), clean(family)].filter(Boolean);
+  return `${prefix}/${name}${parts.length ? `/${parts.join("/")}` : ""}`.replace(
+    /\/{2,}/g,
+    "/",
+  );
+}
+
 export function pathForPage(page, base) {
   const prefix = basePath(base);
   const name = validPage(page);

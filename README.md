@@ -202,15 +202,22 @@ and `#auras` lands on that shelf.
 | **Skills**     | Nine charged effects (three on sale at a time, restocked every 5 minutes), the two skill bays, and the Flywheel tiers |
 | **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time                                    |
 | **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                                                       |
-| **Auras**      | Twenty-two cosmetic looks in four families, equipped one at a time                                                    |
+| **Auras**      | Twenty-two cosmetic looks in four families, each family its own page, equipped one at a time                          |
 | **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                                                    |
 | **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                                                       |
 
 The Auras shelf is the one long shelf, so it is split into **four families** —
-sky and starlight, earth and weather, made things, deep and dark — each with its
-own heading and its own count. Every aura card carries a **chip of its two
-colours** next to its name and a live preview of the box wearing it, so the
-shelf shows what you are buying before you spend anything.
+sky and starlight, earth and weather, made things, deep and dark. `/shop/auras`
+is the index: one **banner per family**, each in that family's own gradient and
+its own typeface, wearing its three best looks as live previews. A banner is a
+door, not a decoration — it opens the set as a page of its own,
+`/shop/auras/celestial` — and every look on that page is a card with a **chip of
+its two colours** next to its name and a live preview of the box wearing it, so
+the page shows what you are buying before you spend anything.
+
+A shelf also never shows a card you cannot act on: an upgrade that waits behind
+another purchase stays off the shelf entirely until that purchase is made, so
+every card on screen is the next step of its chain.
 
 **Auto-Roll is an ability**, not a settings switch: once bought it appears in
 the corner rack as its own circle. One click arms it, another click stands it

@@ -559,21 +559,41 @@ export const AURA_FAMILIES = [
     id: "celestial",
     label: "Sky and starlight",
     blurb: "Constellations, rings and haloes.",
+    // Star-chart labels: spaced capitals in the monospace face.
+    font: '"Space Mono", monospace',
+    tracking: "0.18em",
+    casing: "uppercase",
+    weight: 700,
   },
   {
     id: "element",
     label: "Earth and weather",
     blurb: "Glass, tide, leaf and rain.",
+    // A soft serif for things that grew or fell rather than were built.
+    font: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+    tracking: "0.01em",
+    casing: "none",
+    weight: 400,
   },
   {
     id: "machine",
     label: "Made things",
     blurb: "Circuits, plans, dials and printed colour.",
+    // A readout: the same face as the charts, lowercase and tight.
+    font: '"Space Mono", monospace',
+    tracking: "0.02em",
+    casing: "none",
+    weight: 400,
   },
   {
     id: "void",
     label: "Deep and dark",
     blurb: "Stone, ink and the bottom of the well.",
+    // An inscription cut into stone: wide serif capitals.
+    font: 'Georgia, "Times New Roman", serif',
+    tracking: "0.22em",
+    casing: "uppercase",
+    weight: 700,
   },
 ];
 
@@ -694,6 +714,13 @@ export function nextSkillStockOffset(windowIndex, owned, skillId) {
     if (skillStock(windowIndex + offset, owned).includes(skillId))
       return offset;
   return null;
+}
+
+// An upgrade behind a purchase that has not been made is not on the shelf at
+// all: the shop shows the next step of a chain, never the wall behind it, so a
+// card appears the moment it becomes buyable and not one roll earlier.
+export function productUnlocked(item, owned = []) {
+  return !item.requires || owned.includes(item.requires);
 }
 
 export function nextUpgrade(owned, kind) {

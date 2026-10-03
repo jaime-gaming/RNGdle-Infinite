@@ -9,6 +9,8 @@ import {
   pathForPage,
   pathForSubpage,
   subpageFromLocation,
+  familyFromLocation,
+  pathForShelfFamily,
   isCurrentPath,
 } from "../src/router.js";
 import {
@@ -20,7 +22,7 @@ import {
   rebirthBlocker,
 } from "../src/rebirth.js";
 import { emptyProgress } from "../src/progress.js";
-import { shopProducts } from "../src/shop-data.js";
+import { shopProducts, AURA_FAMILIES } from "../src/shop-data.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 
 test("every top navigation destination is a real path, not a hash fragment", () => {
@@ -208,4 +210,74 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
     if (product.requires)
       expect(product.price / price[product.requires]).toBeLessThanOrEqual(4);
   }
+});
+
+test("an aura family is a real sub-page of its shelf, on every host", () => {
+  // /shop/auras/celestial, locally and under a Pages base path.
+  expect(pathForShelfFamily("shop", "auras", "celestial")).toBe(
+    "/shop/auras/celestial",
+  );
+  expect(
+    pathForShelfFamily("shop", "auras", "element", "/RNGdle-Infinite/"),
+  ).toBe("/RNGdle-Infinite/shop/auras/element");
+  // Without a family it is the shelf index, never a dangling slash.
+  expect(pathForShelfFamily("shop", "auras", "")).toBe("/shop/auras");
+  expect(pathForShelfFamily("shop", "auras", "", "/RNGdle-Infinite/")).toBe(
+    "/RNGdle-Infinite/shop/auras",
+  );
+  // A family is read from the third segment, and only from the shelf's own
+  // path: the shop's other shelves and the site's other pages ignore it.
+  expect(familyFromLocation({ pathname: "/shop/auras/void", hash: "" })).toBe(
+    "void",
+  );
+  expect(
+    familyFromLocation(
+      { pathname: "/RNGdle-Infinite/shop/auras/machine", hash: "" },
+      "/RNGdle-Infinite/",
+    ),
+  ).toBe("machine");
+  expect(familyFromLocation({ pathname: "/shop/auras", hash: "" })).toBe("");
+  expect(familyFromLocation({ pathname: "/shop/skills/x", hash: "" })).toBe("");
+  expect(familyFromLocation({ pathname: "/play/auras/x", hash: "" })).toBe("");
+  // The slug is scrubbed the same way pages and shelves are.
+  expect(pathForShelfFamily("shop", "auras", "  Celestial!../")).toBe(
+    "/shop/auras/celestial",
+  );
+});
+
+test("every aura belongs to a family that has its own type and three best", () => {
+  const families = new Map(AURA_FAMILIES.map((f) => [f.id, f]));
+  const auras = shopProducts.filter((p) => p.kind === "aura");
+  expect(auras.length).toBeGreaterThan(0);
+  for (const aura of auras) {
+    if (aura.family === undefined) continue; // a look outside the four sets
+    expect(families.has(aura.family), `${aura.id} family`).toBe(true);
+  }
+  for (const family of AURA_FAMILIES) {
+    // Type: a real stack, a tracking and a casing that the banner can wear.
+    expect(family.font.length).toBeGreaterThan(8);
+    expect(family.tracking).toMatch(/^-?[\d.]+em$/);
+    expect(["none", "uppercase", "lowercase", "capitalize"]).toContain(
+      family.casing,
+    );
+    expect(family.weight).toBeGreaterThanOrEqual(300);
+    expect(family.weight).toBeLessThanOrEqual(900);
+    // The banner samples the family's own three priciest looks.
+    const best = auras
+      .filter((p) => p.family === family.id)
+      .sort((a, b) => b.price - a.price)
+      .slice(0, 3)
+      .map((p) => p.id);
+    expect(best, `${family.id} set`).toHaveLength(3);
+    expect(best).toEqual(
+      auras
+        .filter((p) => p.family === family.id)
+        .sort((a, b) => b.price - a.price || a.id.localeCompare(b.id))
+        .slice(0, 3)
+        .map((p) => p.id),
+    );
+  }
+  // One family per look: no aura is claimed twice.
+  const claimed = auras.filter((p) => p.family !== undefined).map((p) => p.id);
+  expect(new Set(claimed).size).toBe(claimed.length);
 });

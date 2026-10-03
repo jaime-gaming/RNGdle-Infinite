@@ -2,27 +2,17 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
-    version: "v0.5",
-    title: "a tidier shop, four new auras and companions with faces",
-    body: [
-      "the auras shelf is grouped into four families, and every card shows a chip of its own two colours.",
-      "four new auras: Halcyon, Downpour, Blueprint and Inkblot. Cosmetic, like every aura before them.",
-      "three new things to buy: Offline Vault III (360 rolls an absence), Miser (triple EP) and Triptych (three draws).",
-      "the skill stall sells three at a time now, so all nine skills still come round before you finish reading.",
-      "companions are redrawn: clearer creatures, and each one wears its own colour on the shelf and in the rack.",
-      "saved racks: keep a set of skills and put the whole rack back in one click. Free, like every swap.",
-    ],
-  },
-  {
     version: "v0.4",
     title:
-      "rebirth rebalanced, faster pacing, and a history that keeps every run",
+      "rebirth rebalanced, a shop that regroups, and companions with faces",
     body: [
       "rebirth resets purchases, companions, wallet and collection; your account, history, rebirth-earned skills and permanent bonuses stay.",
-      "the six rungs now ask for 20–45% of badges and 100,000–7,000,000 cycle EP; ultra-rebirth asks for 50% and 15,000,000.",
-      "each rung starts the next cycle with 250,000 EP and adds +2% banked EP; ultra-rebirth adds 1,000,000 EP and +10%.",
-      "pace upgrades now reach a 10-second reveal and a 2-second cooldown; draw skills show every draw, but pay only the best.",
-      "history keeps every cycle, tiers stay accurate, and the shop and narrow-screen layouts are polished.",
+      "the six rungs ask for 20-45% of badges and 100,000-7,000,000 cycle EP; each starts the next cycle with 250,000 EP and +2% banked EP.",
+      "history keeps every cycle behind a dotted line labelled with the rebirth that opened it, and tiers follow the scoring table.",
+      "the shop hides what you cannot buy yet: an upgrade only shows up once the step before it is yours.",
+      "auras are four families, each with a banner of its three best looks in its own gradient and type, and a page of its own.",
+      "nine skills in the stall, three at a time and cheaper to charge; four new auras, three new buys and four saved racks.",
+      "companions redrawn with a colour of their own, and their signature skills rebalanced so the rare ones are worth the wait.",
     ],
   },
   {

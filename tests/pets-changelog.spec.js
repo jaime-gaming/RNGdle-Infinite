@@ -225,16 +225,15 @@ test("share text ends with the public game link", () => {
 
 test("the changelog lists every release and flags an unseen version", () => {
   // Each release ships as one entry rather than inventing a version per part:
-  // v0.4 reworked the cycle, v0.3 was the shop wave, and v0.5 regroups the
-  // shelves around what was already there.
+  // v0.3 was the shop wave, and v0.4 carries the rebirth rework together with
+  // the shelves it regrouped afterwards.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
-    "v0.5",
     "v0.4",
     "v0.3",
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.5");
+  expect(LATEST_VERSION).toBe("v0.4");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");

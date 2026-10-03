@@ -13,6 +13,7 @@ import {
 import {
   shopProducts,
   productById,
+  productUnlocked,
   productsOnShelf,
   rollSettings,
   offlineSettings,
@@ -29,7 +30,7 @@ import {
 } from "../shop-data";
 import { LOADOUT_LIMIT } from "../progress.js";
 import { gameNow } from "../game-clock.js";
-import { pathForSubpage } from "../router.js";
+import { pathForSubpage, pathForShelfFamily } from "../router.js";
 import {
   availableGoals,
   currentGoal,
@@ -165,7 +166,10 @@ export default function Shop({
   progress,
   // "" is the hub. A section id means that shelf is the page being read.
   section = "",
+  // Auras own families: "" is the shelf's index of banners, an id is one set.
+  family = "",
   onOpenShelf,
+  onOpenFamily,
   focusProduct,
   onAction,
   navigate,
@@ -186,6 +190,10 @@ export default function Shop({
     returnFocus = useRef(null),
     returnKind = useRef(null);
   const shelf = SHOP_SECTIONS.find((entry) => entry.id === section) ?? null;
+  const auraFamily =
+    section === "auras"
+      ? (AURA_FAMILIES.find((entry) => entry.id === family) ?? null)
+      : null;
   const settings = rollSettings(progress.owned);
   const { intervalMS: offlineInterval, cap: offlineCap } = offlineSettings(
     progress.owned,
@@ -303,6 +311,10 @@ export default function Shop({
         !owned && !requires && stocked && progress.balance >= item.price,
     };
   }
+  // An upgrade behind a purchase you have not made is not on the shelf at all.
+  // The shop shows the next step of a chain, never the wall behind it, so a
+  // card appears the moment it becomes buyable and not one roll earlier.
+  const unlockedNow = (item) => productUnlocked(item, progress.owned);
   const matches = (item, state) => {
     const text = query.trim().toLowerCase();
     if (text) {
@@ -646,7 +658,7 @@ export default function Shop({
   }
   // Every hub button answers one question: what is on that shelf right now?
   function sectionStat(section) {
-    const items = productsOnShelf(section.id);
+    const items = productsOnShelf(section.id).filter(unlockedNow);
     if (section.id === "skills") return `${rack.used} / ${rack.slots} slots`;
     if (section.id === "pace")
       return `${settings.rollMS / 1000}s · ${formatDuration(settings.cooldownMS / 1000)}`;
@@ -709,6 +721,13 @@ export default function Shop({
   const byPrice = (a, b) => a.price - b.price;
   const shelfItemsNow = (() => {
     if (!shelf) return [];
+    // The auras shelf is an index of four banners until a family is opened.
+    if (shelf.id === "auras")
+      return auraFamily
+        ? productsOnShelf("auras")
+            .filter((item) => item.family === auraFamily.id)
+            .sort(byPrice)
+        : [];
     if (shelf.id === "skills")
       // The whole skill catalogue shows cheap-first; the two the stall stocks
       // right now are buyable, the others wait dimmed under the green restock
@@ -738,7 +757,7 @@ export default function Shop({
     // Companions are drawn by their own component, with their own count.
     if (shelf.id === "companions") return [];
     return productsOnShelf(shelf.id).slice().sort(byPrice);
-  })();
+  })().filter(unlockedNow);
   const visibleCount = shelfItemsNow.filter((item) =>
     matches(item, stateOf(item)),
   ).length;
@@ -771,12 +790,94 @@ export default function Shop({
     shelf &&
     !visibleCount &&
     shelf.id !== "companions" &&
+    // The auras index is never empty: its four banners are the shelf.
+    !(shelf.id === "auras" && !auraFamily) &&
     !(shelf.id === "offline" && !progress.owned.includes("offline-roller"))
       ? "Nothing on this shelf matches your search and filters."
       : "";
   const affordableCount = shopProducts.filter(
     (item) => stateOf(item).affordableNow,
   ).length;
+  // The three auras a family puts on its banner: the best of the set, dearest
+  // first, with their colours for the gradient behind them.
+  function bannerAuras(entry) {
+    return productsOnShelf("auras")
+      .filter((item) => item.family === entry.id)
+      .sort((a, b) => b.price - a.price)
+      .slice(0, 3);
+  }
+  function familyBanner(entry, { link = true } = {}) {
+    const samples = bannerAuras(entry);
+    const owned = productsOnShelf("auras")
+      .filter((item) => item.family === entry.id)
+      .filter((item) => progress.owned.includes(item.id)).length;
+    const total = productsOnShelf("auras").filter(
+      (item) => item.family === entry.id,
+    ).length;
+    const body = (
+      <>
+        <span
+          className="aura-family-gradient"
+          aria-hidden="true"
+          style={{
+            "--banner-a": samples[0]?.swatch?.[0] ?? "var(--border)",
+            "--banner-b": samples[1]?.swatch?.[1] ?? "var(--border)",
+            "--banner-c": samples[2]?.swatch?.[0] ?? "var(--border)",
+          }}
+        />
+        <span className="aura-family-copy">
+          <strong
+            style={{
+              "--family-font": entry.font,
+              "--family-tracking": entry.tracking,
+              "--family-case": entry.casing,
+              "--family-weight": entry.weight,
+            }}
+          >
+            {entry.label}
+          </strong>
+          <small>{entry.blurb}</small>
+          <span className="aura-family-count">
+            {owned} / {total} yours{link ? " · open the set" : ""}
+          </span>
+        </span>
+        <span className="aura-family-samples" aria-hidden="true">
+          {samples.map((aura) => (
+            <NumberBox
+              key={aura.id}
+              value="??????"
+              tier={previewTier}
+              aura={aura.id}
+              compact
+            />
+          ))}
+        </span>
+      </>
+    );
+    return link ? (
+      <a
+        key={entry.id}
+        href={pathForShelfFamily("shop", "auras", entry.id)}
+        className="aura-family-banner"
+        data-family={entry.id}
+        onClick={(event) => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+          event.preventDefault();
+          onOpenFamily(entry.id);
+        }}
+      >
+        {body}
+      </a>
+    ) : (
+      <div
+        className="aura-family-banner is-open"
+        key={entry.id}
+        data-family={entry.id}
+      >
+        {body}
+      </div>
+    );
+  }
   return (
     <>
       <button className="back-link" onClick={() => navigate("roll")}>
@@ -801,7 +902,17 @@ export default function Shop({
             Shop
           </button>
           <ChevronRight size={13} aria-hidden="true" />
-          <span aria-current="page">{shelf.label}</span>
+          {auraFamily ? (
+            <>
+              <button type="button" onClick={() => onOpenShelf("auras")}>
+                {shelf.label}
+              </button>
+              <ChevronRight size={13} aria-hidden="true" />
+              <span aria-current="page">{auraFamily.label}</span>
+            </>
+          ) : (
+            <span aria-current="page">{shelf.label}</span>
+          )}
         </nav>
       )}
       {!progress.profile && (
@@ -1186,7 +1297,11 @@ export default function Shop({
               <h2>
                 <AuraMark size={16} /> Auras
               </h2>
-              <p>Cosmetic only; wear one at a time.</p>
+              <p>
+                {auraFamily
+                  ? `One set of the shelf. ${auraGroups[0]?.items.length ?? 0} looks, cosmetic only.`
+                  : "Four sets, cosmetic only; wear one at a time."}
+              </p>
             </div>
             <button
               className="secondary-button"
@@ -1227,26 +1342,38 @@ export default function Shop({
             </label>
             <span>Same rarity — your look.</span>
           </div>
-          {auraGroups.map((group) => (
-            <div className="shop-family" key={group.family.id}>
-              <div className="shop-family-heading">
-                <h3>{group.family.label}</h3>
-                <p>{group.family.blurb}</p>
-                <span className="shop-family-stat">
-                  {
-                    group.items.filter((item) =>
-                      progress.owned.includes(item.id),
-                    ).length
-                  }
-                  {" / "}
-                  {group.items.length} yours
-                </span>
-              </div>
-              <div className="shop-grid shop-grid-rows">
-                {group.items.map(card)}
-              </div>
+          {/* The index: one banner per family, each one a real page. */}
+          {!auraFamily && (
+            <div className="aura-family-banners">
+              {AURA_FAMILIES.map((entry) => familyBanner(entry))}
             </div>
-          ))}
+          )}
+          {/* Inside a family: its banner opens the page, its cards follow. */}
+          {auraFamily && (
+            <>
+              {familyBanner(auraFamily, { link: false })}
+              {auraGroups.map((group) => (
+                <div className="shop-family" key={group.family.id}>
+                  <div className="shop-family-heading">
+                    <h3>Every {group.family.label.toLowerCase()} look</h3>
+                    <p>{group.family.blurb}</p>
+                    <span className="shop-family-stat">
+                      {
+                        group.items.filter((item) =>
+                          progress.owned.includes(item.id),
+                        ).length
+                      }
+                      {" / "}
+                      {group.items.length} yours
+                    </span>
+                  </div>
+                  <div className="shop-grid shop-grid-rows">
+                    {group.items.map(card)}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </section>
       )}
       {shelf?.id === "companions" && (

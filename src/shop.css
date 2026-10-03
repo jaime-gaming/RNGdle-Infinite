@@ -1232,3 +1232,116 @@
   background: var(--hover);
   color: var(--primary);
 }
+
+/* ---- Aura family banners ------------------------------------------------
+   Each family fronts its own page: a gradient mixed from the three best looks
+   in the set, three live previews, and the family's own type — the same family
+   reads the same way wherever it appears. */
+.aura-family-banners {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+.aura-family-banner {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+  min-height: 132px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.aura-family-banner:hover {
+  transform: translateY(-3px);
+  border-color: var(--muted);
+  box-shadow: 0 10px 26px #00000012;
+}
+.aura-family-banner:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.aura-family-banner.is-open {
+  margin-bottom: 18px;
+  cursor: default;
+}
+.aura-family-banner.is-open:hover {
+  transform: none;
+  box-shadow: none;
+}
+.aura-family-gradient {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(
+      118deg,
+      color-mix(in srgb, var(--banner-a) 34%, transparent),
+      color-mix(in srgb, var(--banner-b) 30%, transparent) 52%,
+      color-mix(in srgb, var(--banner-c) 34%, transparent)
+    ),
+    var(--surface);
+}
+.aura-family-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.aura-family-copy strong {
+  font-family: var(--family-font, "Space Mono", monospace);
+  font-weight: var(--family-weight, 700);
+  letter-spacing: var(--family-tracking, 0.08em);
+  text-transform: var(--family-case, none);
+  font-size: 17px;
+  line-height: 1.25;
+  color: var(--primary);
+}
+.aura-family-copy small {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 17px;
+}
+.aura-family-count {
+  color: var(--muted);
+  font-family: "Space Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.aura-family-samples {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.aura-family-samples .number-box {
+  transform: scale(0.62);
+  transform-origin: center;
+  margin: -14px;
+}
+@media (max-width: 560px) {
+  .aura-family-banner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .aura-family-samples {
+    justify-content: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aura-family-banner,
+  .aura-family-banner:hover {
+    transform: none;
+    transition: none;
+  }
+}
