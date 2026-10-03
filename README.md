@@ -117,8 +117,8 @@ states nothing extra — the EP counter already is the total.
 
 ![The skill rack: three charged circles, one explaining itself on hover](media/skills.png)
 
-Seven skills are bought in the shop — but the shelf is a **stall**: only **two
-are on sale at a time**, and the pair rotates every **five minutes** like a
+Nine skills are bought in the shop — but the shelf is a **stall**: only **three
+are on sale at a time**, and the trio rotates every **five minutes** like a
 shop's stock. A timer on the shelf says when it refreshes, and the skills that
 are out of the rotation stay listed, dimmed under a **green restock aura** with
 the countdown on the button. Thirteen belong to companions (each companion teaches one
@@ -184,24 +184,30 @@ Above the shelves sit three **featured picks**, chosen from your tracked goal an
 your wallet — your goal, something within reach, a cosmetic — and each one is
 only a doorway to the shelf that sells it, with a meter against its price. A
 shelf keeps its own **sticky bar**: search, the same filters and a button back to
-all shelves. Filters only narrow what is drawn (`19 of 49 on this shelf`), and a
+all shelves. Filters only narrow what is drawn (`22 of 56 on this shelf`), and a
 description is held to three lines so a shelf reads as a list, not a wall of
 text. Every shelf reads **from the cheapest item upwards**, and the Skills shelf
-adds its own twist: a rotating stall that only ever stocks two shop skills at a
-time, with a countdown to the next pair. The old `#shop` bookmark still works,
+adds its own twist: a rotating stall that only ever stocks three shop skills at
+a time, with a countdown to the next trio. The old `#shop` bookmark still works,
 and `#auras` lands on that shelf.
 
 ![The shop front door: six shelf buttons with their numbers and three featured picks](media/shop.png)
 ![One shelf as its own page: the breadcrumb, sticky bar and aura cards](media/shop-shelf.png)
 
-| Shelf          | What it sells                                                                                                        |
-| -------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Skills**     | Seven charged effects (two on sale at a time, restocked every 5 minutes), the two skill bays, and the Flywheel tiers |
-| **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time                                   |
-| **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                                                      |
-| **Auras**      | Eighteen cosmetic looks for your number box, equipped one at a time                                                  |
-| **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                                                   |
-| **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                                                      |
+| Shelf          | What it sells                                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Skills**     | Nine charged effects (three on sale at a time, restocked every 5 minutes), the two skill bays, and the Flywheel tiers |
+| **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time                                    |
+| **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                                                       |
+| **Auras**      | Twenty-two cosmetic looks in four families, equipped one at a time                                                    |
+| **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                                                    |
+| **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                                                       |
+
+The Auras shelf is the one long shelf, so it is split into **four families** —
+sky and starlight, earth and weather, made things, deep and dark — each with its
+own heading and its own count. Every aura card carries a **chip of its two
+colours** next to its name and a live preview of the box wearing it, so the
+shelf shows what you are buying before you spend anything.
 
 **Auto-Roll is an ability**, not a settings switch: once bought it appears in
 the corner rack as its own circle. One click arms it, another click stands it
@@ -210,8 +216,8 @@ never skips a reveal, a cooldown or a draw, and without Persistence Core it
 starts off again after a reload.
 
 Every purchase is confirmed, costs EP once, and never changes odds or scores.
-The 49 products in the catalogue come to 107.25 M EP, and the most expensive of
-them costs 11 M. Everything you buy is yours for the rest of the cycle: a
+The 56 products in the catalogue come to 151.12 M EP, and the most expensive of
+them costs 18 M. Everything you buy is yours for the rest of the cycle: a
 rebirth puts the whole catalogue back on the shelf.
 
 ## Rebirth and ultra-rebirth

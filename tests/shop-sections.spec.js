@@ -5,13 +5,15 @@ import {
   shopProducts,
   skillStock,
   skillStockWindow,
+  SKILL_STOCK_SIZE,
 } from "../src/shop-data.js";
 import { seedProgress } from "./helpers/progress.js";
 
 // The shop is a street of sub-pages: the hub is an index of six buttons, each
 // one opening its own URL (/shop/skills, /shop/auras …), the flywheel tiers
 // live on the Skills shelf because Flywheel is a skill, and the shop skills
-// themselves are a rotating stall — two on sale, refreshed every five minutes.
+// themselves are a rotating stall — three on sale, refreshed every five
+// minutes.
 // Every shelf reads from the cheapest item upwards.
 
 const funded = {
@@ -239,7 +241,7 @@ test("the skills shelf is a stall: two skills buyable, the rest under a green au
   // The whole catalogue is listed: the stall's rotating pair is on sale, the
   // other skills wait dimmed under the green restock aura.
   const stock = skillStock(skillStockWindow(Date.now()), funded.owned);
-  expect(stock).toHaveLength(2);
+  expect(stock).toHaveLength(SKILL_STOCK_SIZE);
   const rest = [
     "surge",
     "trail",
@@ -248,6 +250,8 @@ test("the skills shelf is a stall: two skills buyable, the rest under a green au
     "bedrock",
     "turbo",
     "quarry",
+    "miser",
+    "triptych",
   ].filter((id) => !stock.includes(id));
   for (const id of stock) {
     const card = shelf.locator(`[data-product="${id}"]`);
@@ -262,9 +266,11 @@ test("the skills shelf is a stall: two skills buyable, the rest under a green au
     await expect(card).toHaveClass(/is-restocking/);
     await expect(card.getByRole("button")).toBeDisabled();
   }
-  // The stall states how full it is and when the pair restocks — and, since
-  // the rotation is deterministic, which pair comes next.
-  await expect(shelf.locator(".skill-stock")).toContainText("2 of 2 in stock");
+  // The stall states how full it is and when the three restock — and, since
+  // the rotation is deterministic, which skills come next.
+  await expect(shelf.locator(".skill-stock")).toContainText(
+    `${SKILL_STOCK_SIZE} of ${SKILL_STOCK_SIZE} in stock`,
+  );
   await expect(shelf.locator(".skill-stock")).toContainText("next:");
   await expect(page.getByTestId("skill-stock-timer")).toContainText(
     /^\d:\d{2}$/,

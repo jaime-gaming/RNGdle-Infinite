@@ -94,7 +94,7 @@ test("every late tier requires its predecessor, charges exactly once and preserv
   expect(p.history[0].ep).toBe(75000);
   expect(p.history).toHaveLength(shopProducts.length + 1);
   expect(rollSettings(p.owned)).toEqual({ rollMS: 10000, cooldownMS: 2000 });
-  expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 288 });
+  expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 360 });
   expect(flywheelRequired(p.owned)).toBe(1);
   // Buying an aura equips it, so the last aura in the catalogue ends up worn.
   expect(p.equipped).toBe(
@@ -276,7 +276,7 @@ for (const intervalMS of [600000, 450000, 300000, 180000])
     expect(plan(intervalMS).count).toBe(1);
     expect(plan(intervalMS * 144).count).toBe(144);
     expect(plan(intervalMS * 1000).count).toBe(144);
-    for (const cap of [216, 288]) {
+    for (const cap of [216, 288, 360]) {
       expect(plan(intervalMS * cap, [], true, cap).count).toBe(cap);
       expect(plan(intervalMS * 1000, [], true, cap).count).toBe(cap);
       expect(plan(intervalMS * (cap - 1), [], true, cap).count).toBe(cap - 1);

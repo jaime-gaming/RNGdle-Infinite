@@ -2,6 +2,17 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.5",
+    title: "a tidier shop, four new auras and companions with faces",
+    body: [
+      "the auras shelf is grouped into four families, and every card shows a chip of its own two colours.",
+      "four new auras: Halcyon, Downpour, Blueprint and Inkblot. Cosmetic, like every aura before them.",
+      "three new things to buy: Offline Vault III (360 rolls an absence), Miser (triple EP) and Triptych (three draws).",
+      "the skill stall sells three at a time now, so all nine skills still come round before you finish reading.",
+      "companions are redrawn: clearer creatures, and each one wears its own colour on the shelf and in the rack.",
+    ],
+  },
+  {
     version: "v0.4",
     title:
       "rebirth rebalanced, faster pacing, and a history that keeps every run",

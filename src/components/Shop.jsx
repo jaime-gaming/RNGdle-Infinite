@@ -25,6 +25,7 @@ import {
   nextSkillStockOffset,
   SKILL_STOCK_SIZE,
   SKILL_STOCK_WINDOW_MS,
+  AURA_FAMILIES,
 } from "../shop-data";
 import { gameNow } from "../game-clock.js";
 import { pathForSubpage } from "../router.js";
@@ -76,6 +77,12 @@ import {
   SkillMark,
   SolsticeMark,
   SparkMark,
+  HalcyonMark,
+  DownpourMark,
+  BlueprintMark,
+  InkblotMark,
+  MiserMark,
+  TriptychMark,
   SpeedMark,
   StarfallMark,
   SurgeMark,
@@ -124,8 +131,14 @@ const icons = {
   bedrock: BedrockMark,
   turbo: TurboMark,
   quarry: QuarryMark,
+  miser: MiserMark,
+  triptych: TriptychMark,
   bay: BayMark,
   spark: SparkMark,
+  halcyon: HalcyonMark,
+  downpour: DownpourMark,
+  blueprint: BlueprintMark,
+  inkblot: InkblotMark,
 };
 // The shelves come from the catalogue, so routing, the hub, the featured picks
 // and the deep links all read the same list. This map only paints them.
@@ -447,6 +460,16 @@ export default function Shop({
         </div>
         <div className="shop-card-body">
           <div className="shop-item-title">
+            {aura && item.swatch && (
+              <span
+                className="aura-swatch"
+                aria-hidden="true"
+                style={{
+                  "--swatch-a": item.swatch[0],
+                  "--swatch-b": item.swatch[1],
+                }}
+              />
+            )}
             <h3>{item.name}</h3>
             <span
               className={`shop-state ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""}`}
@@ -716,6 +739,14 @@ export default function Shop({
   const visibleCount = shelfItemsNow.filter((item) =>
     matches(item, stateOf(item)),
   ).length;
+  // Auras are grouped by family. A family with nothing to show after a search
+  // simply drops out, so the shelf never prints an empty heading.
+  const auraGroups = AURA_FAMILIES.map((family) => ({
+    family,
+    items: shelfItemsNow
+      .filter((item) => item.family === family.id)
+      .filter((item) => matches(item, stateOf(item))),
+  })).filter((group) => group.items.length);
   // A locked shelf already explains itself, and companions carry their own
   // count, so only the shelves that can go empty get this line.
   const emptyNote =
@@ -1109,9 +1140,26 @@ export default function Shop({
             </label>
             <span>Same rarity — your look.</span>
           </div>
-          <div className="shop-grid shop-grid-rows">
-            {shelfItemsNow.map(card)}
-          </div>
+          {auraGroups.map((group) => (
+            <div className="shop-family" key={group.family.id}>
+              <div className="shop-family-heading">
+                <h3>{group.family.label}</h3>
+                <p>{group.family.blurb}</p>
+                <span className="shop-family-stat">
+                  {
+                    group.items.filter((item) =>
+                      progress.owned.includes(item.id),
+                    ).length
+                  }
+                  {" / "}
+                  {group.items.length} yours
+                </span>
+              </div>
+              <div className="shop-grid shop-grid-rows">
+                {group.items.map(card)}
+              </div>
+            </div>
+          ))}
         </section>
       )}
       {shelf?.id === "companions" && (

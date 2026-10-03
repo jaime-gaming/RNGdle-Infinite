@@ -146,6 +146,32 @@ export const SKILLS = [
 
   // ---- Companion signatures ----------------------------------------------
   {
+    id: "miser",
+    source: "shop",
+    name: "Miser",
+    icon: "miser",
+    tint: "gold",
+    kind: "wallet",
+    value: 3,
+    charges: 8,
+    price: 9000000,
+    description:
+      "The next roll banks triple EP. The number, its badges and its scored EP are untouched.",
+  },
+  {
+    id: "triptych",
+    source: "shop",
+    name: "Triptych",
+    icon: "triptych",
+    tint: "violet",
+    kind: "best-of",
+    attempts: 3,
+    charges: 7,
+    price: 12000000,
+    description:
+      "The next roll is drawn three times and you keep whichever number scores the most EP. All three draws are ordinary, independent rolls.",
+  },
+  {
     id: "pebble-steady",
     source: "pet",
     petId: "pebble",

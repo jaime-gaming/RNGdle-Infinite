@@ -291,6 +291,32 @@ test("draw skills collapse into one plan and never invent EP", () => {
   expect(skillWaivesCooldown(["surge"])).toBe(false);
 });
 
+test("the two late shop skills reuse effects that are already proven", () => {
+  const miser = skillById.get("miser"),
+    triptych = skillById.get("triptych");
+  for (const skill of [miser, triptych]) {
+    expect(skill.source).toBe("shop");
+    // Sold, priced above everything that came before, and never a pet skill.
+    expect(productById.get(skill.id).price).toBe(skill.price);
+    expect(skill.price).toBeGreaterThan(productById.get("quarry").price);
+    expect(skill.charges).toBeGreaterThan(0);
+    expect(skill.description.endsWith(".")).toBe(true);
+  }
+  // Miser is a wallet multiplier, exactly like Surge and the companions.
+  expect(miser.kind).toBe("wallet");
+  expect(skillWalletMultiplier(["miser"])).toBe(3);
+  expect(drawPlanFor(["miser"])).toBeNull();
+  // Triptych is a best-of-three: three ordinary draws, one kept.
+  expect(triptych.kind).toBe("best-of");
+  expect(drawPlanFor(["triptych"])).toEqual({ attempts: 3, floor: 0 });
+  expect(triptych.attempts).toBeLessThanOrEqual(SKILL_MAX_DRAWS);
+  // Together they still only pick between numbers that were really drawn.
+  expect(drawPlanFor(["triptych", "quarry"])).toEqual({
+    attempts: 5,
+    floor: 100000,
+  });
+});
+
 test("a settled roll banks the wallet multiplier and keeps the scored EP honest", () => {
   const result = evaluate(1337);
   const base = fund(1000000, {
@@ -630,9 +656,9 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   );
 });
 
-test("the skill stall sells two skills at a time and rotates every five minutes", () => {
+test("the skill stall sells three skills at a time and rotates every five minutes", () => {
   const ids = shopSkills.map((skill) => skill.id);
-  expect(SKILL_STOCK_SIZE).toBe(2);
+  expect(SKILL_STOCK_SIZE).toBe(3);
   expect(SKILL_STOCK_WINDOW_MS).toBe(5 * 60 * 1000);
   // The window is the clock, not a stored list.
   expect(skillStockWindow(0)).toBe(0);

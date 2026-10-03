@@ -224,16 +224,17 @@ test("share text ends with the public game link", () => {
 });
 
 test("the changelog lists every release and flags an unseen version", () => {
-  // v0.4 reworks the cycle: the shop/rack/rebirth wave of v0.3 shipped as one
-  // release rather than inventing a version for each part, and this one does
-  // the same for the ladder, the history and the skills.
+  // Each release ships as one entry rather than inventing a version per part:
+  // v0.4 reworked the cycle, v0.3 was the shop wave, and v0.5 regroups the
+  // shelves around what was already there.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.5",
     "v0.4",
     "v0.3",
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.4");
+  expect(LATEST_VERSION).toBe("v0.5");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
@@ -295,6 +296,32 @@ test("the changelog reads like release notes, not like a chat log", () => {
   // the same compact budget: eight lines at most.
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);
+});
+
+test("every companion wears its own colour and has its own face", async () => {
+  const icons = await import("node:fs").then((fs) =>
+    fs.readFileSync("src/components/game-icons.jsx", "utf8"),
+  );
+  const token = await import("node:fs").then((fs) =>
+    fs.readFileSync("src/pet-figure.css", "utf8"),
+  );
+  const colours = new Set();
+  for (const pet of PETS) {
+    // One colour each, and no two companions share one.
+    expect(pet.accent).toMatch(/^#[0-9a-f]{6}$/);
+    expect(colours.has(pet.accent)).toBe(false);
+    colours.add(pet.accent);
+    // A glyph drawn for the game, and a skill of its own.
+    expect(icons).toContain(`  ${pet.id}: (`);
+    expect(skillForPet(pet.id)?.petId).toBe(pet.id);
+  }
+  // The avatar token paints that colour, and the icon passes it through.
+  expect(token).toContain("var(--pet-accent,");
+  const icon = await import("node:fs").then((fs) =>
+    fs.readFileSync("src/components/PetIcon.jsx", "utf8"),
+  );
+  expect(icon).toContain('"--pet-accent": accent');
+  expect(icon).toContain("petById.get(pet)?.accent");
 });
 
 test("share is the single copy action and carries the link with it", () => {

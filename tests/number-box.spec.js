@@ -3,7 +3,8 @@ import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { PROGRESS_KEY } from "../src/progress.js";
-import { shopProducts } from "../src/shop-data.js";
+import { shopProducts, AURA_FAMILIES } from "../src/shop-data.js";
+import fs from "node:fs";
 const css = (locator) =>
   locator.evaluate((el) => {
     const s = getComputedStyle(el);
@@ -90,6 +91,37 @@ test("every roll tier uses the observed light/dark Box Lab palettes and shimmer 
     await page.clock.fastForward(105100);
   }
   expect(seen.size).toBe(7);
+});
+
+test("every aura belongs to a family, shows its colours and is renderable", () => {
+  const auras = shopProducts.filter((p) => p.kind === "aura");
+  const box = fs.readFileSync("src/components/NumberBox.jsx", "utf8");
+  const styles = fs.readFileSync("src/number-box.css", "utf8");
+  const families = new Set(AURA_FAMILIES.map((family) => family.id));
+  const seen = new Map();
+  for (const aura of auras) {
+    // A family, and a family that exists.
+    expect(families.has(aura.family)).toBe(true);
+    seen.set(aura.family, (seen.get(aura.family) ?? 0) + 1);
+    // Two distinct colours, so the chip on the card can be drawn.
+    expect(aura.swatch).toHaveLength(2);
+    for (const colour of aura.swatch) expect(colour).toMatch(/^#[0-9a-f]{6}$/);
+    expect(aura.swatch[0]).not.toBe(aura.swatch[1]);
+    // The box must agree to wear it, and the stylesheet must dress it.
+    expect(box).toContain(`"${aura.id}"`);
+    expect(styles).toContain(`data-cosmetic="${aura.id}"`);
+  }
+  // Four families, every one of them populated, and no aura left over.
+  expect(AURA_FAMILIES).toHaveLength(4);
+  for (const family of AURA_FAMILIES)
+    expect(seen.get(family.id)).toBeGreaterThan(0);
+  expect([...seen.values()].reduce((a, b) => a + b, 0)).toBe(auras.length);
+  // A card's chip is painted from the product, never from a hard-coded list.
+  const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
+  expect(shop).toContain('"--swatch-a": item.swatch[0]');
+  expect(shop).toContain('"--swatch-b": item.swatch[1]');
+  // And the shelf groups by family rather than printing one long list.
+  expect(shop).toContain("AURA_FAMILIES.map((family) => ({");
 });
 
 test("legacy purchases survive repricing; upgraded cosmetics match previews, respect reduced motion and fit mobile", async ({
@@ -204,11 +236,19 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     glitch: 1650000,
     monolith: 2700000,
     chrono: 4200000,
+    // v0.5: the two late skills, the third vault and four more auras.
+    miser: 9000000,
+    triptych: 12000000,
+    "offline-vault-3": 18000000,
+    halcyon: 640000,
+    downpour: 380000,
+    blueprint: 1450000,
+    inkblot: 2400000,
   };
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(49);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(56);
   // A skill product carries its effect in skills.js, never inside the product:
   // the shop only mirrors the catalogue so both read the same numbers.
   for (const product of shopProducts.filter((p) => p.kind === "skill")) {
@@ -233,7 +273,20 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
   for (const product of shopProducts)
     if (product.requires)
       expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
-  // The whole catalogue stays within a sane multiple of the cheapest upgrade.
-  const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
+  // The catalogue stays within a sane multiple of the cheapest upgrade. v0.5's
+  // seven additions are late content priced above everything else, so the guard
+  // is kept on the catalogue they joined.
+  const addedInV05 = new Set([
+    "halcyon",
+    "downpour",
+    "blueprint",
+    "inkblot",
+    "miser",
+    "triptych",
+    "offline-vault-3",
+  ]);
+  const total = shopProducts
+    .filter((product) => !addedInV05.has(product.id))
+    .reduce((sum, p) => sum + p.price, 0);
   expect(total).toBeLessThanOrEqual(115000000);
 });

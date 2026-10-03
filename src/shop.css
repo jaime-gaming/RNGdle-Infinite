@@ -482,6 +482,53 @@
 .shop-grid-upgrades {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* The auras shelf is grouped into families: a small heading, then that
+   family's cards. Same grid, so a family of three and a family of eight lay
+   out identically. */
+.shop-family + .shop-family {
+  margin-top: 26px;
+}
+.shop-family-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.shop-family-heading h3 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.shop-family-heading p {
+  margin: 0;
+  flex: 1;
+  color: var(--muted);
+  font-size: 12px;
+}
+.shop-family-stat {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* A chip of the aura's own two colours, so the shelf shows what you are
+   buying before the preview band animates. */
+.aura-swatch {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: linear-gradient(90deg, var(--swatch-a), var(--swatch-b));
+}
 .shop-card {
   display: flex;
   flex-direction: column;
@@ -521,6 +568,7 @@
   justify-content: space-between;
 }
 .shop-item-title h3 {
+  flex: 1;
   font-size: 15px;
   margin: 0;
 }

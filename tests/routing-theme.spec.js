@@ -183,12 +183,23 @@ test("light mode keeps a single source of truth for the palette", () => {
 
 test("rebalanced prices keep the catalogue shape and every chain affordable", () => {
   const price = Object.fromEntries(shopProducts.map((p) => [p.id, p.price]));
-  // 34 upgrades, the nine v0.3 skills and bays, and the six late auras that
-  // close the cosmetic shelf: cheaper curve, more content than launch.
-  expect(shopProducts).toHaveLength(49);
-  const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBe(107250000);
-  expect(total).toBeLessThan(131145000);
+  // 34 upgrades, nine skills and bays, and eighteen auras: the v0.4 catalogue,
+  // repriced once at v0.3 and never since. It still costs less than the launch
+  // catalogue did, and v0.5's additions sit on top of it rather than inside it.
+  const addedInV05 = [
+    "halcyon",
+    "downpour",
+    "blueprint",
+    "inkblot",
+    "miser",
+    "triptych",
+    "offline-vault-3",
+  ];
+  const before = shopProducts.filter((p) => !addedInV05.includes(p.id));
+  expect(before).toHaveLength(49);
+  expect(before.reduce((sum, p) => sum + p.price, 0)).toBe(107250000);
+  expect(107250000).toBeLessThan(131145000);
+  expect(shopProducts).toHaveLength(56);
   // The first upgrade of each visible chain stays reachable early.
   expect(price["quickwind-1"]).toBeLessThanOrEqual(30000);
   expect(price["clockwork-1"]).toBeLessThanOrEqual(50000);
