@@ -4,15 +4,16 @@ export const CHANGELOG = [
   {
     version: "v0.4",
     title:
-      "rebirth rebalanced, a shop that regroups, and companions with faces",
+      "rebirth rebalanced, a shop that regroups, and a link between devices",
     body: [
       "rebirth resets purchases, companions, wallet and collection; your account, history, rebirth-earned skills and permanent bonuses stay.",
       "the six rungs ask for 20-45% of badges and 100,000-7,000,000 cycle EP; each starts the next cycle with 250,000 EP and +2% banked EP.",
       "history keeps every cycle behind a dotted line labelled with the rebirth that opened it, and tiers follow the scoring table.",
       "the shop hides what you cannot buy yet: an upgrade only shows up once the step before it is yours.",
       "auras are four families, each with a banner of its three best looks in its own gradient and type, and a page of its own.",
-      "nine skills in the stall, three at a time and cheaper to charge; four new auras, three new buys and four saved racks.",
-      "companions redrawn with a colour of their own, and their signature skills rebalanced so the rare ones are worth the wait.",
+      "nine skills in the stall, three at a time; their cards and the corner rack now share one set of tinted hand-drawn icons.",
+      "companions are a slideshow: one cage in the middle, arrows to slide to the next, each friend with its own colour and skill.",
+      "one link joins two devices to the same account live, through a memory-only relay — there is still no database anywhere.",
     ],
   },
   {

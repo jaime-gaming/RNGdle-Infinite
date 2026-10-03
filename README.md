@@ -78,6 +78,12 @@ or find one free at roughly **1 in 250 rolls** — a lucky roll drops a random
 companion you do not own yet, and it is worn automatically if you do not already
 wear one.
 
+The companion shelf is a **slideshow of cages**: one companion stands in the
+middle of the stage and the arrows on either side slide to the next one, with a
+rail of small cages underneath to jump straight to any friend. Each cage is
+tinted with that companion's own colour, and the stage shows its bonus, its
+description and its signature skill before you decide.
+
 Only **one companion is equipped at a time** — and the equipped one is the one
 on the roll screen, not just in a list: it walks the stage while you roll, with
 its sign and its bonus right there, and it moves a little quicker while a number
@@ -337,12 +343,23 @@ failed-write recovery.
   reload. Registration starts a clean, genuinely saved account.
 - **A local profile** saves your wallet, discoveries, upgrades, aura, companions,
   skills, cooldowns and activity log in `localStorage` on this browser and
-  origin only. There is no cloud backup and no cross-device sync.
+  origin only.
+- **Device links, live, with no database.** Settings → _Link devices_ creates
+  one URL (`?sync=ROOM.KEY`) that joins a second browser to the same account,
+  live in both directions: buy on the phone, watch it land on the PC. The
+  relay it talks to keeps rooms **in memory only** — the save itself never
+  leaves the players' own browsers, nothing is written to disk, and a restart
+  simply empties the relay. Anyone holding the link plays the account, so
+  treat it like a password. The dev server hosts the relay on `/__sync`; a
+  static deployment runs `npm run relay` and points the game at it with
+  `?relay=https://host:8787`.
 - **Multi-tab safe.** Tabs share one save through storage events and Web Locks:
   simultaneous rolls join the same draw, purchases cannot overspend, and a
   second rebirth cannot apply twice.
 - **Nothing is sent anywhere.** No analytics, no accounts, no backend, no
-  runtime CDN. The only network requests are the game's own asset files.
+  runtime CDN. The only network requests are the game's own asset files — and,
+  only when you explicitly create a device link, the relay forwarding your
+  save between your own devices.
 
 ## Settings, themes and accessibility
 
@@ -407,11 +424,12 @@ For anyone who wants to tinker:
 
 ```sh
 npm install
-npm run dev             # http://localhost:5173
+npm run dev             # http://localhost:5173 (hosts the device-link relay too)
 npm test                # Playwright suite (needs a Chromium binary)
 npm run audit:economy   # reproducible price and roll-distribution audit
 npm run build           # production build
 npm run pages:publish   # rebuild docs/, which is what GitHub Pages serves
+npm run relay           # standalone memory-only relay for a static deployment
 ```
 
 The screenshots in this README are generated from the running game rather than

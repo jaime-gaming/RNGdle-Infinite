@@ -551,9 +551,17 @@ test("two tabs cannot purchase a late Flywheel tier twice or lose the earned cha
   await other.goto("/shop/skills");
   for (const p of [page, other])
     await p.locator('[data-product="flywheel-2"] button').click();
+  // Both tabs press confirm at once, and whichever reaches the lock first
+  // buys. The loser must not double-buy: its dialog disables itself the
+  // moment the storage event lands, or the reducer rejects the duplicate.
+  // Either way exactly one purchase goes through, so a click that never
+  // fires because the button is already dead is a valid outcome here.
   await Promise.all(
     [page, other].map((p) =>
-      p.getByRole("button", { name: "Confirm purchase", exact: true }).click(),
+      p
+        .getByRole("button", { name: "Confirm purchase", exact: true })
+        .click({ timeout: 8000 })
+        .catch(() => {}),
     ),
   );
   await expect

@@ -133,3 +133,60 @@
     max-width: none;
   }
 }
+
+/* ---- Device links -------------------------------------------------------- */
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font: 500 11px/1.5 var(--roll-font);
+  color: var(--muted);
+}
+.sync-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.sync-status.is-live {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+  background: var(--green-bg);
+  color: var(--green);
+}
+.sync-status.is-waiting,
+.sync-status.is-connecting {
+  border-color: color-mix(in srgb, #d9a441 45%, var(--border));
+  color: #b8862f;
+}
+.sync-status.is-error {
+  border-color: color-mix(in srgb, #d9534f 45%, var(--border));
+  color: #c0524f;
+}
+.sync-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.sync-link-field {
+  flex: 1 1 300px;
+  min-width: 0;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--secondary);
+  font: 500 11px var(--roll-font);
+  text-overflow: ellipsis;
+}
+.sync-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--muted);
+}

@@ -1,28 +1,9 @@
 import React, { useState } from "react";
-import {
-  Zap,
-  PawPrint,
-  Wind,
-  Layers,
-  Mountain,
-  Gauge,
-  Target,
-} from "lucide-react";
 import { skillById, skillEffectSummary, skillSourceLabel } from "../skills.js";
 import { rackReport } from "../rack.js";
 import { petById } from "../pets.js";
-import { AutomationMark, CoreMark } from "./game-icons.jsx";
+import { AutomationMark, CoreMark, SkillIcon } from "./game-icons.jsx";
 import "../skills.css";
-
-export const SKILL_ICONS = {
-  surge: Zap,
-  trail: PawPrint,
-  bounce: Wind,
-  twice: Layers,
-  bedrock: Mountain,
-  turbo: Gauge,
-  quarry: Target,
-};
 
 // A ring that fills with charge. No running commentary on the ring itself: the
 // contribution is a small chip next to it, and the tooltip carries the whole
@@ -98,7 +79,6 @@ export default function SkillBar({
   return (
     <div className={`skill-bar ${className}`} role="group" aria-label="Skills">
       {equipped.map((skill) => {
-        const Icon = SKILL_ICONS[skill.icon] ?? Zap;
         const active = firingSet.has(skill.id);
         const petName = skill.definition.petId
           ? petById.get(skill.definition.petId)?.name
@@ -118,7 +98,7 @@ export default function SkillBar({
               fraction={skill.charge / skill.charges}
               tint={skill.tint}
             >
-              <Icon size={17} aria-hidden="true" />
+              <SkillIcon icon={skill.icon} size={17} aria-hidden="true" />
             </ChargeRing>
             {skill.armed && (
               <span className="skill-contribution" aria-hidden="true">

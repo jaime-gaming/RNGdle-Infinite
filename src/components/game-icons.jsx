@@ -283,6 +283,26 @@ export const BayMark = (props) => (
   </Mark>
 );
 
+// Every `icon` a skill can carry, mapped to its mark. The shop card, the
+// corner rack and a companion's signature chip all read this one map, so the
+// same skill is the same drawing everywhere — no stock icons, no lookalikes.
+export const SKILL_MARKS = {
+  surge: SurgeMark,
+  trail: TrailMark,
+  bounce: BounceMark,
+  twice: TwiceMark,
+  bedrock: BedrockMark,
+  turbo: TurboMark,
+  quarry: QuarryMark,
+  miser: MiserMark,
+  triptych: TriptychMark,
+};
+
+export function SkillIcon({ icon, ...props }) {
+  const Glyph = SKILL_MARKS[icon] ?? SparkMark;
+  return <Glyph {...props} />;
+}
+
 // ---- Aura marks -----------------------------------------------------------
 // One glyph per cosmetic, drawn from the same vocabulary as the box layers so
 // the shelf preview and the worn aura describe the same effect.

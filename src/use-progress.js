@@ -22,6 +22,7 @@ import {
   clearPresence,
   OFFLINE_INTERVAL,
 } from "./offline.js";
+import { broadcastSync, SYNC_EVENT } from "./sync.js";
 export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
 function load() {
   try {
@@ -104,6 +105,47 @@ export function useProgress() {
     }
     window.addEventListener("storage", synchronize);
     return () => window.removeEventListener("storage", synchronize);
+  }, []);
+  // A linked device sent a newer save. Same rules as the cross-tab path, plus
+  // one step the storage event never needs: the winning state is written to
+  // this device's own storage first, so the link survives a reload, and a
+  // foreign account is adopted whole — that is exactly what a device link is.
+  useEffect(() => {
+    function receiveLinked(event) {
+      try {
+        const next = parseProgress(event.detail);
+        if (!next.profile) return;
+        try {
+          localStorage.setItem(PROGRESS_KEY, event.detail);
+          healthy.current = true;
+        } catch {
+          healthy.current = false;
+        }
+        if (
+          !current.current.profile ||
+          current.current.profile.id !== next.profile.id ||
+          current.current.rebirths !== next.rebirths ||
+          current.current.ultraRebirths !== next.ultraRebirths
+        ) {
+          reset(next);
+          return;
+        }
+        const merged = healthy.current
+          ? next
+          : recoverUnsavedRolls(next, current.current);
+        current.current = merged;
+        setProgress(merged);
+        healthy.current = merged === next;
+        if (healthy.current) setWarning("");
+      } catch {
+        healthy.current = false;
+        setWarning(
+          "A save from the linked device could not be read. This device is keeping its current progress.",
+        );
+      }
+    }
+    window.addEventListener(SYNC_EVENT, receiveLinked);
+    return () => window.removeEventListener(SYNC_EVENT, receiveLinked);
   }, []);
   function dispatch(input) {
     const token = epoch;
@@ -449,6 +491,8 @@ export function useProgress() {
             localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
             healthy.current = true;
             setWarning("");
+            // Live to the other device the moment this one saves.
+            broadcastSync(next);
           } catch {
             healthy.current = false;
             setWarning(

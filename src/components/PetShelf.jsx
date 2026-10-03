@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Check, Coins, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Coins } from "lucide-react";
 import {
   PETS,
   petById,
@@ -10,12 +10,16 @@ import {
 import { skillForPet, skillEffectSummary } from "../skills.js";
 import { useFormatEP } from "../use-settings.jsx";
 import PetIcon from "./PetIcon.jsx";
-import { CompanionMark } from "./game-icons.jsx";
+import { CompanionMark, SkillIcon } from "./game-icons.jsx";
 import "../pets.css";
 
-// Companions: buy one, or be very lucky. Equipping is free and the bonus
-// applies to banked EP only — never to the number, its tier or its score.
-// Rows rather than a wall of cards: thirteen companions, one line each.
+// Companions are a slideshow of cages: one companion stands in the middle of
+// the stage and the arrows slide to the next one, so thirteen friends read as
+// a shelf you walk along instead of a wall of rows. A rail of small cages
+// under the stage jumps straight to any of them.
+//
+// Buy one, or be very lucky. Equipping is free and the bonus applies to
+// banked EP only — never to the number, its tier or its score.
 export default function PetShelf({
   progress,
   onAction,
@@ -26,6 +30,7 @@ export default function PetShelf({
   const formatEP = useFormatEP();
   const [pending, setPending] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
+  const [index, setIndex] = useState(0);
   const busy = useRef(false);
   const owned = progress.pets ?? [];
   const active = progress.activePet ?? "none";
@@ -58,6 +63,24 @@ export default function PetShelf({
       .toLowerCase()
       .includes(text);
   });
+
+  // The stage points inside the filtered list: a search can shrink the list
+  // under it, and the position clamps rather than falling off the end.
+  const at = visible.length ? Math.min(index, visible.length - 1) : 0;
+  const slide = (delta) =>
+    setIndex((at + delta + visible.length) % visible.length);
+
+  // Left and right arrows slide the stage while the shelf has focus.
+  function slideKeys(event) {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      slide(-1);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      slide(1);
+    }
+  }
+
   return (
     <section
       className="shop-category pet-shelf"
@@ -70,9 +93,9 @@ export default function PetShelf({
             <CompanionMark size={16} /> Companions
           </h2>
           <p>
-            Only one is equipped at a time, free to swap, and it walks the
-            roll screen with you. Each carries a banked-EP bonus and its own
-            skill — or find one free at roughly 1 in {oneIn} rolls.
+            Only one is equipped at a time, free to swap, and it walks the roll
+            screen with you. Each carries a banked-EP bonus and its own skill —
+            or find one free at roughly 1 in {oneIn} rolls.
           </p>
         </div>
         <div className="shop-section-actions">
@@ -106,91 +129,183 @@ export default function PetShelf({
         Wallet-only: never your odds, number or score.
       </p>
       {visible.length ? (
-        <ul className="pet-grid">
-          {visible.map((pet) => {
-            const isOwned = owned.includes(pet.id);
-            const isActive = active === pet.id;
-            const affordable = progress.balance >= pet.price;
-            const signature = skillForPet(pet.id);
-            return (
-              <li
-                key={pet.id}
-                className={`pet-card ${isActive ? "is-active" : ""} ${
-                  isOwned ? "is-owned" : ""
-                }`}
-                data-pet={pet.id}
-              >
-                <PetIcon
-                  pet={pet.id}
-                  name={pet.name}
-                  multiplier={pet.multiplier}
-                  size={46}
-                  active={isActive}
-                />
-                <div className="pet-body">
-                  <div className="pet-title">
-                    <strong>{pet.name}</strong>
-                    <span className="pet-multiplier">
-                      {petBonusLabel(pet.multiplier)}
-                      <small>{formatMultiplier(pet.multiplier)}</small>
+        <div
+          className="pet-slideshow"
+          onKeyDown={slideKeys}
+          style={{ "--pet-count": visible.length }}
+        >
+          <button
+            type="button"
+            className="pet-arrow"
+            aria-label={`Previous companion, ${
+              visible[(at - 1 + visible.length) % visible.length].name
+            }`}
+            onClick={() => slide(-1)}
+          >
+            <ChevronLeft size={20} aria-hidden="true" />
+          </button>
+          <div
+            className="pet-stage"
+            role="group"
+            aria-roledescription="slideshow"
+            aria-label={`Companion ${at + 1} of ${visible.length}`}
+          >
+            <div className="pet-stage-track" style={{ "--pet-at": at }}>
+              {visible.map((pet, i) => {
+                const isOwned = owned.includes(pet.id);
+                const isActive = active === pet.id;
+                const affordable = progress.balance >= pet.price;
+                const signature = skillForPet(pet.id);
+                const current = i === at;
+                return (
+                  <article
+                    key={pet.id}
+                    data-pet={pet.id}
+                    className={`pet-slide ${current ? "is-current" : ""} ${
+                      isActive ? "is-active" : ""
+                    } ${isOwned ? "is-owned" : ""}`}
+                    style={{ "--pet-accent": pet.accent }}
+                    aria-hidden={current ? undefined : "true"}
+                    inert={current ? undefined : true}
+                  >
+                    <div className="pet-cage">
+                      <PetIcon
+                        pet={pet.id}
+                        name={pet.name}
+                        multiplier={pet.multiplier}
+                        size={124}
+                        active={isActive}
+                      />
+                      <span className="pet-cage-label">
+                        {isActive
+                          ? "walking with you"
+                          : isOwned
+                            ? "in your collection"
+                            : "in the wild"}
+                      </span>
+                    </div>
+                    <div className="pet-body">
+                      <div className="pet-title">
+                        <strong>{pet.name}</strong>
+                        <span className="pet-multiplier">
+                          {petBonusLabel(pet.multiplier)}
+                          <small>{formatMultiplier(pet.multiplier)}</small>
+                        </span>
+                      </div>
+                      <p className="pet-description">{pet.description}</p>
+                      {signature && (
+                        <p className="pet-skill">
+                          <span className="pet-skill-name">
+                            <SkillIcon icon={signature.icon} size={12} />{" "}
+                            {signature.name}
+                          </span>
+                          {skillEffectSummary(signature)}
+                        </p>
+                      )}
+                      <div className="pet-actions">
+                        {isOwned ? (
+                          isActive ? (
+                            <span className="pet-equipped">
+                              <Check size={13} /> Walking with you
+                            </span>
+                          ) : (
+                            <button
+                              className="pet-button"
+                              disabled={!!pending}
+                              onClick={() =>
+                                run(
+                                  "equip-pet",
+                                  pet.id,
+                                  `${pet.name} equipped.`,
+                                )
+                              }
+                            >
+                              Equip
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            className="pet-button is-buy"
+                            disabled={!affordable || !!pending}
+                            onClick={() =>
+                              run(
+                                "buy-pet",
+                                pet.id,
+                                `${pet.name} joined you and is now equipped.`,
+                              )
+                            }
+                          >
+                            <Coins size={13} /> {formatEP(pet.price)} EP
+                          </button>
+                        )}
+                        <small className="pet-note">
+                          {isOwned
+                            ? isActive
+                              ? "Its signature skill is available in your rack."
+                              : "Free to equip; charge is never lost."
+                            : affordable
+                              ? "Within reach of your wallet."
+                              : `${formatEP(pet.price - progress.balance)} more EP needed`}
+                        </small>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="pet-arrow"
+            aria-label={`Next companion, ${
+              visible[(at + 1) % visible.length].name
+            }`}
+            onClick={() => slide(1)}
+          >
+            <ChevronRight size={20} aria-hidden="true" />
+          </button>
+          {/* One quiet announcement for screen readers: the stage's label
+              changes with the slides, and this is what changed. */}
+          <span className="sr-only" aria-live="polite">
+            {visible[at].name}, {petBonusLabel(visible[at].multiplier)}
+          </span>
+          <div className="pet-slideshow-foot">
+            <span className="pet-counter" aria-hidden="true">
+              {String(at + 1).padStart(2, "0")} /{" "}
+              {String(visible.length).padStart(2, "0")}
+            </span>
+            {/* Every cage is one jump: the rail is the shelf seen from above. */}
+            <div className="pet-rail" aria-label="Companion cages">
+              {visible.map((pet, i) => (
+                <button
+                  key={pet.id}
+                  type="button"
+                  data-cage={pet.id}
+                  className={`pet-rail-cage ${i === at ? "is-current" : ""} ${
+                    active === pet.id ? "is-active" : ""
+                  }`}
+                  aria-label={`Show ${pet.name}`}
+                  aria-current={i === at ? "true" : undefined}
+                  onClick={() => setIndex(i)}
+                >
+                  <PetIcon
+                    pet={pet.id}
+                    name={pet.name}
+                    multiplier={pet.multiplier}
+                    size={34}
+                    active={active === pet.id}
+                  />
+                  {owned.includes(pet.id) && (
+                    <span className="pet-rail-owned" aria-hidden="true">
+                      <Check size={9} />
                     </span>
-                  </div>
-                  <p className="pet-description">{pet.description}</p>
-                  {signature && (
-                    <p className="pet-skill">
-                      <span className="pet-skill-name">
-                        <Sparkles size={11} /> {signature.name}
-                      </span>
-                      {skillEffectSummary(signature)}
-                    </p>
                   )}
-                </div>
-                <div className="pet-actions">
-                  {isOwned ? (
-                    isActive ? (
-                      <span className="pet-equipped">
-                        <Check size={13} /> Walking with you
-                      </span>
-                    ) : (
-                      <button
-                        className="pet-button"
-                        disabled={!!pending}
-                        onClick={() =>
-                          run("equip-pet", pet.id, `${pet.name} equipped.`)
-                        }
-                      >
-                        Equip
-                      </button>
-                    )
-                  ) : (
-                    <button
-                      className="pet-button is-buy"
-                      disabled={!affordable || !!pending}
-                      onClick={() =>
-                        run(
-                          "buy-pet",
-                          pet.id,
-                          `${pet.name} joined you and is now equipped.`,
-                        )
-                      }
-                    >
-                      <Coins size={13} /> {formatEP(pet.price)} EP
-                    </button>
-                  )}
-                  <small className="pet-note">
-                    {isOwned
-                      ? isActive
-                        ? "Its signature skill is available in your rack."
-                        : "Free to equip; charge is never lost."
-                      : affordable
-                        ? "Within reach of your wallet."
-                        : `${formatEP(pet.price - progress.balance)} more EP needed`}
-                  </small>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                </button>
+              ))}
+            </div>
+            <span className="pet-hint">slide with the arrows or the cages</span>
+          </div>
+        </div>
       ) : (
         <p className="shop-empty">No companions match this filter.</p>
       )}

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
-import { emptyProgress } from "../src/progress.js";
+import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import {
   shopProducts,
   productUnlocked,
@@ -9,7 +9,7 @@ import {
   SKILL_STOCK_SIZE,
   AURA_FAMILIES,
 } from "../src/shop-data.js";
-import { seedProgress } from "./helpers/progress.js";
+import { seedProgress, testProfile } from "./helpers/progress.js";
 
 // The shop is a street of sub-pages: the hub is an index of six buttons, each
 // one opening its own URL (/shop/skills, /shop/auras …), the flywheel tiers
@@ -277,14 +277,18 @@ test("the skills shelf is a stall: three skills buyable, the rest under a green 
   await expect(page.getByTestId("skill-stock-timer")).toContainText(
     /^\d:\d{2}$/,
   );
-  // Flywheel and the two bays are rack hardware, not stock: always listed.
-  for (const id of ["flywheel", "skill-bay-1", "skill-bay-2"])
+  // Flywheel and Skill Bay I are rack hardware, not stock: always listed.
+  for (const id of ["flywheel", "skill-bay-1"])
     await expect(shelf.locator(`[data-product="${id}"]`)).toHaveCount(1);
-  // Every card on the shelf reads cheapest first.
+  // Skill Bay II waits behind Skill Bay I, so until Bay I is bought it is not
+  // on the shelf at all — no locked card, no wall to save up against.
+  await expect(shelf.locator('[data-product="skill-bay-2"]')).toHaveCount(0);
+  // Every card on the shelf reads cheapest first: nine shop skills, Flywheel
+  // and Skill Bay I.
   const prices = (
     await shelf.locator(".shop-card[data-product] .shop-price").allInnerTexts()
   ).map((text) => Number(text.replace(/[^0-9]/g, "")));
-  expect(prices.length).toBe(10);
+  expect(prices.length).toBe(11);
   expect([...prices].sort((a, b) => a - b)).toEqual(prices);
   // Timing tracks are not on this shelf any more: they moved to Pace, which
   // reads cheapest first as well.
@@ -498,8 +502,21 @@ test("nothing on a shelf waits behind a purchase you have not made", async ({
   await expect(page.locator('[data-product="persistence-core"]')).toHaveCount(
     0,
   );
-  // Buying the prerequisite is what puts it on the shelf.
-  await seedProgress(page, { ...funded, owned: ["auto-roll"] });
+  // Buying the prerequisite is what puts it on the shelf. seedProgress only
+  // fills an empty save, so this second state is written directly over it.
+  await page.evaluate(
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    {
+      key: PROGRESS_KEY,
+      data: {
+        ...emptyProgress(),
+        profile: testProfile,
+        balance: 50000000,
+        totalEarned: 50000000,
+        owned: ["auto-roll"],
+      },
+    },
+  );
   await page.goto("/shop/tools");
   await expect(page.locator('[data-product="persistence-core"]')).toHaveCount(
     1,

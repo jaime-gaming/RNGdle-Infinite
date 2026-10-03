@@ -77,6 +77,7 @@ import {
   shelfOfProduct,
   productById,
 } from "./shop-data.js";
+import { joinDeviceLink, resumeDeviceLink, subscribeSync } from "./sync.js";
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
@@ -134,6 +135,35 @@ function App() {
     dispatch,
     epoch,
   } = useProgress();
+  // Device links: ?sync=ROOM.KEY joins this browser to another device's
+  // account through the memory-only relay, then leaves the address bar. A
+  // reload of a browser already in a room simply reopens the stream, and the
+  // first live pairing (or a lost relay) is announced once, in the toast.
+  useEffect(() => {
+    const token = new URLSearchParams(location.search).get("sync");
+    if (token) {
+      const url = new URL(location.href);
+      url.searchParams.delete("sync");
+      history.replaceState(
+        history.state,
+        "",
+        url.pathname + url.search + url.hash,
+      );
+      joinDeviceLink(token);
+    } else {
+      resumeDeviceLink();
+    }
+    let announced = "";
+    return subscribeSync((state, note) => {
+      if (state === "live" && announced !== "live") {
+        announced = "live";
+        notify("Devices linked — both devices now play the same account live.");
+      } else if (state === "error" && announced !== "error") {
+        announced = "error";
+        notify(note);
+      } else if (state !== "error") announced = state;
+    });
+  }, []);
   useEffect(() => {
     setModal(null);
     setShopFocus(null);

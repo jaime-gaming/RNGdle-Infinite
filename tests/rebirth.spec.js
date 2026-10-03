@@ -771,7 +771,9 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
       true,
     ),
   );
-  await other.goto("/shop/auras");
+  // The stale tab sits inside the celestial set before the rebirth happens:
+  // it must never reload afterwards, or it would stop being stale.
+  await other.goto("/shop/auras/celestial");
   await other
     .getByRole("button", { name: "Use original appearance", exact: true })
     .click();

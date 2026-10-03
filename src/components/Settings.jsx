@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Bell,
   BellOff,
+  Link2,
   Volume2,
   Eye,
   Gamepad2,
@@ -16,7 +17,134 @@ import {
   requestNotificationPermission,
   showReadyNotification,
 } from "../notifications.js";
+import {
+  buildDeviceLink,
+  createDeviceLink,
+  syncStatus,
+  subscribeSync,
+  unlinkDevices,
+} from "../sync.js";
 import "../settings.css";
+
+// One link, two devices, one account — live. The relay it talks to keeps
+// rooms in memory only: no database, no sign-up, and the save itself never
+// leaves the players' own browsers.
+function DeviceLink({ progress, notify }) {
+  const [state, setState] = useState(() => syncStatus());
+  const [creating, setCreating] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => subscribeSync(() => setState(syncStatus())), []);
+  const linked = state.linked && !!state.room;
+
+  async function create() {
+    setCreating(true);
+    try {
+      await createDeviceLink();
+      setState(syncStatus());
+      notify?.("Link created. Open it on your other device.");
+    } catch {
+      setState(syncStatus());
+      notify?.("The relay did not answer. Try again in a moment.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(buildDeviceLink());
+      setCopied(true);
+      notify?.("Device link copied.");
+    } catch {
+      notify?.("Copying was blocked — select the link and copy it by hand.");
+    }
+  }
+
+  const statusText =
+    state.status === "live"
+      ? state.detail || "Devices live"
+      : state.status === "waiting"
+        ? "Waiting for the other device…"
+        : state.status === "connecting"
+          ? "Connecting…"
+          : state.status === "error"
+            ? state.detail || "Relay unreachable."
+            : "Not linked";
+
+  return (
+    <div className="settings-group">
+      <h2>
+        <Link2 size={16} aria-hidden="true" /> Link devices
+      </h2>
+      <p className="settings-group-note">
+        One link joins two browsers to this account at the same time: buy on
+        your phone, watch it land on your PC. Saves are forwarded straight
+        between your devices with no database behind them — rooms live in the
+        relay's memory only. Whoever holds the link plays this account, so treat
+        it like a password.
+      </p>
+      <div className="setting-row">
+        <div className="setting-copy">
+          <label htmlFor="sync-status-row">This account</label>
+          <p>
+            {linked
+              ? "Both devices share one save, live. Closing one does not delete anything."
+              : progress?.profile
+                ? "Create a link here, then open it on your other device."
+                : "Guests can open a link, but a local profile is needed to start one."}
+          </p>
+        </div>
+        <span
+          id="sync-status-row"
+          className={`sync-status is-${state.status}`}
+          data-testid="sync-status"
+        >
+          <i aria-hidden="true" /> {statusText}
+        </span>
+      </div>
+      {linked ? (
+        <div className="sync-link-row">
+          <input
+            className="sync-link-field"
+            data-testid="sync-link"
+            readOnly
+            aria-label="Your device link"
+            value={buildDeviceLink()}
+            onFocus={(event) => event.target.select()}
+          />
+          <button type="button" className="secondary-button" onClick={copy}>
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => {
+              unlinkDevices();
+              setState(syncStatus());
+              notify?.("Devices unlinked. Each browser keeps its own save.");
+            }}
+          >
+            Unlink
+          </button>
+        </div>
+      ) : !progress?.profile ? (
+        <p className="sync-hint">
+          Sign up (or create a local profile) to start a link from this device.
+        </p>
+      ) : (
+        <button
+          type="button"
+          className="secondary-button"
+          data-testid="sync-create"
+          disabled={creating}
+          onClick={create}
+        >
+          <Link2 size={14} /> {creating ? "Contacting relay…" : "Create link"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function Toggle({ id, label, description, checked, onChange, disabled }) {
   return (
@@ -205,6 +333,8 @@ export default function Settings({ notify, progress, onAction, navigate }) {
           onChange={(next) => update({ autoRollDefault: next })}
         />
       </div>
+
+      <DeviceLink progress={progress} notify={notify} />
 
       {progress && (
         <div className="settings-group">

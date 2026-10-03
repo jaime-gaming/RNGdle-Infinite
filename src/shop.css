@@ -627,9 +627,27 @@
   overflow: hidden;
 }
 .shop-skill-effect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
   margin: 8px 0 0;
   color: var(--text);
   font: 500 11px/1.5 var(--roll-font);
+}
+/* One pill per claim: the effect reads as facts, not as a sentence to parse. */
+.shop-effect-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--secondary);
+  font: 500 10px/1.6 var(--roll-font);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.shop-card.is-owned .shop-effect-chip {
+  border-color: color-mix(in srgb, var(--green) 35%, var(--border));
+  color: color-mix(in srgb, var(--green) 75%, var(--text));
 }
 .shop-card-tags {
   display: flex;
@@ -711,6 +729,41 @@
 }
 .upgrade-utility {
   background: radial-gradient(ellipse at 50% 20%, #94a3b820, transparent 80%);
+}
+/* A skill card wears the same tint the corner rack gives its ring, so the
+   colour of a skill means one thing everywhere in the game. */
+.upgrade-preview.tint-gold {
+  --skill-tint: #d9a441;
+}
+.upgrade-preview.tint-pink {
+  --skill-tint: #d97ba6;
+}
+.upgrade-preview.tint-cyan {
+  --skill-tint: #4bb3c4;
+}
+.upgrade-preview.tint-violet {
+  --skill-tint: #8a7ad9;
+}
+.upgrade-preview.tint-green {
+  --skill-tint: var(--green);
+}
+.upgrade-preview.tint-orange {
+  --skill-tint: #d98241;
+}
+.upgrade-preview.tint-steel {
+  --skill-tint: var(--secondary);
+}
+.upgrade-preview.tint-gold > svg,
+.upgrade-preview.tint-pink > svg,
+.upgrade-preview.tint-cyan > svg,
+.upgrade-preview.tint-violet > svg,
+.upgrade-preview.tint-green > svg,
+.upgrade-preview.tint-orange > svg,
+.upgrade-preview.tint-steel > svg {
+  color: var(--skill-tint);
+  filter: drop-shadow(
+    0 0 7px color-mix(in srgb, var(--skill-tint) 45%, transparent)
+  );
 }
 .upgrade-preview > span {
   font: 500 22px var(--roll-font);

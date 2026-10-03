@@ -147,7 +147,7 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   await mockRandom(page, [1000000]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto("/shop/auras");
+  await page.goto("/shop/auras/celestial");
   await expect(page.getByTestId("roll-duration")).toHaveText("35s");
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:45");
   for (const [i, id] of ["starfall", "aurora", "orbit"].entries()) {
@@ -171,7 +171,7 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(360);
-    await page.goto("/shop/auras");
+    await page.goto("/shop/auras/celestial");
   }
   await page.getByRole("button", { name: "Back to rolling" }).click();
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();

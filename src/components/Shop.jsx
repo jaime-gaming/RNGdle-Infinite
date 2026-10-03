@@ -440,6 +440,17 @@ export default function Shop({
     const restocking = skill && !state.owned && !state.stocked;
     const definition = skill ? skillById.get(item.skillId ?? item.id) : null;
     const Icon = icons[item.icon] ?? ShoppingBag;
+    // A card that is simply for sale says nothing extra: the price and the
+    // button are the state. Only real states earn a chip.
+    const stateLabel = equipped
+      ? "Equipped"
+      : state.owned
+        ? "Owned"
+        : restocking
+          ? "Back soon"
+          : skill
+            ? "In stock"
+            : "";
     if (!matches(item, state)) return null;
     return (
       <article
@@ -455,7 +466,9 @@ export default function Shop({
           className={
             aura
               ? `aura-preview aura-${item.id}`
-              : `upgrade-preview upgrade-${item.kind}`
+              : // A skill tile wears its own tint, so the shelf reads each
+                // skill's colour the same way the corner rack does.
+                `upgrade-preview upgrade-${item.kind}${item.tint ? ` tint-${item.tint}` : ""}`
           }
           aria-hidden="true"
         >
@@ -486,19 +499,13 @@ export default function Shop({
               />
             )}
             <h3>{item.name}</h3>
-            <span
-              className={`shop-state ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""}`}
-            >
-              {equipped
-                ? "Equipped"
-                : state.owned
-                  ? "Owned"
-                  : restocking
-                    ? "Back soon"
-                    : skill
-                      ? "In stock"
-                      : "Kept"}
-            </span>
+            {stateLabel && (
+              <span
+                className={`shop-state ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""}`}
+              >
+                {stateLabel}
+              </span>
+            )}
           </div>
           <p className="shop-card-desc">
             {item.id === "offline-roller" && state.owned
@@ -506,22 +513,26 @@ export default function Shop({
               : item.description}
           </p>
           {/* What the skill adds, outside the folded description so the effect
-              is never the line that gets clipped. */}
+              is never the line that gets clipped: one pill per claim. */}
           {skill && definition && (
             <p className="shop-skill-effect">
-              {skillEffectChips(definition).join(" · ")}
+              {skillEffectChips(definition).map((chip) => (
+                <span className="shop-effect-chip" key={chip}>
+                  {chip}
+                </span>
+              ))}
             </p>
           )}
-          {/* Only the cards that need a caveat carry one: a goal marker, a
-              prerequisite, or the profile gate. Everything else stays quiet. */}
-          {(goal?.id === item.id ||
-            requiresName(item) ||
-            state.profileGated) && (
+          {/* Only the cards that need a caveat carry one: a goal marker, an
+              unmet prerequisite (rare now that the shelf hides those), or the
+              profile gate. A prerequisite that is already met is not a caveat
+              — it never renders a "Needs" tag on a card you can buy. */}
+          {(goal?.id === item.id || state.requires || state.profileGated) && (
             <div className="shop-card-tags">
               {goal?.id === item.id && (
                 <span className="shop-tag is-goal">Your goal</span>
               )}
-              {requiresName(item) && (
+              {state.requires && (
                 <span className="shop-tag is-locked">
                   Needs {requiresName(item)}
                 </span>
@@ -1132,11 +1143,16 @@ export default function Shop({
             <span className="shop-filter-count" role="status">
               {shelf.id === "companions"
                 ? `${progress.pets?.length ?? 0} / ${PETS.length} found`
-                : !shelfItemsNow.length
-                  ? // A locked shelf has nothing to count; its own panel says
-                    // why, and a second "0 of 0" would only be noise.
-                    "Locked"
-                  : `${visibleCount} of ${shelfItemsNow.length} on this shelf`}
+                : shelf.id === "auras" && !auraFamily
+                  ? // The index has no cards to count — its four banners are
+                    // the shelf, so it counts sets instead of calling itself
+                    // locked.
+                    `${AURA_FAMILIES.length} sets · ${productsOnShelf("auras").length} looks`
+                  : !shelfItemsNow.length
+                    ? // A locked shelf has nothing to count; its own panel says
+                      // why, and a second "0 of 0" would only be noise.
+                      "Locked"
+                    : `${visibleCount} of ${shelfItemsNow.length} on this shelf`}
             </span>
           </div>
         </div>
