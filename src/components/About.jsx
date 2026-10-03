@@ -71,7 +71,7 @@ export default function About({ navigate, progress }) {
       title: "Skills and the rack",
       points: [
         `A skill charges over its own number of completed online rolls; offline rolls never charge it.`,
-        "Charging is automatic and free. Swapping skills in and out of the rack costs nothing.",
+        "Charging is automatic and free. Swapping skills in and out of the rack costs nothing, and four racks can be saved on the Skills shelf and put back in one click.",
         "Draw skills only ever pick between numbers you genuinely rolled — each draw is an ordinary, independent roll. Wallet skills multiply banked EP alone.",
         "The rack starts at two slots and grows to four with the two Skill Bays in the shop.",
       ],

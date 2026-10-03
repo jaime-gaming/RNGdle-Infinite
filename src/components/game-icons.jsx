@@ -482,6 +482,13 @@ export const TriptychMark = (props) => (
   </Mark>
 );
 
+export const RackMark = (props) => (
+  <Mark {...props}>
+    <path d="M4.4 6.2h15.2v3.8H4.4zM4.4 10.8h15.2v3.8H4.4zM4.4 15.4h15.2v3.8H4.4z" />
+    <path className="tone" d="M6.8 7.5h2v1.2h-2zM6.8 12.1h2v1.2h-2z" />
+  </Mark>
+);
+
 export const SparkMark = (props) => (
   <Mark {...props}>
     <path d="M12 3.6l1.8 5.4 5.4 1.8-5.4 1.8L12 18l-1.8-5.4L4.8 10.8l5.4-1.8Z" />

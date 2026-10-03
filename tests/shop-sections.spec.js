@@ -230,7 +230,7 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   expect(leaking).toEqual([]);
 });
 
-test("the skills shelf is a stall: two skills buyable, the rest under a green aura", async ({
+test("the skills shelf is a stall: three skills buyable, the rest under a green aura", async ({
   page,
 }) => {
   await seedProgress(page, funded);
@@ -401,4 +401,50 @@ test("the auto-roll tool is described as an ability, not as a setting", () => {
   const roll = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
   expect(roll).not.toContain("auto-roll-heading");
   expect(roll).toContain("autoRollRunning");
+});
+
+test("a rack can be saved on the skills shelf and put back in one click", async ({
+  page,
+}) => {
+  // Two skills equipped, one rack saved from an earlier session: every step
+  // below is seeded, so nothing depends on what the stall happens to stock.
+  await seedProgress(page, {
+    ...funded,
+    owned: ["surge", "trail", "bounce", "skill-bay-1"],
+    skills: ["surge", "trail", "bounce"],
+    equippedSkills: ["bounce"],
+    loadouts: [
+      {
+        id: "rack-surge+trail",
+        name: "Surge + Trail",
+        skills: ["surge", "trail"],
+      },
+    ],
+  });
+  await page.goto("/shop/skills");
+  const book = page.locator(".skill-racks");
+  await expect(book).toBeVisible();
+  // The saved rack is listed, and the rack on screen is not among them yet.
+  await expect(book.locator(".skill-rack")).toHaveCount(1);
+  await expect(book).toContainText("1 of 4 saved");
+  await expect(
+    book.getByRole("button", { name: "Save this rack" }),
+  ).toBeEnabled();
+
+  // Saving the rack on screen adds a second entry, named after itself.
+  await book.getByRole("button", { name: "Save this rack" }).click();
+  await expect(book.locator(".skill-rack")).toHaveCount(2);
+  await expect(book).toContainText("2 of 4 saved");
+  await expect(book).toContainText("Bounce");
+
+  // One click puts a whole rack back — and says so once it is equipped.
+  await page.locator('.skill-rack-apply:has-text("Surge + Trail")').click();
+  await expect(
+    book.getByRole("button", { name: "This rack is saved" }),
+  ).toBeDisabled();
+
+  // Deleting an entry empties that slot, leaving the other rack alone.
+  await page.getByRole("button", { name: "Delete Bounce" }).click();
+  await expect(book.locator(".skill-rack")).toHaveCount(1);
+  await expect(book).toContainText("Surge + Trail");
 });

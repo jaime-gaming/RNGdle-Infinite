@@ -27,6 +27,7 @@ import {
   SKILL_STOCK_WINDOW_MS,
   AURA_FAMILIES,
 } from "../shop-data";
+import { LOADOUT_LIMIT } from "../progress.js";
 import { gameNow } from "../game-clock.js";
 import { pathForSubpage } from "../router.js";
 import {
@@ -44,6 +45,7 @@ import {
   skillById,
   skillChargeOf,
   skillEffectChips,
+  skillUnlocked,
 } from "../skills.js";
 import NumberBox from "./NumberBox";
 import {
@@ -77,6 +79,7 @@ import {
   SkillMark,
   SolsticeMark,
   SparkMark,
+  RackMark,
   HalcyonMark,
   DownpourMark,
   BlueprintMark,
@@ -193,9 +196,9 @@ export default function Shop({
     suggested = recommendedGoal(progress),
     // The same cheap-first order as the shelves themselves.
     choices = [...availableGoals(progress)].sort((a, b) => a.price - b.price);
-  // The skill stall: two shop skills on sale at a time, rotating every five
+  // The skill stall: three shop skills on sale at a time, rotating every five
   // minutes on the shared game clock, so every tab and the purchase guard
-  // agree on the pair. The one-second ticker only runs on this shelf.
+  // agree on the stock. The one-second ticker only runs on this shelf.
   const [clock, setClock] = useState(() => gameNow());
   useEffect(() => {
     if (shelf?.id !== "skills") return;
@@ -208,10 +211,10 @@ export default function Shop({
     0,
     Math.ceil(((stockWindow + 1) * SKILL_STOCK_WINDOW_MS - clock) / 1000),
   );
-  // The rotation is deterministic, so the upcoming pair is already known.
+  // The rotation is deterministic, so the upcoming stock is already known.
   const nextPair = skillStock(stockWindow + 1, progress.owned);
   // When one out-of-stock skill comes back — the moment it is on sale again,
-  // not the next pair rotation, which may not carry it.
+  // not the next rotation, which may not carry it.
   function restockLabel(id) {
     const offset = nextSkillStockOffset(stockWindow, progress.owned, id);
     if (offset == null) return "Back later";
@@ -420,8 +423,8 @@ export default function Shop({
         : skill
           ? (progress.equippedSkills ?? []).includes(item.id)
           : false;
-    // Out of the stall's rotation: still listed, dimmed under a green aura,
-    // with the next restock counting down.
+    // Out of the stall's current stock: still listed, dimmed under a green
+    // aura, with the next restock counting down.
     const restocking = skill && !state.owned && !state.stocked;
     const definition = skill ? skillById.get(item.skillId ?? item.id) : null;
     const Icon = icons[item.icon] ?? ShoppingBag;
@@ -739,6 +742,21 @@ export default function Shop({
   const visibleCount = shelfItemsNow.filter((item) =>
     matches(item, stateOf(item)),
   ).length;
+  // Saved racks. Equipping is free, so a rack is a convenience rather than a
+  // purchase: applying one can never cost EP, and a skill the account lost is
+  // simply left out of the rack it applies.
+  const loadouts = progress.loadouts ?? [];
+  const rackIds = [...new Set(progress.equippedSkills ?? [])].filter((id) =>
+    skillUnlocked(id, progress),
+  );
+  const rackSaved =
+    !!rackIds.length &&
+    loadouts.some((entry) => entry.id === `rack-${rackIds.join("+")}`);
+  const loadoutOf = (entry) => ({
+    ...entry,
+    names: entry.skills.map((id) => skillById.get(id)?.name ?? id),
+    ready: entry.skills.filter((id) => skillUnlocked(id, progress)).length,
+  });
   // Auras are grouped by family. A family with nothing to show after a search
   // simply drops out, so the shelf never prints an empty heading.
   const auraGroups = AURA_FAMILIES.map((family) => ({
@@ -1033,7 +1051,7 @@ export default function Shop({
               {rack.used} / {rack.slots} slots used
             </span>
           </div>
-          {/* The stall itself: how full, and when the pair rotates. */}
+          {/* The stall itself: how full, and when the stock rotates. */}
           <div
             className={`skill-stock ${stock.length ? "" : "is-empty"}`}
             role="status"
@@ -1048,7 +1066,7 @@ export default function Shop({
                 <b data-testid="skill-stock-timer">
                   {formatDuration(stockSecondsLeft)}
                 </b>
-                {/* The rotation is deterministic, so the pair that replaces
+                {/* The rotation is deterministic, so the stock that replaces
                     this one is already knowable — say it. */}
                 {!!nextPair.length && (
                   <em className="skill-stock-next">
@@ -1065,6 +1083,75 @@ export default function Shop({
           </div>
           {/* What the rack adds up to is stated once — in the Σ panel of the
               skill bar — not repeated here. */}
+          {(!!loadouts.length || !!rackIds.length) && (
+            <div className="skill-racks" aria-labelledby="skill-racks-title">
+              <div className="skill-racks-head">
+                <h3 id="skill-racks-title">
+                  <RackMark size={14} /> Saved racks
+                </h3>
+                <p>
+                  Swapping skills is free, so a rack you like is worth keeping:
+                  one click puts the whole set back. They belong to the run — a
+                  rebirth clears them with the skills that paid for them.
+                </p>
+                <span className="skill-racks-count">
+                  {loadouts.length} of {LOADOUT_LIMIT} saved
+                </span>
+              </div>
+              <div className="skill-rack-row">
+                {loadouts.map((entry) => {
+                  const rack = loadoutOf(entry);
+                  const partial = rack.ready < entry.skills.length;
+                  return (
+                    <span
+                      className={`skill-rack ${partial ? "is-partial" : ""}`}
+                      key={entry.id}
+                    >
+                      <button
+                        type="button"
+                        className="skill-rack-apply"
+                        disabled={pending || !rack.ready}
+                        onClick={() => perform("apply-loadout", entry.id)}
+                      >
+                        <strong>{entry.name}</strong>
+                        <small>
+                          {partial
+                            ? `${rack.ready} of ${entry.skills.length} unlocked`
+                            : rack.names.join(" · ")}
+                        </small>
+                      </button>
+                      <button
+                        type="button"
+                        className="skill-rack-delete"
+                        aria-label={`Delete ${entry.name}`}
+                        disabled={pending}
+                        onClick={() => perform("delete-loadout", entry.id)}
+                      >
+                        <X size={12} aria-hidden="true" />
+                      </button>
+                    </span>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={
+                    pending ||
+                    !rackIds.length ||
+                    rackSaved ||
+                    loadouts.length >= LOADOUT_LIMIT
+                  }
+                  onClick={() => perform("save-loadout")}
+                >
+                  {rackSaved
+                    ? "This rack is saved"
+                    : loadouts.length >= LOADOUT_LIMIT
+                      ? "Rack book full"
+                      : "Save this rack"}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="shop-grid shop-grid-rows">
             {shelfItemsNow.map(card)}
           </div>

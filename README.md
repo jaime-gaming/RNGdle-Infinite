@@ -154,6 +154,9 @@ draws_ — next to the number that was kept.
 The rack starts with **two slots**. Skill Bay I (**1,000,000 EP**) widens it to
 three, Skill Bay II (**4,000,000 EP**) to four. Equipping, unequipping and
 swapping skills is **free** — the bays are the purchase, the loadout is not.
+The Skills shelf also keeps **four saved racks**: save the set you have equipped
+and put the whole rack back with one click. They belong to the run, so a rebirth
+clears them along with the skills that paid for them.
 
 ## Flywheel
 

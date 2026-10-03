@@ -41,11 +41,17 @@ import {
   skillWaivesCooldown,
   skillWalletMultiplier,
   validSkillCharge,
+  SKILL_IDS,
   SKILL_MAX_DRAWS,
+  SKILL_SLOTS,
+  SKILL_SLOTS_BASE,
 } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
+// A rack holds at most five skills, so four saved racks is a full set: one for
+// each thing a player might be doing, and no room to hoard.
+export const LOADOUT_LIMIT = 4;
 const badgeIds = new Set(metadata.map((b) => b.id));
 const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
 
@@ -123,8 +129,43 @@ export function emptyProgress() {
     skills: [],
     equippedSkills: [],
     skillCharge: {},
+    loadouts: [],
   };
 }
+// Saved racks. Parsed leniently — a preset is only checked against what the
+// account can actually equip when it is applied, because a save can outlive the
+// skills that were in it.
+function parseLoadouts(value) {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const entry of value.slice(0, LOADOUT_LIMIT)) {
+    if (!entry || typeof entry !== "object") continue;
+    if (typeof entry.id !== "string" || !entry.id) continue;
+    if (!Array.isArray(entry.skills)) continue;
+    const skills = [
+      ...new Set(
+        entry.skills.filter(
+          (id) => typeof id === "string" && SKILL_IDS.includes(id),
+        ),
+      ),
+    ].slice(0, SKILL_SLOTS_BASE + SKILL_SLOTS.length);
+    if (!skills.length) continue;
+    const name =
+      typeof entry.name === "string" ? entry.name.trim().slice(0, 40) : "";
+    if (out.some((saved) => saved.id === entry.id)) continue;
+    out.push({ id: entry.id, name: name || loadoutName(skills), skills });
+  }
+  return out;
+}
+
+// The name a saved rack earns for itself: the skills it holds, in order.
+export function loadoutName(skills = []) {
+  const names = skills.map((id) => skillById.get(id)?.name ?? id);
+  if (!names.length) return "Empty rack";
+  if (names.length <= 2) return names.join(" + ");
+  return `${names[0]} + ${names.length - 1} more`;
+}
+
 export function parseProgress(raw) {
   if (raw === null) return emptyProgress();
   const p = JSON.parse(raw);
@@ -243,6 +284,7 @@ export function parseProgress(raw) {
     activePet,
     skills,
     equippedSkills,
+    loadouts: parseLoadouts(p.loadouts),
     skillCharge: parseSkillCharge(p.skillCharge),
     cooldownUntil,
     receipts: [
@@ -315,6 +357,9 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
     cooldownUntil: 0,
     cooldownWindow: null,
     cycleEarnedEP: 0,
+    // Saved racks belong to the run: the skills they were built from were
+    // handed back with the rest of the shop.
+    loadouts: [],
   };
 }
 export function applyProgress(state, action) {
@@ -599,7 +644,7 @@ export function applyProgress(state, action) {
       throw new Error(
         "Restore offline rewards before upgrading offline earnings. No EP was spent.",
       );
-    // The skills shelf only ever sells the stall's rotating pair. The guard
+    // The skills shelf only ever sells the stall's rotating stock. The guard
     // reads the same clock windows as the shelf itself, so a card that was
     // buyable when the dialog opened simply sells out past the rotation.
     if (
@@ -744,6 +789,65 @@ export function applyProgress(state, action) {
       return state;
     // Swapping skills is free, so there is no history entry and no charge lost.
     return { ...state, equippedSkills: equipped };
+  }
+  // ---- Saved racks -------------------------------------------------------
+  // Equipping is free, so a saved rack is a convenience, never a purchase:
+  // these three actions move no EP, write no history and change no odds.
+  if (action.type === "save-loadout") {
+    const equipped = [...new Set(state.equippedSkills ?? [])].filter((id) =>
+      skillUnlocked(id, state),
+    );
+    if (!equipped.length) throw new Error("Equip a rack worth saving first.");
+    const saved = state.loadouts ?? [];
+    if (saved.length >= LOADOUT_LIMIT)
+      throw new Error(
+        `Your rack holds ${LOADOUT_LIMIT} saved racks. Delete one to save another.`,
+      );
+    // Identical racks are not saved twice.
+    const same = saved.find(
+      (entry) =>
+        entry.skills.length === equipped.length &&
+        entry.skills.every((id, index) => id === equipped[index]),
+    );
+    if (same) return state;
+    return {
+      ...state,
+      loadouts: [
+        ...saved,
+        // The id is the rack itself, so the same rack can never be saved twice
+        // and nothing depends on the clock.
+        {
+          id: `rack-${equipped.join("+")}`,
+          name: loadoutName(equipped),
+          skills: equipped,
+        },
+      ],
+    };
+  }
+  if (action.type === "apply-loadout") {
+    const entry = (state.loadouts ?? []).find(
+      (saved) => saved.id === action.id,
+    );
+    if (!entry) throw new Error("That saved rack is gone.");
+    const slots = skillSlots(state.owned ?? []);
+    const equipped = entry.skills.filter((id) => skillUnlocked(id, state));
+    if (!equipped.length)
+      throw new Error("None of those skills are unlocked right now.");
+    const trimmed = equipped.slice(0, slots);
+    if (
+      trimmed.length === (state.equippedSkills ?? []).length &&
+      trimmed.every((id, index) => id === state.equippedSkills[index])
+    )
+      return state;
+    return { ...state, equippedSkills: trimmed };
+  }
+  if (action.type === "delete-loadout") {
+    const saved = state.loadouts ?? [];
+    if (!saved.some((entry) => entry.id === action.id)) return state;
+    return {
+      ...state,
+      loadouts: saved.filter((entry) => entry.id !== action.id),
+    };
   }
   if (action.type === "equip") {
     if (

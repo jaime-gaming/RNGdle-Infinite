@@ -1132,3 +1132,103 @@
     box-shadow: none;
   }
 }
+
+/* Saved racks. Equipping is free, so these are shortcuts, not purchases:
+   plain chips under the stall, never taller than the row they sit in. */
+.skill-racks {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--hover);
+}
+.skill-racks-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.skill-racks-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.skill-racks-head p {
+  flex: 1;
+  min-width: 180px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 17px;
+}
+.skill-racks-count {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.skill-rack-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.skill-rack {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.skill-rack.is-partial {
+  border-style: dashed;
+}
+.skill-rack-apply {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  text-align: left;
+  cursor: pointer;
+}
+.skill-rack-apply:hover:not(:disabled) {
+  background: var(--hover);
+}
+.skill-rack-apply:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.skill-rack-apply strong {
+  font-size: 12px;
+}
+.skill-rack-apply small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.skill-rack-delete {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.skill-rack-delete:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--primary);
+}

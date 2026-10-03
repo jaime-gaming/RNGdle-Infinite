@@ -643,9 +643,9 @@ export function productsOnShelf(id) {
 
 // ---- Skill stock ----------------------------------------------------------
 // The skills shelf sells its charged effects like a stall, not a catalogue:
-// only two shop skills are on sale at once, and the pair rotates every five
+// only three shop skills are on sale at once, and the stock rotates every five
 // minutes. The rotation is deterministic — every tab, reload and the purchase
-// guard derive the same pair from the clock, never from a stored list. Skill
+// guard derive the same stock from the clock, never from a stored list. Skill
 // bays, Flywheel and anything you already own are not stock: they stay on the
 // shelf permanently.
 export const SKILL_STOCK_WINDOW_MS = 300000; // Five minutes.

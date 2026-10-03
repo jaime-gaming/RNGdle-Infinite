@@ -10,6 +10,7 @@ export const CHANGELOG = [
       "three new things to buy: Offline Vault III (360 rolls an absence), Miser (triple EP) and Triptych (three draws).",
       "the skill stall sells three at a time now, so all nine skills still come round before you finish reading.",
       "companions are redrawn: clearer creatures, and each one wears its own colour on the shelf and in the rack.",
+      "saved racks: keep a set of skills and put the whole rack back in one click. Free, like every swap.",
     ],
   },
   {
