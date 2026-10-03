@@ -371,7 +371,7 @@ export function applyProgress(state, action) {
     if (!validAmount(count + 1))
       throw new Error("Ultra-rebirth limit reached.");
     // The same fresh start a rebirth gives, taken at the top of the ladder
-    // with the whole collection in hand. It costs the run, never the account:
+    // with half the collection in hand. It costs the run, never the account:
     // history, rebirths, ladder skills and every permanent bonus stay, and the
     // ultra-rebirth adds ten more points forever.
     const starter = cycleStarterEp(state.rebirths ?? 0, count + 1);

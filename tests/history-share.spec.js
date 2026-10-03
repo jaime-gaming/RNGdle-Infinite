@@ -163,3 +163,65 @@ test("the feed draws a dotted line where each rebirth began a cycle", () => {
   expect(progress).toContain("appendHistory(state.history");
   expect(progress).not.toMatch(/startNewCycle[\s\S]{0,900}history: \[\]/);
 });
+
+test("History keeps every cycle and draws a line where each rebirth opened one", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    ...emptyProgress(),
+    profile: testProfile,
+    rebirths: 1,
+    cycleEarnedEP: 34000,
+    history: [
+      {
+        id: "roll:old",
+        type: "roll",
+        at: Date.UTC(2026, 5, 1),
+        number: 123456,
+        tier: "epic",
+        ep: 12000,
+        badges: [],
+      },
+      {
+        id: "reb:1",
+        type: "rebirth",
+        at: Date.UTC(2026, 6, 1),
+        count: 1,
+        grant: 250000,
+        cost: 100000,
+      },
+      {
+        id: "roll:new",
+        type: "roll",
+        at: Date.UTC(2026, 7, 1),
+        number: 777777,
+        tier: "godly",
+        ep: 34000,
+        badges: [],
+      },
+    ],
+  });
+  await page.goto("/history");
+  // One line, labelled with the rebirth that opened the cycle.
+  await expect(page.locator(".activity-divider")).toHaveCount(1);
+  await expect(page.locator(".activity-divider")).toContainText("Rebirth 1");
+  // Nothing was dropped to make room for it: both cycles are still there, on
+  // either side of the line, newest first.
+  await expect(page.locator('[data-event-type="roll"]')).toHaveCount(2);
+  await expect(
+    page.getByRole("button", { name: "Share roll 777777" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Share roll 123456" }),
+  ).toBeVisible();
+  // The line opens the cycle rather than closing the old one: newest first,
+  // it sits directly above the rebirth that drew it.
+  const order = await page.evaluate(() =>
+    [...document.querySelectorAll(".activity-feed > li")].map((li) =>
+      li.classList.contains("activity-divider")
+        ? "divider"
+        : li.dataset.eventType,
+    ),
+  );
+  expect(order).toEqual(["roll", "divider", "rebirth", "roll"]);
+});
