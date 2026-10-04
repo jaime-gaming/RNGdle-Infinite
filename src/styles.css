@@ -910,6 +910,30 @@ footer button:hover,
   border-color: #f0e2c9;
   color: #b59b69;
 }
+/* An uploaded logo replaces the glyph with the account's own picture, in the
+   same rounded tile. */
+.page-icon.has-logo {
+  padding: 0;
+  background: var(--surface);
+  overflow: hidden;
+}
+.page-icon.has-logo .avatar-mark {
+  border: 0;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+}
+.page-icon.has-logo .avatar-mark img {
+  width: 100%;
+  height: 100%;
+}
+/* The header button keeps its shape when the mark stands in for the glyph. */
+.sign-in .avatar-mark {
+  border-color: color-mix(in srgb, var(--text) 18%, var(--border));
+}
+.sign-in[data-avatar="logo"] {
+  padding-left: 7px;
+}
 .eyebrow {
   font-size: 9px;
   font-weight: 600;

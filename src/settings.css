@@ -403,3 +403,94 @@
     flex-basis: 100%;
   }
 }
+
+/* ---- The device-link page ------------------------------------------------ */
+/* Settings carries the summary; everything technical lives one click away. */
+.sync-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.sync-pending {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font: 600 9px/1.6 var(--roll-font);
+  font-style: normal;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  animation: sync-breathe 1.8s ease-in-out infinite;
+}
+.sync-status.is-offline {
+  border-color: color-mix(in srgb, #d9a441 55%, var(--border));
+  color: #b8862f;
+}
+.device-link {
+  width: min(100%, 720px);
+  text-align: left;
+}
+.device-link-lede {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--secondary);
+  max-width: 68ch;
+}
+.device-link-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 26px 0 10px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+.device-link-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--border);
+  animation: sync-note-in 260ms ease-out both;
+}
+.device-link-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 13px;
+  background: var(--surface);
+}
+.device-link-details dt {
+  font: 500 9.5px var(--roll-font);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.device-link-details dd {
+  margin: 0;
+  font: 500 11.5px/1.5 var(--roll-font);
+  color: var(--text);
+  word-break: break-all;
+}
+.device-link-note {
+  margin: 12px 0 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.device-link-footer {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.back-to-settings {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

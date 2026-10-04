@@ -11,6 +11,28 @@ import { shopProducts } from "../src/shop-data.js";
 const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
 
+// The numbers a device keeps about its own link: the stamp the room last
+// accepted, and whether a change is still waiting to be sent.
+const linkState = (page) =>
+  page.evaluate(() =>
+    JSON.parse(localStorage.getItem("rng-infinite-sync-v1") ?? "null"),
+  );
+
+// "The room has it": the stamp moved forward and the outbox is empty.
+async function expectDelivered(page, before) {
+  await expect
+    .poll(
+      async () => {
+        const link = await linkState(page);
+        return link && !link.pending && link.savedAt > before
+          ? link.savedAt
+          : 0;
+      },
+      { timeout: 15000 },
+    )
+    .toBeGreaterThan(before);
+}
+
 test("one link joins two browsers to the same account, live", async ({
   browser,
 }) => {
@@ -21,7 +43,7 @@ test("one link joins two browsers to the same account, live", async ({
     totalEarned: 5000000,
     owned: [],
   });
-  await pageA.goto("/settings");
+  await pageA.goto("/settings/link");
   await expect(pageA.getByTestId("sync-create")).toBeVisible();
   await pageA.getByTestId("sync-create").click();
 
@@ -46,7 +68,7 @@ test("one link joins two browsers to the same account, live", async ({
       timeout: 10000,
     })
     .toBe("LuckyTester");
-  await pageB.goto("/settings");
+  await pageB.goto("/settings/link");
   await expect(pageB.getByTestId("sync-status")).toContainText(/live/);
   await pageB.goto("/");
 
@@ -104,7 +126,7 @@ test("one device can stay closed while the other contributes, and catches up on 
     totalEarned: 5000000,
     owned: [],
   });
-  await pageA.goto("/settings");
+  await pageA.goto("/settings/link");
   await pageA.getByTestId("sync-create").click();
   const link = await pageA.getByTestId("sync-link").inputValue();
 
@@ -138,7 +160,7 @@ test("one device can stay closed while the other contributes, and catches up on 
   await expect
     .poll(async () => (await saved(pageA2))?.owned ?? [], { timeout: 15000 })
     .toContain("archive-lens");
-  await pageA2.goto("/settings");
+  await pageA2.goto("/settings/link");
   await expect(pageA2.getByTestId("sync-status")).toContainText(/live/);
 
   await contextB.close();
@@ -155,7 +177,7 @@ test("a peer code carries the whole account with no relay in the middle", async 
     totalEarned: 5000000,
     owned: ["quickwind-1"],
   });
-  await pageA.goto("/settings");
+  await pageA.goto("/settings/link");
 
   // The hand-link lives behind a disclosure so the relay flow stays the
   // headline; opening it and copying fills the field whether or not the
@@ -169,7 +191,7 @@ test("a peer code carries the whole account with no relay in the middle", async 
   // common — adopts the account the moment the code is pasted.
   const contextB = await browser.newContext();
   const pageB = await contextB.newPage();
-  await pageB.goto("/settings");
+  await pageB.goto("/settings/link");
   await pageB.locator(".sync-hand summary").click();
   await pageB.getByTestId("peer-code-field").fill(code);
   await pageB.getByTestId("peer-code-adopt").click();
@@ -205,7 +227,7 @@ test("send now flushes the save, and the relay address is configurable", async (
     totalEarned: 5000000,
     owned: [],
   });
-  await pageA.goto("/settings");
+  await pageA.goto("/settings/link");
   await pageA.getByTestId("sync-create").click();
   await expect(pageA.getByTestId("sync-link")).toBeVisible();
 
@@ -239,4 +261,150 @@ test("send now flushes the save, and the relay address is configurable", async (
   );
 
   await contextA.close();
+});
+
+test("the link works when one device is closed the whole time, and when both are", async ({
+  browser,
+}) => {
+  // Device A creates the link and plays on its own. Device B does not exist
+  // yet — it might open the link tomorrow, which is the whole point: the room
+  // keeps the newest save on the relay's own store, so a closed device is not
+  // a missing device.
+  const contextA = await browser.newContext();
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, {
+    balance: 5000000,
+    totalEarned: 5000000,
+    owned: [],
+  });
+  await pageA.goto("/settings/link");
+  await pageA.getByTestId("sync-create").click();
+  const link = await pageA.getByTestId("sync-link").inputValue();
+  await expect(pageA.getByTestId("sync-status")).toContainText(
+    /Waiting for the other device/,
+  );
+
+  // A buys something and waits until the room has actually taken it — the
+  // stamp moves forward and nothing is queued any more — then closes
+  // entirely. Closing before that is exactly how a device loses a purchase.
+  await pageA.goto("/shop/tools");
+  const beforeA = (await linkState(pageA)).savedAt;
+  await pageA.locator('[data-product="archive-lens"] button').click();
+  await pageA
+    .getByRole("button", { name: "Confirm purchase", exact: true })
+    .click();
+  await expectDelivered(pageA, beforeA);
+  await pageA.close();
+
+  // Much later, B opens the same link for the first time. It is handed
+  // everything that happened while it did not exist.
+  const contextB = await browser.newContext();
+  const pageB = await contextB.newPage();
+  await pageB.goto(link);
+  await expect
+    .poll(async () => (await saved(pageB))?.profile?.username, {
+      timeout: 15000,
+    })
+    .toBe("LuckyTester");
+  expect((await saved(pageB)).owned).toContain("archive-lens");
+
+  // And the reverse once more: B plays alone while A is closed, and this time
+  // B is the one that disappears — after the room has taken its purchase.
+  await pageB.goto("/shop/tools");
+  const beforeB = (await linkState(pageB)).savedAt;
+  await pageB.locator('[data-product="auto-roll"] button').click();
+  await pageB
+    .getByRole("button", { name: "Confirm purchase", exact: true })
+    .click();
+  await expect
+    .poll(async () => (await saved(pageB)).owned ?? [], { timeout: 10000 })
+    .toContain("auto-roll");
+  await expectDelivered(pageB, beforeB);
+  await contextB.close();
+
+  const pageA2 = await contextA.newPage();
+  await pageA2.goto(link);
+  await expect
+    .poll(async () => (await saved(pageA2))?.owned ?? [], { timeout: 15000 })
+    .toContain("auto-roll");
+
+  await contextA.close();
+});
+
+test("settings keeps the summary and the link page keeps the details", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    balance: 5000000,
+    totalEarned: 5000000,
+    owned: [],
+  });
+  await page.goto("/settings");
+  // The technical surface is not in Settings any more…
+  await expect(page.getByTestId("relay-field")).toHaveCount(0);
+  await expect(page.getByTestId("link-details")).toHaveCount(0);
+  // …only a card that says what the link is and opens its own page.
+  const summary = page.locator(".settings-group", {
+    has: page.getByRole("heading", { name: "Link devices" }),
+  });
+  await expect(summary).toBeVisible();
+  await summary.getByTestId("open-device-link").click();
+  await expect(page).toHaveURL(/\/settings\/link$/);
+
+  // The page states the link, the room, this device and the relay's store.
+  await page.getByTestId("sync-create").click();
+  await expect(page.getByTestId("sync-link")).toBeVisible();
+  const details = page.getByTestId("link-details");
+  await expect(details).toContainText("Relay");
+  await expect(details).toContainText("Store");
+  await expect(details).toContainText(/On disk|In memory only/);
+  await expect(details).toContainText("Waiting to be sent");
+  await expect(page.getByTestId("relay-field")).toBeVisible();
+
+  // Back to settings is a real route, and the browser's Back works too.
+  await page.getByRole("button", { name: "Back to settings" }).first().click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/settings\/link$/);
+});
+
+test("a change made while the relay is unreachable is queued and sent later", async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await seedProgress(page, {
+    balance: 5000000,
+    totalEarned: 5000000,
+    owned: [],
+  });
+  await page.goto("/settings/link");
+  await page.getByTestId("sync-create").click();
+  await expect(page.getByTestId("sync-link")).toBeVisible();
+
+  // The relay goes away: every frame from here on fails, exactly as it does
+  // when the device running it is asleep.
+  await page.route("**/__sync/state**", (route) => route.abort());
+  await page.goto("/shop/tools");
+  await page.locator('[data-product="archive-lens"] button').click();
+  await page
+    .getByRole("button", { name: "Confirm purchase", exact: true })
+    .click();
+  await page.goto("/settings/link");
+  await expect(page.getByTestId("sync-pending")).toBeVisible({
+    timeout: 10000,
+  });
+  await expect(page.getByTestId("link-details")).toContainText(/Yes — since/);
+
+  // The relay answers again; Send now hands over the queued save.
+  await page.unroute("**/__sync/state**");
+  await page.getByTestId("sync-now").click();
+  await expect(page.getByTestId("sync-pending")).toHaveCount(0, {
+    timeout: 10000,
+  });
+  await expect(page.getByTestId("link-details")).toContainText(
+    "Nothing queued",
+  );
+
+  await context.close();
 });

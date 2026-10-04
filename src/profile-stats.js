@@ -155,6 +155,19 @@ export function exportFileName(progress = {}) {
   return `rngdle-infinite-${name || "guest"}-${stamp}.png`;
 }
 
+// The account logo is already a data URL, so the card can carry it without
+// touching the network. A picture that fails to decode simply leaves the card
+// without a logo rather than failing the export.
+function loadAvatar(avatar) {
+  if (typeof Image === "undefined" || !avatar) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = avatar;
+  });
+}
+
 function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -165,7 +178,7 @@ function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-export function drawExportCardToCanvas(canvas, progress = {}) {
+export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   const payload = exportPayload(progress);
   const { stats, accountName, biggestRoll } = payload;
   const width = 1200;
@@ -200,10 +213,27 @@ export function drawExportCardToCanvas(canvas, progress = {}) {
   ctx.fillText(`SNAPSHOT · ${dateText}`, width - 54, 68);
   ctx.textAlign = "left";
 
-  // Account Name
+  // Account Name, with the account's own logo beside it when it has one.
+  let nameX = 54;
+  if (logo) {
+    const size = 54;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(54 + size / 2, 108, size / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(logo, 54, 108 - size / 2, size, size);
+    ctx.restore();
+    ctx.strokeStyle = "#3a3d4b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(54 + size / 2, 108, size / 2, 0, Math.PI * 2);
+    ctx.stroke();
+    nameX = 54 + size + 18;
+  }
   ctx.fillStyle = "#eeece8";
   ctx.font = '700 44px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText(accountName, 54, 126);
+  ctx.fillText(accountName, nameX, 126);
 
   if (stats.ultraRebirths > 0) {
     ctx.fillStyle = "#d9a441";
@@ -341,7 +371,11 @@ export function drawExportCardToCanvas(canvas, progress = {}) {
 export async function renderExportPngBlob(progress = {}) {
   if (typeof document !== "undefined") {
     const canvas = document.createElement("canvas");
-    drawExportCardToCanvas(canvas, progress);
+    drawExportCardToCanvas(
+      canvas,
+      progress,
+      await loadAvatar(progress.profile?.avatar),
+    );
     if (typeof canvas.toBlob === "function") {
       const blob = await new Promise((resolve) =>
         canvas.toBlob((b) => resolve(b), "image/png"),

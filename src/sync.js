@@ -1,15 +1,28 @@
-// Device links: one URL joins two browsers to the same account, live.
+// Device links: one URL joins two browsers to the same account.
 //
-// No database anywhere. The link carries the room id and its key
-// (`?sync=ROOM.KEY`); the relay forwards whole-save snapshots and keeps only
-// the newest one in memory; the real save lives in each browser's own
-// localStorage. Conflicts resolve with one total order both sides share —
-// later `savedAt` wins, ties go to the smaller device id — so two devices
-// always converge on the same progress.
+// The link carries the room id and its key (`?sync=ROOM.KEY`). The relay is
+// the meeting point — and it keeps the room *on the device that runs it*, so
+// the link behaves like a small server of your own: either side may be closed
+// for days while the other plays, and whoever returns is handed everything
+// that happened. That covers every combination — both open, one closed, both
+// closed, alternating — with the newest save winning whenever two devices
+// played apart.
+//
+// Two things make that hold together:
+//   * the relay writes each winning save to its store before answering, so
+//     "sent" really means "kept";
+//   * this client keeps a one-frame outbox. A change made while the relay is
+//     unreachable stays marked as pending and is flushed the moment the link
+//     comes back, stamped with the time the change actually happened so the
+//     later writer wins the tie.
+//
+// Conflicts resolve with one total order both sides share — later `savedAt`
+// wins, ties go to the smaller device id. The save itself never leaves the
+// players' own browsers except through their own relay or a peer code.
 //
 // The relay speaks through same-origin relative URLs (/__sync/...), which the
-// Vite dev server hosts directly. A static deployment can run
-// `npm run relay` and point the game at it with `?relay=https://host:8787`.
+// Vite dev server hosts directly. A static deployment can run `npm run relay`
+// and point the game at it with `?relay=https://host:8787`.
 
 import { PROGRESS_KEY, parseProgress } from "./progress.js";
 
@@ -21,7 +34,7 @@ const PEER_CODE_LINE = 72;
 
 export const SYNC_EVENT = "rng-sync-state";
 
-let status = "off"; // off | connecting | waiting | live | error
+let status = "off"; // off | connecting | waiting | live | error | offline
 let detail = "";
 const listeners = new Set();
 let source = null; // EventSource
@@ -34,6 +47,11 @@ let helloTimer = 0;
 let sendTimer = 0;
 let pendingState = "";
 let everLive = false;
+// The outbox: true while this device holds a change the room has not accepted
+// yet. It is persisted with the link, so closing the tab mid-change cannot
+// silently lose the fact that the other side is owed a frame.
+let pending = false;
+let dirtyAt = 0; // When that change actually happened, not when it is sent.
 // What the settings screen animates: how many devices are in the room, when
 // the last frame crossed the wire, which way it went, and a counter that moves
 // on every exchange so the UI can flash exactly once per event.
@@ -72,7 +90,21 @@ export function syncStatus() {
     lastDirection,
     revision,
     endpoint: relayBase(),
+    device,
+    savedAt,
+    pending,
+    dirtyAt,
+    online:
+      typeof navigator === "undefined" ? true : navigator.onLine !== false,
   };
+}
+
+// What the relay itself reports about its store, for the technical page: a
+// durable relay is what makes a closed device catch up later.
+export async function fetchRelayHealth() {
+  const response = await fetch(syncUrl("health"), { cache: "no-store" });
+  if (!response.ok) throw new Error("The relay did not answer.");
+  return response.json();
 }
 
 export function subscribeSync(listener) {
@@ -137,7 +169,7 @@ function persistLink() {
     if (room)
       localStorage.setItem(
         LINK_KEY,
-        JSON.stringify({ room, key, device, savedAt }),
+        JSON.stringify({ room, key, device, savedAt, pending, dirtyAt }),
       );
     else localStorage.removeItem(LINK_KEY);
   } catch {}
@@ -193,6 +225,9 @@ export async function createDeviceLink() {
 export function resumeDeviceLink() {
   const stored = readStoredLink();
   if (!stored?.room || !stored?.key) return false;
+  // A change made in an earlier session is still owed to the room.
+  pending = stored.pending === true;
+  dirtyAt = Number(stored.dirtyAt) || 0;
   return joinDeviceLink(`${stored.room}.${stored.key}`);
 }
 
@@ -208,6 +243,12 @@ export function joinDeviceLink(token) {
   // Same link as before: keep the device identity so tie-breaks stay stable.
   device = ensureDeviceId(stored?.room === room ? stored.device : "");
   savedAt = stored?.savedAt && stored.device === device ? stored.savedAt : 0;
+  // Joining a link for the first time starts with nothing owed; resuming one
+  // keeps whatever the earlier session had not managed to deliver.
+  if (stored?.room !== room) {
+    pending = false;
+    dirtyAt = 0;
+  }
   everLive = false;
   persistLink();
   openStream();
@@ -217,6 +258,8 @@ export function joinDeviceLink(token) {
 export function unlinkDevices() {
   clearTimeout(helloTimer);
   clearTimeout(sendTimer);
+  pending = false;
+  dirtyAt = 0;
   source?.close();
   source = null;
   room = "";
@@ -264,11 +307,18 @@ function openStream() {
     }
     if (message.type === "hello") {
       clearTimeout(helloTimer);
+      updateCount(message.count);
+      if (pending && currentProfile()) {
+        // We played while the room was out of reach: hand over that work
+        // first — stamped with when it happened — and only adopt if the room
+        // turns out to hold something later than it.
+        void pushState(currentSave(), dirtyAt);
+        return;
+      }
       applyLatest(message.latest, () => {
         // The room is empty (or we hold the newest save): offer ours now.
         if (!message.latest && currentProfile()) void pushState(currentSave());
       });
-      updateCount(message.count);
     } else if (message.type === "state") applyLatest(message.payload);
     else if (message.type === "count") updateCount(message.count);
   };
@@ -357,6 +407,11 @@ export function broadcastSync(progress) {
   } catch {
     return;
   }
+  // The outbox is written down even if the relay is unreachable right now:
+  // the frame is owed until the room says it took it.
+  pending = true;
+  dirtyAt = Date.now();
+  persistLink();
   pendingState = raw;
   clearTimeout(sendTimer);
   sendTimer = setTimeout(() => {
@@ -371,16 +426,19 @@ export function broadcastSync(progress) {
 export async function pushNow() {
   if (!room) return { ok: false, reason: "offline" };
   const state = pendingState || currentSave();
+  const stamp = pending ? dirtyAt : 0;
   pendingState = "";
   clearTimeout(sendTimer);
   if (!state) return { ok: false, reason: "empty" };
-  return pushState(state);
+  return pushState(state, stamp);
 }
 
-async function pushState(state) {
+async function pushState(state, stamp = 0) {
   if (!room || !state) return { ok: false, reason: "offline" };
-  // Stamps only move forward, and a device id never changes mid-link.
-  savedAt = Math.max(savedAt + 1, Date.now());
+  // Stamps only move forward, and a device id never changes mid-link. A
+  // flushed change carries the moment it happened, so a device that edited
+  // earlier never wins against one that edited later.
+  savedAt = Math.max(savedAt + 1, Number(stamp) || 0, Date.now());
   persistLink();
   const body = JSON.stringify({ state, savedAt, device });
   try {
@@ -398,12 +456,28 @@ async function pushState(state) {
     // The room held something newer than the state we just offered: take it.
     if (result.conflict) applyLatest(result.conflict);
     if (typeof result.count === "number") updateCount(result.count);
+    pending = false;
+    dirtyAt = 0;
+    persistLink();
     markSynced("sent");
     return { ok: true };
   } catch {
     setStatus("error", "The relay is unreachable; the link is offline.");
+    scheduleRetry();
     return { ok: false, reason: "offline" };
   }
+}
+
+// A frame that could not be delivered is kept and offered again, so a short
+// outage never strands a session's worth of play.
+let retryTimer = 0;
+function scheduleRetry() {
+  if (retryTimer || !pending) return;
+  retryTimer = setTimeout(() => {
+    retryTimer = 0;
+    if (pending && room) void pushState(currentSave(), dirtyAt);
+  }, 5000);
+  retryTimer.unref?.();
 }
 
 // ---- Linking by hand -------------------------------------------------------
@@ -460,9 +534,29 @@ export function adoptPeerCode(code) {
   }
   if (!parsed?.profile) return { ok: false, reason: "guest" };
   savedAt = Math.max(savedAt, Number(payload?.at) || 0);
+  pending = false;
+  dirtyAt = 0;
+  persistLink();
   markSynced("received");
   window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: payload.save }));
   return { ok: true };
+}
+
+// Connectivity changes are part of the link's job: coming back online opens
+// the stream again and hands over whatever the outbox still holds.
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    if (!room) return;
+    if (status === "offline" || status === "error") openStream();
+    else if (pending) void pushState(currentSave(), dirtyAt);
+  });
+  window.addEventListener("offline", () => {
+    if (room)
+      setStatus(
+        "offline",
+        "This device is offline. Changes are kept here and sent when the link is back.",
+      );
+  });
 }
 
 // Last chance to flush a change that lands right as the tab closes.

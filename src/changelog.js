@@ -6,14 +6,14 @@ export const CHANGELOG = [
     title:
       "rebirth rewards the overshoot, ultra-rebirths throw a ceremony, and devices link live",
     body: [
-      "rebirth resets purchases, companions, wallet and collection; your account, history, rebirth-earned skills and permanent bonuses stay.",
-      "the six rungs ask 20-45% of badges and 250,000-15,000,000 cycle EP; overshooting the gate pays a surplus straight into the next wallet.",
+      "rebirth resets purchases, companions, wallet and collection; your account, history, rebirth-earned skills and bonuses stay.",
+      "its six rungs ask 20-45% of badges and 250,000-15,000,000 cycle EP, and overshooting pays a surplus into the next wallet.",
       "the shop hides what you cannot buy yet, and every aura family has its three-look banner, its own gradient, type and page.",
-      "nine skills in the stall, three at a time, with tinted cards and one set of hand-drawn icons across the shelf and the corner rack.",
-      "companions are a slideshow: one cage in the middle, arrows to slide to the next, each friend with its own colour and skill.",
-      "purchases celebrate on the spot, and companions waddle, bob and ripple whenever they change your number.",
-      "one link joins two devices live through a relay, or the whole account crosses in a code when there is no relay at all.",
-      "ultra-rebirths bring exclusives, a screen-filling ceremony and a note from the developer to whoever climbed the whole ladder.",
+      "nine skills wait in the stall three at a time, and one hand-drawn icon set covers the shelf and the corner rack.",
+      "companions are a slideshow from one cage: each friend has its own colour and skill, and waddles or bobs when it changes your number.",
+      "the device link survives either device being closed: the room is written to the relay's disk, and its technical page sits in Settings.",
+      "your account wears a logo you upload, squared and shrunk into the save and carried to the other device by that same link.",
+      "ultra-rebirths add exclusives and a screen-filling ceremony, and every purchase now celebrates on the spot.",
     ],
   },
   {

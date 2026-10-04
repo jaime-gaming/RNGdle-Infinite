@@ -9,6 +9,7 @@ import {
   Moon,
   Monitor,
   LogIn,
+  Link2,
   CircleHelp,
   ArrowUpRight,
   ArrowRight,
@@ -35,7 +36,8 @@ import Rebirth from "./components/Rebirth";
 import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
-import LocalProfile from "./components/LocalProfile";
+import LocalProfile, { AvatarMark } from "./components/LocalProfile";
+import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
@@ -89,6 +91,15 @@ function shopFamilyFromLocation(target) {
   return AURA_FAMILIES.some((entry) => entry.id === family) ? family : "";
 }
 
+// Settings owns one sub-page of its own: /settings/link, the device link and
+// its technical details. Anything else under /settings is the settings list.
+export const SETTINGS_SECTIONS = ["link"];
+function settingsSectionFromLocation(target) {
+  if (pageFromLocation(target) !== "settings") return "";
+  const named = subpageFromLocation(target);
+  return SETTINGS_SECTIONS.includes(named) ? named : "";
+}
+
 function shopSectionFromLocation(target) {
   if (pageFromLocation(target) !== "shop") return "";
   // A legacy "#auras" bookmark names the shelf itself; a real sub-page carries
@@ -120,11 +131,14 @@ function App() {
   const showVersionFlag = hasUnseenVersion(seenVersion);
   const [shopFocus, setShopFocus] = useState(null);
   const [shopSection, setShopSection] = useState(() =>
-      shopSectionFromLocation(location),
-    ),
-    [shopFamily, setShopFamily] = useState(() =>
-      shopFamilyFromLocation(location),
-    );
+    shopSectionFromLocation(location),
+  );
+  const [settingsSection, setSettingsSection] = useState(() =>
+    settingsSectionFromLocation(location),
+  );
+  const [shopFamily, setShopFamily] = useState(() =>
+    shopFamilyFromLocation(location),
+  );
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
@@ -239,8 +253,20 @@ function App() {
       history.pushState({ page: target, section }, "", path);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const openLinkSettings = () => {
+    setSettingsSection("link");
+    setPage("settings");
+    push("settings", pathForSubpage("settings", "link"), "link");
+  };
   const navigate = (next, focusProduct = null) => {
     const target = validPage(next);
+    // The device link is a page of its own under Settings: "settings" with the
+    // link section named lands there, everything else lands on the list.
+    if (target === "settings" && focusProduct === "link") {
+      openLinkSettings();
+      return;
+    }
+    setSettingsSection("");
     // Opening the shop on a product (a goal link, a recap) opens the shelf that
     // sells it, so the card is on screen when the page renders.
     const section =
@@ -285,17 +311,21 @@ function App() {
       setPage(pageFromLocation(location));
       setShopSection(shopSectionFromLocation(location));
       setShopFamily(shopFamilyFromLocation(location));
+      setSettingsSection(settingsSectionFromLocation(location));
     };
     update();
     const landed = pageFromLocation(location);
     const section = shopSectionFromLocation(location);
     const family = shopFamilyFromLocation(location);
+    const settingsSub = settingsSectionFromLocation(location);
     // A legacy "#shop" bookmark keeps working, a "#skills" one lands on the
     // shelf, and an unknown sub-path is normalised back to the shop hub.
     if (
       location.hash ||
       !isCurrentPath(landed, location) ||
       (landed === "shop" && subpageFromLocation(location) !== section) ||
+      (landed === "settings" &&
+        subpageFromLocation(location) !== settingsSub) ||
       (section === "auras" && familyFromLocation(location) !== family)
     )
       history.replaceState(
@@ -303,7 +333,9 @@ function App() {
         "",
         landed === "shop" && section
           ? pathForShelfFamily("shop", section, family)
-          : pathForPage(landed),
+          : landed === "settings" && settingsSub
+            ? pathForSubpage("settings", settingsSub)
+            : pathForPage(landed),
       );
     window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
@@ -512,9 +544,18 @@ function App() {
           <button
             className="sign-in"
             aria-label={session.profile ? "Your profile" : "Sign up"}
+            data-avatar={session.profile?.avatar ? "logo" : "icon"}
             onClick={() => openAuth()}
           >
-            <LogIn size={15} />
+            {session.profile ? (
+              <AvatarMark
+                avatar={session.profile.avatar}
+                size={18}
+                label={`${session.profile.username} logo`}
+              />
+            ) : (
+              <LogIn size={15} />
+            )}
             <span>{session.profile ? "Profile" : "Sign up"}</span>
           </button>
         </div>
@@ -584,24 +625,48 @@ function App() {
         )}
         {page === "settings" && (
           <>
-            <button className="back-link" onClick={() => navigate("roll")}>
-              <ArrowLeft size={14} /> Back to rolling
+            <button
+              className="back-link"
+              onClick={() =>
+                settingsSection ? navigate("settings") : navigate("roll")
+              }
+            >
+              <ArrowLeft size={14} />{" "}
+              {settingsSection ? "Back to settings" : "Back to rolling"}
             </button>
             <div className="page-heading">
               <div className="page-icon">
-                <SlidersHorizontal size={25} />
+                {settingsSection === "link" ? (
+                  <Link2 size={25} />
+                ) : (
+                  <SlidersHorizontal size={25} />
+                )}
               </div>
               <div>
-                <h1>Settings</h1>
-                <p>Alerts, presentation and gameplay conveniences.</p>
+                <h1>
+                  {settingsSection === "link" ? "Device link" : "Settings"}
+                </h1>
+                <p>
+                  {settingsSection === "link"
+                    ? "One account across your devices, and everything behind it."
+                    : "Alerts, presentation and gameplay conveniences."}
+                </p>
               </div>
             </div>
-            <Settings
-              notify={notify}
-              progress={session}
-              onAction={dispatch}
-              navigate={navigate}
-            />
+            {settingsSection === "link" ? (
+              <DeviceLinkPanel
+                notify={notify}
+                progress={session}
+                navigate={navigate}
+              />
+            ) : (
+              <Settings
+                notify={notify}
+                progress={session}
+                onAction={dispatch}
+                navigate={navigate}
+              />
+            )}
           </>
         )}
         {page === "about" && (
@@ -644,8 +709,18 @@ function App() {
               <ArrowLeft size={14} /> Back to rolling
             </button>
             <div className="page-heading">
-              <div className="page-icon">
-                <UserRound size={25} />
+              <div
+                className={`page-icon ${session.profile?.avatar ? "has-logo" : ""}`}
+              >
+                {session.profile?.avatar ? (
+                  <AvatarMark
+                    avatar={session.profile.avatar}
+                    size={46}
+                    label={`${session.profile.username} logo`}
+                  />
+                ) : (
+                  <UserRound size={25} />
+                )}
               </div>
               <div>
                 <h1>Profile</h1>

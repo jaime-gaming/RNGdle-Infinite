@@ -320,7 +320,14 @@ run back and a new cycle began: _Rebirth 1_, _Rebirth 2_, _Ultra-rebirth 1_.
 ## Your profile, your data
 
 Signing up is just a local name for a save file in your browser — no email, no
-password, no server. Your profile page shows **how far you have come**, all of
+password, no server. The name comes with a **logo**: upload any picture and it
+is squared, shrunk to 256 px and stored inside the save itself, so your account
+wears its own icon in the header, on the profile page and on the exported card —
+and, because it is part of the save, it **travels with a device link** to your
+other browser. Nothing is uploaded anywhere; the picture never leaves the page
+it was picked on.
+
+Your profile page shows **how far you have come**, all of
 it derived live from your save and your activity log rather than stored twice:
 rolls completed, online vs offline, EP earned all-time, EP spent, your best
 roll, badges discovered, companions found free, skills unlocked, charged effects
@@ -364,19 +371,30 @@ failed-write recovery.
 - **A local profile** saves your wallet, discoveries, upgrades, aura, companions,
   skills, cooldowns and activity log in `localStorage` on this browser and
   origin only.
-- **Device links, live, with no database.** Settings → _Link devices_ creates
-  one URL (`?sync=ROOM.KEY`) that joins a second browser to the same account,
-  live in both directions: buy on the phone, watch it land on the PC. The
-  relay it talks to keeps rooms **in memory only** — the save itself never
-  leaves the players' own browsers, nothing is written to disk, and a restart
-  simply empties the relay. The status pill breathes while a device is being
-  waited for and rings once every time a save crosses the wire; _Send now_
+- **Device links, live, with no database of yours.** Settings → _Link devices_
+  creates one URL (`?sync=ROOM.KEY`) that joins a second browser to the same
+  account, live in both directions: buy on the phone, watch it land on the PC.
+  The link's own page in Settings — _Settings → Device link_ — holds the
+  technical half: the relay in use, whether rooms are kept on disk or only in
+  memory, this device's room and id, how many devices are in the room, and when
+  the last save crossed the wire. The status pill breathes while a device is
+  being waited for and rings once every time a save crosses the wire; _Send now_
   flushes the current save without waiting for the next change. Anyone holding
-  the link plays the account, so treat it like a password. The dev server hosts
-  the relay on `/__sync`; a static deployment runs `npm run relay` and points
-  the game at it with `?relay=https://host:8787` or the relay field under
-  _Link devices_.
-  ![Device links in Settings](media/devices.png)
+  the link plays the account, so treat it like a password.
+
+  **Either device may be closed.** The relay writes each room to its own store
+  and only then answers a device, so a save made while the other browser is off
+  waits there instead of being lost: play on the phone, close it, open the PC a
+  day later and you are handed the newer save. The save itself still never
+  leaves the players' browsers — the relay keeps the room (the state blob it was
+  given) so it can hand it back later, and a room nobody touches is swept away
+  after a month. The dev server hosts the relay on `/__sync` with its store in
+  `.cache/sync-rooms`; a static deployment runs `npm run relay` and points the
+  game at it with `?relay=https://host:8787` or the relay field on the device
+  link page. Not sure the relay is reachable? _Send now_ shows the queue and the
+  save is kept locally until it gets through.
+  ![The device link page in Settings](media/devices.png)
+
 - **No relay at all: link by hand.** Under _No relay? Link by hand_, one device
   copies the account into a **peer code** and the other adopts it — the whole
   save, one blob of text, no server anywhere. It is the same save the relay
@@ -394,7 +412,9 @@ failed-write recovery.
 Settings are presentation only — nothing there changes odds, EP, prices or
 timings. You can turn desktop notifications and the ready chime on, force
 reduced motion, hide the skill bar, hide the goal recap, use compact EP numbers,
-skip purchase confirmations, or make the Auto-Roll ability start armed.
+skip purchase confirmations, or make the Auto-Roll ability start armed. The
+device link is the one entry that opens **its own page** (the summary card in
+Settings stays a summary, with a link to the full technical view).
 
 Light, dark and system themes are all real palettes with contrast-checked
 colours. Reduced motion completes a reveal instantly while still reserving the

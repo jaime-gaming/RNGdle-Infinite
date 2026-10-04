@@ -242,10 +242,14 @@ export function parseProgress(raw) {
       !validAmount(p.profile.createdAt)
     )
       throw new Error("Invalid local profile");
+    const avatar = parseAvatar(p.profile.avatar);
     profile = {
       id: p.profile.id,
       username: p.profile.username,
       createdAt: p.profile.createdAt,
+      // A profile only carries a logo once one was uploaded: a save with no
+      // picture keeps exactly the shape it had before logos existed.
+      ...(avatar ? { avatar } : {}),
     };
   }
   // A committed roll already states when it ends. Trusting a separately stored
@@ -306,6 +310,32 @@ export function parseProgress(raw) {
 }
 export function validUsername(value) {
   return typeof value === "string" && /^[\p{L}\p{N}_-]{3,20}$/u.test(value);
+}
+
+// The profile picture is an optional logo the player uploads. It travels inside
+// the save — which is exactly what makes it follow a device link — so it is
+// kept small, inline, and strictly validated: one image data URL, no markup,
+// no remote address, and a hard ceiling on how much of the save it may take.
+export const AVATAR_LIMIT = 240000;
+export const AVATAR_MIME = ["image/png", "image/jpeg", "image/webp"];
+const AVATAR_RE = new RegExp(
+  `^data:(?:${AVATAR_MIME.map((mime) => mime.replace("/", "\\/")).join("|")});base64,[A-Za-z0-9+/]+={0,2}$`,
+);
+
+export function validAvatar(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= AVATAR_LIMIT &&
+    AVATAR_RE.test(value)
+  );
+}
+
+// A save never carries a half-written picture: an unreadable logo is dropped
+// rather than allowed to brick an account over a cosmetic field.
+function parseAvatar(value) {
+  if (typeof value !== "string" || !value) return "";
+  return validAvatar(value) ? value : "";
 }
 
 // What a new cycle hands back, shared by a rebirth and an ultra-rebirth.
@@ -468,6 +498,20 @@ export function applyProgress(state, action) {
         "Choose an unowned item with its prerequisites unlocked.",
       );
     return state.goalId === action.id ? state : { ...state, goalId: action.id };
+  }
+  if (action.type === "avatar") {
+    if (!state.profile) throw new Error("Create a local profile first.");
+    const avatar = typeof action.avatar === "string" ? action.avatar : "";
+    if (avatar && !validAvatar(avatar))
+      throw new Error(
+        "That picture is too large or not a PNG, JPEG or WebP image.",
+      );
+    if ((state.profile.avatar ?? "") === avatar) return state;
+    if (avatar) return { ...state, profile: { ...state.profile, avatar } };
+    // Removing the logo removes the field, so the profile reads like a fresh
+    // one again rather than carrying an empty picture around.
+    const { avatar: _removed, ...profile } = state.profile;
+    return { ...state, profile };
   }
   if (action.type === "register") {
     if (state.profile)
