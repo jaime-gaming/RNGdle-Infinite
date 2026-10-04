@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
+import { createSyncRelay } from "./tools/sync-relay.mjs";
 
 // Real routes (/shop, /badges…) are client-side, and static hosts do not rewrite
 // unknown paths. GitHub Pages serves 404.html for them, so ship the app there
@@ -17,7 +18,25 @@ function spaFallback() {
     },
   };
 }
+
+// Live device linking rides the dev server itself: /__sync/* is handled by the
+// memory-only relay, so two devices (or two browsers) share one account with
+// no database and no second process. Production can run the same relay from
+// `npm run relay` and point at it with ?relay=<origin>.
+function deviceSync() {
+  let relay = null;
+  const attach = (server) => {
+    relay = createSyncRelay();
+    server.middlewares.use((req, res, next) => relay.handle(req, res, next));
+  };
+  return {
+    name: "device-sync-relay",
+    configureServer: attach,
+    configurePreviewServer: attach,
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), spaFallback()],
+  plugins: [react(), spaFallback(), deviceSync()],
   server: { host: "0.0.0.0", allowedHosts: [".e2b.app"] },
 });

@@ -94,7 +94,7 @@ test("every late tier requires its predecessor, charges exactly once and preserv
   expect(p.history[0].ep).toBe(75000);
   expect(p.history).toHaveLength(shopProducts.length + 1);
   expect(rollSettings(p.owned)).toEqual({ rollMS: 10000, cooldownMS: 2000 });
-  expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 288 });
+  expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 360 });
   expect(flywheelRequired(p.owned)).toBe(1);
   // Buying an aura equips it, so the last aura in the catalogue ends up worn.
   expect(p.equipped).toBe(
@@ -276,7 +276,7 @@ for (const intervalMS of [600000, 450000, 300000, 180000])
     expect(plan(intervalMS).count).toBe(1);
     expect(plan(intervalMS * 144).count).toBe(144);
     expect(plan(intervalMS * 1000).count).toBe(144);
-    for (const cap of [216, 288]) {
+    for (const cap of [216, 288, 360]) {
       expect(plan(intervalMS * cap, [], true, cap).count).toBe(cap);
       expect(plan(intervalMS * 1000, [], true, cap).count).toBe(cap);
       expect(plan(intervalMS * (cap - 1), [], true, cap).count).toBe(cap - 1);
@@ -551,9 +551,17 @@ test("two tabs cannot purchase a late Flywheel tier twice or lose the earned cha
   await other.goto("/shop/skills");
   for (const p of [page, other])
     await p.locator('[data-product="flywheel-2"] button').click();
+  // Both tabs press confirm at once, and whichever reaches the lock first
+  // buys. The loser must not double-buy: its dialog disables itself the
+  // moment the storage event lands, or the reducer rejects the duplicate.
+  // Either way exactly one purchase goes through, so a click that never
+  // fires because the button is already dead is a valid outcome here.
   await Promise.all(
     [page, other].map((p) =>
-      p.getByRole("button", { name: "Confirm purchase", exact: true }).click(),
+      p
+        .getByRole("button", { name: "Confirm purchase", exact: true })
+        .click({ timeout: 8000 })
+        .catch(() => {}),
     ),
   );
   await expect

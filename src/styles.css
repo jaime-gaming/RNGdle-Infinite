@@ -29,6 +29,10 @@
   --rank-low: #b83a3a;
   --scrim: #20212a66;
   --scrim-strong: #20212a2e;
+  --font-mono: "Space Mono", monospace;
+  --primary: var(--text);
+  --ink: var(--text);
+  --accent: var(--green);
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -120,6 +124,16 @@ svg {
 svg .tone {
   fill: currentColor;
   stroke: none;
+}
+/* The other half of the same system: a mark drawn as a solid silhouette needs
+   its details cut back out of it, and the surface behind it is the paint. */
+svg .cut {
+  fill: var(--surface);
+  stroke: none;
+}
+svg .cut-line {
+  fill: none;
+  stroke: var(--surface);
 }
 
 .header {
@@ -851,6 +865,19 @@ footer button:hover,
   margin: 0 auto;
   flex: 1;
   padding: 38px 30px 65px;
+  /* Every page past the roll eases in instead of snapping, which also gives
+     the route change a beat the eye can follow. */
+  animation: page-enter 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .back-link {
   display: flex;
@@ -882,6 +909,30 @@ footer button:hover,
   background: #faf3e7;
   border-color: #f0e2c9;
   color: #b59b69;
+}
+/* An uploaded logo replaces the glyph with the account's own picture, in the
+   same rounded tile. */
+.page-icon.has-logo {
+  padding: 0;
+  background: var(--surface);
+  overflow: hidden;
+}
+.page-icon.has-logo .avatar-mark {
+  border: 0;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+}
+.page-icon.has-logo .avatar-mark img {
+  width: 100%;
+  height: 100%;
+}
+/* The header button keeps its shape when the mark stands in for the glyph. */
+.sign-in .avatar-mark {
+  border-color: color-mix(in srgb, var(--text) 18%, var(--border));
+}
+.sign-in[data-avatar="logo"] {
+  padding-left: 7px;
 }
 .eyebrow {
   font-size: 9px;
@@ -1155,6 +1206,42 @@ footer button:hover,
 .secondary-button:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--text) 28%, var(--border));
   background: var(--hover);
+}
+.secondary-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.about-actions .secondary-button,
+.profile-actions .secondary-button,
+.delete-actions .secondary-button,
+.purchase-actions .secondary-button,
+.sync-link-row .secondary-button,
+.archive-controls .secondary-button,
+.offline-actions .secondary-button {
+  margin-top: 0;
+}
+.ultra-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid rgb(217 164 65 / 0.48);
+  border-radius: 999px;
+  background: rgb(217 164 65 / 0.12);
+  color: #a97c1f;
+  font: 700 10px var(--roll-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+:root[data-theme="dark"] .ultra-mark {
+  color: #f1c768;
+}
+.rebirth-count {
+  margin: 0 0 16px;
+  font: 600 11px var(--roll-font);
+  color: var(--green);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .leaderboard-layout {
   display: grid;
@@ -1829,6 +1916,30 @@ footer button:hover,
     gap: 22px;
   }
 }
+@media (max-width: 360px) {
+  .header {
+    gap: 8px;
+    padding: 0 10px;
+  }
+  .header-left {
+    gap: 10px;
+  }
+  .header nav {
+    gap: 8px;
+  }
+  .header-right {
+    gap: 4px;
+  }
+  .sign-in {
+    padding: 7px;
+  }
+  .sign-in span {
+    display: none;
+  }
+  .sign-in svg {
+    display: block;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1954,27 +2065,65 @@ footer button:hover,
 }
 .signup-field {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
+  margin-top: 6px;
 }
 .signup-field input {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  height: 43px;
+  margin-top: 0;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.signup-field input::placeholder {
+  color: var(--muted);
+}
+.signup-field input:focus-visible {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 16%, transparent);
+}
+.signup-field input[aria-invalid="true"] {
+  border-color: var(--danger);
 }
 .signup-suggest {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 43px;
+  height: 43px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
 }
 .signup-suggest:hover:not(:disabled) {
   border-color: var(--muted);
+  background: var(--hover);
   color: var(--text);
+}
+.profile-input-hint {
+  margin: 8px 0 16px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: left;
 }
 .profile-input-hint.is-invalid {
   color: var(--danger) !important;

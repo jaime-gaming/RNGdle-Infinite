@@ -36,6 +36,9 @@
 .changelog-dash {
   color: var(--muted);
 }
+.changelog-title {
+  color: var(--text);
+}
 .changelog-entry p {
   margin: 0 0 6px;
   font-size: 12.5px;

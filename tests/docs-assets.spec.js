@@ -80,8 +80,12 @@ test("the shop hub links match the shelf pages it renders", () => {
   const source = `${shop}\n${companion}`;
   // The sections are catalogue data: routing, the hub and the featured picks
   // all read the one list.
+  // A shelf section carries an icon; the aura families that group a shelf's
+  // cards do not, so the two lists cannot be confused.
   const ids = [
-    ...data.matchAll(/\bid: "([a-z-]+)",\s*\n\s*label: "([^"]+)",/g),
+    ...data.matchAll(
+      /\bid: "([a-z-]+)",\s*\n\s*label: "([^"]+)",\s*\n\s*icon: "/g,
+    ),
   ];
   expect(ids.length).toBeGreaterThanOrEqual(6);
   const seen = new Set();

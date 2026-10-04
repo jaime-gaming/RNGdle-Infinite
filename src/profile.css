@@ -4,6 +4,83 @@
   width: min(100%, 640px);
   margin: 0 auto;
 }
+.profile-page
+  > p:not(.eyebrow):not(.profile-prestige):not(.profile-export-note) {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 0 0 16px;
+}
+.profile-page
+  form
+  > p:not(.profile-input-hint):not(.profile-error):not(.signup-footnote) {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 0 0 16px;
+}
+.profile-page form > label {
+  display: block;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 18px 0 6px;
+}
+.profile-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
+.delete-confirm {
+  margin-top: 14px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+}
+.delete-confirm > p:not(.profile-error) {
+  margin: 0 0 14px;
+  color: var(--secondary);
+  font-size: 12.5px;
+  line-height: 1.75;
+}
+.delete-confirm label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+.delete-confirm input {
+  width: 100%;
+  height: 43px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 600 13px var(--roll-font);
+  letter-spacing: 0.08em;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.delete-confirm input:focus-visible {
+  outline: none;
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent);
+}
 .profile-history {
   margin-top: 18px;
   border-top: 1px solid var(--border);
@@ -65,4 +142,129 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+
+/* Ultra-rebirth prestige on the profile: the Transcendent title that only
+   accounts past the top of the ladder can wear. */
+.profile-prestige {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 14px;
+  padding: 6px 12px;
+  border: 1px solid rgb(217 164 65 / 0.55);
+  border-radius: 999px;
+  background: rgb(217 164 65 / 0.12);
+  color: #a97c1f;
+  font: 700 11px var(--roll-font);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+/* ---- The account's face -------------------------------------------------- */
+/* One mark, three homes: the header button, the profile heading and the
+   upload card. The logo is a plain data URL, so it renders from the save with
+   no network request at all. */
+.avatar-mark {
+  display: inline-grid;
+  place-items: center;
+  width: var(--avatar-size, 40px);
+  height: var(--avatar-size, 40px);
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--hover);
+  color: var(--secondary);
+  overflow: hidden;
+}
+.avatar-mark.has-logo {
+  border-color: color-mix(in srgb, var(--text) 22%, var(--border));
+  background: var(--surface);
+}
+.avatar-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.profile-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.profile-logo {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 22px 0 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+  animation: profile-logo-in 300ms ease-out both;
+}
+@keyframes profile-logo-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.profile-logo-copy {
+  min-width: 0;
+  flex: 1;
+}
+.profile-logo-copy strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+}
+.profile-logo-copy p {
+  margin: 5px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--secondary);
+  max-width: 52ch;
+}
+.profile-logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.profile-logo-actions .secondary-button {
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+}
+/* The picker is driven by the button beside it, so the raw input never shows. */
+.profile-logo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.profile-logo-note {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--green);
+  animation: profile-logo-in 240ms ease-out both;
+}
+@media (max-width: 560px) {
+  .profile-logo {
+    flex-direction: column;
+  }
 }

@@ -22,6 +22,7 @@ import { rollSettings, formatDuration } from "../shop-data";
 import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
+import DrawStage from "./DrawStage";
 import { petById, petBonusLabel } from "../pets.js";
 import { skillForPet } from "../skills.js";
 import { walletMultiplier } from "../progress.js";
@@ -66,6 +67,7 @@ const NumberArtifact = memo(function NumberArtifact({
   reducedMotion,
   aura,
   dockedPet = null,
+  behind = false,
 }) {
   const target = String(run.result.number),
     pad = timeline.slots - target.length;
@@ -106,7 +108,10 @@ const NumberArtifact = memo(function NumberArtifact({
   const dockedSkill = dockedPet ? skillForPet(dockedPet) : null;
   const dockedName = dockedPet ? (petById.get(dockedPet)?.name ?? "") : "";
   return (
-    <div className={`artifact-stage aura-${aura}`} data-aura={aura}>
+    <div
+      className={`artifact-stage aura-${aura} ${behind ? "is-behind" : ""}`}
+      data-aura={aura}
+    >
       {/* While the worn companion's signature skill fires, the companion steps
           off the stage and pins itself here, on the corner of the number box,
           until the roll settles and it can go back to walking. */}
@@ -280,6 +285,22 @@ export default function RollExperience({
       : 0;
   const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0));
   const bonusParts = bonusEP > 0 ? walletParts(session, firedSkills) : [];
+  const floatingCharges = useMemo(() => {
+    if (!result || result.totalEP === null) return [];
+    if (!bonusParts.length) return [{ id: "base", ep: creditedEP, label: "" }];
+    const list = [{ id: "base", ep: result.totalEP, label: "" }];
+    let running = result.totalEP;
+    bonusParts.forEach((part, index) => {
+      const next =
+        index === bonusParts.length - 1
+          ? creditedEP
+          : Math.round(running * part.value);
+      const gain = Math.max(0, next - running);
+      running = next;
+      if (gain > 0) list.push({ id: part.id, ep: gain, label: part.label });
+    });
+    return list;
+  }, [result, bonusParts, creditedEP]);
   const cooldownWindow =
     session.cooldownWindow ??
     parseCooldownWindow(
@@ -289,6 +310,11 @@ export default function RollExperience({
     );
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
+  // A draw skill took more than one number: show them all, then keep the best.
+  const splitDraws = run && (run.draws ?? []).length > 1 ? run.draws : null;
+  const splitPlaying =
+    !!splitDraws && elapsed < timeline.collapse + timeline.pulseMS;
+  const splitDecided = !!splitDraws && elapsed >= timeline.collapse;
   const rankKnown = !!run && elapsed >= timeline.rarity;
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
   const visibleGroups = groups.slice(-visibleCount || groups.length);
@@ -543,6 +569,7 @@ export default function RollExperience({
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
       style={{ "--reveal-scale": timeline.scale }}
       data-settled={!!run && runSettled}
+      data-prestige={session.ultraRebirths > 0 || undefined}
       data-phase={
         !run ? "idle" : !digitsDone ? "digits" : busy ? "badges" : "complete"
       }
@@ -662,14 +689,24 @@ export default function RollExperience({
       ) : (
         <>
           <section className="active-roll" aria-label="Your roll">
+            {/* Every draw the roll took, side by side, until the best of them
+                takes the centre and becomes the number that pays. */}
+            {splitPlaying && (
+              <DrawStage
+                key={run.id}
+                {...{ run, elapsed, timeline, reducedMotion, aura }}
+                leaving={splitDecided}
+              />
+            )}
             <NumberArtifact
               key={run.id}
               {...{ run, elapsed, timeline, reducedMotion, aura }}
+              behind={!!splitDraws && !splitDecided}
               dockedPet={companionSkillFiring ? session.activePet : null}
             />
             <div className="roll-announcement sr-only" role="status">
               {!digitsDone
-                ? `Revealing your number. ${timeline.digitTimes.filter((t) => elapsed >= t).length} of ${timeline.slots} digits settled.`
+                ? `Revealing ${splitDraws ? `${splitDraws.length} numbers` : "your number"}. ${timeline.digitTimes.filter((t) => elapsed >= t).length} of ${timeline.slots} digits settled.`
                 : busy
                   ? `Number ${result.number}. Revealing badges.`
                   : `${result.number}, ${result.tier}, ${formatEP(result.totalEP)} EP.${
@@ -709,26 +746,6 @@ export default function RollExperience({
                   )}{" "}
                   EP
                 </div>
-                {/* When skills or multipliers add to the wallet, the roll says
-                    so once: the extra and every named part of it. A plain roll
-                    needs no line — the EP counter already is the total. */}
-                {digitsDone && bonusEP > 0 && (
-                  <div
-                    className={`roll-credit ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
-                    aria-hidden={elapsed < timeline.sessionShow}
-                    data-testid="roll-credit"
-                  >
-                    <span className="roll-credit-bonus">
-                      <strong>+{formatEP(bonusEP)} EP extra</strong> ·{" "}
-                      {bonusParts
-                        .map(
-                          (part) =>
-                            `${part.label} ×${Number(part.value.toFixed(2))}`,
-                        )
-                        .join(" · ")}
-                    </span>
-                  </div>
-                )}
                 {digitsDone && (
                   <div
                     className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
@@ -748,11 +765,17 @@ export default function RollExperience({
                       EP
                       {elapsed >= timeline.sessionCount &&
                         elapsed < timeline.end &&
-                        !instant && (
-                          <span className="floating-ep">
-                            +{formatEP(creditedEP)}
+                        !instant &&
+                        floatingCharges.map((charge, index) => (
+                          <span
+                            key={charge.id}
+                            className={`floating-ep ${index > 0 ? "is-bonus-charge" : ""}`}
+                            style={{ "--charge-index": index }}
+                          >
+                            +{formatEP(charge.ep)}
+                            {charge.label ? ` · ${charge.label}` : ""}
                           </span>
-                        )}
+                        ))}
                     </span>
                     <small>Your EP balance</small>
                     {/* Savings sit with the wallet they are measured against,

@@ -9,14 +9,10 @@ import {
   recoverUnsavedRolls,
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
+import { runDrawPlan } from "./draw-plan.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
-import {
-  armedSkills,
-  drawPlanFor,
-  skillWaivesCooldown,
-  SKILL_MAX_DRAWS,
-} from "./skills.js";
+import { armedSkills, drawPlanFor, skillWaivesCooldown } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings, offlineSettings, productById } from "./shop-data.js";
 import {
@@ -26,6 +22,7 @@ import {
   clearPresence,
   OFFLINE_INTERVAL,
 } from "./offline.js";
+import { broadcastSync, SYNC_EVENT } from "./sync.js";
 export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
 function load() {
   try {
@@ -86,7 +83,8 @@ export function useProgress() {
         const next = parseProgress(localStorage.getItem(PROGRESS_KEY));
         if (
           next.profile?.id !== current.current.profile.id ||
-          next.rebirths !== current.current.rebirths
+          next.rebirths !== current.current.rebirths ||
+          next.ultraRebirths !== current.current.ultraRebirths
         )
           reset(next);
         else {
@@ -107,6 +105,47 @@ export function useProgress() {
     }
     window.addEventListener("storage", synchronize);
     return () => window.removeEventListener("storage", synchronize);
+  }, []);
+  // A linked device sent a newer save. Same rules as the cross-tab path, plus
+  // one step the storage event never needs: the winning state is written to
+  // this device's own storage first, so the link survives a reload, and a
+  // foreign account is adopted whole — that is exactly what a device link is.
+  useEffect(() => {
+    function receiveLinked(event) {
+      try {
+        const next = parseProgress(event.detail);
+        if (!next.profile) return;
+        try {
+          localStorage.setItem(PROGRESS_KEY, event.detail);
+          healthy.current = true;
+        } catch {
+          healthy.current = false;
+        }
+        if (
+          !current.current.profile ||
+          current.current.profile.id !== next.profile.id ||
+          current.current.rebirths !== next.rebirths ||
+          current.current.ultraRebirths !== next.ultraRebirths
+        ) {
+          reset(next);
+          return;
+        }
+        const merged = healthy.current
+          ? next
+          : recoverUnsavedRolls(next, current.current);
+        current.current = merged;
+        setProgress(merged);
+        healthy.current = merged === next;
+        if (healthy.current) setWarning("");
+      } catch {
+        healthy.current = false;
+        setWarning(
+          "A save from the linked device could not be read. This device is keeping its current progress.",
+        );
+      }
+    }
+    window.addEventListener(SYNC_EVENT, receiveLinked);
+    return () => window.removeEventListener(SYNC_EVENT, receiveLinked);
   }, []);
   function dispatch(input) {
     const token = epoch;
@@ -131,7 +170,8 @@ export function useProgress() {
             // never resurrect a deleted account or spend another profile's EP.
             if (
               stored.profile?.id !== previous.profile.id ||
-              stored.rebirths !== previous.rebirths
+              stored.rebirths !== previous.rebirths ||
+              stored.ultraRebirths !== previous.ultraRebirths
             ) {
               reset(stored);
               return {
@@ -353,22 +393,17 @@ export function useProgress() {
           const plan = drawPlanFor(armed);
           if (flywheel === "boost" || skillWaivesCooldown(armed))
             timing.cooldownMS = 0;
+          // Every draw is an ordinary, independent roll scored by the verified
+          // index; the plan only says how many to take and when to stop early.
           let result,
             draws = null;
           if (!plan) result = await generateRoll();
-          else {
-            draws = [];
-            let best = null;
-            const attempts = Math.min(plan.attempts, SKILL_MAX_DRAWS);
-            for (let attempt = 0; attempt < attempts; attempt++) {
-              const draw = await generateRoll();
-              draws.push(draw.number);
-              const scored = await restoreRoll(draw.number);
-              if (!best || scored.totalEP > best.totalEP) best = scored;
-              if (plan.floor > 0 && scored.totalEP >= plan.floor) break;
-            }
-            result = best;
-          }
+          else
+            ({ draws, result } = await runDrawPlan(
+              plan,
+              async () => (await generateRoll()).number,
+              restoreRoll,
+            ));
           // No digits reach the UI until the draw has been committed below.
           if (token !== generation.current)
             throw new Error("This game was reset. The draw was cancelled.");
@@ -442,7 +477,8 @@ export function useProgress() {
               const latest = parseProgress(localStorage.getItem(PROGRESS_KEY));
               if (
                 latest.profile?.id !== previous.profile.id ||
-                latest.rebirths !== previous.rebirths
+                latest.rebirths !== previous.rebirths ||
+                latest.ultraRebirths !== previous.ultraRebirths
               ) {
                 reset(latest);
                 return {
@@ -455,6 +491,8 @@ export function useProgress() {
             localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
             healthy.current = true;
             setWarning("");
+            // Live to the other device the moment this one saves.
+            broadcastSync(next);
           } catch {
             healthy.current = false;
             setWarning(

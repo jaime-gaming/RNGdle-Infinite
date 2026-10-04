@@ -59,7 +59,7 @@ export const SKILLS = [
     tint: "gold",
     kind: "wallet",
     value: 2,
-    charges: 6,
+    charges: 5,
     price: 180000,
     description:
       "The next roll banks double EP. The number, its badges and its scored EP are untouched.",
@@ -72,7 +72,7 @@ export const SKILLS = [
     tint: "pink",
     kind: "pet-luck",
     value: 4,
-    charges: 6,
+    charges: 5,
     price: 320000,
     description:
       "A companion is four times as likely to turn up on the next roll. Companion luck is its own sample and never touches your number.",
@@ -84,7 +84,7 @@ export const SKILLS = [
     icon: "bounce",
     tint: "cyan",
     kind: "waive",
-    charges: 5,
+    charges: 4,
     price: 500000,
     description:
       "The next roll has no cooldown after a complete reveal. It stacks with nothing: a roll can only be free once.",
@@ -97,7 +97,7 @@ export const SKILLS = [
     tint: "violet",
     kind: "best-of",
     attempts: 2,
-    charges: 10,
+    charges: 7,
     price: 900000,
     description:
       "The next roll is drawn twice and you keep whichever number scores more EP. Both draws are ordinary, independent rolls.",
@@ -111,7 +111,7 @@ export const SKILLS = [
     kind: "floor",
     floor: 25000,
     attempts: 4,
-    charges: 8,
+    charges: 6,
     price: 1600000,
     description:
       "The next roll is redrawn until it scores at least 25,000 EP, up to four draws. If none reaches it you keep the best of them.",
@@ -124,7 +124,7 @@ export const SKILLS = [
     tint: "orange",
     kind: "overdrive",
     value: 3,
-    charges: 10,
+    charges: 7,
     price: 2600000,
     description:
       "The next roll counts triple towards Flywheel and towards every other skill's circle.",
@@ -138,13 +138,39 @@ export const SKILLS = [
     kind: "floor",
     floor: 100000,
     attempts: 5,
-    charges: 18,
+    charges: 11,
     price: 6000000,
     description:
       "The next roll is redrawn until it scores at least 100,000 EP, up to five draws. If none reaches it you keep the best of them.",
   },
 
   // ---- Companion signatures ----------------------------------------------
+  {
+    id: "miser",
+    source: "shop",
+    name: "Miser",
+    icon: "miser",
+    tint: "gold",
+    kind: "wallet",
+    value: 3,
+    charges: 7,
+    price: 9000000,
+    description:
+      "The next roll banks triple EP. The number, its badges and its scored EP are untouched.",
+  },
+  {
+    id: "triptych",
+    source: "shop",
+    name: "Triptych",
+    icon: "triptych",
+    tint: "violet",
+    kind: "best-of",
+    attempts: 3,
+    charges: 6,
+    price: 12000000,
+    description:
+      "The next roll is drawn three times and you keep whichever number scores the most EP. All three draws are ordinary, independent rolls.",
+  },
   {
     id: "pebble-steady",
     source: "pet",
@@ -155,7 +181,7 @@ export const SKILLS = [
     kind: "floor",
     floor: 8000,
     attempts: 3,
-    charges: 6,
+    charges: 5,
     description:
       "The next roll is redrawn until it scores at least 8,000 EP, up to three draws.",
   },
@@ -168,7 +194,7 @@ export const SKILLS = [
     tint: "gold",
     kind: "wallet",
     value: 1.5,
-    charges: 5,
+    charges: 4,
     description: "The next roll banks 50% more EP.",
   },
   {
@@ -179,7 +205,7 @@ export const SKILLS = [
     icon: "bounce",
     tint: "cyan",
     kind: "waive",
-    charges: 6,
+    charges: 5,
     description: "The next roll has no cooldown after its reveal.",
   },
   {
@@ -191,7 +217,7 @@ export const SKILLS = [
     tint: "violet",
     kind: "best-of",
     attempts: 2,
-    charges: 8,
+    charges: 6,
     description:
       "The next roll is drawn twice and you keep whichever scores more EP.",
   },
@@ -204,7 +230,7 @@ export const SKILLS = [
     tint: "pink",
     kind: "pet-luck",
     value: 3,
-    charges: 5,
+    charges: 4,
     description:
       "A companion is three times as likely to turn up on the next roll.",
   },
@@ -217,7 +243,7 @@ export const SKILLS = [
     tint: "gold",
     kind: "wallet",
     value: 1.75,
-    charges: 7,
+    charges: 5,
     description: "The next roll banks 75% more EP.",
   },
   {
@@ -229,7 +255,7 @@ export const SKILLS = [
     tint: "orange",
     kind: "overdrive",
     value: 2,
-    charges: 8,
+    charges: 6,
     description:
       "The next roll counts twice towards Flywheel and every other skill's circle.",
   },
@@ -243,7 +269,7 @@ export const SKILLS = [
     kind: "floor",
     floor: 20000,
     attempts: 4,
-    charges: 9,
+    charges: 7,
     description:
       "The next roll is redrawn until it scores at least 20,000 EP, up to four draws.",
   },
@@ -257,7 +283,7 @@ export const SKILLS = [
     kind: "floor",
     floor: 15000,
     attempts: 5,
-    charges: 8,
+    charges: 6,
     description:
       "The next roll is redrawn until it scores at least 15,000 EP, up to five draws.",
   },
@@ -270,7 +296,7 @@ export const SKILLS = [
     tint: "violet",
     kind: "best-of",
     attempts: 3,
-    charges: 11,
+    charges: 8,
     description:
       "The next roll is drawn three times and you keep the highest-scoring number.",
   },
@@ -283,7 +309,7 @@ export const SKILLS = [
     tint: "gold",
     kind: "wallet",
     value: 2.5,
-    charges: 10,
+    charges: 7,
     description: "The next roll banks two and a half times the EP.",
   },
   {
@@ -296,7 +322,7 @@ export const SKILLS = [
     kind: "floor",
     floor: 60000,
     attempts: 5,
-    charges: 12,
+    charges: 8,
     description:
       "The next roll is redrawn until it scores at least 60,000 EP, up to five draws.",
   },
@@ -310,7 +336,7 @@ export const SKILLS = [
     kind: "floor",
     floor: 150000,
     attempts: 6,
-    charges: 12,
+    charges: 8,
     description:
       "The next roll is redrawn until it scores at least 150,000 EP, up to six draws. The strongest effect in the game.",
   },
@@ -325,7 +351,7 @@ export const SKILLS = [
     tint: "gold",
     kind: "wallet",
     value: 1.5,
-    charges: 6,
+    charges: 5,
     description: "The next roll banks 50% more EP.",
   },
   {
@@ -336,7 +362,7 @@ export const SKILLS = [
     icon: "bounce",
     tint: "cyan",
     kind: "waive",
-    charges: 5,
+    charges: 4,
     description: "The next roll has no cooldown after its reveal.",
   },
   {
@@ -348,7 +374,7 @@ export const SKILLS = [
     tint: "violet",
     kind: "best-of",
     attempts: 2,
-    charges: 8,
+    charges: 6,
     description:
       "The next roll is drawn twice and you keep whichever scores more EP.",
   },
@@ -362,7 +388,7 @@ export const SKILLS = [
     kind: "floor",
     floor: 30000,
     attempts: 4,
-    charges: 9,
+    charges: 7,
     description:
       "The next roll is redrawn until it scores at least 30,000 EP, up to four draws.",
   },
@@ -375,7 +401,7 @@ export const SKILLS = [
     tint: "violet",
     kind: "best-of",
     attempts: 3,
-    charges: 12,
+    charges: 9,
     description:
       "The next roll is drawn three times and you keep the highest-scoring number.",
   },
@@ -389,7 +415,7 @@ export const SKILLS = [
     kind: "floor",
     floor: 75000,
     attempts: 6,
-    charges: 14,
+    charges: 10,
     description:
       "The next roll is redrawn until it scores at least 75,000 EP, up to six draws.",
   },

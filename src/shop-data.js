@@ -171,6 +171,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Starfall",
     price: 40000,
+    family: "celestial",
+    swatch: ["#fde68a", "#a16207"],
     icon: "stars",
     description:
       "A living constellation: golden twinkles and a drifting comet sweep across your rarity box.",
@@ -180,6 +182,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Aurora Veil",
     price: 200000,
+    family: "celestial",
+    swatch: ["#10b981", "#a78bfa"],
     icon: "aurora",
     description:
       "Flowing emerald and violet ribbons with a holographic sheen, layered over your original rarity colours.",
@@ -189,6 +193,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Orbital Halo",
     price: 900000,
+    family: "celestial",
+    swatch: ["#38bdf8", "#6366f1"],
     icon: "orbit",
     description:
       "A five-colour rainbow halo, twin orbital rings, and satellite lights frame every number.",
@@ -198,6 +204,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Frostglass",
     price: 320000,
+    family: "element",
+    swatch: ["#bae6fd", "#7dd3fc"],
     icon: "ice",
     description:
       "Ice-blue facets and drifting crystal shards catch the light around your number.",
@@ -207,6 +215,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Emberwake",
     price: 600000,
+    family: "element",
+    swatch: ["#fb923c", "#dc2626"],
     icon: "fire",
     description:
       "Rising embers and a warm furnace glow, without changing the rarity beneath.",
@@ -216,6 +226,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Eclipse Crown",
     price: 1500000,
+    family: "celestial",
+    swatch: ["#f472b6", "#7c3aed"],
     icon: "eclipse",
     description:
       "A dark corona edged in gold, orbiting crescent rings, and a trail of stardust. Your rarity stays visible.",
@@ -225,6 +237,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Prismatic Bloom",
     price: 2300000,
+    family: "machine",
+    swatch: ["#f9a8d4", "#a78bfa"],
     icon: "prism",
     description:
       "A luminous prism with rotating spectral petals and drifting light motes. A permanent finishing touch.",
@@ -234,6 +248,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Tidepool",
     price: 100000,
+    family: "element",
+    swatch: ["#22d3ee", "#0e7490"],
     icon: "tide",
     description:
       "Slow turquoise swells and rising bubbles lap across your rarity box, like light through shallow water.",
@@ -243,6 +259,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Verdant Bloom",
     price: 450000,
+    family: "element",
+    swatch: ["#4ade80", "#166534"],
     icon: "leaf",
     description:
       "Creeping vines frame the box while pollen motes drift upward in a soft green glow.",
@@ -252,6 +270,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Circuit Bloom",
     price: 1200000,
+    family: "machine",
+    swatch: ["#4ade80", "#0f172a"],
     icon: "circuit",
     description:
       "Etched traces pulse with cyan data packets that race the border and flash at each corner node.",
@@ -261,6 +281,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Obsidian Edge",
     price: 1900000,
+    family: "void",
+    swatch: ["#334155", "#a78bfa"],
     icon: "obsidian",
     description:
       "A matte volcanic-glass frame with a razor-thin magenta edge light and slow drifting ash.",
@@ -270,6 +292,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Singularity",
     price: 3500000,
+    family: "void",
+    swatch: ["#38bdf8", "#020617"],
     icon: "singularity",
     description:
       "A collapsing accretion disc bends light around your number, with an event-horizon ring and infalling sparks.",
@@ -279,6 +303,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Nebula Drift",
     price: 520000,
+    family: "celestial",
+    swatch: ["#7c3aed", "#2563eb"],
     icon: "nebula",
     description:
       "Slow violet and indigo clouds drift behind the number while a scatter of newborn stars winks in and out.",
@@ -288,6 +314,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Solstice Ring",
     price: 780000,
+    family: "celestial",
+    swatch: ["#fb923c", "#fbbf24"],
     icon: "solstice",
     description:
       "A warm ring of midsummer light turns around the box, trailing a soft lens flare across the frame.",
@@ -297,6 +325,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Lumen Filigree",
     price: 1050000,
+    family: "celestial",
+    swatch: ["#fef3c7", "#f59e0b"],
     icon: "lumen",
     description:
       "Hair-thin gold filigree draws itself into the corners, lit by a champagne glow that never washes out your rarity.",
@@ -306,6 +336,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Glitchwave",
     price: 1650000,
+    family: "machine",
+    swatch: ["#f472b6", "#22d3ee"],
     icon: "glitch",
     description:
       "Scanlines tear sideways in red, green and blue, and the frame skews for a heartbeat before it snaps back.",
@@ -315,6 +347,8 @@ export const shopProducts = [
     kind: "aura",
     name: "Monolith",
     price: 2700000,
+    family: "machine",
+    swatch: ["#a8a29e", "#57534e"],
     icon: "monolith",
     description:
       "A heavy carved slab with a single seam of cold light, humming steady while the space around it darkens.",
@@ -324,9 +358,55 @@ export const shopProducts = [
     kind: "aura",
     name: "Chrono Dial",
     price: 4200000,
+    family: "machine",
+    swatch: ["#fcd34d", "#b45309"],
     icon: "chrono",
     description:
       "Sixty engraved ticks ring the number and a single hand sweeps them, marking a second that never quite ends.",
+  },
+  {
+    id: "halcyon",
+    kind: "aura",
+    name: "Halcyon",
+    price: 640000,
+    family: "celestial",
+    swatch: ["#5eead4", "#fbbf24"],
+    icon: "halcyon",
+    description:
+      "A calm tide of teal and gold that settles over the rarity box, bright at the edges and still in the middle.",
+  },
+  {
+    id: "downpour",
+    kind: "aura",
+    name: "Downpour",
+    price: 380000,
+    family: "element",
+    swatch: ["#93c5fd", "#1e3a8a"],
+    icon: "downpour",
+    description:
+      "Rain runs down the inside of the box and slides off the digits, never covering them.",
+  },
+  {
+    id: "blueprint",
+    kind: "aura",
+    name: "Blueprint",
+    price: 1450000,
+    family: "machine",
+    swatch: ["#60a5fa", "#1d4ed8"],
+    icon: "blueprint",
+    description:
+      "Drafting lines, hatch marks and a measuring rule drawn around your number like a plan that just passed review.",
+  },
+  {
+    id: "inkblot",
+    kind: "aura",
+    name: "Inkblot",
+    price: 2400000,
+    family: "void",
+    swatch: ["#475569", "#0f172a"],
+    icon: "inkblot",
+    description:
+      "Two mirrored blooms of ink breathe in the corners of the box: dark, symmetric and faintly alive.",
   },
   {
     id: "offline-roller",
@@ -409,6 +489,20 @@ export const shopProducts = [
       "The largest vault: 288 offline rolls per absence. Every one is an ordinary roll, settled on return.",
   },
   {
+    id: "offline-vault-3",
+    kind: "offline-cap",
+    name: "Offline Vault III",
+    price: 18000000,
+    value: 360,
+    from: 288,
+    requires: "offline-vault-2",
+    requiresProfile: true,
+    icon: "vault",
+    lateGame: true,
+    description:
+      "The cellar under the vault: 360 offline rolls per absence, the highest the archive will hold.",
+  },
+  {
     id: "auto-roll",
     kind: "utility",
     name: "Auto-Roll",
@@ -457,6 +551,52 @@ export const shopProducts = [
 // featured picks, a deep link and the back button can never disagree about
 // where an item is sold. Companions keep their shelf too; it is owned by the
 // companion component rather than by this catalogue.
+// Auras are grouped into families so the shelf reads as four small collections
+// instead of one long list. Cosmetic only: a family never changes a price, an
+// order of purchase or anything a roll can score.
+export const AURA_FAMILIES = [
+  {
+    id: "celestial",
+    label: "Sky and starlight",
+    blurb: "Constellations, rings and haloes.",
+    // Star-chart labels: spaced capitals in the monospace face.
+    font: '"Space Mono", monospace',
+    tracking: "0.18em",
+    casing: "uppercase",
+    weight: 700,
+  },
+  {
+    id: "element",
+    label: "Earth and weather",
+    blurb: "Glass, tide, leaf and rain.",
+    // A soft serif for things that grew or fell rather than were built.
+    font: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+    tracking: "0.01em",
+    casing: "none",
+    weight: 400,
+  },
+  {
+    id: "machine",
+    label: "Made things",
+    blurb: "Circuits, plans, dials and printed colour.",
+    // A readout: the same face as the charts, lowercase and tight.
+    font: '"Space Mono", monospace',
+    tracking: "0.02em",
+    casing: "none",
+    weight: 400,
+  },
+  {
+    id: "void",
+    label: "Deep and dark",
+    blurb: "Stone, ink and the bottom of the well.",
+    // An inscription cut into stone: wide serif capitals.
+    font: 'Georgia, "Times New Roman", serif',
+    tracking: "0.22em",
+    casing: "uppercase",
+    weight: 700,
+  },
+];
+
 export const SHOP_SECTIONS = [
   {
     id: "skills",
@@ -523,13 +663,13 @@ export function productsOnShelf(id) {
 
 // ---- Skill stock ----------------------------------------------------------
 // The skills shelf sells its charged effects like a stall, not a catalogue:
-// only two shop skills are on sale at once, and the pair rotates every five
+// only three shop skills are on sale at once, and the stock rotates every five
 // minutes. The rotation is deterministic — every tab, reload and the purchase
-// guard derive the same pair from the clock, never from a stored list. Skill
+// guard derive the same stock from the clock, never from a stored list. Skill
 // bays, Flywheel and anything you already own are not stock: they stay on the
 // shelf permanently.
 export const SKILL_STOCK_WINDOW_MS = 300000; // Five minutes.
-export const SKILL_STOCK_SIZE = 2;
+export const SKILL_STOCK_SIZE = 3;
 
 export function skillStockWindow(now) {
   return Math.floor(now / SKILL_STOCK_WINDOW_MS);
@@ -574,6 +714,13 @@ export function nextSkillStockOffset(windowIndex, owned, skillId) {
     if (skillStock(windowIndex + offset, owned).includes(skillId))
       return offset;
   return null;
+}
+
+// An upgrade behind a purchase that has not been made is not on the shelf at
+// all: the shop shows the next step of a chain, never the wall behind it, so a
+// card appears the moment it becomes buyable and not one roll earlier.
+export function productUnlocked(item, owned = []) {
+  return !item.requires || owned.includes(item.requires);
 }
 
 export function nextUpgrade(owned, kind) {

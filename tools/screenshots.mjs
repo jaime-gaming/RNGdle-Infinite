@@ -35,7 +35,7 @@ const owned = [
   "skill-bay-1",
 ];
 
-function seededSave() {
+function seededSave(logo) {
   const at = Date.UTC(2026, 6, 4, 18, 30, 0);
   const history = [];
   const numbers = [812044, 40219, 999999, 1337, 656565, 480123, 771912, 200001];
@@ -88,14 +88,19 @@ function seededSave() {
   });
   return {
     ...emptyProgress(),
-    profile: { id: "shot-profile", username: "LuckyOtter41", createdAt: at },
+    profile: {
+      id: "shot-profile",
+      username: "LuckyOtter41",
+      createdAt: at,
+      avatar: logo,
+    },
     balance: 2412500,
     totalEarned: 8430000,
     discovered: ids.slice(0, 158),
     owned,
     equipped: "aurora",
     equippedSkills: ["surge", "twice"],
-    skillCharge: { surge: 6, twice: 3, trail: 2 },
+    skillCharge: { surge: 5, twice: 3, trail: 2 },
     flywheelCharge: 3,
     pets: PETS.slice(0, 6).map((pet) => pet.id),
     activePet: "jelly",
@@ -106,8 +111,8 @@ function seededSave() {
   };
 }
 
-async function seed(page) {
-  const save = seededSave();
+async function seed(page, logo) {
+  const save = seededSave(logo);
   await page.addInitScript(
     ([key, value, autoRollPrefix]) => {
       localStorage.setItem(key, value);
@@ -120,6 +125,30 @@ async function seed(page) {
     },
     [PROGRESS_KEY, JSON.stringify(save), AUTO_ROLL_KEY],
   );
+}
+
+// The account logo for the pictures: two rings and a spark, drawn in the page
+// and stored exactly the way an uploaded one would be.
+function drawLogo(page) {
+  return page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    const gradient = ctx.createLinearGradient(0, 0, 256, 256);
+    gradient.addColorStop(0, "#cc68ed");
+    gradient.addColorStop(1, "#666ee2");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.94)";
+    ctx.lineWidth = 26;
+    ctx.beginPath();
+    ctx.arc(102, 128, 46, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(176, 128, 46, 0, Math.PI * 2);
+    ctx.stroke();
+    return canvas.toDataURL("image/png");
+  });
 }
 
 async function hideAutoRoll(page) {
@@ -153,7 +182,7 @@ try {
 
   // 1. The roll screen, as it loads, with a charged circle explaining itself
   //    on hover (the rack has no text of its own).
-  await seed(page);
+  await seed(page, await drawLogo(page));
   await page.goto(`${BASE}/`);
   await page.waitForSelector(".generate");
   await hideAutoRoll(page);
@@ -180,13 +209,28 @@ try {
   await hideAutoRoll(page);
   await shot(page, "result");
 
-  // 3. The skill rack, close up, with a tooltip open on the armed skill.
+  // 3. The skill rack, close up, with a tooltip open on the armed skill. The
+  //    clip is the rack plus the open tooltip, so the picture shows the corner
+  //    explaining itself rather than a cut-off column of circles.
   await hideAutoRoll(page);
   const rack = page.locator(".skill-bar");
   await rack.waitFor({ state: "visible" });
-  await page.locator('.skill-slot[data-skill="flywheel"]').hover();
+  const hovered = page.locator('.skill-slot[data-skill="flywheel"]');
+  await hovered.hover();
   await page.waitForTimeout(500);
-  await shot(page, "skills", { clip: await rack.boundingBox() });
+  const rackBox = await rack.boundingBox();
+  const tooltipBox = await hovered.locator(".skill-tooltip").boundingBox();
+  const pad = 14;
+  const left = Math.min(rackBox.x, tooltipBox.x) - pad;
+  const top = Math.min(rackBox.y, tooltipBox.y) - pad;
+  const right =
+    Math.max(rackBox.x + rackBox.width, tooltipBox.x + tooltipBox.width) + pad;
+  const bottom =
+    Math.max(rackBox.y + rackBox.height, tooltipBox.y + tooltipBox.height) +
+    pad;
+  await shot(page, "skills", {
+    clip: { x: left, y: top, width: right - left, height: bottom - top },
+  });
 
   // 4. The shop front door: the six shelf buttons and the featured picks, then
   //    one shelf page to show that a shelf is its own address.
@@ -202,6 +246,7 @@ try {
   await shot(page, "shop-shelf");
 
   // 5. The rebirth ladder, on its own page.
+  await page.setViewportSize({ width: 1280, height: 1750 });
   await page.goto(`${BASE}/rebirth`);
   // The ladder and its rungs live on the rebirth page itself.
   await page.waitForSelector(".rebirth-page");
@@ -221,6 +266,21 @@ try {
   await page.goto(`${BASE}/changelog`);
   await page.waitForTimeout(700);
   await shot(page, "changelog");
+
+  // 8. The device link page: a live link waiting for its second device, the
+  //    technical readout, the hand-link fallback and the relay field.
+  await page.setViewportSize({ width: 1280, height: 1500 });
+  await page.goto(`${BASE}/settings/link`);
+  const linkPage = page.locator(".device-link");
+  await linkPage.waitFor({ state: "visible" });
+  await page.getByTestId("sync-create").click();
+  await page.getByTestId("sync-link").waitFor({ state: "visible" });
+  await page.getByTestId("link-details").waitFor({ state: "visible" });
+  await page.locator(".sync-hand summary").click();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  // Let the toast retire so the page is the only thing in the frame.
+  await page.waitForTimeout(4200);
+  await shot(page, "devices", { fullPage: true });
   await page.close();
 } finally {
   await browser.close();

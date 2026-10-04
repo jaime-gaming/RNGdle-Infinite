@@ -76,8 +76,11 @@ try {
       page.on("pageerror", (error) => errors.push(error.message));
       page.on("response", (response) => {
         if (response.status() < 400) return;
-        // The route fallback above is expected; anything else is a break.
+        // The route fallback above is expected; anything else is a break —
+        // except the relay, which a static host does not have and the device
+        // link page reports as unreachable by design.
         const { pathname } = new URL(response.url());
+        if (pathname.includes("/__sync/")) return;
         if (!fallbacks.has(pathname)) failures.push(response.url());
       });
       page.on("requestfailed", (request) => failures.push(request.url()));
@@ -194,6 +197,46 @@ try {
         page.getByRole("heading", { name: "Auras", exact: true }),
       ).toBeVisible();
       assert.equal(new URL(page.url()).pathname, `${base}shop/auras`);
+      // Device links on a published build: there is no relay of its own, the
+      // page says exactly that, and the hand-link still carries the account
+      // from one browser to another with no server anywhere in the middle.
+      await page.goto(`${url}settings/link`);
+      await expect(
+        page.getByRole("heading", { name: "Device link", exact: true }),
+      ).toBeVisible();
+      await expect(page.getByTestId("link-details")).toContainText(
+        "The relay did not answer.",
+      );
+      await expect(page.locator(".device-link-note")).toContainText(
+        "no relay of its own",
+      );
+      await expect(page.getByTestId("link-details")).toContainText(
+        "Nothing queued",
+      );
+      await page.locator(".sync-hand summary").click();
+      await page.getByTestId("peer-code-copy").click();
+      const code = await page.getByTestId("peer-code-field").inputValue();
+      assert.ok(code.startsWith("RNGDLE-ACCOUNT-1:"), code.slice(0, 24));
+      const second = await browser.newContext({ reducedMotion: "reduce" });
+      try {
+        const other = await second.newPage();
+        await other.goto(`${url}settings/link`);
+        await other.locator(".sync-hand summary").click();
+        await other.getByTestId("peer-code-field").fill(code);
+        await other.getByTestId("peer-code-adopt").click();
+        await expect
+          .poll(() =>
+            other.evaluate(
+              (key) =>
+                JSON.parse(localStorage.getItem(key) ?? "null")?.profile
+                  ?.username ?? "",
+              PROGRESS_KEY,
+            ),
+          )
+          .toBe("PagesTester");
+      } finally {
+        await second.close();
+      }
       await page.goto(`${url}shop#tools`);
       await expect(
         page.getByRole("heading", { name: "Tools", exact: true }),
@@ -226,7 +269,7 @@ try {
       assert.deepEqual(errors, []);
       assert.deepEqual(failures, []);
       console.log(
-        `Pages smoke passed: ${base} — real RNG, worker/data, emoji/fonts, route fallback and saved reload`,
+        `Pages smoke passed: ${base} — real RNG, worker/data, emoji/fonts, route fallback, saved reload and a relay-free device link`,
       );
     } finally {
       await context.close();

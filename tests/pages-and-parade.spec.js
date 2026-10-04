@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { PAGES } from "../src/router.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { rebirthUnlocked, REBIRTH_VISIBLE_AT } from "../src/rebirth.js";
-import { emptyProgress } from "../src/progress.js";
+import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 
 const badgeIds = allBadgeMetadata.map((b) => b.id);
@@ -66,19 +66,20 @@ test("a firing companion skill pins the companion to the number's corner", () =>
   expect(read("roll.css")).toContain(".artifact-companion");
 });
 
-test("the roll names the wallet bonus only when there is one", () => {
+test("the roll animates each wallet bonus charge instead of showing a static extra line", () => {
   const roll = read("components/RollExperience.jsx");
-  // The settlement formula still drives the balance counter, but the visible
-  // line only exists when a multiplier adds EP beyond the score: it quotes the
-  // extra and its parts, never repeats the number, never says "banked".
+  // The settlement formula drives the balance counter, and each bonus part
+  // floats up as its own animated charge rather than sitting as a static text
+  // line above "Your EP balance".
   expect(roll).toContain("walletMultiplier(session, firedSkills)");
   expect(roll).toContain("creditedEP");
-  expect(roll).toContain("digitsDone && bonusEP > 0");
-  expect(roll).toContain("roll-credit");
+  expect(roll).toContain("floatingCharges");
+  expect(roll).toContain("is-bonus-charge");
+  expect(roll).not.toContain("roll-credit");
   expect(roll).not.toContain("EP banked");
   expect(roll).not.toContain("roll-credit-total");
-  expect(read("roll.css")).toContain(".roll-credit");
-  expect(read("roll.css")).not.toContain(".roll-credit-total");
+  expect(read("roll.css")).toContain(".floating-ep.is-bonus-charge");
+  expect(read("roll.css")).not.toContain(".roll-credit");
 });
 
 test("the header marks the current page, and hover can never impersonate it", () => {
@@ -185,14 +186,48 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
     page.getByRole("heading", { name: "Rebirth", level: 1 }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: /The ladder/ })).toBeVisible();
-  // Six rungs, each with the badges it asks for and the skill it hands over —
-  // plus the permanent +2% wallet bonus every rung pays.
-  await expect(page.locator(".rebirth-ladder > li")).toHaveCount(6);
+  // At 0 rebirths, 3 clear rungs + 1 blurred/faded 4th rung are shown, hiding #5 and #6.
+  await expect(page.locator(".rebirth-ladder > li")).toHaveCount(4);
   await expect(page.locator(".rebirth-ladder > li.is-current")).toHaveCount(1);
-  await expect(page.locator(".rebirth-reward")).toHaveCount(6);
+  await expect(page.locator(".rebirth-ladder > li.is-faded")).toHaveCount(1);
+  await expect(
+    page.locator(".rebirth-ladder > li.is-faded .rebirth-rung-name"),
+  ).toHaveText("#4");
+  await expect(page.locator(".rebirth-reward")).toHaveCount(4);
   await expect(page.locator(".rebirth-reward-chip").first()).toContainText(
     "+2% EP forever",
   );
+  // After 1 rebirth, #4 is clear and the blurred/faded preview moves to #5, hiding #6.
+  await page.evaluate((key) => {
+    const raw = JSON.parse(localStorage.getItem(key));
+    raw.rebirths = 1;
+    localStorage.setItem(key, JSON.stringify(raw));
+  }, PROGRESS_KEY);
+  await page.reload();
+  await expect(page.locator(".rebirth-ladder > li")).toHaveCount(5);
+  await expect(
+    page.locator(".rebirth-ladder > li.is-faded .rebirth-rung-name"),
+  ).toHaveText("#5");
+  // After 2 rebirths, #5 is clear and the blurred/faded preview moves to #6.
+  await page.evaluate((key) => {
+    const raw = JSON.parse(localStorage.getItem(key));
+    raw.rebirths = 2;
+    localStorage.setItem(key, JSON.stringify(raw));
+  }, PROGRESS_KEY);
+  await page.reload();
+  await expect(page.locator(".rebirth-ladder > li")).toHaveCount(6);
+  await expect(
+    page.locator(".rebirth-ladder > li.is-faded .rebirth-rung-name"),
+  ).toHaveText("#6");
+  // After 3 rebirths, all 6 rungs are clear with no faded rung.
+  await page.evaluate((key) => {
+    const raw = JSON.parse(localStorage.getItem(key));
+    raw.rebirths = 3;
+    localStorage.setItem(key, JSON.stringify(raw));
+  }, PROGRESS_KEY);
+  await page.reload();
+  await expect(page.locator(".rebirth-ladder > li")).toHaveCount(6);
+  await expect(page.locator(".rebirth-ladder > li.is-faded")).toHaveCount(0);
   // What is kept and what is reset are both stated.
   await expect(
     page.getByRole("heading", { name: /What a rebirth keeps/ }),
@@ -211,4 +246,75 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
   await expect(
     page.getByRole("button", { name: "Rebirth", exact: true }),
   ).toBeVisible();
+});
+
+test("equipped skills, companion skills and passive EP modifiers appear in the skill row, excluding unequipped skills", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    profile: testProfile,
+    owned: ["surge", "trail"],
+    skills: ["surge", "trail"],
+    equippedSkills: ["surge"],
+    skillCharge: { surge: 2, trail: 1 },
+    pets: ["pebble"],
+    activePet: "pebble",
+    rebirths: 2,
+    ultraRebirths: 1,
+    surplusBanked: 3,
+  });
+  await page.goto("/");
+  const bar = page.locator(".skill-bar");
+  await expect(bar).toBeVisible();
+  // Equipped skill (charging) and companion skill (Pebble's Steady Step) are shown,
+  // while unequipped non-companion skill (trail) is excluded.
+  await expect(bar.locator('[data-skill="surge"]')).toContainText(
+    "×2 banked EP · 2/5",
+  );
+  await expect(bar.locator('[data-skill="pebble-steady"]')).toBeVisible();
+  await expect(bar.locator('[data-skill="trail"]')).toHaveCount(0);
+  await expect(bar.locator('[data-skill="pet:pebble"]')).toContainText(
+    "+5% EP",
+  );
+  await expect(bar.locator('[data-skill="rebirth"]')).toContainText("+4% EP");
+  await expect(bar.locator('[data-skill="ultra"]')).toContainText("+10% EP");
+  await expect(bar.locator('[data-skill="surplus"]')).toContainText("+3% EP");
+});
+
+test("profile export downloads a valid PNG account card with username and biggest roll", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    profile: testProfile,
+    balance: 250000,
+    totalEarned: 900000,
+    rebirths: 1,
+    history: [
+      {
+        id: "r1",
+        type: "roll",
+        at: 1700000001000,
+        number: 777777,
+        ep: 500000,
+        tier: "godly",
+        badges: [],
+      },
+    ],
+  });
+  await page.goto("/profile");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export my data/i }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(
+    /^rngdle-infinite-luckytester-\d{4}-\d{2}-\d{2}\.png$/,
+  );
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const buffer = Buffer.concat(chunks);
+  // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+  expect(buffer.subarray(0, 8)).toEqual(
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  );
+  expect(buffer.length).toBeGreaterThan(1000);
 });

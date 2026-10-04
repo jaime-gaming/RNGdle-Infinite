@@ -17,11 +17,18 @@ import { validGoal } from "./gameplay-loop.js";
 import {
   rebirthBlocker,
   rebirthMultiplier,
+  rebirthSurplus,
+  surplusMultiplier,
   ultraRebirthBlocker,
   nextRebirthSkill,
   ultraRebirthMultiplier,
+  cycleStarterEp,
+  cycleEarnedEp,
+  rebirthRequirement,
+  ultraRebirthRequirement,
 } from "./rebirth.js";
 import { petById, PET_IDS, petMultiplier } from "./pets.js";
+import manifest from "./data/game-index.json" with { type: "json" };
 import {
   chargeAfterSettlement,
   drawPlanFor,
@@ -36,11 +43,17 @@ import {
   skillWaivesCooldown,
   skillWalletMultiplier,
   validSkillCharge,
+  SKILL_IDS,
   SKILL_MAX_DRAWS,
+  SKILL_SLOTS,
+  SKILL_SLOTS_BASE,
 } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
+// A rack holds at most five skills, so four saved racks is a full set: one for
+// each thing a player might be doing, and no room to hoard.
+export const LOADOUT_LIMIT = 4;
 const badgeIds = new Set(metadata.map((b) => b.id));
 const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
 
@@ -56,6 +69,7 @@ export function walletMultiplier(
     petMultiplier(progress.activePet) *
     rebirthMultiplier(progress.rebirths ?? 0) *
     ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
+    surplusMultiplier(progress.surplusBanked ?? 0) *
     skillWalletMultiplier(skillIds ?? [])
   );
 }
@@ -67,6 +81,19 @@ function firedSkills(state, id, source) {
   return (state.pendingRoll.skills ?? []).filter((skillId) =>
     skillById.has(skillId),
   );
+}
+
+// The activity log is the account's story, so a new cycle never clears it:
+// rebirths, rolls, purchases and unlocks from every past cycle stay readable.
+// It is capped instead — the oldest entries go first, and only for accounts
+// long enough to have collected thousands of them, so the save cannot outgrow
+// the browser's storage.
+export const HISTORY_LIMIT = 5000;
+function appendHistory(history, events = []) {
+  const merged = [...(history ?? []), ...events];
+  return merged.length > HISTORY_LIMIT
+    ? merged.slice(merged.length - HISTORY_LIMIT)
+    : merged;
 }
 
 // Equipping is free. A newly unlocked skill takes a free slot instead of
@@ -92,20 +119,57 @@ export function emptyProgress() {
     cooldownUntil: 0,
     receipts: [],
     history: [],
+    cycleEarnedEP: 0,
     pendingRoll: null,
     offline: null,
     flywheelCharge: 0,
     goalId: null,
     rebirths: 0,
     ultraRebirths: 0,
+    surplusBanked: 0,
     cooldownWindow: null,
     pets: [],
     activePet: "none",
     skills: [],
     equippedSkills: [],
     skillCharge: {},
+    loadouts: [],
   };
 }
+// Saved racks. Parsed leniently — a preset is only checked against what the
+// account can actually equip when it is applied, because a save can outlive the
+// skills that were in it.
+function parseLoadouts(value) {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const entry of value.slice(0, LOADOUT_LIMIT)) {
+    if (!entry || typeof entry !== "object") continue;
+    if (typeof entry.id !== "string" || !entry.id) continue;
+    if (!Array.isArray(entry.skills)) continue;
+    const skills = [
+      ...new Set(
+        entry.skills.filter(
+          (id) => typeof id === "string" && SKILL_IDS.includes(id),
+        ),
+      ),
+    ].slice(0, SKILL_SLOTS_BASE + SKILL_SLOTS.length);
+    if (!skills.length) continue;
+    const name =
+      typeof entry.name === "string" ? entry.name.trim().slice(0, 40) : "";
+    if (out.some((saved) => saved.id === entry.id)) continue;
+    out.push({ id: entry.id, name: name || loadoutName(skills), skills });
+  }
+  return out;
+}
+
+// The name a saved rack earns for itself: the skills it holds, in order.
+export function loadoutName(skills = []) {
+  const names = skills.map((id) => skillById.get(id)?.name ?? id);
+  if (!names.length) return "Empty rack";
+  if (names.length <= 2) return names.join(" + ");
+  return `${names[0]} + ${names.length - 1} more`;
+}
+
 export function parseProgress(raw) {
   if (raw === null) return emptyProgress();
   const p = JSON.parse(raw);
@@ -144,6 +208,13 @@ export function parseProgress(raw) {
     throw new Error("Invalid rebirth count");
   if (p.ultraRebirths != null && !validAmount(p.ultraRebirths))
     throw new Error("Invalid ultra-rebirth count");
+  if (
+    p.surplusBanked != null &&
+    (!validAmount(p.surplusBanked) || p.surplusBanked > 100)
+  )
+    throw new Error("Invalid surplus dividend");
+  if (p.cycleEarnedEP != null && !validAmount(p.cycleEarnedEP))
+    throw new Error("Invalid cycle EP total");
   if (!validSkillCharge(p.skillCharge)) throw new Error("Invalid skill charge");
   if (p.pets != null && !Array.isArray(p.pets))
     throw new Error("Invalid pet collection");
@@ -171,10 +242,14 @@ export function parseProgress(raw) {
       !validAmount(p.profile.createdAt)
     )
       throw new Error("Invalid local profile");
+    const avatar = parseAvatar(p.profile.avatar);
     profile = {
       id: p.profile.id,
       username: p.profile.username,
       createdAt: p.profile.createdAt,
+      // A profile only carries a logo once one was uploaded: a save with no
+      // picture keeps exactly the shape it had before logos existed.
+      ...(avatar ? { avatar } : {}),
     };
   }
   // A committed roll already states when it ends. Trusting a separately stored
@@ -188,9 +263,14 @@ export function parseProgress(raw) {
       )
     : p.cooldownUntil;
   if (!validAmount(cooldownUntil)) throw new Error("Invalid save values");
+  const history = parseHistory(p.history);
   return {
     version: 1,
-    history: parseHistory(p.history),
+    history,
+    cycleEarnedEP: cycleEarnedEp({
+      history,
+      ...(p.cycleEarnedEP != null ? { cycleEarnedEP: p.cycleEarnedEP } : {}),
+    }),
     pendingRoll,
     cooldownWindow: parseCooldownWindow(
       p.cooldownWindow,
@@ -199,6 +279,7 @@ export function parseProgress(raw) {
     ),
     rebirths: p.rebirths ?? 0,
     ultraRebirths: p.ultraRebirths ?? 0,
+    surplusBanked: p.surplusBanked ?? 0,
     offline: parseOffline(p.offline, owned),
     flywheelCharge: owned.includes("flywheel")
       ? Math.min(p.flywheelCharge ?? 0, flywheelRequired(owned))
@@ -217,6 +298,7 @@ export function parseProgress(raw) {
     activePet,
     skills,
     equippedSkills,
+    loadouts: parseLoadouts(p.loadouts),
     skillCharge: parseSkillCharge(p.skillCharge),
     cooldownUntil,
     receipts: [
@@ -228,6 +310,97 @@ export function parseProgress(raw) {
 }
 export function validUsername(value) {
   return typeof value === "string" && /^[\p{L}\p{N}_-]{3,20}$/u.test(value);
+}
+
+// The profile picture is an optional logo the player uploads. It travels inside
+// the save — which is exactly what makes it follow a device link — so it is
+// kept small, inline, and strictly validated: one image data URL, no markup,
+// no remote address, and a hard ceiling on how much of the save it may take.
+export const AVATAR_LIMIT = 240000;
+export const AVATAR_MIME = ["image/png", "image/jpeg", "image/webp"];
+const AVATAR_RE = new RegExp(
+  `^data:(?:${AVATAR_MIME.map((mime) => mime.replace("/", "\\/")).join("|")});base64,[A-Za-z0-9+/]+={0,2}$`,
+);
+
+export function validAvatar(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= AVATAR_LIMIT &&
+    AVATAR_RE.test(value)
+  );
+}
+
+// A save never carries a half-written picture: an unreadable logo is dropped
+// rather than allowed to brick an account over a cosmetic field.
+function parseAvatar(value) {
+  if (typeof value !== "string" || !value) return "";
+  return validAvatar(value) ? value : "";
+}
+
+// What a new cycle hands back, shared by a rebirth and an ultra-rebirth.
+//
+// A cycle restarts the run, not the account: the badge collection, everything
+// the wallet bought — upgrades, auras, tools and shop skills —, the companions
+// and the EP in the wallet start over. What the account *did* is never undone:
+// the activity history, the rebirth and ultra-rebirth counters with their
+// permanent bonuses, the skills the ladder already granted, the all-time EP
+// earned and the profile all stay.
+//
+// `granted` is the ladder skill this rebirth pays, which is earned rather than
+// bought and so joins the skills that survived, and `starter` is the EP the new
+// cycle begins with — paid by the rungs and ultra-rebirths the account keeps.
+function startNewCycle(state, { granted = null, starter = 0 } = {}) {
+  const owned = [];
+  // Shop skills are purchases: they go back on the stall. Ladder skills were
+  // paid for by the rebirths the cycle keeps, so they stay unlocked.
+  const kept = (state.skills ?? []).filter(
+    (id) => skillById.get(id)?.source !== "shop",
+  );
+  const skills = granted ? [...new Set([...kept, granted.id])] : kept;
+  const base = {
+    ...state,
+    owned,
+    pets: [],
+    activePet: "none",
+    skills,
+  };
+  // The rack is rebuilt rather than repaired: the skill this rebirth pays takes
+  // a slot first, then whatever the cycle kept, until the rack is full.
+  let equippedSkills = autoEquip([], base, granted?.id);
+  for (const id of skills) equippedSkills = autoEquip(equippedSkills, base, id);
+  // Charge belongs to the skill it fills: what went back on the shelf — and
+  // the companions' signature skills — take their charge with them.
+  const skillCharge = Object.fromEntries(
+    Object.entries(state.skillCharge ?? {}).filter(([id]) =>
+      skills.includes(id),
+    ),
+  );
+  return {
+    ...base,
+    equippedSkills,
+    skillCharge,
+    // The wallet empties and the ladder refills it: the starting sum is paid
+    // into both figures at once, so the balance can never outgrow what the
+    // account has been given.
+    balance: starter,
+    totalEarned: state.totalEarned + starter,
+    discovered: [],
+    equipped: "none",
+    // The tracked goal is a preference, not a reward: it survives when it is
+    // still reachable from an empty workshop.
+    goalId: validGoal(state.goalId, owned) ? state.goalId : null,
+    flywheelCharge: 0,
+    // Offline earnings are a tool, and the tool was handed back.
+    offline: null,
+    pendingRoll: null,
+    cooldownUntil: 0,
+    cooldownWindow: null,
+    cycleEarnedEP: 0,
+    // Saved racks belong to the run: the skills they were built from were
+    // handed back with the rest of the shop.
+    loadouts: [],
+  };
 }
 export function applyProgress(state, action) {
   if (action.type === "rebirth") {
@@ -244,47 +417,38 @@ export function applyProgress(state, action) {
     if (!validAmount(count + 1))
       throw new Error("Rebirth count limit reached.");
     const granted = nextRebirthSkill(count);
-    // Everything you earned stays: EP, every purchase — auras included —,
-    // companions and skills. What restarts is the collection itself; the
-    // worn aura comes off so the new cycle starts with the plain box, but it
-    // stays in the wardrobe and re-equipping is free.
-    const owned = state.owned;
-    const skills = granted
-      ? [...new Set([...(state.skills ?? []), granted.id])]
-      : [...(state.skills ?? [])];
-    const equippedSkills = autoEquip(
-      state.equippedSkills ?? [],
-      { ...state, owned, skills },
-      granted?.id,
-    );
+    // Whatever the cycle scored over this rung's gate pays its dividend now:
+    // a quarter of the surplus joins the starting sum, and whole 5M blocks of
+    // it bank a permanent +1% (up to +5% on a single rebirth).
+    const gate = rebirthRequirement(count);
+    const surplus = rebirthSurplus(cycleEarnedEp(state), gate.ep);
+    const starter =
+      cycleStarterEp(count + 1, state.ultraRebirths ?? 0) +
+      surplus.starterBonus;
+    // The rung's price — badges and the EP this cycle earned — is written into
+    // the log entry, so the history can say what a cycle was bought with.
+    const cost = gate;
+    // The run starts over — collection, everything bought, companions and the
+    // wallet — while the account keeps its history, its rebirths and every
+    // bonus it earned. Receipts stay too, so a roll from an earlier cycle can
+    // never be settled twice into the new one.
     return {
-      ...state,
+      ...startNewCycle(state, { granted, starter }),
       profile: state.profile,
       rebirths: count + 1,
-      discovered: [],
-      owned,
-      equipped: "none",
-      goalId: null,
-      skills,
-      equippedSkills,
-      pendingRoll: null,
-      cooldownUntil: 0,
-      cooldownWindow: null,
-      receipts: [],
-      // Offline earnings are a tool, so the tool stays; the absence it had
-      // already banked belongs to the cycle that just ended.
-      offline: state.offline
-        ? { lastSeenAt: now, batch: null, report: null }
-        : null,
-      history: [
+      surplusBanked:
+        (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
+      history: appendHistory(state.history, [
         {
           id: action.eventId ?? `rebirth:${count + 1}`,
           type: "rebirth",
           at: now,
           count: count + 1,
           ...(granted ? { skill: granted.id } : {}),
+          ...(starter ? { grant: starter } : {}),
+          ...(cost ? { cost: cost.ep } : {}),
         },
-      ],
+      ]),
     };
   }
   if (action.type === "ultra-rebirth") {
@@ -300,20 +464,32 @@ export function applyProgress(state, action) {
     if (blocked) throw new Error(blocked);
     if (!validAmount(count + 1))
       throw new Error("Ultra-rebirth limit reached.");
-    // The full reset: everything the ladder kept is handed back for a fresh
-    // run, and the permanent wallet bonus grows by ten points.
+    // The same fresh start a rebirth gives, taken at the top of the ladder
+    // with half the collection in hand. It costs the run, never the account:
+    // history, rebirths, ladder skills and every permanent bonus stay, and the
+    // ultra-rebirth adds ten more points forever.
+    // The same overshoot dividend as a rung: the ultra gate is a floor too.
+    const ultraCost = ultraRebirthRequirement();
+    const surplus = rebirthSurplus(cycleEarnedEp(state), ultraCost.ep);
+    const starter =
+      cycleStarterEp(state.rebirths ?? 0, count + 1) + surplus.starterBonus;
+    const cost = ultraCost;
     return {
-      ...emptyProgress(),
+      ...startNewCycle(state, { starter }),
       profile: state.profile,
       ultraRebirths: count + 1,
-      history: [
+      surplusBanked:
+        (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
+      history: appendHistory(state.history, [
         {
           id: action.eventId ?? `ultra:${count + 1}`,
           type: "ultra-rebirth",
           at: now,
           count: count + 1,
+          ...(starter ? { grant: starter } : {}),
+          ...(cost ? { cost: cost.ep } : {}),
         },
-      ],
+      ]),
     };
   }
   if (action.type === "goal") {
@@ -322,6 +498,20 @@ export function applyProgress(state, action) {
         "Choose an unowned item with its prerequisites unlocked.",
       );
     return state.goalId === action.id ? state : { ...state, goalId: action.id };
+  }
+  if (action.type === "avatar") {
+    if (!state.profile) throw new Error("Create a local profile first.");
+    const avatar = typeof action.avatar === "string" ? action.avatar : "";
+    if (avatar && !validAvatar(avatar))
+      throw new Error(
+        "That picture is too large or not a PNG, JPEG or WebP image.",
+      );
+    if ((state.profile.avatar ?? "") === avatar) return state;
+    if (avatar) return { ...state, profile: { ...state.profile, avatar } };
+    // Removing the logo removes the field, so the profile reads like a fresh
+    // one again rather than carrying an empty picture around.
+    const { avatar: _removed, ...profile } = state.profile;
+    return { ...state, profile };
   }
   if (action.type === "register") {
     if (state.profile)
@@ -385,6 +575,7 @@ export function applyProgress(state, action) {
       petFactor *
       rebirthMultiplier(state.rebirths ?? 0) *
       ultraRebirthMultiplier(state.ultraRebirths ?? 0) *
+      surplusMultiplier(state.surplusBanked ?? 0) *
       skillWalletMultiplier(fired);
     const credited =
       multiplier === 1
@@ -397,7 +588,12 @@ export function applyProgress(state, action) {
         : Math.round(result.totalEP * petFactor) - result.totalEP;
     const balance = state.balance + credited,
       totalEarned = state.totalEarned + credited;
-    if (!validAmount(balance) || !validAmount(totalEarned))
+    const cycleEP = cycleEarnedEp(state) + result.totalEP;
+    if (
+      !validAmount(balance) ||
+      !validAmount(totalEarned) ||
+      !validAmount(cycleEP)
+    )
       throw new Error("EP balance limit reached.");
     const earned = [
       ...new Set(
@@ -405,6 +601,14 @@ export function applyProgress(state, action) {
       ),
     ];
     const unlocked = earned.filter((id) => !state.discovered.includes(id));
+    // Only the committed roll itself knows how many numbers it took, and only
+    // when the roll is the one settling — never on a replay or an offline one.
+    const drawCount =
+      state.pendingRoll?.id === id &&
+      Array.isArray(state.pendingRoll.draws) &&
+      state.pendingRoll.draws.length > 1
+        ? Math.min(state.pendingRoll.draws.length, SKILL_MAX_DRAWS)
+        : 0;
     const at = action.at ?? Math.ceil(Date.now());
     const events = [
       {
@@ -419,6 +623,10 @@ export function applyProgress(state, action) {
           ? { walletBonus: bonus, walletMultiplier: multiplier }
           : {}),
         ...(fired.length ? { skills: fired } : {}),
+        // How many numbers the roll actually took, when a skill paid for more
+        // than one: the history can then say the number was kept out of
+        // several, and that only the best of them was paid.
+        ...(drawCount > 1 ? { draws: drawCount } : {}),
         badges: earned,
         ...(action.source === "offline" ? { source: "offline" } : {}),
         ...(action.source !== "offline" &&
@@ -452,7 +660,7 @@ export function applyProgress(state, action) {
       });
     return {
       ...state,
-      history: [...(state.history ?? []), ...events],
+      history: appendHistory(state.history, events),
       pendingRoll: null,
       // Turbo makes the settled roll count more than once towards Flywheel.
       flywheelCharge: flywheelAfterSettlement(
@@ -464,6 +672,7 @@ export function applyProgress(state, action) {
       skillCharge: chargeAfterSettlement(state, id, action.source),
       balance,
       totalEarned,
+      cycleEarnedEP: cycleEP,
       discovered: [
         ...new Set([
           ...state.discovered,
@@ -505,7 +714,7 @@ export function applyProgress(state, action) {
       throw new Error(
         "Restore offline rewards before upgrading offline earnings. No EP was spent.",
       );
-    // The skills shelf only ever sells the stall's rotating pair. The guard
+    // The skills shelf only ever sells the stall's rotating stock. The guard
     // reads the same clock windows as the shelf itself, so a card that was
     // buyable when the dialog opened simply sells out past the rotation.
     if (
@@ -522,8 +731,7 @@ export function applyProgress(state, action) {
       throw new Error("Not enough EP for this item.");
     return {
       ...state,
-      history: [
-        ...(state.history ?? []),
+      history: appendHistory(state.history, [
         {
           id:
             action.eventId ??
@@ -534,7 +742,7 @@ export function applyProgress(state, action) {
           name: item.name,
           ep: item.price,
         },
-      ],
+      ]),
       balance: state.balance - item.price,
       goalId: state.goalId === item.id ? null : (state.goalId ?? null),
       ...(item.kind === "pace"
@@ -588,8 +796,7 @@ export function applyProgress(state, action) {
       ),
       // Buying a companion equips it, matching how auras behave.
       activePet: pet.id,
-      history: [
-        ...(state.history ?? []),
+      history: appendHistory(state.history, [
         {
           id:
             action.eventId ??
@@ -600,7 +807,7 @@ export function applyProgress(state, action) {
           name: pet.name,
           ep: pet.price,
         },
-      ],
+      ]),
     };
   }
   if (action.type === "equip-pet") {
@@ -653,6 +860,65 @@ export function applyProgress(state, action) {
     // Swapping skills is free, so there is no history entry and no charge lost.
     return { ...state, equippedSkills: equipped };
   }
+  // ---- Saved racks -------------------------------------------------------
+  // Equipping is free, so a saved rack is a convenience, never a purchase:
+  // these three actions move no EP, write no history and change no odds.
+  if (action.type === "save-loadout") {
+    const equipped = [...new Set(state.equippedSkills ?? [])].filter((id) =>
+      skillUnlocked(id, state),
+    );
+    if (!equipped.length) throw new Error("Equip a rack worth saving first.");
+    const saved = state.loadouts ?? [];
+    if (saved.length >= LOADOUT_LIMIT)
+      throw new Error(
+        `Your rack holds ${LOADOUT_LIMIT} saved racks. Delete one to save another.`,
+      );
+    // Identical racks are not saved twice.
+    const same = saved.find(
+      (entry) =>
+        entry.skills.length === equipped.length &&
+        entry.skills.every((id, index) => id === equipped[index]),
+    );
+    if (same) return state;
+    return {
+      ...state,
+      loadouts: [
+        ...saved,
+        // The id is the rack itself, so the same rack can never be saved twice
+        // and nothing depends on the clock.
+        {
+          id: `rack-${equipped.join("+")}`,
+          name: loadoutName(equipped),
+          skills: equipped,
+        },
+      ],
+    };
+  }
+  if (action.type === "apply-loadout") {
+    const entry = (state.loadouts ?? []).find(
+      (saved) => saved.id === action.id,
+    );
+    if (!entry) throw new Error("That saved rack is gone.");
+    const slots = skillSlots(state.owned ?? []);
+    const equipped = entry.skills.filter((id) => skillUnlocked(id, state));
+    if (!equipped.length)
+      throw new Error("None of those skills are unlocked right now.");
+    const trimmed = equipped.slice(0, slots);
+    if (
+      trimmed.length === (state.equippedSkills ?? []).length &&
+      trimmed.every((id, index) => id === state.equippedSkills[index])
+    )
+      return state;
+    return { ...state, equippedSkills: trimmed };
+  }
+  if (action.type === "delete-loadout") {
+    const saved = state.loadouts ?? [];
+    if (!saved.some((entry) => entry.id === action.id)) return state;
+    return {
+      ...state,
+      loadouts: saved.filter((entry) => entry.id !== action.id),
+    };
+  }
   if (action.type === "equip") {
     if (
       action.id !== "none" &&
@@ -664,8 +930,7 @@ export function applyProgress(state, action) {
     return {
       ...state,
       equipped: action.id,
-      history: [
-        ...(state.history ?? []),
+      history: appendHistory(state.history, [
         {
           id:
             action.eventId ??
@@ -675,7 +940,7 @@ export function applyProgress(state, action) {
           productId: action.id,
           name: productById.get(action.id)?.name ?? "Original appearance",
         },
-      ],
+      ]),
     };
   }
   throw new Error("Unknown progress action");
@@ -729,7 +994,8 @@ function parseHistory(value) {
         next = {
           ...next,
           ep: e.ep,
-          tier: e.ep >= 500000 ? "godly" : e.tier,
+          tier:
+            manifest.tiers.findLast((tier) => e.ep >= tier.minEP)?.id ?? e.tier,
           ...(e.source === "offline" ? { source: "offline" } : {}),
           ...(["boost", "charge"].includes(e.flywheel)
             ? { flywheel: e.flywheel }
@@ -755,6 +1021,11 @@ function parseHistory(value) {
           ...(Array.isArray(e.skills)
             ? { skills: e.skills.filter((id) => skillById.has(id)) }
             : {}),
+          // A draw skill's receipt: the roll took this many numbers and kept
+          // the best. Two or more, and never more than the shelf allows.
+          ...(e.draws >= 2 && e.draws <= SKILL_MAX_DRAWS
+            ? { draws: Math.floor(e.draws) }
+            : {}),
         };
       }
     } else if (e.type === "rebirth") {
@@ -763,10 +1034,17 @@ function parseHistory(value) {
         ...base,
         count: e.count,
         ...(skillById.has(e.skill) ? { skill: e.skill } : {}),
+        ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
+        ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
       };
     } else if (e.type === "ultra-rebirth") {
       if (!validAmount(e.count) || e.count < 1) return [];
-      next = { ...base, count: e.count };
+      next = {
+        ...base,
+        count: e.count,
+        ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
+        ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
+      };
     } else if (["purchase", "equip"].includes(e.type)) {
       if (
         typeof e.productId !== "string" ||
@@ -855,7 +1133,12 @@ export function parsePending(p, owned = null) {
 // Only roll settlement can succeed in memory after a failed write. Reapply those
 // receipts to the latest shared wallet instead of overwriting other tabs' spending.
 export function recoverUnsavedRolls(stored, temporary) {
-  if ((stored.rebirths ?? 0) !== (temporary.rebirths ?? 0)) return stored;
+  // A roll from an earlier cycle can never be replayed into a later one.
+  if (
+    (stored.rebirths ?? 0) !== (temporary.rebirths ?? 0) ||
+    (stored.ultraRebirths ?? 0) !== (temporary.ultraRebirths ?? 0)
+  )
+    return stored;
   let merged = stored;
   for (const event of temporary.history ?? []) {
     if (

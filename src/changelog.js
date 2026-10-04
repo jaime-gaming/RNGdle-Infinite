@@ -2,6 +2,21 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.4",
+    title:
+      "rebirth rewards the overshoot, ultra-rebirths throw a ceremony, and devices link live",
+    body: [
+      "rebirth resets purchases, companions, wallet and collection; your account, history, rebirth-earned skills and bonuses stay.",
+      "its six rungs ask 20-45% of badges and 250,000-15,000,000 cycle EP, and overshooting pays a surplus into the next wallet.",
+      "the shop hides what you cannot buy yet, and every aura family has its three-look banner, its own gradient, type and page.",
+      "nine skills wait in the stall three at a time, and one hand-drawn icon set covers the shelf and the corner rack.",
+      "companions are a slideshow from one cage: each friend has its own colour and skill, and waddles or bobs when it changes your number.",
+      "the device link survives either device being closed: the room is written to the relay's disk, and its technical page sits in Settings.",
+      "your account wears a logo you upload, squared and shrunk into the save and carried to the other device by that same link.",
+      "ultra-rebirths add exclusives and a screen-filling ceremony, and every purchase now celebrates on the spot.",
+    ],
+  },
+  {
     version: "v0.3",
     title: "one release: the shop, the rack, rebirth and the shelves",
     body: [
@@ -10,7 +25,7 @@ export const CHANGELOG = [
       "skills charge in the corner rack: a full circle fires on your next roll, and Flywheel lives beside them.",
       "13 companions, one worn at a time: a firing signature skill pins it to the corner of your number until the roll settles.",
       "rebirth has its own page — a six-step ladder; every step grants an exclusive skill and a permanent +2% on banked EP.",
-      "rebirth keeps every purchase, auras included; at the top, the ultra-rebirth starts everything over for +10% each.",
+      "each of six rebirth rungs grants an exclusive skill and a permanent +2% banked-EP bonus; ultra-rebirth adds +10%.",
       "Auto-Roll is an ability in the rack, and any archived roll can be shared from History with what it actually earned.",
       "the whole interface speaks one hand-drawn icon set, and the aura ladder grows to eighteen.",
     ],

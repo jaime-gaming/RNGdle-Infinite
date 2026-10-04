@@ -4,11 +4,12 @@ export const OFFLINE_INTERVAL = 600000;
 export const OFFLINE_CAP = 144;
 // Every offline rate and per-absence cap a saved batch may legally claim.
 export const OFFLINE_INTERVALS = [600000, 450000, 300000, 180000];
-export const OFFLINE_CAPS = [144, 216, 288];
+export const OFFLINE_CAPS = [144, 216, 288, 360];
 export const OFFLINE_MAX_CAP = Math.max(...OFFLINE_CAPS);
 export const OFFLINE_CAP_BY_PRODUCT = {
   "offline-vault-1": 216,
   "offline-vault-2": 288,
+  "offline-vault-3": 360,
 };
 export const PRESENCE_PREFIX = "rng-infinite-presence-v1:";
 const amount = (n) => Number.isSafeInteger(n) && n >= 0;

@@ -10,12 +10,15 @@ import {
   skillSlots,
   skillWaivesCooldown,
   skillWalletMultiplier,
+  unlockedSkills,
 } from "./skills.js";
 import { flywheelRequired } from "./flywheel.js";
 import { petById } from "./pets.js";
 import {
   REBIRTH_BONUS_PER_REBIRTH,
+  REBIRTH_TOTAL,
   ULTRA_BONUS_PER_REBIRTH,
+  surplusMultiplier,
 } from "./rebirth.js";
 
 // What the rack adds up to.
@@ -62,6 +65,13 @@ export function walletParts(progress, armed) {
       label: `Ultra-rebirth ×${ultras}`,
       value: 1 + ULTRA_BONUS_PER_REBIRTH * ultras,
     });
+  const surplus = progress.surplusBanked ?? 0;
+  if (surplus > 0)
+    parts.push({
+      id: "surplus",
+      label: `Surplus +${surplus}%`,
+      value: surplusMultiplier(surplus),
+    });
   for (const id of armed) {
     if (skillById.get(id)?.kind === "wallet")
       parts.push({
@@ -94,6 +104,76 @@ export function rackReport(progress = {}) {
       charge: skillChargeOf(progress, skill.id),
       armed: skillArmed(progress, skill.id),
     }));
+  const equippedSet = new Set(equipped.map((skill) => skill.id));
+  const unlocked = unlockedSkills(progress)
+    .map((id) => skillById.get(id))
+    .filter(Boolean)
+    .map((skill) => ({
+      id: skill.id,
+      name: skill.name,
+      icon: skill.icon,
+      tint: skill.tint,
+      effect: skillEffectSummary(skill),
+      chip: skillEffectChip(skill),
+      charges: skill.charges,
+      charge: skillChargeOf(progress, skill.id),
+      armed: skillArmed(progress, skill.id),
+      equipped: equippedSet.has(skill.id),
+    }));
+  const passives = [];
+  const pet = petById.get(progress.activePet);
+  if (pet && pet.multiplier > 1)
+    passives.push({
+      id: `pet:${pet.id}`,
+      kind: "pet",
+      petId: pet.id,
+      name: `${pet.name} companion`,
+      chip: `+${Math.round((pet.multiplier - 1) * 100)}% EP`,
+      value: pet.multiplier,
+      tint: "green",
+      fraction: 1,
+      effect: `Banks ×${Number(pet.multiplier.toFixed(2))} EP on every roll (wallet only)`,
+      meta: "Active companion · always on",
+    });
+  const rebirths = progress.rebirths ?? 0;
+  if (rebirths > 0)
+    passives.push({
+      id: "rebirth",
+      kind: "rebirth",
+      name: `Rebirths ×${rebirths}`,
+      chip: `+${Math.round(REBIRTH_BONUS_PER_REBIRTH * 100 * rebirths)}% EP`,
+      value: 1 + REBIRTH_BONUS_PER_REBIRTH * rebirths,
+      tint: "green",
+      fraction: Math.min(1, rebirths / REBIRTH_TOTAL),
+      effect: `Permanent +${Math.round(REBIRTH_BONUS_PER_REBIRTH * 100 * rebirths)}% banked EP from ${rebirths} rebirth${rebirths === 1 ? "" : "s"}`,
+      meta: `${rebirths} / ${REBIRTH_TOTAL} rebirth rungs · always on`,
+    });
+  const ultras = progress.ultraRebirths ?? 0;
+  if (ultras > 0)
+    passives.push({
+      id: "ultra",
+      kind: "ultra",
+      name: `Ultra-rebirth ×${ultras}`,
+      chip: `+${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}% EP`,
+      value: 1 + ULTRA_BONUS_PER_REBIRTH * ultras,
+      tint: "gold",
+      fraction: 1,
+      effect: `Permanent +${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}% banked EP from ${ultras} ultra-rebirth${ultras === 1 ? "" : "s"}`,
+      meta: "Beyond the ladder · always on",
+    });
+  const surplus = progress.surplusBanked ?? 0;
+  if (surplus > 0)
+    passives.push({
+      id: "surplus",
+      kind: "surplus",
+      name: `Surplus +${surplus}%`,
+      chip: `+${surplus}% EP`,
+      value: surplusMultiplier(surplus),
+      tint: "gold",
+      fraction: 1,
+      effect: `Permanent +${surplus}% banked EP from cycle overshoot`,
+      meta: "Rebirth surplus dividend · always on",
+    });
   const armedIds = equipped.filter((skill) => skill.armed).map((s) => s.id);
   const plan = drawPlanFor(armedIds);
   const parts = walletParts(progress, armedIds);
@@ -120,6 +200,8 @@ export function rackReport(progress = {}) {
     slots,
     used: equipped.length,
     equipped,
+    unlocked,
+    passives,
     armed: armedIds,
     flywheel: {
       owned: ownsFlywheel,

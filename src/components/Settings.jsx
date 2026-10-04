@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import {
   Bell,
   BellOff,
-  Volume2,
   Eye,
   Gamepad2,
   RotateCcw,
   Shirt,
+  Volume2,
 } from "lucide-react";
 import AuraWardrobe from "./AuraWardrobe";
 import { useSettings } from "../use-settings.jsx";
@@ -16,6 +16,7 @@ import {
   requestNotificationPermission,
   showReadyNotification,
 } from "../notifications.js";
+import { DeviceLinkSummary } from "./DeviceLink.jsx";
 import "../settings.css";
 
 function Toggle({ id, label, description, checked, onChange, disabled }) {
@@ -205,6 +206,8 @@ export default function Settings({ notify, progress, onAction, navigate }) {
           onChange={(next) => update({ autoRollDefault: next })}
         />
       </div>
+
+      <DeviceLinkSummary progress={progress} navigate={navigate} />
 
       {progress && (
         <div className="settings-group">

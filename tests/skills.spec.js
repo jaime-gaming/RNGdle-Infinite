@@ -29,9 +29,12 @@ import {
 } from "../src/skills.js";
 import {
   BADGE_TOTAL,
+  REBIRTH_STARTER_EP,
   REBIRTH_STEPS,
   REBIRTH_TOTAL,
   ULTRA_BONUS_PER_REBIRTH,
+  cycleStarterEp,
+  ultraRebirthRequirement,
 } from "../src/rebirth.js";
 import { PETS, petById } from "../src/pets.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
@@ -288,6 +291,32 @@ test("draw skills collapse into one plan and never invent EP", () => {
   expect(skillWaivesCooldown(["surge"])).toBe(false);
 });
 
+test("the two late shop skills reuse effects that are already proven", () => {
+  const miser = skillById.get("miser"),
+    triptych = skillById.get("triptych");
+  for (const skill of [miser, triptych]) {
+    expect(skill.source).toBe("shop");
+    // Sold, priced above everything that came before, and never a pet skill.
+    expect(productById.get(skill.id).price).toBe(skill.price);
+    expect(skill.price).toBeGreaterThan(productById.get("quarry").price);
+    expect(skill.charges).toBeGreaterThan(0);
+    expect(skill.description.endsWith(".")).toBe(true);
+  }
+  // Miser is a wallet multiplier, exactly like Surge and the companions.
+  expect(miser.kind).toBe("wallet");
+  expect(skillWalletMultiplier(["miser"])).toBe(3);
+  expect(drawPlanFor(["miser"])).toBeNull();
+  // Triptych is a best-of-three: three ordinary draws, one kept.
+  expect(triptych.kind).toBe("best-of");
+  expect(drawPlanFor(["triptych"])).toEqual({ attempts: 3, floor: 0 });
+  expect(triptych.attempts).toBeLessThanOrEqual(SKILL_MAX_DRAWS);
+  // Together they still only pick between numbers that were really drawn.
+  expect(drawPlanFor(["triptych", "quarry"])).toEqual({
+    attempts: 5,
+    floor: 100000,
+  });
+});
+
 test("a settled roll banks the wallet multiplier and keeps the scored EP honest", () => {
   const result = evaluate(1337);
   const base = fund(1000000, {
@@ -336,10 +365,9 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
   const multiplier =
     2 * petById.get("dragonet").multiplier * (1 + 0.02 * 3) * (1 + 0.1 * 2);
   expect(
-    walletMultiplier(
-      { activePet: "dragonet", rebirths: 3, ultraRebirths: 2 },
-      ["surge"],
-    ),
+    walletMultiplier({ activePet: "dragonet", rebirths: 3, ultraRebirths: 2 }, [
+      "surge",
+    ]),
   ).toBeCloseTo(multiplier, 6);
   expect(combined.balance).toBe(Math.round(result.totalEP * multiplier));
   // And a reload keeps the receipt.
@@ -432,10 +460,10 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   ).toThrow(/do not match your upgrades/);
 });
 
-test("rebirth keeps everything it earned — auras included — grants the ladder skill and unequips the worn aura", () => {
+test("rebirth hands back the run — shelf, companions and wallet — grants the ladder skill and keeps the history", () => {
   const state = fund(5000000, {
     profile: { id: "p", username: "Tester", createdAt: 1 },
-    discovered: ids.slice(0, Math.ceil(BADGE_TOTAL * 0.5)),
+    discovered: ids.slice(0, REBIRTH_STEPS[0].badges * BADGE_TOTAL),
     owned: ["quickwind-1", "starfall", "flywheel", "skill-bay-1"],
     equipped: "starfall",
     pets: ["pebble"],
@@ -444,6 +472,8 @@ test("rebirth keeps everything it earned — auras included — grants the ladde
     equippedSkills: ["surge"],
     skillCharge: { surge: 4 },
     flywheelCharge: 3,
+    // The rung's other half: EP this cycle has scored. It is a mark of
+    // progress, not a spend, so the wallet is untouched by it.
     history: [
       {
         id: "old",
@@ -454,10 +484,21 @@ test("rebirth keeps everything it earned — auras included — grants the ladde
         ep: 1,
         badges: [],
       },
+      {
+        id: "old2",
+        type: "roll",
+        at: 2,
+        number: 604827,
+        tier: "common",
+        ep: REBIRTH_STEPS[0].ep,
+        badges: [],
+      },
     ],
     receipts: ["old"],
   });
-  expect(REBIRTH_STEPS[0]).toBe(0.5);
+  // The ladder's first rung: a fifth of the collection and 250,000 EP the
+  // cycle earned — both are met by this account.
+  expect(REBIRTH_STEPS[0]).toEqual({ badges: 0.2, ep: 250000 });
   const reborn = applyProgress(state, {
     type: "rebirth",
     expectedRebirths: 0,
@@ -465,60 +506,73 @@ test("rebirth keeps everything it earned — auras included — grants the ladde
     eventId: "ev1",
   });
   expect(reborn.rebirths).toBe(1);
-  expect(reborn.balance).toBe(5000000);
-  // Every finished rung pays a permanent +2% on banked EP, on top of the
-  // equipped companion.
-  expect(walletMultiplier(reborn, [])).toBeCloseTo(
-    petById.get("pebble").multiplier * 1.02,
-    6,
-  );
-  // Purchased auras stay in the wardrobe; only the worn one comes off, and
-  // re-equipping costs nothing.
-  expect(reborn.owned).toEqual([
-    "quickwind-1",
-    "starfall",
-    "flywheel",
-    "skill-bay-1",
-  ]);
+  // The run is handed back: the wallet, the shelf, the companions and the
+  // collection all start over, and the wallet restarts on the sum the rung
+  // just paid.
+  expect(reborn.balance).toBe(REBIRTH_STARTER_EP);
+  expect(reborn.owned).toEqual([]);
+  expect(reborn.pets).toEqual([]);
   expect(reborn.equipped).toBe("none");
-  expect(reborn.pets).toEqual(["pebble"]);
-  expect(reborn.skillCharge).toEqual({ surge: 4 });
-  expect(reborn.flywheelCharge).toBe(3);
   expect(reborn.discovered).toEqual([]);
+  expect(reborn.skillCharge).toEqual({});
+  expect(reborn.flywheelCharge).toBe(0);
   expect(reborn.pendingRoll).toBeNull();
   expect(reborn.cooldownUntil).toBe(0);
-  expect(reborn.receipts).toEqual([]);
-  // The ladder skill arrives unlocked and takes a free slot; the activity
-  // history restarts with the rebirth that opened the cycle.
+  // The wallet keeps its balance of EP earned all-time and the +2% the rung
+  // just paid — the companion that went back with the run does not count.
+  expect(reborn.totalEarned).toBe(5000000 + REBIRTH_STARTER_EP);
+  expect(walletMultiplier(reborn, [])).toBeCloseTo(1.02, 6);
+  // The ladder skill is earned, not bought: it arrives unlocked and takes the
+  // rack's slot, while the shop skill went back on the stall.
   const granted = rebirthSkill(1);
-  expect(reborn.skills).toContain(granted.id);
-  expect(reborn.equippedSkills).toContain(granted.id);
-  expect(reborn.history).toHaveLength(1);
-  expect(reborn.history[0]).toMatchObject({
+  expect(reborn.skills).toEqual([granted.id]);
+  expect(reborn.equippedSkills).toEqual([granted.id]);
+  // The activity history is the account's, so the old roll stays and the
+  // rebirth is recorded after it.
+  expect(reborn.history.map((e) => e.type)).toEqual([
+    "roll",
+    "roll",
+    "rebirth",
+  ]);
+  expect(reborn.history.at(-1)).toMatchObject({
     id: "ev1",
     type: "rebirth",
     count: 1,
     skill: granted.id,
   });
   expect(parseProgress(JSON.stringify(reborn)).skills).toContain(granted.id);
-  // The next rung asks for ten points more, and the collection has to be
-  // rediscovered before it can be claimed.
-  expect(REBIRTH_STEPS[1]).toBe(0.6);
+  // The next rung asks for more badges and more EP, and the cycle has to
+  // rediscover the collection before it can be claimed.
+  expect(REBIRTH_STEPS[1]).toEqual({ badges: 0.25, ep: 600000 });
   expect(() =>
     applyProgress(reborn, { type: "rebirth", expectedRebirths: 1, at: 200000 }),
   ).toThrow(/Discover/);
 });
 
-test("the ultra-rebirth only exists at the top of the ladder and resets everything for a permanent bonus", () => {
+test("the ultra-rebirth only exists at the top of the ladder and restarts the run for a permanent bonus", () => {
   const top = fund(9000000, {
     profile: { id: "p", username: "Tester", createdAt: 1 },
     discovered: ids,
+    // The ultra-rebirth asks for the cycle's EP as well as the badges.
+    history: [
+      {
+        id: "old",
+        type: "roll",
+        at: 1,
+        number: 604827,
+        tier: "common",
+        ep: ultraRebirthRequirement().ep,
+        badges: [],
+      },
+    ],
     owned: ["quickwind-1", "starfall"],
     equipped: "starfall",
     pets: ["pebble"],
     activePet: "pebble",
-    skills: ["surge"],
-    equippedSkills: ["surge"],
+    // One shop skill and one the ladder paid for: the first goes back on the
+    // stall, the second was earned by a rebirth the account keeps.
+    skills: ["surge", "reborn-drive"],
+    equippedSkills: ["surge", "reborn-drive"],
     skillCharge: { surge: 5 },
     rebirths: REBIRTH_TOTAL,
     ultraRebirths: 1,
@@ -530,13 +584,20 @@ test("the ultra-rebirth only exists at the top of the ladder and resets everythi
       { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
     ),
   ).toThrow(/ladder/);
-  // And not without the whole collection.
+  // And not without half the collection back.
   expect(() =>
     applyProgress(
       { ...top, discovered: ids.slice(0, 10) },
       { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
     ),
-  ).toThrow(/Discover all/);
+  ).toThrow(/Discover 118 badges/);
+  // Nor without the EP the cycle has to have earned.
+  expect(() =>
+    applyProgress(
+      { ...top, history: [] },
+      { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
+    ),
+  ).toThrow(/Earn 30,000,000 EP/);
   const reborn = applyProgress(top, {
     type: "ultra-rebirth",
     expectedUltraRebirths: 1,
@@ -545,16 +606,23 @@ test("the ultra-rebirth only exists at the top of the ladder and resets everythi
   });
   expect(reborn.ultraRebirths).toBe(2);
   expect(reborn.profile).toEqual(top.profile);
-  expect(reborn.balance).toBe(0);
+  // The same fresh start a rebirth gives: wallet, collection, shelf and
+  // companions go back, and the shop skill with them.
+  expect(reborn.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 2));
   expect(reborn.discovered).toEqual([]);
   expect(reborn.owned).toEqual([]);
   expect(reborn.pets).toEqual([]);
-  expect(reborn.skills).toEqual([]);
-  expect(reborn.equippedSkills).toEqual([]);
+  expect(reborn.skills).toEqual(["reborn-drive"]);
+  expect(reborn.equippedSkills).toEqual(["reborn-drive"]);
   expect(reborn.skillCharge).toEqual({});
-  expect(reborn.rebirths).toBe(0);
-  expect(reborn.history).toHaveLength(1);
-  expect(reborn.history[0]).toMatchObject({ type: "ultra-rebirth", count: 2 });
+  // It costs the run, never the account: the ladder and its bonuses stay.
+  expect(reborn.rebirths).toBe(REBIRTH_TOTAL);
+  expect(reborn.totalEarned).toBe(9000000 + cycleStarterEp(REBIRTH_TOTAL, 2));
+  // The roll that paid for it stays in the log, and the ultra-rebirth is
+  // recorded after it: the history is the account's, never the cycle's.
+  expect(reborn.history).toHaveLength(2);
+  expect(reborn.history[0]).toMatchObject({ type: "roll" });
+  expect(reborn.history[1]).toMatchObject({ type: "ultra-rebirth", count: 2 });
   // The bonus is permanent and multiplies banked EP only: +10% per ultra.
   expect(ULTRA_BONUS_PER_REBIRTH).toBe(0.1);
   expect(walletMultiplier({ activePet: "none", ultraRebirths: 3 })).toBeCloseTo(
@@ -577,15 +645,20 @@ test("the ultra-rebirth only exists at the top of the ladder and resets everythi
     },
     { type: "complete", result, id: "u", cooldownUntil: 2, at: 3 },
   );
-  expect(credited.balance).toBe(Math.round(result.totalEP * 1.2));
-  expect(credited.history.find((e) => e.type === "roll").ep).toBe(
+  // The bonus is permanent and multiplies banked EP only: +10% per ultra,
+  // stacked on the +2% every rung of the ladder paid.
+  expect(credited.balance).toBe(
+    Math.round(result.totalEP * 1.2 * (1 + 0.02 * REBIRTH_TOTAL)),
+  );
+  // The roll this settlement wrote, not the one that paid for the ultra.
+  expect(credited.history.findLast((e) => e.type === "roll").ep).toBe(
     result.totalEP,
   );
 });
 
-test("the skill stall sells two skills at a time and rotates every five minutes", () => {
+test("the skill stall sells three skills at a time and rotates every five minutes", () => {
   const ids = shopSkills.map((skill) => skill.id);
-  expect(SKILL_STOCK_SIZE).toBe(2);
+  expect(SKILL_STOCK_SIZE).toBe(3);
   expect(SKILL_STOCK_WINDOW_MS).toBe(5 * 60 * 1000);
   // The window is the clock, not a stored list.
   expect(skillStockWindow(0)).toBe(0);

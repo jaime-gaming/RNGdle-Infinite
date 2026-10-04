@@ -12,6 +12,7 @@ import {
   productById,
 } from "../src/shop-data.js";
 import { SKILL_IDS } from "../src/skills.js";
+import { OFFLINE_CAPS } from "../src/offline.js";
 
 const rich = (extra = {}) => ({
   ...emptyProgress(),
@@ -100,13 +101,19 @@ test("late-game offline vaults raise the per-absence cap without touching the ra
     "offline-clock-2",
     "offline-vault-2",
     "offline-clock-3",
+    "offline-vault-3",
   ])
     p = buy(p, id);
-  expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 288 });
+  expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 360 });
   // A vault without its clock prerequisite cannot be owned.
   expect(() =>
     buy(rich({ owned: ["offline-roller"] }), "offline-vault-1"),
   ).toThrow("Requires");
+  // The third vault is the deepest cap the archive will hold, and it is a cap
+  // a saved batch is allowed to claim.
+  expect(Math.max(...OFFLINE_CAPS)).toBe(360);
+  expect(OFFLINE_CAPS).toContain(360);
+  expect(offlineSettings(["offline-vault-3"]).cap).toBe(360);
 });
 
 test("Persistence Core requires Auto-Roll and grants no timing, odds or EP advantage", () => {
@@ -146,7 +153,7 @@ test("every catalogue entry declares a known kind and late tiers stay optional",
 
 test("new auras are cosmetic, uniquely priced and renderable by the shared number box", async () => {
   const auras = shopProducts.filter((p) => p.kind === "aura");
-  expect(auras).toHaveLength(18);
+  expect(auras).toHaveLength(22);
   const added = [
     "tidepool",
     "verdant",
@@ -159,6 +166,11 @@ test("new auras are cosmetic, uniquely priced and renderable by the shared numbe
     "glitch",
     "monolith",
     "chrono",
+    // The fifth wave: one more for every family but the sky, which gets two.
+    "halcyon",
+    "downpour",
+    "blueprint",
+    "inkblot",
   ];
   for (const id of added) {
     const aura = productById.get(id);

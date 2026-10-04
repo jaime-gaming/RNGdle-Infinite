@@ -482,6 +482,53 @@
 .shop-grid-upgrades {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* The auras shelf is grouped into families: a small heading, then that
+   family's cards. Same grid, so a family of three and a family of eight lay
+   out identically. */
+.shop-family + .shop-family {
+  margin-top: 26px;
+}
+.shop-family-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.shop-family-heading h3 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.shop-family-heading p {
+  margin: 0;
+  flex: 1;
+  color: var(--muted);
+  font-size: 12px;
+}
+.shop-family-stat {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* A chip of the aura's own two colours, so the shelf shows what you are
+   buying before the preview band animates. */
+.aura-swatch {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: linear-gradient(90deg, var(--swatch-a), var(--swatch-b));
+}
 .shop-card {
   display: flex;
   flex-direction: column;
@@ -521,6 +568,7 @@
   justify-content: space-between;
 }
 .shop-item-title h3 {
+  flex: 1;
   font-size: 15px;
   margin: 0;
 }
@@ -579,9 +627,27 @@
   overflow: hidden;
 }
 .shop-skill-effect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
   margin: 8px 0 0;
   color: var(--text);
   font: 500 11px/1.5 var(--roll-font);
+}
+/* One pill per claim: the effect reads as facts, not as a sentence to parse. */
+.shop-effect-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--secondary);
+  font: 500 10px/1.6 var(--roll-font);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.shop-card.is-owned .shop-effect-chip {
+  border-color: color-mix(in srgb, var(--green) 35%, var(--border));
+  color: color-mix(in srgb, var(--green) 75%, var(--text));
 }
 .shop-card-tags {
   display: flex;
@@ -663,6 +729,41 @@
 }
 .upgrade-utility {
   background: radial-gradient(ellipse at 50% 20%, #94a3b820, transparent 80%);
+}
+/* A skill card wears the same tint the corner rack gives its ring, so the
+   colour of a skill means one thing everywhere in the game. */
+.upgrade-preview.tint-gold {
+  --skill-tint: #d9a441;
+}
+.upgrade-preview.tint-pink {
+  --skill-tint: #d97ba6;
+}
+.upgrade-preview.tint-cyan {
+  --skill-tint: #4bb3c4;
+}
+.upgrade-preview.tint-violet {
+  --skill-tint: #8a7ad9;
+}
+.upgrade-preview.tint-green {
+  --skill-tint: var(--green);
+}
+.upgrade-preview.tint-orange {
+  --skill-tint: #d98241;
+}
+.upgrade-preview.tint-steel {
+  --skill-tint: var(--secondary);
+}
+.upgrade-preview.tint-gold > svg,
+.upgrade-preview.tint-pink > svg,
+.upgrade-preview.tint-cyan > svg,
+.upgrade-preview.tint-violet > svg,
+.upgrade-preview.tint-green > svg,
+.upgrade-preview.tint-orange > svg,
+.upgrade-preview.tint-steel > svg {
+  color: var(--skill-tint);
+  filter: drop-shadow(
+    0 0 7px color-mix(in srgb, var(--skill-tint) 45%, transparent)
+  );
 }
 .upgrade-preview > span {
   font: 500 22px var(--roll-font);
@@ -1082,5 +1183,274 @@
   .shop-card:hover {
     transform: none;
     box-shadow: none;
+  }
+}
+
+/* Saved racks. Equipping is free, so these are shortcuts, not purchases:
+   plain chips under the stall, never taller than the row they sit in. */
+.skill-racks {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--hover);
+}
+.skill-racks-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.skill-racks-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.skill-racks-head p {
+  flex: 1;
+  min-width: 180px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 17px;
+}
+.skill-racks-count {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.skill-rack-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.skill-rack {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.skill-rack.is-partial {
+  border-style: dashed;
+}
+.skill-rack-apply {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  text-align: left;
+  cursor: pointer;
+}
+.skill-rack-apply:hover:not(:disabled) {
+  background: var(--hover);
+}
+.skill-rack-apply:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.skill-rack-apply strong {
+  font-size: 12px;
+}
+.skill-rack-apply small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.skill-rack-delete {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.skill-rack-delete:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--primary);
+}
+
+/* ---- Aura family banners ------------------------------------------------
+   Each family fronts its own page: a gradient mixed from the three best looks
+   in the set, three live previews, and the family's own type — the same family
+   reads the same way wherever it appears. */
+.aura-family-banners {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+.aura-family-banner {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+  min-height: 132px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.aura-family-banner:hover {
+  transform: translateY(-3px);
+  border-color: var(--muted);
+  box-shadow: 0 10px 26px #00000012;
+}
+.aura-family-banner:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.aura-family-banner.is-open {
+  margin-bottom: 18px;
+  cursor: default;
+}
+.aura-family-banner.is-open:hover {
+  transform: none;
+  box-shadow: none;
+}
+.aura-family-gradient {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(
+      118deg,
+      color-mix(in srgb, var(--banner-a) 34%, transparent),
+      color-mix(in srgb, var(--banner-b) 30%, transparent) 52%,
+      color-mix(in srgb, var(--banner-c) 34%, transparent)
+    ),
+    var(--surface);
+}
+.aura-family-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.aura-family-copy strong {
+  font-family: var(--family-font, "Space Mono", monospace);
+  font-weight: var(--family-weight, 700);
+  letter-spacing: var(--family-tracking, 0.08em);
+  text-transform: var(--family-case, none);
+  font-size: 17px;
+  line-height: 1.25;
+  color: var(--primary);
+}
+.aura-family-copy small {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 17px;
+}
+.aura-family-count {
+  color: var(--muted);
+  font-family: "Space Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.aura-family-samples {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.aura-family-samples .number-box {
+  transform: scale(0.62);
+  transform-origin: center;
+  margin: -14px;
+}
+@media (max-width: 560px) {
+  .aura-family-banner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .aura-family-samples {
+    justify-content: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aura-family-banner,
+  .aura-family-banner:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ---- Purchase celebrations ------------------------------------------------
+   Buying something is a moment: the card pops and rims in the shop's gold,
+   the wallet answers with a pulse of its own, and the return banner drops
+   its confetti. All one-shot keyframes — the global reduced-motion reset
+   turns every one of them off, and nothing here ever changes a number. */
+.shop-card.is-celebrated {
+  animation: purchase-card-pop 0.7s var(--ease-reveal) both;
+  box-shadow:
+    0 0 0 2px rgb(217 164 65 / 0.65),
+    0 10px 34px rgb(217 164 65 / 0.28);
+}
+@keyframes purchase-card-pop {
+  0% {
+    transform: scale(1);
+  }
+  22% {
+    transform: scale(1.035);
+  }
+  55% {
+    transform: scale(0.995);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.shop-wallet.is-celebrated {
+  animation: purchase-wallet-glow 0.9s ease-out both;
+  border-color: rgb(217 164 65 / 0.6);
+}
+.shop-wallet.is-celebrated strong {
+  animation: purchase-wallet-count 0.7s var(--ease-reveal) both;
+}
+@keyframes purchase-wallet-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgb(217 164 65 / 0.5);
+  }
+  45% {
+    box-shadow: 0 0 0 7px rgb(217 164 65 / 0.18);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(217 164 65 / 0);
+  }
+}
+@keyframes purchase-wallet-count {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.07);
+    color: #a97c1f;
+  }
+  100% {
+    transform: scale(1);
   }
 }

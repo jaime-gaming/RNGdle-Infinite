@@ -394,7 +394,7 @@ test("failed settlement is merged with later cross-tab spending rather than over
   expect((await saved(page)).flywheelCharge).toBe(3);
   expect((await saved(page)).pendingRoll).not.toBeNull();
   const other = await context.newPage();
-  await other.goto("/shop/auras");
+  await other.goto("/shop/auras/celestial");
   await buy(other, "starfall");
   await nav(page, "Shop");
   const starfallPrice = shopProducts.find((p) => p.id === "starfall").price;

@@ -199,8 +199,8 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
   });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // Auras are their own shelf page.
-  await page.goto("/shop/auras");
+  // Auras are sold inside their family page.
+  await page.goto("/shop/auras/celestial");
   const card = page.locator('[data-product="starfall"]');
   await card.getByRole("button", { name: priced }).click();
   await page
@@ -262,9 +262,9 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   );
   const wallet = pair[0].price + pair[1].price - 1;
   await seedProgress(page, { balance: wallet, totalEarned: wallet });
-  await page.goto("/shop/auras");
+  await page.goto("/shop/auras/celestial");
   const other = await context.newPage();
-  await other.goto("/shop/auras");
+  await other.goto("/shop/auras/celestial");
   await page.locator(`[data-product="${pair[0].id}"] button`).click();
   await other.locator(`[data-product="${pair[1].id}"] button`).click();
   await Promise.all([
@@ -307,7 +307,7 @@ test("a failed save does not spend EP or grant a purchase", async ({
       },
     },
   );
-  await page.goto("/shop/auras");
+  await page.goto("/shop/auras/celestial");
   await page.locator('[data-product="starfall"] button').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })

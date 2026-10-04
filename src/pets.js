@@ -13,11 +13,14 @@
 //
 // Companion artwork is drawn for the game rather than borrowed from an emoji
 // font: every id here has a matching glyph in `components/game-icons.jsx`, and a
-// test fails if the two ever drift apart.
+// test fails if the two ever drift apart. `accent` is that companion's own
+// colour, worn by its avatar token; the grade of the bonus still decides the
+// ink the glyph is drawn in.
 export const PETS = [
   {
     id: "pebble",
     name: "Pebble",
+    accent: "#a8a29e",
     multiplier: 1.05,
     price: 45000,
     dropWeight: 40,
@@ -27,6 +30,7 @@ export const PETS = [
   {
     id: "moth",
     name: "Lumen Moth",
+    accent: "#fbbf24",
     multiplier: 1.09,
     price: 120000,
     dropWeight: 30,
@@ -36,6 +40,7 @@ export const PETS = [
   {
     id: "kit",
     name: "Static Kit",
+    accent: "#fb923c",
     multiplier: 1.13,
     price: 320000,
     dropWeight: 22,
@@ -45,6 +50,7 @@ export const PETS = [
   {
     id: "snail",
     name: "Lunar Snail",
+    accent: "#a78bfa",
     multiplier: 1.17,
     price: 560000,
     dropWeight: 16,
@@ -54,6 +60,7 @@ export const PETS = [
   {
     id: "jelly",
     name: "Tide Jelly",
+    accent: "#38bdf8",
     multiplier: 1.21,
     price: 900000,
     dropWeight: 12,
@@ -63,6 +70,7 @@ export const PETS = [
   {
     id: "bee",
     name: "Amber Bee",
+    accent: "#facc15",
     multiplier: 1.26,
     price: 1400000,
     dropWeight: 9,
@@ -72,6 +80,7 @@ export const PETS = [
   {
     id: "corvid",
     name: "Ledger Corvid",
+    accent: "#818cf8",
     multiplier: 1.31,
     price: 2100000,
     dropWeight: 7,
@@ -81,6 +90,7 @@ export const PETS = [
   {
     id: "owl",
     name: "Archive Owl",
+    accent: "#f59e0b",
     multiplier: 1.37,
     price: 3200000,
     dropWeight: 5,
@@ -90,6 +100,7 @@ export const PETS = [
   {
     id: "turtle",
     name: "Patient Turtle",
+    accent: "#34d399",
     multiplier: 1.43,
     price: 4800000,
     dropWeight: 4,
@@ -99,6 +110,7 @@ export const PETS = [
   {
     id: "griffin",
     name: "Storm Griffin",
+    accent: "#60a5fa",
     multiplier: 1.5,
     price: 7000000,
     dropWeight: 3,
@@ -108,6 +120,7 @@ export const PETS = [
   {
     id: "unicorn",
     name: "Astral Unicorn",
+    accent: "#f472b6",
     multiplier: 1.6,
     price: 10000000,
     dropWeight: 2,
@@ -117,6 +130,7 @@ export const PETS = [
   {
     id: "serpent",
     name: "Void Serpent",
+    accent: "#8b5cf6",
     multiplier: 1.7,
     price: 14000000,
     dropWeight: 1,
@@ -126,6 +140,7 @@ export const PETS = [
   {
     id: "dragonet",
     name: "Ember Dragonet",
+    accent: "#ef4444",
     multiplier: 1.8,
     price: 20000000,
     dropWeight: 1,

@@ -32,6 +32,10 @@ const cosmetics = new Set([
   "glitch",
   "monolith",
   "chrono",
+  "halcyon",
+  "downpour",
+  "blueprint",
+  "inkblot",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [
