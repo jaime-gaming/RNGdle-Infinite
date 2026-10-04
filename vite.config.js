@@ -19,14 +19,15 @@ function spaFallback() {
   };
 }
 
-// Live device linking rides the dev server itself: /__sync/* is handled by the
+// Live device linking rides the dev server itself: /__sync/* is handled by a
 // memory-only relay, so two devices (or two browsers) share one account with
-// no database and no second process. Production can run the same relay from
-// `npm run relay` and point at it with ?relay=<origin>.
+// no database and no second process. A dev relay that forgets rooms on restart
+// is the right default — it leaves nothing behind on disk, and a durable relay
+// is what `npm run relay` stands up for production.
 function deviceSync() {
   let relay = null;
   const attach = (server) => {
-    relay = createSyncRelay();
+    relay = createSyncRelay({ storeDir: null });
     server.middlewares.use((req, res, next) => relay.handle(req, res, next));
   };
   return {
