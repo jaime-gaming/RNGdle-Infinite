@@ -124,8 +124,20 @@ test("the main action wears the signature ring, and its cooldown bar stays insid
   // ring rests while the timer is the content.
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await start.click();
+  // The draw is committed asynchronously (worker plus Web Lock), so the reveal
+  // clock only means anything from the tick the roll is actually committed:
+  // wait for the running reveal instead of assuming the click finished in the
+  // same turn. During the reveal the only wait left after the number is the
+  // cooldown, so the label names the cooldown, and the number beside it is the
+  // cooldown alone rather than reveal plus cooldown.
+  const cta = page.locator(".generate");
+  await expect(cta).toContainText("COOLDOWN IN");
+  await expect(cta).toContainText("1:00");
   await page.clock.fastForward(44000);
   await page.clock.runFor(1200);
+  // Past the reveal the cooldown itself is ticking, so the same countdown is
+  // now honestly the next roll.
+  await expect(cta).toContainText("NEXT ROLL IN");
   const rail = await page.evaluate(() => {
     const button = document.querySelector(".generate").getBoundingClientRect();
     const fill = document
