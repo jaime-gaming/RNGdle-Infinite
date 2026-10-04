@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
+import "@fontsource-variable/plus-jakarta-sans";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "./styles.css";
@@ -81,6 +82,11 @@ import {
   productById,
 } from "./shop-data.js";
 import { joinDeviceLink, resumeDeviceLink, subscribeSync } from "./sync.js";
+import { installConsoleSaveTools } from "./console-save.js";
+
+// Console-only save import/export — no UI button, no indicator.
+// Open F12 → Console and type: __importSave(json), __exportSave(), __downloadSave()
+installConsoleSaveTools();
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
