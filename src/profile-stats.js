@@ -168,6 +168,19 @@ function loadAvatar(avatar) {
   });
 }
 
+// The canvas paints before the web fonts finish loading, so glyphs fall back
+// to a generic sans-serif and the layout shifts. Wait for the exact faces the
+// card uses — and cap the wait so a blocked font never stalls the export.
+async function waitForExportFonts() {
+  if (typeof document === "undefined" || !document.fonts?.ready) return;
+  try {
+    await Promise.race([
+      document.fonts.ready,
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+  } catch {}
+}
+
 function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -232,7 +245,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     nameX = 54 + size + 18;
   }
   ctx.fillStyle = "#eeece8";
-  ctx.font = '700 44px "Plus Jakarta Sans", system-ui, sans-serif';
+  ctx.font = '700 44px "Plus Jakarta Sans Variable", system-ui, sans-serif';
   ctx.fillText(accountName, nameX, 126);
 
   if (stats.ultraRebirths > 0) {
@@ -241,7 +254,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     ctx.fillText(`✦ TRANSCENDENT (ULTRA ×${stats.ultraRebirths})`, 54, 154);
   } else {
     ctx.fillStyle = "#9d9a93";
-    ctx.font = '500 14px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.font = '500 14px "Plus Jakarta Sans Variable", system-ui, sans-serif';
     ctx.fillText(
       stats.rebirths > 0
         ? `Rebirth Rung #${stats.rebirths} · +${stats.rebirths * 2}% permanent EP`
@@ -356,7 +369,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     ctx.fillText(card.value, cx + 18, cy + 64);
 
     ctx.fillStyle = "#89c4a8";
-    ctx.font = '500 12px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.font = '500 12px "Plus Jakarta Sans Variable", system-ui, sans-serif';
     ctx.fillText(card.sub, cx + 18, cy + 88);
   });
 
@@ -371,11 +384,13 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
 export async function renderExportPngBlob(progress = {}) {
   if (typeof document !== "undefined") {
     const canvas = document.createElement("canvas");
-    drawExportCardToCanvas(
-      canvas,
-      progress,
-      await loadAvatar(progress.profile?.avatar),
-    );
+    // Wait for the web fonts the card paints with, so the layout matches
+    // what the player sees on screen. The logo loads in parallel.
+    const [logo] = await Promise.all([
+      loadAvatar(progress.profile?.avatar),
+      waitForExportFonts(),
+    ]);
+    drawExportCardToCanvas(canvas, progress, logo);
     if (typeof canvas.toBlob === "function") {
       const blob = await new Promise((resolve) =>
         canvas.toBlob((b) => resolve(b), "image/png"),
