@@ -85,7 +85,8 @@ import { joinDeviceLink, resumeDeviceLink, subscribeSync } from "./sync.js";
 import { installConsoleSaveTools } from "./console-save.js";
 
 // Console-only save import/export — no UI button, no indicator.
-// Open F12 → Console and type: __importSave(json), __exportSave(), __downloadSave()
+// Open F12 → Console and type: __importData() opens the file picker,
+// __importData(json) imports a JSON string, plus __exportSave() / __downloadSave().
 installConsoleSaveTools();
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
