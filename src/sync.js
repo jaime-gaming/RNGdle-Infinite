@@ -12,12 +12,14 @@
 // fires every second so the pill updates and a peer that just came back is
 // caught up within a beat.
 //
-// Conflicts resolve with one total order both sides share — later `savedAt`
-// wins, ties go to the smaller device id. The save itself never leaves the
-// players' own browsers except through the link.
+// A valid account wins over a guest save; otherwise conflicts resolve with
+// one total order both sides share — later `savedAt` wins, ties to the smaller
+// device id. The save itself never leaves the players' own browsers except
+// through the link.
 
 import Peer from "peerjs";
 import { PROGRESS_KEY, parseProgress } from "./progress.js";
+import { syncDecision } from "./sync-policy.js";
 
 const LINK_KEY = "rng-infinite-sync-v1";
 const RELAY_KEY = "rng-infinite-sync-endpoint-v1";
@@ -459,21 +461,22 @@ function handlePeerMessage(message) {
   }
 }
 
-// Both sides apply the same rule: later savedAt wins, ties to smaller device.
+// Apply the shared profile-first, then timestamp/device reconciliation policy.
 function reconcile(remote) {
-  if (!remote || typeof remote.savedAt !== "number" || !remote.state) return;
-  if (
-    remote.savedAt > savedAt ||
-    (remote.savedAt === savedAt &&
-      typeof remote.device === "string" &&
-      remote.device < device)
-  ) {
+  if (!remote || !Number.isFinite(remote.savedAt) || !remote.state) return;
+  const decision = syncDecision(
+    { state: currentSave(), savedAt, device },
+    remote,
+  );
+  if (decision.direction === "receive") {
     receiveRemote(remote);
-  } else if (
-    remote.savedAt < savedAt ||
-    (remote.savedAt === savedAt && remote.device !== device)
-  ) {
-    // We are ahead: push the truth.
+  } else if (decision.direction === "send") {
+    // A profile always outranks a guest save. Give that correction a newer
+    // stamp so the guest accepts it even if its local clock ran ahead.
+    if (decision.savedAt !== savedAt) {
+      savedAt = decision.savedAt;
+      persistLink();
+    }
     sendPeerMessage({
       type: "state",
       state: currentSave(),

@@ -2,7 +2,7 @@
 //
 // Open the browser console (F12) and type:
 //
-//   __importData()           — opens the file picker; pick a .json save to import
+//   __importData()           — opens the picker for a raw save or v0.3 Profile JSON export
 //   __importData(json)       — imports a save from a JSON string or object
 //   __exportSave()           — copies the current save to the clipboard as JSON
 //   __downloadSave()         — downloads the current save as a .json file
@@ -12,7 +12,7 @@
 // Importing replaces the current save entirely, so the command stays in the
 // developer console where a mistaken click cannot wipe an account.
 
-import { PROGRESS_KEY, parseProgress } from "./progress.js";
+import { PROGRESS_KEY, emptyProgress, parseProgress } from "./progress.js";
 
 const TAG = "%c[RNGdle]";
 const GREEN = "color:#89c4a8;font-weight:700";
@@ -61,6 +61,45 @@ function describeSave(parsed) {
     `${parsed.totalEarned.toLocaleString()} EP earned`,
   ];
   return bits.join(", ");
+}
+
+// The v0.3 Profile page downloaded a JSON account snapshot, not the raw save
+// stored by the game. Keep that existing export usable by rebuilding the full
+// v1 shape around the fields it contains. The missing transient fields (such as
+// an in-flight roll or offline batch) cannot be recovered from that snapshot.
+function parseImportedSave(raw) {
+  const source = JSON.parse(raw);
+  const isV03Export =
+    source?.app === "RNGdle Infinite" &&
+    source.appVersion === "v0.3" &&
+    source.saveVersion === 1 &&
+    source.save &&
+    typeof source.save === "object" &&
+    !Array.isArray(source.save);
+
+  if (!isV03Export) return { parsed: parseProgress(raw), storageValue: raw };
+
+  const migrated = parseProgress(
+    JSON.stringify({
+      ...emptyProgress(),
+      ...source.save,
+      version: source.saveVersion,
+      profile: source.profile ?? null,
+      // The snapshot omitted receipts. Rebuild them from its validated history
+      // below so an imported roll cannot be credited a second time.
+      receipts: [],
+    }),
+  );
+  migrated.receipts = migrated.history
+    .filter((event) => event.type === "roll")
+    .slice(-128)
+    .map((event) => event.id);
+
+  return {
+    parsed: migrated,
+    storageValue: JSON.stringify(migrated),
+    legacySnapshot: true,
+  };
 }
 
 async function readFile(file) {
@@ -224,7 +263,7 @@ function pickWithFileInput() {
 }
 
 function pickSaveFile() {
-  log("Opening the file picker — choose the .json save to import…");
+  log("Opening the file picker — choose an RNGdle .json save to import…");
   if (typeof window.showOpenFilePicker === "function") {
     return pickWithFileSystemAPI();
   }
@@ -241,9 +280,11 @@ async function importData(input) {
     return;
   }
 
-  let parsed;
+  let parsed,
+    storageValue,
+    legacySnapshot = false;
   try {
-    parsed = parseProgress(raw);
+    ({ parsed, storageValue, legacySnapshot = false } = parseImportedSave(raw));
   } catch (failure) {
     error(`Import failed: ${label} is not a valid RNGdle save.`);
     if (failure instanceof SyntaxError) {
@@ -260,12 +301,17 @@ async function importData(input) {
     } else {
       warn("Reason:", failure?.message ?? failure);
       log(
-        "Import the file exactly as __downloadSave() wrote it — hand edits usually break the format.",
+        "Choose a raw save from __downloadSave() or the v0.3 Profile JSON export. Hand edits usually break the format.",
       );
     }
     return;
   }
 
+  if (legacySnapshot) {
+    warn(
+      "This v0.3 JSON is an account snapshot, not a complete save. Pending rolls, cooldowns, offline rewards and other fields absent from the export cannot be recovered.",
+    );
+  }
   if (!parsed.profile) {
     warn(
       "The imported save has no local profile. Guest progress is never saved — sign up after the reload to keep it.",
@@ -273,7 +319,7 @@ async function importData(input) {
   }
 
   try {
-    localStorage.setItem(PROGRESS_KEY, raw);
+    localStorage.setItem(PROGRESS_KEY, storageValue);
   } catch (failure) {
     error(
       "Could not write the save to localStorage.",
