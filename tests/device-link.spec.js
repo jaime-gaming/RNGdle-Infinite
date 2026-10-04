@@ -390,6 +390,13 @@ test("a change made while the relay is unreachable is queued and sent later", as
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
+  // Waiting for the purchase to land in this browser's own storage keeps the
+  // test about the queue, not about navigating away mid-commit. The commit is
+  // asynchronous (Web Lock + write), so leaving the page in the same tick can
+  // race it on a loaded machine.
+  await expect
+    .poll(async () => (await saved(page))?.owned ?? [], { timeout: 10000 })
+    .toContain("archive-lens");
   await page.goto("/settings/link");
   await expect(page.getByTestId("sync-pending")).toBeVisible({
     timeout: 10000,
