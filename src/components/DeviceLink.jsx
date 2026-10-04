@@ -122,10 +122,11 @@ export function DeviceLinkSummary({ progress, navigate }) {
         <Link2 size={16} aria-hidden="true" /> Link devices
       </h2>
       <p className="settings-group-note">
-        One link joins two browsers to this account. Saves travel
-        browser-to-browser through an encrypted WebRTC channel — no database, no
-        account anywhere — and either device may stay closed while the other
-        plays.
+        Saves move between your own devices over an encrypted WebRTC channel — a
+        free public broker handles only the initial handshake — or through a
+        relay you run yourself when one answers. Devices catch up as soon as
+        they can see each other; a relay with a store keeps the room while both
+        are closed.
       </p>
       <div className="setting-row">
         <div className="setting-copy">
@@ -285,9 +286,20 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     : "Browser-to-browser (P2P via WebRTC)";
   const store = health
     ? health.store === "disk"
-      ? `On disk at ${health.storeDir}`
+      ? health.storeLabel
+        ? `On disk (${health.storeLabel})`
+        : "On disk"
       : "In memory only"
     : "—";
+  // The note has to describe the transport that actually answered, including
+  // what its store can and cannot do: a memory-only relay hands the newest
+  // save to whoever is listening, but it does not keep a room once everybody
+  // has left, and the page must not promise otherwise.
+  const note = !health
+    ? "This deployment has no relay of its own, so saves travel browser-to-browser through WebRTC, with a free public broker handling only the initial handshake. Both devices therefore have to be open at the same time at least once. Treat the link like a password: whoever holds it plays this account."
+    : health.store === "disk"
+      ? "The relay above keeps rooms on its own disk, so either device may be closed and catch up later, and the newer save wins when both played apart. Treat the link like a password: whoever holds it plays this account."
+      : "The relay above keeps rooms in memory: it is the fastest path while a device is listening, and it hands over the newest save the moment the other side opens the link — but it forgets a room once nobody is listening. Run your own relay with a store to keep a room alive while both devices are closed. Treat the link like a password: whoever holds it plays this account.";
 
   const details = [
     ["Transport", transport],
@@ -320,9 +332,10 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
         Two browsers, one account, no database. The link moves saves between
         your own devices: over an encrypted WebRTC channel, with a free public
         broker handling only the initial handshake, or through a relay you run
-        yourself when one answers. Either device may be closed for as long as
-        you like: whichever one comes back is handed everything that happened,
-        and when both played apart the newer save wins.
+        yourself when one answers. Whichever device comes back catches up as
+        soon as the two can see each other, and when both played apart the newer
+        save wins — with a relay that keeps a store, a returning device is
+        handed everything it missed even if the other one is closed.
       </p>
 
       <div className="setting-row">
@@ -419,11 +432,7 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
           </div>
         ))}
       </dl>
-      <p className="device-link-note">
-        {health
-          ? "Rooms are kept by the relay above, so either device may be closed and catch up later. Treat the link like a password: whoever holds it plays this account."
-          : "This deployment has no relay of its own, so saves travel browser-to-browser through WebRTC, with a free public broker handling only the initial handshake. Treat the link like a password: whoever holds it plays this account."}
-      </p>
+      <p className="device-link-note">{note}</p>
 
       {state.status === "error" && (
         <p className="sync-note" data-testid="sync-trouble" role="status">

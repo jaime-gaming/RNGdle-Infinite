@@ -95,6 +95,22 @@ export function createSyncRelay({
   const rooms = new Map(); // room -> { key, latest, members: Map, sweep }
   const loading = new Map(); // room -> Promise, so two requests load one room
 
+  // Health is answered to any browser that opens the game, so it names the
+  // store without handing out the machine's directory layout: a path inside
+  // the working directory is kept relative, anything else is reduced to its
+  // final segment. The absolute path stays on the returned object, where only
+  // the process that created the relay can read it.
+  const storeLabel = storeDir
+    ? (() => {
+        const relative = path.relative(process.cwd(), storeDir);
+        return relative &&
+          !relative.startsWith("..") &&
+          !path.isAbsolute(relative)
+          ? relative.split(path.sep).join("/")
+          : path.basename(storeDir);
+      })()
+    : null;
+
   const fileFor = (room) => path.join(storeDir, `${room}.json`);
 
   async function readStoredRoom(room) {
@@ -368,7 +384,7 @@ export function createSyncRelay({
       return send(res, 200, {
         ok: true,
         store: storeDir ? "disk" : "memory",
-        storeDir: storeDir ?? null,
+        storeLabel,
         rooms: rooms.size,
         ttlMs,
       });

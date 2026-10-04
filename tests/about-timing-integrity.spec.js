@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { PAGES, pathForPage, validPage } from "../src/router.js";
 import { parseProgress, emptyProgress } from "../src/progress.js";
 import { rollSettings, shopProducts } from "../src/shop-data.js";
-import { displayedCooldownSeconds } from "../src/cooldown.js";
+import { cooldownLabel, displayedCooldownSeconds } from "../src/cooldown.js";
 import { POPULATION } from "../src/probability.js";
 import { BADGE_TOTAL } from "../src/rebirth.js";
 import { PETS } from "../src/pets.js";
@@ -162,6 +162,29 @@ test("the countdown displays the cooldown alone while the wait itself is unchang
   expect(
     displayedCooldownSeconds({ startsAt: 0, endsAt: 5 }, deadline, startedAt),
   ).toBe(105);
+
+  // The word matches the number it sits beside: during the reveal the only
+  // wait left after it is the cooldown, so the label says cooldown; once the
+  // cooldown itself is running, the countdown really is the next roll.
+  expect(cooldownLabel(window, deadline, startedAt)).toBe("COOLDOWN IN");
+  expect(cooldownLabel(window, deadline, startedAt + 30000)).toBe(
+    "COOLDOWN IN",
+  );
+  expect(cooldownLabel(window, deadline, window.startsAt)).toBe("NEXT ROLL IN");
+  expect(cooldownLabel(window, deadline, startedAt + 75000)).toBe(
+    "NEXT ROLL IN",
+  );
+  // No window of its own means the shown value is reveal + cooldown, which is
+  // exactly the next roll.
+  expect(cooldownLabel(null, deadline, startedAt)).toBe("NEXT ROLL IN");
+  // And the whole shell uses that function rather than hardcoding the words:
+  // the only wait label in the component comes from cooldownLabel(), and the
+  // no-cooldown case (a boost or a waive skill) names the reveal that is
+  // actually still playing instead of promising a roll.
+  const roll = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
+  expect(roll).toContain("cooldownLabel(");
+  expect(roll).not.toContain("NEXT ROLL IN");
+  expect(roll).toContain('"REVEAL IN"');
 });
 
 test("the reveal is paced by the hardened clock, not by a replaceable timer", () => {
