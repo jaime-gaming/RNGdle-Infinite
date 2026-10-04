@@ -2,64 +2,288 @@
 //
 // Open the browser console (F12) and type:
 //
-//   __importSave(json)      — import a save from a JSON string or object
-//   __exportSave()          — copy the current save to clipboard as JSON
-//   __downloadSave()        — download the current save as a .json file
+//   __importData()           — opens the file picker; pick a .json save to import
+//   __importData(json)       — imports a save from a JSON string or object
+//   __exportSave()           — copies the current save to the clipboard as JSON
+//   __downloadSave()         — downloads the current save as a .json file
 //
-// These are intentionally undocumented in the UI: importing a save replaces
-// the current one entirely, so it lives in the developer console where a
-// mistaken click cannot wipe an account.
+// Every call reports back on the console: which file was read, exactly what
+// was wrong when an import is rejected, or a one-line summary of what landed.
+// Importing replaces the current save entirely, so the command stays in the
+// developer console where a mistaken click cannot wipe an account.
 
 import { PROGRESS_KEY, parseProgress } from "./progress.js";
 
+const TAG = "%c[RNGdle]";
+const GREEN = "color:#89c4a8;font-weight:700";
+const AMBER = "color:#f59e0b;font-weight:700";
+const RED = "color:#ef4444;font-weight:700";
+
 function log(...args) {
-  // eslint-disable-next-line no-console
-  console.log("%c[RNGdle]", "color: #89c4a8; font-weight: 700", ...args);
+  console.log(TAG, GREEN, ...args);
 }
 
 function warn(...args) {
-  // eslint-disable-next-line no-console
-  console.warn("%c[RNGdle]", "color: #f59e0b; font-weight: 700", ...args);
+  console.warn(TAG, AMBER, ...args);
 }
 
 function error(...args) {
-  // eslint-disable-next-line no-console
-  console.error("%c[RNGdle]", "color: #ef4444; font-weight: 700", ...args);
+  console.error(TAG, RED, ...args);
 }
 
-function importSave(input) {
-  let raw;
+const SAVE_EXTENSIONS = [".json"];
+const PICKER_TYPES = [
+  {
+    description: "RNGdle save (JSON)",
+    accept: { "application/json": SAVE_EXTENSIONS },
+  },
+];
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes)) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileLabel(file) {
+  const name = file.name || "save.json";
+  const size = formatBytes(file.size);
+  return size ? `"${name}" (${size})` : `"${name}"`;
+}
+
+function describeSave(parsed) {
+  const bits = [
+    parsed.profile
+      ? `profile "${parsed.profile.username}"`
+      : "no profile (guest save)",
+    `${parsed.discovered.length} badge${parsed.discovered.length === 1 ? "" : "s"} discovered`,
+    `${parsed.totalEarned.toLocaleString()} EP earned`,
+  ];
+  return bits.join(", ");
+}
+
+async function readFile(file) {
+  if (typeof file.text === "function") return await file.text();
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("The file could not be read"));
+    reader.readAsText(file);
+  });
+}
+
+// Everything __importData() accepts: nothing (open the picker), a JSON string,
+// a File/Blob, or a plain save object. Returns { raw, label, kind } — or null
+// when the user cancelled, in which case the reason is already on the console.
+async function resolveImport(input) {
   if (typeof input === "string") {
-    raw = input.trim();
-  } else if (input && typeof input === "object") {
-    raw = JSON.stringify(input);
-  } else {
-    error(
-      "Pass a JSON string or an object. Example: __importSave('{\"version\":1,...}')",
+    return {
+      raw: input.trim(),
+      label: "the JSON text you passed",
+      kind: "text",
+    };
+  }
+  if (input && typeof input === "object" && typeof input.text === "function") {
+    let raw;
+    try {
+      raw = await readFile(input);
+    } catch (failure) {
+      error("Could not read the file.", failure?.message ?? failure);
+      return null;
+    }
+    return { raw: raw.trim(), label: fileLabel(input), kind: "file" };
+  }
+  if (input && typeof input === "object") {
+    return {
+      raw: JSON.stringify(input),
+      label: "the save object you passed",
+      kind: "object",
+    };
+  }
+  if (input === undefined || input === null) return pickSaveFile();
+  error(
+    "__importData() takes no argument (it opens the file picker) or a JSON string/object.",
+  );
+  log("Example: __importData()   or   __importData('{\"version\":1,…}')");
+  return null;
+}
+
+// The modern picker (Chrome, Edge, Opera) resolves only once the user has
+// chosen or cancelled, and it tells us when the browser blocks it, so the
+// console always gets an answer.
+async function pickWithFileSystemAPI() {
+  let handle;
+  try {
+    [handle] = await window.showOpenFilePicker({
+      id: "rngdle-save-import",
+      multiple: false,
+      types: PICKER_TYPES,
+    });
+  } catch (failure) {
+    if (failure?.name === "AbortError") {
+      warn("No file selected — nothing was imported.");
+    } else {
+      error(
+        "The browser did not open the file picker.",
+        failure?.message ?? failure,
+      );
+      log(
+        "You can still import by passing the JSON directly: __importData(jsonText)",
+      );
+    }
+    return null;
+  }
+  const file = await handle.getFile().catch(() => null);
+  if (!file) {
+    error("The chosen file could not be read.");
+    return null;
+  }
+  const raw = await readFile(file).catch((failure) => {
+    error("Could not read the file.", failure?.message ?? failure);
+    return null;
+  });
+  if (raw === null) return null;
+  return { raw: raw.trim(), label: fileLabel(file), kind: "file" };
+}
+
+// Firefox and Safari have no showOpenFilePicker, so the picker is a hidden
+// <input type="file">. There is no promise to await, which is exactly how a
+// blocked dialog used to fail in silence — so every ending (chosen, cancelled,
+// never opened) now ends with a line on the console.
+function pickWithFileInput() {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    // Firefox and Safari allow any type regardless of this list; the extension
+    // and the JSON check afterwards are what keep the wrong file out.
+    input.accept = ["application/json", ...SAVE_EXTENSIONS].join(",");
+    input.setAttribute("aria-hidden", "true");
+    input.style.cssText =
+      "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;";
+    document.body.appendChild(input);
+
+    let settled = false;
+    const timers = [];
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      timers.forEach(clearTimeout);
+      window.removeEventListener("focus", onFocus);
+      input.remove();
+      resolve(result);
+    };
+    const cancelled = () => {
+      warn("No file selected — nothing was imported.");
+      finish(null);
+    };
+    // The dialog closes and the window gets focus back before the change event
+    // lands, so wait one tick before calling it a cancel.
+    const onFocus = () => {
+      timers.push(
+        setTimeout(() => {
+          if (!input.files?.length) cancelled();
+        }, 300),
+      );
+    };
+    input.addEventListener(
+      "change",
+      async () => {
+        const file = input.files?.[0];
+        if (!file) return cancelled();
+        let raw;
+        try {
+          raw = await readFile(file);
+        } catch (failure) {
+          error("Could not read the file.", failure?.message ?? failure);
+          finish(null);
+          return;
+        }
+        finish({ raw: raw.trim(), label: fileLabel(file), kind: "file" });
+      },
+      { once: true },
     );
+    window.addEventListener("focus", onFocus);
+    // Opening a file dialog moves focus out of the page. If the page still has
+    // it a moment after the click, the browser likely refused to open the
+    // dialog — say so, but keep waiting in case the dialog appears late.
+    timers.push(
+      setTimeout(() => {
+        if (settled || !document.hasFocus()) return;
+        warn(
+          "The file picker did not seem to open. The browser only allows it from a real user action in the page.",
+        );
+        log(
+          "Try again, or import without a file: __importData('{…save JSON…}')",
+        );
+      }, 1200),
+    );
+    input.click();
+  });
+}
+
+function pickSaveFile() {
+  log("Opening the file picker — choose the .json save to import…");
+  if (typeof window.showOpenFilePicker === "function") {
+    return pickWithFileSystemAPI();
+  }
+  return pickWithFileInput();
+}
+
+async function importData(input) {
+  const picked = await resolveImport(input);
+  if (!picked) return;
+  const { raw, label, kind } = picked;
+
+  if (!raw) {
+    error(`Import failed: ${label} is empty — there is no save to import.`);
     return;
   }
+
   let parsed;
   try {
     parsed = parseProgress(raw);
   } catch (failure) {
-    error("That JSON is not a valid RNGdle save.", failure.message);
+    error(`Import failed: ${label} is not a valid RNGdle save.`);
+    if (failure instanceof SyntaxError) {
+      warn("The JSON could not be parsed:", failure.message);
+      if (/^\s*</.test(raw)) {
+        log(
+          "Hint: that looks like an HTML page. Pick the .json written by __downloadSave().",
+        );
+      } else if (kind === "text") {
+        log(
+          "If you meant a file on disk, run __importData() with no arguments and use the dialog.",
+        );
+      }
+    } else {
+      warn("Reason:", failure?.message ?? failure);
+      log(
+        "Import the file exactly as __downloadSave() wrote it — hand edits usually break the format.",
+      );
+    }
     return;
   }
+
   if (!parsed.profile) {
     warn(
       "The imported save has no local profile. Guest progress is never saved — sign up after the reload to keep it.",
     );
   }
+
   try {
     localStorage.setItem(PROGRESS_KEY, raw);
   } catch (failure) {
-    error("Could not write to localStorage.", failure.message);
+    error(
+      "Could not write the save to localStorage.",
+      failure?.message ?? failure,
+    );
     return;
   }
-  log(
-    `Save imported${parsed.profile ? ` for ${parsed.profile.username}` : ""}. Reloading…`,
-  );
+
+  log(`Save imported: ${label} — ${describeSave(parsed)}.`);
+  log("Reloading to apply it…");
   // A hard reload is the only safe way to make every hook, worker and
   // linked-device listener pick up the new save at once.
   setTimeout(() => location.reload(), 400);
@@ -129,7 +353,15 @@ export function installConsoleSaveTools() {
   if (typeof window === "undefined") return;
   // Expose on window so the console can call them. The double-underscore
   // prefix keeps them out of the way of any real API the page might add.
-  window.__importSave = importSave;
+  window.__importData = importData;
+  // Older builds only exposed __importSave: keep it working (it opens the
+  // picker too when called with no argument) but point at the new name.
+  window.__importSave = (input) => {
+    warn(
+      "__importSave was renamed to __importData — use __importData() from now on.",
+    );
+    return importData(input);
+  };
   window.__exportSave = exportSave;
   window.__downloadSave = downloadSave;
 }
