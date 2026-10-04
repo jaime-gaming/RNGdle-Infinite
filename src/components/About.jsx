@@ -44,7 +44,7 @@ export default function About({ navigate, progress }) {
     {
       icon: Clock3,
       title: "Wait a little, roll again",
-      body: `A reveal takes ${formatDuration(BASE_ROLL_MS / 1000)} and the cooldown that follows is ${formatDuration(BASE_COOLDOWN_MS / 1000)}. The countdown shows the cooldown itself. Upgrades shorten both for this run; rebirth resets them.`,
+      body: `A reveal takes ${formatDuration(BASE_ROLL_MS / 1000)} and the cooldown that follows is ${formatDuration(BASE_COOLDOWN_MS / 1000)}. The countdown says which wait it is showing: COOLDOWN IN while the reveal is still playing, NEXT ROLL IN once the cooldown itself is running, and REVEAL IN when a boost removed the cooldown entirely. Upgrades shorten both for this run; rebirth resets them.`,
     },
   ];
   const topics = [
@@ -104,7 +104,7 @@ export default function About({ navigate, progress }) {
         "Signing up creates a local profile in this browser and starts a clean account — nothing from guest play carries over.",
         "There is no email, password, server or leaderboard. Clearing site data deletes the save.",
         "Refreshing resumes the same committed number and deadline. Tabs on one account share a single draw and reward.",
-        "Your profile shows how far you have come since the account was created, and you can export it as a file. There is no import — a file can never overwrite the game.",
+        "Your profile shows how far you have come since the account was created, and you can export it as a card. Nothing in the game reads a card back, so a shared file can never overwrite your save.",
       ],
     },
   ];

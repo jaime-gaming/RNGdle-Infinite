@@ -43,6 +43,10 @@ Three steps, over and over:
    45-second reveal plus a 60-second cooldown, and upgrades can reduce these to a
    10-second reveal and a 2-second cooldown. Both are snapshotted when you press
    the button, so buying something mid-roll never shortens the roll in flight.
+   The countdown names the wait it is actually showing: **COOLDOWN IN** while the
+   reveal still holds the roll back, **NEXT ROLL IN** once the cooldown itself is
+   ticking, and **REVEAL IN** when a boost or a waive skill removed the cooldown
+   entirely.
 
 Your EP is a real wallet. Roll, earn, spend it on upgrades and cosmetics, roll
 faster.
@@ -386,17 +390,25 @@ failed-write recovery.
   flushes the current save without waiting for the next change. Anyone holding
   the link plays the account, so treat it like a password.
 
-  **Either device may be closed.** The relay writes each room to its own store
-  and only then answers a device, so a save made while the other browser is off
-  waits there instead of being lost: play on the phone, close it, open the PC a
-  day later and you are handed the newer save. The save itself still never
-  leaves the players' browsers — the relay keeps the room (the state blob it was
-  given) so it can hand it back later, and a room nobody touches is swept away
-  after a month. The dev server hosts the relay on `/__sync` with its store in
-  `.cache/sync-rooms`; a static deployment runs `npm run relay` and points the
-  game at it with `?relay=https://host:8787` or the relay field on the device
-  link page. Not sure the relay is reachable? _Send now_ shows the queue and the
-  save is kept locally until it gets through.
+  **Two transports, and the page says which one you are on.** On a static host
+  there is no relay, so the link uses WebRTC: a free public broker carries the
+  initial handshake only, and then every byte goes browser-to-browser. Both
+  devices then have to be open at the same time at least once; a change made
+  while the other side is away is queued and goes out on the next connection.
+
+  **With a relay, either device may be closed.** A relay that keeps a store
+  writes each room to it and only then answers a device, so a save made while
+  the other browser is off waits there instead of being lost: play on the
+  phone, close it, open the PC a day later and you are handed the newer save. A
+  room nobody touches is swept away after a month. The dev server hosts the
+  relay on `/__sync`; a static deployment runs `npm run relay` (store in
+  `.cache/sync-rooms`) and points the game at it with `?relay=https://host:8787`
+  or the relay field on the device link page. The technical table states plainly
+  whether the room is `On disk at …` or `In memory only`, and a memory-only
+  relay says it forgets a room once nobody is listening. The save itself still
+  never leaves the players' browsers — the relay keeps only the latest blob it
+  was given, to hand it back later. Not sure the relay is reachable? _Send now_
+  shows the queue and the save is kept locally until it gets through.
   ![The device link page in Settings](media/devices.png)
 
 - **No relay at all: link by hand.** Under _No relay? Link by hand_, one device
