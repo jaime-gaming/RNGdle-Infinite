@@ -109,17 +109,19 @@ complete online rolls. When it is full the skill is _armed_, and **the next roll
 fires it**. Hover, focus or use a screen reader to read the name, the exact
 effect and the charge state.
 
-Two things in that corner keep the arithmetic out of your head: an armed circle
-shows **what it adds** ("×2 banked EP", "2 draws, best kept"), and the **Σ
-button** opens the total — every equipped skill with its charge, the banked-EP
-multiplier with each part named (companion, rebirth and ultra-rebirth bonuses,
+Two things in that corner keep the arithmetic out of your head: every circle in
+the Skill Row (equipped skills, companion skills, and passive EP modifiers from
+companions, rebirths, ultra-rebirths and surplus) shows **what it adds** ("×2
+banked EP", "+5% EP", "2 draws, best kept"), and the **Σ button** opens the
+total — every equipped and companion skill with its charge, the banked-EP
+multiplier with each part named (companion, rebirth, ultra-rebirth, surplus and
 wallet skills), the draw plan for the next roll, and whether it is
 cooldown-free. That panel is the only place the total is written out, so it is
 never contradicted.
 
-And when the roll itself applies the money, a bonus shows once: the **extra**
-EP added beyond the score and every part that produced it, named. A plain roll
-states nothing extra — the EP counter already is the total.
+And when the roll itself applies the money, each bonus charge floats into
+`Your EP balance` as a staggered animation. A plain roll states only the base
+gain.
 
 ![The skill rack: three charged circles, one explaining itself on hover](media/skills.png)
 
@@ -131,15 +133,17 @@ the countdown on the button. Thirteen belong to companions (each companion teach
 skill that exists nowhere else and only works while that companion is worn),
 and six are handed out by the rebirth ladder — one per rung.
 
-| Skill             |        Price | Charges | Effect                                                  |
-| ----------------- | -----------: | ------: | ------------------------------------------------------- |
-| **Surge**         |   180,000 EP |       6 | The next roll banks double EP                           |
-| **Trail**         |   320,000 EP |       6 | The next roll finds companions four times as often      |
-| **Bounce**        |   500,000 EP |       5 | The next roll has no cooldown (the reveal still plays)  |
-| **Double Vision** |   900,000 EP |      10 | Draws two numbers and keeps the one that scores more EP |
-| **Bedrock**       | 1,600,000 EP |       8 | Redraws to at least 25,000 EP, at most four draws       |
-| **Turbo**         | 2,600,000 EP |      10 | The next roll counts three times towards charging       |
-| **Big Game**      | 6,000,000 EP |      18 | Redraws to at least 100,000 EP, at most five draws      |
+| Skill             |         Price | Charges | Effect                                                   |
+| ----------------- | ------------: | ------: | -------------------------------------------------------- |
+| **Surge**         |    180,000 EP |       5 | The next roll banks double EP                            |
+| **Trail**         |    320,000 EP |       5 | The next roll finds companions four times as often       |
+| **Bounce**        |    500,000 EP |       4 | The next roll has no cooldown (the reveal still plays)   |
+| **Double Vision** |    900,000 EP |       7 | Draws two numbers and keeps the one that scores more EP  |
+| **Bedrock**       |  1,600,000 EP |       6 | Redraws to at least 25,000 EP, at most four draws        |
+| **Turbo**         |  2,600,000 EP |       7 | The next roll counts three times towards charging        |
+| **Big Game**      |  6,000,000 EP |      11 | Redraws to at least 100,000 EP, at most five draws       |
+| **Miser**         |  9,000,000 EP |       7 | The next roll banks triple EP                            |
+| **Triptych**      | 12,000,000 EP |       6 | Draws three numbers and keeps the one that scores top EP |
 
 Every effect stays inside the honest-roll rule: **a skill may touch the roll,
 but never the scoring table.** Wallet multipliers only multiply banked EP, and
@@ -242,14 +246,14 @@ Rebirth is a **ladder**, not a single wall, and it is driven by the run you are
 playing: a slice of the badge collection **and** EP the current cycle has
 earned. No shop purchase is ever part of a rung.
 
-| Rung | Required | Badges |  Cycle EP | Granted skill  |
-| ---: | -------: | -----: | --------: | -------------- |
-|    1 |      20% |     47 |   100,000 | Reborn Drive   |
-|    2 |      25% |     59 |   250,000 | Reborn Tempo   |
-|    3 |      30% |     71 |   500,000 | Reborn Depth   |
-|    4 |      35% |     83 | 1,250,000 | Reborn Vault   |
-|    5 |      40% |     94 | 3,000,000 | Reborn Omen    |
-|    6 |      45% |    106 | 7,000,000 | Reborn Paragon |
+| Rung | Required | Badges |   Cycle EP | Granted skill  |
+| ---: | -------: | -----: | ---------: | -------------- |
+|    1 |      20% |     47 |    250,000 | Reborn Drive   |
+|    2 |      25% |     59 |    600,000 | Reborn Tempo   |
+|    3 |      30% |     71 |  1,500,000 | Reborn Depth   |
+|    4 |      35% |     83 |  3,500,000 | Reborn Vault   |
+|    5 |      40% |     94 |  7,500,000 | Reborn Omen    |
+|    6 |      45% |    106 | 15,000,000 | Reborn Paragon |
 
 The EP is **a mark of progress, not a spend**: it is never taken from your
 wallet, so buying an upgrade can never lock you out of a rung — the wallet
@@ -285,12 +289,12 @@ permanent bonuses with their own explanation. Each rebirth:
 ![The rebirth ladder: collection progress, the current rung and all six steps](media/rebirth.png)
 
 Finish the sixth rung and **ultra-rebirth** unlocks: the same clean slate,
-taken from **50% of the collection (118 badges) and 15,000,000 EP** earned in
+taken from **50% of the collection (118 badges) and 30,000,000 EP** earned in
 the cycle, in exchange for a **permanent, stackable +10% to banked EP** for
 every ultra-rebirth, and a cosmetic mark next to your profile. It pays its own
 **1,000,000 EP** on top of the rungs you keep — a ladder-complete ultra-rebirth
 starts the next cycle with 2,500,000 EP — and any EP the cycle scored over the
-ultra's 15,000,000 gate pays the same surplus dividend as a rung. It costs the
+ultra's 30,000,000 gate pays the same surplus dividend as a rung. It costs the
 run, never the account — history, rebirths and their +2% rung bonuses all
 stay. Both resets require typing the word (`REBIRTH` or `ULTRA`) and cannot be
 undone.
@@ -325,11 +329,11 @@ first and latest entry.
 
 ![The profile page with the derived history and the one-way export](media/profile.png)
 
-**Export my data** downloads a JSON snapshot of the whole save — profile,
-figures and full activity history — so you can read it, archive it or keep it
-somewhere safe. It is deliberately **one-way**: there is no import anywhere, so
-a downloaded file can never overwrite the game you are playing. Delete account &
-progress remains the only way to remove it.
+**Export my data** downloads a PNG account card of your save — your account
+name, your biggest roll and your key account stats — so you can view, share or
+keep it somewhere safe. It is deliberately **one-way**: there is no import
+anywhere, so a downloaded card can never overwrite the game you are playing.
+Delete account & progress remains the only way to remove it.
 
 ## Fairness
 
@@ -365,10 +369,18 @@ failed-write recovery.
   live in both directions: buy on the phone, watch it land on the PC. The
   relay it talks to keeps rooms **in memory only** — the save itself never
   leaves the players' own browsers, nothing is written to disk, and a restart
-  simply empties the relay. Anyone holding the link plays the account, so
-  treat it like a password. The dev server hosts the relay on `/__sync`; a
-  static deployment runs `npm run relay` and points the game at it with
-  `?relay=https://host:8787`.
+  simply empties the relay. The status pill breathes while a device is being
+  waited for and rings once every time a save crosses the wire; _Send now_
+  flushes the current save without waiting for the next change. Anyone holding
+  the link plays the account, so treat it like a password. The dev server hosts
+  the relay on `/__sync`; a static deployment runs `npm run relay` and points
+  the game at it with `?relay=https://host:8787` or the relay field under
+  _Link devices_.
+  ![Device links in Settings](media/devices.png)
+- **No relay at all: link by hand.** Under _No relay? Link by hand_, one device
+  copies the account into a **peer code** and the other adopts it — the whole
+  save, one blob of text, no server anywhere. It is the same save the relay
+  would forward, moved by clipboard or chat instead.
 - **Multi-tab safe.** Tabs share one save through storage events and Web Locks:
   simultaneous rolls join the same draw, purchases cannot overspend, and a
   second rebirth cannot apply twice.
@@ -409,7 +421,7 @@ their EP and count in your history, but charging is online-only.
 a rebirth restarts the run — every purchase, the companions, the badge
 collection and the EP in your wallet. Your history, your rebirths, the skills
 the ladder granted and every permanent bonus stay. An ultra-rebirth gives the
-same fresh start after half the collection and 15,000,000 cycle EP, for a
+same fresh start after half the collection and 30,000,000 cycle EP, for a
 bigger bonus.
 
 **Is this the official RNGdle?** No. It is an independent recreation, built from

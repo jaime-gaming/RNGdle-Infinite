@@ -95,7 +95,7 @@ function seededSave() {
     owned,
     equipped: "aurora",
     equippedSkills: ["surge", "twice"],
-    skillCharge: { surge: 6, twice: 3, trail: 2 },
+    skillCharge: { surge: 5, twice: 3, trail: 2 },
     flywheelCharge: 3,
     pets: PETS.slice(0, 6).map((pet) => pet.id),
     activePet: "jelly",
@@ -202,6 +202,7 @@ try {
   await shot(page, "shop-shelf");
 
   // 5. The rebirth ladder, on its own page.
+  await page.setViewportSize({ width: 1280, height: 1750 });
   await page.goto(`${BASE}/rebirth`);
   // The ladder and its rungs live on the rebirth page itself.
   await page.waitForSelector(".rebirth-page");
@@ -221,6 +222,20 @@ try {
   await page.goto(`${BASE}/changelog`);
   await page.waitForTimeout(700);
   await shot(page, "changelog");
+
+  // 8. Device links, close up: a live link waiting for its second device, the
+  //    hand-link fallback and the relay field, all in the settings panel.
+  await page.goto(`${BASE}/settings`);
+  const linkGroup = page.locator(".settings-group", {
+    has: page.getByRole("heading", { name: "Link devices" }),
+  });
+  await linkGroup.waitFor({ state: "visible" });
+  await page.getByTestId("sync-create").click();
+  await page.getByTestId("sync-link").waitFor({ state: "visible" });
+  await linkGroup.locator(".sync-hand summary").click();
+  // Let the toast retire so the panel is the only thing in the frame.
+  await page.waitForTimeout(3800);
+  await shot(page, "devices", { clip: await linkGroup.boundingBox() });
   await page.close();
 } finally {
   await browser.close();

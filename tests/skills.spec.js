@@ -496,9 +496,9 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
     ],
     receipts: ["old"],
   });
-  // The ladder's first rung: a fifth of the collection and 100,000 EP the
+  // The ladder's first rung: a fifth of the collection and 250,000 EP the
   // cycle earned — both are met by this account.
-  expect(REBIRTH_STEPS[0]).toEqual({ badges: 0.2, ep: 100000 });
+  expect(REBIRTH_STEPS[0]).toEqual({ badges: 0.2, ep: 250000 });
   const reborn = applyProgress(state, {
     type: "rebirth",
     expectedRebirths: 0,
@@ -543,7 +543,7 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
   expect(parseProgress(JSON.stringify(reborn)).skills).toContain(granted.id);
   // The next rung asks for more badges and more EP, and the cycle has to
   // rediscover the collection before it can be claimed.
-  expect(REBIRTH_STEPS[1]).toEqual({ badges: 0.25, ep: 250000 });
+  expect(REBIRTH_STEPS[1]).toEqual({ badges: 0.25, ep: 600000 });
   expect(() =>
     applyProgress(reborn, { type: "rebirth", expectedRebirths: 1, at: 200000 }),
   ).toThrow(/Discover/);
@@ -597,7 +597,7 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
       { ...top, history: [] },
       { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
     ),
-  ).toThrow(/Earn 15,000,000 EP/);
+  ).toThrow(/Earn 30,000,000 EP/);
   const reborn = applyProgress(top, {
     type: "ultra-rebirth",
     expectedUltraRebirths: 1,

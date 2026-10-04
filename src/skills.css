@@ -21,7 +21,12 @@
   outline: none;
 }
 .skill-slot:focus-visible {
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: 0 0 0 2px var(--accent, var(--green));
+}
+.skill-slot:hover,
+.skill-slot:focus-visible,
+.skill-slot:focus-within {
+  z-index: 30;
 }
 .skill-ring {
   position: relative;
@@ -78,8 +83,16 @@
 .skill-bar .tint-steel .skill-ring-fill {
   stroke: var(--secondary);
 }
-.skill-slot.is-armed .skill-ring-icon {
-  color: var(--ink);
+.skill-slot.is-armed .skill-ring-icon,
+.skill-slot.skill-passive .skill-ring-icon {
+  color: var(--ink, var(--text));
+}
+.skill-slot.is-standby {
+  opacity: 0.65;
+  transition: opacity 0.25s ease;
+}
+.skill-slot.skill-passive .skill-tooltip-state {
+  color: var(--green);
 }
 .skill-slot.is-armed .skill-ring {
   filter: drop-shadow(
@@ -87,11 +100,45 @@
   );
   animation: skill-ready 2.6s ease-in-out infinite;
 }
+/* A charged circle breathes a halo of its own, so "ready" is visible from
+   across the page without reading anything. */
+.skill-slot.is-armed::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--green) 50%, transparent);
+  pointer-events: none;
+  animation: skill-halo 2.6s ease-in-out infinite;
+}
+@keyframes skill-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.12;
+    transform: scale(1.12);
+  }
+}
 .skill-slot.is-firing .skill-ring {
   animation: skill-fire 900ms ease-out 1;
 }
 .skill-slot.is-firing .skill-ring-icon {
   color: var(--green);
+  animation: skill-flash 900ms ease-out 1;
+}
+@keyframes skill-flash {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 @keyframes skill-ready {
   0%,
@@ -137,10 +184,21 @@
 .skill-slot:focus-visible .skill-tooltip,
 .skill-slot:focus-within .skill-tooltip {
   display: flex;
+  animation: skill-tooltip-in 170ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes skill-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-7px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }
 .skill-tooltip strong {
   font-size: 12px;
-  color: var(--ink);
+  color: var(--ink, var(--text));
 }
 .skill-tooltip-effect {
   color: var(--secondary);
@@ -179,7 +237,9 @@
 /* Motion is decoration here: the state is still readable from the ring. */
 @media (prefers-reduced-motion: reduce) {
   .skill-slot.is-armed .skill-ring,
-  .skill-slot.is-firing .skill-ring {
+  .skill-slot.is-firing .skill-ring,
+  .skill-slot.is-armed::after,
+  .skill-slot.is-firing .skill-ring-icon {
     animation: none;
   }
 }
@@ -188,6 +248,7 @@
 /* Each armed circle states its own contribution next to the ring, and the Σ
    button opens the only panel in this corner that does arithmetic. */
 .skill-contribution {
+  transition: opacity 0.18s ease;
   position: absolute;
   top: 50%;
   left: calc(100% + 8px);
@@ -204,11 +265,7 @@
 }
 .skill-bar:hover .skill-contribution,
 .skill-bar:focus-within .skill-contribution {
-  opacity: 0.35;
-}
-.skill-slot:hover .skill-contribution,
-.skill-slot:focus-visible .skill-contribution {
-  opacity: 1;
+  opacity: 0;
 }
 .skill-ability {
   cursor: pointer;
@@ -284,6 +341,7 @@
 .skill-summary:focus-visible .rack-panel,
 .skill-summary.is-open .rack-panel {
   display: flex;
+  animation: skill-tooltip-in 170ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 .rack-panel strong {
   font-size: 12px;

@@ -16,6 +16,8 @@ import { PROGRESS_KEY, parseProgress } from "./progress.js";
 const LINK_KEY = "rng-infinite-sync-v1";
 const RELAY_KEY = "rng-infinite-sync-endpoint-v1";
 const BROADCAST_DELAY_MS = 120;
+const PEER_CODE_PREFIX = "RNGDLE-ACCOUNT-1:";
+const PEER_CODE_LINE = 72;
 
 export const SYNC_EVENT = "rng-sync-state";
 
@@ -32,6 +34,13 @@ let helloTimer = 0;
 let sendTimer = 0;
 let pendingState = "";
 let everLive = false;
+// What the settings screen animates: how many devices are in the room, when
+// the last frame crossed the wire, which way it went, and a counter that moves
+// on every exchange so the UI can flash exactly once per event.
+let peers = 0;
+let lastSyncAt = 0;
+let lastDirection = ""; // "" | sent | received
+let revision = 0;
 
 function emit() {
   for (const listener of listeners) listener(status, detail);
@@ -44,8 +53,26 @@ function setStatus(next, note = detail) {
   emit();
 }
 
+// A frame really crossed the wire: stamp it so the pill can pulse.
+function markSynced(direction) {
+  lastSyncAt = Date.now();
+  lastDirection = direction;
+  revision += 1;
+  emit();
+}
+
 export function syncStatus() {
-  return { status, detail, room, linked: status !== "off" && !!room };
+  return {
+    status,
+    detail,
+    room,
+    linked: status !== "off" && !!room,
+    peers,
+    lastSyncAt,
+    lastDirection,
+    revision,
+    endpoint: relayBase(),
+  };
 }
 
 export function subscribeSync(listener) {
@@ -80,6 +107,29 @@ function syncUrl(path, params = {}) {
   for (const [name, value] of Object.entries(params))
     if (value) url.searchParams.set(name, value);
   return url;
+}
+
+// The relay a page talks to: remembered endpoint, `?relay=` override, or the
+// origin the game is served from. Exposed so Settings can show, change and
+// reset it — a static build has no relay of its own and needs pointing at one.
+export function relayEndpoint() {
+  return relayBase();
+}
+
+export function setRelayEndpoint(endpoint) {
+  const trimmed = String(endpoint ?? "")
+    .trim()
+    .replace(/\/+$/, "");
+  try {
+    if (trimmed) localStorage.setItem(RELAY_KEY, trimmed);
+    else localStorage.removeItem(RELAY_KEY);
+  } catch {}
+  // Already in a room: reconnect through the new address immediately.
+  if (room) {
+    session = "";
+    openStream();
+  } else emit();
+  return trimmed;
 }
 
 function persistLink() {
@@ -189,7 +239,10 @@ function openStream() {
   try {
     stream = new EventSource(syncUrl("stream", { room, key, session }));
   } catch {
-    setStatus("error", "The sync relay is not reachable from here.");
+    setStatus(
+      "error",
+      "No relay answered. Run `npm run relay`, point this page at it below, or link by hand.",
+    );
     return;
   }
   source = stream;
@@ -198,7 +251,7 @@ function openStream() {
       stream.close();
       setStatus(
         "error",
-        "The sync relay is not reachable. Run `npm run relay` or use a build with one.",
+        "No relay answered. Run `npm run relay`, point this page at it below, or link by hand.",
       );
     }
   }, 6000);
@@ -213,7 +266,7 @@ function openStream() {
       clearTimeout(helloTimer);
       applyLatest(message.latest, () => {
         // The room is empty (or we hold the newest save): offer ours now.
-        if (!message.latest && currentProfile()) pushState(currentSave());
+        if (!message.latest && currentProfile()) void pushState(currentSave());
       });
       updateCount(message.count);
     } else if (message.type === "state") applyLatest(message.payload);
@@ -229,6 +282,7 @@ function openStream() {
 }
 
 function updateCount(count) {
+  if (typeof count === "number") peers = count;
   if (count >= 2) {
     everLive = true;
     setStatus("live", `${count} devices live`);
@@ -258,7 +312,7 @@ function applyLatest(latest, onEmpty) {
     (latest.savedAt === savedAt && latest.device !== device)
   ) {
     // We are ahead of the room (or the tie goes our way): push the truth.
-    pushState(currentSave());
+    void pushState(currentSave());
   }
 }
 
@@ -289,6 +343,7 @@ function receiveRemote(latest) {
   savedAt = latest.savedAt;
   device = latest.device || device;
   persistLink();
+  markSynced("received");
   window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: raw }));
 }
 
@@ -307,35 +362,107 @@ export function broadcastSync(progress) {
   sendTimer = setTimeout(() => {
     const state = pendingState;
     pendingState = "";
-    if (state) pushState(state, false);
+    if (state) pushState(state);
   }, BROADCAST_DELAY_MS);
 }
 
-function pushState(state) {
-  if (!room || !state) return;
+// "Send now": flush whatever this browser holds straight to the room instead
+// of waiting for the debounce, and report whether the relay took it.
+export async function pushNow() {
+  if (!room) return { ok: false, reason: "offline" };
+  const state = pendingState || currentSave();
+  pendingState = "";
+  clearTimeout(sendTimer);
+  if (!state) return { ok: false, reason: "empty" };
+  return pushState(state);
+}
+
+async function pushState(state) {
+  if (!room || !state) return { ok: false, reason: "offline" };
   // Stamps only move forward, and a device id never changes mid-link.
   savedAt = Math.max(savedAt + 1, Date.now());
   persistLink();
   const body = JSON.stringify({ state, savedAt, device });
-  fetch(syncUrl("state", { room, key, session }), {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body,
-  })
-    .then(async (response) => {
-      if (response.status === 403) {
-        setStatus("error", "That device link was rejected by the relay.");
-        return;
-      }
-      if (!response.ok) return;
-      const result = await response.json().catch(() => ({}));
-      // The room held something newer than the state we just offered: take it.
-      if (result.conflict) applyLatest(result.conflict);
-      if (typeof result.count === "number") updateCount(result.count);
-    })
-    .catch(() => {
-      setStatus("error", "The relay is unreachable; the link is offline.");
+  try {
+    const response = await fetch(syncUrl("state", { room, key, session }), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
     });
+    if (response.status === 403) {
+      setStatus("error", "That device link was rejected by the relay.");
+      return { ok: false, reason: "rejected" };
+    }
+    if (!response.ok) return { ok: false, reason: "relay" };
+    const result = await response.json().catch(() => ({}));
+    // The room held something newer than the state we just offered: take it.
+    if (result.conflict) applyLatest(result.conflict);
+    if (typeof result.count === "number") updateCount(result.count);
+    markSynced("sent");
+    return { ok: true };
+  } catch {
+    setStatus("error", "The relay is unreachable; the link is offline.");
+    return { ok: false, reason: "offline" };
+  }
+}
+
+// ---- Linking by hand -------------------------------------------------------
+// A device link needs a relay in the middle; a *peer code* does not. It packs
+// the whole save into one text blob a player can walk across by clipboard or
+// chat, so two devices can still meet with no server anywhere at all — the
+// same trick the relay performs, done by hand.
+function encodeBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function decodeBase64(code) {
+  const binary = atob(code);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+export function buildPeerCode() {
+  const save = currentSave();
+  if (!save) return "";
+  const payload = JSON.stringify({
+    v: 1,
+    at: Math.max(savedAt, Date.now()),
+    save,
+  });
+  const base64 = encodeBase64(payload).replace(
+    new RegExp(`(.{${PEER_CODE_LINE}})`, "g"),
+    "$1\n",
+  );
+  return `${PEER_CODE_PREFIX}${base64}`;
+}
+
+// Adopt a code another device showed: the same event path a relay frame takes,
+// so the reducer, the storage write and the deadline checks are all identical.
+export function adoptPeerCode(code) {
+  const cleaned = String(code ?? "")
+    .replace(new RegExp(`^\\s*${PEER_CODE_PREFIX}\\s*`), "")
+    .replace(/\s+/g, "");
+  if (!cleaned) return { ok: false, reason: "empty" };
+  let payload;
+  try {
+    payload = JSON.parse(decodeBase64(cleaned));
+  } catch {
+    return { ok: false, reason: "unreadable" };
+  }
+  let parsed;
+  try {
+    parsed = parseProgress(payload?.save);
+  } catch {
+    return { ok: false, reason: "unreadable" };
+  }
+  if (!parsed?.profile) return { ok: false, reason: "guest" };
+  savedAt = Math.max(savedAt, Number(payload?.at) || 0);
+  markSynced("received");
+  window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: payload.save }));
+  return { ok: true };
 }
 
 // Last chance to flush a change that lands right as the tab closes.

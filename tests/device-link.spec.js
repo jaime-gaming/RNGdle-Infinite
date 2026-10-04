@@ -144,3 +144,99 @@ test("one device can stay closed while the other contributes, and catches up on 
   await contextB.close();
   await contextA.close();
 });
+
+test("a peer code carries the whole account with no relay in the middle", async ({
+  browser,
+}) => {
+  const contextA = await browser.newContext();
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, {
+    balance: 5000000,
+    totalEarned: 5000000,
+    owned: ["quickwind-1"],
+  });
+  await pageA.goto("/settings");
+
+  // The hand-link lives behind a disclosure so the relay flow stays the
+  // headline; opening it and copying fills the field whether or not the
+  // browser allows the clipboard.
+  await pageA.locator(".sync-hand summary").click();
+  await pageA.getByTestId("peer-code-copy").click();
+  const code = await pageA.getByTestId("peer-code-field").inputValue();
+  expect(code.startsWith("RNGDLE-ACCOUNT-1:")).toBe(true);
+
+  // A second, entirely empty browser — no link, no relay, no storage in
+  // common — adopts the account the moment the code is pasted.
+  const contextB = await browser.newContext();
+  const pageB = await contextB.newPage();
+  await pageB.goto("/settings");
+  await pageB.locator(".sync-hand summary").click();
+  await pageB.getByTestId("peer-code-field").fill(code);
+  await pageB.getByTestId("peer-code-adopt").click();
+  await expect
+    .poll(async () => (await saved(pageB))?.profile?.username, {
+      timeout: 10000,
+    })
+    .toBe("LuckyTester");
+  const adopted = await saved(pageB);
+  expect(adopted.balance).toBe(5000000);
+  expect(adopted.owned).toContain("quickwind-1");
+  // The field clears once the code has been taken.
+  await expect(pageB.getByTestId("peer-code-field")).toHaveValue("");
+
+  // Rubbish pasted in is refused with a note, never a broken save.
+  await pageB
+    .getByTestId("peer-code-field")
+    .fill("RNGDLE-ACCOUNT-1:not-a-code");
+  await pageB.getByTestId("peer-code-adopt").click();
+  expect((await saved(pageB)).profile.username).toBe("LuckyTester");
+
+  await contextB.close();
+  await contextA.close();
+});
+
+test("send now flushes the save, and the relay address is configurable", async ({
+  browser,
+}) => {
+  const contextA = await browser.newContext();
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, {
+    balance: 5000000,
+    totalEarned: 5000000,
+    owned: [],
+  });
+  await pageA.goto("/settings");
+  await pageA.getByTestId("sync-create").click();
+  await expect(pageA.getByTestId("sync-link")).toBeVisible();
+
+  // One click on Send now posts this browser's save and says so.
+  await pageA.getByTestId("sync-now").click();
+  await expect(pageA.getByTestId("sync-note")).toContainText(
+    /left this device|arrived/,
+  );
+  await expect(pageA.getByTestId("sync-status")).toHaveAttribute(
+    "data-direction",
+    /sent|received/,
+  );
+
+  // A static deployment points at a relay of its own; the field remembers it
+  // and Reset hands the page back to this site's own address.
+  await pageA.getByTestId("relay-field").fill("https://relay.example:8787/");
+  await pageA.getByTestId("relay-save").click();
+  await expect(pageA.getByTestId("relay-field")).toHaveValue(
+    "https://relay.example:8787",
+  );
+  await expect
+    .poll(async () =>
+      pageA.evaluate(() =>
+        localStorage.getItem("rng-infinite-sync-endpoint-v1"),
+      ),
+    )
+    .toBe("https://relay.example:8787");
+  await pageA.getByTestId("relay-reset").click();
+  await expect(pageA.getByTestId("relay-field")).toHaveValue(
+    "http://127.0.0.1:5173",
+  );
+
+  await contextA.close();
+});

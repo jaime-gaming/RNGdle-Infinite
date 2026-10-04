@@ -149,7 +149,7 @@ test("the rebirth ladder depends on the collection alone, never on auras or tool
   // Shekels cannot buy the EP half either: a full wallet changes nothing.
   expect(
     rebirthBlocker({ ...broke, balance: 100000000, history: [] }, 0),
-  ).toContain("Earn 100,000 EP");
+  ).toContain("Earn 250,000 EP");
   // An all-owned shop with one badge missing from the rung still cannot.
   const rich = {
     ...emptyProgress(),
@@ -187,7 +187,8 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
   const price = Object.fromEntries(shopProducts.map((p) => [p.id, p.price]));
   // 34 upgrades, nine skills and bays, and eighteen auras: the v0.4 catalogue,
   // repriced once at v0.3 and never since. It still costs less than the launch
-  // catalogue did, and v0.5's additions sit on top of it rather than inside it.
+  // catalogue did, and the late additions sit on top of it rather than inside
+  // it.
   const addedInV05 = [
     "halcyon",
     "downpour",

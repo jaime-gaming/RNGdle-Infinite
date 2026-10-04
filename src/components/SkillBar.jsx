@@ -2,7 +2,15 @@ import React, { useState } from "react";
 import { skillById, skillEffectSummary, skillSourceLabel } from "../skills.js";
 import { rackReport } from "../rack.js";
 import { petById } from "../pets.js";
-import { AutomationMark, CoreMark, SkillIcon } from "./game-icons.jsx";
+import {
+  AutomationMark,
+  CoreMark,
+  CreatureIcon,
+  InfinityMark,
+  LegendMark,
+  SkillIcon,
+  SparkMark,
+} from "./game-icons.jsx";
 import "../skills.css";
 
 // A ring that fills with charge. No running commentary on the ring itself: the
@@ -70,28 +78,49 @@ export default function SkillBar({
   if (!progress) return null;
   const report = rackReport(progress);
   const equipped = report.equipped
-    .map((entry) => ({ ...entry, definition: skillById.get(entry.id) }))
+    .map((entry) => ({
+      ...entry,
+      equipped: true,
+      definition: skillById.get(entry.id),
+    }))
     .filter((entry) => entry.definition);
+  const companionSkills = (report.unlocked ?? [])
+    .filter((entry) => !entry.equipped)
+    .map((entry) => ({ ...entry, definition: skillById.get(entry.id) }))
+    .filter((entry) => entry.definition?.petId);
+  const allSkills = [...equipped, ...companionSkills];
+  const passives = report.passives ?? [];
   const hasAutoRoll = (progress.owned ?? []).includes("auto-roll");
-  if (!equipped.length && !report.flywheel.owned && !hasAutoRoll) return null;
+  if (
+    !allSkills.length &&
+    !passives.length &&
+    !report.flywheel.owned &&
+    !hasAutoRoll
+  )
+    return null;
   const firingSet = new Set(firing);
-  const armedCount = report.armed.length;
+  const armedCount = report.armed.length + passives.length;
   return (
     <div className={`skill-bar ${className}`} role="group" aria-label="Skills">
-      {equipped.map((skill) => {
+      {allSkills.map((skill) => {
         const active = firingSet.has(skill.id);
         const petName = skill.definition.petId
           ? petById.get(skill.definition.petId)?.name
           : "";
         return (
           <div
-            className={`skill-slot tint-${skill.tint} ${skill.armed ? "is-armed" : ""} ${active ? "is-firing" : ""}`}
+            className={`skill-slot tint-${skill.tint} ${skill.armed ? "is-armed" : ""} ${!skill.equipped ? "is-standby" : ""} ${active ? "is-firing" : ""}`}
             key={skill.id}
             data-skill={skill.id}
             data-armed={skill.armed}
+            data-equipped={skill.equipped}
             tabIndex={0}
             aria-label={`${skill.name}: ${skill.effect} ${skill.charge} of ${skill.charges} rolls charged. ${
-              skill.armed ? "Ready — fires on your next roll." : "Charging."
+              !skill.equipped
+                ? "Companion skill."
+                : skill.armed
+                  ? "Ready — fires on your next roll."
+                  : "Charging."
             }`}
           >
             <ChargeRing
@@ -100,11 +129,11 @@ export default function SkillBar({
             >
               <SkillIcon icon={skill.icon} size={17} aria-hidden="true" />
             </ChargeRing>
-            {skill.armed && (
-              <span className="skill-contribution" aria-hidden="true">
-                {skill.chip}
-              </span>
-            )}
+            <span className="skill-contribution" aria-hidden="true">
+              {skill.armed
+                ? skill.chip
+                : `${skill.chip} · ${skill.charge}/${skill.charges}`}
+            </span>
             <span className="skill-tooltip" role="tooltip">
               <strong>{skill.name}</strong>
               <span className="skill-tooltip-effect">
@@ -120,9 +149,11 @@ export default function SkillBar({
               <span className="skill-tooltip-state">
                 {active
                   ? "Firing on this roll"
-                  : skill.armed
-                    ? "Ready — fires on your next roll"
-                    : "Charging"}
+                  : !skill.equipped
+                    ? "Companion skill (equip in Shop)"
+                    : skill.armed
+                      ? "Ready — fires on your next roll"
+                      : "Charging"}
               </span>
             </span>
             <progress
@@ -134,6 +165,40 @@ export default function SkillBar({
           </div>
         );
       })}
+      {passives.map((passive) => (
+        <div
+          className={`skill-slot skill-passive tint-${passive.tint}`}
+          key={passive.id}
+          data-skill={passive.id}
+          data-passive={passive.kind}
+          tabIndex={0}
+          aria-label={`${passive.name}: ${passive.effect}. Always active.`}
+        >
+          <ChargeRing fraction={passive.fraction} tint={passive.tint}>
+            {passive.kind === "pet" ? (
+              <CreatureIcon pet={passive.petId} size={17} aria-hidden="true" />
+            ) : passive.kind === "rebirth" ? (
+              <LegendMark size={17} aria-hidden="true" />
+            ) : passive.kind === "ultra" ? (
+              <InfinityMark size={17} aria-hidden="true" />
+            ) : (
+              <SparkMark size={17} aria-hidden="true" />
+            )}
+          </ChargeRing>
+          <span className="skill-contribution" aria-hidden="true">
+            {passive.chip}
+          </span>
+          <span className="skill-tooltip" role="tooltip">
+            <strong>{passive.name}</strong>
+            <span className="skill-tooltip-effect">{passive.effect}</span>
+            <span className="skill-tooltip-contribution">
+              Adds {passive.chip}
+            </span>
+            <span className="skill-tooltip-meta">{passive.meta}</span>
+            <span className="skill-tooltip-state">Always active</span>
+          </span>
+        </div>
+      ))}
       {report.flywheel.owned && (
         <div
           className={`skill-slot skill-flywheel ${report.flywheel.ready ? "is-armed" : ""} ${firingSet.has("flywheel") ? "is-firing" : ""}`}
@@ -278,13 +343,14 @@ export default function SkillBar({
               A companion, a wallet skill or an ultra-rebirth bonus raises this.
             </span>
           )}
-          <span className="rack-panel-label">Armed skills</span>
-          {report.equipped.length ? (
-            report.equipped.map((skill) => (
+          <span className="rack-panel-label">Skills</span>
+          {allSkills.length ? (
+            allSkills.map((skill) => (
               <span className="rack-panel-row" key={skill.id}>
                 <span>{skill.name}</span>
                 <span>
                   {skill.chip} · {skill.charge}/{skill.charges}
+                  {!skill.equipped ? " (companion)" : ""}
                 </span>
               </span>
             ))

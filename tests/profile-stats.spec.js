@@ -147,10 +147,13 @@ test("an empty save reads as zeros rather than as invented progress", () => {
   expect(stats.lastEventAt).toBeNull();
 });
 
-test("the export is a read-only snapshot with no import path", () => {
+test("the export is a read-only PNG snapshot with no import path", async () => {
   const progress = played();
   const payload = exportPayload(progress);
   expect(payload.app).toBe("RNGdle Infinite");
+  expect(payload.format).toBe("png");
+  expect(payload.accountName).toBe("LuckyOtter41");
+  expect(payload.biggestRoll).toEqual(payload.stats.bestRoll);
   expect(payload.profile.username).toBe("LuckyOtter41");
   expect(payload.stats.rolls).toBe(4);
   expect(payload.save).toMatchObject({
@@ -164,13 +167,16 @@ test("the export is a read-only snapshot with no import path", () => {
   });
   expect(payload.save.history).toHaveLength(progress.history.length);
   expect(exportFileName(progress)).toMatch(
-    /^rngdle-infinite-luckyotter41-\d{4}-\d{2}-\d{2}\.json$/,
+    /^rngdle-infinite-luckyotter41-\d{4}-\d{2}-\d{2}\.png$/,
   );
-  expect(exportFileName(emptyProgress())).toMatch(/^rngdle-infinite-guest-/);
+  expect(exportFileName(emptyProgress())).toMatch(
+    /^rngdle-infinite-guest-\d{4}-\d{2}-\d{2}\.png$/,
+  );
 
-  // The UI offers exactly one direction: a download, and no file input.
+  // The UI offers a PNG card download and no file input.
   const profile = fs.readFileSync("src/components/LocalProfile.jsx", "utf8");
   expect(profile).toContain("Export my data");
+  expect(profile).toContain("renderExportPngBlob");
   expect(profile).not.toContain('type="file"');
   expect(profile).not.toMatch(/\bImport\b/);
 });

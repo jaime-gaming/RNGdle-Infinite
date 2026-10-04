@@ -246,7 +246,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     glitch: 1650000,
     monolith: 2700000,
     chrono: 4200000,
-    // v0.5: the two late skills, the third vault and four more auras.
+    // v0.4: the two late skills, the third vault and four more auras.
     miser: 9000000,
     triptych: 12000000,
     "offline-vault-3": 18000000,
@@ -283,9 +283,9 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
   for (const product of shopProducts)
     if (product.requires)
       expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
-  // The catalogue stays within a sane multiple of the cheapest upgrade. v0.5's
-  // seven additions are late content priced above everything else, so the guard
-  // is kept on the catalogue they joined.
+  // The catalogue stays within a sane multiple of the cheapest upgrade. v0.4's
+  // seven late additions are priced above everything else, so the guard is kept
+  // on the catalogue they joined.
   const addedInV05 = new Set([
     "halcyon",
     "downpour",

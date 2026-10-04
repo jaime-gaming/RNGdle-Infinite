@@ -30,18 +30,18 @@ export function rebirthRelevantPurchases(owned = []) {
 // the ladder closes at 45% — where the old one only started.
 export const REBIRTH_VISIBLE_AT = Math.ceil(BADGE_TOTAL * 0.15);
 export const REBIRTH_STEPS = [
-  { badges: 0.2, ep: 100000 },
-  { badges: 0.25, ep: 250000 },
-  { badges: 0.3, ep: 500000 },
-  { badges: 0.35, ep: 1250000 },
-  { badges: 0.4, ep: 3000000 },
-  { badges: 0.45, ep: 7000000 },
+  { badges: 0.2, ep: 250000 },
+  { badges: 0.25, ep: 600000 },
+  { badges: 0.3, ep: 1500000 },
+  { badges: 0.35, ep: 3500000 },
+  { badges: 0.4, ep: 7500000 },
+  { badges: 0.45, ep: 15000000 },
 ];
 export const REBIRTH_TOTAL = REBIRTH_STEPS.length;
 // The ultra-rebirth closes the ladder: half the collection and a cycle that
 // has earned real EP. Asking for all 235 badges asked for a collection nobody
 // could finish.
-export const ULTRA_REBIRTH_STEP = { badges: 0.5, ep: 15000000 };
+export const ULTRA_REBIRTH_STEP = { badges: 0.5, ep: 30000000 };
 
 // Everything an ultra-rebirth grants on top of the cosmetic mark: a permanent,
 // always-on wallet bonus. It multiplies banked EP only, exactly like a

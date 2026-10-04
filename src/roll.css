@@ -436,45 +436,31 @@ nav button.active {
 }
 .floating-ep {
   position: absolute;
-  top: -4px;
-  left: 100%;
+  top: calc(-4px - var(--charge-index, 0) * 18px);
+  left: calc(100% + 8px + var(--charge-index, 0) * 7px);
   font-family: var(--roll-font);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
   color: var(--green);
   white-space: nowrap;
-  margin-left: 4px;
-  animation: ep-float calc(1.5s * var(--reveal-scale, 1)) ease-out forwards;
-}
-/* The wallet bonus, stated once: only when a companion, a skill or a rebirth
-   bonus adds EP beyond the score does the roll name the extra and its parts. */
-.roll-credit {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  margin-top: 10px;
-  visibility: hidden;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--surface) 65%, transparent);
   opacity: 0;
+  pointer-events: none;
+  /* Each charge pops in, drifts right and fades on a stagger, so a settle
+     reads as one sum being added up rather than a block of text appearing. */
+  animation: ep-float calc(1.5s * var(--reveal-scale, 1))
+    cubic-bezier(0.2, 0.75, 0.25, 1)
+    calc(var(--charge-index, 0) * 0.24s * var(--reveal-scale, 1)) both;
 }
-.roll-credit.is-visible {
-  visibility: visible;
-  opacity: 1;
-  animation: summary-rise calc(0.4s * var(--reveal-scale, 1)) var(--ease-reveal)
-    both;
+.floating-ep.is-bonus-charge {
+  font-size: 11.5px;
+  color: color-mix(in srgb, var(--green) 88%, var(--text));
 }
-.roll-credit-bonus {
-  max-width: 420px;
+.branch-mark {
   font-family: var(--roll-font);
-  font-variant-numeric: tabular-nums;
-  font-size: 12.5px;
-  line-height: 17px;
   color: var(--muted);
-}
-.roll-credit-bonus strong {
-  font-size: 14px;
-  color: var(--green);
-  font-weight: 650;
+  opacity: 0.72;
 }
 .share-row {
   display: flex;
@@ -957,13 +943,23 @@ nav button.active {
   }
 }
 @keyframes ep-float {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
+  0% {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translate(0, 10px) scale(0.82);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(2px, 0) scale(1.06);
+  }
+  28% {
+    transform: translate(3px, -4px) scale(1);
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(13px, -32px) scale(0.96);
   }
 }
 @keyframes share-attention {

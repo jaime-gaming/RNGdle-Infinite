@@ -13,18 +13,15 @@ import { validUsername } from "../progress.js";
 import {
   accountStats,
   exportFileName,
-  exportPayload,
+  renderExportPngBlob,
 } from "../profile-stats.js";
 import "../profile.css";
 
-// A one-way export: the browser saves a JSON snapshot of this local save so it
-// can be read or archived. There is no import anywhere, by design — a file you
-// downloaded can never overwrite the game you are playing.
-function downloadExport(progress) {
-  const payload = exportPayload(progress);
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: "application/json",
-  });
+// A one-way export: the browser saves a PNG card with the account name,
+// biggest roll and key stats. There is no import anywhere, by design — a card
+// you downloaded can never overwrite the game you are playing.
+async function downloadExport(progress) {
+  const blob = await renderExportPngBlob(progress);
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -262,9 +259,9 @@ export default function LocalProfile({
             </button>
           </div>
           <p className="profile-export-note">
-            One-way export: a JSON file you can read or keep. There is no
-            import, so a downloaded save can never overwrite the game in this
-            browser.
+            One-way export: a PNG card with your name, your biggest roll and
+            your account’s key stats. There is no import, so a downloaded card
+            can never overwrite the game in this browser.
           </p>
           {progress && <ProfileHistory progress={progress} />}
           <div className="account-danger">

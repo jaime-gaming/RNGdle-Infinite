@@ -550,55 +550,65 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           </p>
         </header>
         <ol className="rebirth-ladder">
-          {REBIRTH_STEPS.map((rung, index) => {
-            const state =
-              index < rebirths
-                ? "is-done"
-                : index === rebirths
-                  ? "is-current"
-                  : "is-locked";
-            const needed = Math.ceil(BADGE_TOTAL * rung.badges);
-            const stepPercent = Math.min(
-              100,
-              Math.round((count / needed) * 100),
-            );
-            return (
-              <li key={index} className={state}>
-                <span className="rebirth-rung-mark">
-                  {index < rebirths ? (
-                    <Check size={13} />
-                  ) : index === rebirths ? (
-                    <ArrowRight size={13} />
-                  ) : (
-                    <Lock size={12} />
-                  )}
-                </span>
-                <span className="rebirth-rung-head">
-                  <span className="rebirth-rung-name">#{index + 1}</span>
-                  <span className="rebirth-rung-percent">
-                    {Math.round(rung.badges * 100)}% of the collection
+          {REBIRTH_STEPS.slice(0, Math.min(REBIRTH_TOTAL, 4 + rebirths)).map(
+            (rung, index) => {
+              const isFaded = index === 3 + rebirths;
+              const state =
+                index < rebirths
+                  ? "is-done"
+                  : index === rebirths
+                    ? "is-current"
+                    : isFaded
+                      ? "is-locked is-faded"
+                      : "is-locked";
+              const needed = Math.ceil(BADGE_TOTAL * rung.badges);
+              const stepPercent = Math.min(
+                100,
+                Math.round((count / needed) * 100),
+              );
+              return (
+                <li
+                  key={`${index}-${rebirths}`}
+                  className={state}
+                  data-faded={isFaded || undefined}
+                  aria-hidden={isFaded || undefined}
+                >
+                  <span className="rebirth-rung-mark">
+                    {index < rebirths ? (
+                      <Check size={13} />
+                    ) : index === rebirths ? (
+                      <ArrowRight size={13} />
+                    ) : (
+                      <Lock size={12} />
+                    )}
                   </span>
-                  <span className="rebirth-rung-badges">
-                    {needed} badges · {formatEPCompact(rung.ep)} EP earned
+                  <span className="rebirth-rung-head">
+                    <span className="rebirth-rung-name">#{index + 1}</span>
+                    <span className="rebirth-rung-percent">
+                      {Math.round(rung.badges * 100)}% of the collection
+                    </span>
+                    <span className="rebirth-rung-badges">
+                      {needed} badges · {formatEPCompact(rung.ep)} EP earned
+                    </span>
                   </span>
-                </span>
-                <span className="rebirth-rung-bar" aria-hidden="true">
-                  <span
-                    style={{
-                      width: `${index < rebirths ? 100 : stepPercent}%`,
-                    }}
-                  />
-                </span>
-                <span className="rebirth-rung-skill">
-                  <Reward
-                    step={index + 1}
-                    earned={index < rebirths}
-                    current={index === rebirths}
-                  />
-                </span>
-              </li>
-            );
-          })}
+                  <span className="rebirth-rung-bar" aria-hidden="true">
+                    <span
+                      style={{
+                        width: `${index < rebirths ? 100 : stepPercent}%`,
+                      }}
+                    />
+                  </span>
+                  <span className="rebirth-rung-skill">
+                    <Reward
+                      step={index + 1}
+                      earned={index < rebirths}
+                      current={index === rebirths}
+                    />
+                  </span>
+                </li>
+              );
+            },
+          )}
         </ol>
       </section>
 

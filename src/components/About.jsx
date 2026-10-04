@@ -13,9 +13,15 @@ import {
 import { BASE_ROLL_MS, BASE_COOLDOWN_MS, formatDuration } from "../shop-data";
 import { POPULATION } from "../probability.js";
 import { PETS, PET_DROP_CHANCE } from "../pets.js";
-import { BADGE_TOTAL, REBIRTH_TOTAL, rebirthUnlocked } from "../rebirth.js";
+import {
+  BADGE_TOTAL,
+  REBIRTH_STEPS,
+  REBIRTH_TOTAL,
+  ULTRA_REBIRTH_STEP,
+  rebirthUnlocked,
+} from "../rebirth.js";
 import { SKILLS } from "../skills.js";
-import { GAME_URL } from "../roll-data";
+import { GAME_URL, formatEP } from "../roll-data";
 import "../about.css";
 
 // The old help modal was one unreadable block of text. This is the same
@@ -85,7 +91,7 @@ export default function About({ navigate, progress }) {
         "Labels are rounded; hover any rank to see the exact percentage and counts.",
         ...(showsRebirth
           ? [
-              `Rebirth unlocks step by step: the first asks for a fifth of the collection and 100,000 EP earned this cycle; the final rung asks for 45% and 7,000,000 EP. Each of the ${REBIRTH_TOTAL} steps grants an exclusive skill, a permanent +2% banked-EP bonus and 250,000 EP to start the next cycle. Ultra-rebirth asks for half the collection and 15,000,000 cycle EP, then adds a permanent +10% bonus and 1,000,000 starting EP. Resets clear the run, not your activity history or permanent bonuses.`,
+              `Rebirth unlocks step by step: the first asks for a fifth of the collection and ${formatEP(REBIRTH_STEPS[0].ep)} EP earned this cycle; the final rung asks for 45% and ${formatEP(REBIRTH_STEPS.at(-1).ep)} EP. Each of the ${REBIRTH_TOTAL} steps grants an exclusive skill, a permanent +2% banked-EP bonus and 250,000 EP to start the next cycle. Ultra-rebirth asks for half the collection and ${formatEP(ULTRA_REBIRTH_STEP.ep)} cycle EP, then adds a permanent +10% bonus and 1,000,000 starting EP. Resets clear the run, not your activity history or permanent bonuses.`,
             ]
           : []),
       ],

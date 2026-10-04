@@ -285,6 +285,22 @@ export default function RollExperience({
       : 0;
   const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0));
   const bonusParts = bonusEP > 0 ? walletParts(session, firedSkills) : [];
+  const floatingCharges = useMemo(() => {
+    if (!result || result.totalEP === null) return [];
+    if (!bonusParts.length) return [{ id: "base", ep: creditedEP, label: "" }];
+    const list = [{ id: "base", ep: result.totalEP, label: "" }];
+    let running = result.totalEP;
+    bonusParts.forEach((part, index) => {
+      const next =
+        index === bonusParts.length - 1
+          ? creditedEP
+          : Math.round(running * part.value);
+      const gain = Math.max(0, next - running);
+      running = next;
+      if (gain > 0) list.push({ id: part.id, ep: gain, label: part.label });
+    });
+    return list;
+  }, [result, bonusParts, creditedEP]);
   const cooldownWindow =
     session.cooldownWindow ??
     parseCooldownWindow(
@@ -730,26 +746,6 @@ export default function RollExperience({
                   )}{" "}
                   EP
                 </div>
-                {/* When skills or multipliers add to the wallet, the roll says
-                    so once: the extra and every named part of it. A plain roll
-                    needs no line — the EP counter already is the total. */}
-                {digitsDone && bonusEP > 0 && (
-                  <div
-                    className={`roll-credit ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
-                    aria-hidden={elapsed < timeline.sessionShow}
-                    data-testid="roll-credit"
-                  >
-                    <span className="roll-credit-bonus">
-                      <strong>+{formatEP(bonusEP)} EP extra</strong> ·{" "}
-                      {bonusParts
-                        .map(
-                          (part) =>
-                            `${part.label} ×${Number(part.value.toFixed(2))}`,
-                        )
-                        .join(" · ")}
-                    </span>
-                  </div>
-                )}
                 {digitsDone && (
                   <div
                     className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
@@ -769,11 +765,17 @@ export default function RollExperience({
                       EP
                       {elapsed >= timeline.sessionCount &&
                         elapsed < timeline.end &&
-                        !instant && (
-                          <span className="floating-ep">
-                            +{formatEP(creditedEP)}
+                        !instant &&
+                        floatingCharges.map((charge, index) => (
+                          <span
+                            key={charge.id}
+                            className={`floating-ep ${index > 0 ? "is-bonus-charge" : ""}`}
+                            style={{ "--charge-index": index }}
+                          >
+                            +{formatEP(charge.ep)}
+                            {charge.label ? ` · ${charge.label}` : ""}
                           </span>
-                        )}
+                        ))}
                     </span>
                     <small>Your EP balance</small>
                     {/* Savings sit with the wallet they are measured against,

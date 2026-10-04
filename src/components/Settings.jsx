@@ -2,12 +2,17 @@ import React, { useEffect, useState } from "react";
 import {
   Bell,
   BellOff,
-  Link2,
-  Volume2,
+  Check,
+  Copy,
   Eye,
   Gamepad2,
+  Handshake,
+  Link2,
+  RefreshCw,
   RotateCcw,
   Shirt,
+  Unplug,
+  Volume2,
 } from "lucide-react";
 import AuraWardrobe from "./AuraWardrobe";
 import { useSettings } from "../use-settings.jsx";
@@ -18,8 +23,13 @@ import {
   showReadyNotification,
 } from "../notifications.js";
 import {
+  adoptPeerCode,
   buildDeviceLink,
+  buildPeerCode,
   createDeviceLink,
+  pushNow,
+  relayEndpoint,
+  setRelayEndpoint,
   syncStatus,
   subscribeSync,
   unlinkDevices,
@@ -32,9 +42,22 @@ import "../settings.css";
 function DeviceLink({ progress, notify }) {
   const [state, setState] = useState(() => syncStatus());
   const [creating, setCreating] = useState(false);
+  const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [code, setCode] = useState("");
+  const [relay, setRelay] = useState(() => relayEndpoint());
   useEffect(() => subscribeSync(() => setState(syncStatus())), []);
   const linked = state.linked && !!state.room;
+  // Moves once per frame that actually crosses the wire: the pill's ring
+  // replays its one-shot animation whenever this changes.
+  const exchanges = state.revision;
+  const lastLine =
+    state.lastDirection === "sent"
+      ? "Your save just left this device."
+      : state.lastDirection === "received"
+        ? "A save just arrived from the other device."
+        : "";
 
   async function create() {
     setCreating(true);
@@ -44,20 +67,82 @@ function DeviceLink({ progress, notify }) {
       notify?.("Link created. Open it on your other device.");
     } catch {
       setState(syncStatus());
-      notify?.("The relay did not answer. Try again in a moment.");
+      notify?.("No relay answered. Try again, or link by hand below.");
     } finally {
       setCreating(false);
     }
   }
 
+  function flash(setter) {
+    setter(true);
+    setTimeout(() => setter(false), 1800);
+  }
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(buildDeviceLink());
-      setCopied(true);
+      flash(setCopied);
       notify?.("Device link copied.");
     } catch {
       notify?.("Copying was blocked — select the link and copy it by hand.");
     }
+  }
+
+  async function send() {
+    setSending(true);
+    const result = await pushNow();
+    setSending(false);
+    notify?.(
+      result.ok
+        ? "Save sent — your other device has it."
+        : result.reason === "offline"
+          ? "The relay is offline, so there is nobody to send to."
+          : "There was nothing new to send.",
+    );
+  }
+
+  async function copyCode() {
+    const text = buildPeerCode();
+    if (!text) {
+      notify?.(
+        "Create a local profile first — a guest save is not worth carrying.",
+      );
+      return;
+    }
+    setCode(text);
+    try {
+      await navigator.clipboard.writeText(text);
+      flash(setCodeCopied);
+      notify?.("Account code copied. Paste it on your other device.");
+    } catch {
+      notify?.("Code ready below — select it and copy it by hand.");
+    }
+  }
+
+  function adopt() {
+    const result = adoptPeerCode(code);
+    if (result.ok) {
+      setCode("");
+      notify?.("Account adopted from the code. Keep it somewhere safe.");
+      return;
+    }
+    notify?.(
+      {
+        empty: "Paste an account code first.",
+        guest: "That code carries a guest save, which is not worth adopting.",
+        unreadable: "That code could not be read. Copy it again, whole.",
+      }[result.reason] ?? "That code could not be read.",
+    );
+  }
+
+  function saveRelay() {
+    const next = setRelayEndpoint(relay);
+    setRelay(next);
+    notify?.(
+      next
+        ? `Linked through ${next}.`
+        : "Relay reset to this site's own address.",
+    );
   }
 
   const statusText =
@@ -77,12 +162,12 @@ function DeviceLink({ progress, notify }) {
         <Link2 size={16} aria-hidden="true" /> Link devices
       </h2>
       <p className="settings-group-note">
-        One link joins two browsers to this account at the same time: buy on
-        your phone, watch it land on your PC. Saves are forwarded straight
-        between your devices with no database behind them — rooms live in the
-        relay's memory only. One device can stay closed while the other keeps
-        playing; everything meets again the moment both are back on the link.
-        Whoever holds the link plays this account, so treat it like a password.
+        Two browsers, one account, no database: saves are forwarded straight
+        between your devices, and the relay only ever holds the newest one in
+        memory. Buy on your phone, watch it land on your PC. One device can stay
+        closed while the other keeps playing, and everything meets again the
+        moment both are back on the link. Whoever holds the link plays this
+        account, so treat it like a password.
       </p>
       <div className="setting-row">
         <div className="setting-copy">
@@ -99,35 +184,70 @@ function DeviceLink({ progress, notify }) {
           id="sync-status-row"
           className={`sync-status is-${state.status}`}
           data-testid="sync-status"
+          data-direction={state.lastDirection || undefined}
         >
-          <i aria-hidden="true" /> {statusText}
+          <i className="sync-dot" aria-hidden="true" />
+          {exchanges > 0 && (
+            <b
+              key={`ping-${exchanges}`}
+              className="sync-ping"
+              aria-hidden="true"
+            />
+          )}
+          {statusText}
         </span>
       </div>
       {linked ? (
-        <div className="sync-link-row">
-          <input
-            className="sync-link-field"
-            data-testid="sync-link"
-            readOnly
-            aria-label="Your device link"
-            value={buildDeviceLink()}
-            onFocus={(event) => event.target.select()}
-          />
-          <button type="button" className="secondary-button" onClick={copy}>
-            {copied ? "Copied" : "Copy"}
-          </button>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              unlinkDevices();
-              setState(syncStatus());
-              notify?.("Devices unlinked. Each browser keeps its own save.");
-            }}
-          >
-            Unlink
-          </button>
-        </div>
+        <>
+          <div className="sync-link-row" data-testid="sync-link-row">
+            <input
+              className="sync-link-field"
+              data-testid="sync-link"
+              readOnly
+              aria-label="Your device link"
+              value={buildDeviceLink()}
+              onFocus={(event) => event.target.select()}
+            />
+            <button
+              type="button"
+              className="secondary-button sync-action"
+              data-testid="sync-copy"
+              onClick={copy}
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button sync-action"
+              data-testid="sync-now"
+              disabled={sending}
+              onClick={send}
+            >
+              <RefreshCw
+                size={14}
+                className={sending ? "is-spinning" : undefined}
+              />
+              {sending ? "Sending…" : "Send now"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button sync-action"
+              data-testid="sync-unlink"
+              onClick={() => {
+                unlinkDevices();
+                setState(syncStatus());
+                notify?.("Devices unlinked. Each browser keeps its own save.");
+              }}
+            >
+              <Unplug size={14} /> Unlink
+            </button>
+          </div>
+          <p className="sync-note" data-testid="sync-note" key={exchanges}>
+            {lastLine ||
+              "The link is open. Anything that changes here is sent straight over."}
+          </p>
+        </>
       ) : !progress?.profile ? (
         <p className="sync-hint">
           Sign up (or create a local profile) to start a link from this device.
@@ -135,7 +255,7 @@ function DeviceLink({ progress, notify }) {
       ) : (
         <button
           type="button"
-          className="secondary-button"
+          className="secondary-button sync-action sync-create"
           data-testid="sync-create"
           disabled={creating}
           onClick={create}
@@ -143,6 +263,86 @@ function DeviceLink({ progress, notify }) {
           <Link2 size={14} /> {creating ? "Contacting relay…" : "Create link"}
         </button>
       )}
+      <details className="sync-hand">
+        <summary>
+          <Handshake size={14} aria-hidden="true" /> No relay? Link by hand
+        </summary>
+        <p className="sync-hand-note">
+          A live link needs a relay somewhere; a code does not. Copy this
+          account's code and adopt it on the other device — no server, no
+          address to configure, just the save itself in one blob of text.
+        </p>
+        <div className="sync-hand-row">
+          <button
+            type="button"
+            className="secondary-button sync-action"
+            data-testid="peer-code-copy"
+            onClick={copyCode}
+          >
+            {codeCopied ? <Check size={14} /> : <Copy size={14} />}
+            {codeCopied ? "Code copied" : "Copy this account's code"}
+          </button>
+          <button
+            type="button"
+            className="secondary-button sync-action"
+            data-testid="peer-code-adopt"
+            disabled={!code.trim()}
+            onClick={adopt}
+          >
+            <Handshake size={14} /> Adopt this account
+          </button>
+        </div>
+        <textarea
+          className="sync-code-field"
+          data-testid="peer-code-field"
+          rows={3}
+          spellCheck="false"
+          aria-label="Account code"
+          placeholder="Paste an account code here, then adopt it…"
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+        />
+      </details>
+      <div className="setting-row sync-relay-row">
+        <div className="setting-copy">
+          <label htmlFor="setting-relay">Relay</label>
+          <p>
+            {`This page talks to ${relayEndpoint()}. A static deployment has no relay of its own: run npm run relay and point this page at it here.`}
+          </p>
+        </div>
+        <div className="sync-relay-controls">
+          <input
+            id="setting-relay"
+            className="sync-relay-field"
+            data-testid="relay-field"
+            value={relay}
+            spellCheck="false"
+            aria-label="Relay address"
+            placeholder="https://relay.example:8787"
+            onChange={(event) => setRelay(event.target.value)}
+          />
+          <button
+            type="button"
+            className="secondary-button"
+            data-testid="relay-save"
+            onClick={saveRelay}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            data-testid="relay-reset"
+            onClick={() => {
+              setRelayEndpoint("");
+              setRelay(relayEndpoint());
+              notify?.("Relay reset to this site's own address.");
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

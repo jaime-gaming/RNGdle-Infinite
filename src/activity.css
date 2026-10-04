@@ -100,6 +100,22 @@
   color: var(--green);
   background: var(--green-bg);
 }
+.event-rebirth {
+  color: var(--green);
+  background: var(--green-bg);
+}
+.event-ultra-rebirth {
+  color: #a97c1f;
+  background: rgb(217 164 65 / 0.14);
+}
+.event-purchase,
+.event-equip {
+  color: var(--text);
+}
+.activity-transaction strong {
+  font-family: "Space Mono", monospace;
+  color: var(--text);
+}
 .activity-event article {
   min-width: 0;
   flex: 1;
