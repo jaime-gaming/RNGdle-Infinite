@@ -180,13 +180,28 @@ try {
   await hideAutoRoll(page);
   await shot(page, "result");
 
-  // 3. The skill rack, close up, with a tooltip open on the armed skill.
+  // 3. The skill rack, close up, with a tooltip open on the armed skill. The
+  //    clip is the rack plus the open tooltip, so the picture shows the corner
+  //    explaining itself rather than a cut-off column of circles.
   await hideAutoRoll(page);
   const rack = page.locator(".skill-bar");
   await rack.waitFor({ state: "visible" });
-  await page.locator('.skill-slot[data-skill="flywheel"]').hover();
+  const hovered = page.locator('.skill-slot[data-skill="flywheel"]');
+  await hovered.hover();
   await page.waitForTimeout(500);
-  await shot(page, "skills", { clip: await rack.boundingBox() });
+  const rackBox = await rack.boundingBox();
+  const tooltipBox = await hovered.locator(".skill-tooltip").boundingBox();
+  const pad = 14;
+  const left = Math.min(rackBox.x, tooltipBox.x) - pad;
+  const top = Math.min(rackBox.y, tooltipBox.y) - pad;
+  const right =
+    Math.max(rackBox.x + rackBox.width, tooltipBox.x + tooltipBox.width) + pad;
+  const bottom =
+    Math.max(rackBox.y + rackBox.height, tooltipBox.y + tooltipBox.height) +
+    pad;
+  await shot(page, "skills", {
+    clip: { x: left, y: top, width: right - left, height: bottom - top },
+  });
 
   // 4. The shop front door: the six shelf buttons and the featured picks, then
   //    one shelf page to show that a shelf is its own address.

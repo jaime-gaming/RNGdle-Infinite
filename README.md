@@ -123,7 +123,7 @@ And when the roll itself applies the money, each bonus charge floats into
 `Your EP balance` as a staggered animation. A plain roll states only the base
 gain.
 
-![The skill rack: three charged circles, one explaining itself on hover](media/skills.png)
+![The skill rack: the equipped and companion circles, one explaining itself on hover](media/skills.png)
 
 Nine skills are bought in the shop — but the shelf is a **stall**: only **three
 are on sale at a time**, and the trio rotates every **five minutes** like a
@@ -286,7 +286,7 @@ permanent bonuses with their own explanation. Each rebirth:
   the skills they granted, every permanent bonus, the EP you have earned
   all-time, and your profile.
 
-![The rebirth ladder: collection progress, the current rung and all six steps](media/rebirth.png)
+![The rebirth ladder: collection progress, the current rung, one blurred preview and the steps beyond](media/rebirth.png)
 
 Finish the sixth rung and **ultra-rebirth** unlocks: the same clean slate,
 taken from **50% of the collection (118 badges) and 30,000,000 EP** earned in
@@ -327,7 +327,7 @@ roll, badges discovered, companions found free, skills unlocked, charged effects
 fired, Flywheel boosts used, rebirths and ultra-rebirths, and the date of your
 first and latest entry.
 
-![The profile page with the derived history and the one-way export](media/profile.png)
+![The profile page with the derived history and the PNG account card export](media/profile.png)
 
 **Export my data** downloads a PNG account card of your save — your account
 name, your biggest roll and your key account stats — so you can view, share or
