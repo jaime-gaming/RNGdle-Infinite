@@ -231,6 +231,13 @@ export default function LocalProfile({
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
       </h2>
+      {profile && (progress?.ultraRebirths ?? 0) > 0 && (
+        <p className="profile-prestige">
+          <span aria-hidden="true">✦</span> Transcendent ·{" "}
+          {progress.ultraRebirths} ultra-rebirth
+          {progress.ultraRebirths === 1 ? "" : "s"} beyond the ladder
+        </p>
+      )}
       {profile ? (
         <>
           <p>

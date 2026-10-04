@@ -454,7 +454,7 @@ export default function Shop({
     if (!matches(item, state)) return null;
     return (
       <article
-        className={`shop-card ${aura ? "is-aura" : ""} ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""}`}
+        className={`shop-card ${aura ? "is-aura" : ""} ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""} ${lastPurchase?.id === item.id ? "is-celebrated" : ""}`}
         key={item.id}
         data-product={item.id}
         data-kind={item.kind}
@@ -937,7 +937,10 @@ export default function Shop({
           </button>
         </div>
       )}
-      <section className="shop-wallet" aria-label="EP wallet">
+      <section
+        className={`shop-wallet ${lastPurchase ? "is-celebrated" : ""}`}
+        aria-label="EP wallet"
+      >
         <div>
           <span className="eyebrow">
             <Coins size={14} /> YOUR EP BALANCE
@@ -1467,6 +1470,11 @@ export default function Shop({
         <>
           <div className="purchase-return-space" aria-hidden="true" />
           <aside className="purchase-return" aria-label="Purchase complete">
+            <span className="purchase-confetti" aria-hidden="true">
+              {Array.from({ length: 10 }, (_, index) => (
+                <i key={index} />
+              ))}
+            </span>
             <p role="status">{lastPurchase.name} purchased.</p>
             <button className="return-link" onClick={() => navigate("roll")}>
               Continue rolling

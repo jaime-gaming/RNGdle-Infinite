@@ -50,6 +50,7 @@ import Changelog from "./components/Changelog";
 import {
   BadgeMark,
   CompanionMark,
+  InfinityMark,
   SkillMark,
   RollMark,
 } from "./components/game-icons.jsx";
@@ -127,6 +128,16 @@ function App() {
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
+  // The ultra-rebirth earns a moment: a full-screen ceremony that lives in
+  // the app shell (the rebirth page navigates away the moment it succeeds),
+  // plays over whatever is on screen, then removes itself. Pointer-transparent
+  // and animation-driven — reduced motion never sees it at all.
+  const [ultraCeremony, setUltraCeremony] = useState(false);
+  useEffect(() => {
+    if (!ultraCeremony) return;
+    const timer = setTimeout(() => setUltraCeremony(false), 2700);
+    return () => clearTimeout(timer);
+  }, [ultraCeremony]);
   // A companion found on a roll walks in with its own moment on the roll stage.
   const [arrivalPet, setArrivalPet] = useState(null);
   const {
@@ -670,9 +681,10 @@ function App() {
               key={epoch}
               progress={session}
               onAction={dispatch}
-              onDone={(message) => {
+              onDone={(message, meta) => {
                 navigate("roll");
                 notify(message ?? "Rebirth complete.");
+                if (meta?.ultra) setUltraCeremony(true);
               }}
             />
           </>
@@ -998,6 +1010,30 @@ function App() {
         <div className="toast" role="status">
           <Check size={16} />
           {toast}
+        </div>
+      )}
+
+      {/* The ceremony: rays, a slam of the title and a storm of confetti for
+          the ultra-rebirth itself. Pointer-transparent (never in the way of
+          the game) and fully animation-driven — with reduced motion it rests
+          at opacity 0, exactly as if it were never there. */}
+      {ultraCeremony && (
+        <div className="ultra-ceremony" aria-hidden="true">
+          <span className="ultra-ceremony-rays" />
+          <span className="ultra-ceremony-mark">
+            <InfinityMark size={64} />
+          </span>
+          <strong className="ultra-ceremony-title">
+            ULTRA-REBIRTH {session.ultraRebirths}
+          </strong>
+          <span className="ultra-ceremony-sub">
+            the run starts again — the account never does
+          </span>
+          <span className="ultra-ceremony-confetti">
+            {Array.from({ length: 12 }, (_, index) => (
+              <i key={index} />
+            ))}
+          </span>
         </div>
       )}
     </>

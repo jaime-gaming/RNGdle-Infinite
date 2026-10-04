@@ -356,3 +356,25 @@
     transition: none;
   }
 }
+
+/* The companion shelf lives a little: the equipped cage breathes a glow of
+   its own colour, and the slide carries a touch of overshoot on the way to
+   the next cage — springy, never loose. Reduced motion kills both. */
+.pet-slide.is-active .pet-cage {
+  animation: pet-cage-breathe 3.2s ease-in-out infinite;
+}
+@keyframes pet-cage-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--pet-accent, transparent) 14%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--pet-accent, #d9a441) 34%, transparent),
+      0 8px 26px color-mix(in srgb, var(--pet-accent, #d9a441) 34%, transparent);
+  }
+}
+.pet-stage-track {
+  transition: transform 0.42s cubic-bezier(0.34, 1.45, 0.52, 1);
+}

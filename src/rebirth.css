@@ -585,3 +585,284 @@
     white-space: normal;
   }
 }
+
+/* ---- Ultra legacy panel -------------------------------------------------- */
+.rebirth-legacy-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr);
+  gap: 16px 24px;
+}
+.rebirth-legacy-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.rebirth-legacy-figures > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid rgb(217 164 65 / 0.4);
+  border-radius: 10px;
+  background: rgb(217 164 65 / 0.08);
+}
+.rebirth-legacy-figures dt {
+  font: 500 10px var(--roll-font);
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rebirth-legacy-figures dd {
+  margin: 0;
+  font: 700 17px var(--roll-font);
+  color: #a97c1f;
+}
+.rebirth-dev-note {
+  margin: 18px 0 0;
+  padding: 16px 18px;
+  border-left: 3px solid #d9a441;
+  border-radius: 0 12px 12px 0;
+  background: linear-gradient(90deg, rgb(217 164 65 / 0.1), transparent 70%);
+}
+.rebirth-dev-note-label {
+  margin: 0 0 6px;
+  font: 700 10px var(--roll-font);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #a97c1f;
+}
+.rebirth-dev-note p:not(.rebirth-dev-note-label) {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.75;
+}
+.rebirth-dev-note footer {
+  margin-top: 8px;
+  font: 500 12px var(--roll-font);
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .rebirth-legacy-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- The ceremony ---------------------------------------------------------
+   The ultra-rebirth earns a moment: rays, a slam and confetti, pointer-
+   transparent over the page. Everything is driven by animation — the global
+   reduced-motion reset sets `animation: none`, which leaves the shell at its
+   resting opacity of 0, so reduced motion never sees any of it. */
+.ultra-ceremony {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 40%, rgb(255 236 190 / 0.9), transparent 55%),
+    rgb(20 16 6 / 0.72);
+  animation: ultra-ceremony-shell 2.7s ease-out forwards;
+}
+.ultra-ceremony-rays {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: min(78vmin, 560px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgb(217 164 65 / 0.55) 0deg 7deg,
+    transparent 7deg 18deg
+  );
+  mask: radial-gradient(circle, transparent 28%, #000 66%, transparent 92%);
+  animation: ultra-ceremony-rays 2.7s ease-out forwards;
+}
+.ultra-ceremony-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  border: 2px solid #d9a441;
+  background: rgb(255 246 224 / 0.95);
+  color: #a97c1f;
+  box-shadow: 0 0 44px 10px rgb(217 164 65 / 0.55);
+  animation: ultra-ceremony-mark 2.7s var(--ease-reveal, ease-out) forwards;
+}
+.ultra-ceremony-title {
+  position: relative;
+  font: 700 clamp(26px, 7vw, 44px) var(--roll-font);
+  letter-spacing: 4px;
+  color: #ffce6b;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.6);
+  animation: ultra-ceremony-title 2.7s var(--ease-reveal, ease-out) forwards;
+}
+.ultra-ceremony-sub {
+  position: relative;
+  font-size: 14px;
+  color: #f4e7c8;
+}
+.ultra-ceremony-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.ultra-ceremony-confetti i {
+  position: absolute;
+  top: -4vh;
+  left: calc(4% + 8% * var(--i, 0));
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--c, #d9a441);
+  opacity: 0;
+  animation: ultra-ceremony-confetti 2.2s ease-in forwards;
+}
+.ultra-ceremony-confetti i:nth-child(1) {
+  --i: 0;
+  --c: #d9a441;
+  animation-delay: 0.15s;
+}
+.ultra-ceremony-confetti i:nth-child(2) {
+  --i: 1;
+  --c: #d97ba6;
+  animation-delay: 0.35s;
+}
+.ultra-ceremony-confetti i:nth-child(3) {
+  --i: 2;
+  --c: #4bb3c4;
+  animation-delay: 0.05s;
+}
+.ultra-ceremony-confetti i:nth-child(4) {
+  --i: 3;
+  --c: #8a7ad9;
+  animation-delay: 0.5s;
+}
+.ultra-ceremony-confetti i:nth-child(5) {
+  --i: 4;
+  --c: var(--green);
+  animation-delay: 0.25s;
+}
+.ultra-ceremony-confetti i:nth-child(6) {
+  --i: 5;
+  --c: #d98241;
+  animation-delay: 0.45s;
+}
+.ultra-ceremony-confetti i:nth-child(7) {
+  --i: 6;
+  --c: #ffe1a0;
+  animation-delay: 0.6s;
+}
+.ultra-ceremony-confetti i:nth-child(8) {
+  --i: 7;
+  --c: #d9a441;
+  animation-delay: 0.2s;
+}
+.ultra-ceremony-confetti i:nth-child(9) {
+  --i: 8;
+  --c: #d97ba6;
+  animation-delay: 0.55s;
+}
+.ultra-ceremony-confetti i:nth-child(10) {
+  --i: 9;
+  --c: #4bb3c4;
+  animation-delay: 0.3s;
+}
+.ultra-ceremony-confetti i:nth-child(11) {
+  --i: 10;
+  --c: #8a7ad9;
+  animation-delay: 0.4s;
+}
+.ultra-ceremony-confetti i:nth-child(12) {
+  --i: 11;
+  --c: var(--green);
+  animation-delay: 0.1s;
+}
+@keyframes ultra-ceremony-shell {
+  0% {
+    opacity: 0;
+  }
+  9% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ultra-ceremony-rays {
+  0% {
+    transform: rotate(-40deg) scale(0.5);
+    opacity: 0;
+  }
+  24% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(50deg) scale(1.15);
+    opacity: 0;
+  }
+}
+@keyframes ultra-ceremony-mark {
+  0% {
+    transform: scale(0.2) rotate(-160deg);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.12) rotate(6deg);
+    opacity: 1;
+  }
+  46% {
+    transform: scale(1) rotate(0deg);
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+@keyframes ultra-ceremony-title {
+  0% {
+    transform: translateY(26px) scale(1.35);
+    opacity: 0;
+    letter-spacing: 16px;
+  }
+  26% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    letter-spacing: 4px;
+  }
+  84% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ultra-ceremony-confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(106vh) rotate(640deg);
+    opacity: 0.9;
+  }
+}

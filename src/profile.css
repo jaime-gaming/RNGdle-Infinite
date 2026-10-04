@@ -66,3 +66,20 @@
   align-items: center;
   gap: 7px;
 }
+
+/* Ultra-rebirth prestige on the profile: the Transcendent title that only
+   accounts past the top of the ladder can wear. */
+.profile-prestige {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 14px;
+  padding: 6px 12px;
+  border: 1px solid rgb(217 164 65 / 0.55);
+  border-radius: 999px;
+  background: rgb(217 164 65 / 0.12);
+  color: #a97c1f;
+  font: 700 11px var(--roll-font);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}

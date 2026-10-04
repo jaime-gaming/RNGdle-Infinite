@@ -4,16 +4,16 @@ export const CHANGELOG = [
   {
     version: "v0.4",
     title:
-      "rebirth rebalanced, a shop that regroups, and a link between devices",
+      "rebirth rewards the overshoot, ultra-rebirths throw a ceremony, and devices link live",
     body: [
       "rebirth resets purchases, companions, wallet and collection; your account, history, rebirth-earned skills and permanent bonuses stay.",
-      "the six rungs ask for 20-45% of badges and 100,000-7,000,000 cycle EP; each starts the next cycle with 250,000 EP and +2% banked EP.",
-      "history keeps every cycle behind a dotted line labelled with the rebirth that opened it, and tiers follow the scoring table.",
-      "the shop hides what you cannot buy yet: an upgrade only shows up once the step before it is yours.",
-      "auras are four families, each with a banner of its three best looks in its own gradient and type, and a page of its own.",
-      "nine skills in the stall, three at a time; their cards and the corner rack now share one set of tinted hand-drawn icons.",
+      "the six rungs ask 20-45% of badges and 100,000-7,000,000 cycle EP; overshooting the gate pays a surplus straight into the next wallet.",
+      "the shop hides what you cannot buy yet, and every aura family has its three-look banner, its own gradient, type and page.",
+      "nine skills in the stall, three at a time, with tinted cards and one set of hand-drawn icons across the shelf and the corner rack.",
       "companions are a slideshow: one cage in the middle, arrows to slide to the next, each friend with its own colour and skill.",
+      "purchases celebrate on the spot, and companions waddle, bob and ripple whenever they change your number.",
       "one link joins two devices to the same account live, through a memory-only relay — there is still no database anywhere.",
+      "ultra-rebirths bring exclusives, a screen-filling ceremony and a note from the developer to whoever climbed the whole ladder.",
     ],
   },
   {

@@ -93,3 +93,54 @@ test("an invalid link fails with a note instead of a blank page", async ({
   );
   expect(new URL(page.url()).search).not.toContain("sync=");
 });
+
+test("one device can stay closed while the other contributes, and catches up on return", async ({
+  browser,
+}) => {
+  const contextA = await browser.newContext();
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, {
+    balance: 5000000,
+    totalEarned: 5000000,
+    owned: [],
+  });
+  await pageA.goto("/settings");
+  await pageA.getByTestId("sync-create").click();
+  const link = await pageA.getByTestId("sync-link").inputValue();
+
+  // B joins the room while A is watching.
+  const contextB = await browser.newContext();
+  const pageB = await contextB.newPage();
+  await pageB.goto(link);
+  await expect
+    .poll(async () => (await saved(pageB))?.profile?.username, {
+      timeout: 10000,
+    })
+    .toBe("LuckyTester");
+
+  // A closes its tab entirely — from B's point of view, that device is off.
+  await pageA.close();
+
+  // B keeps contributing on its own: a whole purchase made while A is away.
+  await pageB.goto("/shop/tools");
+  await pageB.locator('[data-product="archive-lens"] button').click();
+  await pageB
+    .getByRole("button", { name: "Confirm purchase", exact: true })
+    .click();
+  await expect
+    .poll(async () => (await saved(pageB))?.owned ?? [], { timeout: 10000 })
+    .toContain("archive-lens");
+
+  // A comes back later — same browser, stored link, fresh tab. The room
+  // answers with B's newer save and A adopts everything that happened.
+  const pageA2 = await contextA.newPage();
+  await pageA2.goto("/");
+  await expect
+    .poll(async () => (await saved(pageA2))?.owned ?? [], { timeout: 15000 })
+    .toContain("archive-lens");
+  await pageA2.goto("/settings");
+  await expect(pageA2.getByTestId("sync-status")).toContainText(/live/);
+
+  await contextB.close();
+  await contextA.close();
+});

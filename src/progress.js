@@ -17,6 +17,8 @@ import { validGoal } from "./gameplay-loop.js";
 import {
   rebirthBlocker,
   rebirthMultiplier,
+  rebirthSurplus,
+  surplusMultiplier,
   ultraRebirthBlocker,
   nextRebirthSkill,
   ultraRebirthMultiplier,
@@ -67,6 +69,7 @@ export function walletMultiplier(
     petMultiplier(progress.activePet) *
     rebirthMultiplier(progress.rebirths ?? 0) *
     ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
+    surplusMultiplier(progress.surplusBanked ?? 0) *
     skillWalletMultiplier(skillIds ?? [])
   );
 }
@@ -123,6 +126,7 @@ export function emptyProgress() {
     goalId: null,
     rebirths: 0,
     ultraRebirths: 0,
+    surplusBanked: 0,
     cooldownWindow: null,
     pets: [],
     activePet: "none",
@@ -204,6 +208,11 @@ export function parseProgress(raw) {
     throw new Error("Invalid rebirth count");
   if (p.ultraRebirths != null && !validAmount(p.ultraRebirths))
     throw new Error("Invalid ultra-rebirth count");
+  if (
+    p.surplusBanked != null &&
+    (!validAmount(p.surplusBanked) || p.surplusBanked > 100)
+  )
+    throw new Error("Invalid surplus dividend");
   if (p.cycleEarnedEP != null && !validAmount(p.cycleEarnedEP))
     throw new Error("Invalid cycle EP total");
   if (!validSkillCharge(p.skillCharge)) throw new Error("Invalid skill charge");
@@ -266,6 +275,7 @@ export function parseProgress(raw) {
     ),
     rebirths: p.rebirths ?? 0,
     ultraRebirths: p.ultraRebirths ?? 0,
+    surplusBanked: p.surplusBanked ?? 0,
     offline: parseOffline(p.offline, owned),
     flywheelCharge: owned.includes("flywheel")
       ? Math.min(p.flywheelCharge ?? 0, flywheelRequired(owned))
@@ -377,10 +387,17 @@ export function applyProgress(state, action) {
     if (!validAmount(count + 1))
       throw new Error("Rebirth count limit reached.");
     const granted = nextRebirthSkill(count);
-    const starter = cycleStarterEp(count + 1, state.ultraRebirths ?? 0);
+    // Whatever the cycle scored over this rung's gate pays its dividend now:
+    // a quarter of the surplus joins the starting sum, and whole 5M blocks of
+    // it bank a permanent +1% (up to +5% on a single rebirth).
+    const gate = rebirthRequirement(count);
+    const surplus = rebirthSurplus(cycleEarnedEp(state), gate.ep);
+    const starter =
+      cycleStarterEp(count + 1, state.ultraRebirths ?? 0) +
+      surplus.starterBonus;
     // The rung's price — badges and the EP this cycle earned — is written into
     // the log entry, so the history can say what a cycle was bought with.
-    const cost = rebirthRequirement(count);
+    const cost = gate;
     // The run starts over — collection, everything bought, companions and the
     // wallet — while the account keeps its history, its rebirths and every
     // bonus it earned. Receipts stay too, so a roll from an earlier cycle can
@@ -389,6 +406,8 @@ export function applyProgress(state, action) {
       ...startNewCycle(state, { granted, starter }),
       profile: state.profile,
       rebirths: count + 1,
+      surplusBanked:
+        (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
       history: appendHistory(state.history, [
         {
           id: action.eventId ?? `rebirth:${count + 1}`,
@@ -419,12 +438,18 @@ export function applyProgress(state, action) {
     // with half the collection in hand. It costs the run, never the account:
     // history, rebirths, ladder skills and every permanent bonus stay, and the
     // ultra-rebirth adds ten more points forever.
-    const starter = cycleStarterEp(state.rebirths ?? 0, count + 1);
-    const cost = ultraRebirthRequirement();
+    // The same overshoot dividend as a rung: the ultra gate is a floor too.
+    const ultraCost = ultraRebirthRequirement();
+    const surplus = rebirthSurplus(cycleEarnedEp(state), ultraCost.ep);
+    const starter =
+      cycleStarterEp(state.rebirths ?? 0, count + 1) + surplus.starterBonus;
+    const cost = ultraCost;
     return {
       ...startNewCycle(state, { starter }),
       profile: state.profile,
       ultraRebirths: count + 1,
+      surplusBanked:
+        (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
       history: appendHistory(state.history, [
         {
           id: action.eventId ?? `ultra:${count + 1}`,
@@ -506,6 +531,7 @@ export function applyProgress(state, action) {
       petFactor *
       rebirthMultiplier(state.rebirths ?? 0) *
       ultraRebirthMultiplier(state.ultraRebirths ?? 0) *
+      surplusMultiplier(state.surplusBanked ?? 0) *
       skillWalletMultiplier(fired);
     const credited =
       multiplier === 1

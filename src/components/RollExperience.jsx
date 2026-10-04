@@ -553,6 +553,7 @@ export default function RollExperience({
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
       style={{ "--reveal-scale": timeline.scale }}
       data-settled={!!run && runSettled}
+      data-prestige={session.ultraRebirths > 0 || undefined}
       data-phase={
         !run ? "idle" : !digitsDone ? "digits" : busy ? "badges" : "complete"
       }

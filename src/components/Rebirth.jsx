@@ -21,6 +21,8 @@ import {
   REBIRTH_STEPS,
   REBIRTH_TOTAL,
   REBIRTH_VISIBLE_AT,
+  SURPLUS_BANKED_EP_STEP,
+  SURPLUS_START_SHARE,
   ULTRA_BONUS_PER_REBIRTH,
   ULTRA_STARTER_EP,
   cycleStarterEp,
@@ -28,6 +30,7 @@ import {
   nextRebirthSkill,
   rebirthBlocker,
   rebirthRequirement,
+  rebirthSurplus,
   rebirthUnlocked,
   ultraRebirthAvailable,
   ultraRebirthBlocker,
@@ -131,10 +134,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     Math.round((count / Math.max(1, target)) * 100),
   );
   const reward = nextRebirthSkill(rebirths);
+  const surplusBanked = progress.surplusBanked ?? 0;
   const ultraPercent = Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1));
   const bonusNow = Math.round(
     REBIRTH_BONUS_PER_REBIRTH * 100 * rebirths +
-      ULTRA_BONUS_PER_REBIRTH * 100 * ultras,
+      ULTRA_BONUS_PER_REBIRTH * 100 * ultras +
+      surplusBanked,
   );
   // What this exact account would hand back and what it would be paid for it,
   // read from the save rather than described in general terms.
@@ -150,6 +155,13 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     (sum, id) => sum + (productById.get(id)?.price ?? 0),
     0,
   );
+  // The overshoot, in this save's numbers: the gate is a floor, and the page
+  // shows what the surplus would pay right now — in the preview, in the
+  // dialog, and again in the result message after the rebirth lands.
+  const previewGate = ladderComplete ? ultraRebirthRequirement().ep : epTarget;
+  const previewSurplus = rebirthSurplus(cycleEp, previewGate);
+  const dialogGate = open === "ultra" ? ultraRebirthRequirement().ep : epTarget;
+  const dialogSurplus = rebirthSurplus(cycleEp, dialogGate);
   const pets = (progress.pets ?? []).length;
   const keptSkills = (progress.skills ?? []).filter(
     (id) => skillById.get(id)?.source !== "shop",
@@ -187,19 +199,31 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
         const granted = result.granted
           ? skillById.get(result.granted)?.name
           : "";
+        const surplusNote =
+          dialogSurplus.starterBonus > 0
+            ? ` The surplus over the gate paid ${formatEP(dialogSurplus.starterBonus)} EP${
+                dialogSurplus.bankedBonus > 0
+                  ? ` and +${Math.round(dialogSurplus.bankedBonus * 100)}% EP forever`
+                  : ""
+              }.`
+            : "";
         onDone(
           ultra
             ? `Ultra-rebirth ${ultras + 1}. Your permanent bonus is now +${Math.round(
                 REBIRTH_BONUS_PER_REBIRTH * 100 * rebirths +
-                  ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1),
-              )}% EP, and you start with ${formatEP(ultraStarter)} EP.`
+                  ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1) +
+                  surplusBanked,
+              )}% EP, and you start with ${formatEP(ultraStarter + dialogSurplus.starterBonus)} EP.${surplusNote}`
             : granted
               ? `Rebirth ${rebirths + 1} complete: ${granted} unlocked, +${Math.round(
                   REBIRTH_BONUS_PER_REBIRTH * 100,
-                )}% EP forever and ${formatEP(starter)} EP to start.`
+                )}% EP forever and ${formatEP(starter + dialogSurplus.starterBonus)} EP to start.${surplusNote}`
               : `Rebirth ${rebirths + 1} complete: +${Math.round(
                   REBIRTH_BONUS_PER_REBIRTH * 100,
-                )}% EP forever and ${formatEP(starter)} EP to start.`,
+                )}% EP forever and ${formatEP(starter + dialogSurplus.starterBonus)} EP to start.${surplusNote}`,
+          // An ultra also fires the ceremony — in the app shell, which is
+          // still mounted after this page navigates away.
+          { ultra },
         );
       } else setError(result.message);
     } finally {
@@ -435,9 +459,28 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                     : "on every roll you bank"}
                 </small>
               </li>
+              {previewSurplus.surplus > 0 && (
+                <li>
+                  <strong>
+                    +{formatEP(previewSurplus.starterBonus)} EP surplus
+                  </strong>
+                  <small>
+                    {Math.round(SURPLUS_START_SHARE * 100)}% of the{" "}
+                    {formatEP(previewSurplus.surplus)} EP this cycle scored over
+                    the gate
+                    {previewSurplus.bankedBonus > 0
+                      ? `, plus +${Math.round(previewSurplus.bankedBonus * 100)}% EP forever`
+                      : ""}
+                  </small>
+                </li>
+              )}
               <li>
                 <strong>
-                  {formatEP(ladderComplete ? ultraStarter : starter)} EP
+                  {formatEP(
+                    (ladderComplete ? ultraStarter : starter) +
+                      previewSurplus.starterBonus,
+                  )}{" "}
+                  EP
                 </strong>
                 <small>
                   {ladderComplete
@@ -456,12 +499,38 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           </article>
         </div>
         <p className="rebirth-preview-note">
-          <Target size={13} aria-hidden="true" /> This step asks for{" "}
-          <b>{target} badges</b> ({count} found) and{" "}
-          <b>{formatEP(epTarget)} EP</b> earned in this cycle —{" "}
-          {formatEP(cycleEp)} scored by {cycle.rolls}{" "}
-          {cycle.rolls === 1 ? "roll" : "rolls"}. The EP is a mark of progress,
-          not a spend: the wallet restarts on the starting sum either way.
+          <Target size={13} aria-hidden="true" />
+          {/* One flex item for the whole paragraph: the note is a flex row
+              around its icon, and loose inline children become items of
+              their own — more than a phone-wide row can hold. */}
+          <span>
+            This step asks for <b>{target} badges</b> ({count} found) and{" "}
+            <b>{formatEP(epTarget)} EP</b> earned in this cycle —{" "}
+            {formatEP(cycleEp)} scored by {cycle.rolls}{" "}
+            {cycle.rolls === 1 ? "roll" : "rolls"}. The EP is a mark of
+            progress, not a spend: the wallet restarts on the starting sum
+            either way.
+            {previewSurplus.surplus > 0 && (
+              <>
+                {" "}
+                Over the gate by <b>{formatEP(previewSurplus.surplus)} EP</b> —
+                the surplus adds{" "}
+                <b>{formatEP(previewSurplus.starterBonus)} EP</b> to the new
+                wallet
+                {previewSurplus.bankedBonus > 0 && (
+                  <>
+                    {" "}
+                    and{" "}
+                    <b>
+                      +{Math.round(previewSurplus.bankedBonus * 100)}% EP
+                    </b>{" "}
+                    forever
+                  </>
+                )}
+                .
+              </>
+            )}
+          </span>
         </p>
       </section>
 
@@ -474,7 +543,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             Each step asks for a slice of the collection and EP the cycle has
             earned, and grants a skill found nowhere else, a permanent +2% EP
             and the sum the next cycle starts with. No purchase is ever
-            required.
+            required. Whatever the cycle scores <em>over</em> the gate is
+            surplus: a quarter joins the new wallet, and every{" "}
+            {formatEP(SURPLUS_BANKED_EP_STEP)} of it banks +1% EP forever, up to
+            +5% on a single rebirth.
           </p>
         </header>
         <ol className="rebirth-ladder">
@@ -637,6 +709,17 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 </small>
               </span>
             </li>
+            <li>
+              <Sparkles size={14} />
+              <span>
+                <strong>Prestige rewards</strong>
+                <small>
+                  From the first one: a gold halo behind every roll, the
+                  Transcendent title on your profile and a note from the
+                  developer — nowhere else in the game.
+                </small>
+              </span>
+            </li>
           </ul>
           {ladderComplete && (
             <p className="rebirth-ultra-state" role="status">
@@ -647,6 +730,91 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           )}
         </div>
       </section>
+
+      {/* Past the ladder the account keeps its own page: what every ultra
+          has paid so far, which exclusives are wearing, and the note the
+          developer left at the very top for whoever made it. */}
+      {ladderComplete && (
+        <section
+          className="rebirth-block rebirth-legacy"
+          aria-labelledby="rebirth-legacy-title"
+        >
+          <header>
+            <h3 id="rebirth-legacy-title">
+              <Sparkles size={16} /> Your ultra legacy
+            </h3>
+            <p>What this account carries past the top of the ladder.</p>
+          </header>
+          <div className="rebirth-legacy-grid">
+            <dl className="rebirth-legacy-figures">
+              <div>
+                <dt>Ultra-rebirths</dt>
+                <dd>{ultras}</dd>
+              </div>
+              <div>
+                <dt>Permanent EP bonus</dt>
+                <dd>{bonusNow > 0 ? `+${bonusNow}%` : "—"}</dd>
+              </div>
+              <div>
+                <dt>Banked from surplus</dt>
+                <dd>{surplusBanked > 0 ? `+${surplusBanked}%` : "—"}</dd>
+              </div>
+              <div>
+                <dt>Next ultra starts with</dt>
+                <dd>
+                  {formatEPCompact(cycleStarterEp(rebirths, ultras + 1))} EP
+                </dd>
+              </div>
+            </dl>
+            <ul className="rebirth-list is-keep">
+              <li>
+                {ultras > 0 ? <Check size={14} /> : <Lock size={14} />}
+                <span>
+                  <strong>Gold halo on every roll</strong>
+                  <small>
+                    {ultras > 0
+                      ? "Worn now: the stage carries your prestige while you roll."
+                      : "Unlocks with your first ultra-rebirth."}
+                  </small>
+                </span>
+              </li>
+              <li>
+                {ultras > 0 ? <Check size={14} /> : <Lock size={14} />}
+                <span>
+                  <strong>Transcendent title</strong>
+                  <small>
+                    {ultras > 0
+                      ? "Showing on your profile, and only there."
+                      : "Unlocks with your first ultra-rebirth."}
+                  </small>
+                </span>
+              </li>
+              <li>
+                {ultras > 0 ? <Check size={14} /> : <ArrowRight size={14} />}
+                <span>
+                  <strong>+10% EP and +1,000,000 EP per ultra</strong>
+                  <small>
+                    {ultras > 0
+                      ? `Stacked ${ultras} time${ultras === 1 ? "" : "s"}: +${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}% EP forever.`
+                      : "The next one starts the run with both."}
+                  </small>
+                </span>
+              </li>
+            </ul>
+          </div>
+          <blockquote className="rebirth-dev-note">
+            <p className="rebirth-dev-note-label">A note from the developer</p>
+            <p>
+              I didn&apos;t know you would get this far. The ladder started as a
+              joke about very big numbers, and here you are at the top of it —
+              with an account that outlived every single run. Thank you for
+              playing. Take the glow, keep the history, and go do it all over
+              again.
+            </p>
+            <footer>— Jaime, making RNGdle</footer>
+          </blockquote>
+        </section>
+      )}
 
       {ultras > 0 && (
         <p className="rebirth-ultra-note">
@@ -707,6 +875,25 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                   <strong>{formatEP(ultraStarter)} EP</strong> to start the new
                   cycle.
                 </li>
+                {dialogSurplus.surplus > 0 && (
+                  <li>
+                    <strong>Surplus:</strong> the cycle scored{" "}
+                    {formatEP(dialogSurplus.surplus)} EP over the gate, so{" "}
+                    <strong>{formatEP(dialogSurplus.starterBonus)} EP</strong>{" "}
+                    joins the new wallet
+                    {dialogSurplus.bankedBonus > 0 && (
+                      <>
+                        {" "}
+                        and{" "}
+                        <strong>
+                          +{Math.round(dialogSurplus.bankedBonus * 100)}% EP
+                        </strong>{" "}
+                        lands forever
+                      </>
+                    )}
+                    .
+                  </li>
+                )}
               </ul>
             </>
           ) : (
@@ -739,6 +926,25 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                   banked roll, and <strong>{formatEP(starter)} EP</strong> to
                   start the cycle.
                 </li>
+                {dialogSurplus.surplus > 0 && (
+                  <li>
+                    <strong>Surplus:</strong> the cycle scored{" "}
+                    {formatEP(dialogSurplus.surplus)} EP over the gate, so{" "}
+                    <strong>{formatEP(dialogSurplus.starterBonus)} EP</strong>{" "}
+                    joins the new wallet
+                    {dialogSurplus.bankedBonus > 0 && (
+                      <>
+                        {" "}
+                        and{" "}
+                        <strong>
+                          +{Math.round(dialogSurplus.bankedBonus * 100)}% EP
+                        </strong>{" "}
+                        lands forever
+                      </>
+                    )}
+                    .
+                  </li>
+                )}
               </ul>
             </>
           )}

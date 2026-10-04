@@ -254,7 +254,12 @@ earned. No shop purchase is ever part of a rung.
 The EP is **a mark of progress, not a spend**: it is never taken from your
 wallet, so buying an upgrade can never lock you out of a rung — the wallet
 empties on rebirth either way. It counts the EP this cycle's rolls scored, so
-every cycle pays its own way.
+every cycle pays its own way — and the gate is a **floor, not a ceiling**:
+whatever the cycle scores _over_ the gate is **surplus**. A quarter of the
+surplus joins the new wallet as starting EP (a 100,000 gate taken with
+1,000,000 in the cycle carries +225,000 EP into the next run), and every full
+5,000,000 of overshoot banks a permanent **+1% to banked EP**, capped at +5%
+on any single rebirth. Overshooting is rewarded, never wasted.
 
 Rebirth says **nothing at all before it unlocks**: no header entry, no counter,
 no teaser, and a direct link to `/rebirth` simply goes home. From **15% (36
@@ -284,9 +289,20 @@ taken from **50% of the collection (118 badges) and 15,000,000 EP** earned in
 the cycle, in exchange for a **permanent, stackable +10% to banked EP** for
 every ultra-rebirth, and a cosmetic mark next to your profile. It pays its own
 **1,000,000 EP** on top of the rungs you keep — a ladder-complete ultra-rebirth
-starts the next cycle with 2,500,000 EP. It costs the run, never the account —
-history, rebirths and their +2% rung bonuses all stay. Both resets require
-typing the word (`REBIRTH` or `ULTRA`) and cannot be undone.
+starts the next cycle with 2,500,000 EP — and any EP the cycle scored over the
+ultra's 15,000,000 gate pays the same surplus dividend as a rung. It costs the
+run, never the account — history, rebirths and their +2% rung bonuses all
+stay. Both resets require typing the word (`REBIRTH` or `ULTRA`) and cannot be
+undone.
+
+Taking one is **a moment**: a full-screen ceremony of rays, confetti and a
+slamming title plays over the page (still and invisible under reduced motion,
+pointer-transparent either way), and the account keeps the exclusives that
+come with it — a **gold halo behind every roll**, the **Transcendent** title
+on the profile, and the **ultra legacy panel** on the rebirth page: your
+ultra count, the permanent bonus broken down, which exclusives are wearing,
+and **a note from the developer** left at the top of the ladder for whoever
+climbed it.
 
 The page speaks in your own numbers before you commit: how long this cycle has
 run, how many rolls and badges it produced, its best number and the EP those

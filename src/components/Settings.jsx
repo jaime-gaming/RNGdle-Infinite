@@ -80,8 +80,9 @@ function DeviceLink({ progress, notify }) {
         One link joins two browsers to this account at the same time: buy on
         your phone, watch it land on your PC. Saves are forwarded straight
         between your devices with no database behind them — rooms live in the
-        relay's memory only. Whoever holds the link plays this account, so treat
-        it like a password.
+        relay's memory only. One device can stay closed while the other keeps
+        playing; everything meets again the moment both are back on the link.
+        Whoever holds the link plays this account, so treat it like a password.
       </p>
       <div className="setting-row">
         <div className="setting-copy">
