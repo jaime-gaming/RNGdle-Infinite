@@ -130,6 +130,32 @@ test("old saves gain an empty feed without invented history, malformed entries c
   expect(p.history).toEqual([valid]);
 });
 
+test("legacy companion-drop history survives reload and is shown as a found pet", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    pets: ["pebble"],
+    activePet: "pebble",
+    history: [
+      {
+        id: "legacy-roll:pet",
+        type: "pet",
+        at: 1700000000000,
+        productId: "pebble",
+        name: "Pebble",
+      },
+    ],
+  });
+
+  await page.goto("/#history");
+
+  const event = page.locator('[data-event-type="pet"]');
+  await expect(event).toHaveCount(1);
+  await expect(event).toContainText("Found Pebble on a roll");
+  await expect(event).toContainText("A new companion joined your collection");
+  await expect(event).not.toContainText("Equipped Pebble");
+});
+
 test("guest feed, filters, badge details and shop transactions stay a demo; signup starts a clean feed", async ({
   page,
 }) => {

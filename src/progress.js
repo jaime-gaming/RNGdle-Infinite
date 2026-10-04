@@ -1045,11 +1045,23 @@ function parseHistory(value) {
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
         ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
       };
+    } else if (e.type === "pet") {
+      if (
+        typeof e.productId !== "string" ||
+        !petById.has(e.productId) ||
+        typeof e.name !== "string" ||
+        e.name.length > 100
+      )
+        return [];
+      next = { ...base, productId: e.productId, name: e.name };
     } else if (["purchase", "equip"].includes(e.type)) {
+      // Companions are purchased from their own shelf, outside productById,
+      // but their transactions still belong in the account history.
       if (
         typeof e.productId !== "string" ||
         !(
           productById.has(e.productId) ||
+          (e.type === "purchase" && petById.has(e.productId)) ||
           (e.type === "equip" && e.productId === "none")
         ) ||
         typeof e.name !== "string" ||

@@ -4,6 +4,7 @@ import {
   History,
   Coins,
   Medal,
+  PawPrint,
   ShoppingBag,
   Check,
   RotateCcw,
@@ -101,7 +102,10 @@ export default function ActivityFeed({
         </div>
         <div>
           <h1>Your activity</h1>
-          <p>Every completed roll, new discovery, and shop transaction.</p>
+          <p>
+            Every completed roll, new discovery, companion, and shop
+            transaction.
+          </p>
         </div>
       </div>
       {!progress.profile && (
@@ -252,6 +256,8 @@ export default function ActivityFeed({
                     <Medal size={19} />
                   ) : event.type === "purchase" ? (
                     <ShoppingBag size={19} />
+                  ) : event.type === "pet" ? (
+                    <PawPrint size={19} />
                   ) : event.type === "rebirth" ? (
                     <RotateCcw size={19} />
                   ) : event.type === "ultra-rebirth" ? (
@@ -273,11 +279,13 @@ export default function ActivityFeed({
                           ? `${event.badges.length} new badge${event.badges.length === 1 ? "" : "s"} unlocked`
                           : event.type === "purchase"
                             ? `Purchased ${event.name}`
-                            : event.type === "rebirth"
-                              ? `Rebirth ${event.count}`
-                              : event.type === "ultra-rebirth"
-                                ? `Ultra-rebirth ${event.count}`
-                                : `Equipped ${event.name}`}
+                            : event.type === "pet"
+                              ? `Found ${event.name} on a roll`
+                              : event.type === "rebirth"
+                                ? `Rebirth ${event.count}`
+                                : event.type === "ultra-rebirth"
+                                  ? `Ultra-rebirth ${event.count}`
+                                  : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString(undefined, {
@@ -355,6 +363,10 @@ export default function ActivityFeed({
                       </p>
                       <BadgeList ids={event.badges} openBadge={openBadge} />
                     </>
+                  ) : event.type === "pet" ? (
+                    <p>
+                      A new companion joined your collection from a lucky roll.
+                    </p>
                   ) : event.type === "rebirth" ? (
                     <p>
                       New cycle started
