@@ -264,7 +264,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     );
   }
 
-  // Hero Spotlight: Biggest Roll ("El roll más grande")
+  // Hero spotlight: the biggest roll of the account.
   const heroX = 54;
   const heroY = 182;
   const heroW = width - 108;

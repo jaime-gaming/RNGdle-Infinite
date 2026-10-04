@@ -23,6 +23,7 @@ account, works on desktop and mobile.
 - [Your profile, your data](#your-profile-your-data)
 - [Fairness](#fairness)
 - [Saving, privacy and guests](#saving-privacy-and-guests)
+- [Console save tools](#console-save-tools-optional-no-button-anywhere)
 - [Settings, themes and accessibility](#settings-themes-and-accessibility)
 - [Questions people actually ask](#questions-people-actually-ask)
 - [Credits](#credits)
@@ -338,8 +339,11 @@ first and latest entry.
 
 **Export my data** downloads a PNG account card of your save — your account
 name, your biggest roll and your key account stats — so you can view, share or
-keep it somewhere safe. It is deliberately **one-way**: there is no import
-anywhere, so a downloaded card can never overwrite the game you are playing.
+keep it somewhere safe. The card is deliberately **one-way**: nothing in the
+game imports it, so a shared card can never overwrite the game you are playing.
+The only import that exists is the console-only one for a raw save file, under
+[Console save tools](#console-save-tools-optional-no-button-anywhere) — it
+replaces the save on purpose, and it is never a button in the interface.
 Delete account & progress remains the only way to remove it.
 
 ## Fairness
@@ -406,6 +410,28 @@ failed-write recovery.
   runtime CDN. The only network requests are the game's own asset files — and,
   only when you explicitly create a device link, the relay forwarding your
   save between your own devices.
+
+### Console save tools (optional, no button anywhere)
+
+A save can also be moved as a plain JSON file, without any link at all. The
+commands live in the browser console on purpose — importing **replaces the
+whole save**, so it should take a deliberate act, not a stray click:
+
+```js
+__importData(); // opens the file picker (raw save or a v0.3 Profile JSON export)
+__importData(jsonText); // imports a save from a JSON string, File/Blob or object
+__exportSave(); // copies the current save to the clipboard as JSON
+__downloadSave(); // downloads the current save as rngdle-<name>-<date>.json
+```
+
+Imports are validated before anything is written: a save from v0.1, v0.2 or
+v0.3 (raw or the v0.3 profile snapshot) is migrated, anything unreadable is
+rejected with the exact reason on the console, and the current save is left
+untouched when a file is refused. When the browser blocks its own file dialog
+— an iframe, a missing user gesture — the command falls back to an ordinary
+file input instead of dead-ending. `__exportSave()` never claims a copy the
+browser refused: if the clipboard is blocked it says so and prints the save.
+`__importSave()` still works and points at the new name.
 
 ## Settings, themes and accessibility
 
