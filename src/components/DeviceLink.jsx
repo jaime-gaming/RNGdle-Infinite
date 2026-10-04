@@ -394,9 +394,17 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
         ))}
       </dl>
       <p className="device-link-note">
-        The room lives on whichever device runs the relay ({relayEndpoint()}) —
-        for the sandbox that is this site itself. Treat the link like a
-        password: whoever holds it plays this account.
+        The room lives on whichever machine runs the relay ({relayEndpoint()}).
+        Treat the link like a password: whoever holds it plays this account.
+        {healthError ? (
+          <>
+            {" "}
+            Nothing answers there, so no link can be created from this page: a
+            published build has no relay of its own. Run npm run relay on a
+            machine you keep around and set its address below — or use the
+            hand-link, which needs no relay at all.
+          </>
+        ) : null}
       </p>
 
       <details className="sync-hand">
