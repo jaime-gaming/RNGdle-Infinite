@@ -232,146 +232,163 @@ export default function ActivityFeed({
       ) : (
         <ol className="activity-feed">
           {events.slice(0, limit).map((event) => (
-            <li
-              key={event.id}
-              className="activity-event"
-              data-event-type={event.type}
-            >
-              <div className={`activity-icon event-${event.type}`}>
-                {event.type === "roll" ? (
-                  <Coins size={19} />
-                ) : event.type === "unlock" ? (
-                  <Medal size={19} />
-                ) : event.type === "purchase" ? (
-                  <ShoppingBag size={19} />
-                ) : event.type === "rebirth" ? (
-                  <RotateCcw size={19} />
-                ) : event.type === "ultra-rebirth" ? (
-                  <InfinityIcon size={19} />
-                ) : (
-                  <Check size={19} />
-                )}
-              </div>
-              <article>
-                <div className="activity-event-heading">
-                  <h2>
-                    {event.type === "roll"
-                      ? event.source === "offline"
-                        ? "Offline roll completed"
-                        : event.flywheel === "boost"
-                          ? "Flywheel roll completed"
-                          : "Roll completed"
-                      : event.type === "unlock"
-                        ? `${event.badges.length} new badge${event.badges.length === 1 ? "" : "s"} unlocked`
-                        : event.type === "purchase"
-                          ? `Purchased ${event.name}`
-                          : event.type === "rebirth"
-                            ? `Rebirth ${event.count}`
-                            : event.type === "ultra-rebirth"
-                              ? `Ultra-rebirth ${event.count}`
-                              : `Equipped ${event.name}`}
-                  </h2>
-                  <time dateTime={new Date(event.at).toISOString()}>
-                    {new Date(event.at).toLocaleString(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </time>
+            <React.Fragment key={event.id}>
+              {/* A rebirth ends a cycle, not the story: the log keeps every
+                  entry and draws a dotted line where the new one begins. */}
+              {(event.type === "rebirth" || event.type === "ultra-rebirth") && (
+                <li className="activity-divider">
+                  <span className="activity-divider-label">
+                    {event.type === "ultra-rebirth"
+                      ? `Ultra-rebirth ${event.count}`
+                      : `Rebirth ${event.count}`}
+                  </span>
+                </li>
+              )}
+              <li className="activity-event" data-event-type={event.type}>
+                <div className={`activity-icon event-${event.type}`}>
+                  {event.type === "roll" ? (
+                    <Coins size={19} />
+                  ) : event.type === "unlock" ? (
+                    <Medal size={19} />
+                  ) : event.type === "purchase" ? (
+                    <ShoppingBag size={19} />
+                  ) : event.type === "rebirth" ? (
+                    <RotateCcw size={19} />
+                  ) : event.type === "ultra-rebirth" ? (
+                    <InfinityIcon size={19} />
+                  ) : (
+                    <Check size={19} />
+                  )}
                 </div>
-                {event.type === "roll" ? (
-                  <>
-                    <div className="activity-roll">
-                      <NumberBox
-                        compact
-                        value={event.number}
-                        tier={event.tier}
-                        aria-label={`Historical roll ${event.number}`}
-                      />
-                      <div>
-                        <strong className="activity-credit">
-                          +{formatEP(event.ep)} EP
-                        </strong>
-                        <span>
-                          {event.tier.toUpperCase()} · {event.badges.length}{" "}
-                          badges earned
-                          {event.walletBonus
-                            ? ` · +${formatEP(event.walletBonus)} EP extra`
-                            : ""}
-                        </span>
-                        {!!event.skills?.length && (
-                          <span className="activity-skills">
-                            {event.skills.map((id) => {
-                              const skill = skillById.get(id);
-                              if (!skill) return null;
-                              // The receipt states what the skill actually
-                              // added to this roll, not just its name.
-                              return (
-                                <span className="activity-skill" key={id}>
-                                  <strong>{skill.name}</strong>
-                                  {skillEffectChips(skill)[0]}
-                                </span>
-                              );
-                            })}
+                <article>
+                  <div className="activity-event-heading">
+                    <h2>
+                      {event.type === "roll"
+                        ? event.source === "offline"
+                          ? "Offline roll completed"
+                          : event.flywheel === "boost"
+                            ? "Flywheel roll completed"
+                            : "Roll completed"
+                        : event.type === "unlock"
+                          ? `${event.badges.length} new badge${event.badges.length === 1 ? "" : "s"} unlocked`
+                          : event.type === "purchase"
+                            ? `Purchased ${event.name}`
+                            : event.type === "rebirth"
+                              ? `Rebirth ${event.count}`
+                              : event.type === "ultra-rebirth"
+                                ? `Ultra-rebirth ${event.count}`
+                                : `Equipped ${event.name}`}
+                    </h2>
+                    <time dateTime={new Date(event.at).toISOString()}>
+                      {new Date(event.at).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </time>
+                  </div>
+                  {event.type === "roll" ? (
+                    <>
+                      <div className="activity-roll">
+                        <NumberBox
+                          compact
+                          value={event.number}
+                          tier={event.tier}
+                          aria-label={`Historical roll ${event.number}`}
+                        />
+                        <div>
+                          <strong className="activity-credit">
+                            +{formatEP(event.ep)} EP
+                          </strong>
+                          <span>
+                            {event.tier.toUpperCase()} · {event.badges.length}{" "}
+                            badges earned
+                            {event.draws > 1
+                              ? ` · best of ${event.draws} draws`
+                              : ""}
+                            {event.walletBonus
+                              ? ` · +${formatEP(event.walletBonus)} EP extra`
+                              : ""}
                           </span>
-                        )}
-                        <button
-                          type="button"
-                          className="activity-share"
-                          onClick={() => shareRoll(event)}
-                          aria-label={`Share roll ${event.number}`}
-                        >
-                          {copiedId === event.id ? (
-                            <Check size={13} />
-                          ) : (
-                            <Share2 size={13} />
+                          {!!event.skills?.length && (
+                            <span className="activity-skills">
+                              {event.skills.map((id) => {
+                                const skill = skillById.get(id);
+                                if (!skill) return null;
+                                // The receipt states what the skill actually
+                                // added to this roll, not just its name.
+                                return (
+                                  <span className="activity-skill" key={id}>
+                                    <strong>{skill.name}</strong>
+                                    {skillEffectChips(skill)[0]}
+                                  </span>
+                                );
+                              })}
+                            </span>
                           )}
-                          {copiedId === event.id
-                            ? "Copied result + link"
-                            : "Share this roll"}
-                        </button>
+                          <button
+                            type="button"
+                            className="activity-share"
+                            onClick={() => shareRoll(event)}
+                            aria-label={`Share roll ${event.number}`}
+                          >
+                            {copiedId === event.id ? (
+                              <Check size={13} />
+                            ) : (
+                              <Share2 size={13} />
+                            )}
+                            {copiedId === event.id
+                              ? "Copied result + link"
+                              : "Share this roll"}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <details>
-                      <summary>View earned badges</summary>
+                      <details>
+                        <summary>View earned badges</summary>
+                        <BadgeList ids={event.badges} openBadge={openBadge} />
+                      </details>
+                    </>
+                  ) : event.type === "unlock" ? (
+                    <>
+                      <p>
+                        First discovered with roll{" "}
+                        <strong>{event.number}</strong>.
+                      </p>
                       <BadgeList ids={event.badges} openBadge={openBadge} />
-                    </details>
-                  </>
-                ) : event.type === "unlock" ? (
-                  <>
+                    </>
+                  ) : event.type === "rebirth" ? (
                     <p>
-                      First discovered with roll <strong>{event.number}</strong>
-                      .
+                      New cycle started
+                      {event.skill
+                        ? ` · ${skillById.get(event.skill)?.name} unlocked`
+                        : ""}
+                      . The collection, every purchase, the companions and the
+                      wallet reset; the history, the rebirths and every
+                      permanent bonus were kept, and the cycle began with{" "}
+                      {formatEP(event.grant ?? 0)} EP.
                     </p>
-                    <BadgeList ids={event.badges} openBadge={openBadge} />
-                  </>
-                ) : event.type === "rebirth" ? (
-                  <p>
-                    New cycle started
-                    {event.skill
-                      ? ` · ${skillById.get(event.skill)?.name} unlocked`
-                      : ""}
-                    . The collection, auras and activity history reset; EP,
-                    upgrades, companions and skills were kept.
-                  </p>
-                ) : event.type === "ultra-rebirth" ? (
-                  <p>
-                    Everything reset, including the rebirth ladder. The
-                    permanent wallet bonus grew by 10 points.
-                  </p>
-                ) : (
-                  <p className="activity-transaction">
-                    {event.type === "purchase" ? (
-                      <>
-                        <strong>−{formatEP(event.ep)} EP</strong> · Permanent
-                        purchase
-                      </>
-                    ) : (
-                      <>Free equipment change · No EP spent</>
-                    )}
-                  </p>
-                )}
-              </article>
-            </li>
+                  ) : event.type === "ultra-rebirth" ? (
+                    <p>
+                      The run started over from the top of the ladder: the
+                      collection, every purchase, the companions and the wallet
+                      reset. History, rebirths and bonuses stayed, the cycle
+                      began with {formatEP(event.grant ?? 0)} EP, and the
+                      permanent wallet bonus grew by 10 points.
+                    </p>
+                  ) : (
+                    <p className="activity-transaction">
+                      {event.type === "purchase" ? (
+                        <>
+                          <strong>−{formatEP(event.ep)} EP</strong> · Kept until
+                          your next rebirth
+                        </>
+                      ) : (
+                        <>Free equipment change · No EP spent</>
+                      )}
+                    </p>
+                  )}
+                </article>
+              </li>
+            </React.Fragment>
           ))}
         </ol>
       )}

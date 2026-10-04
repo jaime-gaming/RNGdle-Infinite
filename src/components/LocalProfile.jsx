@@ -8,23 +8,23 @@ import {
   Dices,
   Download,
   History,
+  ImagePlus,
+  UserRound,
 } from "lucide-react";
 import { validUsername } from "../progress.js";
+import { AVATAR_ACCEPT, fileToAvatar } from "../avatar.js";
 import {
   accountStats,
   exportFileName,
-  exportPayload,
+  renderExportPngBlob,
 } from "../profile-stats.js";
 import "../profile.css";
 
-// A one-way export: the browser saves a JSON snapshot of this local save so it
-// can be read or archived. There is no import anywhere, by design — a file you
-// downloaded can never overwrite the game you are playing.
-function downloadExport(progress) {
-  const payload = exportPayload(progress);
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: "application/json",
-  });
+// A one-way export: the browser saves a PNG card with the account name,
+// biggest roll and key stats. There is no import anywhere, by design — a card
+// you downloaded can never overwrite the game you are playing.
+async function downloadExport(progress) {
+  const blob = await renderExportPngBlob(progress);
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -48,6 +48,27 @@ function when(at) {
   });
 }
 
+// The account's face: the logo it uploaded, or the neutral icon every new
+// account starts with. Used by the profile page, the header button and the
+// sign-up preview, so all three can never disagree.
+export function AvatarMark({ avatar, size = 40, label = "" }) {
+  return (
+    <span
+      className={`avatar-mark ${avatar ? "has-logo" : ""}`}
+      style={{ "--avatar-size": `${size}px` }}
+      data-avatar={avatar ? "logo" : "icon"}
+      aria-label={label || undefined}
+      role={label ? "img" : undefined}
+    >
+      {avatar ? (
+        <img src={avatar} alt="" draggable="false" />
+      ) : (
+        <UserRound size={Math.round(size * 0.55)} aria-hidden="true" />
+      )}
+    </span>
+  );
+}
+
 function ProfileHistory({ progress }) {
   const stats = accountStats(progress);
   const items = [
@@ -56,7 +77,7 @@ function ProfileHistory({ progress }) {
       "Online · offline",
       `${stats.onlineRolls.toLocaleString("en-US")} · ${stats.offlineRolls.toLocaleString("en-US")}`,
     ],
-    ["EP earned in this cycle", formatStatEP(stats.totalEarned)],
+    ["EP earned all-time", formatStatEP(stats.totalEarned)],
     ["EP spent", formatStatEP(stats.spent)],
     [
       "Best roll",
@@ -93,7 +114,8 @@ function ProfileHistory({ progress }) {
       </dl>
       <p className="profile-history-note">
         Read from your activity log and current save — these figures are not
-        stored on their own, and the log starts over with each rebirth.
+        stored on their own, and the log keeps every cycle, not just the current
+        one.
       </p>
     </section>
   );
@@ -123,6 +145,37 @@ export default function LocalProfile({
     [deleting, setDeleting] = useState(false),
     [confirmation, setConfirmation] = useState("");
   const busy = useRef(false);
+  const fileInput = useRef(null);
+  const [logoNote, setLogoNote] = useState("");
+  const [choosing, setChoosing] = useState(false);
+  const avatar = profile?.avatar ?? "";
+  async function chooseLogo(event) {
+    const file = event.target.files?.[0];
+    // Reset first: choosing the same file twice must work.
+    event.target.value = "";
+    if (!file) return;
+    setChoosing(true);
+    setLogoNote("");
+    try {
+      const data = await fileToAvatar(file);
+      const outcome = await onAction({ type: "avatar", avatar: data });
+      setLogoNote(
+        outcome.ok
+          ? "Logo saved — it travels with your account and its device link."
+          : outcome.message,
+      );
+    } catch (failure) {
+      setLogoNote(failure.message);
+    } finally {
+      setChoosing(false);
+    }
+  }
+  async function removeLogo() {
+    const outcome = await onAction({ type: "avatar", avatar: "" });
+    setLogoNote(
+      outcome.ok ? "Logo removed. The account icon is back." : outcome.message,
+    );
+  }
   // Live feedback: say what is wrong while typing rather than only on submit.
   const trimmed = username.trim();
   const tooShort = trimmed.length > 0 && trimmed.length < 3;
@@ -225,11 +278,25 @@ export default function LocalProfile({
     );
   return (
     <>
-      <h2>
+      <h2 className="profile-title">
+        {profile && (
+          <AvatarMark
+            avatar={avatar}
+            size={46}
+            label={`${profile.username}'s logo`}
+          />
+        )}
         {profile
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
       </h2>
+      {profile && (progress?.ultraRebirths ?? 0) > 0 && (
+        <p className="profile-prestige">
+          <span aria-hidden="true">✦</span> Transcendent ·{" "}
+          {progress.ultraRebirths} ultra-rebirth
+          {progress.ultraRebirths === 1 ? "" : "s"} beyond the ladder
+        </p>
+      )}
       {profile ? (
         <>
           <p>
@@ -253,10 +320,62 @@ export default function LocalProfile({
               <Download size={15} aria-hidden="true" /> Export my data
             </button>
           </div>
+          <section className="profile-logo" aria-label="Account logo">
+            <AvatarMark avatar={avatar} size={64} label="Your logo" />
+            <div className="profile-logo-copy">
+              <strong>Your logo</strong>
+              <p>
+                A picture this account wears in the header and on its profile.
+                It is saved inside the account on this browser — and, because it
+                rides in the save, a device link carries it too. Nothing is
+                uploaded anywhere.
+              </p>
+              <div className="profile-logo-actions">
+                <input
+                  ref={fileInput}
+                  className="profile-logo-input"
+                  type="file"
+                  accept={AVATAR_ACCEPT}
+                  data-testid="avatar-input"
+                  onChange={chooseLogo}
+                  aria-label="Upload a logo"
+                />
+                <button
+                  type="button"
+                  className="secondary-button"
+                  data-testid="avatar-upload"
+                  disabled={choosing}
+                  onClick={() => fileInput.current?.click()}
+                >
+                  <ImagePlus size={15} aria-hidden="true" />
+                  {choosing
+                    ? "Shrinking…"
+                    : avatar
+                      ? "Replace logo"
+                      : "Upload logo"}
+                </button>
+                {avatar && (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    data-testid="avatar-remove"
+                    onClick={removeLogo}
+                  >
+                    <Trash2 size={15} aria-hidden="true" /> Remove
+                  </button>
+                )}
+              </div>
+              {logoNote && (
+                <p className="profile-logo-note" role="status">
+                  {logoNote}
+                </p>
+              )}
+            </div>
+          </section>
           <p className="profile-export-note">
-            One-way export: a JSON file you can read or keep. There is no
-            import, so a downloaded save can never overwrite the game in this
-            browser.
+            One-way export: a PNG card with your name, your biggest roll and
+            your account’s key stats. There is no import, so a downloaded card
+            can never overwrite the game in this browser.
           </p>
           {progress && <ProfileHistory progress={progress} />}
           <div className="account-danger">

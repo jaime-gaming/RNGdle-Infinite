@@ -9,6 +9,7 @@ import {
   Moon,
   Monitor,
   LogIn,
+  Link2,
   CircleHelp,
   ArrowUpRight,
   ArrowRight,
@@ -35,7 +36,8 @@ import Rebirth from "./components/Rebirth";
 import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
-import LocalProfile from "./components/LocalProfile";
+import LocalProfile, { AvatarMark } from "./components/LocalProfile";
+import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
@@ -50,6 +52,7 @@ import Changelog from "./components/Changelog";
 import {
   BadgeMark,
   CompanionMark,
+  InfinityMark,
   SkillMark,
   RollMark,
 } from "./components/game-icons.jsx";
@@ -65,14 +68,38 @@ import {
   pageFromLocation,
   pathForPage,
   pathForSubpage,
+  pathForShelfFamily,
   subpageFromLocation,
+  familyFromLocation,
   isCurrentPath,
   validPage,
 } from "./router.js";
-import { SHOP_SECTIONS, shelfOfProduct, productById } from "./shop-data.js";
+import {
+  SHOP_SECTIONS,
+  AURA_FAMILIES,
+  shelfOfProduct,
+  productById,
+} from "./shop-data.js";
+import { joinDeviceLink, resumeDeviceLink, subscribeSync } from "./sync.js";
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
+// Only the auras shelf owns families, and only a family that exists counts.
+function shopFamilyFromLocation(target) {
+  // The router only reads a family off the auras shelf.
+  const family = familyFromLocation(target);
+  return AURA_FAMILIES.some((entry) => entry.id === family) ? family : "";
+}
+
+// Settings owns one sub-page of its own: /settings/link, the device link and
+// its technical details. Anything else under /settings is the settings list.
+export const SETTINGS_SECTIONS = ["link"];
+function settingsSectionFromLocation(target) {
+  if (pageFromLocation(target) !== "settings") return "";
+  const named = subpageFromLocation(target);
+  return SETTINGS_SECTIONS.includes(named) ? named : "";
+}
+
 function shopSectionFromLocation(target) {
   if (pageFromLocation(target) !== "shop") return "";
   // A legacy "#auras" bookmark names the shelf itself; a real sub-page carries
@@ -106,9 +133,25 @@ function App() {
   const [shopSection, setShopSection] = useState(() =>
     shopSectionFromLocation(location),
   );
+  const [settingsSection, setSettingsSection] = useState(() =>
+    settingsSectionFromLocation(location),
+  );
+  const [shopFamily, setShopFamily] = useState(() =>
+    shopFamilyFromLocation(location),
+  );
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
+  // The ultra-rebirth earns a moment: a full-screen ceremony that lives in
+  // the app shell (the rebirth page navigates away the moment it succeeds),
+  // plays over whatever is on screen, then removes itself. Pointer-transparent
+  // and animation-driven — reduced motion never sees it at all.
+  const [ultraCeremony, setUltraCeremony] = useState(false);
+  useEffect(() => {
+    if (!ultraCeremony) return;
+    const timer = setTimeout(() => setUltraCeremony(false), 2700);
+    return () => clearTimeout(timer);
+  }, [ultraCeremony]);
   // A companion found on a roll walks in with its own moment on the roll stage.
   const [arrivalPet, setArrivalPet] = useState(null);
   const {
@@ -117,6 +160,35 @@ function App() {
     dispatch,
     epoch,
   } = useProgress();
+  // Device links: ?sync=ROOM.KEY joins this browser to another device's
+  // account through the memory-only relay, then leaves the address bar. A
+  // reload of a browser already in a room simply reopens the stream, and the
+  // first live pairing (or a lost relay) is announced once, in the toast.
+  useEffect(() => {
+    const token = new URLSearchParams(location.search).get("sync");
+    if (token) {
+      const url = new URL(location.href);
+      url.searchParams.delete("sync");
+      history.replaceState(
+        history.state,
+        "",
+        url.pathname + url.search + url.hash,
+      );
+      joinDeviceLink(token);
+    } else {
+      resumeDeviceLink();
+    }
+    let announced = "";
+    return subscribeSync((state, note) => {
+      if (state === "live" && announced !== "live") {
+        announced = "live";
+        notify("Devices linked — both devices now play the same account live.");
+      } else if (state === "error" && announced !== "error") {
+        announced = "error";
+        notify(note);
+      } else if (state !== "error") announced = state;
+    });
+  }, []);
   useEffect(() => {
     setModal(null);
     setShopFocus(null);
@@ -181,8 +253,20 @@ function App() {
       history.pushState({ page: target, section }, "", path);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const openLinkSettings = () => {
+    setSettingsSection("link");
+    setPage("settings");
+    push("settings", pathForSubpage("settings", "link"), "link");
+  };
   const navigate = (next, focusProduct = null) => {
     const target = validPage(next);
+    // The device link is a page of its own under Settings: "settings" with the
+    // link section named lands there, everything else lands on the list.
+    if (target === "settings" && focusProduct === "link") {
+      openLinkSettings();
+      return;
+    }
+    setSettingsSection("");
     // Opening the shop on a product (a goal link, a recap) opens the shelf that
     // sells it, so the card is on screen when the page renders.
     const section =
@@ -204,6 +288,7 @@ function App() {
     const section = SHOP_SECTIONS.some((entry) => entry.id === id) ? id : "";
     setShopFocus(null);
     setShopSection(section);
+    setShopFamily("");
     setPage("shop");
     push(
       "shop",
@@ -211,29 +296,46 @@ function App() {
       section,
     );
   };
+  const openFamily = (id) => {
+    const family = AURA_FAMILIES.some((entry) => entry.id === id) ? id : "";
+    setShopFocus(null);
+    setShopSection("auras");
+    setShopFamily(family);
+    setPage("shop");
+    push("shop", pathForShelfFamily("shop", "auras", family), "auras");
+  };
   useEffect(() => {
     // Back/forward must move between pages, and a legacy #shop link or a
     // 404.html fallback landing must be normalised to its real path once.
     const update = () => {
       setPage(pageFromLocation(location));
       setShopSection(shopSectionFromLocation(location));
+      setShopFamily(shopFamilyFromLocation(location));
+      setSettingsSection(settingsSectionFromLocation(location));
     };
     update();
     const landed = pageFromLocation(location);
     const section = shopSectionFromLocation(location);
+    const family = shopFamilyFromLocation(location);
+    const settingsSub = settingsSectionFromLocation(location);
     // A legacy "#shop" bookmark keeps working, a "#skills" one lands on the
     // shelf, and an unknown sub-path is normalised back to the shop hub.
     if (
       location.hash ||
       !isCurrentPath(landed, location) ||
-      (landed === "shop" && subpageFromLocation(location) !== section)
+      (landed === "shop" && subpageFromLocation(location) !== section) ||
+      (landed === "settings" &&
+        subpageFromLocation(location) !== settingsSub) ||
+      (section === "auras" && familyFromLocation(location) !== family)
     )
       history.replaceState(
-        { page: landed, section },
+        { page: landed, section, family },
         "",
         landed === "shop" && section
-          ? pathForSubpage("shop", section)
-          : pathForPage(landed),
+          ? pathForShelfFamily("shop", section, family)
+          : landed === "settings" && settingsSub
+            ? pathForSubpage("settings", settingsSub)
+            : pathForPage(landed),
       );
     window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
@@ -442,9 +544,18 @@ function App() {
           <button
             className="sign-in"
             aria-label={session.profile ? "Your profile" : "Sign up"}
+            data-avatar={session.profile?.avatar ? "logo" : "icon"}
             onClick={() => openAuth()}
           >
-            <LogIn size={15} />
+            {session.profile ? (
+              <AvatarMark
+                avatar={session.profile.avatar}
+                size={18}
+                label={`${session.profile.username} logo`}
+              />
+            ) : (
+              <LogIn size={15} />
+            )}
             <span>{session.profile ? "Profile" : "Sign up"}</span>
           </button>
         </div>
@@ -514,24 +625,48 @@ function App() {
         )}
         {page === "settings" && (
           <>
-            <button className="back-link" onClick={() => navigate("roll")}>
-              <ArrowLeft size={14} /> Back to rolling
+            <button
+              className="back-link"
+              onClick={() =>
+                settingsSection ? navigate("settings") : navigate("roll")
+              }
+            >
+              <ArrowLeft size={14} />{" "}
+              {settingsSection ? "Back to settings" : "Back to rolling"}
             </button>
             <div className="page-heading">
               <div className="page-icon">
-                <SlidersHorizontal size={25} />
+                {settingsSection === "link" ? (
+                  <Link2 size={25} />
+                ) : (
+                  <SlidersHorizontal size={25} />
+                )}
               </div>
               <div>
-                <h1>Settings</h1>
-                <p>Alerts, presentation and gameplay conveniences.</p>
+                <h1>
+                  {settingsSection === "link" ? "Device link" : "Settings"}
+                </h1>
+                <p>
+                  {settingsSection === "link"
+                    ? "One account across your devices, and everything behind it."
+                    : "Alerts, presentation and gameplay conveniences."}
+                </p>
               </div>
             </div>
-            <Settings
-              notify={notify}
-              progress={session}
-              onAction={dispatch}
-              navigate={navigate}
-            />
+            {settingsSection === "link" ? (
+              <DeviceLinkPanel
+                notify={notify}
+                progress={session}
+                navigate={navigate}
+              />
+            ) : (
+              <Settings
+                notify={notify}
+                progress={session}
+                onAction={dispatch}
+                navigate={navigate}
+              />
+            )}
           </>
         )}
         {page === "about" && (
@@ -574,8 +709,18 @@ function App() {
               <ArrowLeft size={14} /> Back to rolling
             </button>
             <div className="page-heading">
-              <div className="page-icon">
-                <UserRound size={25} />
+              <div
+                className={`page-icon ${session.profile?.avatar ? "has-logo" : ""}`}
+              >
+                {session.profile?.avatar ? (
+                  <AvatarMark
+                    avatar={session.profile.avatar}
+                    size={46}
+                    label={`${session.profile.username} logo`}
+                  />
+                ) : (
+                  <UserRound size={25} />
+                )}
               </div>
               <div>
                 <h1>Profile</h1>
@@ -611,19 +756,22 @@ function App() {
               key={epoch}
               progress={session}
               onAction={dispatch}
-              onDone={(message) => {
+              onDone={(message, meta) => {
                 navigate("roll");
                 notify(message ?? "Rebirth complete.");
+                if (meta?.ultra) setUltraCeremony(true);
               }}
             />
           </>
         )}
         {page === "shop" && (
           <Shop
-            key={`${epoch}:${shopSection}`}
+            key={`${epoch}:${shopSection}:${shopFamily}`}
             progress={session}
             section={shopSection}
+            family={shopFamily}
             onOpenShelf={openShelf}
+            onOpenFamily={openFamily}
             focusProduct={shopFocus}
             onAction={dispatch}
             openSignup={openAuth}
@@ -937,6 +1085,30 @@ function App() {
         <div className="toast" role="status">
           <Check size={16} />
           {toast}
+        </div>
+      )}
+
+      {/* The ceremony: rays, a slam of the title and a storm of confetti for
+          the ultra-rebirth itself. Pointer-transparent (never in the way of
+          the game) and fully animation-driven — with reduced motion it rests
+          at opacity 0, exactly as if it were never there. */}
+      {ultraCeremony && (
+        <div className="ultra-ceremony" aria-hidden="true">
+          <span className="ultra-ceremony-rays" />
+          <span className="ultra-ceremony-mark">
+            <InfinityMark size={64} />
+          </span>
+          <strong className="ultra-ceremony-title">
+            ULTRA-REBIRTH {session.ultraRebirths}
+          </strong>
+          <span className="ultra-ceremony-sub">
+            the run starts again — the account never does
+          </span>
+          <span className="ultra-ceremony-confetti">
+            {Array.from({ length: 12 }, (_, index) => (
+              <i key={index} />
+            ))}
+          </span>
         </div>
       )}
     </>

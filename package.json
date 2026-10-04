@@ -1,10 +1,11 @@
 {
   "name": "rngdle-infinite",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "relay": "node tools/sync-relay.mjs",
     "build": "vite build",
     "build:pages": "vite build --base=/RNGdle-Infinite/",
     "pages:publish": "node tools/publish-pages.mjs",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@sparticuz/chromium": "^153.0.0",
     "@twemoji/svg": "^15.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "prettier": "^3.9.6",

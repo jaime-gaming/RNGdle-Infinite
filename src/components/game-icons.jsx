@@ -194,60 +194,84 @@ export const FlywheelMark = (props) => (
   </Mark>
 );
 
+// ---- Skill marks ---------------------------------------------------------
+// One shape language per kind, so a rack reads at 16px: a bolt for the wallet,
+// a U-turn for the cooldown, panels for the draws, a floor line for the
+// redraws, chevrons for the overdrive and a paw for companion luck.
 export const SurgeMark = (props) => (
   <Mark {...props}>
-    <path d="M13.4 3.6 6.8 13h4.6l-1.2 7.4L17.8 11h-4.8Z" />
-    <path className="tone" d="M18.4 5.6h2.6v2.6h-2.6Z" />
+    <path className="tone" d="M13.4 3.4 7.2 12.4h3.9l-1.5 8.2L18 10.6h-4.1Z" />
+    <path d="M4.2 15.6h3.4M16.4 15.6h3.4" />
   </Mark>
 );
 
 export const TrailMark = (props) => (
   <Mark {...props}>
-    <ellipse cx="12" cy="15.4" rx="4.6" ry="3.8" />
-    <circle cx="7.4" cy="10.6" r="1.5" />
-    <circle cx="10.6" cy="8.4" r="1.5" />
-    <circle cx="14.2" cy="8.6" r="1.5" />
-    <circle cx="17" cy="11" r="1.4" />
+    <path
+      className="tone"
+      d="M12 13.6c-2.2 0-3.6 1.6-3.6 3.4 0 1.6 1.4 2.6 3.6 2.6 1.6 0 2.4-.6 3.6-.6s2 .6 3.6.6c2.2 0 3.6-1 3.6-2.6 0-1.8-1.4-3.4-3.6-3.4-1.6 0-2.4.8-3.6.8s-2-.8-3.6-.8Z"
+    />
+    <circle cx="7.2" cy="9.2" r="1.7" />
+    <circle cx="11.4" cy="7.4" r="1.7" />
+    <circle cx="15.8" cy="9.2" r="1.7" />
   </Mark>
 );
 
 export const BounceMark = (props) => (
   <Mark {...props}>
-    <path d="M3.8 19.6h16.4" />
-    <path d="M4.4 12.6c1.6-4.6 4.6-7 7.6-7s6 2.4 7.6 7" />
-    <path d="M4.4 12.6 7 16.4M19.6 12.6 17 16.4" />
-    <circle className="tone" cx="12" cy="16.4" r="2.1" />
+    <path d="M6.4 8.6h7.6a3 3 0 0 1 0 6H9" />
+    <path d="m11.2 12.4-2.4 2.2 2.4 2.2" />
+    <path className="tone" d="M6.4 5.4h4.4v6.4H6.4z" />
   </Mark>
 );
 
 export const TwiceMark = (props) => (
   <Mark {...props}>
-    <rect x="3.6" y="6.4" width="10.4" height="11.2" rx="2.4" />
-    <path d="M7.6 6.4V5.2a1.8 1.8 0 0 1 1.8-1.8h8a1.8 1.8 0 0 1 1.8 1.8v9.4a1.6 1.6 0 0 1-1.6 1.6h-1" />
-    <path className="tone" d="M7.2 12.2h3.4v3.4H7.2Z" />
+    <rect x="3.8" y="6.2" width="6.8" height="11.6" rx="1.8" />
+    <rect x="13.4" y="6.2" width="6.8" height="11.6" rx="1.8" />
+    <path className="tone" d="M15.2 10.2h3.2v3.2h-3.2z" />
   </Mark>
 );
 
 export const BedrockMark = (props) => (
   <Mark {...props}>
-    <path d="M2.8 17.4 8.6 8l3.4 5.4L14.8 9l6.4 8.4Z" />
-    <path d="M2.8 19.8h18.4" />
-    <path className="tone" d="M8.6 8 6.6 11.2h4Z" />
+    <path className="tone" d="M6.4 13.4h11.2v5.4H6.4z" />
+    <path d="M4.4 18.8h15.2" />
+    <path d="M12 4.4v5.2M9.6 6.8 12 4.4l2.4 2.4" />
   </Mark>
 );
 
 export const TurboMark = (props) => (
   <Mark {...props}>
-    <path d="M6.6 17.4 12 13.4l5.4 4M6.6 13.4 12 9.4l5.4 4M9.4 9.6 12 7.6l2.6 2" />
+    <path d="m5.2 6 4.2 6-4.2 6M10.8 6l4.2 6-4.2 6" />
+    <path className="tone" d="m16.2 6 4.2 6-4.2 6Z" />
   </Mark>
 );
 
 export const QuarryMark = (props) => (
   <Mark {...props}>
-    <circle cx="11.2" cy="11.2" r="7.4" />
-    <circle cx="11.2" cy="11.2" r="3" />
-    <path d="m16.4 16.4 4.2 4.2" />
-    <circle className="tone" cx="11.2" cy="11.2" r="1" />
+    <path d="M12 4.2 19.4 12 12 19.8 4.6 12Z" />
+    <path className="tone" d="M12 8.2 15.6 12 12 15.8 8.4 12Z" />
+  </Mark>
+);
+
+export const MiserMark = (props) => (
+  <Mark {...props}>
+    <ellipse cx="12" cy="6.6" rx="5.4" ry="2.2" />
+    <path d="M6.6 6.6v4.2c0 1.2 2.4 2.2 5.4 2.2s5.4-1 5.4-2.2V6.6" />
+    <path d="M6.6 10.8v4.2c0 1.2 2.4 2.2 5.4 2.2s5.4-1 5.4-2.2v-4.2" />
+    <path
+      className="tone"
+      d="M12 5.4a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"
+    />
+  </Mark>
+);
+
+export const TriptychMark = (props) => (
+  <Mark {...props}>
+    <path d="M3.4 9.6h4v7.8h-4zM16.6 9.6h4v7.8h-4z" />
+    <path d="M9.4 6.4h5.2v11.2H9.4z" />
+    <path className="tone" d="M11.2 10.2h1.6v3.6h-1.6z" />
   </Mark>
 );
 
@@ -258,6 +282,26 @@ export const BayMark = (props) => (
     <rect className="tone" x="13.4" y="13.4" width="7" height="7" rx="2" />
   </Mark>
 );
+
+// Every `icon` a skill can carry, mapped to its mark. The shop card, the
+// corner rack and a companion's signature chip all read this one map, so the
+// same skill is the same drawing everywhere — no stock icons, no lookalikes.
+export const SKILL_MARKS = {
+  surge: SurgeMark,
+  trail: TrailMark,
+  bounce: BounceMark,
+  twice: TwiceMark,
+  bedrock: BedrockMark,
+  turbo: TurboMark,
+  quarry: QuarryMark,
+  miser: MiserMark,
+  triptych: TriptychMark,
+};
+
+export function SkillIcon({ icon, ...props }) {
+  const Glyph = SKILL_MARKS[icon] ?? SparkMark;
+  return <Glyph {...props} />;
+}
 
 // ---- Aura marks -----------------------------------------------------------
 // One glyph per cosmetic, drawn from the same vocabulary as the box layers so
@@ -417,6 +461,58 @@ export const ChronoMark = (props) => (
   </Mark>
 );
 
+// Fifth-generation aura marks, drawn on the same 24x24 grid as the rest.
+export const HalcyonMark = (props) => (
+  <Mark {...props}>
+    <circle cx="12" cy="12" r="7.4" />
+    <path d="M5.8 13.2c1.5-1.6 3.1-1.6 4.6 0s3.1 1.6 4.6 0 2.3-1.2 3.2-.6" />
+    <path d="M12 3.4v1.6M12 19v1.6M3.4 12h1.6M19 12h1.6" />
+    <path
+      className="tone"
+      d="M12 9.2a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4Z"
+    />
+  </Mark>
+);
+
+export const DownpourMark = (props) => (
+  <Mark {...props}>
+    <path d="M7 9.6a3 3 0 0 1 .5-5.9 3.6 3.6 0 0 1 6.8.5 2.8 2.8 0 0 1 3.3 2.7" />
+    <path d="M8.6 12.6v3.4M12 12v4.6M15.4 12.6v3.4" />
+    <path
+      className="tone"
+      d="M12 18.2c.9 1.1 1.5 1.8 1.5 2.5a1.5 1.5 0 0 1-3 0c0-.7.6-1.4 1.5-2.5Z"
+    />
+  </Mark>
+);
+
+export const BlueprintMark = (props) => (
+  <Mark {...props}>
+    <path d="M4.4 4.4h15.2v15.2H4.4Z" />
+    <path d="M4.4 9.4h15.2M9.4 4.4v15.2" />
+    <path d="M12.8 12.8 17 17" />
+    <path className="tone" d="M11.5 11.5h2v2h-2Z" />
+  </Mark>
+);
+
+export const InkblotMark = (props) => (
+  <Mark {...props}>
+    <path d="M9.2 4.8c-1.8.7-2.6 2.7-1.7 4.3.7 1.2 2.1 1.6 2 2.8-.1 1.4-1.5 1.9-1.1 3.1.5 1.5 2.7 1.9 3.7.7.5-.6 1.5-.6 2 0" />
+    <path d="M14.8 4.8c1.8.7 2.6 2.7 1.7 4.3-.7 1.2-2.1 1.6-2 2.8.1 1.4 1.5 1.9 1.1 3.1-.5 1.5-2.7 1.9-3.7.7-.5-.6-1.5-.6-2 0" />
+    <path
+      className="tone"
+      d="M12 9.9a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4Z"
+    />
+  </Mark>
+);
+
+// The two late skills: a hoard, and three draws.
+export const RackMark = (props) => (
+  <Mark {...props}>
+    <path d="M4.4 6.2h15.2v3.8H4.4zM4.4 10.8h15.2v3.8H4.4zM4.4 15.4h15.2v3.8H4.4z" />
+    <path className="tone" d="M6.8 7.5h2v1.2h-2zM6.8 12.1h2v1.2h-2z" />
+  </Mark>
+);
+
 export const SparkMark = (props) => (
   <Mark {...props}>
     <path d="M12 3.6l1.8 5.4 5.4 1.8-5.4 1.8L12 18l-1.8-5.4L4.8 10.8l5.4-1.8Z" />
@@ -428,91 +524,184 @@ export const SparkMark = (props) => (
 // One glyph per companion, drawn on the same grid so a shelf of thirteen still
 // looks like one collection rather than thirteen pasted images.
 const CREATURES = {
+  // A small loyal rock. Chipped on one side, entirely unbothered.
   pebble: (
     <>
-      <path d="M6.4 17.6c-2.2-2.3-1.9-7.1.9-9.8 2.4-2.3 7.6-2.5 9.9-.2 2 2 2.4 6.2.5 8.5-1.8 2.2-9 3.6-11.3 1.5Z" />
-      <path d="m9 9.4 3.3 2.3-1.6 3.6" />
+      <path
+        className="tone"
+        d="M6.6 16.4c-2.9-1.8-3.1-6.6-.6-9C8.6 5.2 13.6 5 16 6.8c2.4 1.8 2.8 5.8 1.2 8.2-1.6 2.4-7.6 3.8-10.6 1.4Z"
+      />
+      <path d="m9.4 9.2 3.2 2.4-1.6 2.8" className="cut-line" />
+      <circle cx="10.4" cy="11.6" r=".95" className="cut" />
+      <circle cx="13.8" cy="11.6" r=".95" className="cut" />
+      <path d="M11 14.2c.8.7 1.8.7 2.6 0" className="cut-line" />
     </>
   ),
+  // Lumen Moth: two broad wings, two antennae, one steady body.
   moth: (
     <>
-      <path d="M12 8.4v7.8" />
-      <path d="m11.6 9.4 3.6-3.1 1.6 3.6M12.4 9.4 8.8 6.3 7.2 9.9" />
-      <path d="M11.6 11.2C9 7.9 4.4 9 5.4 12.6c.8 2.9 4.6 2.7 6.2.6M12.4 11.2c2.6-3.3 7.2-2.2 6.2 1.4-.8 2.9-4.6 2.7-6.2.6" />
+      <path
+        d="M11.4 10.8C8.6 7.2 3.4 8.6 4.6 12.8c.9 3.2 5.1 2.8 6.8.4Z"
+        className="tone"
+      />
+      <path
+        d="M12.6 10.8c2.8-3.6 8-2.2 6.8 2-.9 3.2-5.1 2.8-6.8.4Z"
+        className="tone"
+      />
+      <path d="M12 7.4v9.2" />
+      <path d="m11.4 8.2 3.6-3.2 1.8 3.8M12.6 8.2 9 5 7.2 8.8" />
+      <path
+        d="M12 12.4a1.2 1.2 0 0 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z"
+        className="cut"
+      />
     </>
   ),
+  // Static Kit: a fox whose fur has not settled since 1998.
   kit: (
     <>
-      <path d="M6.6 12.6 4.8 5.6l4.4 2.6M17.4 12.6l1.8-7-4.4 2.6" />
-      <path d="M6.6 12.4c0-2.6 2.4-4.6 5.4-4.6s5.4 2 5.4 4.6c0 3.8-2.4 7.2-5.4 7.2s-5.4-3.4-5.4-7.2Z" />
-      <path d="M12 14v1.6M14.6 11.4h.01M9.4 11.4h.01" />
+      <path
+        d="M6.4 12.2 4.4 5.2l4.8 3ZM17.6 12.2 19.6 5.2l-4.8 3Z"
+        className="tone"
+      />
+      <path
+        d="M12 7.4c3 0 5.4 2.2 5.4 4.9 0 4-2.4 7.5-5.4 7.5s-5.4-3.5-5.4-7.5c0-2.7 2.4-4.9 5.4-4.9Z"
+        className="tone"
+      />
+      <circle cx="10.2" cy="11.2" r=".95" className="cut" />
+      <circle cx="13.8" cy="11.2" r=".95" className="cut" />
+      <path d="M12 13.8v1.6" className="cut-line" />
+      <path d="M10.8 15.4c.8.6 1.6.6 2.4 0" className="cut-line" />
     </>
   ),
+  // Lunar Snail: a spiral house, carried at a lunar pace.
   snail: (
     <>
-      <path d="M13.6 15.4a4.6 4.6 0 1 0-3.4-7.7 4.6 4.6 0 0 0 3.4 7.7Z" />
-      <path d="M13.6 12.4a1.9 1.9 0 1 0-1.4.9" />
-      <path d="M3.4 17.6h13.2a2.8 2.8 0 0 0 2.8-2.6M9 9.6 7.6 6.2l2.6.6" />
+      <path
+        d="M13.6 15.8a4.8 4.8 0 1 0-3.6-8 4.8 4.8 0 0 0 3.6 8Z"
+        className="tone"
+      />
+      <path d="M13.6 12.6a1.9 1.9 0 1 0-1.4 1" className="cut-line" />
+      <path d="M3.4 17.8h13.4a2.8 2.8 0 0 0 2.8-2.6" />
+      <path d="M9.4 9.4 7.8 5.8l2.8.8M11.8 9.6l-.6-3.6 2.4 1.8" />
+      <circle cx="5.4" cy="17" r=".9" className="tone" />
     </>
   ),
+  // Tide Jelly: a bell that pulses, trailing three quiet tentacles.
   jelly: (
     <>
-      <path d="M5.6 13.2a6.4 6.4 0 0 1 12.8 0Z" />
-      <path d="M8.4 13.4c0 2.4.8 3.6.2 5.4M12 13.6v5.6M15.6 13.4c0 2.4-.8 3.6-.2 5.4" />
+      <path d="M5 12.6a7 7 0 0 1 14 0Z" className="tone" />
+      <path d="M8.4 12.8c-.2 2.8.6 4 .1 5.8M12 13v6.2M15.6 12.8c.2 2.8-.6 4-.1 5.8" />
+      <circle cx="10" cy="10.6" r=".95" className="cut" />
+      <circle cx="14" cy="10.6" r=".95" className="cut" />
     </>
   ),
+  // Amber Bee: striped, busy, counting every digit three times.
   bee: (
     <>
-      <path d="M12 8.6a4.4 4.4 0 0 0 0 8.8 4.4 4.4 0 0 0 0-8.8Z" />
-      <path d="M9.2 10.6c-2.6-2.6-5.6-1.4-5 1.4.5 2.2 3.4 2.6 5.4 1M14.8 10.6c2.6-2.6 5.6-1.4 5 1.4-.5 2.2-3.4 2.6-5.4 1" />
-      <path d="M8.6 11.4h6.8M8.6 14.6h6.8M9.8 8.8 8.6 6.4M14.2 8.8l1.2-2.4" />
+      <path
+        d="M12 7.8a4.8 4.8 0 0 0 0 9.6 4.8 4.8 0 0 0 0-9.6Z"
+        className="tone"
+      />
+      <path d="M9 10.2c-2.8-2.8-6-1.6-5.4 1.6.5 2.4 3.6 2.8 5.8 1M15 10.2c2.8-2.8 6-1.6 5.4 1.6-.5 2.4-3.6 2.8-5.8 1" />
+      <path d="M8.2 11.6h7.6M8.2 14.8h7.6" className="cut-line" />
+      <path d="M9.6 8.4 8.4 5.8M14.4 8.4l1.2-2.6" />
+      <circle cx="10.6" cy="9.9" r=".85" className="cut" />
+      <circle cx="13.4" cy="9.9" r=".85" className="cut" />
     </>
   ),
+  // Ledger Corvid: a raven with a quill and strong opinions about rounding.
   corvid: (
     <>
-      <path d="M4.6 15.6c-.6-4.4 3.2-8 7.6-7.6l3.4 2.8-3.2.8c-.4 3.4-3 5.6-6.2 5.6-.9 0-1.4-.5-1.6-1.6Z" />
-      <path d="M15.6 10.8c1-1 2.6-1.2 3.8-.6l1-2 .4 3.4c-.6 1.2-1.6 2-3 2.2M9.4 11.6h.01M8 18.6l4.4-2.4 4 2.4" />
+      <path
+        d="M4.2 15.6c-.8-4.6 3.4-8.4 8.2-7.8l3.6 3-3.4.8c-.4 3.6-3.2 6-6.6 6-.9 0-1.4-.5-1.8-2Z"
+        className="tone"
+      />
+      <path d="M16 10.8c1-1 2.8-1.2 4-.6l1-2.2.5 3.6c-.6 1.2-1.8 2.1-3.2 2.3" />
+      <path d="M7.8 18.8l4.4-2.6 4 2.6" />
+      <circle cx="9.6" cy="11.4" r=".9" className="cut" />
     </>
   ),
+  // Archive Owl: two enormous eyes, and the whole catalogue memorised.
   owl: (
     <>
-      <path d="M6.4 9.2c0-2.6 2.5-4.6 5.6-4.6s5.6 2 5.6 4.6v3.4c0 3.4-2.5 5.8-5.6 5.8s-5.6-2.4-5.6-5.8Z" />
-      <circle cx="9.6" cy="10.6" r="2.2" />
-      <circle cx="14.4" cy="10.6" r="2.2" />
-      <path d="m12 13.4 1.1 1.5-1.1 1.1-1.1-1.1ZM6.6 7.6 5.4 4.8l2.6 1M17.4 7.6l1.2-2.8-2.6 1" />
+      <path
+        d="M6 9.4c0-2.8 2.7-5 6-5s6 2.2 6 5v3.6c0 3.6-2.7 6.2-6 6.2s-6-2.6-6-6.2Z"
+        className="tone"
+      />
+      <circle cx="9.5" cy="10.4" r="2.4" className="cut" />
+      <circle cx="14.5" cy="10.4" r="2.4" className="cut" />
+      <circle cx="9.5" cy="10.4" r="1" className="tone" />
+      <circle cx="14.5" cy="10.4" r="1" className="tone" />
+      <path d="m12 13.6 1.2 1.6-1.2 1.2-1.2-1.2Z" className="tone" />
+      <path d="M6.2 7.6 5 4.6l2.8 1M17.8 7.6 19 4.6l-2.8 1" />
     </>
   ),
+  // Patient Turtle: a plated shell, and nowhere in particular to be.
   turtle: (
     <>
-      <path d="M4.4 15.6a7.6 7.6 0 0 1 15.2 0Z" />
-      <path d="M12 8v7.6M8.2 9.4l2 6.2M15.8 9.4l-2 6.2M3.4 18.4l1.6-1.6M20.6 18.4l-1.6-1.6" />
-      <path d="M19.6 15.6h1.8" />
+      <path d="M4 15.6a8 8 0 0 1 16 0Z" className="tone" />
+      <path d="M12 8v7.6M8 9.4l2 6.2M16 9.4l-2 6.2" className="cut-line" />
+      <path d="M3.2 18.4l1.8-1.8M20.8 18.4l-1.8-1.8" />
+      <path d="M19.4 15.4h2.4" />
+      <circle cx="9.4" cy="13.4" r=".85" className="cut" />
+      <circle cx="14.6" cy="13.4" r=".85" className="cut" />
     </>
   ),
+  // Storm Griffin: wings up, one talon down, three laps of the reveal.
   griffin: (
     <>
-      <path d="M12 19.6V9.8" />
-      <path d="M12 9.8C9.4 5.8 5.2 5.6 3.8 8.4c1.6 0 3.2.9 4.3 2.2M12 9.8c2.6-4 6.8-4.2 8.2-1.4-1.6 0-3.2.9-4.3 2.2" />
-      <path d="M12 9.8a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z" />
-      <path d="m14.2 6.6 2.4.7-2.4 1.4M9 19.6h6l-1.4-2.4h-3.2Z" />
+      <path
+        d="M12 9.4C9.2 5.2 4.8 5 3.4 8c1.8 0 3.4 1 4.6 2.4Z"
+        className="tone"
+      />
+      <path
+        d="M12 9.4c2.8-4.2 7.2-4.4 8.6-1.5-1.8 0-3.4 1-4.6 2.4Z"
+        className="tone"
+      />
+      <path d="M12 19.8V9.4" />
+      <path
+        d="M12 9.4a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6Z"
+        className="tone"
+      />
+      <path d="m14.4 6.4 2.6.8-2.6 1.6" className="cut-line" />
+      <path d="M8.8 19.8h6.4l-1.4-2.6h-3.6Z" />
     </>
   ),
+  // Astral Unicorn: rare, radiant, and entirely aware of it.
   unicorn: (
     <>
-      <path d="M13.6 20.4v-3.2c0-1.4 1.6-2.6 1.6-4.8 0-2.4-1.8-4.4-4.4-4.4-1.3 0-2.5.5-3.3 1.4L5.4 12l2.8-6.6 1.6 3.4" />
-      <path d="m10.6 9.4 2.2-4.8 1.8 2.6M8.2 20.4l1.2-3M15.4 20.4l-1-3M12 11.4h.01" />
+      <path
+        d="M13.8 20.6v-3.4c0-1.4 1.6-2.6 1.6-4.9 0-2.6-1.9-4.6-4.6-4.6-1.4 0-2.6.5-3.5 1.4L5.2 12l3-6.8 1.7 3.6Z"
+        className="tone"
+      />
+      <path d="m10.6 9.2 2.3-5 2 2.8" />
+      <path d="M8.2 20.6l1.2-3M15.6 20.6l-1-3" />
+      <circle cx="12" cy="11.2" r=".9" className="cut" />
     </>
   ),
+  // Void Serpent: swallows whole cooldowns and asks whether that is all.
   serpent: (
     <>
-      <path d="M6.2 18.6c0-2 1.8-2.6 4-2.6s6.4.4 6.4-2.6-3.4-3-5.4-3-4.6.2-4.6-2.4 2-3.2 4-3.2" />
-      <path d="M12.6 5.4a2 2 0 1 0 2.2 3.2M14.8 9.6l2.2-1.4-1.4-.8" />
+      <path
+        d="M6 18.8c0-2.2 2-2.8 4.2-2.8s6.6.4 6.6-2.8-3.6-3.2-5.6-3.2-4.8.2-4.8-2.5 2.1-3.4 4.2-3.4"
+        className="tone"
+      />
+      <path d="M12.7 5a2.1 2.1 0 1 0 2.3 3.4" />
+      <path d="m15 9.6 2.4-1.6-1.6-.8" />
+      <circle cx="13.6" cy="5.9" r=".9" className="cut" />
     </>
   ),
+  // Ember Dragonet: small, smug, faintly on fire, and the largest bonus.
   dragonet: (
     <>
-      <path d="M9.4 20.4v-3c-2-1.2-3-3.2-3-5.8 0-3.4 2.6-6 6-6 2 0 3.8.8 5 2.2l-1.4 2.4c1 1 1.4 2.4 1.4 4 0 1.2-.4 2.2-1.1 3h-1.5v3.2" />
-      <path d="m12.4 5.6-1.2-2.8 2.8 1.6M17.4 7.8l2.6-1.2-1.4 2.6M10.4 12.8h.01M15 12.8h.01" />
+      <path
+        d="M9.4 20.6v-3c-2.1-1.2-3.1-3.4-3.1-6 0-3.6 2.8-6.2 6.2-6.2 2.1 0 4 .8 5.2 2.2l-1.4 2.5c1 1 1.5 2.5 1.5 4.2 0 1.2-.4 2.2-1.1 3h-1.7v3.3Z"
+        className="tone"
+      />
+      <path d="m12.4 5.6-1.2-3 3 1.8M17.6 7.8l2.6-1.2-1.4 2.8" />
+      <circle cx="10.4" cy="12.6" r=".9" className="cut" />
+      <circle cx="15" cy="12.6" r=".9" className="cut" />
+      <path d="M11.6 15.8c.6-.5 1.4-.5 2 0" className="cut-line" />
     </>
   ),
 };

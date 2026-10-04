@@ -9,7 +9,7 @@ import { emptyProgress, applyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { evaluate } from "./helpers/index.js";
-import { shopProducts } from "../src/shop-data.js";
+import { shopProducts, AURA_FAMILIES } from "../src/shop-data.js";
 import { openShelfFor } from "./helpers/shop.js";
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
@@ -301,18 +301,26 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
   page,
 }) => {
   await seedProgress(page, { balance: 40000000, totalEarned: 40000000 });
-  await page.goto("/shop/auras");
-  const auraCount = shopProducts.filter((p) => p.kind === "aura").length;
-  await expect(page.locator(".aura-preview .number-box")).toHaveCount(
-    auraCount,
-  );
-  await page.getByLabel("Cosmetic preview rarity").selectOption("godly");
-  await expect(page.locator('.aura-preview [data-tier="godly"]')).toHaveCount(
-    auraCount,
-  );
+  // Every set is its own page now, so the walk is per family: each one
+  // previews exactly its own looks behind the same rarity control.
+  const auras = shopProducts.filter((p) => p.kind === "aura");
+  let auraCount = 0;
+  for (const family of AURA_FAMILIES) {
+    await page.goto(`/shop/auras/${family.id}`);
+    const inFamily = auras.filter((p) => p.family === family.id).length;
+    auraCount += inFamily;
+    await expect(page.locator(".aura-preview .number-box")).toHaveCount(
+      inFamily,
+    );
+    await page.getByLabel("Cosmetic preview rarity").selectOption("godly");
+    await expect(page.locator('.aura-preview [data-tier="godly"]')).toHaveCount(
+      inFamily,
+    );
+  }
+  expect(auraCount).toBe(auras.length);
   for (const id of ["eclipse", "prism", "offline-roller"]) {
-    // Auras are on this shelf; the Offline Roller itself is a tool.
-    if (id === "offline-roller") await openShelfFor(page, id);
+    // Auras open their family page; the Offline Roller itself is a tool.
+    await openShelfFor(page, id);
     await page.locator(`[data-product="${id}"] button`).click();
     await page
       .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -327,11 +335,14 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
       ),
   );
   expect((await saved(page)).equipped).toBe("prism");
-  // Back to the shelf the auras were bought on: the roller lives in Tools.
-  await page.goto("/shop/auras");
+  // Back to each aura's own page: the roller lives in Tools.
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
-  for (const id of ["eclipse", "prism"]) {
+  for (const [family, id] of [
+    ["celestial", "eclipse"],
+    ["machine", "prism"],
+  ]) {
+    await page.goto(`/shop/auras/${family}`);
     const box = page.locator(`[data-product="${id}"] .number-box`);
     await expect(box).toHaveAttribute("data-cosmetic", id);
     expect(

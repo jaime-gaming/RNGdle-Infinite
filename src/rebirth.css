@@ -114,6 +114,51 @@
   margin: 0;
   font: 700 15px/1.3 var(--roll-font);
 }
+/* The second half of a rung's price: how much of the EP this cycle has
+   already scored, next to the badge ring's slice of the collection. */
+.rebirth-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 14px;
+}
+.rebirth-meter-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.rebirth-meter-bar {
+  display: block;
+  height: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.rebirth-meter-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green);
+  transition: width 0.4s ease;
+}
+.rebirth-preview-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.rebirth-preview-note svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--green);
+}
 .rebirth-block {
   padding: 22px 24px;
   border: 1px solid var(--border);
@@ -201,13 +246,77 @@
   border: 1px solid var(--border);
   border-radius: 11px;
   background: var(--bg);
+  /* The ladder is re-keyed when a rebirth lands, so every rung replays its
+     entrance: the finished one settles green, the next one steps up, and the
+     blurred preview comes back into focus one step further down. */
+  animation: rung-in 380ms ease-out both;
+  transition:
+    border-color 0.35s ease,
+    background 0.35s ease,
+    opacity 0.35s ease,
+    filter 0.35s ease;
 }
 .rebirth-ladder li.is-current {
   border-color: color-mix(in srgb, var(--green) 45%, var(--border));
   background: var(--green-bg);
+  animation: rung-step 560ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.rebirth-ladder li.is-done {
+  animation: rung-done 460ms ease-out both;
+}
+@keyframes rung-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes rung-step {
+  0% {
+    opacity: 0.4;
+    transform: translateY(6px) scale(0.985);
+  }
+  55% {
+    transform: translateY(0) scale(1.004);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes rung-done {
+  from {
+    border-color: color-mix(in srgb, var(--green) 70%, var(--border));
+    transform: translateY(-2px);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 .rebirth-ladder li.is-locked {
   opacity: 0.72;
+}
+.rebirth-ladder li.is-faded {
+  position: relative;
+  opacity: 0.5;
+  filter: blur(4px);
+  mask-image: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 0.85) 0%,
+    rgb(0 0 0 / 0.35) 55%,
+    transparent 96%
+  );
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 0.85) 0%,
+    rgb(0 0 0 / 0.35) 55%,
+    transparent 96%
+  );
+  pointer-events: none;
+  user-select: none;
 }
 .rebirth-rung-mark {
   display: grid;
@@ -268,8 +377,9 @@
 }
 .rebirth-reward {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
   min-width: 0;
 }
 .rebirth-reward-chip {
@@ -301,6 +411,126 @@
 }
 .rebirth-reward.is-earned > svg {
   color: var(--green);
+}
+
+/* This cycle, in the player's own numbers: what the run they are about to hand
+   back has actually done. */
+.rebirth-cycle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.rebirth-cycle div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.rebirth-cycle dt {
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rebirth-cycle dd {
+  margin: 0;
+  font: 700 12.5px/1.4 var(--roll-font);
+  overflow-wrap: anywhere;
+}
+
+/* What the button would do to this save, right now. */
+.rebirth-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.rebirth-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.rebirth-preview-card h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+.rebirth-preview-card.is-reset h4 {
+  color: var(--warning);
+}
+.rebirth-preview-card.is-keep h4 {
+  color: var(--green);
+}
+.rebirth-preview-card.is-gain h4 {
+  color: var(--green);
+}
+.rebirth-preview-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rebirth-preview-card li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rebirth-preview-card strong {
+  font: 700 13px/1.3 var(--roll-font);
+  overflow-wrap: anywhere;
+}
+.rebirth-preview-card small {
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* The starting sum each rung pays, on the same line as its reward. */
+.rebirth-reward-starter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font: 500 10px var(--roll-font);
+  color: var(--secondary);
+  white-space: nowrap;
+}
+.rebirth-reward-starter svg {
+  color: var(--muted);
+}
+.rebirth-reward.is-earned .rebirth-reward-starter {
+  color: var(--green);
+}
+
+.rebirth-history-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--secondary);
+}
+.rebirth-history-note svg {
+  flex-shrink: 0;
+  color: var(--muted);
 }
 
 /* Ultra-rebirth: the permanent bonus, explained where the ladder ends. */
@@ -366,6 +596,12 @@
   .rebirth-ultra-card {
     grid-template-columns: 1fr;
   }
+  .rebirth-preview-grid {
+    grid-template-columns: 1fr;
+  }
+  .rebirth-cycle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .rebirth-ladder li {
     grid-template-columns: 26px minmax(0, 1fr);
     row-gap: 8px;
@@ -385,4 +621,365 @@
   .rebirth-figures {
     grid-template-columns: 1fr 1fr;
   }
+  /* Two columns of figures and a smaller ring keep the hero inside a phone. */
+  .rebirth-gauge {
+    width: 112px;
+    height: 112px;
+  }
+  .rebirth-gauge span {
+    font-size: 25px;
+  }
+  .rebirth-cycle {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    padding: 10px 12px;
+  }
+  .rebirth-preview-card {
+    padding: 14px;
+  }
+  .rebirth-hero-copy h2 {
+    font-size: 22px;
+  }
+  .rebirth-preview-note {
+    font-size: 11.5px;
+  }
+  .rebirth-reward-starter {
+    min-width: 0;
+    flex-shrink: 1;
+    white-space: normal;
+  }
+}
+
+/* ---- Ultra legacy panel -------------------------------------------------- */
+.rebirth-legacy-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr);
+  gap: 16px 24px;
+}
+.rebirth-legacy-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.rebirth-legacy-figures > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid rgb(217 164 65 / 0.4);
+  border-radius: 10px;
+  background: rgb(217 164 65 / 0.08);
+}
+.rebirth-legacy-figures dt {
+  font: 500 10px var(--roll-font);
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rebirth-legacy-figures dd {
+  margin: 0;
+  font: 700 17px var(--roll-font);
+  color: #a97c1f;
+}
+.rebirth-dev-note {
+  margin: 18px 0 0;
+  padding: 16px 18px;
+  border-left: 3px solid #d9a441;
+  border-radius: 0 12px 12px 0;
+  background: linear-gradient(90deg, rgb(217 164 65 / 0.1), transparent 70%);
+}
+.rebirth-dev-note-label {
+  margin: 0 0 6px;
+  font: 700 10px var(--roll-font);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #a97c1f;
+}
+.rebirth-dev-note p:not(.rebirth-dev-note-label) {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.75;
+}
+.rebirth-dev-note footer {
+  margin-top: 8px;
+  font: 500 12px var(--roll-font);
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .rebirth-legacy-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- The ceremony ---------------------------------------------------------
+   The ultra-rebirth earns a moment: rays, a slam and confetti, pointer-
+   transparent over the page. Everything is driven by animation — the global
+   reduced-motion reset sets `animation: none`, which leaves the shell at its
+   resting opacity of 0, so reduced motion never sees any of it. */
+.ultra-ceremony {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 40%, rgb(255 236 190 / 0.9), transparent 55%),
+    rgb(20 16 6 / 0.72);
+  animation: ultra-ceremony-shell 2.7s ease-out forwards;
+}
+.ultra-ceremony-rays {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: min(78vmin, 560px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgb(217 164 65 / 0.55) 0deg 7deg,
+    transparent 7deg 18deg
+  );
+  mask: radial-gradient(circle, transparent 28%, #000 66%, transparent 92%);
+  animation: ultra-ceremony-rays 2.7s ease-out forwards;
+}
+.ultra-ceremony-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  border: 2px solid #d9a441;
+  background: rgb(255 246 224 / 0.95);
+  color: #a97c1f;
+  box-shadow: 0 0 44px 10px rgb(217 164 65 / 0.55);
+  animation: ultra-ceremony-mark 2.7s var(--ease-reveal, ease-out) forwards;
+}
+.ultra-ceremony-title {
+  position: relative;
+  font: 700 clamp(26px, 7vw, 44px) var(--roll-font);
+  letter-spacing: 4px;
+  color: #ffce6b;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.6);
+  animation: ultra-ceremony-title 2.7s var(--ease-reveal, ease-out) forwards;
+}
+.ultra-ceremony-sub {
+  position: relative;
+  font-size: 14px;
+  color: #f4e7c8;
+}
+.ultra-ceremony-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.ultra-ceremony-confetti i {
+  position: absolute;
+  top: -4vh;
+  left: calc(4% + 8% * var(--i, 0));
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--c, #d9a441);
+  opacity: 0;
+  animation: ultra-ceremony-confetti 2.2s ease-in forwards;
+}
+.ultra-ceremony-confetti i:nth-child(1) {
+  --i: 0;
+  --c: #d9a441;
+  animation-delay: 0.15s;
+}
+.ultra-ceremony-confetti i:nth-child(2) {
+  --i: 1;
+  --c: #d97ba6;
+  animation-delay: 0.35s;
+}
+.ultra-ceremony-confetti i:nth-child(3) {
+  --i: 2;
+  --c: #4bb3c4;
+  animation-delay: 0.05s;
+}
+.ultra-ceremony-confetti i:nth-child(4) {
+  --i: 3;
+  --c: #8a7ad9;
+  animation-delay: 0.5s;
+}
+.ultra-ceremony-confetti i:nth-child(5) {
+  --i: 4;
+  --c: var(--green);
+  animation-delay: 0.25s;
+}
+.ultra-ceremony-confetti i:nth-child(6) {
+  --i: 5;
+  --c: #d98241;
+  animation-delay: 0.45s;
+}
+.ultra-ceremony-confetti i:nth-child(7) {
+  --i: 6;
+  --c: #ffe1a0;
+  animation-delay: 0.6s;
+}
+.ultra-ceremony-confetti i:nth-child(8) {
+  --i: 7;
+  --c: #d9a441;
+  animation-delay: 0.2s;
+}
+.ultra-ceremony-confetti i:nth-child(9) {
+  --i: 8;
+  --c: #d97ba6;
+  animation-delay: 0.55s;
+}
+.ultra-ceremony-confetti i:nth-child(10) {
+  --i: 9;
+  --c: #4bb3c4;
+  animation-delay: 0.3s;
+}
+.ultra-ceremony-confetti i:nth-child(11) {
+  --i: 10;
+  --c: #8a7ad9;
+  animation-delay: 0.4s;
+}
+.ultra-ceremony-confetti i:nth-child(12) {
+  --i: 11;
+  --c: var(--green);
+  animation-delay: 0.1s;
+}
+@keyframes ultra-ceremony-shell {
+  0% {
+    opacity: 0;
+  }
+  9% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ultra-ceremony-rays {
+  0% {
+    transform: rotate(-40deg) scale(0.5);
+    opacity: 0;
+  }
+  24% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(50deg) scale(1.15);
+    opacity: 0;
+  }
+}
+@keyframes ultra-ceremony-mark {
+  0% {
+    transform: scale(0.2) rotate(-160deg);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.12) rotate(6deg);
+    opacity: 1;
+  }
+  46% {
+    transform: scale(1) rotate(0deg);
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+@keyframes ultra-ceremony-title {
+  0% {
+    transform: translateY(26px) scale(1.35);
+    opacity: 0;
+    letter-spacing: 16px;
+  }
+  26% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    letter-spacing: 4px;
+  }
+  84% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ultra-ceremony-confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(106vh) rotate(640deg);
+    opacity: 0.9;
+  }
+}
+
+.rebirth-preview,
+.rebirth-legacy {
+  position: relative;
+}
+
+.rebirth-confirm label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+.rebirth-confirm input {
+  width: 100%;
+  height: 43px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 600 13px var(--roll-font);
+  letter-spacing: 0.08em;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.rebirth-confirm input:focus-visible {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 16%, transparent);
+}
+.rebirth-confirm [role="alert"] {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  color: var(--danger);
+  font-size: 12px;
+}
+.rebirth-confirm [role="status"] {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--warning);
+}
+.rebirth-confirm .purchase-actions {
+  margin-top: 18px;
+  align-items: center;
 }

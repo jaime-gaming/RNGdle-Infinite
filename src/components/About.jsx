@@ -13,9 +13,15 @@ import {
 import { BASE_ROLL_MS, BASE_COOLDOWN_MS, formatDuration } from "../shop-data";
 import { POPULATION } from "../probability.js";
 import { PETS, PET_DROP_CHANCE } from "../pets.js";
-import { BADGE_TOTAL, REBIRTH_TOTAL, rebirthUnlocked } from "../rebirth.js";
+import {
+  BADGE_TOTAL,
+  REBIRTH_STEPS,
+  REBIRTH_TOTAL,
+  ULTRA_REBIRTH_STEP,
+  rebirthUnlocked,
+} from "../rebirth.js";
 import { SKILLS } from "../skills.js";
-import { GAME_URL } from "../roll-data";
+import { GAME_URL, formatEP } from "../roll-data";
 import "../about.css";
 
 // The old help modal was one unreadable block of text. This is the same
@@ -38,7 +44,7 @@ export default function About({ navigate, progress }) {
     {
       icon: Clock3,
       title: "Wait a little, roll again",
-      body: `A reveal takes ${formatDuration(BASE_ROLL_MS / 1000)} and the cooldown that follows is ${formatDuration(BASE_COOLDOWN_MS / 1000)}. The countdown shows the cooldown itself. Upgrades shorten both, permanently.`,
+      body: `A reveal takes ${formatDuration(BASE_ROLL_MS / 1000)} and the cooldown that follows is ${formatDuration(BASE_COOLDOWN_MS / 1000)}. The countdown shows the cooldown itself. Upgrades shorten both for this run; rebirth resets them.`,
     },
   ];
   const topics = [
@@ -46,7 +52,7 @@ export default function About({ navigate, progress }) {
       icon: ShoppingBag,
       title: "The shop",
       points: [
-        "Quickwind shortens the reveal; Clockwork shortens the cooldown. Both are permanent and one-time.",
+        "Quickwind shortens the reveal to as little as 10 seconds; Clockwork shortens the cooldown to 2 seconds. Both reset at rebirth.",
         "Flywheel grants a no-cooldown roll every few rolls. Tools add Auto-Roll, archive search and offline earnings.",
         `${SKILLS.length} charged skills can be bought, won from companions or earned with a rebirth. A circle fills as you roll and the next roll fires it.`,
         "The shop is one street of shelves — skills, pace, companions, auras, offline and tools — with a sticky jump bar, a search box and filters, and each shelf has its own link.",
@@ -71,7 +77,7 @@ export default function About({ navigate, progress }) {
       title: "Skills and the rack",
       points: [
         `A skill charges over its own number of completed online rolls; offline rolls never charge it.`,
-        "Charging is automatic and free. Swapping skills in and out of the rack costs nothing.",
+        "Charging is automatic and free. Swapping skills in and out of the rack costs nothing, and four racks can be saved on the Skills shelf and put back in one click.",
         "Draw skills only ever pick between numbers you genuinely rolled — each draw is an ordinary, independent roll. Wallet skills multiply banked EP alone.",
         "The rack starts at two slots and grows to four with the two Skill Bays in the shop.",
       ],
@@ -85,7 +91,7 @@ export default function About({ navigate, progress }) {
         "Labels are rounded; hover any rank to see the exact percentage and counts.",
         ...(showsRebirth
           ? [
-              `Rebirth unlocks step by step: the first step asks for half of the collection, and each of the ${REBIRTH_TOTAL} steps raises the bar by ten points. Every step grants an exclusive skill and a permanent +2% on banked EP, and everything you bought — auras included — stays; only the collection and the worn aura reset. An ultra-rebirth at the top starts everything over for a larger permanent bonus. No purchase is ever required for it.`,
+              `Rebirth unlocks step by step: the first asks for a fifth of the collection and ${formatEP(REBIRTH_STEPS[0].ep)} EP earned this cycle; the final rung asks for 45% and ${formatEP(REBIRTH_STEPS.at(-1).ep)} EP. Each of the ${REBIRTH_TOTAL} steps grants an exclusive skill, a permanent +2% banked-EP bonus and 250,000 EP to start the next cycle. Ultra-rebirth asks for half the collection and ${formatEP(ULTRA_REBIRTH_STEP.ep)} cycle EP, then adds a permanent +10% bonus and 1,000,000 starting EP. Resets clear the run, not your activity history or permanent bonuses.`,
             ]
           : []),
       ],
@@ -98,7 +104,7 @@ export default function About({ navigate, progress }) {
         "Signing up creates a local profile in this browser and starts a clean account — nothing from guest play carries over.",
         "There is no email, password, server or leaderboard. Clearing site data deletes the save.",
         "Refreshing resumes the same committed number and deadline. Tabs on one account share a single draw and reward.",
-        "Your profile shows how far you have come in this cycle, and you can export it as a file. There is no import — a file can never overwrite the game.",
+        "Your profile shows how far you have come since the account was created, and you can export it as a file. There is no import — a file can never overwrite the game.",
       ],
     },
   ];

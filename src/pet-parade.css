@@ -304,3 +304,22 @@
     font-size: 9px;
   }
 }
+
+/* Walking has a waddle: the figure leans into each step while the body bobs
+   above it, and odd/even walkers fall out of step with each other so the
+   parade never marches in lockstep. */
+.pet-walker .pet-figure {
+  animation: pet-waddle 0.55s ease-in-out infinite alternate;
+  transform-origin: 50% 88%;
+}
+.pet-walker:nth-child(even) .pet-figure {
+  animation-delay: -0.27s;
+}
+@keyframes pet-waddle {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}

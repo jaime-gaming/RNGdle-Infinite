@@ -5,11 +5,72 @@ import {
   exportFileName,
   exportPayload,
 } from "../src/profile-stats.js";
-import { emptyProgress } from "../src/progress.js";
+import zlib from "node:zlib";
+import {
+  AVATAR_LIMIT,
+  applyProgress,
+  emptyProgress,
+  parseProgress,
+  validAvatar,
+} from "../src/progress.js";
 import { BADGE_TOTAL } from "../src/rebirth.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { PETS } from "../src/pets.js";
 import { SKILLS } from "../src/skills.js";
+
+// A tiny PNG reader, so the exported card can be inspected for real pixels
+// rather than for "some bytes came out". Handles the colour types a canvas
+// writes (RGB and RGBA) and every scanline filter.
+function decodePng(buffer) {
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = 0;
+  const idat = [];
+  while (offset < buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString("ascii", offset + 4, offset + 8);
+    const data = buffer.subarray(offset + 8, offset + 8 + length);
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      colorType = data[9];
+    } else if (type === "IDAT") idat.push(data);
+    else if (type === "IEND") break;
+    offset += 12 + length;
+  }
+  const channels = colorType === 6 ? 4 : colorType === 2 ? 3 : 1;
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const stride = width * channels;
+  const pixels = Buffer.alloc(height * stride);
+  let pos = 0;
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[pos];
+    pos += 1;
+    const line = raw.subarray(pos, pos + stride);
+    pos += stride;
+    const target = pixels.subarray(y * stride, (y + 1) * stride);
+    const prior = y ? pixels.subarray((y - 1) * stride, y * stride) : null;
+    for (let x = 0; x < stride; x += 1) {
+      const left = x >= channels ? target[x - channels] : 0;
+      const up = prior ? prior[x] : 0;
+      const upLeft = prior && x >= channels ? prior[x - channels] : 0;
+      let value = line[x];
+      if (filter === 1) value += left;
+      else if (filter === 2) value += up;
+      else if (filter === 3) value += (left + up) >> 1;
+      else if (filter === 4) {
+        const p = left + up - upLeft;
+        const pa = Math.abs(p - left);
+        const pb = Math.abs(p - up);
+        const pc = Math.abs(p - upLeft);
+        value += pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft;
+      }
+      target[x] = value & 0xff;
+    }
+  }
+  return { width, height, channels, pixels };
+}
 
 const at = (day) => Date.UTC(2026, 7, day, 12, 0, 0);
 const [badgeA] = allBadgeMetadata.map((badge) => badge.id);
@@ -147,10 +208,13 @@ test("an empty save reads as zeros rather than as invented progress", () => {
   expect(stats.lastEventAt).toBeNull();
 });
 
-test("the export is a read-only snapshot with no import path", () => {
+test("the export is a read-only PNG snapshot with no import path", async () => {
   const progress = played();
   const payload = exportPayload(progress);
   expect(payload.app).toBe("RNGdle Infinite");
+  expect(payload.format).toBe("png");
+  expect(payload.accountName).toBe("LuckyOtter41");
+  expect(payload.biggestRoll).toEqual(payload.stats.bestRoll);
   expect(payload.profile.username).toBe("LuckyOtter41");
   expect(payload.stats.rolls).toBe(4);
   expect(payload.save).toMatchObject({
@@ -164,13 +228,115 @@ test("the export is a read-only snapshot with no import path", () => {
   });
   expect(payload.save.history).toHaveLength(progress.history.length);
   expect(exportFileName(progress)).toMatch(
-    /^rngdle-infinite-luckyotter41-\d{4}-\d{2}-\d{2}\.json$/,
+    /^rngdle-infinite-luckyotter41-\d{4}-\d{2}-\d{2}\.png$/,
   );
-  expect(exportFileName(emptyProgress())).toMatch(/^rngdle-infinite-guest-/);
+  expect(exportFileName(emptyProgress())).toMatch(
+    /^rngdle-infinite-guest-\d{4}-\d{2}-\d{2}\.png$/,
+  );
 
-  // The UI offers exactly one direction: a download, and no file input.
+  // The UI offers a PNG card download, and the only file input in the whole
+  // page is the logo picker — images in, never account data out of a file.
   const profile = fs.readFileSync("src/components/LocalProfile.jsx", "utf8");
   expect(profile).toContain("Export my data");
-  expect(profile).not.toContain('type="file"');
-  expect(profile).not.toMatch(/\bImport\b/);
+  expect(profile).toContain("renderExportPngBlob");
+  expect(profile).toContain("accept={AVATAR_ACCEPT}");
+  expect(profile).not.toMatch(/readAsText|Import from|importProgress/);
+});
+
+test("the account logo is part of the save, and only a small image data URL is one", async () => {
+  const base = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAg";
+  expect(validAvatar(base)).toBe(true);
+  // Wrong shapes: other formats, remote addresses, scripts, empty strings.
+  for (const bad of [
+    "",
+    "https://example.com/logo.png",
+    "data:text/html;base64,PHNjcmlwdD4=",
+    "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
+    "javascript:alert(1)",
+    `data:image/png;base64,${"A".repeat(AVATAR_LIMIT)}`,
+  ])
+    expect(validAvatar(bad), bad.slice(0, 24)).toBe(false);
+
+  // The action sets and clears it, refuses anything else, and is profile-only.
+  const withLogo = applyProgress(played(), { type: "avatar", avatar: base });
+  expect(withLogo.profile.avatar).toBe(base);
+  expect(
+    applyProgress(withLogo, { type: "avatar", avatar: "" }).profile.avatar,
+  ).toBeUndefined();
+  expect(() =>
+    applyProgress(played(), {
+      type: "avatar",
+      avatar: "data:text/html;base64,AA",
+    }),
+  ).toThrow(/PNG, JPEG or WebP/);
+  expect(() =>
+    applyProgress(
+      { ...emptyProgress(), profile: null },
+      {
+        type: "avatar",
+        avatar: base,
+      },
+    ),
+  ).toThrow(/local profile/);
+
+  // A save carries it across a reload, and a broken one is dropped rather
+  // than allowed to brick the account over a cosmetic field.
+  const parsed = parseProgress(JSON.stringify(withLogo));
+  expect(parsed.profile.avatar).toBe(base);
+  const broken = parseProgress(
+    JSON.stringify({
+      ...withLogo,
+      profile: { ...withLogo.profile, avatar: "data:text/html;base64,AA" },
+    }),
+  );
+  expect(broken.profile.avatar).toBeUndefined();
+  expect(broken.profile.username).toBe("LuckyOtter41");
+});
+
+test("the PNG card carries the account's own logo", async ({ page }) => {
+  await page.goto("/");
+  // A solid blue square, so the card can be checked pixel by pixel.
+  const logo = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 128;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "rgb(0, 0, 255)";
+    ctx.fillRect(0, 0, 128, 128);
+    return canvas.toDataURL("image/png");
+  });
+  const withLogo = played();
+  withLogo.profile = { ...withLogo.profile, avatar: logo };
+  const [plainPng, logoPng] = await page.evaluate(
+    async ([withSave, withoutSave]) => {
+      const { renderExportPngBlob } = await import(
+        `${location.origin}/src/profile-stats.js`
+      );
+      const bytes = async (save) => {
+        const blob = await renderExportPngBlob(save);
+        const buffer = await blob.arrayBuffer();
+        return Array.from(new Uint8Array(buffer));
+      };
+      return [await bytes(withoutSave), await bytes(withSave)];
+    },
+    [withLogo, played()],
+  );
+  const plain = decodePng(Buffer.from(plainPng));
+  const card = decodePng(Buffer.from(logoPng));
+  expect([plain.width, plain.height]).toEqual([1200, 680]);
+  expect([card.width, card.height]).toEqual([1200, 680]);
+  // Different pictures: the card with a logo is not the card without one.
+  expect(logoPng.length).not.toBe(plainPng.length);
+  // The logo sits in a circle just left of the account name: the blue lands
+  // where the name would otherwise start.
+  const at = (image, x, y) => {
+    const index = y * image.width * image.channels + x * image.channels;
+    return [
+      image.pixels[index],
+      image.pixels[index + 1],
+      image.pixels[index + 2],
+    ];
+  };
+  expect(at(card, 80, 108)[2]).toBeGreaterThan(200);
+  expect(at(card, 80, 108)[0]).toBeLessThan(80);
+  expect(at(plain, 80, 108)[2]).toBeLessThan(200);
 });

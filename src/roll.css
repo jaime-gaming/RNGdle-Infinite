@@ -255,6 +255,11 @@ nav button.active {
 .artifact-stage {
   position: relative;
 }
+/* While a draw skill's split screen is playing, the number itself waits behind
+   it: it takes the stage the moment the best draw is chosen. */
+.artifact-stage.is-behind {
+  opacity: 0;
+}
 /* The little mark a companion leaves while its signature skill fires: pinned
    to a corner of the number box, tinted like the skill it carries, and gone
    the moment the roll settles. It pins once and then holds still — the house
@@ -431,45 +436,31 @@ nav button.active {
 }
 .floating-ep {
   position: absolute;
-  top: -4px;
-  left: 100%;
+  top: calc(-4px - var(--charge-index, 0) * 18px);
+  left: calc(100% + 8px + var(--charge-index, 0) * 7px);
   font-family: var(--roll-font);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
   color: var(--green);
   white-space: nowrap;
-  margin-left: 4px;
-  animation: ep-float calc(1.5s * var(--reveal-scale, 1)) ease-out forwards;
-}
-/* The wallet bonus, stated once: only when a companion, a skill or a rebirth
-   bonus adds EP beyond the score does the roll name the extra and its parts. */
-.roll-credit {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  margin-top: 10px;
-  visibility: hidden;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--surface) 65%, transparent);
   opacity: 0;
+  pointer-events: none;
+  /* Each charge pops in, drifts right and fades on a stagger, so a settle
+     reads as one sum being added up rather than a block of text appearing. */
+  animation: ep-float calc(1.5s * var(--reveal-scale, 1))
+    cubic-bezier(0.2, 0.75, 0.25, 1)
+    calc(var(--charge-index, 0) * 0.24s * var(--reveal-scale, 1)) both;
 }
-.roll-credit.is-visible {
-  visibility: visible;
-  opacity: 1;
-  animation: summary-rise calc(0.4s * var(--reveal-scale, 1)) var(--ease-reveal)
-    both;
+.floating-ep.is-bonus-charge {
+  font-size: 11.5px;
+  color: color-mix(in srgb, var(--green) 88%, var(--text));
 }
-.roll-credit-bonus {
-  max-width: 420px;
+.branch-mark {
   font-family: var(--roll-font);
-  font-variant-numeric: tabular-nums;
-  font-size: 12.5px;
-  line-height: 17px;
   color: var(--muted);
-}
-.roll-credit-bonus strong {
-  font-size: 14px;
-  color: var(--green);
-  font-weight: 650;
+  opacity: 0.72;
 }
 .share-row {
   display: flex;
@@ -952,13 +943,23 @@ nav button.active {
   }
 }
 @keyframes ep-float {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
+  0% {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translate(0, 10px) scale(0.82);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(2px, 0) scale(1.06);
+  }
+  28% {
+    transform: translate(3px, -4px) scale(1);
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(13px, -32px) scale(0.96);
   }
 }
 @keyframes share-attention {
@@ -1208,4 +1209,49 @@ nav button.active {
 }
 .roll-hint-pet svg {
   stroke-width: 1.8;
+}
+
+/* Ultra-rebirth prestige: a still gold halo behind the stage for accounts
+   that took the top of the ladder. Static on purpose — the house rule is no
+   decorative loops on the roll screen, so the mark holds while the number
+   does its own reveal. Inset only vertically: nothing may widen the page. */
+.roll-experience[data-prestige] .active-roll::before {
+  content: "";
+  position: absolute;
+  inset: -10px 0 -6px;
+  border-radius: 22px;
+  background:
+    radial-gradient(
+      56% 62% at 50% 40%,
+      rgb(217 164 65 / 0.17),
+      transparent 74%
+    ),
+    linear-gradient(180deg, rgb(217 164 65 / 0.09), transparent 58%);
+  border: 1px solid rgb(217 164 65 / 0.38);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* When a signature skill fires, the corner mark lands with a one-shot ripple
+   of its own tint: born with the pin, gone with the mark — no loop on the
+   roll screen. */
+.artifact-companion::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--companion-tint, #d9a441);
+  opacity: 0;
+  animation: companion-ripple calc(0.9s * var(--reveal-scale, 1)) ease-out 0.2s
+    both;
+}
+@keyframes companion-ripple {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
 }

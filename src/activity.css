@@ -51,6 +51,33 @@
   flex-direction: column;
   gap: 16px;
 }
+/* A rebirth ends a cycle, not the story: the log keeps every entry and a
+   dotted rule marks where the run was handed back and a new cycle began, so
+   the whole account reads as one continuous history. */
+.activity-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  color: var(--muted);
+}
+.activity-divider::before,
+.activity-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dotted var(--border);
+}
+.activity-divider-label {
+  padding: 4px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--secondary);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .activity-event {
   display: flex;
   gap: 18px;
@@ -72,6 +99,22 @@
 .event-unlock {
   color: var(--green);
   background: var(--green-bg);
+}
+.event-rebirth {
+  color: var(--green);
+  background: var(--green-bg);
+}
+.event-ultra-rebirth {
+  color: #a97c1f;
+  background: rgb(217 164 65 / 0.14);
+}
+.event-purchase,
+.event-equip {
+  color: var(--text);
+}
+.activity-transaction strong {
+  font-family: "Space Mono", monospace;
+  color: var(--text);
 }
 .activity-event article {
   min-width: 0;

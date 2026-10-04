@@ -1,5 +1,7 @@
-/* Companions are rows, like every other shelf: a face, what it adds, and one
-   button. Thirteen of them stay scannable instead of becoming a wall. */
+/* Companions are a slideshow of cages: one large stage in the middle, an
+   arrow on each side to slide to the next cage, and a rail of small cages
+   underneath to jump straight to a friend. One column of DOM that reads as a
+   shelf you walk along, not a wall of thirteen rows. */
 .pet-disclaimer {
   margin: 0 0 14px;
   padding: 10px 14px;
@@ -9,31 +11,121 @@
   line-height: 1.7;
   color: var(--muted);
 }
-.pet-grid {
+.pet-slideshow {
   display: grid;
-  /* A single column that can shrink: a hard 360px minimum would push the page
-     sideways on a 360px phone. */
-  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 12px 10px;
+  align-items: stretch;
 }
-.pet-card {
+.pet-arrow {
+  align-self: center;
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 14px;
-  padding: 14px 16px;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--secondary);
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+.pet-arrow:hover {
+  border-color: var(--pet-accent, var(--text));
+  color: var(--text);
+}
+.pet-arrow:active {
+  transform: scale(0.94);
+}
+.pet-arrow:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+/* The stage clips its track: slides live side by side and the track slides
+   exactly one stage-width per step. */
+.pet-stage {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
   background: var(--surface);
 }
-.pet-card.is-owned {
-  background: color-mix(in srgb, var(--hover) 55%, var(--surface));
+.pet-stage-track {
+  display: flex;
+  align-items: stretch;
+  transform: translateX(calc(var(--pet-at, 0) * -100%));
+  transition: transform 0.34s cubic-bezier(0.22, 0.8, 0.3, 1);
 }
-.pet-card.is-active {
-  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+.pet-slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  padding: 20px;
+}
+/* The cage: the companion's own colour washes the alcove it stands in. */
+.pet-cage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  padding: 26px 16px 18px;
+  border: 1px dashed
+    color-mix(in srgb, var(--pet-accent, var(--border)) 52%, var(--border));
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      circle at 50% 34%,
+      color-mix(in srgb, var(--pet-accent, transparent) 20%, transparent),
+      transparent 72%
+    ),
+    var(--bg);
+}
+.pet-cage::before,
+.pet-cage::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--pet-accent, var(--border)) 34%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+  opacity: 0.6;
+  pointer-events: none;
+}
+.pet-cage::before {
+  left: 12px;
+}
+.pet-cage::after {
+  right: 12px;
+}
+.pet-cage-label {
+  font: 700 9px/1.4 var(--roll-font);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  color: color-mix(in srgb, var(--pet-accent, var(--muted)) 72%, var(--text));
+}
+.pet-slide.is-active .pet-cage {
+  border-style: solid;
+  border-color: color-mix(
+    in srgb,
+    var(--pet-accent, var(--border)) 62%,
+    var(--border)
+  );
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--pet-accent, transparent) 14%, transparent);
 }
 .pet-body {
   min-width: 0;
@@ -45,32 +137,33 @@
   gap: 10px;
 }
 .pet-title strong {
-  font-size: 14px;
+  font-size: 19px;
+  letter-spacing: -0.2px;
 }
 .pet-multiplier {
   display: flex;
   align-items: baseline;
   gap: 6px;
   flex-shrink: 0;
-  font: 700 12px/1.4 var(--roll-font);
+  font: 700 14px/1.4 var(--roll-font);
   color: var(--green);
 }
 .pet-multiplier small {
-  font: 500 10px var(--roll-font);
+  font: 500 10.5px var(--roll-font);
   color: var(--muted);
 }
 .pet-description {
-  margin: 6px 0 0;
-  font-size: 11.5px;
-  line-height: 1.65;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
   color: var(--secondary);
 }
 .pet-skill {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin: 8px 0 0;
+  gap: 7px;
+  margin: 10px 0 0;
   font-size: 11px;
   line-height: 1.6;
   color: var(--muted);
@@ -79,33 +172,34 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 7px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--bg);
+  padding: 3px 8px;
+  border: 1px solid
+    color-mix(in srgb, var(--pet-accent, var(--border)) 45%, var(--border));
+  border-radius: 999px;
+  background: var(--surface);
   color: var(--text);
   font: 500 10px var(--roll-font);
 }
 .pet-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  width: 152px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
 }
 .pet-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 100%;
   min-height: 34px;
-  padding: 6px 12px;
+  padding: 6px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
   font-size: 11.5px;
+  cursor: pointer;
 }
 .pet-button:hover:not(:disabled) {
   border-color: var(--text);
@@ -127,7 +221,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 1px solid color-mix(in srgb, var(--green) 40%, var(--border));
   border-radius: 8px;
   background: var(--green-bg);
@@ -139,6 +233,70 @@
   font-size: 10px;
   line-height: 15px;
   color: var(--muted);
+}
+/* The foot: position, the rail of cages, and the instruction. */
+.pet-slideshow-foot {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.pet-counter {
+  font: 700 12px var(--roll-font);
+  letter-spacing: 0.1em;
+  color: var(--secondary);
+}
+.pet-rail {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 4px;
+  scrollbar-width: thin;
+}
+.pet-rail-cage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition:
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+.pet-rail-cage:hover {
+  border-color: var(--muted);
+  transform: translateY(-2px);
+}
+.pet-rail-cage.is-current {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--text) 18%, transparent);
+}
+.pet-rail-cage:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.pet-rail-owned {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--bg);
+}
+.pet-hint {
+  font: 500 10px var(--roll-font);
+  letter-spacing: 0.06em;
+  color: var(--muted);
   text-align: right;
 }
 .pet-footnote {
@@ -148,23 +306,75 @@
   color: var(--muted);
 }
 @media (max-width: 760px) {
-  .pet-card {
-    grid-template-columns: 46px minmax(0, 1fr);
+  .pet-slideshow {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
   }
-  .pet-actions {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
+  .pet-arrow {
+    position: absolute;
+    z-index: 2;
+    top: 118px;
+    width: 36px;
+    height: 36px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+  }
+  .pet-slideshow {
+    position: relative;
+  }
+  .pet-arrow:first-of-type {
+    left: 6px;
+  }
+  .pet-arrow:nth-of-type(2) {
+    right: 6px;
+    left: auto;
+  }
+  .pet-slide {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px;
+  }
+  .pet-cage {
+    padding: 20px 14px 14px;
+  }
+  .pet-slideshow-foot {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 8px;
+  }
+  .pet-rail {
+    justify-content: flex-start;
     width: 100%;
   }
-  .pet-actions .pet-button,
-  .pet-actions .pet-equipped {
-    width: auto;
+  .pet-hint {
+    text-align: center;
   }
-  .pet-note {
-    text-align: left;
-    flex-basis: 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-stage-track,
+  .pet-arrow,
+  .pet-rail-cage {
+    transition: none;
   }
+}
+
+/* The companion shelf lives a little: the equipped cage breathes a glow of
+   its own colour, and the slide carries a touch of overshoot on the way to
+   the next cage — springy, never loose. Reduced motion kills both. */
+.pet-slide.is-active .pet-cage {
+  animation: pet-cage-breathe 3.2s ease-in-out infinite;
+}
+@keyframes pet-cage-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--pet-accent, transparent) 14%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--pet-accent, #d9a441) 34%, transparent),
+      0 8px 26px color-mix(in srgb, var(--pet-accent, #d9a441) 34%, transparent);
+  }
+}
+.pet-stage-track {
+  transition: transform 0.42s cubic-bezier(0.34, 1.45, 0.52, 1);
 }

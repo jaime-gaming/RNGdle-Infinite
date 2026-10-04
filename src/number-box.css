@@ -907,6 +907,146 @@ button.number-box.number-box:hover {
   box-shadow: 0 0 6px #c4b5fd;
   animation: box-infall 4.5s ease-in infinite;
 }
+/* Fifth-generation auras. Same contract as the ones before: every layer sits
+   behind the number's ink, the rarity palette stays readable underneath, only
+   the decorative layers are used, and reduced motion stills them all. */
+.number-box[data-cosmetic="halcyon"] .box-halo {
+  display: block;
+  inset: -16px;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 50% 25%, #5eead445, transparent 68%),
+    radial-gradient(ellipse at 50% 78%, #fbbf2433, transparent 66%);
+  filter: blur(9px);
+  animation: box-halo-pulse 8s ease-in-out infinite;
+}
+.number-box[data-cosmetic="halcyon"] .box-ornament {
+  inset: -6px;
+  border: 1px solid #5eead45c;
+  border-bottom-color: #fbbf2473;
+  box-shadow: 0 0 16px #2dd4bf14;
+}
+.number-box[data-cosmetic="halcyon"] .aura-trace {
+  inset: 3px;
+  border: 1px solid #ccfbf166;
+  border-left-color: transparent;
+  border-right-color: #fde68a80;
+  animation: aura-drift 9s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="halcyon"] .box-particles i {
+  background: #ccfbf1;
+  width: 3px !important;
+  height: 3px !important;
+  filter: drop-shadow(0 0 4px #2dd4bf);
+  animation: box-twinkle 5.2s ease-in-out infinite;
+}
+
+.number-box[data-cosmetic="downpour"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    to bottom,
+    #93c5fd33 0 2px,
+    transparent 2px 11px
+  );
+  background-size: 100% 120%;
+  animation: box-drift-cloud 9s linear infinite alternate;
+}
+.number-box[data-cosmetic="downpour"] .box-halo {
+  display: block;
+  inset: -14px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, #1e3a8a3d, transparent 70%);
+  filter: blur(8px);
+}
+.number-box[data-cosmetic="downpour"] .aura-trace {
+  inset: -1px;
+  border: 1px solid #60a5fa55;
+  border-top-color: #bfdbfe80;
+}
+.number-box[data-cosmetic="downpour"] .box-particles i {
+  background: #bfdbfe;
+  width: 2px !important;
+  height: 5px !important;
+  border-radius: 999px;
+  filter: drop-shadow(0 0 4px #3b82f6);
+  animation: box-twinkle 3.4s ease-in-out infinite;
+}
+
+.number-box[data-cosmetic="blueprint"] .box-ornament {
+  inset: -5px;
+  border: 1px solid #60a5fa66;
+  background:
+    repeating-linear-gradient(to right, #60a5fa1a 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(to bottom, #60a5fa1a 0 1px, transparent 1px 12px);
+}
+.number-box[data-cosmetic="blueprint"] .box-ornament::after {
+  inset: 4px;
+  border-radius: inherit;
+  border: 1px dashed #93c5fd5c;
+}
+.number-box[data-cosmetic="blueprint"] .aura-trace {
+  inset: -2px;
+  border: 1px solid #1d4ed873;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+}
+.number-box[data-cosmetic="blueprint"] .box-comet {
+  display: block;
+  width: 1px;
+  height: 62%;
+  top: 19%;
+  left: 8%;
+  border-radius: 0;
+  background: linear-gradient(to bottom, #60a5fa00, #93c5fd, #60a5fa00);
+  animation: box-flare 5s ease-in-out infinite;
+}
+.number-box[data-cosmetic="blueprint"] .box-particles i {
+  background: #bfdbfe;
+  width: 2px !important;
+  height: 2px !important;
+  border-radius: 0;
+  opacity: 0.75;
+}
+
+.number-box[data-cosmetic="inkblot"] .box-halo {
+  display: block;
+  inset: -18px;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 22% 28%, #0f172ab8, transparent 58%),
+    radial-gradient(ellipse at 78% 72%, #0f172ab8, transparent 58%);
+  filter: blur(7px);
+  animation: aura-drift 12s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="inkblot"] .box-ornament {
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 26% 32%, #33415566, transparent 52%),
+    radial-gradient(ellipse at 74% 68%, #33415566, transparent 52%);
+  background-size: 130% 130%;
+  animation: box-drift-cloud 14s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="inkblot"] .aura-trace {
+  inset: -2px;
+  border: 1px solid #64748b5c;
+  border-top-color: transparent;
+  border-bottom-color: #94a3b873;
+}
+.number-box[data-cosmetic="inkblot"] .box-particles i {
+  background: #e2e8f0;
+  width: 3px !important;
+  height: 3px !important;
+  opacity: 0.6;
+  filter: drop-shadow(0 0 4px #0f172a);
+  animation: box-twinkle 6.4s ease-in-out infinite;
+}
+
 /* Fourth-generation auras. Same contract as the third: every layer sits behind
    the number's ink, keeps the rarity palette visible underneath, uses only the
    decorative layers, and is stilled by reduced motion. */

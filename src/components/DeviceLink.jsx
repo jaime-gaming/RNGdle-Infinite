@@ -1,0 +1,506 @@
+import React, { useEffect, useState } from "react";
+import {
+  Check,
+  Copy,
+  Handshake,
+  Link2,
+  RefreshCw,
+  Server,
+  Unplug,
+} from "lucide-react";
+import {
+  adoptPeerCode,
+  buildDeviceLink,
+  buildPeerCode,
+  createDeviceLink,
+  fetchRelayHealth,
+  pushNow,
+  relayEndpoint,
+  setRelayEndpoint,
+  syncStatus,
+  subscribeSync,
+  unlinkDevices,
+} from "../sync.js";
+import "../settings.css";
+
+// The device link, in two pieces.
+//
+// `DeviceLinkSummary` is the single card Settings shows: the state of the link
+// and a door to the technical page. `DeviceLinkPanel` is that page — the link
+// itself, the relay address, the relay-free peer code and the numbers behind
+// the whole thing. Keeping the details on their own page means Settings stays
+// a list of choices rather than a control room.
+
+const STATUS_COPY = {
+  live: (detail) => detail || "Devices live",
+  waiting: () => "Waiting for the other device…",
+  connecting: () => "Connecting…",
+  offline: () => "This device is offline",
+  error: (detail) => detail || "Relay unreachable.",
+  off: () => "Not linked",
+};
+
+function useLink() {
+  const [state, setState] = useState(() => syncStatus());
+  useEffect(() => subscribeSync(() => setState(syncStatus())), []);
+  return [state, setState];
+}
+
+function LinkPill({ state }) {
+  const statusText = (STATUS_COPY[state.status] ?? STATUS_COPY.off)(
+    state.detail,
+  );
+  return (
+    <span
+      id="sync-status-row"
+      className={`sync-status is-${state.status}`}
+      data-testid="sync-status"
+      data-direction={state.lastDirection || undefined}
+      data-pending={state.pending || undefined}
+    >
+      <i className="sync-dot" aria-hidden="true" />
+      {state.revision > 0 && (
+        <b
+          key={`ping-${state.revision}`}
+          className="sync-ping"
+          aria-hidden="true"
+        />
+      )}
+      {statusText}
+      {state.pending && (
+        <em
+          className="sync-pending"
+          data-testid="sync-pending"
+          title="Waiting to be sent"
+        >
+          queued
+        </em>
+      )}
+    </span>
+  );
+}
+
+function useCopy() {
+  const [copied, setCopied] = useState("");
+  function flash(key) {
+    setCopied(key);
+    setTimeout(
+      () => setCopied((current) => (current === key ? "" : current)),
+      1800,
+    );
+  }
+  return [copied, flash];
+}
+
+function formatMoment(at) {
+  if (!at) return "—";
+  const seconds = Math.max(0, Math.round((Date.now() - at) / 1000));
+  if (seconds < 5) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return new Date(at).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+// ---- The Settings card -----------------------------------------------------
+export function DeviceLinkSummary({ progress, navigate }) {
+  const [state] = useLink();
+  const linked = state.linked && !!state.room;
+  return (
+    <div className="settings-group">
+      <h2>
+        <Link2 size={16} aria-hidden="true" /> Link devices
+      </h2>
+      <p className="settings-group-note">
+        One link joins two browsers to this account. Saves are forwarded through
+        your own relay — no database, no account anywhere — and either device
+        may stay closed while the other plays.
+      </p>
+      <div className="setting-row">
+        <div className="setting-copy">
+          <label htmlFor="sync-status-row">This account</label>
+          <p>
+            {linked
+              ? state.pending
+                ? "You have changes waiting to reach the other device."
+                : "Both devices share one save. Closing one does not delete anything."
+              : progress?.profile
+                ? "Create a link, then open it on your other device whenever you like."
+                : "Guests can open a link, but a local profile is needed to start one."}
+          </p>
+        </div>
+        <LinkPill state={state} />
+      </div>
+      <button
+        type="button"
+        className="secondary-button sync-open"
+        data-testid="open-device-link"
+        onClick={() => navigate?.("settings", "link")}
+      >
+        <Server size={15} aria-hidden="true" /> Device link settings
+      </button>
+    </div>
+  );
+}
+
+// ---- The technical page ----------------------------------------------------
+export default function DeviceLinkPanel({ progress, notify, navigate }) {
+  const [state, setState] = useLink();
+  const [creating, setCreating] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [code, setCode] = useState("");
+  const [relay, setRelay] = useState(() => relayEndpoint());
+  const [health, setHealth] = useState(null);
+  const [healthError, setHealthError] = useState("");
+  const [copied, flash] = useCopy();
+  const linked = state.linked && !!state.room;
+  const lastLine =
+    state.lastDirection === "sent"
+      ? "Your save just left this device."
+      : state.lastDirection === "received"
+        ? "A save just arrived from the other device."
+        : "";
+
+  // The relay reports whether it keeps rooms on disk; that is exactly what
+  // lets a device that was closed catch up instead of starting over.
+  useEffect(() => {
+    let live = true;
+    fetchRelayHealth()
+      .then((info) => {
+        if (live) {
+          setHealth(info);
+          setHealthError("");
+        }
+      })
+      .catch(() => live && setHealthError("The relay did not answer."));
+    return () => {
+      live = false;
+    };
+  }, [state.status, state.revision]);
+
+  async function create() {
+    setCreating(true);
+    try {
+      await createDeviceLink();
+      setState(syncStatus());
+      notify?.("Link created. Open it on your other device.");
+    } catch {
+      setState(syncStatus());
+      notify?.("No relay answered. Try again, or link by hand below.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(buildDeviceLink());
+      flash("link");
+      notify?.("Device link copied.");
+    } catch {
+      notify?.("Copying was blocked — select the link and copy it by hand.");
+    }
+  }
+
+  async function send() {
+    setSending(true);
+    const result = await pushNow();
+    setSending(false);
+    notify?.(
+      result.ok
+        ? "Save sent — the room keeps it for when the other device returns."
+        : result.reason === "offline"
+          ? "The relay is offline, so there is nobody to send to."
+          : "There was nothing new to send.",
+    );
+  }
+
+  async function copyCode() {
+    const text = buildPeerCode();
+    if (!text) {
+      notify?.(
+        "Create a local profile first — a guest save is not worth carrying.",
+      );
+      return;
+    }
+    setCode(text);
+    try {
+      await navigator.clipboard.writeText(text);
+      flash("code");
+      notify?.("Account code copied. Paste it on your other device.");
+    } catch {
+      notify?.("Code ready below — select it and copy it by hand.");
+    }
+  }
+
+  function adopt() {
+    const result = adoptPeerCode(code);
+    if (result.ok) {
+      setCode("");
+      notify?.("Account adopted from the code. Keep it somewhere safe.");
+      return;
+    }
+    notify?.(
+      {
+        empty: "Paste an account code first.",
+        guest: "That code carries a guest save, which is not worth adopting.",
+        unreadable: "That code could not be read. Copy it again, whole.",
+      }[result.reason] ?? "That code could not be read.",
+    );
+  }
+
+  function saveRelay() {
+    const next = setRelayEndpoint(relay);
+    setRelay(next);
+    notify?.(
+      next
+        ? `Linked through ${next}.`
+        : "Relay reset to this site's own address.",
+    );
+  }
+
+  const store = health
+    ? health.store === "disk"
+      ? `On disk at ${health.storeDir}`
+      : "In memory only"
+    : healthError || "Checking…";
+
+  const details = [
+    ["Relay", relayEndpoint()],
+    ["Store", store],
+    ["Room", state.room || "—"],
+    ["This device", state.device || "—"],
+    ["Devices in the room", linked ? String(state.peers || 1) : "—"],
+    ["Last exchange", state.lastSyncAt ? formatMoment(state.lastSyncAt) : "—"],
+    [
+      "This device's last save",
+      state.savedAt ? formatMoment(state.savedAt) : "—",
+    ],
+    [
+      "Waiting to be sent",
+      state.pending
+        ? `Yes — since ${formatMoment(state.dirtyAt)}`
+        : "Nothing queued",
+    ],
+  ];
+
+  return (
+    <section className="device-link" aria-label="Device link settings">
+      <p className="device-link-lede">
+        Two browsers, one account, no database: the relay is a small server you
+        run yourself, and it keeps the newest save of this account. Either
+        device may be closed for as long as you like — whichever one comes back
+        is handed everything that happened, and when both played apart the newer
+        save wins.
+      </p>
+
+      <div className="setting-row">
+        <div className="setting-copy">
+          <label htmlFor="sync-status-row">This account</label>
+          <p>
+            {linked
+              ? "Both devices share one save. Closing one does not delete anything."
+              : progress?.profile
+                ? "Create a link here, then open it on your other device."
+                : "Guests can open a link, but a local profile is needed to start one."}
+          </p>
+        </div>
+        <LinkPill state={state} />
+      </div>
+
+      {linked ? (
+        <>
+          <div className="sync-link-row" data-testid="sync-link-row">
+            <input
+              className="sync-link-field"
+              data-testid="sync-link"
+              readOnly
+              aria-label="Your device link"
+              value={buildDeviceLink()}
+              onFocus={(event) => event.target.select()}
+            />
+            <button
+              type="button"
+              className="secondary-button sync-action"
+              data-testid="sync-copy"
+              onClick={copyLink}
+            >
+              {copied === "link" ? <Check size={14} /> : <Copy size={14} />}
+              {copied === "link" ? "Copied" : "Copy"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button sync-action"
+              data-testid="sync-now"
+              disabled={sending}
+              onClick={send}
+            >
+              <RefreshCw
+                size={14}
+                className={sending ? "is-spinning" : undefined}
+              />
+              {sending ? "Sending…" : "Send now"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button sync-action"
+              data-testid="sync-unlink"
+              onClick={() => {
+                unlinkDevices();
+                setState(syncStatus());
+                notify?.("Devices unlinked. Each browser keeps its own save.");
+              }}
+            >
+              <Unplug size={14} /> Unlink
+            </button>
+          </div>
+          <p className="sync-note" data-testid="sync-note" key={state.revision}>
+            {lastLine ||
+              (state.pending
+                ? "A change is queued here and goes out with the next connection."
+                : "The link is open. Anything that changes here is sent straight over.")}
+          </p>
+        </>
+      ) : !progress?.profile ? (
+        <p className="sync-hint">
+          Sign up (or create a local profile) to start a link from this device.
+        </p>
+      ) : (
+        <button
+          type="button"
+          className="secondary-button sync-action sync-create"
+          data-testid="sync-create"
+          disabled={creating}
+          onClick={create}
+        >
+          <Link2 size={14} /> {creating ? "Contacting relay…" : "Create link"}
+        </button>
+      )}
+
+      <h3 className="device-link-heading">
+        <Server size={15} aria-hidden="true" /> Technical details
+      </h3>
+      <dl className="device-link-details" data-testid="link-details">
+        {details.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="device-link-note">
+        The room lives on whichever machine runs the relay ({relayEndpoint()}).
+        Treat the link like a password: whoever holds it plays this account.
+        {healthError ? (
+          <>
+            {" "}
+            Nothing answers there, so no link can be created from this page: a
+            published build has no relay of its own. Run npm run relay on a
+            machine you keep around and set its address below — or use the
+            hand-link, which needs no relay at all.
+          </>
+        ) : null}
+      </p>
+
+      <details className="sync-hand">
+        <summary>
+          <Handshake size={14} aria-hidden="true" /> No relay? Link by hand
+        </summary>
+        <p className="sync-hand-note">
+          A live link needs a relay somewhere; a code does not. Copy this
+          account&apos;s code and adopt it on the other device — no server, no
+          address to configure, just the save itself in one blob of text. Your
+          logo travels inside it too.
+        </p>
+        <div className="sync-hand-row">
+          <button
+            type="button"
+            className="secondary-button sync-action"
+            data-testid="peer-code-copy"
+            onClick={copyCode}
+          >
+            {copied === "code" ? <Check size={14} /> : <Copy size={14} />}
+            {copied === "code" ? "Code copied" : "Copy this account's code"}
+          </button>
+          <button
+            type="button"
+            className="secondary-button sync-action"
+            data-testid="peer-code-adopt"
+            disabled={!code.trim()}
+            onClick={adopt}
+          >
+            <Handshake size={14} /> Adopt this account
+          </button>
+        </div>
+        <textarea
+          className="sync-code-field"
+          data-testid="peer-code-field"
+          rows={3}
+          spellCheck="false"
+          aria-label="Account code"
+          placeholder="Paste an account code here, then adopt it…"
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+        />
+      </details>
+
+      <div className="setting-row sync-relay-row">
+        <div className="setting-copy">
+          <label htmlFor="setting-relay">Relay address</label>
+          <p>
+            This page talks to {relayEndpoint()}. A static deployment has no
+            relay of its own: run npm run relay on a device you keep around and
+            point this page at it here.
+          </p>
+        </div>
+        <div className="sync-relay-controls">
+          <input
+            id="setting-relay"
+            className="sync-relay-field"
+            data-testid="relay-field"
+            value={relay}
+            spellCheck="false"
+            aria-label="Relay address"
+            placeholder="https://relay.example:8787"
+            onChange={(event) => setRelay(event.target.value)}
+          />
+          <button
+            type="button"
+            className="secondary-button"
+            data-testid="relay-save"
+            onClick={saveRelay}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            data-testid="relay-reset"
+            onClick={() => {
+              setRelayEndpoint("");
+              setRelay(relayEndpoint());
+              notify?.("Relay reset to this site's own address.");
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div className="device-link-footer">
+        <button
+          type="button"
+          className="secondary-button back-to-settings"
+          onClick={() => navigate?.("settings")}
+        >
+          Back to settings
+        </button>
+      </div>
+    </section>
+  );
+}

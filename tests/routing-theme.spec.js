@@ -9,6 +9,8 @@ import {
   pathForPage,
   pathForSubpage,
   subpageFromLocation,
+  familyFromLocation,
+  pathForShelfFamily,
   isCurrentPath,
 } from "../src/router.js";
 import {
@@ -20,7 +22,7 @@ import {
   rebirthBlocker,
 } from "../src/rebirth.js";
 import { emptyProgress } from "../src/progress.js";
-import { shopProducts } from "../src/shop-data.js";
+import { shopProducts, AURA_FAMILIES } from "../src/shop-data.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 
 test("every top navigation destination is a real path, not a hash fragment", () => {
@@ -119,20 +121,41 @@ test("the rebirth ladder depends on the collection alone, never on auras or tool
     expect(rebirthOptionalProducts).toContain(id);
   expect(rebirthRelevantPurchases([...auras, "auto-roll"])).toEqual([]);
 
-  // Rung 1 wants half the collection; owning nothing else is fine.
+  // Rung 1 wants a fifth of the collection and 100,000 EP the cycle earned;
+  // owning nothing else is fine, and the EP is never something you can buy.
   const ids = allBadgeMetadata.map((b) => b.id);
-  const rungOne = ids.slice(0, Math.ceil(REBIRTH_STEPS[0] * BADGE_TOTAL));
+  const rungOne = ids.slice(
+    0,
+    Math.ceil(REBIRTH_STEPS[0].badges * BADGE_TOTAL),
+  );
+  const earned = [
+    {
+      id: "ep",
+      type: "roll",
+      at: 1000,
+      number: 604827,
+      tier: "common",
+      ep: REBIRTH_STEPS[0].ep,
+      badges: [],
+    },
+  ];
   const broke = {
     ...emptyProgress(),
     discovered: rungOne,
     owned: [],
+    history: earned,
   };
   expect(rebirthBlocker(broke, 0)).toBe("");
-  // An all-owned shop with three badges missing from the rung still cannot.
+  // Shekels cannot buy the EP half either: a full wallet changes nothing.
+  expect(
+    rebirthBlocker({ ...broke, balance: 100000000, history: [] }, 0),
+  ).toContain("Earn 250,000 EP");
+  // An all-owned shop with one badge missing from the rung still cannot.
   const rich = {
     ...emptyProgress(),
     discovered: rungOne.slice(0, -1),
     owned: shopProducts.map((p) => p.id),
+    history: earned,
   };
   expect(rebirthBlocker(rich, 0)).toContain(
     `Discover ${rungOne.length} badges`,
@@ -162,12 +185,24 @@ test("light mode keeps a single source of truth for the palette", () => {
 
 test("rebalanced prices keep the catalogue shape and every chain affordable", () => {
   const price = Object.fromEntries(shopProducts.map((p) => [p.id, p.price]));
-  // 34 upgrades, the nine v0.3 skills and bays, and the six late auras that
-  // close the cosmetic shelf: cheaper curve, more content than launch.
-  expect(shopProducts).toHaveLength(49);
-  const total = shopProducts.reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBe(107250000);
-  expect(total).toBeLessThan(131145000);
+  // 34 upgrades, nine skills and bays, and eighteen auras: the v0.4 catalogue,
+  // repriced once at v0.3 and never since. It still costs less than the launch
+  // catalogue did, and the late additions sit on top of it rather than inside
+  // it.
+  const addedInV05 = [
+    "halcyon",
+    "downpour",
+    "blueprint",
+    "inkblot",
+    "miser",
+    "triptych",
+    "offline-vault-3",
+  ];
+  const before = shopProducts.filter((p) => !addedInV05.includes(p.id));
+  expect(before).toHaveLength(49);
+  expect(before.reduce((sum, p) => sum + p.price, 0)).toBe(107250000);
+  expect(107250000).toBeLessThan(131145000);
+  expect(shopProducts).toHaveLength(56);
   // The first upgrade of each visible chain stays reachable early.
   expect(price["quickwind-1"]).toBeLessThanOrEqual(30000);
   expect(price["clockwork-1"]).toBeLessThanOrEqual(50000);
@@ -176,4 +211,74 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
     if (product.requires)
       expect(product.price / price[product.requires]).toBeLessThanOrEqual(4);
   }
+});
+
+test("an aura family is a real sub-page of its shelf, on every host", () => {
+  // /shop/auras/celestial, locally and under a Pages base path.
+  expect(pathForShelfFamily("shop", "auras", "celestial")).toBe(
+    "/shop/auras/celestial",
+  );
+  expect(
+    pathForShelfFamily("shop", "auras", "element", "/RNGdle-Infinite/"),
+  ).toBe("/RNGdle-Infinite/shop/auras/element");
+  // Without a family it is the shelf index, never a dangling slash.
+  expect(pathForShelfFamily("shop", "auras", "")).toBe("/shop/auras");
+  expect(pathForShelfFamily("shop", "auras", "", "/RNGdle-Infinite/")).toBe(
+    "/RNGdle-Infinite/shop/auras",
+  );
+  // A family is read from the third segment, and only from the shelf's own
+  // path: the shop's other shelves and the site's other pages ignore it.
+  expect(familyFromLocation({ pathname: "/shop/auras/void", hash: "" })).toBe(
+    "void",
+  );
+  expect(
+    familyFromLocation(
+      { pathname: "/RNGdle-Infinite/shop/auras/machine", hash: "" },
+      "/RNGdle-Infinite/",
+    ),
+  ).toBe("machine");
+  expect(familyFromLocation({ pathname: "/shop/auras", hash: "" })).toBe("");
+  expect(familyFromLocation({ pathname: "/shop/skills/x", hash: "" })).toBe("");
+  expect(familyFromLocation({ pathname: "/play/auras/x", hash: "" })).toBe("");
+  // The slug is scrubbed the same way pages and shelves are.
+  expect(pathForShelfFamily("shop", "auras", "  Celestial!../")).toBe(
+    "/shop/auras/celestial",
+  );
+});
+
+test("every aura belongs to a family that has its own type and three best", () => {
+  const families = new Map(AURA_FAMILIES.map((f) => [f.id, f]));
+  const auras = shopProducts.filter((p) => p.kind === "aura");
+  expect(auras.length).toBeGreaterThan(0);
+  for (const aura of auras) {
+    if (aura.family === undefined) continue; // a look outside the four sets
+    expect(families.has(aura.family), `${aura.id} family`).toBe(true);
+  }
+  for (const family of AURA_FAMILIES) {
+    // Type: a real stack, a tracking and a casing that the banner can wear.
+    expect(family.font.length).toBeGreaterThan(8);
+    expect(family.tracking).toMatch(/^-?[\d.]+em$/);
+    expect(["none", "uppercase", "lowercase", "capitalize"]).toContain(
+      family.casing,
+    );
+    expect(family.weight).toBeGreaterThanOrEqual(300);
+    expect(family.weight).toBeLessThanOrEqual(900);
+    // The banner samples the family's own three priciest looks.
+    const best = auras
+      .filter((p) => p.family === family.id)
+      .sort((a, b) => b.price - a.price)
+      .slice(0, 3)
+      .map((p) => p.id);
+    expect(best, `${family.id} set`).toHaveLength(3);
+    expect(best).toEqual(
+      auras
+        .filter((p) => p.family === family.id)
+        .sort((a, b) => b.price - a.price || a.id.localeCompare(b.id))
+        .slice(0, 3)
+        .map((p) => p.id),
+    );
+  }
+  // One family per look: no aura is claimed twice.
+  const claimed = auras.filter((p) => p.family !== undefined).map((p) => p.id);
+  expect(new Set(claimed).size).toBe(claimed.length);
 });

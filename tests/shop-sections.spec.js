@@ -1,17 +1,21 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
-import { emptyProgress } from "../src/progress.js";
+import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import {
   shopProducts,
+  productUnlocked,
   skillStock,
   skillStockWindow,
+  SKILL_STOCK_SIZE,
+  AURA_FAMILIES,
 } from "../src/shop-data.js";
-import { seedProgress } from "./helpers/progress.js";
+import { seedProgress, testProfile } from "./helpers/progress.js";
 
 // The shop is a street of sub-pages: the hub is an index of six buttons, each
 // one opening its own URL (/shop/skills, /shop/auras …), the flywheel tiers
 // live on the Skills shelf because Flywheel is a skill, and the shop skills
-// themselves are a rotating stall — two on sale, refreshed every five minutes.
+// themselves are a rotating stall — three on sale, refreshed every five
+// minutes.
 // Every shelf reads from the cheapest item upwards.
 
 const funded = {
@@ -125,7 +129,7 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
     "/shop/skills",
     "/shop/pace",
     "/shop/offline",
-    "/shop/auras",
+    "/shop/auras/celestial",
     "/shop/tools",
   ]) {
     await page.goto(path);
@@ -141,10 +145,10 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
     /^\d+ \/ 13 found$/,
   );
   // A search that matches nothing says so, in words and in numbers.
-  await page.goto("/shop/auras");
+  await page.goto("/shop/auras/celestial");
   await page.getByLabel("Search the shop").fill("zzz-nothing");
   await expect(page.locator(".shop-filter-count")).toHaveText(
-    "0 of 18 on this shelf",
+    "0 of 8 on this shelf",
   );
   await expect(page.locator(".shop-empty")).toContainText(
     "Nothing on this shelf matches",
@@ -228,7 +232,7 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   expect(leaking).toEqual([]);
 });
 
-test("the skills shelf is a stall: two skills buyable, the rest under a green aura", async ({
+test("the skills shelf is a stall: three skills buyable, the rest under a green aura", async ({
   page,
 }) => {
   await seedProgress(page, funded);
@@ -239,7 +243,7 @@ test("the skills shelf is a stall: two skills buyable, the rest under a green au
   // The whole catalogue is listed: the stall's rotating pair is on sale, the
   // other skills wait dimmed under the green restock aura.
   const stock = skillStock(skillStockWindow(Date.now()), funded.owned);
-  expect(stock).toHaveLength(2);
+  expect(stock).toHaveLength(SKILL_STOCK_SIZE);
   const rest = [
     "surge",
     "trail",
@@ -248,6 +252,8 @@ test("the skills shelf is a stall: two skills buyable, the rest under a green au
     "bedrock",
     "turbo",
     "quarry",
+    "miser",
+    "triptych",
   ].filter((id) => !stock.includes(id));
   for (const id of stock) {
     const card = shelf.locator(`[data-product="${id}"]`);
@@ -262,21 +268,27 @@ test("the skills shelf is a stall: two skills buyable, the rest under a green au
     await expect(card).toHaveClass(/is-restocking/);
     await expect(card.getByRole("button")).toBeDisabled();
   }
-  // The stall states how full it is and when the pair restocks — and, since
-  // the rotation is deterministic, which pair comes next.
-  await expect(shelf.locator(".skill-stock")).toContainText("2 of 2 in stock");
+  // The stall states how full it is and when the three restock — and, since
+  // the rotation is deterministic, which skills come next.
+  await expect(shelf.locator(".skill-stock")).toContainText(
+    `${SKILL_STOCK_SIZE} of ${SKILL_STOCK_SIZE} in stock`,
+  );
   await expect(shelf.locator(".skill-stock")).toContainText("next:");
   await expect(page.getByTestId("skill-stock-timer")).toContainText(
     /^\d:\d{2}$/,
   );
-  // Flywheel and the two bays are rack hardware, not stock: always listed.
-  for (const id of ["flywheel", "skill-bay-1", "skill-bay-2"])
+  // Flywheel and Skill Bay I are rack hardware, not stock: always listed.
+  for (const id of ["flywheel", "skill-bay-1"])
     await expect(shelf.locator(`[data-product="${id}"]`)).toHaveCount(1);
-  // Every card on the shelf reads cheapest first.
+  // Skill Bay II waits behind Skill Bay I, so until Bay I is bought it is not
+  // on the shelf at all — no locked card, no wall to save up against.
+  await expect(shelf.locator('[data-product="skill-bay-2"]')).toHaveCount(0);
+  // Every card on the shelf reads cheapest first: nine shop skills, Flywheel
+  // and Skill Bay I.
   const prices = (
     await shelf.locator(".shop-card[data-product] .shop-price").allInnerTexts()
   ).map((text) => Number(text.replace(/[^0-9]/g, "")));
-  expect(prices.length).toBe(10);
+  expect(prices.length).toBe(11);
   expect([...prices].sort((a, b) => a - b)).toEqual(prices);
   // Timing tracks are not on this shelf any more: they moved to Pace, which
   // reads cheapest first as well.
@@ -395,4 +407,124 @@ test("the auto-roll tool is described as an ability, not as a setting", () => {
   const roll = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
   expect(roll).not.toContain("auto-roll-heading");
   expect(roll).toContain("autoRollRunning");
+});
+
+test("a rack can be saved on the skills shelf and put back in one click", async ({
+  page,
+}) => {
+  // Two skills equipped, one rack saved from an earlier session: every step
+  // below is seeded, so nothing depends on what the stall happens to stock.
+  await seedProgress(page, {
+    ...funded,
+    owned: ["surge", "trail", "bounce", "skill-bay-1"],
+    skills: ["surge", "trail", "bounce"],
+    equippedSkills: ["bounce"],
+    loadouts: [
+      {
+        id: "rack-surge+trail",
+        name: "Surge + Trail",
+        skills: ["surge", "trail"],
+      },
+    ],
+  });
+  await page.goto("/shop/skills");
+  const book = page.locator(".skill-racks");
+  await expect(book).toBeVisible();
+  // The saved rack is listed, and the rack on screen is not among them yet.
+  await expect(book.locator(".skill-rack")).toHaveCount(1);
+  await expect(book).toContainText("1 of 4 saved");
+  await expect(
+    book.getByRole("button", { name: "Save this rack" }),
+  ).toBeEnabled();
+
+  // Saving the rack on screen adds a second entry, named after itself.
+  await book.getByRole("button", { name: "Save this rack" }).click();
+  await expect(book.locator(".skill-rack")).toHaveCount(2);
+  await expect(book).toContainText("2 of 4 saved");
+  await expect(book).toContainText("Bounce");
+
+  // One click puts a whole rack back — and says so once it is equipped.
+  await page.locator('.skill-rack-apply:has-text("Surge + Trail")').click();
+  await expect(
+    book.getByRole("button", { name: "This rack is saved" }),
+  ).toBeDisabled();
+
+  // Deleting an entry empties that slot, leaving the other rack alone.
+  await page.getByRole("button", { name: "Delete Bounce" }).click();
+  await expect(book.locator(".skill-rack")).toHaveCount(1);
+  await expect(book).toContainText("Surge + Trail");
+});
+
+test("an aura family is a page of its own, reached from its banner", async ({
+  page,
+}) => {
+  await seedProgress(page, { ...funded, balance: 200000000 });
+  await page.goto("/shop/auras");
+  // The index is four banners, each one a real link to the set it fronts.
+  await expect(page.locator(".aura-family-banner")).toHaveCount(
+    AURA_FAMILIES.length,
+  );
+  for (const family of AURA_FAMILIES) {
+    const banner = page.locator(
+      `.aura-family-banner[data-family="${family.id}"]`,
+    );
+    await expect(banner).toContainText(family.label);
+    await expect(banner).toHaveAttribute("href", `/shop/auras/${family.id}`);
+    // Every banner shows three previews and its own typeface.
+    await expect(banner.locator(".number-box")).toHaveCount(3);
+    const font = await banner
+      .locator(".aura-family-copy strong")
+      .evaluate((el) => getComputedStyle(el).fontFamily);
+    expect(font.toLowerCase()).toContain(
+      family.font.includes("Space Mono") ? "space mono" : "georgia",
+    );
+  }
+  // Opening one is a real navigation, and the breadcrumb grows a step.
+  await page.locator('.aura-family-banner[data-family="celestial"]').click();
+  await expect(page).toHaveURL(/\/shop\/auras\/celestial$/);
+  await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText(
+    "Sky and starlight",
+  );
+  await expect(page.locator(".shop-card[data-product]")).toHaveCount(
+    shopProducts.filter((p) => p.family === "celestial").length,
+  );
+  await page.goBack();
+  await expect(page).toHaveURL(/\/shop\/auras$/);
+});
+
+test("nothing on a shelf waits behind a purchase you have not made", async ({
+  page,
+}) => {
+  // Persistence Core needs Auto-Roll; without it, it is not on the shelf.
+  await seedProgress(page, { ...funded, owned: [] });
+  await page.goto("/shop/tools");
+  await expect(page.locator('[data-product="auto-roll"]')).toHaveCount(1);
+  await expect(page.locator('[data-product="persistence-core"]')).toHaveCount(
+    0,
+  );
+  // Buying the prerequisite is what puts it on the shelf. seedProgress only
+  // fills an empty save, so this second state is written directly over it.
+  await page.evaluate(
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    {
+      key: PROGRESS_KEY,
+      data: {
+        ...emptyProgress(),
+        profile: testProfile,
+        balance: 50000000,
+        totalEarned: 50000000,
+        owned: ["auto-roll"],
+      },
+    },
+  );
+  await page.goto("/shop/tools");
+  await expect(page.locator('[data-product="persistence-core"]')).toHaveCount(
+    1,
+  );
+  // The rule is the catalogue's, not the page's.
+  for (const product of shopProducts)
+    if (product.requires) {
+      expect(productUnlocked(product, [])).toBe(false);
+      expect(productUnlocked(product, [product.requires])).toBe(true);
+    } else expect(productUnlocked(product, [])).toBe(true);
 });
