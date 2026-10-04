@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
-import { PROGRESS_KEY, emptyProgress } from "../src/progress.js";
+import { PROGRESS_KEY, emptyProgress, parseProgress } from "../src/progress.js";
+import { accountStats } from "../src/profile-stats.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 
 const read = (file) => fs.readFileSync(`src/${file}`, "utf8");
@@ -12,6 +13,181 @@ const saveString = JSON.stringify({
   balance: 900,
   totalEarned: 2000,
 });
+
+// The v0.3 Profile page downloaded this JSON snapshot instead of the raw v1
+// local save. It is still the only JSON backup many existing players have.
+const v03ExportString = JSON.stringify({
+  app: "RNGdle Infinite",
+  saveVersion: 1,
+  appVersion: "v0.3",
+  exportedAt: "2025-01-01T00:00:00.000Z",
+  profile: testProfile,
+  stats: { companionsFound: 1, spent: 160000 },
+  save: {
+    balance: 900,
+    totalEarned: 200000,
+    discovered: [],
+    owned: ["starfall"],
+    equipped: "starfall",
+    pets: ["pebble", "moth"],
+    activePet: "moth",
+    skills: [],
+    equippedSkills: [],
+    skillCharge: {},
+    flywheelCharge: 0,
+    rebirths: 2,
+    ultraRebirths: 0,
+    goalId: null,
+    history: [
+      {
+        id: "legacy-roll-1",
+        type: "roll",
+        at: 1700000000000,
+        number: 1337,
+        tier: "common",
+        ep: 42,
+        badges: [],
+      },
+      {
+        id: "legacy-pet-drop",
+        type: "pet",
+        at: 1700000000000,
+        productId: "pebble",
+        name: "Pebble",
+      },
+      {
+        id: "legacy-buy-starfall",
+        type: "purchase",
+        at: 1700000000001,
+        productId: "starfall",
+        name: "Starfall",
+        ep: 40000,
+      },
+      {
+        id: "legacy-buy-moth",
+        type: "purchase",
+        at: 1700000000002,
+        productId: "moth",
+        name: "Lumen Moth",
+        ep: 120000,
+      },
+    ],
+  },
+});
+
+// v0.1–v0.3 did not all have the same local-save shape. These are the raw v1
+// saves from those releases; only v0.3 had the separate downloadable snapshot.
+const v01RawSave = {
+  version: 1,
+  profile: testProfile,
+  balance: 900,
+  totalEarned: 2000,
+  discovered: [],
+  owned: [],
+  equipped: "none",
+  cooldownUntil: 0,
+  receipts: ["v01-roll"],
+};
+const legacyRollStartedAt = 1700000000000;
+const v02PendingRoll = {
+  id: "v02-pending-roll",
+  number: 1337,
+  startedAt: legacyRollStartedAt,
+  rollMS: 45000,
+  cooldownMS: 60000,
+};
+const v02RawSave = {
+  ...v01RawSave,
+  totalEarned: 1000000,
+  history: [
+    {
+      id: "v02-buy-flywheel",
+      type: "purchase",
+      at: legacyRollStartedAt,
+      productId: "flywheel",
+      name: "Flywheel",
+      ep: 450000,
+    },
+    {
+      id: "v02-free-pet",
+      type: "pet",
+      at: legacyRollStartedAt + 1,
+      productId: "pebble",
+      name: "Pebble",
+    },
+    {
+      id: "v02-buy-moth",
+      type: "purchase",
+      at: legacyRollStartedAt + 2,
+      productId: "moth",
+      name: "Lumen Moth",
+      ep: 120000,
+    },
+  ],
+  pets: ["pebble", "moth"],
+  activePet: "moth",
+  pendingRoll: v02PendingRoll,
+  offline: null,
+  flywheelCharge: 3,
+  goalId: null,
+  rebirths: 1,
+  cooldownWindow: {
+    startsAt: legacyRollStartedAt + v02PendingRoll.rollMS,
+    endsAt:
+      legacyRollStartedAt + v02PendingRoll.rollMS + v02PendingRoll.cooldownMS,
+  },
+  cooldownUntil:
+    legacyRollStartedAt + v02PendingRoll.rollMS + v02PendingRoll.cooldownMS,
+  owned: ["flywheel"],
+};
+const v03RawSave = {
+  ...v02RawSave,
+  ultraRebirths: 1,
+  skills: ["surge"],
+  equippedSkills: ["surge"],
+  skillCharge: { surge: 5 },
+  owned: ["flywheel", "surge"],
+  history: [
+    ...v02RawSave.history,
+    {
+      id: "v03-buy-surge",
+      type: "purchase",
+      at: legacyRollStartedAt,
+      productId: "surge",
+      name: "Surge",
+      ep: 180000,
+    },
+  ],
+  pendingRoll: {
+    ...v02PendingRoll,
+    id: "v03-skill-pending-roll",
+    skills: ["surge"],
+  },
+};
+const historicalRawSaves = [
+  {
+    version: "v0.1",
+    save: v01RawSave,
+    rebirths: 0,
+    flywheelCharge: 0,
+    pendingRollId: null,
+  },
+  {
+    version: "v0.2",
+    save: v02RawSave,
+    rebirths: 1,
+    flywheelCharge: 3,
+    pendingRollId: "v02-pending-roll",
+  },
+  {
+    version: "v0.3 raw",
+    save: v03RawSave,
+    rebirths: 1,
+    ultraRebirths: 1,
+    flywheelCharge: 3,
+    pendingRollId: "v03-skill-pending-roll",
+  },
+];
 
 function collectConsole(page) {
   const lines = [];
@@ -63,6 +239,123 @@ test("__importData() opens the file picker and imports the chosen save", async (
   expect(says(lines, "LuckyTester")).toBe(true);
   expect(failures(lines)).toEqual([]);
   expect(await storedBalance(page)).toBe(900);
+});
+
+test("imports the valid v0.3 JSON profile export as a partial save", async ({
+  page,
+}) => {
+  await page.addInitScript((raw) => {
+    window.showOpenFilePicker = async () => [
+      {
+        getFile: async () =>
+          new File([raw], "rngdle-infinite-v03.json", {
+            type: "application/json",
+          }),
+      },
+    ];
+  }, v03ExportString);
+  await seedProgress(page, { balance: 40, totalEarned: 40 });
+  const lines = collectConsole(page);
+
+  await page.goto("/");
+  await importAndWaitForReload(page, () => window.__importData());
+
+  const imported = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)),
+    PROGRESS_KEY,
+  );
+  expect(says(lines, 'Save imported: "rngdle-infinite-v03.json"')).toBe(true);
+  expect(says(lines, "This v0.3 JSON is an account snapshot")).toBe(true);
+  expect(failures(lines)).toEqual([]);
+  expect(imported).toMatchObject({
+    version: 1,
+    profile: testProfile,
+    balance: 900,
+    totalEarned: 200000,
+    owned: ["starfall"],
+    equipped: "starfall",
+    pets: ["pebble", "moth"],
+    activePet: "moth",
+    rebirths: 2,
+    pendingRoll: null,
+    offline: null,
+    cooldownUntil: 0,
+    cycleEarnedEP: 42,
+    receipts: ["legacy-roll-1"],
+  });
+  expect(imported.history).toContainEqual(
+    expect.objectContaining({
+      type: "pet",
+      productId: "pebble",
+      name: "Pebble",
+    }),
+  );
+  expect(imported.history).toContainEqual(
+    expect.objectContaining({
+      type: "purchase",
+      productId: "moth",
+      name: "Lumen Moth",
+      ep: 120000,
+    }),
+  );
+  expect(accountStats(imported).companionsFound).toBe(1);
+  expect(accountStats(imported).spent).toBe(160000);
+});
+
+test("imports raw local saves from v0.1, v0.2 and v0.3", async ({ page }) => {
+  await seedProgress(page);
+  const lines = collectConsole(page);
+
+  await page.goto("/");
+  for (const legacy of historicalRawSaves) {
+    await importAndWaitForReload(
+      page,
+      (raw) => window.__importData(raw),
+      JSON.stringify(legacy.save),
+    );
+
+    const raw = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      PROGRESS_KEY,
+    );
+    const imported = parseProgress(raw);
+    expect(imported.profile).toEqual(testProfile);
+    expect(imported.balance).toBe(900);
+    expect(imported.rebirths).toBe(legacy.rebirths);
+    expect(imported.ultraRebirths).toBe(legacy.ultraRebirths ?? 0);
+    expect(imported.flywheelCharge).toBe(legacy.flywheelCharge);
+    expect(imported.pendingRoll?.id ?? null).toBe(legacy.pendingRollId);
+    if (legacy.version === "v0.3 raw")
+      expect(imported.pendingRoll.skills).toEqual(["surge"]);
+    if (legacy.version === "v0.2" || legacy.version === "v0.3 raw") {
+      expect(imported.pets).toEqual(["pebble", "moth"]);
+      expect(imported.activePet).toBe("moth");
+      expect(imported.history).toContainEqual(
+        expect.objectContaining({
+          type: "pet",
+          productId: "pebble",
+          name: "Pebble",
+        }),
+      );
+      expect(imported.history).toContainEqual(
+        expect.objectContaining({
+          type: "purchase",
+          productId: "moth",
+          name: "Lumen Moth",
+          ep: 120000,
+        }),
+      );
+      expect(accountStats(imported).companionsFound).toBe(1);
+      expect(accountStats(imported).spent).toBe(
+        legacy.version === "v0.2" ? 570000 : 750000,
+      );
+    }
+  }
+
+  expect(
+    lines.filter((line) => line.text.includes("Save imported")).length,
+  ).toBe(historicalRawSaves.length);
+  expect(failures(lines)).toEqual([]);
 });
 
 test("__importData() falls back to a file input where there is no picker", async ({
