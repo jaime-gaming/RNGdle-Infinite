@@ -198,7 +198,14 @@ test("repeated random results each earn EP once and double-clicking cannot bypas
     "data-settled",
     "true",
   );
+  // The reveal runs on a virtual clock, so the button changes to ROLL AGAIN
+  // only once the cooldown is actually running. Wait for the label to land
+  // before advancing time, otherwise the next click races the state update.
+  await expect(page.locator(".generate")).toContainText("COOLDOWN IN");
   await page.clock.fastForward(105100);
+  await expect(page.locator(".generate")).toContainText("ROLL AGAIN", {
+    timeout: 10000,
+  });
   await page.getByRole("button", { name: "ROLL AGAIN", exact: true }).click();
   await expect(page.locator(".number-artifact")).toHaveAttribute(
     "aria-label",
@@ -211,7 +218,11 @@ test("repeated random results each earn EP once and double-clicking cannot bypas
     "data-settled",
     "true",
   );
+  await expect(page.locator(".generate")).toContainText("COOLDOWN IN");
   await page.clock.fastForward(105100);
+  await expect(page.locator(".generate")).toContainText("ROLL AGAIN", {
+    timeout: 10000,
+  });
   await page.getByRole("button", { name: "ROLL AGAIN", exact: true }).click();
   await expect(page.locator(".number-artifact")).toHaveAttribute(
     "aria-label",

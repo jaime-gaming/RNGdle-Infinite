@@ -21,7 +21,7 @@ import {
 import "../profile.css";
 
 // A one-way export: the browser saves a PNG card with the account name,
-// biggest roll and key stats. There is no import anywhere, by design — a card
+// biggest roll and key stats. Nothing in the game reads a card back — a card
 // you downloaded can never overwrite the game you are playing.
 async function downloadExport(progress) {
   const blob = await renderExportPngBlob(progress);
@@ -304,9 +304,10 @@ export default function LocalProfile({
             automatically.
           </p>
           <div className="info-box">
-            This is a local profile on this browser only—not an online account.
-            There is no password, cloud backup, or cross-device login. Clearing
-            site data removes the profile and its progress.
+            This is a local profile on this browser—not an online account. There
+            is no password and no cloud backup: a device link can carry the
+            profile to other browsers you own, and nothing is stored on a
+            server. Clearing site data removes the profile and its progress.
           </div>
           <div className="profile-actions">
             <button className="primary-button" onClick={onContinue}>
@@ -374,8 +375,8 @@ export default function LocalProfile({
           </section>
           <p className="profile-export-note">
             One-way export: a PNG card with your name, your biggest roll and
-            your account’s key stats. There is no import, so a downloaded card
-            can never overwrite the game in this browser.
+            your account’s key stats. Nothing in the game reads a card back, so
+            a downloaded file can never overwrite the game in this browser.
           </p>
           {progress && <ProfileHistory progress={progress} />}
           <div className="account-danger">

@@ -547,6 +547,81 @@ test("the old __importSave name keeps working and points at the new one", async 
   expect(await storedBalance(page)).toBe(900);
 });
 
+test("a modern picker the browser blocks falls back instead of dead-ending", async ({
+  page,
+}) => {
+  // Chrome throws a SecurityError for showOpenFilePicker() in an iframe or
+  // without a user gesture, which is exactly how the command is used from the
+  // console. The hidden file input must take over, not the error message.
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript((raw) => {
+    window.showOpenFilePicker = async () => {
+      throw new DOMException(
+        "Must be handling a user gesture to use 'showOpenFilePicker'.",
+        "SecurityError",
+      );
+    };
+    const original = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function () {
+      HTMLInputElement.prototype.click = original;
+      const data = new DataTransfer();
+      data.items.add(
+        new File([raw], "fallback-save.json", { type: "application/json" }),
+      );
+      this.files = data.files;
+      this.dispatchEvent(new Event("change"));
+    };
+  }, saveString);
+  await seedProgress(page);
+  const lines = collectConsole(page);
+
+  await page.goto("/");
+  await importAndWaitForReload(page, () => window.__importData());
+
+  expect(says(lines, "would not open its own file dialog")).toBe(true);
+  expect(says(lines, "Trying the browser's own file input")).toBe(true);
+  expect(says(lines, 'Save imported: "fallback-save.json"')).toBe(true);
+  expect(failures(lines)).toEqual([]);
+  expect(pageErrors).toEqual([]);
+  expect(await storedBalance(page)).toBe(900);
+});
+
+test("__exportSave() never claims a copy the browser refused", async ({
+  page,
+}) => {
+  // writeText() rejects asynchronously, so an un-awaited call would report
+  // success and then throw a page error. Both clipboard routes are broken
+  // here: the command must say so and print the save instead.
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: () =>
+          Promise.reject(
+            new DOMException("Write permission denied.", "NotAllowedError"),
+          ),
+      },
+      configurable: true,
+    });
+    document.execCommand = () => false;
+  });
+  await seedProgress(page);
+  const lines = collectConsole(page);
+
+  await page.goto("/");
+  const raw = await page.evaluate(() => window.__exportSave());
+  await page.waitForTimeout(300);
+
+  expect(typeof raw).toBe("string");
+  expect(JSON.parse(raw).profile.username).toBe("LuckyTester");
+  expect(says(lines, "The browser blocked the clipboard")).toBe(true);
+  expect(says(lines, "Save (copy this):")).toBe(true);
+  expect(says(lines, "Save copied to clipboard")).toBe(false);
+  expect(pageErrors).toEqual([]);
+});
+
 test("main.jsx installs the console tools and nothing else changed", () => {
   const main = read("main.jsx");
   expect(main).toContain("installConsoleSaveTools()");

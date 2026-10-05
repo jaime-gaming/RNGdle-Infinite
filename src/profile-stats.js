@@ -111,8 +111,9 @@ function formatCardEP(value = 0) {
 }
 
 // The export is a read-only PNG snapshot of the account's key information,
-// username and biggest roll. It exists to be looked at or shared — there is
-// deliberately no import, so a downloaded file can never overwrite a live game.
+// username and biggest roll. It exists to be looked at or shared — nothing in
+// the game reads a card back, so a downloaded file can never overwrite a live
+// game.
 export function exportPayload(progress = {}) {
   const stats = accountStats(progress);
   return {
@@ -264,7 +265,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     );
   }
 
-  // Hero Spotlight: Biggest Roll ("El roll más grande")
+  // Hero spotlight: the biggest roll of the account.
   const heroX = 54;
   const heroY = 182;
   const heroW = width - 108;

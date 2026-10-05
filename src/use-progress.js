@@ -2,6 +2,7 @@ import { gameNow } from "./game-clock";
 import { useEffect, useRef, useState } from "react";
 import {
   PROGRESS_KEY,
+  GUEST_ROLL_KEY,
   emptyProgress,
   parseProgress,
   applyProgress,
@@ -23,7 +24,9 @@ import {
   OFFLINE_INTERVAL,
 } from "./offline.js";
 import { broadcastSync, SYNC_EVENT } from "./sync.js";
-export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
+// Re-exported for the modules that grew up reading it from here; the key
+// itself lives beside PROGRESS_KEY so the console tools can clear it too.
+export { GUEST_ROLL_KEY };
 function load() {
   try {
     const progress = parseProgress(localStorage.getItem(PROGRESS_KEY));

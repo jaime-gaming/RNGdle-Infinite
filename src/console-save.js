@@ -11,8 +11,18 @@
 // was wrong when an import is rejected, or a one-line summary of what landed.
 // Importing replaces the current save entirely, so the command stays in the
 // developer console where a mistaken click cannot wipe an account.
+//
+// The picker degrades instead of failing: Chrome's showOpenFilePicker is used
+// when it works, and when the browser blocks it — an iframe, a missing user
+// gesture, a denied permission — the command falls back to an ordinary hidden
+// <input type="file">. Either way the import ends with a line on the console.
 
-import { PROGRESS_KEY, emptyProgress, parseProgress } from "./progress.js";
+import {
+  PROGRESS_KEY,
+  GUEST_ROLL_KEY,
+  emptyProgress,
+  parseProgress,
+} from "./progress.js";
 
 const TAG = "%c[RNGdle]";
 const GREEN = "color:#89c4a8;font-weight:700";
@@ -151,7 +161,11 @@ async function resolveImport(input) {
 
 // The modern picker (Chrome, Edge, Opera) resolves only once the user has
 // chosen or cancelled, and it tells us when the browser blocks it, so the
-// console always gets an answer.
+// console always gets an answer. A picker that is blocked is not the end of
+// the import: `pickSaveFile` then falls back to the hidden <input type="file">,
+// which is why the result distinguishes a cancelled dialog from a failed one.
+// Chrome refuses showOpenFilePicker() in an iframe or without a user gesture,
+// and that is exactly the case the fallback exists for.
 async function pickWithFileSystemAPI() {
   let handle;
   try {
@@ -163,28 +177,28 @@ async function pickWithFileSystemAPI() {
   } catch (failure) {
     if (failure?.name === "AbortError") {
       warn("No file selected — nothing was imported.");
-    } else {
-      error(
-        "The browser did not open the file picker.",
-        failure?.message ?? failure,
-      );
-      log(
-        "You can still import by passing the JSON directly: __importData(jsonText)",
-      );
+      return { settled: true, picked: null };
     }
-    return null;
+    warn(
+      "The browser would not open its own file dialog:",
+      failure?.message ?? failure,
+    );
+    return { settled: false, picked: null };
   }
   const file = await handle.getFile().catch(() => null);
   if (!file) {
     error("The chosen file could not be read.");
-    return null;
+    return { settled: true, picked: null };
   }
   const raw = await readFile(file).catch((failure) => {
     error("Could not read the file.", failure?.message ?? failure);
     return null;
   });
-  if (raw === null) return null;
-  return { raw: raw.trim(), label: fileLabel(file), kind: "file" };
+  if (raw === null) return { settled: true, picked: null };
+  return {
+    settled: true,
+    picked: { raw: raw.trim(), label: fileLabel(file), kind: "file" },
+  };
 }
 
 // Firefox and Safari have no showOpenFilePicker, so the picker is a hidden
@@ -251,10 +265,10 @@ function pickWithFileInput() {
       setTimeout(() => {
         if (settled || !document.hasFocus()) return;
         warn(
-          "The file picker did not seem to open. The browser only allows it from a real user action in the page.",
+          "The file picker did not seem to open. Browsers only open it from a real user action, and an embedded preview can block it entirely — open the game in its own tab and try again.",
         );
         log(
-          "Try again, or import without a file: __importData('{…save JSON…}')",
+          "Or import without a file: __importData('{…save JSON…}') copies the save straight from its text.",
         );
       }, 1200),
     );
@@ -262,10 +276,15 @@ function pickWithFileInput() {
   });
 }
 
-function pickSaveFile() {
+async function pickSaveFile() {
   log("Opening the file picker — choose an RNGdle .json save to import…");
   if (typeof window.showOpenFilePicker === "function") {
-    return pickWithFileSystemAPI();
+    const result = await pickWithFileSystemAPI();
+    // A chosen file, or a dialog the user deliberately dismissed, ends here.
+    // Anything else (an iframe, a missing user gesture, a blocked permission)
+    // gets the ordinary file input instead of a dead end.
+    if (result.settled) return result.picked;
+    log("Trying the browser's own file input instead…");
   }
   return pickWithFileInput();
 }
@@ -320,6 +339,12 @@ async function importData(input) {
 
   try {
     localStorage.setItem(PROGRESS_KEY, storageValue);
+    // A guest roll committed in this tab lives in sessionStorage and would be
+    // re-applied on top of the imported save. The import is the whole truth
+    // from here on, so that leftover guard goes with the old save.
+    try {
+      sessionStorage.removeItem(GUEST_ROLL_KEY);
+    } catch {}
   } catch (failure) {
     error(
       "Could not write the save to localStorage.",
@@ -335,29 +360,56 @@ async function importData(input) {
   setTimeout(() => location.reload(), 400);
 }
 
-function exportSave() {
+// The clipboard API returns a promise, so a denied permission rejects it
+// asynchronously — a plain try/catch around the call reports success and then
+// throws a page error. This awaits it, falls back to the old
+// `document.execCommand("copy")`, and only then prints the save so it can be
+// copied by hand. The promise still resolves to the raw save either way.
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {}
+  try {
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.cssText =
+      "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;";
+    document.body.appendChild(field);
+    field.select();
+    const copied = document.execCommand("copy");
+    field.remove();
+    if (copied) return true;
+  } catch {}
+  return false;
+}
+
+async function exportSave() {
   let raw;
   try {
     raw = localStorage.getItem(PROGRESS_KEY);
   } catch (failure) {
     error("Could not read localStorage.", failure.message);
-    return;
+    return undefined;
   }
   if (!raw) {
     warn("No save found in this browser.");
-    return;
+    return undefined;
   }
   try {
     // Validate before handing it out, so the user never gets a broken blob.
     parseProgress(raw);
   } catch (failure) {
     warn("The current save is corrupted.", failure.message);
-    return;
+    return undefined;
   }
-  try {
-    navigator.clipboard.writeText(raw);
+  if (await copyToClipboard(raw))
     log("Save copied to clipboard. Paste it into a file to keep it.");
-  } catch {
+  else {
+    warn(
+      "The browser blocked the clipboard. Copy the save from the line below, or run __downloadSave() instead.",
+    );
     log("Save (copy this):", raw);
   }
   return raw;
