@@ -2,7 +2,7 @@
 //
 // Open the browser console (F12) and type:
 //
-//   __importData()           — opens the picker for a raw save or v0.3 Profile JSON export
+//   __importData()           — opens the picker for a raw save or legacy Profile JSON snapshot
 //   __importData(json)       — imports a save from a JSON string or object
 //   __exportSave()           — copies the current save to the clipboard as JSON
 //   __downloadSave()         — downloads the current save as a .json file
@@ -73,28 +73,56 @@ function describeSave(parsed) {
   return bits.join(", ");
 }
 
-// The v0.3 Profile page downloaded a JSON account snapshot, not the raw save
-// stored by the game. Keep that existing export usable by rebuilding the full
-// v1 shape around the fields it contains. The missing transient fields (such as
-// an in-flight roll or offline batch) cannot be recovered from that snapshot.
+// Older Profile pages downloaded a JSON snapshot, not the raw save stored by
+// the game. Those exports used a top-level envelope (app/saveVersion/stats/
+// profile/save), and some builds wrote saveVersion 0 plus empty placeholders
+// for a guest profile. Detect the envelope by its shape, not its optional app
+// labels, then rebuild the current v1 save around the data it contains. The
+// missing transient fields (such as an in-flight roll or offline batch) cannot
+// be recovered from a profile snapshot.
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isProfileSnapshot(source) {
+  return (
+    isRecord(source) &&
+    isRecord(source.save) &&
+    isRecord(source.stats) &&
+    [0, 1].includes(source.saveVersion)
+  );
+}
+
+function snapshotProfile(value) {
+  if (value == null) return null;
+  if (
+    isRecord(value) &&
+    !value.id &&
+    !value.username &&
+    (value.createdAt == null || value.createdAt === 0) &&
+    !value.avatar
+  )
+    return null;
+  return value;
+}
+
 function parseImportedSave(raw) {
   const source = JSON.parse(raw);
-  const isV03Export =
-    source?.app === "RNGdle Infinite" &&
-    source.appVersion === "v0.3" &&
-    source.saveVersion === 1 &&
-    source.save &&
-    typeof source.save === "object" &&
-    !Array.isArray(source.save);
+  if (!isProfileSnapshot(source))
+    return { parsed: parseProgress(raw), storageValue: raw };
 
-  if (!isV03Export) return { parsed: parseProgress(raw), storageValue: raw };
-
+  const snapshotVersion =
+    typeof source.appVersion === "string" && source.appVersion.trim()
+      ? source.appVersion.trim()
+      : `saveVersion ${source.saveVersion}`;
   const migrated = parseProgress(
     JSON.stringify({
       ...emptyProgress(),
       ...source.save,
-      version: source.saveVersion,
-      profile: source.profile ?? null,
+      // saveVersion belongs to the old export envelope, not this app's current
+      // local-storage format. Every migrated snapshot is normalized to v1.
+      version: 1,
+      profile: snapshotProfile(source.profile),
       // The snapshot omitted receipts. Rebuild them from its validated history
       // below so an imported roll cannot be credited a second time.
       receipts: [],
@@ -109,6 +137,7 @@ function parseImportedSave(raw) {
     parsed: migrated,
     storageValue: JSON.stringify(migrated),
     legacySnapshot: true,
+    snapshotVersion,
   };
 }
 
@@ -301,9 +330,15 @@ async function importData(input) {
 
   let parsed,
     storageValue,
-    legacySnapshot = false;
+    legacySnapshot = false,
+    snapshotVersion = "";
   try {
-    ({ parsed, storageValue, legacySnapshot = false } = parseImportedSave(raw));
+    ({
+      parsed,
+      storageValue,
+      legacySnapshot = false,
+      snapshotVersion = "",
+    } = parseImportedSave(raw));
   } catch (failure) {
     error(`Import failed: ${label} is not a valid RNGdle save.`);
     if (failure instanceof SyntaxError) {
@@ -320,7 +355,7 @@ async function importData(input) {
     } else {
       warn("Reason:", failure?.message ?? failure);
       log(
-        "Choose a raw save from __downloadSave() or the v0.3 Profile JSON export. Hand edits usually break the format.",
+        "Choose a raw save from __downloadSave() or a legacy Profile JSON snapshot. Hand edits usually break the format.",
       );
     }
     return;
@@ -328,7 +363,7 @@ async function importData(input) {
 
   if (legacySnapshot) {
     warn(
-      "This v0.3 JSON is an account snapshot, not a complete save. Pending rolls, cooldowns, offline rewards and other fields absent from the export cannot be recovered.",
+      `This ${snapshotVersion} JSON is an account snapshot, not a complete save. Pending rolls, cooldowns, offline rewards and other fields absent from the export cannot be recovered.`,
     );
   }
   if (!parsed.profile) {

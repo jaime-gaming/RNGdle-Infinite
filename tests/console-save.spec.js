@@ -75,8 +75,60 @@ const v03ExportString = JSON.stringify({
   },
 });
 
-// v0.1–v0.3 did not all have the same local-save shape. These are the raw v1
-// saves from those releases; only v0.3 had the separate downloadable snapshot.
+// This legacy Profile JSON shape had a saveVersion 0 envelope. The fields are
+// present, but a new/guest account exports blank identity strings and zeros.
+const emptyV0ProfileExportString = JSON.stringify({
+  app: "",
+  saveVersion: 0,
+  appVersion: "",
+  exportedAt: "",
+  profile: { id: "", username: "", createdAt: 0 },
+  stats: {
+    rolls: 0,
+    onlineRolls: 0,
+    offlineRolls: 0,
+    favoriteTier: "",
+    bestRoll: { number: 0, ep: 0, tier: "", at: 0 },
+    totalEarned: 0,
+    balance: 0,
+    spent: 0,
+    uniqueBadges: 0,
+    badgesNow: 0,
+    badgesTotal: 0,
+    companions: 0,
+    companionsFound: 0,
+    companionsTotal: 0,
+    skills: 0,
+    skillsTotal: 0,
+    skillSlots: 0,
+    skillsUsed: 0,
+    boostsUsed: 0,
+    rebirths: 0,
+    ultraRebirths: 0,
+    firstEventAt: 0,
+    lastEventAt: 0,
+  },
+  save: {
+    balance: 0,
+    totalEarned: 0,
+    discovered: [],
+    owned: [],
+    equipped: "",
+    pets: [],
+    activePet: "",
+    skills: [],
+    equippedSkills: [],
+    skillCharge: {},
+    flywheelCharge: 0,
+    rebirths: 0,
+    ultraRebirths: 0,
+    goalId: null,
+    history: [],
+  },
+});
+
+// v0.1–v0.3 did not all have the same local-save shape. These raw saves all
+// use the app's v1 local-storage marker despite their release-specific fields.
 const v01RawSave = {
   version: 1,
   profile: testProfile,
@@ -300,6 +352,61 @@ test("imports the valid v0.3 JSON profile export as a partial save", async ({
   );
   expect(accountStats(imported).companionsFound).toBe(1);
   expect(accountStats(imported).spent).toBe(160000);
+});
+
+test("imports the blank saveVersion 0 Profile JSON template", async ({
+  page,
+}) => {
+  await seedProgress(page, { balance: 40, totalEarned: 40 });
+  const lines = collectConsole(page);
+
+  await page.goto("/");
+  await importAndWaitForReload(
+    page,
+    (raw) => window.__importData(raw),
+    emptyV0ProfileExportString,
+  );
+
+  const imported = parseProgress(
+    await page.evaluate((key) => localStorage.getItem(key), PROGRESS_KEY),
+  );
+  expect(says(lines, "This saveVersion 0 JSON is an account snapshot")).toBe(
+    true,
+  );
+  expect(says(lines, "Save imported: the JSON text you passed")).toBe(true);
+  expect(failures(lines)).toEqual([]);
+  expect(imported).toEqual(emptyProgress());
+});
+
+test("migrates populated saveVersion 0 snapshots with blank app labels", async ({
+  page,
+}) => {
+  const snapshot = JSON.parse(emptyV0ProfileExportString);
+  snapshot.save.balance = 75;
+  snapshot.save.totalEarned = 125;
+  snapshot.save.rebirths = 1;
+  await seedProgress(page, { balance: 40, totalEarned: 40 });
+  const lines = collectConsole(page);
+
+  await page.goto("/");
+  await importAndWaitForReload(
+    page,
+    (raw) => window.__importData(raw),
+    JSON.stringify(snapshot),
+  );
+
+  const imported = parseProgress(
+    await page.evaluate((key) => localStorage.getItem(key), PROGRESS_KEY),
+  );
+  expect(imported).toMatchObject({
+    version: 1,
+    profile: null,
+    balance: 75,
+    totalEarned: 125,
+    rebirths: 1,
+  });
+  expect(says(lines, "Save imported: the JSON text you passed")).toBe(true);
+  expect(failures(lines)).toEqual([]);
 });
 
 test("imports raw local saves from v0.1, v0.2 and v0.3", async ({ page }) => {

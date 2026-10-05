@@ -430,16 +430,17 @@ commands live in the browser console on purpose — importing **replaces the
 whole save**, so it should take a deliberate act, not a stray click:
 
 ```js
-__importData(); // opens the file picker (raw save or a v0.3 Profile JSON export)
+__importData(); // opens the file picker (raw save or a legacy Profile JSON snapshot)
 __importData(jsonText); // imports a save from a JSON string, File/Blob or object
 __exportSave(); // copies the current save to the clipboard as JSON
 __downloadSave(); // downloads the current save as rngdle-<name>-<date>.json
 ```
 
-Imports are validated before anything is written: a save from v0.1, v0.2 or
-v0.3 (raw or the v0.3 profile snapshot) is migrated, anything unreadable is
-rejected with the exact reason on the console, and the current save is left
-untouched when a file is refused. When the browser blocks its own file dialog
+Imports are validated before anything is written: raw saves from v0.1–v0.3
+and the older Profile JSON snapshot envelope (including `saveVersion: 0` files
+with an empty profile template) are migrated, anything unreadable is rejected
+with the exact reason on the console, and the current save is left untouched
+when a file is refused. When the browser blocks its own file dialog
 — an iframe, a missing user gesture — the command falls back to an ordinary
 file input instead of dead-ending. `__exportSave()` never claims a copy the
 browser refused: if the clipboard is blocked it says so and prints the save.
