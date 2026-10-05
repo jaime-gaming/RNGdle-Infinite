@@ -357,7 +357,7 @@ test("sign-up validates the name live and states what is and is not kept", () =>
   expect(source).toContain("Not carried over:");
   expect(source).toContain("Saved from here on:");
   // The same validator guards the reducer, so UI and rules cannot disagree.
-  for (const good of ["abc", "Lucky_Otter-12", "ñandú99"])
+  for (const good of ["abc", "Lucky_Otter-12", "Zoë99"])
     expect(validUsername(good)).toBe(true);
   for (const bad of ["ab", "", "a".repeat(21), "has space", "bad!"])
     expect(validUsername(bad)).toBe(false);

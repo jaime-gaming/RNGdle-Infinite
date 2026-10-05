@@ -93,7 +93,8 @@ export function syncStatus() {
     savedAt,
     pending,
     dirtyAt,
-    online: typeof navigator === "undefined" ? true : navigator.onLine !== false,
+    online:
+      typeof navigator === "undefined" ? true : navigator.onLine !== false,
   };
 }
 
@@ -268,16 +269,25 @@ export function unlinkDevices() {
 }
 
 // ---- Transport orchestration ----------------------------------------------
+// Choosing a transport starts with one await (the relay health check), so a
+// link created, replaced or unlinked while that check is in flight must not
+// leave the old choice behind: every transport is opened for the epoch it was
+// started in, and a newer teardown makes that epoch stale.
+let linkEpoch = 0;
+
 async function openLink() {
   teardown();
+  const epoch = linkEpoch;
   if (!room || !key) return;
   setStatus("connecting", "Connecting…");
   const hasRelay = await relayAvailable();
+  if (epoch !== linkEpoch || !room || !key) return;
   if (hasRelay) openRelay();
   else openPeer();
 }
 
 function teardown() {
+  linkEpoch += 1;
   clearInterval(heartbeatTimer);
   heartbeatTimer = 0;
   clearTimeout(reconnectTimer);
@@ -332,7 +342,12 @@ function openPeerSlot(slot) {
     return;
   }
   peer.on("open", () => {
-    setStatus("waiting", everLive ? "Waiting for the other device…" : "Waiting for another device to open the link…");
+    setStatus(
+      "waiting",
+      everLive
+        ? "Waiting for the other device…"
+        : "Waiting for another device to open the link…",
+    );
     startHeartbeat();
     // We just came online: try reaching the other side right away.
     connectToPeer();
@@ -358,14 +373,23 @@ function openPeerSlot(slot) {
       if (status === "connecting")
         setStatus(
           "waiting",
-          everLive ? "Waiting for the other device…" : "Waiting for another device to open the link…",
+          everLive
+            ? "Waiting for the other device…"
+            : "Waiting for another device to open the link…",
         );
       return;
     }
-    if (type === "network" || type === "server-error" || type === "socket-closed") {
+    if (
+      type === "network" ||
+      type === "server-error" ||
+      type === "socket-closed"
+    ) {
+      // The public signaling broker could not be reached. Retrying happens on
+      // its own (the heartbeat reconnects), and the hand-link code below needs
+      // no broker at all — so say what to do instead of only what failed.
       setStatus(
         "error",
-        "The peer broker is unreachable. Check your connection and try again.",
+        "The public peer broker is unreachable. Retrying… you can transfer the account by hand now.",
       );
       return;
     }
@@ -420,7 +444,9 @@ function attachConnection(connection) {
     peers = peer && !peer.destroyed ? 1 : 0;
     setStatus(
       "waiting",
-      everLive ? "Waiting for the other device…" : "Waiting for another device to open the link…",
+      everLive
+        ? "Waiting for the other device…"
+        : "Waiting for another device to open the link…",
     );
   });
   connection.on("error", () => {
@@ -540,7 +566,9 @@ function openRelay() {
     `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   let stream;
   try {
-    stream = new EventSource(syncUrl("stream", { room, key, session: relaySession }));
+    stream = new EventSource(
+      syncUrl("stream", { room, key, session: relaySession }),
+    );
   } catch {
     // Relay failed to open — fall back to PeerJS.
     openPeer();
@@ -569,7 +597,8 @@ function openRelay() {
         return;
       }
       relayApplyLatest(message.latest, () => {
-        if (!message.latest && currentProfile()) void relayPushState(currentSave());
+        if (!message.latest && currentProfile())
+          void relayPushState(currentSave());
       });
     } else if (message.type === "state") relayApplyLatest(message.payload);
     else if (message.type === "count") updateRelayCount(message.count);
@@ -593,7 +622,9 @@ function updateRelayCount(count) {
   } else if (room)
     setStatus(
       "waiting",
-      everLive ? "Waiting for the other device…" : "Waiting for another device to open the link…",
+      everLive
+        ? "Waiting for the other device…"
+        : "Waiting for another device to open the link…",
     );
 }
 

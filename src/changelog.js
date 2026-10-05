@@ -11,7 +11,7 @@ export const CHANGELOG = [
       "the shop hides what you cannot buy yet, and every aura family has its three-look banner, its own gradient, type and page.",
       "nine skills wait in the stall three at a time, and one hand-drawn icon set covers the shelf and the corner rack.",
       "companions are a slideshow from one cage: each friend has its own colour and skill, and waddles or bobs when it changes your number.",
-      "the device link survives either device being closed: the room is written to the relay's disk, and its technical page sits in Settings.",
+      "the device link page states the real transport, where the room lives and what a relay can and cannot keep.",
       "your account wears a logo you upload, squared and shrunk into the save and carried to the other device by that same link.",
       "ultra-rebirths add exclusives and a screen-filling ceremony, and every purchase now celebrates on the spot.",
     ],

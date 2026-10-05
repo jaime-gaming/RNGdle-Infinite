@@ -3,7 +3,11 @@ import { gameNow } from "../game-clock";
 import RollProgress from "./RollProgress";
 import GoalRecap from "./GoalRecap";
 import CooldownFill from "./CooldownFill";
-import { parseCooldownWindow, displayedCooldownSeconds } from "../cooldown.js";
+import {
+  cooldownLabel,
+  displayedCooldownSeconds,
+  parseCooldownWindow,
+} from "../cooldown.js";
 import SkillBar from "./SkillBar";
 import PetParade from "./PetParade";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
@@ -301,13 +305,16 @@ export default function RollExperience({
     });
     return list;
   }, [result, bonusParts, creditedEP]);
+  const cooldownDeadline = Math.max(session.cooldownUntil, localCooldownUntil);
   const cooldownWindow =
-    session.cooldownWindow ??
-    parseCooldownWindow(
-      null,
-      Math.max(session.cooldownUntil, localCooldownUntil),
-      run,
-    );
+    session.cooldownWindow ?? parseCooldownWindow(null, cooldownDeadline, run);
+  // The word in front of the countdown always names the wait that number
+  // actually is: the cooldown while the reveal still holds the roll back, the
+  // next roll once the cooldown itself is running, and the rest of the reveal
+  // when a boost or a waive skill removed the cooldown entirely.
+  const waitWord = cooldown
+    ? cooldownLabel(cooldownWindow, cooldownDeadline, gameNow())
+    : "REVEAL IN";
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
   // A draw skill took more than one number: show them all, then keep the best.
@@ -637,7 +644,7 @@ export default function RollExperience({
               : drawing
                 ? "DRAWING…"
                 : cooldown || reserving
-                  ? `NEXT ROLL IN ${formatDuration(cooldown || reservedSeconds)}`
+                  ? `${waitWord} ${formatDuration(cooldown || reservedSeconds)}`
                   : error
                     ? "RETRY & ROLL"
                     : "GENERATE"}
@@ -805,7 +812,7 @@ export default function RollExperience({
                         "REVEALING YOUR ROLL"
                       ) : cooldown || reserving ? (
                         <>
-                          NEXT ROLL IN{" "}
+                          {waitWord}{" "}
                           <b>{formatDuration(cooldown || reservedSeconds)}</b>
                         </>
                       ) : awaitingSettlement ? (
@@ -841,7 +848,7 @@ export default function RollExperience({
                   "DRAWING…"
                 ) : cooldown ? (
                   <>
-                    <Clock3 size={18} /> NEXT ROLL IN {formatDuration(cooldown)}
+                    <Clock3 size={18} /> {waitWord} {formatDuration(cooldown)}
                     <CooldownFill
                       window={cooldownWindow}
                       reducedMotion={reducedMotion}
@@ -849,7 +856,7 @@ export default function RollExperience({
                   </>
                 ) : reserving ? (
                   <>
-                    <Clock3 size={18} /> NEXT ROLL IN{" "}
+                    <Clock3 size={18} /> {waitWord}{" "}
                     {formatDuration(reservedSeconds)}
                   </>
                 ) : awaitingSettlement ? (

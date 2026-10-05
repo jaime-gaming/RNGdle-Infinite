@@ -51,6 +51,11 @@ import {
 import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
+// Guests have no saved account, so the one thing worth protecting — the roll
+// they already committed and its deadline — lives in sessionStorage under this
+// key for the life of the tab. It is also cleared whenever a save is imported,
+// so a stale guest roll can never ride along with the imported one.
+export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
 // A rack holds at most five skills, so four saved racks is a full set: one for
 // each thing a player might be doing, and no room to hoard.
 export const LOADOUT_LIMIT = 4;

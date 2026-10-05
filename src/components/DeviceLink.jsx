@@ -122,10 +122,11 @@ export function DeviceLinkSummary({ progress, navigate }) {
         <Link2 size={16} aria-hidden="true" /> Link devices
       </h2>
       <p className="settings-group-note">
-        One link joins two browsers to this account. Saves travel
-        browser-to-browser through an encrypted WebRTC channel — no database,
-        no account anywhere — and either device may stay closed while the
-        other plays.
+        Saves move between your own devices over an encrypted WebRTC channel — a
+        free public broker handles only the initial handshake — or through a
+        relay you run yourself when one answers. Devices catch up as soon as
+        they can see each other; a relay with a store keeps the room while both
+        are closed.
       </p>
       <div className="setting-row">
         <div className="setting-copy">
@@ -174,7 +175,8 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
 
   // The relay health check is only meaningful when a relay exists. On GitHub
   // Pages or any static host there is none, and the link uses PeerJS instead
-  // — that is the happy path, not an error.
+  // — that is the happy path, not an error, so the details state it plainly
+  // instead of dressing it up as a failure.
   useEffect(() => {
     let live = true;
     fetchRelayHealth()
@@ -184,8 +186,10 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
           setHealthError("");
         }
       })
-      .catch(() =>
-        live && setHealthError("No relay — using browser-to-browser P2P."),
+      .catch(
+        () =>
+          live &&
+          setHealthError("The relay did not answer. P2P is in use instead."),
       );
     return () => {
       live = false;
@@ -273,14 +277,39 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     );
   }
 
+  // What the live transport actually is, and where the room is kept. A relay
+  // that writes rooms to disk survives both devices being closed; one that
+  // keeps them in memory only hands the newest save to whoever is listening
+  // right now. Neither case is an error, so neither is worded like one.
   const transport = health
-    ? health.store === "disk"
-      ? `Relay on disk at ${health.storeDir}`
-      : "Relay in memory"
+    ? "Relay (HTTP)"
     : "Browser-to-browser (P2P via WebRTC)";
+  const store = health
+    ? health.store === "disk"
+      ? health.storeLabel
+        ? `On disk (${health.storeLabel})`
+        : "On disk"
+      : "In memory only"
+    : "—";
+  // The note has to describe the transport that actually answered, including
+  // what its store can and cannot do: a memory-only relay hands the newest
+  // save to whoever is listening, but it does not keep a room once everybody
+  // has left, and the page must not promise otherwise.
+  const note = !health
+    ? "This deployment has no relay of its own, so saves travel browser-to-browser through WebRTC, with a free public broker handling only the initial handshake. Both devices therefore have to be open at the same time at least once. Treat the link like a password: whoever holds it plays this account."
+    : health.store === "disk"
+      ? "The relay above keeps rooms on its own disk, so either device may be closed and catch up later, and the newer save wins when both played apart. Treat the link like a password: whoever holds it plays this account."
+      : "The relay above keeps rooms in memory: it is the fastest path while a device is listening, and it hands over the newest save the moment the other side opens the link — but it forgets a room once nobody is listening. Run your own relay with a store to keep a room alive while both devices are closed. Treat the link like a password: whoever holds it plays this account.";
 
   const details = [
     ["Transport", transport],
+    [
+      "Relay",
+      health
+        ? relayEndpoint() || "This device's own address"
+        : healthError || "None — P2P in use",
+    ],
+    ["Store", store],
     ["Room", state.room || "—"],
     ["This device", state.device || "—"],
     ["Devices connected", linked ? String(state.peers || 1) : "—"],
@@ -300,12 +329,13 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
   return (
     <section className="device-link" aria-label="Device link settings">
       <p className="device-link-lede">
-        Two browsers, one account, no database. The link opens an encrypted
-        WebRTC channel between the two browsers — saves travel directly, with
-        a free public broker handling the initial handshake. Either device may
-        be closed for as long as you like: whichever one comes back is handed
-        everything that happened, and when both played apart the newer save
-        wins.
+        Two browsers, one account, no database. The link moves saves between
+        your own devices: over an encrypted WebRTC channel, with a free public
+        broker handling only the initial handshake, or through a relay you run
+        yourself when one answers. Whichever device comes back catches up as
+        soon as the two can see each other, and when both played apart the newer
+        save wins — with a relay that keeps a store, a returning device is
+        handed everything it missed even if the other one is closed.
       </p>
 
       <div className="setting-row">
@@ -402,22 +432,70 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
           </div>
         ))}
       </dl>
-      <p className="device-link-note">
-        The link works on any static host (GitHub Pages included) — saves
-        travel browser-to-browser through WebRTC, using a free public broker
-        only for the initial handshake. Treat the link like a password:
-        whoever holds it plays this account.
+      <p className="device-link-note">{note}</p>
+
+      {state.status === "error" && (
+        <p className="sync-note" data-testid="sync-trouble" role="status">
+          The link is not connected right now. You can retry from here, or use
+          “No link? Transfer by hand” below — a code needs no connection at all.
+        </p>
+      )}
+
+      <h3 className="device-link-heading">
+        <Server size={15} aria-hidden="true" /> Relay
+      </h3>
+      <p className="sync-hand-note">
+        The built-in P2P transport works everywhere without any server. If you
+        run your own relay ({`npm run relay`}), point this page at it here — the
+        relay is preferred over P2P when it answers, keeps each room on its own
+        store so a closed device can catch up later, and is faster on a local
+        network. Leave the field on this site&apos;s own address to let the game
+        decide.
       </p>
+      <div className="setting-row sync-relay-row">
+        <div className="sync-relay-controls">
+          <input
+            id="setting-relay"
+            className="sync-relay-field"
+            data-testid="relay-field"
+            value={relay}
+            spellCheck="false"
+            aria-label="Relay address"
+            placeholder="https://relay.example:8787"
+            onChange={(event) => setRelay(event.target.value)}
+          />
+          <button
+            type="button"
+            className="secondary-button"
+            data-testid="relay-save"
+            onClick={saveRelay}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            data-testid="relay-reset"
+            onClick={() => {
+              setRelayEndpoint("");
+              setRelay(relayEndpoint());
+              notify?.("Relay cleared — using browser-to-browser P2P.");
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
 
       <details className="sync-hand">
         <summary>
           <Handshake size={14} aria-hidden="true" /> No link? Transfer by hand
         </summary>
         <p className="sync-hand-note">
-          A link needs both browsers online at some point; a code does not.
-          Copy this account&apos;s code and adopt it on the other device — no
-          connection needed, just the save itself in one blob of text. Your
-          logo travels inside it too.
+          A link needs both browsers online at some point; a code does not. Copy
+          this account&apos;s code and adopt it on the other device — no
+          connection needed, just the save itself in one blob of text. Your logo
+          travels inside it too.
         </p>
         <div className="sync-hand-row">
           <button
@@ -449,52 +527,6 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
           value={code}
           onChange={(event) => setCode(event.target.value)}
         />
-      </details>
-
-      <details className="sync-hand">
-        <summary>
-          <Server size={14} aria-hidden="true" /> Advanced: custom relay
-        </summary>
-        <p className="sync-hand-note">
-          The built-in P2P transport works everywhere without any server. If
-          you run your own relay ({`npm run relay`}), point this page at it
-          here — the relay will be preferred over P2P when reachable, giving
-          faster sync on the local network.
-        </p>
-        <div className="setting-row sync-relay-row">
-          <div className="sync-relay-controls">
-            <input
-              id="setting-relay"
-              className="sync-relay-field"
-              data-testid="relay-field"
-              value={relay}
-              spellCheck="false"
-              aria-label="Relay address"
-              placeholder="https://relay.example:8787"
-              onChange={(event) => setRelay(event.target.value)}
-            />
-            <button
-              type="button"
-              className="secondary-button"
-              data-testid="relay-save"
-              onClick={saveRelay}
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              data-testid="relay-reset"
-              onClick={() => {
-                setRelayEndpoint("");
-                setRelay(relayEndpoint());
-                notify?.("Relay cleared — using browser-to-browser P2P.");
-              }}
-            >
-              Reset
-            </button>
-          </div>
-        </div>
       </details>
 
       <div className="device-link-footer">

@@ -63,7 +63,7 @@ test("registered refresh resumes the committed number and never resets its deadl
   await page.reload();
   expect((await saved(page)).balance).toBe(4663);
   await expect(
-    page.getByRole("button", { name: /NEXT ROLL IN/ }),
+    page.getByRole("button", { name: /COOLDOWN IN|NEXT ROLL IN/ }),
   ).toBeDisabled();
 });
 
@@ -85,7 +85,7 @@ test("guest refresh cannot discard a number or cooldown, but does not persist th
   expect((await guest(page)).cooldownUntil).toBe(before.cooldownUntil);
   await page.reload();
   await expect(
-    page.getByRole("button", { name: /NEXT ROLL IN/ }),
+    page.getByRole("button", { name: /COOLDOWN IN|NEXT ROLL IN/ }),
   ).toBeDisabled();
   await nav(page, "History");
   await expect(page.locator(".activity-event")).toHaveCount(0);

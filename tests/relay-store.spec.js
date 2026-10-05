@@ -83,6 +83,24 @@ async function hello(base, { room, key }) {
   throw new Error("The relay never said hello.");
 }
 
+test("a disk store is announced by name, never by absolute path", async () => {
+  const store = await mkdtemp(path.join(tmpdir(), "rngdle-relay-"));
+  try {
+    const host = await startRelay({ storeDir: store });
+    const health = await (await fetch(`${host.base}/health`)).json();
+    expect(health.ok).toBe(true);
+    expect(health.store).toBe("disk");
+    // The label is the store's own name, and nothing in the payload hints at
+    // where the machine keeps its files.
+    expect(health.storeLabel).toBe(path.basename(store));
+    expect(JSON.stringify(health)).not.toContain(store);
+    expect(JSON.stringify(health)).not.toMatch(/\/(home|Users|var|tmp|root)\//);
+    await host.close();
+  } finally {
+    await rm(store, { recursive: true, force: true });
+  }
+});
+
 test("a room outlives the relay: a device that returns later is caught up", async () => {
   const store = await mkdtemp(path.join(tmpdir(), "rngdle-relay-"));
   try {
@@ -211,7 +229,15 @@ test("with no store the relay is a memory-only room, and health says so", async 
   try {
     expect(host.relay.storeDir).toBe(null);
     const health = await (await fetch(`${host.base}/health`)).json();
-    expect(health).toMatchObject({ ok: true, store: "memory", storeDir: null });
+    expect(health).toMatchObject({
+      ok: true,
+      store: "memory",
+      storeLabel: null,
+    });
+    // Health is answered to any browser that opens the game, so it must never
+    // describe the machine's directory layout: no absolute path anywhere.
+    expect(Object.keys(health)).not.toContain("storeDir");
+    expect(JSON.stringify(health)).not.toMatch(/\/(home|Users|var|tmp|root)\//);
     const room = await create(host.base);
     const pushed = await push(host.base, room, {
       state: JSON.stringify({ n: 1 }),

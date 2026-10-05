@@ -14,7 +14,7 @@ test("home, random roll, cooldown, and badge breakdown", async ({ page }) => {
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(
-    page.getByRole("button", { name: /NEXT ROLL IN/ }),
+    page.getByRole("button", { name: /COOLDOWN IN|NEXT ROLL IN/ }),
   ).toBeDisabled();
   await expect(page.locator(".badge-summary")).toContainText("badges earned");
   await expect(
