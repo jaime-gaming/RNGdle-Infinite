@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import {
   PROGRESS_KEY,
   GUEST_ROLL_KEY,
+  PRE_REPAIR_BACKUP_KEY,
   emptyProgress,
   parseProgress,
+  parseAndRepairProgress,
   applyProgress,
   parsePending,
   recoverUnsavedRolls,
@@ -24,35 +26,60 @@ import {
   OFFLINE_INTERVAL,
 } from "./offline.js";
 import { broadcastSync, SYNC_EVENT } from "./sync.js";
-// Re-exported for the modules that grew up reading it from here; the key
-// itself lives beside PROGRESS_KEY so the console tools can clear it too.
+// Re-exported for the modules that grew up reading it from here.
 export { GUEST_ROLL_KEY };
+// A repaired save says what was fixed, briefly: the first three notes inline,
+// the rest counted. The full list also goes to the console for support.
+function repairWarning(repairs) {
+  const shown = repairs.slice(0, 3).join(" ");
+  const suffix =
+    repairs.length > 3 ? ` Plus ${repairs.length - 3} more fixes.` : "";
+  return `Your save was repaired — nothing was reset. ${shown}${suffix}`;
+}
 function load() {
   try {
-    const progress = parseProgress(localStorage.getItem(PROGRESS_KEY));
+    const stored = localStorage.getItem(PROGRESS_KEY);
+    const { progress, repairs } = parseAndRepairProgress(stored);
     if (!progress.profile) {
-      const guard = JSON.parse(
-        sessionStorage.getItem(GUEST_ROLL_KEY) || "null",
-      );
-      if (guard) {
-        progress.pendingRoll = parsePending(guard.pendingRoll);
-        if (
-          !Number.isSafeInteger(guard.cooldownUntil) ||
-          guard.cooldownUntil < 0
-        )
-          throw new Error("Invalid roll guard");
-        progress.cooldownUntil = Math.max(
-          progress.cooldownUntil,
-          guard.cooldownUntil,
+      // A stale guest guard is ephemeral session data: when it cannot be
+      // read it is dropped instead of failing the whole load.
+      try {
+        const guard = JSON.parse(
+          sessionStorage.getItem(GUEST_ROLL_KEY) || "null",
         );
-        progress.cooldownWindow = parseCooldownWindow(
-          guard.cooldownWindow,
-          progress.cooldownUntil,
-          progress.pendingRoll,
-        );
+        if (guard) {
+          progress.pendingRoll = parsePending(guard.pendingRoll);
+          if (
+            !Number.isSafeInteger(guard.cooldownUntil) ||
+            guard.cooldownUntil < 0
+          )
+            throw new Error("Invalid roll guard");
+          progress.cooldownUntil = Math.max(
+            progress.cooldownUntil,
+            guard.cooldownUntil,
+          );
+          progress.cooldownWindow = parseCooldownWindow(
+            guard.cooldownWindow,
+            progress.cooldownUntil,
+            progress.pendingRoll,
+          );
+        }
+      } catch {
+        progress.pendingRoll = null;
       }
     }
-    return { progress, warning: "" };
+    if (repairs.length) {
+      console.info("[RNGdle] save repaired:", repairs);
+      try {
+        // Heal the file itself, keeping the exact pre-repair bytes aside so
+        // a bad repair can always be undone by hand.
+        localStorage.setItem(PRE_REPAIR_BACKUP_KEY, stored);
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+      } catch {
+        // Storage unwritable: the repaired save still runs in memory.
+      }
+    }
+    return { progress, warning: repairs.length ? repairWarning(repairs) : "" };
   } catch {
     return {
       progress: emptyProgress(),

@@ -23,7 +23,6 @@ account, works on desktop and mobile.
 - [Your profile, your data](#your-profile-your-data)
 - [Fairness](#fairness)
 - [Saving, privacy and guests](#saving-privacy-and-guests)
-- [Console save tools](#console-save-tools-optional-no-button-anywhere)
 - [Settings, themes and accessibility](#settings-themes-and-accessibility)
 - [Questions people actually ask](#questions-people-actually-ask)
 - [Credits](#credits)
@@ -114,11 +113,13 @@ complete online rolls. When it is full the skill is _armed_, and **the next roll
 fires it**. Hover, focus or use a screen reader to read the name, the exact
 effect and the charge state.
 
-Two things in that corner keep the arithmetic out of your head: every circle in
-the Skill Row (equipped skills, companion skills, and passive EP modifiers from
-companions, rebirths, ultra-rebirths and surplus) shows **what it adds** ("×2
-banked EP", "+5% EP", "2 draws, best kept"), and the **Σ button** opens the
-total — every equipped and companion skill with its charge, the banked-EP
+Two things in that corner keep the arithmetic out of your head: related circles
+ride together in **stacks** — the pet bonus with its signature skill, the
+rebirth bonuses with their ladder skills — that fan out on hover, focus or tap
+while shop skills stand alone, and every circle only shows **what it adds**
+("×2 banked EP", "+5% EP", "2 draws, best kept") while hovered or focused. The
+**Σ button** opens the total — every equipped and companion skill with its
+charge, the banked-EP
 multiplier with each part named (companion, rebirth, ultra-rebirth, surplus and
 wallet skills), the draw plan for the next roll, and whether it is
 cooldown-free. That panel is the only place the total is written out, so it is
@@ -136,7 +137,8 @@ shop's stock. A timer on the shelf says when it refreshes, and the skills that
 are out of the rotation stay listed, dimmed under a **green restock aura** with
 the countdown on the button. Thirteen belong to companions (each companion teaches one
 skill that exists nowhere else and only works while that companion is worn),
-and six are handed out by the rebirth ladder — one per rung.
+and six are handed out by the rebirth ladder — one per rung. Both earned kinds
+are equipped from the Skills shelf, like shop skills.
 
 | Skill             |         Price | Charges | Effect                                                   |
 | ----------------- | ------------: | ------: | -------------------------------------------------------- |
@@ -166,8 +168,10 @@ what they would have earned and then dropped, so a best-of skill never quietly
 banks two rolls at once. The activity feed keeps the receipt — _best of 3
 draws_ — next to the number that was kept.
 
-The rack starts with **two slots**. Skill Bay I (**1,000,000 EP**) widens it to
-three, Skill Bay II (**4,000,000 EP**) to four. Equipping, unequipping and
+The rack starts with **two slots**, for **shop skills only**. Rebirth rewards
+and companion signatures **ride free** beside the rack: equip every one you
+have earned and the slots stay open. Skill Bay I (**1,000,000 EP**) widens it
+to three, Skill Bay II (**4,000,000 EP**) to four. Equipping, unequipping and
 swapping skills is **free** — the bays are the purchase, the loadout is not.
 The Skills shelf also keeps **four saved racks**: save the set you have equipped
 and put the whole rack back with one click. They belong to the run, so a rebirth
@@ -200,14 +204,17 @@ so on, with its own address to bookmark or share.
 
 Above the shelves sit three **featured picks**, chosen from your tracked goal and
 your wallet — your goal, something within reach, a cosmetic — and each one is
-only a doorway to the shelf that sells it, with a meter against its price. A
-shelf keeps its own **sticky bar**: search, the same filters and a button back to
-all shelves. Filters only narrow what is drawn (`22 of 56 on this shelf`), and a
-description is held to three lines so a shelf reads as a list, not a wall of
-text. Every shelf reads **from the cheapest item upwards**, and the Skills shelf
-adds its own twist: a rotating stall that only ever stocks three shop skills at
-a time, with a countdown to the next trio. The old `#shop` bookmark still works,
-and `#auras` lands on that shelf.
+only a doorway to the shelf that sells it, with a meter against its price. The
+**savings goal** banner lives in the shop too: what you are tracking (or what
+the shop recommends), how the wallet is doing against it, and the shelf that
+sells it — **click any item on a shelf to track it**. A shelf keeps its own
+**sticky bar**: a button back to all shelves and the count of what is on it.
+Every shelf shows everything it has, and a description is held to three lines
+so a shelf reads as a list, not a wall of text. Every shelf reads **from the
+cheapest item upwards**, and the Skills shelf adds its own twist: a rotating
+stall that only ever stocks three shop skills at a time, with a countdown to
+the next trio. The old `#shop` bookmark still works, and `#auras` lands on
+that shelf.
 
 ![The shop front door: six shelf buttons with their numbers and three featured picks](media/shop.png)
 ![One shelf as its own page: the breadcrumb, sticky bar and aura cards](media/shop-shelf.png)
@@ -345,9 +352,6 @@ first and latest entry.
 name, your biggest roll and your key account stats — so you can view, share or
 keep it somewhere safe. The card is deliberately **one-way**: nothing in the
 game imports it, so a shared card can never overwrite the game you are playing.
-The only import that exists is the console-only one for a raw save file, under
-[Console save tools](#console-save-tools-optional-no-button-anywhere) — it
-replaces the save on purpose, and it is never a button in the interface.
 Delete account & progress remains the only way to remove it.
 
 ## Fairness
@@ -379,6 +383,13 @@ failed-write recovery.
 - **A local profile** saves your wallet, discoveries, upgrades, aura, companions,
   skills, cooldowns and activity log in `localStorage` on this browser and
   origin only.
+- **Saves repair themselves.** If a stored value fails validation — an
+  overcharged skill circle left over from an older balance, a committed roll
+  that cannot be verified — the loader fixes it in place (clamped, discarded
+  or rebuilt from the purchases and history that vouch for it) instead of
+  resetting the account, and tells you what it fixed. The exact pre-repair
+  bytes stay in your browser as a backup, so a bad repair can always be
+  undone by hand. Only data that is not a save at all is still rejected.
 - **Device links, live, with no database of yours.** Settings → _Link devices_
   creates one URL (`?sync=ROOM.KEY`) that joins a second browser to the same
   account, live in both directions: buy on the phone, watch it land on the PC.
@@ -422,29 +433,6 @@ failed-write recovery.
   runtime CDN. The only network requests are the game's own asset files — and,
   only when you explicitly create a device link, the relay forwarding your
   save between your own devices.
-
-### Console save tools (optional, no button anywhere)
-
-A save can also be moved as a plain JSON file, without any link at all. The
-commands live in the browser console on purpose — importing **replaces the
-whole save**, so it should take a deliberate act, not a stray click:
-
-```js
-__importData(); // opens the file picker (raw save or a legacy Profile JSON snapshot)
-__importData(jsonText); // imports a save from a JSON string, File/Blob or object
-__exportSave(); // copies the current save to the clipboard as JSON
-__downloadSave(); // downloads the current save as rngdle-<name>-<date>.json
-```
-
-Imports are validated before anything is written: raw saves from v0.1–v0.3
-and the older Profile JSON snapshot envelope (including `saveVersion: 0` files
-with an empty profile template) are migrated, anything unreadable is rejected
-with the exact reason on the console, and the current save is left untouched
-when a file is refused. When the browser blocks its own file dialog
-— an iframe, a missing user gesture — the command falls back to an ordinary
-file input instead of dead-ending. `__exportSave()` never claims a copy the
-browser refused: if the clipboard is blocked it says so and prints the save.
-`__importSave()` still works and points at the new name.
 
 ## Settings, themes and accessibility
 

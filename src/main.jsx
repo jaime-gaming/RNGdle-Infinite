@@ -82,12 +82,6 @@ import {
   productById,
 } from "./shop-data.js";
 import { joinDeviceLink, resumeDeviceLink, subscribeSync } from "./sync.js";
-import { installConsoleSaveTools } from "./console-save.js";
-
-// Console-only save import/export — no UI button, no indicator.
-// Open F12 → Console and type: __importData() opens the file picker,
-// __importData(json) imports a JSON string, plus __exportSave() / __downloadSave().
-installConsoleSaveTools();
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
@@ -159,6 +153,14 @@ function App() {
     const timer = setTimeout(() => setUltraCeremony(false), 2700);
     return () => clearTimeout(timer);
   }, [ultraCeremony]);
+  // A plain rebirth earns a smaller moment: a spinning rainbow ring over the
+  // new cycle, in the app shell for the same reason, gone by itself.
+  const [rebirthRing, setRebirthRing] = useState(false);
+  useEffect(() => {
+    if (!rebirthRing) return;
+    const timer = setTimeout(() => setRebirthRing(false), 2600);
+    return () => clearTimeout(timer);
+  }, [rebirthRing]);
   // A companion found on a roll walks in with its own moment on the roll stage.
   const [arrivalPet, setArrivalPet] = useState(null);
   const {
@@ -741,6 +743,7 @@ function App() {
                 progress={session}
                 onAction={dispatch}
                 onContinue={() => navigate("roll")}
+                navigate={navigate}
               />
             </div>
           </>
@@ -767,6 +770,7 @@ function App() {
                 navigate("roll");
                 notify(message ?? "Rebirth complete.");
                 if (meta?.ultra) setUltraCeremony(true);
+                else setRebirthRing(true);
               }}
             />
           </>
@@ -1116,6 +1120,18 @@ function App() {
               <i key={index} />
             ))}
           </span>
+        </div>
+      )}
+      {/* The rebirth ring: a rainbow circle spinning over the new cycle.
+          Pointer-transparent and fully animation-driven — with reduced motion
+          it rests at opacity 0, exactly as if it were never there. */}
+      {rebirthRing && (
+        <div className="rebirth-ring" aria-hidden="true">
+          <span className="rebirth-ring-circle" />
+          <strong className="rebirth-ring-title">
+            REBIRTH {session.rebirths}
+          </strong>
+          <span className="rebirth-ring-sub">a new cycle begins</span>
         </div>
       )}
     </>

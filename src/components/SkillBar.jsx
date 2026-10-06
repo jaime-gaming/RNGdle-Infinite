@@ -14,7 +14,7 @@ import {
 import "../skills.css";
 
 // A ring that fills with charge. No running commentary on the ring itself: the
-// contribution is a small chip next to it, and the tooltip carries the whole
+// contribution chip appears on hover, and the tooltip carries the whole
 // explanation for anyone who wants the sentence.
 function ChargeRing({ fraction, tint, size = 42, children }) {
   const radius = (size - 5) / 2,
@@ -58,11 +58,197 @@ const AUTO_ROLL_COPY = {
   paused: "Paused while you browse. Your current roll will finish.",
 };
 
+// One charged skill circle: ring, hover chip, tooltip, screen-reader progress.
+// Rendered standalone for shop skills, or as a member of a group stack.
+function SkillCircle({ skill, active }) {
+  const petName = skill.definition.petId
+    ? petById.get(skill.definition.petId)?.name
+    : "";
+  return (
+    <div
+      className={`skill-slot tint-${skill.tint} ${skill.armed ? "is-armed" : ""} ${!skill.equipped ? "is-standby" : ""} ${active ? "is-firing" : ""}`}
+      data-skill={skill.id}
+      data-armed={skill.armed}
+      data-equipped={skill.equipped}
+      tabIndex={0}
+      aria-label={`${skill.name}: ${skill.effect} ${skill.charge} of ${skill.charges} rolls charged. ${
+        !skill.equipped
+          ? "Companion skill."
+          : skill.armed
+            ? "Ready — fires on your next roll."
+            : "Charging."
+      }`}
+    >
+      <ChargeRing fraction={skill.charge / skill.charges} tint={skill.tint}>
+        <SkillIcon icon={skill.icon} size={17} aria-hidden="true" />
+      </ChargeRing>
+      <span className="skill-contribution" aria-hidden="true">
+        {skill.armed
+          ? skill.chip
+          : `${skill.chip} · ${skill.charge}/${skill.charges}`}
+      </span>
+      <span className="skill-tooltip" role="tooltip">
+        <strong>{skill.name}</strong>
+        <span className="skill-tooltip-effect">
+          {skillEffectSummary(skill.definition)}
+        </span>
+        <span className="skill-tooltip-contribution">Adds {skill.chip}</span>
+        <span className="skill-tooltip-meta">
+          {skill.charge} / {skill.charges} rolls ·{" "}
+          {skillSourceLabel(skill.definition, petName)}
+        </span>
+        <span className="skill-tooltip-state">
+          {active
+            ? "Firing on this roll"
+            : !skill.equipped
+              ? "Companion skill (equip in Shop)"
+              : skill.armed
+                ? "Ready — fires on your next roll"
+                : "Charging"}
+        </span>
+      </span>
+      <progress
+        className="sr-only"
+        aria-label={`${skill.name} charge`}
+        value={skill.charge}
+        max={skill.charges}
+      />
+    </div>
+  );
+}
+
+// One always-on bonus circle: pet, rebirth, ultra-rebirth or surplus.
+function PassiveCircle({ passive }) {
+  return (
+    <div
+      className={`skill-slot skill-passive tint-${passive.tint}`}
+      data-skill={passive.id}
+      data-passive={passive.kind}
+      tabIndex={0}
+      aria-label={`${passive.name}: ${passive.effect}. Always active.`}
+    >
+      <ChargeRing fraction={passive.fraction} tint={passive.tint}>
+        {passive.kind === "pet" ? (
+          <CreatureIcon pet={passive.petId} size={17} aria-hidden="true" />
+        ) : passive.kind === "rebirth" ? (
+          <LegendMark size={17} aria-hidden="true" />
+        ) : passive.kind === "ultra" ? (
+          <InfinityMark size={17} aria-hidden="true" />
+        ) : (
+          <SparkMark size={17} aria-hidden="true" />
+        )}
+      </ChargeRing>
+      <span className="skill-contribution" aria-hidden="true">
+        {passive.chip}
+      </span>
+      <span className="skill-tooltip" role="tooltip">
+        <strong>{passive.name}</strong>
+        <span className="skill-tooltip-effect">{passive.effect}</span>
+        <span className="skill-tooltip-contribution">Adds {passive.chip}</span>
+        <span className="skill-tooltip-meta">{passive.meta}</span>
+        <span className="skill-tooltip-state">Always active</span>
+      </span>
+    </div>
+  );
+}
+
+const memberId = (member) =>
+  member.kind === "skill" ? member.skill.id : member.passive.id;
+
+function MemberCircle({ member, active }) {
+  return member.kind === "skill" ? (
+    <SkillCircle skill={member.skill} active={active} />
+  ) : (
+    <PassiveCircle passive={member.passive} />
+  );
+}
+
+// A stack: one bubble for a family of circles that fans out on hover,
+// keyboard focus or tap. The bubble reads armed when any member is armed and
+// fills with the fullest member, so readiness still shows at a glance; every
+// member keeps its own chip and tooltip once the fan is open.
+function SkillStack({ stackId, label, tint, icon, members, firingSet }) {
+  const [open, setOpen] = useState(false);
+  const armed = members.some(
+    (member) => member.kind === "skill" && member.skill.armed,
+  );
+  const firing = members.some((member) => firingSet.has(memberId(member)));
+  const skillFractions = members
+    .filter((member) => member.kind === "skill")
+    .map((member) => member.skill.charge / member.skill.charges);
+  const fraction = skillFractions.length ? Math.max(...skillFractions) : 1;
+  const summary = members
+    .map((member) =>
+      member.kind === "skill"
+        ? `${member.skill.name} ${member.skill.charge} of ${member.skill.charges} rolls charged, ${member.skill.armed ? "ready" : "charging"}`
+        : `${member.passive.name} ${member.passive.chip}, always active`,
+    )
+    .join(". ");
+  return (
+    <div
+      className={`skill-stack ${armed ? "is-armed" : ""} ${firing ? "is-firing" : ""} ${open ? "is-open" : ""}`}
+      data-stack={stackId}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        className="skill-stack-bubble"
+        aria-expanded={open}
+        aria-label={`${label} group: ${summary}`}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <ChargeRing fraction={fraction} tint={tint}>
+          {icon}
+        </ChargeRing>
+        <span className="skill-stack-count" aria-hidden="true">
+          {members.length}
+        </span>
+      </button>
+      <div className="skill-stack-members">
+        {members.map((member) => (
+          <MemberCircle
+            key={memberId(member)}
+            member={member}
+            active={firingSet.has(memberId(member))}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// A family of circles: stacked behind one bubble when there are two or more,
+// or a plain circle when a single member stands alone.
+function GroupCircles({ stackId, label, tint, icon, members, firingSet }) {
+  if (!members.length) return null;
+  if (members.length === 1)
+    return (
+      <MemberCircle
+        member={members[0]}
+        active={firingSet.has(memberId(members[0]))}
+      />
+    );
+  return (
+    <SkillStack
+      stackId={stackId}
+      label={label}
+      tint={tint}
+      icon={icon}
+      members={members}
+      firingSet={firingSet}
+    />
+  );
+}
+
 // The rack that lives in the corner of the Roll page.
 //
 // Three kinds of circle share one column: charged skills (fill over online
 // rolls, fire on the next one), Flywheel, and the Auto-Roll switch, which is
-// simply an ability you click on or off. The column also carries the single
+// simply an ability you click on or off. Related circles ride together — the
+// pet bonus with its signature skill, the rebirth bonuses with their ladder
+// skills — while shop skills stand alone. The column also carries the single
 // indicator of what the rack adds up to — the totals the next roll will get,
 // with every contribution named.
 export default function SkillBar({
@@ -100,105 +286,59 @@ export default function SkillBar({
     return null;
   const firingSet = new Set(firing);
   const armedCount = report.armed.length + passives.length;
+  const petPassive = passives.find((passive) => passive.kind === "pet") ?? null;
+  const petSkill = allSkills.find((skill) => skill.definition?.petId) ?? null;
+  const petMembers = [
+    ...(petPassive ? [{ kind: "passive", passive: petPassive }] : []),
+    ...(petSkill ? [{ kind: "skill", skill: petSkill }] : []),
+  ];
+  const rebirthMembers = [
+    ...passives
+      .filter((passive) => passive.kind !== "pet")
+      .map((passive) => ({ kind: "passive", passive })),
+    ...allSkills
+      .filter(
+        (skill) =>
+          !skill.definition?.petId && skill.definition?.source === "rebirth",
+      )
+      .map((skill) => ({ kind: "skill", skill })),
+  ];
+  const looseSkills = allSkills.filter(
+    (skill) =>
+      !skill.definition?.petId && skill.definition?.source !== "rebirth",
+  );
+  const petId = petPassive?.petId ?? petSkill?.definition?.petId ?? null;
   return (
     <div className={`skill-bar ${className}`} role="group" aria-label="Skills">
-      {allSkills.map((skill) => {
-        const active = firingSet.has(skill.id);
-        const petName = skill.definition.petId
-          ? petById.get(skill.definition.petId)?.name
-          : "";
-        return (
-          <div
-            className={`skill-slot tint-${skill.tint} ${skill.armed ? "is-armed" : ""} ${!skill.equipped ? "is-standby" : ""} ${active ? "is-firing" : ""}`}
-            key={skill.id}
-            data-skill={skill.id}
-            data-armed={skill.armed}
-            data-equipped={skill.equipped}
-            tabIndex={0}
-            aria-label={`${skill.name}: ${skill.effect} ${skill.charge} of ${skill.charges} rolls charged. ${
-              !skill.equipped
-                ? "Companion skill."
-                : skill.armed
-                  ? "Ready — fires on your next roll."
-                  : "Charging."
-            }`}
-          >
-            <ChargeRing
-              fraction={skill.charge / skill.charges}
-              tint={skill.tint}
-            >
-              <SkillIcon icon={skill.icon} size={17} aria-hidden="true" />
-            </ChargeRing>
-            <span className="skill-contribution" aria-hidden="true">
-              {skill.armed
-                ? skill.chip
-                : `${skill.chip} · ${skill.charge}/${skill.charges}`}
-            </span>
-            <span className="skill-tooltip" role="tooltip">
-              <strong>{skill.name}</strong>
-              <span className="skill-tooltip-effect">
-                {skillEffectSummary(skill.definition)}
-              </span>
-              <span className="skill-tooltip-contribution">
-                Adds {skill.chip}
-              </span>
-              <span className="skill-tooltip-meta">
-                {skill.charge} / {skill.charges} rolls ·{" "}
-                {skillSourceLabel(skill.definition, petName)}
-              </span>
-              <span className="skill-tooltip-state">
-                {active
-                  ? "Firing on this roll"
-                  : !skill.equipped
-                    ? "Companion skill (equip in Shop)"
-                    : skill.armed
-                      ? "Ready — fires on your next roll"
-                      : "Charging"}
-              </span>
-            </span>
-            <progress
-              className="sr-only"
-              aria-label={`${skill.name} charge`}
-              value={skill.charge}
-              max={skill.charges}
-            />
-          </div>
-        );
-      })}
-      {passives.map((passive) => (
-        <div
-          className={`skill-slot skill-passive tint-${passive.tint}`}
-          key={passive.id}
-          data-skill={passive.id}
-          data-passive={passive.kind}
-          tabIndex={0}
-          aria-label={`${passive.name}: ${passive.effect}. Always active.`}
-        >
-          <ChargeRing fraction={passive.fraction} tint={passive.tint}>
-            {passive.kind === "pet" ? (
-              <CreatureIcon pet={passive.petId} size={17} aria-hidden="true" />
-            ) : passive.kind === "rebirth" ? (
-              <LegendMark size={17} aria-hidden="true" />
-            ) : passive.kind === "ultra" ? (
-              <InfinityMark size={17} aria-hidden="true" />
-            ) : (
-              <SparkMark size={17} aria-hidden="true" />
-            )}
-          </ChargeRing>
-          <span className="skill-contribution" aria-hidden="true">
-            {passive.chip}
-          </span>
-          <span className="skill-tooltip" role="tooltip">
-            <strong>{passive.name}</strong>
-            <span className="skill-tooltip-effect">{passive.effect}</span>
-            <span className="skill-tooltip-contribution">
-              Adds {passive.chip}
-            </span>
-            <span className="skill-tooltip-meta">{passive.meta}</span>
-            <span className="skill-tooltip-state">Always active</span>
-          </span>
-        </div>
+      {looseSkills.map((skill) => (
+        <SkillCircle
+          key={skill.id}
+          skill={skill}
+          active={firingSet.has(skill.id)}
+        />
       ))}
+      <GroupCircles
+        stackId="pet"
+        label="Pet"
+        tint="green"
+        icon={
+          petId ? (
+            <CreatureIcon pet={petId} size={17} aria-hidden="true" />
+          ) : (
+            <SkillIcon icon="trail" size={17} aria-hidden="true" />
+          )
+        }
+        members={petMembers}
+        firingSet={firingSet}
+      />
+      <GroupCircles
+        stackId="rebirth"
+        label="Rebirth"
+        tint="green"
+        icon={<LegendMark size={17} aria-hidden="true" />}
+        members={rebirthMembers}
+        firingSet={firingSet}
+      />
       {report.flywheel.owned && (
         <div
           className={`skill-slot skill-flywheel ${report.flywheel.ready ? "is-armed" : ""} ${firingSet.has("flywheel") ? "is-firing" : ""}`}

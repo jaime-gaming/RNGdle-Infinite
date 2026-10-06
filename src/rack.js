@@ -8,8 +8,10 @@ import {
   skillEffectSummary,
   skillPetLuck,
   skillSlots,
+  skillTakesSlot,
   skillWaivesCooldown,
   skillWalletMultiplier,
+  trimToSlots,
   unlockedSkills,
 } from "./skills.js";
 import { flywheelRequired } from "./flywheel.js";
@@ -89,8 +91,11 @@ export function rackReport(progress = {}) {
   const slots = skillSlots(progress.owned ?? []);
   // The save already refuses more skills than the rack holds; the report
   // enforces the same ceiling so a hand-edited object cannot overstate it.
-  const equipped = [...new Set(progress.equippedSkills ?? [])]
-    .slice(0, slots)
+  // Free skills ride beside the slots, so they are never the ones trimmed.
+  const equipped = trimToSlots(
+    [...new Set(progress.equippedSkills ?? [])],
+    slots,
+  )
     .map((id) => skillById.get(id))
     .filter(Boolean)
     .map((skill) => ({
@@ -198,7 +203,9 @@ export function rackReport(progress = {}) {
 
   return {
     slots,
-    used: equipped.length,
+    // The slots only hold shop skills: rebirth rewards and companion
+    // signatures ride free, so "used" counts the shop skills alone.
+    used: equipped.filter((skill) => skillTakesSlot(skill.id)).length,
     equipped,
     unlocked,
     passives,

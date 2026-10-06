@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Coins } from "lucide-react";
 import {
   PETS,
@@ -20,20 +20,17 @@ import "../pets.css";
 //
 // Buy one, or be very lucky. Equipping is free and the bonus applies to
 // banked EP only — never to the number, its tier or its score.
-export default function PetShelf({
-  progress,
-  onAction,
-  notify,
-  query = "",
-  filter = "all",
-}) {
+export default function PetShelf({ progress, onAction, notify }) {
   const formatEP = useFormatEP();
   const [pending, setPending] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
   const [index, setIndex] = useState(0);
+  const [uncaged, setUncaged] = useState(null);
   const busy = useRef(false);
+  const uncageTimer = useRef(null);
   const owned = progress.pets ?? [];
   const active = progress.activePet ?? "none";
+  useEffect(() => () => clearTimeout(uncageTimer.current), []);
 
   async function run(action, id, message) {
     if (busy.current) return;
@@ -41,8 +38,17 @@ export default function PetShelf({
     setPending(id);
     try {
       const result = await onAction({ type: action, id });
-      if (result.ok) notify?.(message);
-      else notify?.(result.message);
+      if (result.ok) {
+        notify?.(message);
+        // Equipping — or buying, which equips — opens the cage: the door
+        // swings and the friend hops out. Putting one away cages it again,
+        // so that one stays quiet.
+        if ((action === "equip-pet" || action === "buy-pet") && id !== "none") {
+          setUncaged(id);
+          clearTimeout(uncageTimer.current);
+          uncageTimer.current = setTimeout(() => setUncaged(null), 1400);
+        }
+      } else notify?.(result.message);
     } finally {
       busy.current = false;
       setPending("");
@@ -50,21 +56,12 @@ export default function PetShelf({
   }
 
   const oneIn = Math.round(1 / PET_DROP_CHANCE);
-  const text = query.trim().toLowerCase();
   const visible = PETS.filter((pet) => {
-    const isOwned = owned.includes(pet.id);
-    if (onlyMine && !isOwned) return false;
-    if (filter === "owned" && !isOwned) return false;
-    if (filter === "available" && isOwned) return false;
-    if (filter === "affordable" && (isOwned || progress.balance < pet.price))
-      return false;
-    if (!text) return true;
-    return `${pet.name} ${pet.description} ${skillForPet(pet.id)?.name ?? ""}`
-      .toLowerCase()
-      .includes(text);
+    if (onlyMine && !owned.includes(pet.id)) return false;
+    return true;
   });
 
-  // The stage points inside the filtered list: a search can shrink the list
+  // The stage points inside the visible list: "Only mine" can shrink the list
   // under it, and the position clamps rather than falling off the end.
   const at = visible.length ? Math.min(index, visible.length - 1) : 0;
   const slide = (delta) =>
@@ -163,12 +160,15 @@ export default function PetShelf({
                     data-pet={pet.id}
                     className={`pet-slide ${current ? "is-current" : ""} ${
                       isActive ? "is-active" : ""
-                    } ${isOwned ? "is-owned" : ""}`}
+                    } ${isOwned ? "is-owned" : ""} ${
+                      uncaged === pet.id ? "is-uncaging" : ""
+                    }`}
                     style={{ "--pet-accent": pet.accent }}
                     aria-hidden={current ? undefined : "true"}
                     inert={current ? undefined : true}
                   >
                     <div className="pet-cage">
+                      <span className="pet-cage-hanger" aria-hidden="true" />
                       <PetIcon
                         pet={pet.id}
                         name={pet.name}
@@ -176,6 +176,8 @@ export default function PetShelf({
                         size={124}
                         active={isActive}
                       />
+                      <span className="pet-cage-door" aria-hidden="true" />
+                      <span className="pet-cage-tray" aria-hidden="true" />
                       <span className="pet-cage-label">
                         {isActive
                           ? "walking with you"
@@ -283,7 +285,8 @@ export default function PetShelf({
                   data-cage={pet.id}
                   className={`pet-rail-cage ${i === at ? "is-current" : ""} ${
                     active === pet.id ? "is-active" : ""
-                  }`}
+                  } ${owned.includes(pet.id) ? "is-owned" : ""}`}
+                  style={{ "--pet-accent": pet.accent }}
                   aria-label={`Show ${pet.name}`}
                   aria-current={i === at ? "true" : undefined}
                   onClick={() => setIndex(i)}
@@ -307,7 +310,7 @@ export default function PetShelf({
           </div>
         </div>
       ) : (
-        <p className="shop-empty">No companions match this filter.</p>
+        <p className="shop-empty">You have no companions yet.</p>
       )}
       <p className="pet-footnote">
         A lucky roll drops a companion you do not own yet, already worn.

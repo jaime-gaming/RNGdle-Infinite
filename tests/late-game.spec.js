@@ -48,7 +48,7 @@ const nav = (p, name) =>
 async function purchase(page, id) {
   // Each tier lives on the shelf that tracks it; open it without reloading.
   await openShelfFor(page, id);
-  await page.locator(`[data-product="${id}"] button`).click();
+  await page.locator(`[data-product="${id}"] button:not(.shop-tag)`).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -550,7 +550,9 @@ test("two tabs cannot purchase a late Flywheel tier twice or lose the earned cha
   const other = await context.newPage();
   await other.goto("/shop/skills");
   for (const p of [page, other])
-    await p.locator('[data-product="flywheel-2"] button').click();
+    await p
+      .locator('[data-product="flywheel-2"] button:not(.shop-tag)')
+      .click();
   // Both tabs press confirm at once, and whichever reaches the lock first
   // buys. The loser must not double-buy: its dialog disables itself the
   // moment the storage event lands, or the reducer rejects the duplicate.
@@ -645,7 +647,7 @@ test("failed late-tier saves leave wallet, charge and offline rate unchanged unt
   for (const id of ["flywheel-2", "offline-clock-1"]) {
     // Skills and Offline are separate shelves, so walk to each one.
     await openShelfFor(page, id);
-    await page.locator(`[data-product="${id}"] button`).click();
+    await page.locator(`[data-product="${id}"] button:not(.shop-tag)`).click();
     await page
       .getByRole("button", { name: "Confirm purchase", exact: true })
       .click();

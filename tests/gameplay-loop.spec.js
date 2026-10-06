@@ -19,8 +19,6 @@ import { showRoll, mockRandom } from "./helpers/random-roll.js";
 import { productById } from "../src/shop-data.js";
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
-const nav = (p, name) =>
-  p.getByRole("navigation").getByRole("button", { name, exact: true }).click();
 const home = (p) =>
   p.getByRole("button", { name: "Back to rolling", exact: true }).click();
 const complete = (id) => ({
@@ -157,21 +155,51 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
   );
 });
 
+test("a found companion bursts out of its cage on the roll stage", async ({
+  page,
+}) => {
+  // Main-thread randomness feeds the companion drop and nothing else, so
+  // pinning it to zero drops the first missing friend: pebble, every time.
+  await page.addInitScript(() => {
+    Object.defineProperty(globalThis.crypto, "getRandomValues", {
+      configurable: true,
+      value(array) {
+        array.fill(0);
+        return array;
+      },
+    });
+  });
+  await seedProgress(page, {});
+  await mockRandom(page, [604827]);
+  await page.goto("/");
+  await page.locator(".generate").click();
+  await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
+  // Step the clock until the arrival lands: it lives 5.6s of clock time, so
+  // one big jump would skip past it.
+  for (let step = 0; step < 60; step += 1) {
+    if (await page.locator("[data-arrival]").count()) break;
+    await page.clock.fastForward(1000);
+  }
+  const arrival = page.locator('[data-arrival="pebble"]');
+  await expect(arrival).toHaveCount(1);
+  await expect(arrival.locator(".pet-arrival-cage")).toHaveCount(1);
+  expect((await saved(page)).pets).toContain("pebble");
+});
+
 test("a chosen goal persists, focuses its shop card, requires confirmation and advances after buying", async ({
   page,
 }) => {
   await seedProgress(page, { balance: 100000, totalEarned: 100000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#shop");
-  await page
-    .getByLabel("Track a goal", { exact: true })
-    .selectOption("quickwind-1");
+  // The goal is set by clicking the card for the item you want.
+  await page.goto("/shop/pace");
+  await page.locator('[data-product="quickwind-1"] .shop-card-desc').click();
   await expect.poll(async () => (await saved(page)).goalId).toBe("quickwind-1");
   expect((await saved(page)).history).toHaveLength(0);
   expect((await saved(page)).balance).toBe(100000);
   await page.reload();
-  await expect(page.getByLabel("Track a goal", { exact: true })).toHaveValue(
-    "quickwind-1",
+  await expect(page.locator(".shop-goal")).toContainText(
+    "Your goal: Quickwind I",
   );
   await home(page);
   await expect(page.locator(".roll-progress-links")).toContainText(
@@ -181,11 +209,11 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   const card = page.locator('[data-product="quickwind-1"]');
   await expect(card).toBeFocused();
   expect((await saved(page)).owned).toEqual([]);
-  await card.getByRole("button").click();
+  await card.locator("button:not(.shop-tag)").click();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect((await saved(page)).goalId).toBe("quickwind-1");
   expect((await saved(page)).balance).toBe(100000);
-  await card.getByRole("button").click();
+  await card.locator("button:not(.shop-tag)").click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -226,7 +254,7 @@ test("failed goal writes preserve the previous choice and wallet and can be retr
     balance: 12345,
     totalEarned: 12345,
   });
-  await page.goto("/#shop");
+  await page.goto("/shop/skills");
   await page.evaluate((k) => {
     const write = Storage.prototype.setItem;
     window.failGoal = true;
@@ -240,21 +268,15 @@ test("failed goal writes preserve the previous choice and wallet and can be retr
       return write.call(this, key, value);
     };
   }, PROGRESS_KEY);
-  await page
-    .getByLabel("Track a goal", { exact: true })
-    .selectOption("flywheel");
+  await page.locator('[data-product="flywheel"] .shop-card-desc').click();
   await expect(page.locator(".toast")).toContainText("goal could not be saved");
-  await expect(page.getByLabel("Track a goal", { exact: true })).toHaveValue(
-    "starfall",
-  );
+  await expect(page.locator(".shop-goal")).toContainText("Your goal: Starfall");
   expect((await saved(page)).balance).toBe(12345);
   expect((await saved(page)).goalId).toBe("starfall");
   await page.evaluate(() => {
     window.failGoal = false;
   });
-  await page
-    .getByLabel("Track a goal", { exact: true })
-    .selectOption("flywheel");
+  await page.locator('[data-product="flywheel"] .shop-card-desc').click();
   await expect.poll(async () => (await saved(page)).goalId).toBe("flywheel");
 });
 
@@ -269,14 +291,16 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   const before = await saved(page);
-  await nav(page, "Shop");
+  await page.goto("/shop/auras/celestial");
   const other = await context.newPage();
   await other.goto("/shop/auras/celestial");
-  await page.getByLabel("Track a goal", { exact: true }).selectOption("aurora");
-  await expect(other.getByLabel("Track a goal", { exact: true })).toHaveValue(
-    "aurora",
+  await page.locator('[data-product="aurora"] .shop-card-desc').click();
+  await expect(other.locator(".shop-goal")).toContainText(
+    "Your goal: Aurora Veil",
   );
-  await other.locator('[data-product="starfall"] button').click();
+  await other
+    .locator('[data-product="starfall"] button:not(.shop-tag)')
+    .click();
   await other
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -324,21 +348,15 @@ test("Auto-Roll pauses for badge inspection and resumes without replacing its co
 test("guest goals are temporary until signup; signup preserves the choice without spending EP", async ({
   page,
 }) => {
-  await page.goto("/#shop");
-  await page
-    .getByLabel("Track a goal", { exact: true })
-    .selectOption("starfall");
-  await expect(page.getByLabel("Track a goal", { exact: true })).toHaveValue(
-    "starfall",
-  );
+  await page.goto("/shop/auras/celestial");
+  await page.locator('[data-product="starfall"] .shop-card-desc').click();
+  await expect(page.locator(".shop-goal")).toContainText("Your goal: Starfall");
   expect(await saved(page)).toBeNull();
   await page.reload();
-  await expect(page.getByLabel("Track a goal", { exact: true })).toHaveValue(
-    "",
-  );
-  await page
-    .getByLabel("Track a goal", { exact: true })
-    .selectOption("flywheel");
+  await expect(page.locator(".shop-goal")).toContainText("Recommended next");
+  await expect(page.locator(".shop-goal")).not.toContainText("Your goal");
+  await page.goto("/shop/skills");
+  await page.locator('[data-product="flywheel"] .shop-card-desc').click();
   await expect(page.locator(".toast")).toContainText("Goal updated");
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
   await page
@@ -353,11 +371,9 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   expect((await saved(page)).history).toHaveLength(0);
   await page.reload();
   // The profile page has no goal control: the saved choice is read back where
-  // the picker lives.
+  // the banner lives.
   await page.goto("/#shop");
-  await expect(page.getByLabel("Track a goal", { exact: true })).toHaveValue(
-    "flywheel",
-  );
+  await expect(page.locator(".shop-goal")).toContainText("Your goal: Flywheel");
 });
 
 test("the completed workshop and collection have honest end states with no invented upgrades", async ({
@@ -378,7 +394,9 @@ test("the completed workshop and collection have honest end states with no inven
     .locator(".roll-progress-links")
     .getByRole("button", { name: "Shop", exact: true })
     .click();
-  await expect(page.getByLabel("Track a goal", { exact: true })).toBeDisabled();
+  await expect(page.locator(".shop-goal")).toContainText(
+    "nothing left to save for",
+  );
 });
 
 test("feedback and goals fit narrow screens in both themes and respect reduced motion", async ({
@@ -440,7 +458,9 @@ test("a funded offline goal still explains the profile requirement instead of cl
     .getByRole("button", { name: "Offline Roller", exact: true })
     .click();
   await expect(page.locator('[data-product="offline-roller"]')).toBeFocused();
-  await page.locator('[data-product="offline-roller"] button').click();
+  await page
+    .locator('[data-product="offline-roller"] button:not(.shop-tag)')
+    .click();
   // No profile: the product button navigates to the profile page.
   await expect(page.locator(".profile-page")).toBeVisible();
   await expect(

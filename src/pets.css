@@ -71,16 +71,20 @@
   align-items: center;
   padding: 20px;
 }
-/* The cage: the companion's own colour washes the alcove it stands in. */
+/* The cage: an arched alcove washed in the companion's own colour, hung from
+   a ring, standing on a tray, with a barred door across the front. The door
+   stands open while the friend walks with you — and swings open with a hop
+   the moment it is uncaged. */
 .pet-cage {
   position: relative;
   display: grid;
   place-items: center;
   gap: 14px;
-  padding: 26px 16px 18px;
+  margin-top: 10px;
+  padding: 30px 16px 22px;
   border: 1px dashed
     color-mix(in srgb, var(--pet-accent, var(--border)) 52%, var(--border));
-  border-radius: 14px;
+  border-radius: 110px 110px 14px 14px;
   background:
     radial-gradient(
       circle at 50% 34%,
@@ -93,8 +97,8 @@
 .pet-cage::after {
   content: "";
   position: absolute;
-  top: 10px;
-  bottom: 10px;
+  top: 26px;
+  bottom: 22px;
   width: 1px;
   background: repeating-linear-gradient(
     to bottom,
@@ -110,12 +114,60 @@
 .pet-cage::after {
   right: 12px;
 }
+.pet-cage-hanger {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  translate: -50% 0;
+  border: 3px solid
+    color-mix(in srgb, var(--pet-accent, var(--muted)) 55%, var(--border));
+  border-radius: 50%;
+  background: var(--surface);
+}
+.pet-cage-door {
+  position: absolute;
+  inset: 24px 14px 20px;
+  border-radius: 96px 96px 10px 10px;
+  background: repeating-linear-gradient(
+    to right,
+    color-mix(in srgb, var(--pet-accent, var(--muted)) 42%, transparent) 0 2px,
+    transparent 2px 13px
+  );
+  opacity: 0.85;
+  transform-origin: 12% 50%;
+  transition:
+    transform 0.32s ease,
+    opacity 0.32s ease;
+  pointer-events: none;
+}
+.pet-cage-tray {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--pet-accent, var(--muted)) 30%,
+    var(--border)
+  );
+  opacity: 0.7;
+  pointer-events: none;
+}
 .pet-cage-label {
   font: 700 9px/1.4 var(--roll-font);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   text-align: center;
   color: color-mix(in srgb, var(--pet-accent, var(--muted)) 72%, var(--text));
+}
+/* Still wild: the friend waits behind its bars, a touch dimmed. */
+.pet-slide:not(.is-owned) .pet-cage .pet-figure {
+  opacity: 0.72;
+  filter: saturate(0.75);
 }
 .pet-slide.is-active .pet-cage {
   border-style: solid;
@@ -126,6 +178,50 @@
   );
   box-shadow: 0 0 0 3px
     color-mix(in srgb, var(--pet-accent, transparent) 14%, transparent);
+}
+/* Walking with you: the door stands open. */
+.pet-slide.is-active .pet-cage-door {
+  transform: perspective(420px) rotateY(-68deg);
+  opacity: 0.2;
+}
+/* The uncaging: the door swings wide while the friend hops out twice. */
+.pet-slide.is-uncaging .pet-cage-door {
+  animation: pet-uncage-door 1.2s ease-out forwards;
+}
+.pet-slide.is-uncaging .pet-cage .pet-figure {
+  animation: pet-uncage-hop 1.2s ease-out;
+}
+@keyframes pet-uncage-door {
+  0% {
+    transform: perspective(420px) rotateY(0deg);
+    opacity: 0.85;
+  }
+  35% {
+    transform: perspective(420px) rotateY(-82deg);
+    opacity: 0.15;
+  }
+  100% {
+    transform: perspective(420px) rotateY(-68deg);
+    opacity: 0.2;
+  }
+}
+@keyframes pet-uncage-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  18% {
+    transform: translateY(-30px) scale(1.04);
+  }
+  34% {
+    transform: translateY(0) scale(0.96, 1.02);
+  }
+  52% {
+    transform: translateY(-18px) scale(1.02);
+  }
+  66% {
+    transform: translateY(0) scale(1);
+  }
 }
 .pet-body {
   min-width: 0;
@@ -276,6 +372,18 @@
 .pet-rail-cage.is-current {
   border-color: var(--text);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--text) 18%, transparent);
+}
+/* A found friend carries its own colour on the rail. */
+.pet-rail-cage.is-owned {
+  border-color: color-mix(
+    in srgb,
+    var(--pet-accent, var(--border)) 55%,
+    var(--border)
+  );
+}
+.pet-rail-cage.is-active {
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--pet-accent, var(--text)) 40%, transparent);
 }
 .pet-rail-cage:focus-visible {
   outline: 2px solid var(--primary);

@@ -1,7 +1,11 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import { PAGES, pathForPage, validPage } from "../src/router.js";
-import { parseProgress, emptyProgress } from "../src/progress.js";
+import {
+  parseProgress,
+  parseAndRepairProgress,
+  emptyProgress,
+} from "../src/progress.js";
 import { rollSettings, shopProducts } from "../src/shop-data.js";
 import { cooldownLabel, displayedCooldownSeconds } from "../src/cooldown.js";
 import { POPULATION } from "../src/probability.js";
@@ -89,15 +93,18 @@ test("a committed roll can never be faster than the upgrades the save has paid f
     .filter((p) => ["roll", "cooldown"].includes(p.kind))
     .map((p) => p.id);
   const max = rollSettings(fastest);
-  // Forged snapshots on an upgrade-free profile are rejected.
+  // Forged snapshots on an upgrade-free profile lose the roll, never the save.
   for (const forged of [
     { rollMS: max.rollMS, cooldownMS: max.cooldownMS },
     { rollMS: max.rollMS },
     { cooldownMS: max.cooldownMS },
-  ])
-    expect(() => parseProgress(save([], pending(forged)))).toThrow(
-      /do not match your upgrades/,
+  ]) {
+    const { progress, repairs } = parseAndRepairProgress(
+      save([], pending(forged)),
     );
+    expect(progress.pendingRoll).toBeNull();
+    expect(repairs.join(" ")).toMatch(/committed roll/);
+  }
   // Honest snapshots, at or below the paid-for speed, survive.
   expect(parseProgress(save([], pending({}))).pendingRoll.rollMS).toBe(45000);
   expect(

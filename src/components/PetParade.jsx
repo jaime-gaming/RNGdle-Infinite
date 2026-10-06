@@ -56,8 +56,13 @@ function Arrival({ pet }) {
   const definition = petById.get(pet);
   if (!definition) return null;
   return (
-    <div className="pet-arrival" data-arrival={pet}>
+    <div
+      className="pet-arrival"
+      data-arrival={pet}
+      style={{ "--pet-accent": definition.accent }}
+    >
       <span className="pet-arrival-rings" aria-hidden="true" />
+      <span className="pet-arrival-cage" aria-hidden="true" />
       <PetIcon
         pet={pet}
         name={definition.name}

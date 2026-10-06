@@ -76,7 +76,9 @@ test("one link joins two browsers to the same account, live", async ({
   // B stays on its page the whole time, so nothing but the relay wrote it.
   await pageA.goto("/shop/tools");
   const autoRoll = shopProducts.find((item) => item.id === "auto-roll");
-  await pageA.locator('[data-product="auto-roll"] button').click();
+  await pageA
+    .locator('[data-product="auto-roll"] button:not(.shop-tag)')
+    .click();
   await pageA
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -88,7 +90,9 @@ test("one link joins two browsers to the same account, live", async ({
   // And back the other way: a purchase on B reaches A's storage live.
   await pageB.goto("/shop/tools");
   const lens = shopProducts.find((item) => item.id === "archive-lens");
-  await pageB.locator('[data-product="archive-lens"] button').click();
+  await pageB
+    .locator('[data-product="archive-lens"] button:not(.shop-tag)')
+    .click();
   await pageB
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -145,7 +149,9 @@ test("one device can stay closed while the other contributes, and catches up on 
 
   // B keeps contributing on its own: a whole purchase made while A is away.
   await pageB.goto("/shop/tools");
-  await pageB.locator('[data-product="archive-lens"] button').click();
+  await pageB
+    .locator('[data-product="archive-lens"] button:not(.shop-tag)')
+    .click();
   await pageB
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -289,7 +295,9 @@ test("the link works when one device is closed the whole time, and when both are
   // entirely. Closing before that is exactly how a device loses a purchase.
   await pageA.goto("/shop/tools");
   const beforeA = (await linkState(pageA)).savedAt;
-  await pageA.locator('[data-product="archive-lens"] button').click();
+  await pageA
+    .locator('[data-product="archive-lens"] button:not(.shop-tag)')
+    .click();
   await pageA
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -312,7 +320,9 @@ test("the link works when one device is closed the whole time, and when both are
   // B is the one that disappears — after the room has taken its purchase.
   await pageB.goto("/shop/tools");
   const beforeB = (await linkState(pageB)).savedAt;
-  await pageB.locator('[data-product="auto-roll"] button').click();
+  await pageB
+    .locator('[data-product="auto-roll"] button:not(.shop-tag)')
+    .click();
   await pageB
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -386,7 +396,9 @@ test("a change made while the relay is unreachable is queued and sent later", as
   // when the device running it is asleep.
   await page.route("**/__sync/state**", (route) => route.abort());
   await page.goto("/shop/tools");
-  await page.locator('[data-product="archive-lens"] button').click();
+  await page
+    .locator('[data-product="archive-lens"] button:not(.shop-tag)')
+    .click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();

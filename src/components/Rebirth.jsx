@@ -104,7 +104,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   const unlocked = rebirthUnlocked(progress);
   const [now, setNow] = useState(gameNow),
     [open, setOpen] = useState(null),
-    [confirmation, setConfirmation] = useState(""),
     [pending, setPending] = useState(false),
     [error, setError] = useState("");
   const dialog = useRef(null),
@@ -122,7 +121,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     if (open) dialog.current?.showModal();
     else dialog.current?.close();
   }, [open]);
-  const word = open === "ultra" ? "ULTRA" : "REBIRTH";
   // A step asks for two things: a slice of the collection and EP earned in the
   // cycle that is asking. The page reads both off the save.
   const step = requirement ?? ultraRebirthRequirement();
@@ -183,7 +181,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   ];
   async function submit(event) {
     event.preventDefault();
-    if (busy.current || confirmation !== word) return;
+    if (busy.current) return;
     const ultra = open === "ultra";
     busy.current = true;
     setPending(true);
@@ -963,16 +961,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               Guest progress is never saved, so this resets nothing permanent.
             </p>
           )}
-          <label>
-            Type {word} to confirm
-            <input
-              value={confirmation}
-              onChange={(event) => setConfirmation(event.target.value)}
-              disabled={pending}
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </label>
           {error && <p role="alert">{error}</p>}
           {open === "ultra"
             ? ultraBlocker && <p role="status">{ultraBlocker}</p>
@@ -991,9 +979,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               type="submit"
               className="danger-button"
               disabled={
-                pending ||
-                confirmation !== word ||
-                !!(open === "ultra" ? ultraBlocker : blocker)
+                pending || !!(open === "ultra" ? ultraBlocker : blocker)
               }
             >
               {pending

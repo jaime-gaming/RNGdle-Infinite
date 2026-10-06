@@ -2140,3 +2140,26 @@ footer button:hover,
   line-height: 1.6;
   color: var(--muted);
 }
+/* The other way in: an account on another device joins through the device
+   link instead of starting over. */
+.signup-link {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--hover);
+  text-align: left;
+}
+.signup-link p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+.signup-link strong {
+  color: var(--text);
+}
+.signup-link .secondary-button {
+  width: 100%;
+  justify-content: center;
+}
