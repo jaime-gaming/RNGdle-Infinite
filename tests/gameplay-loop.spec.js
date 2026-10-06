@@ -191,8 +191,13 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
 }) => {
   await seedProgress(page, { balance: 100000, totalEarned: 100000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // The goal is set by clicking the card for the item you want.
+  // The goal is set from the goal banner: arm pick mode, then tap the card
+  // you want. A plain card click never changes the goal.
   await page.goto("/shop/pace");
+  await page
+    .locator(".shop-goal")
+    .getByRole("button", { name: "Set goal", exact: true })
+    .click();
   await page.locator('[data-product="quickwind-1"] .shop-card-desc').click();
   await expect.poll(async () => (await saved(page)).goalId).toBe("quickwind-1");
   expect((await saved(page)).history).toHaveLength(0);
@@ -268,6 +273,12 @@ test("failed goal writes preserve the previous choice and wallet and can be retr
       return write.call(this, key, value);
     };
   }, PROGRESS_KEY);
+  // Pick mode is armed from the banner; a failed write keeps it armed, so
+  // the retry is one tap, not a second trip to the banner.
+  await page
+    .locator(".shop-goal")
+    .getByRole("button", { name: "Change goal", exact: true })
+    .click();
   await page.locator('[data-product="flywheel"] .shop-card-desc').click();
   await expect(page.locator(".toast")).toContainText("goal could not be saved");
   await expect(page.locator(".shop-goal")).toContainText("Your goal: Starfall");
@@ -294,6 +305,10 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
   await page.goto("/shop/auras/celestial");
   const other = await context.newPage();
   await other.goto("/shop/auras/celestial");
+  await page
+    .locator(".shop-goal")
+    .getByRole("button", { name: "Set goal", exact: true })
+    .click();
   await page.locator('[data-product="aurora"] .shop-card-desc').click();
   await expect(other.locator(".shop-goal")).toContainText(
     "Your goal: Aurora Veil",
@@ -349,6 +364,10 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   page,
 }) => {
   await page.goto("/shop/auras/celestial");
+  await page
+    .locator(".shop-goal")
+    .getByRole("button", { name: "Set goal", exact: true })
+    .click();
   await page.locator('[data-product="starfall"] .shop-card-desc').click();
   await expect(page.locator(".shop-goal")).toContainText("Your goal: Starfall");
   expect(await saved(page)).toBeNull();
@@ -356,6 +375,11 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   await expect(page.locator(".shop-goal")).toContainText("Recommended next");
   await expect(page.locator(".shop-goal")).not.toContainText("Your goal");
   await page.goto("/shop/skills");
+  // The reload dropped the guest goal, so the banner is back to "Set goal".
+  await page
+    .locator(".shop-goal")
+    .getByRole("button", { name: "Set goal", exact: true })
+    .click();
   await page.locator('[data-product="flywheel"] .shop-card-desc').click();
   await expect(page.locator(".toast")).toContainText("Goal updated");
   await page.getByRole("button", { name: "Sign up", exact: true }).click();

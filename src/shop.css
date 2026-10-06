@@ -374,6 +374,8 @@
     var(--ring-colour, var(--secondary)) var(--fill, 0%),
     var(--border) 0
   );
+  /* --fill is registered in rebirth-nav.css; the savings ring glides too. */
+  transition: --fill 0.6s ease;
 }
 .shop-goal-ring::after {
   content: "";
@@ -404,6 +406,10 @@
 .shop-goal-copy > span {
   color: var(--muted);
 }
+.shop-goal-current {
+  font-size: 11px;
+  color: var(--secondary);
+}
 .shop-goal-bar {
   display: block;
   height: 4px;
@@ -432,22 +438,108 @@
   color: var(--muted);
   font-size: 11px;
 }
-/* A trackable card is clickable: the cursor says so, and the tag beside the
-   caveats is the same control for keyboards. */
-.shop-card.is-goalable {
+.shop-goal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 520px) {
+  .shop-goal-body {
+    flex-wrap: wrap;
+  }
+  .shop-goal-copy {
+    flex-basis: 100%;
+    order: 3;
+  }
+  .shop-goal-actions {
+    margin-left: auto;
+  }
+}
+/* Pick mode: the banner asks for a choice and the shelves wait for the tap. */
+.shop-goal.is-picking {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  background: var(--green-bg);
+  animation: goal-pick-in 0.3s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.shop-goal-ring.is-picking {
+  background: none;
+  border: 1px dashed var(--green);
+  color: var(--green);
+  animation: goal-pick-ring 1.8s ease-in-out infinite;
+}
+.shop-goal-ring.is-picking::after {
+  content: none;
+}
+@keyframes goal-pick-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes goal-pick-ring {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.75;
+  }
+}
+/* While pick mode is armed, every pickable card offers itself: dashed green
+   edge, a target in the corner, and a lift on hover. */
+.shop-card.is-picking[data-goalable] {
   cursor: pointer;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
-button.shop-tag {
-  font: inherit;
-  cursor: pointer;
+.shop-card.is-picking[data-goalable]:hover {
+  transform: translateY(-2px);
+  border-color: var(--green);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--green) 18%, transparent);
 }
-button.shop-tag:hover {
-  border-color: var(--muted);
-  color: var(--text);
+.shop-card-pick {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--surface);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--green) 45%, transparent);
+  animation: goal-pick-in 0.25s ease-out both;
+  pointer-events: none;
 }
+/* A tracked goal keeps its quiet green tag. */
 .shop-tag.is-goal.is-on {
   border-color: color-mix(in srgb, var(--green) 55%, var(--border));
   background: color-mix(in srgb, var(--green) 12%, var(--bg));
+}
+/* The "Clear" action is deliberately the quietest button in the shop. */
+.ghost-button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ghost-button:hover {
+  background: var(--hover);
+  color: var(--danger);
 }
 
 /* ---- Shelves --------------------------------------------------------------
@@ -579,6 +671,7 @@ button.shop-tag:hover {
   background: linear-gradient(90deg, var(--swatch-a), var(--swatch-b));
 }
 .shop-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -589,11 +682,23 @@ button.shop-tag:hover {
     transform 0.2s ease,
     border-color 0.2s ease,
     box-shadow 0.2s ease;
+  /* Cards arrive softly, one after another, when a shelf opens. */
+  animation: card-in 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
 }
 .shop-card:hover {
   transform: translateY(-3px);
   border-color: var(--muted);
   box-shadow: 0 8px 24px #00000009;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .shop-card:focus-within {
   border-color: #a499d9;
@@ -994,6 +1099,19 @@ button.shop-tag:hover {
 .shop-confirm::backdrop {
   background: var(--scrim);
   backdrop-filter: blur(4px);
+}
+.shop-confirm[open] {
+  animation: confirm-in 0.26s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 .shop-confirm h2 {
   font-size: 22px;

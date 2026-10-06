@@ -195,19 +195,23 @@ pace before Flywheel — and with everything maxed, the average cycle is about
 
 ## The shop
 
-`/shop` is the shop's front door: **six buttons**, one per shelf — Skills, Pace,
-Companions, Auras, Offline and Tools. Each button names what the shelf is for and
-carries the one number that matters on it (slots used, current reveal and
-cooldown, companions found, auras owned, the EP-per-roll rate, tools owned), and
-each one **opens the shelf as its own page**: `/shop/skills`, `/shop/auras` and
-so on, with its own address to bookmark or share.
+`/shop` is the shop's front door: **one button per shelf** — Skills, Pace,
+Companions, Auras and Tools, plus **Offline once the Offline Roller is yours**
+(the shelf stays out of the shop entirely until it is unlocked). Each button
+names what the shelf is for and carries the one number that matters on it
+(slots used, current reveal and cooldown, companions found, auras owned, the
+EP-per-roll rate, tools owned), and each one **opens the shelf as its own
+page**: `/shop/skills`, `/shop/auras` and so on, with its own address to
+bookmark or share.
 
 Above the shelves sit three **featured picks**, chosen from your tracked goal and
 your wallet — your goal, something within reach, a cosmetic — and each one is
 only a doorway to the shelf that sells it, with a meter against its price. The
 **savings goal** banner lives in the shop too: what you are tracking (or what
 the shop recommends), how the wallet is doing against it, and the shelf that
-sells it — **click any item on a shelf to track it**. A shelf keeps its own
+sells it. Setting one is a deliberate choice: press **Set goal** on the banner,
+then **tap any item on any shelf** and that item becomes your goal — no EP is
+ever spent on it. A shelf keeps its own
 **sticky bar**: a button back to all shelves and the count of what is on it.
 Every shelf shows everything it has, and a description is held to three lines
 so a shelf reads as a list, not a wall of text. Every shelf reads **from the

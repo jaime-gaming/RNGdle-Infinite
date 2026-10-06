@@ -262,7 +262,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 title={ultraBlocker || undefined}
                 onClick={() => {
                   setError("");
-                  setConfirmation("");
                   setOpen("ultra");
                 }}
               >
@@ -274,7 +273,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               disabled={!!blocker}
               onClick={() => {
                 setError("");
-                setConfirmation("");
                 setOpen("rebirth");
               }}
             >
