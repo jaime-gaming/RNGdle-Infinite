@@ -323,6 +323,32 @@
   border-color: var(--text);
   color: var(--text);
 }
+/* A pinned roll: same chip as Share, filled and green once saved. */
+.activity-bookmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 6px 0 0;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 500 10.5px var(--roll-font);
+}
+.activity-bookmark:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+.activity-bookmark.is-saved,
+.activity-bookmark.is-saved:hover {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  background: var(--green-bg);
+  color: var(--green);
+}
+.activity-bookmark + .activity-share {
+  margin-top: 8px;
+}
 /* What each fired skill actually added to that roll. */
 .activity-skills {
   display: flex;

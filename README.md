@@ -350,6 +350,11 @@ roll, badges discovered, companions found free, skills unlocked, charged effects
 fired, Flywheel boosts used, rebirths and ultra-rebirths, and the date of your
 first and latest entry.
 
+The activity feed also lets you **bookmark up to three rolls**: a Bookmark
+button on every roll entry pins it for later, the Bookmarks filter shows only
+pinned rolls, and the pins live on the save — so they survive reloads,
+rebirths and other tabs. A fourth pin asks you to remove one first.
+
 ![The profile page with the derived history and the PNG account card export](media/profile.png)
 
 **Export my data** downloads a PNG account card of your save — your account
@@ -446,6 +451,11 @@ reduced motion, hide the skill bar, hide the goal recap, use compact EP numbers,
 skip purchase confirmations, or make the Auto-Roll ability start armed. The
 device link is the one entry that opens **its own page** (the summary card in
 Settings stays a summary, with a link to the full technical view).
+
+On phones the layout hands the navigation to a **bottom tab bar** — Roll,
+Shop, Badges, History, Settings, plus Rebirth once the ladder shows — while
+the top bar keeps the logo, the theme switch and the profile button, so the
+screen stays for the game instead of a wall of buttons.
 
 Light, dark and system themes are all real palettes with contrast-checked
 colours. Reduced motion completes a reveal instantly while still reserving the

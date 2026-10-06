@@ -1743,11 +1743,12 @@ footer button:hover,
   .theme-switch button:nth-child(2) {
     display: none;
   }
-  /* Phones keep a compact icon-only profile button; the label rides along. */
+  /* Phones keep a compact icon-only profile button; only the text label is
+     hidden — the avatar mark is a span too and must stay visible. */
   .sign-in {
     padding: 8px;
   }
-  .sign-in span {
+  .sign-in > span:not(.avatar-mark) {
     display: none;
   }
   .brand-title {
@@ -1976,7 +1977,7 @@ footer button:hover,
   .sign-in {
     padding: 7px;
   }
-  .sign-in span {
+  .sign-in > span:not(.avatar-mark) {
     display: none;
   }
   .sign-in svg {
