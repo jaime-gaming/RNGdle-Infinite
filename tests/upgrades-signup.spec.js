@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import fs from "node:fs";
 import {
   applyProgress,
   emptyProgress,
@@ -27,7 +28,7 @@ const nav = (page, name) =>
 async function buy(page, id) {
   // The shop is a street of sub-pages: open the shelf that sells it first.
   await openShelfFor(page, id);
-  await page.locator(`[data-product="${id}"] button`).click();
+  await page.locator(`[data-product="${id}"] button:not(.shop-tag)`).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -121,7 +122,9 @@ test("guest rewards and purchases stay in memory and disappear on reload", async
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
   await expect(page.getByTestId("roll-duration")).toHaveText("45s");
   await gotoShelfFor(page, "starfall");
-  await expect(page.locator('[data-product="starfall"] button')).toBeDisabled();
+  await expect(
+    page.locator('[data-product="starfall"] button:not(.shop-tag)'),
+  ).toBeDisabled();
   await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
   expect(await saved(page)).toBeNull();
@@ -163,6 +166,25 @@ test("signup names a clean account and never invents guest earnings", async ({
   ).toBeVisible();
   await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
+});
+
+test("sign up offers linking an existing account instead of starting over", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  // The form is not the only way in: an account on another device joins
+  // through the device link.
+  const link = page.locator(".signup-link");
+  await expect(link).toContainText("Already play on another device?");
+  await link.getByRole("button", { name: "Link an existing account" }).click();
+  await expect(page).toHaveURL(/\/settings\/link$/);
+});
+
+test("the sign-up form carries the link-existing-account door", () => {
+  const profile = fs.readFileSync("src/components/LocalProfile.jsx", "utf8");
+  expect(profile).toContain("Link an existing account");
+  expect(profile).toContain('navigate?.("settings", "link")');
 });
 
 test("invalid or failed signup never creates a profile or discards guest progress; retry saves it", async ({
@@ -272,12 +294,12 @@ test("the first three tiers produce a fifteen-second reveal and fifteen-second c
 }) => {
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
   await page.goto("/shop/pace");
-  await expect(page.locator('[data-product="quickwind-2"] button')).toHaveCount(
-    0,
-  );
-  await expect(page.locator('[data-product="clockwork-3"] button')).toHaveCount(
-    0,
-  );
+  await expect(
+    page.locator('[data-product="quickwind-2"] button:not(.shop-tag)'),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('[data-product="clockwork-3"] button:not(.shop-tag)'),
+  ).toHaveCount(0);
   const tiers = shopProducts.filter(
     (p) => ["roll", "cooldown"].includes(p.kind) && !p.lateGame,
   );

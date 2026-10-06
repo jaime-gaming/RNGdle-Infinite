@@ -160,10 +160,10 @@
     transform: scale(1) rotate(0deg);
   }
 }
-/* The tooltip is the only place this corner ever shows words. */
+/* The tooltip opens below the hover chip, so the two never cover each other. */
 .skill-tooltip {
   position: absolute;
-  top: -6px;
+  top: 34px;
   left: calc(100% + 12px);
   display: none;
   flex-direction: column;
@@ -224,9 +224,14 @@
     left: 8px;
     gap: 7px;
   }
-  .skill-slot .skill-ring {
+  .skill-slot .skill-ring,
+  .skill-stack-bubble .skill-ring {
     width: 34px !important;
     height: 34px !important;
+  }
+  .skill-stack-members {
+    max-width: calc(100vw - 120px);
+    flex-wrap: wrap;
   }
   .skill-tooltip {
     left: 0;
@@ -239,15 +244,111 @@
   .skill-slot.is-armed .skill-ring,
   .skill-slot.is-firing .skill-ring,
   .skill-slot.is-armed::after,
-  .skill-slot.is-firing .skill-ring-icon {
+  .skill-slot.is-firing .skill-ring-icon,
+  .skill-stack.is-armed > .skill-stack-bubble .skill-ring,
+  .skill-stack.is-armed > .skill-stack-bubble::after,
+  .skill-stack.is-firing > .skill-stack-bubble .skill-ring {
     animation: none;
   }
 }
 
+/* ---- Grouped stacks ----------------------------------------------------- */
+/* A family of circles behind one bubble: the pet bonus with its signature
+   skill, the rebirth bonuses with their ladder skills. One circle at rest;
+   the fan opens on hover, keyboard focus or tap, and every member keeps its
+   own chip and tooltip once the fan is open. */
+.skill-stack {
+  position: relative;
+}
+.skill-stack-bubble {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.skill-stack-bubble:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent, var(--green));
+}
+.skill-stack:hover,
+.skill-stack:focus-within {
+  z-index: 30;
+}
+.skill-stack-count {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 700 9px/14px var(--roll-font);
+  text-align: center;
+  pointer-events: none;
+}
+.skill-stack.is-armed .skill-stack-count {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  color: var(--green);
+}
+/* Armed and firing read exactly like a plain circle. */
+.skill-stack.is-armed > .skill-stack-bubble .skill-ring {
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--green) 55%, transparent)
+  );
+  animation: skill-ready 2.6s ease-in-out infinite;
+}
+.skill-stack.is-armed > .skill-stack-bubble::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--green) 50%, transparent);
+  pointer-events: none;
+  animation: skill-halo 2.6s ease-in-out infinite;
+}
+.skill-stack.is-firing > .skill-stack-bubble .skill-ring {
+  animation: skill-fire 900ms ease-out 1;
+}
+.skill-stack-members {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 10px);
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 14%);
+}
+/* Invisible bridge over the gap, so the fan survives the trip across it. */
+.skill-stack-members::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 10px;
+}
+.skill-stack:hover .skill-stack-members,
+.skill-stack:focus-within .skill-stack-members,
+.skill-stack.is-open .skill-stack-members {
+  display: flex;
+}
+
 /* ---- What the rack adds up to ------------------------------------------- */
-/* Each armed circle states its own contribution next to the ring, and the Σ
-   button opens the only panel in this corner that does arithmetic. */
+/* Each circle states its own contribution next to the ring, but only while
+   hovered or focused: at rest the corner is bare rings. The Σ button opens
+   the only panel in this corner that does arithmetic. */
 .skill-contribution {
+  opacity: 0;
   transition: opacity 0.18s ease;
   position: absolute;
   top: 50%;
@@ -263,9 +364,10 @@
   white-space: nowrap;
   pointer-events: none;
 }
-.skill-bar:hover .skill-contribution,
-.skill-bar:focus-within .skill-contribution {
-  opacity: 0;
+.skill-slot:hover .skill-contribution,
+.skill-slot:focus-visible .skill-contribution,
+.skill-slot:focus-within .skill-contribution {
+  opacity: 1;
 }
 .skill-ability {
   cursor: pointer;

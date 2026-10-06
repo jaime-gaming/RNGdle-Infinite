@@ -2,6 +2,7 @@ import { test, expect } from "./helpers/clock.js";
 import {
   emptyProgress,
   parseProgress,
+  parseAndRepairProgress,
   applyProgress,
   recoverUnsavedRolls,
   walletMultiplier,
@@ -68,9 +69,8 @@ const earned = (ep, at = 150000) => [
   },
 ];
 const funded = (extra = {}) => state({ history: earned(35000000), ...extra });
-async function confirm(p, word = "REBIRTH") {
+async function confirm(p) {
   await p.getByRole("button", { name: "Rebirth", exact: true }).click();
-  await p.getByRole("textbox", { name: `Type ${word} to confirm` }).fill(word);
 }
 const scale = (p) =>
   p
@@ -333,7 +333,7 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
     skillCharge: {},
   });
   // A shop skill is a purchase, so it goes back on the stall; the ladder skill
-  // is earned by the rebirth and takes the rack's base slot.
+  // is earned by the rebirth and rides free beside the rack's slots.
   expect(next.skills).toEqual(["reborn-drive"]);
   expect(next.equippedSkills).toEqual(["reborn-drive"]);
   // The activity history belongs to the account, not to the cycle: the roll
@@ -442,13 +442,12 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
   expect(new Set(granted).size).toBe(REBIRTH_TOTAL);
   for (const id of granted) expect(progress.skills).toContain(id);
   // Every cycle hands the shop back, so the rack is back to its base two
-  // slots: the last rung's skill takes one, the first rung's keeps the other,
-  // and the rest of the ladder waits in the rack.
+  // slots — and every rung's skill rides free beside them, equipped and
+  // charging, with the slots left open for shop skills.
   expect(progress.owned).toEqual([]);
   expect(skillSlots(progress.owned)).toBe(2);
-  expect(progress.equippedSkills).toHaveLength(2);
-  expect(progress.equippedSkills).toContain(granted.at(-1));
-  expect(progress.equippedSkills).toContain(granted[0]);
+  expect(progress.equippedSkills).toHaveLength(REBIRTH_TOTAL);
+  for (const id of granted) expect(progress.equippedSkills).toContain(id);
   expect(progress.skills).toHaveLength(REBIRTH_TOTAL);
   // The ladder is complete: rebirth is finished, the ultra-rebirth is next.
   expect(rebirthRequirement(REBIRTH_TOTAL)).toBeNull();
@@ -600,18 +599,42 @@ test("old saves default to zero rebirths and ultra-rebirths, and optional bar sn
   expect(parsed.skills).toEqual([]);
   expect(parsed.equippedSkills).toEqual([]);
   expect(parsed.skillCharge).toEqual({});
-  for (const rebirths of [-1, 0.5, "1", Number.MAX_SAFE_INTEGER + 1])
-    expect(() =>
-      parseProgress(JSON.stringify({ ...legacy, rebirths })),
-    ).toThrow();
-  for (const ultraRebirths of [-1, 0.5, "1"])
-    expect(() =>
-      parseProgress(JSON.stringify({ ...legacy, ultraRebirths })),
-    ).toThrow();
-  for (const surplusBanked of [-1, 0.5, "1", 101])
-    expect(() =>
-      parseProgress(JSON.stringify({ ...legacy, surplusBanked })),
-    ).toThrow();
+  // Unreadable counters are repaired in place instead of bricking the save.
+  for (const [field, cases] of [
+    [
+      "rebirths",
+      [
+        [-1, 0],
+        [0.5, 0],
+        ["1", 0],
+        [Number.MAX_SAFE_INTEGER + 1, Number.MAX_SAFE_INTEGER],
+      ],
+    ],
+    [
+      "ultraRebirths",
+      [
+        [-1, 0],
+        [0.5, 0],
+        ["1", 0],
+      ],
+    ],
+    [
+      "surplusBanked",
+      [
+        [-1, 0],
+        [0.5, 0],
+        ["1", 0],
+        [101, 100],
+      ],
+    ],
+  ])
+    for (const [stored, expected] of cases) {
+      const { progress, repairs } = parseAndRepairProgress(
+        JSON.stringify({ ...legacy, [field]: stored }),
+      );
+      expect(progress[field]).toBe(expected);
+      expect(repairs.length).toBeGreaterThan(0);
+    }
   expect(
     parseCooldownWindow({ startsAt: 45000, endsAt: 105000 }, 105000, null),
   ).toEqual({ startsAt: 45000, endsAt: 105000 });
@@ -687,7 +710,7 @@ for (const [count, rebirths, ep, expected] of [
     ).toBeVisible();
   });
 
-test("rebirth asks for typed confirmation, applies once, and restarts the run without touching the history", async ({
+test("rebirth confirms in its dialog, applies once, and restarts the run without touching the history", async ({
   page,
 }) => {
   const initial = applyProgress(
@@ -715,15 +738,10 @@ test("rebirth asks for typed confirmation, applies once, and restarts the run wi
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Keep:");
   await expect(dialog).toContainText("EP");
+  // No typing: the dialog is the confirmation — read it, confirm or cancel.
   await expect(
     page.getByRole("button", { name: "Confirm rebirth", exact: true }),
-  ).toBeDisabled();
-  await page
-    .getByRole("textbox", { name: "Type REBIRTH to confirm" })
-    .fill("rebirth");
-  await expect(
-    page.getByRole("button", { name: "Confirm rebirth", exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await page.getByRole("button", { name: "Cancel" }).click();
   expect((await saved(page)).rebirths).toBe(0);
   await confirm(page);
@@ -734,6 +752,10 @@ test("rebirth asks for typed confirmation, applies once, and restarts the run wi
       b.click();
     });
   await expect.poll(async () => (await saved(page)).rebirths).toBe(1);
+  // A rainbow ring spins over the new cycle, then leaves by itself.
+  await expect(page.locator(".rebirth-ring")).toBeVisible();
+  await expect(page.locator(".rebirth-ring-title")).toContainText("REBIRTH 1");
+  await expect(page.locator(".rebirth-ring")).toBeHidden({ timeout: 8000 });
   const after = await saved(page);
   // The run starts over: the wallet and everything it bought are handed back,
   // and rung one refills the wallet with its starting sum plus the surplus.
@@ -862,7 +884,9 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
     .getByRole("button", { name: "Confirm rebirth", exact: true })
     .click();
   await expect.poll(async () => (await saved(page)).rebirths).toBe(1);
-  await other.locator('[data-product="starfall"] button').click();
+  await other
+    .locator('[data-product="starfall"] button:not(.shop-tag)')
+    .click();
   await expect(other.locator(".toast")).toContainText("changed");
   // The stale tab neither spent EP nor revived an old purchase: the rebirth
   // handed the shelf back, so nothing was sold and the wallet holds only the
@@ -897,7 +921,7 @@ test("rebirth waits for cooldown and remains usable on mobile without motion", a
   ).toBeEnabled();
   await confirm(page);
   // The dialog and the page behind it fit the smallest phone: no sideways
-  // scroll while the typed confirmation is on screen.
+  // scroll while the confirmation is on screen.
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -928,7 +952,9 @@ test("the moving bar uses the cooldown only, is smooth between seconds, survives
   // Clockwork is a pace tier: the shop's Pace shelf sells it.
   await nav(page, "Shop");
   await page.getByRole("link", { name: "Pace", exact: true }).click();
-  await page.locator('[data-product="clockwork-1"] button').click();
+  await page
+    .locator('[data-product="clockwork-1"] button:not(.shop-tag)')
+    .click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -1109,9 +1135,6 @@ test("an ultra-rebirth runs the ceremony, wears the prestige mark and reads the 
   });
   await expect(ultra).toBeEnabled();
   await ultra.click();
-  await page
-    .getByRole("textbox", { name: "Type ULTRA to confirm" })
-    .fill("ULTRA");
   await page.getByRole("button", { name: "Confirm ultra-rebirth" }).click();
   // The ceremony plays over the page the moment the save lands: rays, the
   // mark and a title, pointer-transparent and gone by itself.

@@ -42,7 +42,7 @@ async function confirmDelete(page) {
 async function buy(page, id) {
   // The shop is a street of sub-pages: open the shelf that sells it first.
   await openShelfFor(page, id);
-  await page.locator(`[data-product="${id}"] button`).click();
+  await page.locator(`[data-product="${id}"] button:not(.shop-tag)`).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -293,7 +293,9 @@ test("deletion requires confirmation, supports cancellation, clears every game f
   await nav(page, "Shop");
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
   await openShelfFor(page, "starfall");
-  await expect(page.locator('[data-product="starfall"] button')).toBeDisabled();
+  await expect(
+    page.locator('[data-product="starfall"] button:not(.shop-tag)'),
+  ).toBeDisabled();
   await nav(page, "History");
   await expect(page.locator(".activity-event")).toHaveCount(0);
   await nav(page, "Badges");
@@ -435,7 +437,7 @@ test("failed purchases add no transactions; failed draw commits reveal no new nu
   }, PROGRESS_KEY);
   await nav(page, "Shop");
   await openShelfFor(page, "starfall");
-  await page.locator('[data-product="starfall"] button').click();
+  await page.locator('[data-product="starfall"] button:not(.shop-tag)').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();

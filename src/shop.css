@@ -317,67 +317,12 @@
   text-decoration: underline;
 }
 
-.shop-filters {
+.shop-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-top: 10px;
-}
-.shop-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1 1 260px;
-  min-width: 0;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  color: var(--muted);
-}
-.shop-search:focus-within {
-  border-color: var(--secondary);
-}
-.shop-search input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font-size: 12px;
-  outline: none;
-}
-.shop-search button {
-  display: grid;
-  place-items: center;
-  padding: 2px;
-  color: var(--muted);
-}
-.shop-filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.shop-filter-chips button {
-  padding: 6px 11px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--secondary);
-  font: 500 11.5px var(--roll-font);
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease;
-}
-.shop-filter-chips button:hover {
-  border-color: var(--muted);
-}
-.shop-filter-chips button.active {
-  border-color: var(--text);
-  background: var(--hover);
-  color: var(--text);
 }
 .shop-back {
   display: flex;
@@ -394,11 +339,115 @@
   border-color: var(--muted);
   color: var(--text);
 }
-.shop-filter-count {
+.shop-count {
   margin-left: auto;
   font: 500 11px var(--roll-font);
   color: var(--muted);
   white-space: nowrap;
+}
+/* ---- The savings goal ------------------------------------------------------
+   The goal lives in the shop, above everything: what is tracked (or what the
+   shop recommends), how the wallet is doing against it, and the shelf that
+   sells it. Clicking any item on a shelf retracks it. */
+.shop-goal {
+  margin: 18px 0 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--hover);
+}
+.shop-goal-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.shop-goal-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--muted);
+  background: conic-gradient(
+    var(--ring-colour, var(--secondary)) var(--fill, 0%),
+    var(--border) 0
+  );
+}
+.shop-goal-ring::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--hover);
+}
+.shop-goal-ring > svg {
+  position: relative;
+  z-index: 1;
+}
+.shop-goal-body.is-ready .shop-goal-ring {
+  --ring-colour: var(--green);
+  color: var(--green);
+}
+.shop-goal-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+.shop-goal-copy strong {
+  font-size: 13px;
+}
+.shop-goal-copy > span {
+  color: var(--muted);
+}
+.shop-goal-bar {
+  display: block;
+  height: 4px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.shop-goal-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--secondary);
+}
+.shop-goal-body.is-ready .shop-goal-bar i {
+  background: var(--green);
+}
+.shop-goal-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.shop-goal-hint {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+/* A trackable card is clickable: the cursor says so, and the tag beside the
+   caveats is the same control for keyboards. */
+.shop-card.is-goalable {
+  cursor: pointer;
+}
+button.shop-tag {
+  font: inherit;
+  cursor: pointer;
+}
+button.shop-tag:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.shop-tag.is-goal.is-on {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  background: color-mix(in srgb, var(--green) 12%, var(--bg));
 }
 
 /* ---- Shelves --------------------------------------------------------------
@@ -1195,14 +1244,25 @@
   border-radius: 12px;
   background: var(--hover);
 }
-.skill-racks-head {
+/* Earned skills sit below the shelf's stock with the same head shape as the
+   saved racks, so the section reads as part of the shelf, not a second shop. */
+.free-skills {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--hover);
+}
+.skill-racks-head,
+.free-skills-head {
   display: flex;
   align-items: baseline;
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
-.skill-racks-head h3 {
+.skill-racks-head h3,
+.free-skills-head h3 {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1213,7 +1273,8 @@
   text-transform: uppercase;
   color: var(--primary);
 }
-.skill-racks-head p {
+.skill-racks-head p,
+.free-skills-head p {
   flex: 1;
   min-width: 180px;
   margin: 0;
@@ -1221,11 +1282,22 @@
   font-size: 12px;
   line-height: 17px;
 }
-.skill-racks-count {
+.skill-racks-count,
+.free-skills-count {
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Where a product card shows its price, an earned skill names its source:
+   the line holds the same place so the button stays level across the row. */
+.shop-source {
+  margin: auto 0 14px;
+  padding-top: 16px;
+  color: var(--muted);
+  font: 500 11px/20px var(--roll-font);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .skill-rack-row {

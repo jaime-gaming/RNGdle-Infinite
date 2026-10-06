@@ -9,6 +9,7 @@ import {
   Download,
   History,
   ImagePlus,
+  Link2,
   UserRound,
 } from "lucide-react";
 import { validUsername } from "../progress.js";
@@ -138,6 +139,7 @@ export default function LocalProfile({
   progress,
   onAction,
   onContinue,
+  navigate,
 }) {
   const [username, setUsername] = useState(""),
     [pending, setPending] = useState(false),
@@ -482,6 +484,22 @@ export default function LocalProfile({
             Clearing your browser's site data deletes the save. You can delete
             it yourself at any time.
           </p>
+          {/* Signing up is not the only way in: an account living on another
+              device joins this browser through the device link instead of
+              starting over. */}
+          <div className="signup-link">
+            <p>
+              <strong>Already play on another device?</strong> Link that account
+              here instead — both devices will play the same save.
+            </p>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => navigate?.("settings", "link")}
+            >
+              <Link2 size={15} aria-hidden="true" /> Link an existing account
+            </button>
+          </div>
         </form>
       )}
     </>

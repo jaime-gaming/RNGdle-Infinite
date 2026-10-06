@@ -151,10 +151,13 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   await expect(page.getByTestId("roll-duration")).toHaveText("35s");
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:45");
   for (const [i, id] of ["starfall", "aurora", "orbit"].entries()) {
-    if (i) await page.locator(`[data-product="${id}"] button`).click();
-    await expect(page.locator(`[data-product="${id}"] button`)).toContainText(
-      "Equipped",
-    );
+    if (i)
+      await page
+        .locator(`[data-product="${id}"] button:not(.shop-tag)`)
+        .click();
+    await expect(
+      page.locator(`[data-product="${id}"] button:not(.shop-tag)`),
+    ).toContainText("Equipped");
     await page.reload();
     const saved = await page.evaluate(
       (key) => JSON.parse(localStorage.getItem(key)),

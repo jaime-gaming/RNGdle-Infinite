@@ -140,11 +140,6 @@ export default function DrawStage({
           );
         })}
       </ol>
-      <p className="draw-stage-note">
-        {decided
-          ? "Only the kept number scores badges, EP and rank."
-          : "Every draw is an ordinary, independent roll."}
-      </p>
     </div>
   );
 }

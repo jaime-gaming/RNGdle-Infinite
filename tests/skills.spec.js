@@ -3,6 +3,7 @@ import {
   emptyProgress,
   applyProgress,
   parseProgress,
+  parseAndRepairProgress,
   parsePending,
   walletMultiplier,
 } from "../src/progress.js";
@@ -14,6 +15,7 @@ import {
   armedSkills,
   chargeAfterSettlement,
   drawPlanFor,
+  parseEquippedSkills,
   petSkills,
   rebirthSkill,
   skillArmed,
@@ -22,10 +24,12 @@ import {
   skillForPet,
   skillPetLuck,
   skillSlots,
+  skillTakesSlot,
   skillUnlocked,
   skillWaivesCooldown,
   skillWalletMultiplier,
   shopSkills,
+  trimToSlots,
 } from "../src/skills.js";
 import {
   BADGE_TOTAL,
@@ -120,7 +124,7 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
         at: 1,
       },
     ),
-  ).toThrow(/rack holds 2 skills/);
+  ).toThrow(/rack holds 2 shop skills/);
   // Unequipping and re-equipping spends nothing, and no charge is lost.
   const charged = { ...p, skillCharge: { surge: 4, trail: 2 } };
   const swapped = applyProgress(charged, {
@@ -139,6 +143,81 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
     at: 1,
   });
   expect(back.equippedSkills).toEqual(["trail", "surge"]);
+  // Rebirth rewards and companion signatures ride free beside the rack: a
+  // full rack still takes them, and they take no slot.
+  const signature = skillForPet("pebble");
+  const full = {
+    ...back,
+    pets: ["pebble"],
+    activePet: "pebble",
+    skills: [...back.skills, "reborn-drive"],
+  };
+  const withReborn = applyProgress(full, {
+    type: "equip-skill",
+    id: "reborn-drive",
+    at: 1,
+  });
+  expect(withReborn.equippedSkills).toEqual(["trail", "surge", "reborn-drive"]);
+  const withBoth = applyProgress(withReborn, {
+    type: "equip-skill",
+    id: signature.id,
+    at: 1,
+  });
+  expect(withBoth.equippedSkills).toEqual([
+    "trail",
+    "surge",
+    "reborn-drive",
+    signature.id,
+  ]);
+  // And they unequip like any other skill.
+  const without = applyProgress(withBoth, {
+    type: "equip-skill",
+    id: "reborn-drive",
+    equipped: false,
+    at: 1,
+  });
+  expect(without.equippedSkills).toEqual(["trail", "surge", signature.id]);
+});
+
+test("only shop skills take rack slots, and trimming keeps the free ones", () => {
+  expect(skillTakesSlot("surge")).toBe(true);
+  expect(skillTakesSlot("reborn-drive")).toBe(false);
+  expect(skillTakesSlot(skillForPet("pebble").id)).toBe(false);
+  // Trimming keeps every free skill and the shop skills in order, wherever
+  // the free ones sit in the list.
+  expect(trimToSlots(["reborn-drive", "surge", "trail", "bounce"], 2)).toEqual([
+    "reborn-drive",
+    "surge",
+    "trail",
+  ]);
+  expect(trimToSlots(["surge", "reborn-drive", "trail", "bounce"], 2)).toEqual([
+    "surge",
+    "reborn-drive",
+    "trail",
+  ]);
+  expect(trimToSlots(["surge", "trail", "bounce"], 2)).toEqual([
+    "surge",
+    "trail",
+  ]);
+});
+
+test("a repaired save keeps its free skills no matter how full the rack is", () => {
+  const signature = skillForPet("pebble");
+  const progress = fund(1000, {
+    owned: ["surge", "trail", "bounce"],
+    skills: ["surge", "trail", "bounce", "reborn-drive"],
+    pets: ["pebble"],
+    activePet: "pebble",
+    equippedSkills: ["surge", "trail", "bounce", "reborn-drive", signature.id],
+  });
+  // Two slots hold two shop skills; the ladder's reward and the companion's
+  // signature stay on, in place.
+  expect(parseEquippedSkills(progress.equippedSkills, progress)).toEqual([
+    "surge",
+    "trail",
+    "reborn-drive",
+    signature.id,
+  ]);
 });
 
 test("a companion's signature only exists while it is the active companion", () => {
@@ -379,18 +458,23 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
 
 test("forged saves cannot smuggle charge, slots or a free roll", () => {
   const base = fund(0);
-  // Charge beyond a circle's limit is rejected outright.
-  expect(() =>
-    parseProgress(
-      JSON.stringify({
-        ...base,
-        skillCharge: { surge: skillById.get("surge").charges + 1 },
-      }),
-    ),
-  ).toThrow(/Invalid skill charge/);
-  expect(() =>
-    parseProgress(JSON.stringify({ ...base, skillCharge: { surge: -1 } })),
-  ).toThrow(/Invalid skill charge/);
+  // Charge beyond a circle's limit is clamped, never trusted — so a balance
+  // patch that cheapens a circle can no longer brick an older save.
+  const overcharged = parseAndRepairProgress(
+    JSON.stringify({
+      ...base,
+      skillCharge: { surge: skillById.get("surge").charges + 1 },
+    }),
+  );
+  expect(overcharged.progress.skillCharge).toEqual({
+    surge: skillById.get("surge").charges,
+  });
+  expect(overcharged.repairs.join(" ")).toMatch(/Surge/);
+  const negative = parseAndRepairProgress(
+    JSON.stringify({ ...base, skillCharge: { surge: -1 } }),
+  );
+  expect(negative.progress.skillCharge).toEqual({});
+  expect(negative.repairs.join(" ")).toMatch(/Surge/);
   // Unknown skills and unknown charge keys are dropped, never trusted.
   const cleaned = parseProgress(
     JSON.stringify({

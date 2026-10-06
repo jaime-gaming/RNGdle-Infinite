@@ -8,11 +8,7 @@ import {
   skillStock,
   skillStockWindow,
 } from "./shop-data.js";
-import {
-  FLYWHEEL_CHARGES,
-  flywheelAfterSettlement,
-  flywheelRequired,
-} from "./flywheel.js";
+import { flywheelAfterSettlement, flywheelRequired } from "./flywheel.js";
 import { validGoal } from "./gameplay-loop.js";
 import {
   rebirthBlocker,
@@ -35,18 +31,20 @@ import {
   parseEquippedSkills,
   parseSkillCharge,
   parseUnlockedSkills,
+  rebirthSkill,
   skillById,
   skillChargeFactor,
   skillForPet,
   skillSlots,
+  skillTakesSlot,
   skillUnlocked,
   skillWaivesCooldown,
   skillWalletMultiplier,
-  validSkillCharge,
   SKILL_IDS,
   SKILL_MAX_DRAWS,
   SKILL_SLOTS,
   SKILL_SLOTS_BASE,
+  trimToSlots,
 } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
@@ -56,11 +54,45 @@ export const PROGRESS_KEY = "rng-infinite-progress-v1";
 // key for the life of the tab. It is also cleared whenever a save is imported,
 // so a stale guest roll can never ride along with the imported one.
 export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
+// Before a repaired save is written back, the exact bytes it was repaired
+// from are stashed here, so a bad repair can always be undone by hand.
+export const PRE_REPAIR_BACKUP_KEY = "rng-infinite-progress-pre-repair-v1";
 // A rack holds at most five skills, so four saved racks is a full set: one for
 // each thing a player might be doing, and no room to hoard.
 export const LOADOUT_LIMIT = 4;
 const badgeIds = new Set(metadata.map((b) => b.id));
 const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
+
+// Closest legal amount to a stored value: whole EP figures stay untouched,
+// finite non-negative numbers are truncated into range, and anything else
+// (negatives, strings, objects) falls back — never throws.
+function repairAmount(value, fallback = 0) {
+  if (validAmount(value)) return value;
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0)
+    return Math.min(Math.trunc(value), Number.MAX_SAFE_INTEGER);
+  return fallback;
+}
+
+// One short phrase for a repair note, so the warning can say what the stored
+// value was without pasting an entire object into the interface.
+function describeStored(value) {
+  if (typeof value === "string") return `"${value.slice(0, 24)}"`;
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  if (value == null) return "missing";
+  return Array.isArray(value) ? "a list" : "an object";
+}
+
+// A profile id for a save whose own id is gone. The game already depends on
+// crypto.randomUUID for event ids; the fallback is only for contexts where
+// crypto itself is unavailable, so a repair can never throw.
+function freshProfileId() {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `repaired-${Date.now().toString(36)}-${Math.floor(Math.random() * 0xffffffff).toString(36)}`;
+  }
+}
 
 // The wallet multiplier of a settled roll: companions, rebirth and
 // ultra-rebirth bonuses, and any wallet skill that fired. It only ever scales
@@ -108,7 +140,12 @@ function autoEquip(equipped, progress, id) {
     skillUnlocked(skillId, progress),
   );
   if (!id || !skillById.has(id) || list.includes(id)) return list;
-  if (list.length >= skillSlots(progress.owned ?? [])) return list;
+  // Only shop skills count towards the rack's slots: rebirth rewards and
+  // companion signatures ride free, so they always fit.
+  if (skillTakesSlot(id)) {
+    const shop = list.filter(skillTakesSlot).length;
+    if (shop >= skillSlots(progress.owned ?? [])) return list;
+  }
   return [...list, id];
 }
 
@@ -151,13 +188,18 @@ function parseLoadouts(value) {
     if (!entry || typeof entry !== "object") continue;
     if (typeof entry.id !== "string" || !entry.id) continue;
     if (!Array.isArray(entry.skills)) continue;
-    const skills = [
-      ...new Set(
-        entry.skills.filter(
-          (id) => typeof id === "string" && SKILL_IDS.includes(id),
+    // A saved rack holds free skills without limit; only its shop skills are
+    // capped, at the widest the rack can ever be.
+    const skills = trimToSlots(
+      [
+        ...new Set(
+          entry.skills.filter(
+            (id) => typeof id === "string" && SKILL_IDS.includes(id),
+          ),
         ),
-      ),
-    ].slice(0, SKILL_SLOTS_BASE + SKILL_SLOTS.length);
+      ],
+      SKILL_SLOTS_BASE + SKILL_SLOTS.length,
+    );
     if (!skills.length) continue;
     const name =
       typeof entry.name === "string" ? entry.name.trim().slice(0, 40) : "";
@@ -175,23 +217,47 @@ export function loadoutName(skills = []) {
   return `${names[0]} + ${names.length - 1} more`;
 }
 
-export function parseProgress(raw) {
-  if (raw === null) return emptyProgress();
+// ---- Self-repairing saves -------------------------------------------------
+// A save the game itself wrote must never brick an account over one bad
+// value: instead of rejecting the whole file, the loader repairs what it can
+// — clamping an overcharged circle, discarding an unverifiable roll,
+// rebuilding a list from the purchases that paid for it — and reports every
+// fix it made. Only data that is not a save at all (unparseable JSON, a
+// foreign version envelope) is still rejected.
+export function parseAndRepairProgress(raw) {
+  if (raw === null) return { progress: emptyProgress(), repairs: [] };
+  const repairs = [];
+  const note = (message) => repairs.push(message);
   const p = JSON.parse(raw);
   if (!p || p.version !== 1) throw new Error("Unrecognized save version");
-  if (
-    !validAmount(p.balance) ||
-    !validAmount(p.totalEarned) ||
-    p.balance > p.totalEarned ||
-    !validAmount(p.cooldownUntil)
-  )
-    throw new Error("Invalid save values");
-  if (
-    !Array.isArray(p.discovered) ||
-    !Array.isArray(p.owned) ||
-    !Array.isArray(p.receipts)
-  )
-    throw new Error("Invalid save collections");
+  // Wallet figures. The all-time earned total is trusted over the wallet: a
+  // balance above it is clamped down so no EP is ever invented, while an
+  // unreadable total is rebuilt from a healthy wallet instead of wiping it.
+  let totalEarned = repairAmount(p.totalEarned);
+  let balance = repairAmount(p.balance);
+  if (!validAmount(p.totalEarned) && validAmount(p.balance))
+    totalEarned = Math.max(totalEarned, balance);
+  else if (balance > totalEarned) balance = totalEarned;
+  if (balance !== p.balance)
+    note(
+      `wallet balance was ${describeStored(p.balance)}, so it was set to ${balance.toLocaleString("en-US")} EP.`,
+    );
+  if (totalEarned !== p.totalEarned)
+    note(
+      `all-time earned EP was ${describeStored(p.totalEarned)}, so it was set to ${totalEarned.toLocaleString("en-US")} EP.`,
+    );
+  const cooldownBase = repairAmount(p.cooldownUntil);
+  if (cooldownBase !== p.cooldownUntil)
+    note("roll cooldown timer was unreadable, so it was reset.");
+  for (const [field, label] of [
+    ["discovered", "badge collection"],
+    ["owned", "owned upgrades"],
+    ["receipts", "roll receipts"],
+  ])
+    if (!Array.isArray(p[field])) {
+      note(`The ${label} list was unreadable, so it was reset.`);
+      p[field] = [];
+    }
   let owned = [...new Set(p.owned.filter((id) => productById.has(id)))];
   // Prune to a fixed point: late-game chains can be deeper than three levels.
   let priorLength;
@@ -203,55 +269,146 @@ export function parseProgress(raw) {
         owned.includes(productById.get(id).requires),
     );
   } while (owned.length !== priorLength);
+  // An overcharged Flywheel is clamped to what the owned model holds — a
+  // cheaper model from a newer balance patch must never brick the save.
+  const flywheelMax = owned.includes("flywheel") ? flywheelRequired(owned) : 0;
+  const flywheelCharge =
+    flywheelMax > 0 ? Math.min(repairAmount(p.flywheelCharge), flywheelMax) : 0;
   if (
-    owned.includes("flywheel") &&
+    flywheelMax > 0 &&
     p.flywheelCharge != null &&
-    (!validAmount(p.flywheelCharge) || p.flywheelCharge > FLYWHEEL_CHARGES)
+    flywheelCharge !== p.flywheelCharge
   )
-    throw new Error("Invalid Flywheel charge");
-  if (p.rebirths != null && !validAmount(p.rebirths))
-    throw new Error("Invalid rebirth count");
-  if (p.ultraRebirths != null && !validAmount(p.ultraRebirths))
-    throw new Error("Invalid ultra-rebirth count");
-  if (
-    p.surplusBanked != null &&
-    (!validAmount(p.surplusBanked) || p.surplusBanked > 100)
-  )
-    throw new Error("Invalid surplus dividend");
-  if (p.cycleEarnedEP != null && !validAmount(p.cycleEarnedEP))
-    throw new Error("Invalid cycle EP total");
-  if (!validSkillCharge(p.skillCharge)) throw new Error("Invalid skill charge");
-  if (p.pets != null && !Array.isArray(p.pets))
-    throw new Error("Invalid pet collection");
-  if (p.skills != null && !Array.isArray(p.skills))
-    throw new Error("Invalid skill collection");
+    note(
+      `Flywheel charge was ${describeStored(p.flywheelCharge)}, so it was clamped to ${flywheelCharge}.`,
+    );
+  const rebirths = repairAmount(p.rebirths ?? 0);
+  if ((p.rebirths ?? 0) !== rebirths)
+    note(
+      `rebirth count was ${describeStored(p.rebirths)}, so it was set to ${rebirths}.`,
+    );
+  const ultraRebirths = repairAmount(p.ultraRebirths ?? 0);
+  if ((p.ultraRebirths ?? 0) !== ultraRebirths)
+    note(
+      `ultra-rebirth count was ${describeStored(p.ultraRebirths)}, so it was set to ${ultraRebirths}.`,
+    );
+  const surplusBanked = Math.min(repairAmount(p.surplusBanked ?? 0), 100);
+  if ((p.surplusBanked ?? 0) !== surplusBanked)
+    note(
+      `surplus dividend was ${describeStored(p.surplusBanked)}, so it was set to ${surplusBanked}.`,
+    );
+  // An unreadable cycle total is simply recalculated from the activity log
+  // below, instead of blocking the whole load.
+  const cycleOverride = validAmount(p.cycleEarnedEP) ? p.cycleEarnedEP : null;
+  if (p.cycleEarnedEP != null && cycleOverride === null)
+    note("cycle EP total was unreadable, so it was recalculated from history.");
+  // Skill charges clamp to what each circle holds — exactly the failure an
+  // older, more expensive balance used to cause — while unknown keys keep
+  // being dropped silently: they are future skills, not corruption.
+  const skillCharge = parseSkillCharge(p.skillCharge);
+  if (p.skillCharge != null) {
+    if (typeof p.skillCharge !== "object" || Array.isArray(p.skillCharge)) {
+      note("skill charges were unreadable, so every circle was reset.");
+    } else {
+      for (const [id, charge] of Object.entries(p.skillCharge)) {
+        const skill = skillById.get(id);
+        if (!skill || skillCharge[id] === charge) continue;
+        note(
+          `skill "${skill.name}" had ${describeStored(charge)} charges but holds ${skill.charges}, so it was ${skillCharge[id] === undefined ? "reset" : `clamped to ${skillCharge[id]}`}.`,
+        );
+      }
+    }
+  }
+  const history = parseHistory(p.history);
+  if (Array.isArray(p.history) && history.length < p.history.length) {
+    const dropped = p.history.length - history.length;
+    note(
+      `${dropped} activity-log ${dropped === 1 ? "entry was" : "entries were"} unreadable and ${dropped === 1 ? "was" : "were"} removed.`,
+    );
+  }
+  // Lists that the rest of the save can vouch for are rebuilt from it: the
+  // activity log remembers every companion found or bought, and purchases
+  // plus rebirths re-unlock every skill. Nothing else can vouch for a wallet
+  // figure, so those fall back to zero above instead.
+  let petsInput = p.pets;
+  if (p.pets != null && !Array.isArray(p.pets)) {
+    note("companion list was unreadable, so it was rebuilt from your history.");
+    petsInput = history.flatMap((event) =>
+      event.type === "pet"
+        ? [event.productId]
+        : event.type === "purchase" && petById.has(event.productId)
+          ? [event.productId]
+          : [],
+    );
+  }
   const pets = [
-    ...new Set((p.pets ?? []).filter((id) => petById.has(id))),
+    ...new Set((petsInput ?? []).filter((id) => petById.has(id))),
   ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
   // Only an owned pet can be active; anything else falls back to no pet.
   const activePet = pets.includes(p.activePet) ? p.activePet : "none";
-  const skills = parseUnlockedSkills(p.skills, { owned });
+  let skillsInput = p.skills;
+  if (p.skills != null && !Array.isArray(p.skills)) {
+    note(
+      "unlocked skills were unreadable, so they were rebuilt from your purchases and rebirths.",
+    );
+    skillsInput = [
+      ...owned.filter((id) => skillById.get(id)?.source === "shop"),
+      ...Array.from(
+        { length: Math.min(rebirths, 6) },
+        (_, rung) => rebirthSkill(rung + 1)?.id,
+      ).filter(Boolean),
+    ];
+  }
+  const skills = parseUnlockedSkills(skillsInput, { owned });
+  if (p.equippedSkills != null && !Array.isArray(p.equippedSkills))
+    note("skill rack was unreadable, so it was emptied.");
   const equippedSkills = parseEquippedSkills(p.equippedSkills, {
     owned,
     skills,
     pets,
     activePet,
   });
-  const pendingRoll = parsePending(p.pendingRoll, owned);
+  // An unverifiable committed roll is discarded instead of bricking the
+  // account: its number was never revealed, so nothing of value is lost, and
+  // the stored cooldown is kept as-is.
+  let pendingRoll = null;
+  try {
+    pendingRoll = parsePending(p.pendingRoll, owned);
+  } catch {
+    if (p.pendingRoll != null)
+      note("a committed roll could not be verified, so it was discarded.");
+  }
+  // The profile is repaired piece by piece — a fresh id, a placeholder name,
+  // the current time — so the save keeps loading as the same funded account
+  // instead of degrading into a guest session that a sign-up would wipe.
   let profile = null;
   if (p.profile != null) {
-    if (
-      typeof p.profile.id !== "string" ||
-      !p.profile.id ||
-      !validUsername(p.profile.username) ||
-      !validAmount(p.profile.createdAt)
-    )
-      throw new Error("Invalid local profile");
-    const avatar = parseAvatar(p.profile.avatar);
+    const stored = typeof p.profile === "object" ? p.profile : {};
+    if (typeof p.profile !== "object")
+      note(
+        "local profile was unreadable, so a new one was issued — wallet, collection and upgrades are untouched.",
+      );
+    const id =
+      typeof stored.id === "string" && stored.id ? stored.id : freshProfileId();
+    if (id !== stored.id)
+      note(
+        "profile id was unreadable, so a new one was issued — device links need re-creating.",
+      );
+    const username = validUsername(stored.username)
+      ? stored.username
+      : `player-${id.replace(/-/g, "").slice(0, 8)}`;
+    if (username !== stored.username)
+      note(`profile name was unreadable, so it was set to "${username}".`);
+    const createdAt = validAmount(stored.createdAt)
+      ? stored.createdAt
+      : Date.now();
+    if (createdAt !== stored.createdAt)
+      note("profile creation date was unreadable, so it was reset.");
+    const avatar = parseAvatar(stored.avatar);
     profile = {
-      id: p.profile.id,
-      username: p.profile.username,
-      createdAt: p.profile.createdAt,
+      id,
+      username,
+      createdAt,
       // A profile only carries a logo once one was uploaded: a save with no
       // picture keeps exactly the shape it had before logos existed.
       ...(avatar ? { avatar } : {}),
@@ -261,20 +418,39 @@ export function parseProgress(raw) {
   // cooldownUntil let an edited save keep its number while truncating (or
   // zeroing) the deadline, cancelling the wait entirely. The deadline can only
   // ever be extended by the roll in flight, never shortened by one.
-  const cooldownUntil = pendingRoll
-    ? Math.max(
-        p.cooldownUntil,
-        pendingRoll.startedAt + pendingRoll.rollMS + pendingRoll.cooldownMS,
-      )
-    : p.cooldownUntil;
-  if (!validAmount(cooldownUntil)) throw new Error("Invalid save values");
-  const history = parseHistory(p.history);
-  return {
+  const pendingEnd = pendingRoll
+    ? pendingRoll.startedAt + pendingRoll.rollMS + pendingRoll.cooldownMS
+    : 0;
+  const cooldownUntil = Math.min(
+    Math.max(cooldownBase, pendingEnd),
+    Number.MAX_SAFE_INTEGER,
+  );
+  let offline = null;
+  try {
+    offline = parseOffline(p.offline, owned);
+  } catch {
+    // Only the timestamp is salvageable: a pending batch or report that fails
+    // validation is discarded rather than trusted.
+    const lastSeenAt = p.offline?.lastSeenAt;
+    offline =
+      p.offline != null &&
+      owned.includes("offline-roller") &&
+      Number.isSafeInteger(lastSeenAt) &&
+      lastSeenAt >= 0 &&
+      lastSeenAt <= 8640000000000000
+        ? { lastSeenAt, batch: null, report: null }
+        : null;
+    if (p.offline != null)
+      note(
+        "saved offline rewards were unreadable, so they were discarded — wallet and history are untouched.",
+      );
+  }
+  const progress = {
     version: 1,
     history,
     cycleEarnedEP: cycleEarnedEp({
       history,
-      ...(p.cycleEarnedEP != null ? { cycleEarnedEP: p.cycleEarnedEP } : {}),
+      ...(cycleOverride != null ? { cycleEarnedEP: cycleOverride } : {}),
     }),
     pendingRoll,
     cooldownWindow: parseCooldownWindow(
@@ -282,17 +458,15 @@ export function parseProgress(raw) {
       cooldownUntil,
       pendingRoll,
     ),
-    rebirths: p.rebirths ?? 0,
-    ultraRebirths: p.ultraRebirths ?? 0,
-    surplusBanked: p.surplusBanked ?? 0,
-    offline: parseOffline(p.offline, owned),
-    flywheelCharge: owned.includes("flywheel")
-      ? Math.min(p.flywheelCharge ?? 0, flywheelRequired(owned))
-      : 0,
+    rebirths,
+    ultraRebirths,
+    surplusBanked,
+    offline,
+    flywheelCharge,
     profile,
     goalId: validGoal(p.goalId, owned) ? p.goalId : null,
-    balance: p.balance,
-    totalEarned: p.totalEarned,
+    balance,
+    totalEarned,
     discovered: [...new Set(p.discovered.filter((id) => badgeIds.has(id)))],
     owned,
     equipped:
@@ -304,7 +478,7 @@ export function parseProgress(raw) {
     skills,
     equippedSkills,
     loadouts: parseLoadouts(p.loadouts),
-    skillCharge: parseSkillCharge(p.skillCharge),
+    skillCharge,
     cooldownUntil,
     receipts: [
       ...new Set(
@@ -312,6 +486,15 @@ export function parseProgress(raw) {
       ),
     ].slice(-128),
   };
+  return { progress, repairs };
+}
+
+// The strict-looking loader every caller already uses: it repairs instead of
+// rejecting, so a save is only ever unreadable when it is not a save at all.
+// Callers that want to tell the player what was fixed use
+// parseAndRepairProgress directly.
+export function parseProgress(raw) {
+  return parseAndRepairProgress(raw).progress;
 }
 export function validUsername(value) {
   return typeof value === "string" && /^[\p{L}\p{N}_-]{3,20}$/u.test(value);
@@ -370,8 +553,9 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
     activePet: "none",
     skills,
   };
-  // The rack is rebuilt rather than repaired: the skill this rebirth pays takes
-  // a slot first, then whatever the cycle kept, until the rack is full.
+  // The rack is rebuilt rather than repaired: the skill this rebirth pays goes
+  // on first, then whatever the cycle kept. Ladder skills ride free, so the
+  // rack keeps them all; only the shop skills left behind took slots.
   let equippedSkills = autoEquip([], base, granted?.id);
   for (const id of skills) equippedSkills = autoEquip(equippedSkills, base, id);
   // Charge belongs to the skill it fills: what went back on the shelf — and
@@ -847,9 +1031,14 @@ export function applyProgress(state, action) {
     const wanted = action.equipped ?? !equipped.includes(skill.id);
     if (wanted && !equipped.includes(skill.id)) {
       const slots = skillSlots(state.owned ?? []);
-      if (equipped.length >= slots)
+      // The slots only hold shop skills: rebirth rewards and companion
+      // signatures ride free beside the rack.
+      if (
+        skillTakesSlot(skill.id) &&
+        equipped.filter(skillTakesSlot).length >= slots
+      )
         throw new Error(
-          `Your rack holds ${slots} skills. Unequip one, or buy a bigger Skill Bay.`,
+          `Your rack holds ${slots} shop skills. Unequip one, or buy a bigger Skill Bay.`,
         );
       equipped.push(skill.id);
     }
@@ -908,7 +1097,7 @@ export function applyProgress(state, action) {
     const equipped = entry.skills.filter((id) => skillUnlocked(id, state));
     if (!equipped.length)
       throw new Error("None of those skills are unlocked right now.");
-    const trimmed = equipped.slice(0, slots);
+    const trimmed = trimToSlots(equipped, slots);
     if (
       trimmed.length === (state.equippedSkills ?? []).length &&
       trimmed.every((id, index) => id === state.equippedSkills[index])

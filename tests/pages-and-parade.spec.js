@@ -66,6 +66,22 @@ test("a firing companion skill pins the companion to the number's corner", () =>
   expect(read("roll.css")).toContain(".artifact-companion");
 });
 
+test("companions are uncaged with an animation, on the shelf and on arrival", () => {
+  // The shelf: a barred door across every cage, swinging open with a hop
+  // while the friend is uncaged.
+  const shelf = read("components/PetShelf.jsx");
+  expect(shelf).toContain("pet-cage-door");
+  expect(shelf).toContain("is-uncaging");
+  expect(shelf).toContain("pet-cage-hanger");
+  const css = read("pets.css");
+  expect(css).toContain("@keyframes pet-uncage-door");
+  expect(css).toContain("@keyframes pet-uncage-hop");
+  // The arrival: a found friend bursts out of its cage on the roll stage.
+  const parade = read("components/PetParade.jsx");
+  expect(parade).toContain("pet-arrival-cage");
+  expect(read("pet-parade.css")).toContain("@keyframes pet-arrival-cage");
+});
+
 test("the roll animates each wallet bonus charge instead of showing a static extra line", () => {
   const roll = read("components/RollExperience.jsx");
   // The settlement formula drives the balance counter, and each bonus part
@@ -248,7 +264,7 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
   ).toBeVisible();
 });
 
-test("equipped skills, companion skills and passive EP modifiers appear in the skill row, excluding unequipped skills", async ({
+test("equipped skills stand alone while pet and rebirth families stack in the skill row, excluding unequipped skills", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -266,13 +282,20 @@ test("equipped skills, companion skills and passive EP modifiers appear in the s
   await page.goto("/");
   const bar = page.locator(".skill-bar");
   await expect(bar).toBeVisible();
-  // Equipped skill (charging) and companion skill (Pebble's Steady Step) are shown,
-  // while unequipped non-companion skill (trail) is excluded.
+  // The equipped skill stands alone while the pet and rebirth families ride in
+  // stacks that fan out on hover; the unequipped non-companion skill (trail)
+  // stays out entirely.
   await expect(bar.locator('[data-skill="surge"]')).toContainText(
     "×2 banked EP · 2/5",
   );
-  await expect(bar.locator('[data-skill="pebble-steady"]')).toBeVisible();
   await expect(bar.locator('[data-skill="trail"]')).toHaveCount(0);
+  await expect(bar.locator('[data-stack="pet"]')).toBeVisible();
+  await expect(bar.locator('[data-stack="rebirth"]')).toBeVisible();
+  await bar.locator('[data-stack="pet"]').hover();
+  await expect(bar.locator('[data-skill="pebble-steady"]')).toBeVisible();
+  await expect(bar.locator('[data-skill="pet:pebble"]')).toBeVisible();
+  await bar.locator('[data-stack="rebirth"]').hover();
+  await expect(bar.locator('[data-skill="rebirth"]')).toBeVisible();
   await expect(bar.locator('[data-skill="pet:pebble"]')).toContainText(
     "+5% EP",
   );
