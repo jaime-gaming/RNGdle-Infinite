@@ -165,6 +165,11 @@ export default function Shop({
   navigate,
   notify,
   openSignup,
+  // Goal picking is armed from the goal banner above the shelves; while it is
+  // armed, the next trackable card the player taps becomes the goal. The state
+  // lives in the app shell so it survives moving between shelves.
+  pickingGoal = false,
+  onPickingGoal = () => {},
 }) {
   const formatEP = useFormatEP();
   const { settings: preferences } = useSettings();
@@ -185,6 +190,14 @@ export default function Shop({
   const settings = rollSettings(progress.owned);
   const { intervalMS: offlineInterval, cap: offlineCap } = offlineSettings(
     progress.owned,
+  );
+  // The offline shelf only exists once the Offline Roller does: no door to it
+  // in the hub or on the other shelves before then. A direct link still lands
+  // on the shelf's own locked panel, so nothing breaks — it simply never
+  // advertises itself early.
+  const offlineUnlocked = progress.owned.includes("offline-roller");
+  const visibleShelves = SHOP_SECTIONS.filter(
+    (entry) => entry.id !== "offline" || offlineUnlocked,
   );
   const charges = flywheelRequired(progress.owned);
   const rack = rackReport(progress);
@@ -271,8 +284,16 @@ export default function Shop({
         if (type === "buy") setLastPurchase(productById.get(id));
         else {
           setLastPurchase(null);
-          if (type === "goal") notify("Goal updated. No EP spent.");
-          else if (type === "equip-skill") notify("Skill rack updated. Free.");
+          if (type === "goal") {
+            // The pick is done the moment the goal lands.
+            onPickingGoal(false);
+            notify(
+              id
+                ? "Goal updated. No EP spent."
+                : "Goal cleared. The shop recommends the next step.",
+            );
+          } else if (type === "equip-skill")
+            notify("Skill rack updated. Free.");
           else notify("Appearance updated.");
         }
       } else {
@@ -400,7 +421,7 @@ export default function Shop({
     );
   }
   const owned = (item) => progress.owned.includes(item.id);
-  function card(item) {
+  function card(item, index = 0) {
     const state = stateOf(item);
     const aura = item.kind === "aura",
       skill = item.kind === "skill",
@@ -410,11 +431,15 @@ export default function Shop({
         : skill
           ? (progress.equippedSkills ?? []).includes(item.id)
           : false;
-    const isGoal = goal?.id === item.id;
-    // Clicking a card tracks it as the goal: anything the goal action would
-    // accept — unowned, prerequisites unlocked — is clickable. Clicking the
-    // tracked card again untracks it.
+    // Tracked, not recommended: a card is "the goal" only when the save has
+    // actually chosen it. The recommendation the banner falls back to must
+    // never read as tracked, or picking it would untrack nothing.
+    const isGoal = progress.goalId === item.id;
+    // A card becomes the goal only while the goal banner's pick mode is
+    // armed: anything the goal action would accept — unowned, prerequisites
+    // unlocked — is pickable, and tapping the tracked card again untracks it.
     const goalable = validGoal(item.id, progress.owned ?? []);
+    const pickable = pickingGoal && goalable;
     // Out of the stall's current stock: still listed, dimmed under a green
     // aura, with the next restock counting down.
     const restocking = skill && !state.owned && !state.stocked;
@@ -433,22 +458,32 @@ export default function Shop({
             : "";
     return (
       <article
-        className={`shop-card ${aura ? "is-aura" : ""} ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""} ${lastPurchase?.id === item.id ? "is-celebrated" : ""} ${goalable ? "is-goalable" : ""}`}
+        className={`shop-card ${aura ? "is-aura" : ""} ${state.owned ? "is-owned" : ""} ${equipped ? "is-equipped" : ""} ${restocking ? "is-restocking" : ""} ${lastPurchase?.id === item.id ? "is-celebrated" : ""} ${goalable ? "is-goalable" : ""} ${pickingGoal ? "is-picking" : ""}`}
         key={item.id}
         data-product={item.id}
         data-kind={item.kind}
         data-tracked={isGoal}
+        data-goalable={goalable || undefined}
         aria-label={item.name}
         tabIndex={-1}
+        style={{ animationDelay: `${Math.min(index, 10) * 40}ms` }}
         onClick={(event) => {
-          // The card itself is the goal control — unless the click landed on
-          // something that already does something (buy, equip, track…).
+          // A card only becomes the goal while the goal banner's pick mode is
+          // armed — a plain click is just browsing. Clicks that land on a real
+          // control (buy, equip…) still belong to that control.
           if (event.target.closest("button, a, input, select, textarea"))
             return;
-          if (!goalable) return;
+          if (!pickable) return;
           perform("goal", isGoal ? null : item.id);
         }}
       >
+        {/* While pick mode is armed, pickable cards wear a target so the
+            player knows the next tap sets the goal. */}
+        {pickable && (
+          <span className="shop-card-pick" aria-hidden="true">
+            <Target size={15} />
+          </span>
+        )}
         <div
           className={
             aura
@@ -510,23 +545,16 @@ export default function Shop({
               ))}
             </p>
           )}
-          {/* The goal toggle lives beside the caveats: every trackable card
-              offers it, so the goal is set where the item is, by mouse or by
-              keyboard. An unmet prerequisite (rare now that the shelf hides
+          {/* The goal is set from the goal banner's pick mode, never by an
+              extra button on the card — the card only states when it *is* the
+              goal. An unmet prerequisite (rare now that the shelf hides
               those) or the profile gate still reads as a caveat — a
               prerequisite that is already met never renders a "Needs" tag on
               a card you can buy. */}
-          {(goalable || state.requires || state.profileGated) && (
+          {(isGoal || state.requires || state.profileGated) && (
             <div className="shop-card-tags">
-              {goalable && (
-                <button
-                  type="button"
-                  className={`shop-tag is-goal${isGoal ? " is-on" : ""}`}
-                  aria-pressed={isGoal}
-                  onClick={() => perform("goal", isGoal ? null : item.id)}
-                >
-                  {isGoal ? "Your goal" : "Track as goal"}
-                </button>
+              {isGoal && (
+                <span className="shop-tag is-goal is-on">Your goal</span>
               )}
               {state.requires && (
                 <span className="shop-tag is-locked">
@@ -1034,8 +1062,39 @@ export default function Shop({
           </div>
         </div>
       </section>
-      <section className="shop-goal" aria-label="Savings goal">
-        {goal ? (
+      <section
+        className={`shop-goal${pickingGoal ? " is-picking" : ""}`}
+        aria-label="Savings goal"
+      >
+        {pickingGoal ? (
+          /* Pick mode, armed from here and only from here: the shelves wait
+             for the player's tap, and this banner says so out loud. */
+          <div className="shop-goal-body shop-goal-picking" role="status">
+            <span className="shop-goal-ring is-picking" aria-hidden="true">
+              <Target size={14} />
+            </span>
+            <div className="shop-goal-copy">
+              <strong>Pick your goal</strong>
+              <span>
+                Tap any item on any shelf — the one you tap becomes your
+                savings goal. No EP is spent.
+              </span>
+              {goalTracked && (
+                <span className="shop-goal-current">
+                  Your goal: {goal.name} stays tracked until you pick another
+                  item or cancel.
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => onPickingGoal(false)}
+            >
+              <X size={14} /> Cancel
+            </button>
+          </div>
+        ) : goal ? (
           <div className={`shop-goal-body${goalReady ? " is-ready" : ""}`}>
             <span
               className="shop-goal-ring"
@@ -1056,30 +1115,55 @@ export default function Shop({
               <span>
                 {goalReady
                   ? `Ready now · ${formatEP(goal.price)} EP`
-                  : `${formatEP(goalSaved)} of ${formatEP(goal.price)} EP · ${formatEP(goal.price - progress.balance)} to go`}
+                  : `${formatEP(goalSaved)} of ${formatEP(goal.price)} EP · ${formatEP(goal.price - progress.balance)} EP to go`}
               </span>
               <span className="shop-goal-bar" aria-hidden="true">
                 <i style={{ width: `${goalPercent}%` }} />
               </span>
             </div>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => onOpenShelf(shelfOfProduct(goal))}
-            >
-              View on shelf
-            </button>
+            <div className="shop-goal-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => onOpenShelf(shelfOfProduct(goal))}
+              >
+                View on shelf
+              </button>
+              {/* The goal is a deliberate choice: arm pick mode here first,
+                  then tap the item you want on a shelf. */}
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => onPickingGoal(true)}
+              >
+                <Target size={14} />
+                {goalTracked ? "Change goal" : "Set goal"}
+              </button>
+              {goalTracked && (
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => perform("goal", null)}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <p className="shop-goal-empty">
             All items owned — nothing left to save for.
           </p>
         )}
-        <small className="shop-goal-hint">
-          {progress.profile
-            ? "Click any item on a shelf to track it as your goal."
-            : "Guest goals are temporary. Click any item on a shelf to track it as your goal."}
-        </small>
+        {!pickingGoal && (
+          <small className="shop-goal-hint">
+            {goal
+              ? progress.profile
+                ? "Press “Set goal”, then tap any item on a shelf to track it. Goals never cost EP."
+                : "Guest goals are temporary. Press “Set goal”, then tap any item on a shelf to track it."
+              : ""}
+          </small>
+        )}
       </section>
       {/* The shop's own page is the index: one button per shelf, each a real
           link to a real sub-page, each carrying the number that tells you
@@ -1106,7 +1190,7 @@ export default function Shop({
               <span className="shop-section-stat">Shop · /shop</span>
             </div>
             <nav className="shop-jump" aria-label="Shop sections">
-              {SHOP_SECTIONS.map(shelfTile)}
+              {visibleShelves.map(shelfTile)}
             </nav>
           </section>
           {/* A shop window, not a second catalogue: three picks that link into the
@@ -1568,9 +1652,9 @@ export default function Shop({
         <nav className="shop-others" aria-label="Other shelves">
           <span className="shop-others-label">Other shelves</span>
           <div className="shop-jump">
-            {SHOP_SECTIONS.filter((entry) => entry.id !== shelf.id).map(
-              shelfTile,
-            )}
+            {visibleShelves
+              .filter((entry) => entry.id !== shelf.id)
+              .map(shelfTile)}
           </div>
         </nav>
       )}

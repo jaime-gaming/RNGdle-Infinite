@@ -9,6 +9,7 @@ import {
   Check,
   RotateCcw,
   Share2,
+  Bookmark,
   Infinity as InfinityIcon,
 } from "lucide-react";
 import NumberBox from "./NumberBox";
@@ -44,6 +45,7 @@ export default function ActivityFeed({
   openSignup,
   openBadge,
   notify,
+  onAction,
 }) {
   const [filter, setFilter] = useState("All activity"),
     [limit, setLimit] = useState(50);
@@ -53,6 +55,9 @@ export default function ActivityFeed({
     [tier, setTier] = useState("all");
   const lens = progress.owned.includes("archive-lens");
   const history = progress.history ?? [];
+  // A few rolls can be pinned for later: the bookmarks live on the save, so
+  // they survive reloads, rebirths and other tabs.
+  const bookmarks = progress.bookmarks ?? [];
   const events = useMemo(
     () =>
       history
@@ -63,6 +68,9 @@ export default function ActivityFeed({
             (filter === "Offline" && e.source === "offline") ||
             (filter === "Rebirths" &&
               ["rebirth", "ultra-rebirth"].includes(e.type)) ||
+            (filter === "Bookmarks" &&
+              e.type === "roll" &&
+              bookmarks.includes(e.id)) ||
             (filter === "Badge unlocks" && e.type === "unlock") ||
             (filter === "Shop" && ["purchase", "equip"].includes(e.type)),
         )
@@ -75,8 +83,12 @@ export default function ActivityFeed({
         .slice()
         .sort((a, b) => a.at - b.at)
         .reverse(),
-    [history, filter, query, tier, lens],
+    [history, filter, query, tier, lens, bookmarks],
   );
+  async function toggleBookmark(event) {
+    const result = await onAction?.({ type: "bookmark", id: event.id });
+    if (result && !result.ok && result.message) notify?.(result.message);
+  }
   // Any archived roll can be shared later: the text is rebuilt from the entry
   // the save kept, so it can only ever state what the roll actually earned.
   async function shareRoll(event) {
@@ -134,7 +146,11 @@ export default function ActivityFeed({
         role="group"
         aria-label="Activity filters"
       >
-        {[...filters, ...(progress.rebirths ? ["Rebirths"] : [])].map(
+        {[
+          ...filters,
+          "Bookmarks",
+          ...(progress.rebirths ? ["Rebirths"] : []),
+        ].map(
           (name) => (
             <button
               key={name}
@@ -144,7 +160,9 @@ export default function ActivityFeed({
                 setLimit(50);
               }}
             >
-              {name}
+              {name === "Bookmarks" && bookmarks.length
+                ? `Bookmarks (${bookmarks.length}/3)`
+                : name}
             </button>
           ),
         )}
@@ -333,6 +351,36 @@ export default function ActivityFeed({
                               })}
                             </span>
                           )}
+                          <button
+                            type="button"
+                            className={`activity-bookmark ${
+                              bookmarks.includes(event.id) ? "is-saved" : ""
+                            }`}
+                            onClick={() => toggleBookmark(event)}
+                            aria-pressed={bookmarks.includes(event.id)}
+                            aria-label={
+                              bookmarks.includes(event.id)
+                                ? `Remove bookmark from roll ${event.number}`
+                                : `Bookmark roll ${event.number}`
+                            }
+                            title={
+                              bookmarks.includes(event.id)
+                                ? "Remove bookmark"
+                                : "Keep this roll handy (up to 3)"
+                            }
+                          >
+                            <Bookmark
+                              size={13}
+                              fill={
+                                bookmarks.includes(event.id)
+                                  ? "currentColor"
+                                  : "none"
+                              }
+                            />
+                            {bookmarks.includes(event.id)
+                              ? "Bookmarked"
+                              : "Bookmark"}
+                          </button>
                           <button
                             type="button"
                             className="activity-share"

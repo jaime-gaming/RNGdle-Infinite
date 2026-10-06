@@ -213,7 +213,7 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   expect(leaking).toEqual([]);
 });
 
-test("clicking a card tracks it as the goal, and the banner shows the savings", async ({
+test("the goal banner arms pick mode, and only then does a card become the goal", async ({
   page,
 }) => {
   await seedProgress(page, { ...funded, balance: 10000, totalEarned: 10000 });
@@ -221,21 +221,34 @@ test("clicking a card tracks it as the goal, and the banner shows the savings", 
   const banner = page.locator(".shop-goal");
   // Nothing tracked yet, so the banner recommends instead.
   await expect(banner).toContainText("Recommended next");
-  // Clicking the card — on plain text, not on any of its buttons — tracks it.
   const card = page.locator('[data-product="quickwind-1"]');
+  // A plain card click is just browsing: the goal does not move.
+  await card.locator(".shop-card-desc").click();
+  await expect(banner).toContainText("Recommended next");
+  await expect(banner).not.toContainText("Your goal");
+  // Pick mode is armed from the banner itself.
+  await banner.getByRole("button", { name: "Set goal", exact: true }).click();
+  await expect(banner).toContainText("Pick your goal");
+  await expect(card).toHaveClass(/is-picking/);
+  // Now tapping the card — on plain text, not on any of its buttons — tracks
+  // it, and the banner shows the savings.
   await card.locator(".shop-card-desc").click();
   await expect(banner).toContainText("Your goal: Quickwind I");
   await expect(card).toHaveAttribute("data-tracked", "true");
   await expect(banner).toContainText("10,000 of 30,000 EP");
   await expect(banner).toContainText("20,000 EP to go");
-  // Clicking the tracked card again untracks it, back to the recommendation.
+  // Arming pick mode again and tapping the tracked card untracks it, back to
+  // the recommendation.
+  await banner
+    .getByRole("button", { name: "Change goal", exact: true })
+    .click();
   await card.locator(".shop-card-desc").click();
   await expect(banner).toContainText("Recommended next");
   await expect(banner).not.toContainText("Your goal");
-  // The tag is the same control for keyboards.
-  await card.getByRole("button", { name: "Track as goal" }).click();
-  await expect(banner).toContainText("Your goal: Quickwind I");
-  await card.getByRole("button", { name: "Your goal" }).click();
+  // Cancel leaves pick mode without touching the goal.
+  await banner.getByRole("button", { name: "Set goal", exact: true }).click();
+  await banner.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(banner).not.toContainText("Pick your goal");
   await expect(banner).not.toContainText("Your goal");
 });
 
@@ -351,11 +364,15 @@ test("the shop speaks one card language: preview, facts, price, one button", () 
   expect(css).toContain(".shop-controls {");
   expect(css).toContain("position: sticky");
   expect(css).not.toContain(".shop-search");
-  // The goal is set by clicking a card, and the banner above the shelves
-  // shows what is tracked and how the wallet is doing against it.
-  expect(shop).toContain("Track as goal");
+  // The goal is armed from the banner above the shelves — pick mode — and
+  // only then does a tapped card become the goal; the banner shows what is
+  // tracked and how the wallet is doing against it.
+  expect(shop).toContain("Set goal");
+  expect(shop).toContain("Change goal");
+  expect(shop).toContain("Pick your goal");
+  expect(shop).toContain("pickingGoal");
   expect(shop).toContain("is-goalable");
-  expect(shop).toContain('className="shop-goal"');
+  expect(shop).toContain("shop-goal");
   expect(shop).toContain("shopProducts.length");
   // Every product keeps its stable hook for deep links and tests.
   for (const product of shopProducts)

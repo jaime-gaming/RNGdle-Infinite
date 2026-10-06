@@ -155,6 +155,27 @@ function PassiveCircle({ passive }) {
 const memberId = (member) =>
   member.kind === "skill" ? member.skill.id : member.passive.id;
 
+// A member's charge as a 0–1 fraction. Passives are always-on: their circle
+// is simply full.
+const memberFraction = (member) =>
+  member.kind === "skill"
+    ? member.skill.charge / member.skill.charges
+    : 1;
+
+// The glyph a member wears, at whatever size the circle needs.
+function memberGlyph(member, size) {
+  if (member.kind === "skill")
+    return <SkillIcon icon={member.skill.icon} size={size} aria-hidden="true" />;
+  const passive = member.passive;
+  if (passive.kind === "pet")
+    return <CreatureIcon pet={passive.petId} size={size} aria-hidden="true" />;
+  if (passive.kind === "rebirth")
+    return <LegendMark size={size} aria-hidden="true" />;
+  if (passive.kind === "ultra")
+    return <InfinityMark size={size} aria-hidden="true" />;
+  return <SparkMark size={size} aria-hidden="true" />;
+}
+
 function MemberCircle({ member, active }) {
   return member.kind === "skill" ? (
     <SkillCircle skill={member.skill} active={active} />
@@ -164,8 +185,10 @@ function MemberCircle({ member, active }) {
 }
 
 // A stack: one bubble for a family of circles that fans out on hover,
-// keyboard focus or tap. The bubble reads armed when any member is armed and
-// fills with the fullest member, so readiness still shows at a glance; every
+// keyboard focus or tap. The bubble itself is a constellation: every member of
+// the group gets its own little charge circle, and they sit on one shared
+// circumference — the least charged at the top, growing clockwise, so a glance
+// reads both the state of each skill and the shape of the whole group. Every
 // member keeps its own chip and tooltip once the fan is open.
 function SkillStack({ stackId, label, tint, icon, members, firingSet }) {
   const [open, setOpen] = useState(false);
@@ -173,10 +196,6 @@ function SkillStack({ stackId, label, tint, icon, members, firingSet }) {
     (member) => member.kind === "skill" && member.skill.armed,
   );
   const firing = members.some((member) => firingSet.has(memberId(member)));
-  const skillFractions = members
-    .filter((member) => member.kind === "skill")
-    .map((member) => member.skill.charge / member.skill.charges);
-  const fraction = skillFractions.length ? Math.max(...skillFractions) : 1;
   const summary = members
     .map((member) =>
       member.kind === "skill"
@@ -184,6 +203,22 @@ function SkillStack({ stackId, label, tint, icon, members, firingSet }) {
         : `${member.passive.name} ${member.passive.chip}, always active`,
     )
     .join(". ");
+  // The constellation geometry: least progress at twelve o'clock, ascending
+  // clockwise. Equal arcs between neighbours, whatever the group size.
+  const size = 56;
+  const mini = members.length <= 2 ? 26 : members.length === 3 ? 23 : 20;
+  const orbit = (size - mini) / 2;
+  const ordered = [...members].sort(
+    (a, b) => memberFraction(a) - memberFraction(b),
+  );
+  const placed = ordered.map((member, index) => {
+    const angle = ((-90 + (360 / ordered.length) * index) * Math.PI) / 180;
+    return {
+      member,
+      left: size / 2 + orbit * Math.cos(angle) - mini / 2,
+      top: size / 2 + orbit * Math.sin(angle) - mini / 2,
+    };
+  });
   return (
     <div
       className={`skill-stack ${armed ? "is-armed" : ""} ${firing ? "is-firing" : ""} ${open ? "is-open" : ""}`}
@@ -199,9 +234,40 @@ function SkillStack({ stackId, label, tint, icon, members, firingSet }) {
         aria-label={`${label} group: ${summary}`}
         onClick={() => setOpen((value) => !value)}
       >
-        <ChargeRing fraction={fraction} tint={tint}>
-          {icon}
-        </ChargeRing>
+        <span
+          className="skill-stack-cluster"
+          style={{ width: size, height: size }}
+          aria-hidden="true"
+        >
+          {placed.map(({ member, left, top }) => (
+            <span
+              key={memberId(member)}
+              className={`skill-stack-mini ${
+                member.kind === "skill"
+                  ? `tint-${member.skill.tint} ${member.skill.armed ? "is-armed" : ""}`
+                  : `tint-${member.passive.tint} is-passive`
+              } ${firingSet.has(memberId(member)) ? "is-firing" : ""}`}
+              style={{ left, top, width: mini, height: mini }}
+              title={
+                member.kind === "skill"
+                  ? `${member.skill.name} — ${member.skill.charge}/${member.skill.charges}`
+                  : member.passive.name
+              }
+            >
+              <ChargeRing
+                fraction={memberFraction(member)}
+                tint={
+                  member.kind === "skill"
+                    ? member.skill.tint
+                    : member.passive.tint
+                }
+                size={mini}
+              >
+                {memberGlyph(member, Math.max(9, mini - 14))}
+              </ChargeRing>
+            </span>
+          ))}
+        </span>
         <span className="skill-stack-count" aria-hidden="true">
           {members.length}
         </span>
