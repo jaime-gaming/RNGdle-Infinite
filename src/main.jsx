@@ -648,6 +648,7 @@ function App() {
             openSignup={openAuth}
             openBadge={openBadge}
             notify={notify}
+            onAction={dispatch}
           />
         )}
         {page === "settings" && (
@@ -1011,11 +1012,9 @@ function App() {
       </footer>
       <MobileTabBar
         page={page}
-        progress={session}
         rebirthVisible={rebirthVisible}
         rebirthReady={rebirthReadyNow}
         navigate={navigate}
-        openSignup={openAuth}
       />
       {modal && (
         <div

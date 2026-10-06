@@ -6,8 +6,6 @@ import {
   History,
   Sparkles,
   SlidersHorizontal,
-  UserRound,
-  LogIn,
 } from "lucide-react";
 import "../mobile-tabbar.css";
 
@@ -17,11 +15,9 @@ import "../mobile-tabbar.css";
 // tablet never loses the navigation.
 export default function MobileTabBar({
   page,
-  progress,
   rebirthVisible,
   rebirthReady,
   navigate,
-  openSignup,
 }) {
   const tabs = [
     { id: "roll", label: "Roll", icon: Dices, go: () => navigate("roll") },
@@ -42,20 +38,14 @@ export default function MobileTabBar({
       ready: rebirthReady,
       go: () => navigate("rebirth"),
     });
-  tabs.push(
-    {
-      id: "settings",
-      label: "Settings",
-      icon: SlidersHorizontal,
-      go: () => navigate("settings"),
-    },
-    {
-      id: "profile",
-      label: progress.profile ? "Profile" : "Sign up",
-      icon: progress.profile ? UserRound : LogIn,
-      go: openSignup,
-    },
-  );
+  // The profile lives in the top bar's icon button, so the thumb row stays
+  // short: five destinations, six once the ladder shows up.
+  tabs.push({
+    id: "settings",
+    label: "Settings",
+    icon: SlidersHorizontal,
+    go: () => navigate("settings"),
+  });
   return (
     <nav className="mobile-tabbar" aria-label="Mobile navigation">
       {tabs.map(({ id, label, icon: Icon, ready, go }) => (

@@ -176,7 +176,27 @@ export function emptyProgress() {
     equippedSkills: [],
     skillCharge: {},
     loadouts: [],
+    bookmarks: [],
   };
+}
+
+// Bookmarks pin a few rolls the player wants to find again. They reference
+// history entries by id, so a repaired save drops any mark whose roll did not
+// survive the repair, and the cap is part of the save's shape, not the UI's.
+export const BOOKMARK_LIMIT = 3;
+function parseBookmarks(value, history) {
+  if (!Array.isArray(value)) return [];
+  const rolls = new Set(
+    history.filter((e) => e.type === "roll").map((e) => e.id),
+  );
+  const out = [];
+  for (const id of value) {
+    if (typeof id !== "string" || !id || !rolls.has(id)) continue;
+    if (out.includes(id)) continue;
+    out.push(id);
+    if (out.length >= BOOKMARK_LIMIT) break;
+  }
+  return out;
 }
 // Saved racks. Parsed leniently — a preset is only checked against what the
 // account can actually equip when it is applied, because a save can outlive the
@@ -478,6 +498,7 @@ export function parseAndRepairProgress(raw) {
     skills,
     equippedSkills,
     loadouts: parseLoadouts(p.loadouts),
+    bookmarks: parseBookmarks(p.bookmarks, history),
     skillCharge,
     cooldownUntil,
     receipts: [
@@ -687,6 +708,19 @@ export function applyProgress(state, action) {
         "Choose an unowned item with its prerequisites unlocked.",
       );
     return state.goalId === action.id ? state : { ...state, goalId: action.id };
+  }
+  if (action.type === "bookmark") {
+    const id = typeof action.id === "string" ? action.id : "";
+    if (!id || !(state.history ?? []).some((e) => e.type === "roll" && e.id === id))
+      throw new Error("Only rolled numbers can be bookmarked.");
+    const bookmarks = state.bookmarks ?? [];
+    if (bookmarks.includes(id))
+      return { ...state, bookmarks: bookmarks.filter((b) => b !== id) };
+    if (bookmarks.length >= BOOKMARK_LIMIT)
+      throw new Error(
+        `You can keep up to ${BOOKMARK_LIMIT} bookmarked rolls. Remove one first.`,
+      );
+    return { ...state, bookmarks: [...bookmarks, id] };
   }
   if (action.type === "avatar") {
     if (!state.profile) throw new Error("Create a local profile first.");

@@ -180,8 +180,13 @@ export function nextRebirthSkill(rebirths = 0) {
 function commitmentBlocker(progress, now) {
   if (progress.pendingRoll || progress.offline?.batch)
     return "Finish your committed rolls before rebirthing.";
-  if (now < progress.cooldownUntil)
-    return "Wait for the current cooldown to finish.";
+  if (now < progress.cooldownUntil) {
+    // A live countdown, not a bare refusal: the button opens the moment the
+    // clock reaches zero, and the player can watch it get there.
+    const secs = Math.max(0, Math.ceil((progress.cooldownUntil - now) / 1000));
+    const stamp = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+    return `Wait for the current cooldown to finish (${stamp} left).`;
+  }
   return "";
 }
 

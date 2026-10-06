@@ -264,6 +264,23 @@
 .rebirth-ladder li.is-done {
   animation: rung-done 460ms ease-out both;
 }
+/* Finished rungs are memories: they wear the same blur as the faded preview,
+   only lighter, and come back into focus on hover or keyboard focus. On
+   touch screens the blur stays subtle enough to read without a pointer. */
+.rebirth-ladder li.is-done {
+  opacity: 0.82;
+  filter: blur(1.5px);
+}
+.rebirth-ladder li.is-done:hover,
+.rebirth-ladder li.is-done:focus-within {
+  opacity: 1;
+  filter: none;
+}
+@media (hover: none) {
+  .rebirth-ladder li.is-done {
+    filter: blur(0.75px);
+  }
+}
 @keyframes rung-in {
   from {
     opacity: 0;
@@ -647,6 +664,17 @@
     min-width: 0;
     flex-shrink: 1;
     white-space: normal;
+  }
+  /* One thumb-wide target per action on a phone. */
+  .rebirth-actions {
+    align-items: stretch;
+  }
+  .rebirth-actions .primary-button {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .rebirth-blocker {
+    flex-basis: 100%;
   }
 }
 
