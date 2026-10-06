@@ -21,8 +21,7 @@
 .draw-stage.is-leaving {
   opacity: 0;
 }
-.draw-stage-label,
-.draw-stage-note {
+.draw-stage-label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -31,12 +30,6 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--muted);
-}
-.draw-stage-note {
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 11px;
-  color: var(--secondary);
 }
 .draw-stage-label svg {
   color: var(--green);

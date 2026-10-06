@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import {
   accountStats,
+  drawExportCardToCanvas,
   exportFileName,
   exportPayload,
 } from "../src/profile-stats.js";
@@ -241,6 +242,61 @@ test("the export is a read-only PNG snapshot with no import path", async () => {
   expect(profile).toContain("renderExportPngBlob");
   expect(profile).toContain("accept={AVATAR_ACCEPT}");
   expect(profile).not.toMatch(/readAsText|Import from|importProgress/);
+});
+
+test("the PNG card paints the logo, the name, the biggest roll and the key stats", () => {
+  // A recording 2d surface: every string the card paints and every image it
+  // draws, without needing a browser canvas.
+  const paint = (progress, logo) => {
+    const texts = [];
+    let images = 0;
+    const ctx = {
+      fillText: (text) => texts.push(String(text)),
+      drawImage: () => {
+        images += 1;
+      },
+      createLinearGradient: () => ({ addColorStop: () => {} }),
+      arc: () => {},
+      arcTo: () => {},
+      beginPath: () => {},
+      clip: () => {},
+      closePath: () => {},
+      fill: () => {},
+      fillRect: () => {},
+      moveTo: () => {},
+      restore: () => {},
+      save: () => {},
+      stroke: () => {},
+    };
+    const canvas = { getContext: () => ctx };
+    drawExportCardToCanvas(canvas, progress, logo);
+    return { canvas, texts, images };
+  };
+  const progress = played();
+  const card = paint(progress, { width: 128, height: 128 });
+  expect([card.canvas.width, card.canvas.height]).toEqual([1200, 680]);
+  // Identity: the account name, with its logo drawn beside it.
+  expect(card.images).toBe(1);
+  expect(card.texts).toContain("LuckyOtter41");
+  // The hero: the biggest roll's number, tier and EP — r2, the godly roll.
+  expect(card.texts).toContain("BIGGEST ROLL");
+  expect(card.texts).toContain("999,999");
+  expect(card.texts).toContain("GODLY TIER · +512,000 EP");
+  // The key stats grid, all six tiles.
+  for (const label of [
+    "ALL-TIME EP EARNED",
+    "TOTAL ROLLS",
+    "BADGES DISCOVERED",
+    "REBIRTHS & PRESTIGE",
+    "COMPANIONS",
+    "SKILLS UNLOCKED",
+  ])
+    expect(card.texts).toContain(label);
+  // Without a logo the card still paints everything else — just no image.
+  const plain = paint(progress, null);
+  expect(plain.images).toBe(0);
+  expect(plain.texts).toContain("LuckyOtter41");
+  expect(plain.texts).toContain("999,999");
 });
 
 test("the account logo is part of the save, and only a small image data URL is one", async () => {

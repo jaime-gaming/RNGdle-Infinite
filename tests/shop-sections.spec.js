@@ -112,19 +112,15 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
   await seedProgress(page, funded);
   // Pace shows one level per path: two cards, so the line says two, not ten.
   await page.goto("/shop/pace");
-  await expect(page.locator(".shop-filter-count")).toHaveText(
-    "2 of 2 on this shelf",
-  );
+  await expect(page.locator(".shop-count")).toHaveText("2 on this shelf");
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(2);
   // The funded fixture owns the roller but no clock: one card, so one is what
   // the line says.
   await page.goto("/shop/offline");
-  await expect(page.locator(".shop-filter-count")).toHaveText(
-    "1 of 1 on this shelf",
-  );
+  await expect(page.locator(".shop-count")).toHaveText("1 on this shelf");
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(1);
-  // The invariant, on every shelf that can hide cards: the first number in the
-  // status line is the number of cards drawn.
+  // The invariant, on every shelf: the number in the status line is the
+  // number of cards drawn — every shelf shows everything it has.
   for (const path of [
     "/shop/skills",
     "/shop/pace",
@@ -134,29 +130,14 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
   ]) {
     await page.goto(path);
     const drawn = await page.locator(".shop-card[data-product]").count();
-    const [shown] = (
-      await page.locator(".shop-filter-count").innerText()
-    ).match(/\d+/);
+    const [shown] = (await page.locator(".shop-count").innerText()).match(
+      /\d+/,
+    );
     expect(Number(shown), `${path} status line`).toBe(drawn);
   }
   // Companions are drawn by their own component and counted their own way.
   await page.goto("/shop/companions");
-  await expect(page.locator(".shop-filter-count")).toHaveText(
-    /^\d+ \/ 13 found$/,
-  );
-  // A search that matches nothing says so, in words and in numbers.
-  await page.goto("/shop/auras/celestial");
-  await page.getByLabel("Search the shop").fill("zzz-nothing");
-  await expect(page.locator(".shop-filter-count")).toHaveText(
-    "0 of 8 on this shelf",
-  );
-  await expect(page.locator(".shop-empty")).toContainText(
-    "Nothing on this shelf matches",
-  );
-  // A shelf with nothing to sell says Locked rather than counting zero.
-  await page.getByLabel("Search the shop").fill("");
-  await page.goto("/shop/offline");
-  await expect(page.locator(".shop-locked-heading")).toHaveCount(0);
+  await expect(page.locator(".shop-count")).toHaveText(/^\d+ \/ 13 found$/);
 });
 
 test("a locked shelf reads Locked, and the header's nav rules stay in the header", async ({
@@ -166,7 +147,7 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   await seedProgress(page, { ...funded, owned: [] });
   await page.goto("/shop/offline");
   await expect(page.locator(".shop-locked-heading")).toBeVisible();
-  await expect(page.locator(".shop-filter-count")).toHaveText("Locked");
+  await expect(page.locator(".shop-count")).toHaveText("Locked");
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(0);
 
   // The header sets nav { display:flex; gap } for its own bar. Those element
@@ -232,6 +213,32 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   expect(leaking).toEqual([]);
 });
 
+test("clicking a card tracks it as the goal, and the banner shows the savings", async ({
+  page,
+}) => {
+  await seedProgress(page, { ...funded, balance: 10000, totalEarned: 10000 });
+  await page.goto("/shop/pace");
+  const banner = page.locator(".shop-goal");
+  // Nothing tracked yet, so the banner recommends instead.
+  await expect(banner).toContainText("Recommended next");
+  // Clicking the card — on plain text, not on any of its buttons — tracks it.
+  const card = page.locator('[data-product="quickwind-1"]');
+  await card.locator(".shop-card-desc").click();
+  await expect(banner).toContainText("Your goal: Quickwind I");
+  await expect(card).toHaveAttribute("data-tracked", "true");
+  await expect(banner).toContainText("10,000 of 30,000 EP");
+  await expect(banner).toContainText("20,000 EP to go");
+  // Clicking the tracked card again untracks it, back to the recommendation.
+  await card.locator(".shop-card-desc").click();
+  await expect(banner).toContainText("Recommended next");
+  await expect(banner).not.toContainText("Your goal");
+  // The tag is the same control for keyboards.
+  await card.getByRole("button", { name: "Track as goal" }).click();
+  await expect(banner).toContainText("Your goal: Quickwind I");
+  await card.getByRole("button", { name: "Your goal" }).click();
+  await expect(banner).not.toContainText("Your goal");
+});
+
 test("the skills shelf is a stall: three skills buyable, the rest under a green aura", async ({
   page,
 }) => {
@@ -260,13 +267,13 @@ test("the skills shelf is a stall: three skills buyable, the rest under a green 
     await expect(card).toHaveCount(1);
     await expect(card).not.toHaveClass(/is-restocking/);
     await expect(card).toContainText("In stock");
-    await expect(card.getByRole("button")).toBeEnabled();
+    await expect(card.locator("button:not(.shop-tag)")).toBeEnabled();
   }
   for (const id of rest) {
     const card = shelf.locator(`[data-product="${id}"]`);
     await expect(card).toHaveCount(1);
     await expect(card).toHaveClass(/is-restocking/);
-    await expect(card.getByRole("button")).toBeDisabled();
+    await expect(card.locator("button:not(.shop-tag)")).toBeDisabled();
   }
   // The stall states how full it is and when the three restock — and, since
   // the rotation is deterministic, which skills come next.
@@ -307,6 +314,17 @@ test("the skills shelf is a stall: three skills buyable, the rest under a green 
   ).toHaveCount(1);
 });
 
+test("equipping a companion uncages it with an animation", async ({ page }) => {
+  await seedProgress(page, { ...funded, pets: ["pebble"], activePet: "none" });
+  await page.goto("/shop/companions");
+  const slide = page.locator("#shop-companions [data-pet='pebble']");
+  await slide.getByRole("button", { name: "Equip", exact: true }).click();
+  // The door swings and the friend hops out, then walks with you.
+  const uncaging = page.locator("#shop-companions .pet-slide.is-uncaging");
+  await expect(uncaging).toHaveAttribute("data-pet", "pebble");
+  await expect(slide).toContainText("Walking with you");
+});
+
 test("the shop speaks one card language: preview, facts, price, one button", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
   const css = fs.readFileSync("src/shop.css", "utf8");
@@ -323,17 +341,21 @@ test("the shop speaks one card language: preview, facts, price, one button", () 
   expect(shop).toContain("shop-card-desc");
   expect(shop).not.toContain("shop-card-more");
   expect(css).toContain("-webkit-line-clamp: 3");
-  // One sticky bar holds shelves, search and filters.
+  // One sticky bar holds the way back and the count: no search, no filters,
+  // every shelf shows everything it has.
   expect(shop).toContain('className="shop-controls"');
-  expect(shop).toContain('aria-label="Search the shop"');
-  expect(shop).toContain('aria-label="Shop filters"');
+  expect(shop).not.toContain("Search the shop");
+  expect(shop).not.toContain("Shop filters");
+  expect(shop).not.toContain("matches = (item, state)");
+  expect(shop).not.toContain("visibleCount");
   expect(css).toContain(".shop-controls {");
   expect(css).toContain("position: sticky");
-  // Search and filters only narrow what is drawn; the default view hides
-  // nothing, so nothing disappears without the player asking.
-  expect(shop).toContain("const matches = (item, state)");
-  expect(shop).toContain('{ id: "all", text: "Everything" }');
-  expect(shop).toContain("visibleCount");
+  expect(css).not.toContain(".shop-search");
+  // The goal is set by clicking a card, and the banner above the shelves
+  // shows what is tracked and how the wallet is doing against it.
+  expect(shop).toContain("Track as goal");
+  expect(shop).toContain("is-goalable");
+  expect(shop).toContain('className="shop-goal"');
   expect(shop).toContain("shopProducts.length");
   // Every product keeps its stable hook for deep links and tests.
   for (const product of shopProducts)
@@ -453,6 +475,58 @@ test("a rack can be saved on the skills shelf and put back in one click", async 
   await page.getByRole("button", { name: "Delete Bounce" }).click();
   await expect(book.locator(".skill-rack")).toHaveCount(1);
   await expect(book).toContainText("Surge + Trail");
+});
+
+test("earned skills live on the skills shelf and equip without taking a slot", async ({
+  page,
+}) => {
+  // A ladder reward and an active companion's signature: both ride free, so
+  // the two shop skills already fill the rack without blocking them.
+  await seedProgress(page, {
+    ...funded,
+    owned: ["surge", "trail"],
+    skills: ["surge", "trail", "reborn-drive"],
+    equippedSkills: ["surge", "trail"],
+    pets: ["pebble"],
+    activePet: "pebble",
+    rebirths: 1,
+  });
+  await page.goto("/shop/skills");
+  const shelf = page.locator("#shop-skills");
+  const earned = shelf.locator(".free-skills");
+  await expect(earned).toBeVisible();
+  await expect(earned).toContainText("never take a slot");
+  await expect(earned.locator(".free-skills-count")).toHaveText(
+    "0 of 2 equipped",
+  );
+  // Two cards: the ladder's reward and the companion's signature, each one
+  // naming where it came from instead of carrying a price.
+  const reward = earned.locator('[data-freeskill="reborn-drive"]');
+  await expect(reward).toHaveCount(1);
+  await expect(reward).toContainText("Rebirth 1 reward");
+  await expect(reward.locator(".shop-price")).toHaveCount(0);
+  const signature = earned.locator('[data-freeskill="pebble-steady"]');
+  await expect(signature).toHaveCount(1);
+  await expect(signature).toContainText("signature");
+  // The rack is full of shop skills, and the reward equips anyway.
+  await expect(shelf.locator(".shop-section-stat")).toHaveText(
+    "2 / 2 slots used",
+  );
+  await reward.getByRole("button", { name: "Equip", exact: true }).click();
+  await expect(
+    reward.getByRole("button", { name: "Equipped", exact: true }),
+  ).toBeVisible();
+  await expect(earned.locator(".free-skills-count")).toHaveText(
+    "1 of 2 equipped",
+  );
+  await expect(shelf.locator(".shop-section-stat")).toHaveText(
+    "2 / 2 slots used",
+  );
+  // Equipping is a toggle: the same button unequips again.
+  await reward.getByRole("button", { name: "Equipped", exact: true }).click();
+  await expect(
+    reward.getByRole("button", { name: "Equip", exact: true }),
+  ).toBeVisible();
 });
 
 test("an aura family is a page of its own, reached from its banner", async ({

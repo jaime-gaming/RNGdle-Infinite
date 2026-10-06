@@ -936,35 +936,6 @@
   position: relative;
 }
 
-.rebirth-confirm label {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 16px 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  text-align: left;
-}
-.rebirth-confirm input {
-  width: 100%;
-  height: 43px;
-  padding: 0 13px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-  font: 600 13px var(--roll-font);
-  letter-spacing: 0.08em;
-  transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
-}
-.rebirth-confirm input:focus-visible {
-  outline: none;
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 16%, transparent);
-}
 .rebirth-confirm [role="alert"] {
   margin: 0 0 12px;
   padding: 9px 12px;
@@ -982,4 +953,106 @@
 .rebirth-confirm .purchase-actions {
   margin-top: 18px;
   align-items: center;
+}
+
+/* ---- The rebirth ring ------------------------------------------------------
+   A plain rebirth earns a smaller moment than the ultra ceremony: one rainbow
+   circle spinning over the new cycle, pointer-transparent over the page.
+   Everything is driven by animation — the global reduced-motion reset sets
+   `animation: none`, which leaves the shell at its resting opacity of 0, so
+   reduced motion never sees any of it. */
+.rebirth-ring {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  background: rgb(10 10 16 / 0.45);
+  animation: rebirth-ring-shell 2.6s ease-out forwards;
+}
+.rebirth-ring-circle {
+  width: min(52vmin, 340px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(
+    #ff5d5d,
+    #ff9f43,
+    #f7d154,
+    #5fd97a,
+    #4bb3c4,
+    #8a7ad9,
+    #d97ba6,
+    #ff5d5d
+  );
+  mask: radial-gradient(
+    circle,
+    transparent 62%,
+    #000 66%,
+    #000 78%,
+    transparent 82%
+  );
+  filter: saturate(1.25) drop-shadow(0 0 26px rgb(255 255 255 / 0.25));
+  animation: rebirth-ring-spin 2.6s ease-out forwards;
+}
+.rebirth-ring-title {
+  font: 700 clamp(22px, 6vw, 36px) var(--roll-font);
+  letter-spacing: 4px;
+  color: #f2ede2;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.6);
+  animation: rebirth-ring-title 2.6s ease-out forwards;
+}
+.rebirth-ring-sub {
+  font-size: 13px;
+  color: #cfc9bb;
+}
+@keyframes rebirth-ring-shell {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes rebirth-ring-spin {
+  0% {
+    transform: rotate(0deg) scale(0.55);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(540deg) scale(1.08);
+    opacity: 0;
+  }
+}
+@keyframes rebirth-ring-title {
+  0% {
+    transform: translateY(18px);
+    opacity: 0;
+    letter-spacing: 12px;
+  }
+  24% {
+    transform: translateY(0);
+    opacity: 1;
+    letter-spacing: 4px;
+  }
+  84% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }

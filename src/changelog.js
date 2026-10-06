@@ -2,6 +2,11 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.4.1",
+    title: "tiny update",
+    body: ["QoLI, like basic UI changes :D"],
+  },
+  {
     version: "v0.4",
     title:
       "rebirth rewards the overshoot, ultra-rebirths throw a ceremony, and devices link live",

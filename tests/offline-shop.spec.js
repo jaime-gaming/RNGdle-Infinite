@@ -321,7 +321,7 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
   for (const id of ["eclipse", "prism", "offline-roller"]) {
     // Auras open their family page; the Offline Roller itself is a tool.
     await openShelfFor(page, id);
-    await page.locator(`[data-product="${id}"] button`).click();
+    await page.locator(`[data-product="${id}"] button:not(.shop-tag)`).click();
     await page
       .getByRole("button", { name: "Confirm purchase", exact: true })
       .click();

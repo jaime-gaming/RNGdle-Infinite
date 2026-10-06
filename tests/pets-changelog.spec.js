@@ -228,17 +228,21 @@ test("the changelog lists every release and flags an unseen version", () => {
   // v0.3 was the shop wave, and v0.4 carries the rebirth rework together with
   // the shelves it regrouped afterwards.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.4.1",
     "v0.4",
     "v0.3",
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.4");
+  expect(LATEST_VERSION).toBe("v0.4.1");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
   expect(launch.body[0]).toContain("RNGdle Infinite is live");
-  for (const entry of CHANGELOG) expect(entry.body.length).toBeGreaterThan(0);
+  // Every entry carries its changes in the body, one line per change.
+  for (const entry of CHANGELOG) {
+    expect(entry.body.length).toBeGreaterThan(0);
+  }
   // The flag shows until the newest version is acknowledged.
   expect(hasUnseenVersion("")).toBe(true);
   expect(hasUnseenVersion("v0.1")).toBe(true);
@@ -278,9 +282,15 @@ test("ambient animations are subtle and fully disabled by reduced motion", () =>
 
 test("the changelog reads like release notes, not like a chat log", () => {
   for (const entry of CHANGELOG) {
-    expect(entry.version).toMatch(/^v\d+\.\d+$/);
+    expect(entry.version).toMatch(/^v\d+\.\d+(\.\d+)?$/);
     expect(entry.title.length).toBeGreaterThan(5);
     for (const line of entry.body) {
+      // v0.4.1 is a one-line note in the author's own words, not a
+      // release-notes sentence: pinned verbatim instead of styled.
+      if (entry.version === "v0.4.1") {
+        expect(line).toBe("QoLI, like basic UI changes :D");
+        continue;
+      }
       // One short line per change, always a finished sentence.
       expect(line.length).toBeLessThanOrEqual(140);
       // House style: a line opens lowercase unless it opens with a name or a

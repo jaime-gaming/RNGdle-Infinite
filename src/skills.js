@@ -576,17 +576,42 @@ export function parseSkillCharge(value) {
   return next;
 }
 
+// Only shop skills take rack slots. Rebirth rewards and companion signatures
+// ride free beside the rack: the slots are a shelf for purchases, not a tax
+// on earnings.
+export function skillTakesSlot(id) {
+  return skillById.get(id)?.source === "shop";
+}
+
+// Trim an equipped list to the rack: free skills always stay, shop skills keep
+// their order until the slots run out.
+export function trimToSlots(ids, slots) {
+  const kept = [];
+  let shop = 0;
+  for (const id of ids ?? []) {
+    if (!skillTakesSlot(id)) {
+      kept.push(id);
+      continue;
+    }
+    if (shop < slots) {
+      kept.push(id);
+      shop += 1;
+    }
+  }
+  return kept;
+}
+
 export function parseEquippedSkills(value, progress) {
   const slots = skillSlots(progress.owned ?? []);
-  return (Array.isArray(value) ? value : [])
+  const valid = (Array.isArray(value) ? value : [])
     .filter(
       (id) =>
         typeof id === "string" &&
         skillIds.has(id) &&
         skillUnlocked(id, progress),
     )
-    .filter((id, index, list) => list.indexOf(id) === index)
-    .slice(0, slots);
+    .filter((id, index, list) => list.indexOf(id) === index);
+  return trimToSlots(valid, slots);
 }
 
 export function parseUnlockedSkills(value, progress) {

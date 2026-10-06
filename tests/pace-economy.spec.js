@@ -3,6 +3,7 @@ import {
   emptyProgress,
   applyProgress,
   parseProgress,
+  parseAndRepairProgress,
   PROGRESS_KEY,
 } from "../src/progress.js";
 import { flywheelForDraw } from "../src/flywheel.js";
@@ -104,7 +105,7 @@ test("tier chances are derived from all effective scores even when cached manife
   }
 });
 
-test("Flywheel migration validates charge and zero-cooldown snapshots without rewriting legacy prices or progress", () => {
+test("Flywheel migration repairs charge and drops bad zero-cooldown snapshots without rewriting legacy prices or progress", () => {
   const legacy = {
     ...emptyProgress(),
     owned: ["starfall", "quickwind-1"],
@@ -129,12 +130,20 @@ test("Flywheel migration validates charge and zero-cooldown snapshots without re
   expect(parsed.history[0].ep).toBe(125000);
   expect(parsed.owned).toEqual(legacy.owned);
   expect(parsed.pendingRoll).toEqual(legacy.pendingRoll);
-  for (const flywheelCharge of [-1, 5, 0.5, "4"])
-    expect(() =>
-      parseProgress(
-        JSON.stringify({ ...legacy, owned: ["flywheel"], flywheelCharge }),
-      ),
-    ).toThrow();
+  // Out-of-range charges clamp to the owned model instead of bricking the save.
+  for (const [flywheelCharge, expected] of [
+    [-1, 0],
+    [5, 4],
+    [0.5, 0],
+    ["4", 0],
+  ]) {
+    const { progress, repairs } = parseAndRepairProgress(
+      JSON.stringify({ ...legacy, owned: ["flywheel"], flywheelCharge }),
+    );
+    expect(progress.flywheelCharge).toBe(expected);
+    expect(progress.balance).toBe(12345);
+    expect(repairs.join(" ")).toMatch(/Flywheel charge/);
+  }
   const boost = {
     ...legacy,
     owned: ["flywheel"],
@@ -144,20 +153,23 @@ test("Flywheel migration validates charge and zero-cooldown snapshots without re
   expect(parseProgress(JSON.stringify(boost)).pendingRoll).toEqual(
     boost.pendingRoll,
   );
+  // A zero cooldown the snapshot cannot explain discards the roll, never the save.
   for (const change of [
     { flywheel: undefined, cooldownMS: 0 },
     { flywheel: "charge", cooldownMS: 0 },
     { flywheel: "boost", cooldownMS: 60000 },
     { flywheel: "arbitrary", cooldownMS: 60000 },
-  ])
-    expect(() =>
-      parseProgress(
-        JSON.stringify({
-          ...boost,
-          pendingRoll: { ...boost.pendingRoll, ...change },
-        }),
-      ),
-    ).toThrow();
+  ]) {
+    const { progress, repairs } = parseAndRepairProgress(
+      JSON.stringify({
+        ...boost,
+        pendingRoll: { ...boost.pendingRoll, ...change },
+      }),
+    );
+    expect(progress.pendingRoll).toBeNull();
+    expect(progress.balance).toBe(12345);
+    expect(repairs.join(" ")).toMatch(/committed roll/);
+  }
 });
 
 test("two complete Flywheel cycles require four distinct eligible completions each, never offline or pre-purchase rolls", () => {
@@ -397,7 +409,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   await expect(card).toContainText(
     `${productById.get("flywheel").price.toLocaleString("en-US")} EP`,
   );
-  await card.getByRole("button").click();
+  await card.locator("button:not(.shop-tag)").click();
   await expect(page.getByRole("dialog")).toContainText(
     "4 online rolls per charge",
   );
@@ -502,7 +514,7 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
   expect(before.pendingRoll.flywheel).toBeUndefined();
   await nav(page, "Shop");
   await openShelfFor(page, "flywheel");
-  await page.locator('[data-product="flywheel"] button').click();
+  await page.locator('[data-product="flywheel"] button:not(.shop-tag)').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();

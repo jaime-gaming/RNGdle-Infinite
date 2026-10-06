@@ -210,6 +210,26 @@ test("the rack never reports more slots or effects than the save allows", () => 
     expect(skill.effect).toBe(skillEffectSummary(skillById.get(skill.id)));
 });
 
+test("the rack report counts slots in shop skills, with free skills beside them", () => {
+  const report = rackReport(
+    armed({
+      owned: ["surge", "trail"],
+      skills: ["surge", "trail", "reborn-drive"],
+      equippedSkills: ["surge", "trail", "reborn-drive"],
+      skillCharge: { surge: 6 },
+    }),
+  );
+  expect(report.slots).toBe(2);
+  // "Used" is the shop skills alone: the ladder's reward rides free, and the
+  // report still lists it — it fires like any equipped skill.
+  expect(report.used).toBe(2);
+  expect(report.equipped.map((skill) => skill.id)).toEqual([
+    "surge",
+    "trail",
+    "reborn-drive",
+  ]);
+});
+
 // ---- Saved racks ----------------------------------------------------------
 // Equipping is free, so a saved rack is a shortcut and never a purchase: these
 // actions must move no EP, write no history and change nothing but the rack.
@@ -318,6 +338,27 @@ test("saved racks respect the rack they land in", () => {
   expect(narrow.equippedSkills).toHaveLength(
     skillSlots(["surge", "trail", "bounce"]),
   );
+});
+
+test("a saved rack keeps its free skills when the slots run out", () => {
+  const mixed = rack({
+    owned: ["surge", "trail", "bounce"],
+    skills: ["surge", "trail", "bounce", "reborn-drive"],
+    equippedSkills: ["surge", "trail", "bounce", "reborn-drive"],
+  });
+  const saved = applyProgress(mixed, { type: "save-loadout" });
+  expect(saved.loadouts[0].skills).toEqual([
+    "surge",
+    "trail",
+    "bounce",
+    "reborn-drive",
+  ]);
+  const narrow = applyProgress(
+    { ...saved, equippedSkills: [] },
+    { type: "apply-loadout", id: saved.loadouts[0].id },
+  );
+  // Two slots hold two shop skills; the ladder's reward rides free.
+  expect(narrow.equippedSkills).toEqual(["surge", "trail", "reborn-drive"]);
 });
 
 test("saved racks survive a reload, are repaired when damaged and cleared by a rebirth", () => {

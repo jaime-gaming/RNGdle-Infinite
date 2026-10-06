@@ -3,6 +3,7 @@ import {
   applyProgress,
   emptyProgress,
   parseProgress,
+  parseAndRepairProgress,
   PROGRESS_KEY,
 } from "../src/progress.js";
 import { shopProducts } from "../src/shop-data.js";
@@ -90,16 +91,27 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   expect(reset.equipped).toBe("none");
 });
 
-test("saved progress is versioned, validated, and cannot equip an unowned item", () => {
+test("saved progress is versioned, self-repairing, and cannot equip an unowned item", () => {
   expect(parseProgress(null)).toEqual(emptyProgress());
-  for (const value of [
-    "broken",
-    JSON.stringify({ version: 999 }),
-    JSON.stringify({ ...emptyProgress(), balance: -1 }),
-    JSON.stringify({ ...emptyProgress(), balance: 10 }),
-    JSON.stringify({ ...emptyProgress(), balance: 1.5, totalEarned: 2 }),
-  ])
+  // Data that is not a save at all is still rejected.
+  for (const value of ["broken", JSON.stringify({ version: 999 })])
     expect(() => parseProgress(value)).toThrow();
+  // Bad values inside a real save are repaired, never reset.
+  const negative = parseAndRepairProgress(
+    JSON.stringify({ ...emptyProgress(), balance: -1 }),
+  );
+  expect(negative.progress.balance).toBe(0);
+  expect(negative.repairs.join(" ")).toMatch(/wallet balance/);
+  const overdrawn = parseAndRepairProgress(
+    JSON.stringify({ ...emptyProgress(), balance: 10 }),
+  );
+  expect(overdrawn.progress.balance).toBe(0);
+  expect(overdrawn.repairs.join(" ")).toMatch(/wallet balance/);
+  const fractional = parseAndRepairProgress(
+    JSON.stringify({ ...emptyProgress(), balance: 1.5, totalEarned: 2 }),
+  );
+  expect(fractional.progress.balance).toBe(1);
+  expect(fractional.repairs.join(" ")).toMatch(/wallet balance/);
   const p = parseProgress(
     JSON.stringify({
       ...emptyProgress(),
@@ -221,7 +233,9 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
   await expect(
     card.getByRole("button", { name: "Equipped", exact: true }),
   ).toBeDisabled();
-  await expect(page.locator('[data-product="aurora"] button')).toBeDisabled();
+  await expect(
+    page.locator('[data-product="aurora"] button:not(.shop-tag)'),
+  ).toBeDisabled();
   await page.reload();
   await expect(
     card.getByRole("button", { name: "Equipped", exact: true }),
@@ -265,8 +279,12 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   await page.goto("/shop/auras/celestial");
   const other = await context.newPage();
   await other.goto("/shop/auras/celestial");
-  await page.locator(`[data-product="${pair[0].id}"] button`).click();
-  await other.locator(`[data-product="${pair[1].id}"] button`).click();
+  await page
+    .locator(`[data-product="${pair[0].id}"] button:not(.shop-tag)`)
+    .click();
+  await other
+    .locator(`[data-product="${pair[1].id}"] button:not(.shop-tag)`)
+    .click();
   await Promise.all([
     page
       .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -308,7 +326,7 @@ test("a failed save does not spend EP or grant a purchase", async ({
     },
   );
   await page.goto("/shop/auras/celestial");
-  await page.locator('[data-product="starfall"] button').click();
+  await page.locator('[data-product="starfall"] button:not(.shop-tag)').click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
