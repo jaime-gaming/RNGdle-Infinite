@@ -455,7 +455,14 @@ Settings stays a summary, with a link to the full technical view).
 On phones the layout hands the navigation to a **bottom tab bar** — Roll,
 Shop, Badges, History, Settings, plus Rebirth once the ladder shows — while
 the top bar keeps the logo, the theme switch and the profile button, so the
-screen stays for the game instead of a wall of buttons.
+screen stays for the game instead of a wall of buttons. The footer never
+paints on phones; its links (How to play, Changelog, the real game) live in
+Settings → More instead.
+
+The game is also **installable as an app**: a manifest, icons and a
+pass-through service worker make the browser offer "Add to Home screen", and
+a small card on phones proposes it the first time (Settings → More → Get the
+app reopens it). Installed, it opens full-screen like a native app.
 
 Light, dark and system themes are all real palettes with contrast-checked
 colours. Reduced motion completes a reveal instantly while still reserving the

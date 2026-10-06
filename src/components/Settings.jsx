@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
 import {
+  ArrowUpRight,
   Bell,
   BellOff,
+  BookOpen,
+  Download,
   Eye,
   Gamepad2,
   RotateCcw,
+  ScrollText,
   Shirt,
   Volume2,
 } from "lucide-react";
@@ -17,6 +21,7 @@ import {
   showReadyNotification,
 } from "../notifications.js";
 import { DeviceLinkSummary } from "./DeviceLink.jsx";
+import { openInstallBanner } from "./InstallApp.jsx";
 import "../settings.css";
 
 function Toggle({ id, label, description, checked, onChange, disabled }) {
@@ -208,6 +213,48 @@ export default function Settings({ notify, progress, onAction, navigate }) {
       </div>
 
       <DeviceLinkSummary progress={progress} navigate={navigate} />
+
+      {/* The footer never paints on phones, so its destinations live here —
+          the group only renders where the footer is gone. */}
+      <div className="settings-group settings-mobile-only">
+        <h2>
+          <Gamepad2 size={16} aria-hidden="true" /> More
+        </h2>
+        <div className="settings-more-links">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => navigate("about")}
+          >
+            <BookOpen size={14} /> How to play
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => navigate("changelog")}
+          >
+            <ScrollText size={14} /> Changelog
+          </button>
+          <a
+            className="secondary-button"
+            href="https://www.rngdle.com/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <ArrowUpRight size={14} /> Real game
+          </a>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => {
+              navigate("roll");
+              setTimeout(openInstallBanner, 350);
+            }}
+          >
+            <Download size={14} /> Get the app
+          </button>
+        </div>
+      </div>
 
       {progress && (
         <div className="settings-group">

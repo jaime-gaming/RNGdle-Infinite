@@ -1776,8 +1776,10 @@ footer button:hover,
   .toast {
     bottom: calc(78px + env(safe-area-inset-bottom));
   }
+  /* The phone layout ends at the tab bar: the footer only adds a scroll
+     tail, and its destinations live in Settings and the tab bar. */
   footer {
-    padding-bottom: 26px;
+    display: none;
   }
   .badge-grid {
     grid-template-columns: repeat(3, 1fr);

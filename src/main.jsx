@@ -64,6 +64,7 @@ import {
 } from "./components/game-icons.jsx";
 import RebirthNav from "./components/RebirthNav";
 import MobileTabBar from "./components/MobileTabBar";
+import InstallApp from "./components/InstallApp";
 import About from "./components/About";
 import {
   LATEST_VERSION,
@@ -167,9 +168,17 @@ function App() {
   const [rebirthRing, setRebirthRing] = useState(false);
   useEffect(() => {
     if (!rebirthRing) return;
-    const timer = setTimeout(() => setRebirthRing(false), 2600);
+    const timer = setTimeout(() => setRebirthRing(false), 3300);
     return () => clearTimeout(timer);
   }, [rebirthRing]);
+  // The home-screen app: registering the (pass-through) service worker is
+  // part of the install criteria on some browsers.
+  useEffect(() => {
+    if ("serviceWorker" in navigator)
+      navigator.serviceWorker
+        .register(`${import.meta.env.BASE_URL}sw.js`)
+        .catch(() => {});
+  }, []);
   // A companion found on a roll walks in with its own moment on the roll stage.
   const [arrivalPet, setArrivalPet] = useState(null);
   const {
@@ -1010,6 +1019,9 @@ function App() {
           <button onClick={() => navigate("about")}>How to play</button>
         </div>
       </footer>
+      {/* The install card lives on the roll screen only: it is the landing
+          page, and other pages keep their back-links unobstructed. */}
+      {page === "roll" && <InstallApp notify={notify} />}
       <MobileTabBar
         page={page}
         rebirthVisible={rebirthVisible}
@@ -1149,16 +1161,25 @@ function App() {
           </span>
         </div>
       )}
-      {/* The rebirth ring: a rainbow circle spinning over the new cycle.
-          Pointer-transparent and fully animation-driven — with reduced motion
-          it rests at opacity 0, exactly as if it were never there. */}
+      {/* The rebirth moment: a flash, rainbow rays, a shockwave and the
+          spinning ring bursting into confetti over the new cycle. Pointer-
+          transparent and fully animation-driven — with reduced motion it
+          rests at opacity 0, exactly as if it were never there. */}
       {rebirthRing && (
         <div className="rebirth-ceremony" aria-hidden="true">
+          <span className="rebirth-ceremony-flash" />
+          <span className="rebirth-ceremony-rays" />
+          <span className="rebirth-ceremony-shock" />
           <span className="rebirth-ceremony-circle" />
           <strong className="rebirth-ceremony-title">
             REBIRTH {session.rebirths}
           </strong>
           <span className="rebirth-ceremony-sub">a new cycle begins</span>
+          <span className="rebirth-ceremony-confetti">
+            {Array.from({ length: 12 }, (_, index) => (
+              <i key={index} />
+            ))}
+          </span>
         </div>
       )}
     </>
