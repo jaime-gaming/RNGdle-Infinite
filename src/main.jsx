@@ -46,7 +46,12 @@ import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
 import { petDrop, petById } from "./pets.js";
-import { rebirthUnlocked } from "./rebirth.js";
+import {
+  rebirthUnlocked,
+  rebirthReady,
+  ultraRebirthAvailable,
+} from "./rebirth.js";
+import { gameNow } from "./game-clock.js";
 import { skillPetLuck, skillById } from "./skills.js";
 import { randomUnit } from "./random.js";
 import Changelog from "./components/Changelog";
@@ -58,6 +63,8 @@ import {
   RollMark,
 } from "./components/game-icons.jsx";
 import RebirthNav from "./components/RebirthNav";
+import MobileTabBar from "./components/MobileTabBar";
+import InstallApp from "./components/InstallApp";
 import About from "./components/About";
 import {
   LATEST_VERSION,
@@ -140,6 +147,9 @@ function App() {
   const [shopFamily, setShopFamily] = useState(() =>
     shopFamilyFromLocation(location),
   );
+  // Goal picking is armed from the shop's goal banner; the state lives here so
+  // it survives shelf changes (the Shop remounts on every sub-page).
+  const [pickingGoal, setPickingGoal] = useState(false);
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
@@ -158,9 +168,17 @@ function App() {
   const [rebirthRing, setRebirthRing] = useState(false);
   useEffect(() => {
     if (!rebirthRing) return;
-    const timer = setTimeout(() => setRebirthRing(false), 2600);
+    const timer = setTimeout(() => setRebirthRing(false), 3300);
     return () => clearTimeout(timer);
   }, [rebirthRing]);
+  // The home-screen app: registering the (pass-through) service worker is
+  // part of the install criteria on some browsers.
+  useEffect(() => {
+    if ("serviceWorker" in navigator)
+      navigator.serviceWorker
+        .register(`${import.meta.env.BASE_URL}sw.js`)
+        .catch(() => {});
+  }, []);
   // A companion found on a roll walks in with its own moment on the roll stage.
   const [arrivalPet, setArrivalPet] = useState(null);
   const {
@@ -206,6 +224,7 @@ function App() {
     setRarity("All rarities");
     setGroup("All sets");
     setSort("Default");
+    setPickingGoal(false);
   }, [epoch]);
   async function completeRoll(result, id, cooldownUntil) {
     // Companion luck is sampled here, independently of the number itself.
@@ -275,6 +294,8 @@ function App() {
       openLinkSettings();
       return;
     }
+    // Leaving the shop disarms goal picking: it belongs to the shop floor.
+    if (target !== "shop") setPickingGoal(false);
     setSettingsSection("");
     // Opening the shop on a product (a goal link, a recap) opens the shelf that
     // sells it, so the card is on screen when the page renders.
@@ -426,6 +447,12 @@ function App() {
     blocked: !!session.pendingRoll || !!session.offline?.batch,
   });
   const rebirthVisible = rebirthUnlocked(session);
+  // The mobile tab bar marks the rebirth tab ready the moment either a rung
+  // or the ultra is available.
+  const rebirthReadyNow =
+    rebirthVisible &&
+    (rebirthReady(session, gameNow()) ||
+      ultraRebirthAvailable(session, gameNow()));
   // A direct link to a page that has not been unlocked yet simply goes home:
   // no locked panel, no counter, nothing to explain the mystery early.
   useEffect(() => {
@@ -630,6 +657,7 @@ function App() {
             openSignup={openAuth}
             openBadge={openBadge}
             notify={notify}
+            onAction={dispatch}
           />
         )}
         {page === "settings" && (
@@ -788,6 +816,8 @@ function App() {
             openSignup={openAuth}
             navigate={navigate}
             notify={notify}
+            pickingGoal={pickingGoal}
+            onPickingGoal={setPickingGoal}
           />
         )}
         {page === "badges" && (
@@ -989,6 +1019,15 @@ function App() {
           <button onClick={() => navigate("about")}>How to play</button>
         </div>
       </footer>
+      {/* The install card lives on the roll screen only: it is the landing
+          page, and other pages keep their back-links unobstructed. */}
+      {page === "roll" && <InstallApp notify={notify} />}
+      <MobileTabBar
+        page={page}
+        rebirthVisible={rebirthVisible}
+        rebirthReady={rebirthReadyNow}
+        navigate={navigate}
+      />
       {modal && (
         <div
           className="modal-overlay"
@@ -1122,16 +1161,25 @@ function App() {
           </span>
         </div>
       )}
-      {/* The rebirth ring: a rainbow circle spinning over the new cycle.
-          Pointer-transparent and fully animation-driven — with reduced motion
-          it rests at opacity 0, exactly as if it were never there. */}
+      {/* The rebirth moment: a flash, rainbow rays, a shockwave and the
+          spinning ring bursting into confetti over the new cycle. Pointer-
+          transparent and fully animation-driven — with reduced motion it
+          rests at opacity 0, exactly as if it were never there. */}
       {rebirthRing && (
-        <div className="rebirth-ring" aria-hidden="true">
-          <span className="rebirth-ring-circle" />
-          <strong className="rebirth-ring-title">
+        <div className="rebirth-ceremony" aria-hidden="true">
+          <span className="rebirth-ceremony-flash" />
+          <span className="rebirth-ceremony-rays" />
+          <span className="rebirth-ceremony-shock" />
+          <span className="rebirth-ceremony-circle" />
+          <strong className="rebirth-ceremony-title">
             REBIRTH {session.rebirths}
           </strong>
-          <span className="rebirth-ring-sub">a new cycle begins</span>
+          <span className="rebirth-ceremony-sub">a new cycle begins</span>
+          <span className="rebirth-ceremony-confetti">
+            {Array.from({ length: 12 }, (_, index) => (
+              <i key={index} />
+            ))}
+          </span>
         </div>
       )}
     </>

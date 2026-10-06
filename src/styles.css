@@ -1466,9 +1466,15 @@ footer button:hover,
 .primary-button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--text) 86%, var(--surface));
   color: var(--surface);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 14%);
 }
 .primary-button:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.985);
+  box-shadow: none;
+}
+.secondary-button:active:not(:disabled),
+.danger-button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
 }
 .primary-button:disabled {
   opacity: 0.55;
@@ -1601,10 +1607,20 @@ footer button:hover,
   padding: 14px 20px;
   font-size: 12px;
   max-width: 90%;
-  animation: fade-in 0.2s;
+  animation: toast-in 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 .toast svg {
   color: var(--green);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
 }
 .spin {
   animation: spin 1s linear infinite;
@@ -1675,35 +1691,49 @@ footer button:hover,
     display: none;
   }
 }
+/* Phone layout: a slim sticky top bar with the game logo, and a bottom tab
+   bar (MobileTabBar) carrying the destinations. The header's own button row
+   and its secondary buttons hand over to the tab bar below. */
 @media (max-width: 760px) {
+  #root {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
   .header {
-    height: 69px;
-    padding: 0 18px;
-    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: 58px;
+    padding: 0 14px;
+    gap: 8px;
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
   }
   .header-left {
-    gap: 20px;
+    gap: 12px;
   }
   .nav-divider {
     display: none;
   }
+  /* The destinations live in the bottom tab bar now. */
   .header nav {
-    gap: 14px;
-  }
-  .header nav button {
-    gap: 5px;
-  }
-  .header nav button span {
     display: none;
-  }
-  .header nav button svg {
-    width: 17px;
-    height: 17px;
   }
   .header-right {
     gap: 8px;
   }
+  /* Help, settings and the rebirth pill ride in the tab bar. */
   .help-button {
+    display: none;
+  }
+  .header-right .icon-button[aria-label="Settings"] {
+    display: none;
+  }
+  .version-flag {
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+  .ultra-mark {
     display: none;
   }
   .theme-switch button {
@@ -1713,14 +1743,24 @@ footer button:hover,
   .theme-switch button:nth-child(2) {
     display: none;
   }
+  /* Phones keep a compact icon-only profile button; only the text label is
+     hidden — the avatar mark is a span too and must stay visible. */
   .sign-in {
-    padding: 8px 9px;
-    font-size: 10px;
-    gap: 5px;
+    padding: 8px;
+  }
+  .sign-in > span:not(.avatar-mark) {
+    display: none;
+  }
+  .brand-title {
+    font-size: 16px;
+  }
+  .brand-edition {
+    font-size: 7px;
+    letter-spacing: 1.9px;
   }
   .home-main {
-    padding-top: 55px;
-    padding-bottom: 48px;
+    padding-top: 44px;
+    padding-bottom: 40px;
   }
   .leaderboard-layout {
     grid-template-columns: 1fr;
@@ -1730,7 +1770,16 @@ footer button:hover,
     margin: 0 auto 10px;
   }
   .content-main {
-    padding: 28px 20px 45px;
+    padding: 24px 16px 40px;
+  }
+  /* Toasts and the corner skill rack must clear the tab bar. */
+  .toast {
+    bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+  /* The phone layout ends at the tab bar: the footer only adds a scroll
+     tail, and its destinations live in Settings and the tab bar. */
+  footer {
+    display: none;
   }
   .badge-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -1790,9 +1839,6 @@ footer button:hover,
   }
   .sign-in {
     padding: 8px;
-  }
-  .sign-in svg {
-    display: none;
   }
   .home-main {
     padding: 47px 19px 40px;
@@ -1933,7 +1979,7 @@ footer button:hover,
   .sign-in {
     padding: 7px;
   }
-  .sign-in span {
+  .sign-in > span:not(.avatar-mark) {
     display: none;
   }
   .sign-in svg {

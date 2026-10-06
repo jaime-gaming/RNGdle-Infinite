@@ -70,7 +70,12 @@ const earned = (ep, at = 150000) => [
 ];
 const funded = (extra = {}) => state({ history: earned(35000000), ...extra });
 async function confirm(p) {
-  await p.getByRole("button", { name: "Rebirth", exact: true }).click();
+  // Scoped to the page's own action: at phone width the bottom tab bar
+  // carries a Rebirth tab of its own.
+  await p
+    .getByRole("region", { name: "Rebirth", exact: true })
+    .getByRole("button", { name: "Rebirth", exact: true })
+    .click();
 }
 const scale = (p) =>
   p
@@ -752,10 +757,16 @@ test("rebirth confirms in its dialog, applies once, and restarts the run without
       b.click();
     });
   await expect.poll(async () => (await saved(page)).rebirths).toBe(1);
-  // A rainbow ring spins over the new cycle, then leaves by itself.
-  await expect(page.locator(".rebirth-ring")).toBeVisible();
-  await expect(page.locator(".rebirth-ring-title")).toContainText("REBIRTH 1");
-  await expect(page.locator(".rebirth-ring")).toBeHidden({ timeout: 8000 });
+  // A rainbow ring spins over the new cycle, then leaves by itself. The
+  // ceremony class is its own — it must never collide with the header
+  // button's progress ring, which keeps the same name.
+  await expect(page.locator(".rebirth-ceremony")).toBeVisible();
+  await expect(page.locator(".rebirth-ceremony-title")).toContainText(
+    "REBIRTH 1",
+  );
+  await expect(page.locator(".rebirth-ceremony")).toBeHidden({
+    timeout: 8000,
+  });
   const after = await saved(page);
   // The run starts over: the wallet and everything it bought are handed back,
   // and rung one refills the wallet with its starting sum plus the surplus.
@@ -912,13 +923,14 @@ test("rebirth waits for cooldown and remains usable on mobile without motion", a
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#rebirth");
-  await expect(
-    page.getByRole("button", { name: "Rebirth", exact: true }),
-  ).toBeDisabled();
+  // At phone width the bottom tab bar carries a Rebirth tab of its own, so
+  // the assertion scopes itself to the page's own action button.
+  const rebirthButton = page
+    .getByRole("region", { name: "Rebirth", exact: true })
+    .getByRole("button", { name: "Rebirth", exact: true });
+  await expect(rebirthButton).toBeDisabled();
   await page.clock.fastForward(11000);
-  await expect(
-    page.getByRole("button", { name: "Rebirth", exact: true }),
-  ).toBeEnabled();
+  await expect(rebirthButton).toBeEnabled();
   await confirm(page);
   // The dialog and the page behind it fit the smallest phone: no sideways
   // scroll while the confirmation is on screen.

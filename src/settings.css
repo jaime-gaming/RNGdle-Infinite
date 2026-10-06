@@ -494,3 +494,25 @@
   align-items: center;
   gap: 8px;
 }
+
+/* ---- Phone-only "More" group ------------------------------------------------
+   The site footer never paints under 761px, so its links (and the home-screen
+   install entry) live here instead. Desktop keeps the footer. */
+.settings-mobile-only {
+  display: none;
+}
+@media (max-width: 760px) {
+  .settings-mobile-only {
+    display: block;
+  }
+  .settings-more-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .settings-more-links .secondary-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+}
