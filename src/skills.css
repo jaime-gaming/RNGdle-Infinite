@@ -220,14 +220,21 @@
 }
 @media (max-width: 720px) {
   .skill-bar {
-    top: 68px;
+    top: 66px;
     left: 8px;
     gap: 7px;
   }
-  .skill-slot .skill-ring,
-  .skill-stack-bubble .skill-ring {
+  .skill-slot > .skill-ring {
     width: 34px !important;
     height: 34px !important;
+  }
+  /* The constellation shrinks as one shape, minis and orbit together. */
+  .skill-stack-cluster {
+    transform: scale(0.82);
+    transform-origin: center;
+  }
+  .skill-stack-bubble:hover .skill-stack-cluster {
+    transform: scale(0.88);
   }
   .skill-stack-members {
     max-width: calc(100vw - 120px);
@@ -245,9 +252,8 @@
   .skill-slot.is-firing .skill-ring,
   .skill-slot.is-armed::after,
   .skill-slot.is-firing .skill-ring-icon,
-  .skill-stack.is-armed > .skill-stack-bubble .skill-ring,
-  .skill-stack.is-armed > .skill-stack-bubble::after,
-  .skill-stack.is-firing > .skill-stack-bubble .skill-ring {
+  .skill-stack-mini.is-armed .skill-ring,
+  .skill-stack-mini.is-firing .skill-ring {
     animation: none;
   }
 }
@@ -272,6 +278,47 @@
 .skill-stack-bubble:focus-visible {
   box-shadow: 0 0 0 2px var(--accent, var(--green));
 }
+/* The constellation: one shared circumference, every member of the group on
+   it as its own charge circle — least progress at the top, ascending
+   clockwise (the order is set inline by the component). */
+.skill-stack-cluster {
+  position: relative;
+  display: block;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.skill-stack-bubble:hover .skill-stack-cluster {
+  transform: scale(1.07);
+}
+.skill-stack-mini {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+/* A faint orbit line ties the circles into one shape. */
+.skill-stack-cluster::before {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--border) 90%, transparent);
+  pointer-events: none;
+}
+.skill-stack-mini .skill-ring-icon {
+  color: var(--secondary);
+}
+.skill-stack-mini.is-armed .skill-ring-icon,
+.skill-stack-mini.is-passive .skill-ring-icon {
+  color: var(--ink, var(--text));
+}
+.skill-stack-mini.is-armed .skill-ring {
+  filter: drop-shadow(
+    0 0 4px color-mix(in srgb, var(--green) 55%, transparent)
+  );
+}
+.skill-stack-mini.is-firing .skill-ring {
+  animation: skill-fire 900ms ease-out 1;
+}
 .skill-stack:hover,
 .skill-stack:focus-within {
   z-index: 30;
@@ -295,11 +342,10 @@
   border-color: color-mix(in srgb, var(--green) 55%, var(--border));
   color: var(--green);
 }
-/* Armed and firing read exactly like a plain circle. */
-.skill-stack.is-armed > .skill-stack-bubble .skill-ring {
-  filter: drop-shadow(
-    0 0 6px color-mix(in srgb, var(--green) 55%, transparent)
-  );
+/* Armed and firing read exactly like a plain circle: the ready member of the
+   constellation breathes, and the whole bubble keeps a soft halo while any
+   member is ready. */
+.skill-stack-mini.is-armed .skill-ring {
   animation: skill-ready 2.6s ease-in-out infinite;
 }
 .skill-stack.is-armed > .skill-stack-bubble::after {
@@ -310,9 +356,6 @@
   border: 1px solid color-mix(in srgb, var(--green) 50%, transparent);
   pointer-events: none;
   animation: skill-halo 2.6s ease-in-out infinite;
-}
-.skill-stack.is-firing > .skill-stack-bubble .skill-ring {
-  animation: skill-fire 900ms ease-out 1;
 }
 .skill-stack-members {
   position: absolute;

@@ -12,15 +12,30 @@
   transition:
     border-color 0.25s,
     background 0.25s,
-    color 0.25s;
+    color 0.25s,
+    transform 0.18s ease,
+    box-shadow 0.25s ease;
 }
 .rebirth-nav:hover {
   border-color: var(--muted);
   background: var(--hover);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 8%);
+}
+.rebirth-nav:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: none;
 }
 .rebirth-nav.active {
   border-color: var(--text);
   color: var(--text);
+}
+/* Registering the custom property lets the conic fill glide instead of jumping
+   when a badge lands. Browsers without @property simply skip the transition. */
+@property --fill {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
 }
 .rebirth-ring {
   position: relative;
@@ -35,6 +50,7 @@
     var(--ring-colour, var(--secondary)) var(--fill, 0%),
     var(--border) 0
   );
+  transition: --fill 0.6s ease;
 }
 .rebirth-ring::after {
   content: "";
@@ -94,6 +110,13 @@
   }
   .rebirth-nav {
     padding: 5px;
+  }
+}
+/* On phones the bottom tab bar carries the rebirth entry, so the header
+   pill stays out of the way. */
+@media (max-width: 760px) {
+  .rebirth-nav {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
