@@ -1,0 +1,82 @@
+/* The home-screen install card: a phone-only sheet that floats above the
+   tab bar until dismissed. Desktop installs use the browser's own UI. */
+.install-app {
+  display: none;
+}
+@media (max-width: 760px) {
+  .install-app {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    /* Under the sticky top bar, out of the tab bar's and rack's way. */
+    top: calc(64px + env(safe-area-inset-top));
+    z-index: 65;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 28px rgb(0 0 0 / 10%);
+    animation: install-app-in 320ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+  .install-app-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+  .install-app-copy strong {
+    font-size: 12px;
+  }
+  .install-app-copy span {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .install-app-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--green) 45%, var(--border));
+    border-radius: 9px;
+    background: var(--green-bg);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .install-app-close {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+  }
+  @keyframes install-app-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  .install-app {
+    animation: none;
+  }
+}
