@@ -285,10 +285,14 @@ test("the changelog reads like release notes, not like a chat log", () => {
     expect(entry.version).toMatch(/^v\d+\.\d+(\.\d+)?$/);
     expect(entry.title.length).toBeGreaterThan(5);
     for (const line of entry.body) {
-      // v0.4.1 is a one-line note in the author's own words, not a
-      // release-notes sentence: pinned verbatim instead of styled.
+      // v0.4.1 is the author's own note plus the publishing fix that shipped
+      // with it, not a release-notes sentence: both pinned verbatim instead
+      // of styled.
       if (entry.version === "v0.4.1") {
-        expect(line).toBe("QoLI, like basic UI changes :D");
+        expect([
+          "QoL, like basic UI changes :D",
+          "GitHub Pages now publishes the same build as the repository, including the latest assets and offline app files.",
+        ]).toContain(line);
         continue;
       }
       // One short line per change, always a finished sentence.

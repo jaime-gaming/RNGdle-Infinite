@@ -28,7 +28,7 @@ import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
 import DrawStage from "./DrawStage";
 import { petById, petBonusLabel } from "../pets.js";
-import { skillForPet } from "../skills.js";
+import { skillById, skillForPet } from "../skills.js";
 import { walletMultiplier } from "../progress.js";
 import { walletParts } from "../rack.js";
 import { CreatureIcon } from "./game-icons.jsx";
@@ -283,11 +283,64 @@ export default function RollExperience({
   // ultra-rebirth and every wallet skill that fired, never the score.
   const firedSkills = run?.skills ?? [];
   const bankedMultiplier = result ? walletMultiplier(session, firedSkills) : 1;
-  const creditedEP =
+  // Every draw skill keeps its own number, and every number it keeps is a
+  // banked roll: the sum that lands in the wallet is the sum of all of them,
+  // not just the one the roll commits. The extra numbers are scored here from
+  // the same verified index the settlement will read.
+  const keptNumbers = useMemo(
+    () =>
+      (run?.picks ?? []).filter(
+        (pick) => pick.number !== result?.number && pick.number != null,
+      ),
+    [run?.picks, result?.number],
+  );
+  const [keptScores, setKeptScores] = useState({});
+  useEffect(() => {
+    if (!keptNumbers.length) {
+      setKeptScores({});
+      return;
+    }
+    let cancelled = false;
+    Promise.all(
+      keptNumbers.map(async (pick) => {
+        try {
+          return [pick.number, await restoreRoll(pick.number)];
+        } catch {
+          return [pick.number, null];
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setKeptScores(
+        Object.fromEntries(entries.filter(([, scored]) => !!scored)),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [run?.id, keptNumbers.length]);
+  const extraPicks = useMemo(
+    () =>
+      keptNumbers
+        .map((pick) => ({
+          ...pick,
+          name: skillById.get(pick.skill)?.name ?? "",
+          tint: skillById.get(pick.skill)?.tint ?? "green",
+          scored: keptScores[pick.number] ?? null,
+        }))
+        .filter((pick) => !!pick.scored),
+    [keptNumbers, keptScores],
+  );
+  const extraEP = extraPicks.reduce(
+    (total, pick) => total + Math.round(pick.scored.totalEP * bankedMultiplier),
+    0,
+  );
+  const ownEP =
     result && result.totalEP !== null
       ? Math.round(result.totalEP * bankedMultiplier)
       : 0;
-  const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0));
+  const creditedEP = ownEP + extraEP;
+  const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0) - extraEP);
   const bonusParts = bonusEP > 0 ? walletParts(session, firedSkills) : [];
   const floatingCharges = useMemo(() => {
     if (!result || result.totalEP === null) return [];
@@ -317,11 +370,29 @@ export default function RollExperience({
     : "REVEAL IN";
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
-  // A draw skill took more than one number: show them all, then keep the best.
+  // A draw skill took more than one number. The split screen owns the roll
+  // until every draw has rolled its digits and earned its badges; the best one
+  // then takes the centre of the screen, holds it, and leaves — the rest of the
+  // reveal (rank, wallet, breakdown) plays underneath once it has gone.
   const splitDraws = run && (run.draws ?? []).length > 1 ? run.draws : null;
+  const splitDecision = useMemo(() => {
+    if (!splitDraws) return 0;
+    const last = timeline.badgeTimes.at(-1);
+    return (
+      (Number.isFinite(last) ? last : timeline.collapse) +
+      0.35 * timeline.pulseMS
+    );
+  }, [splitDraws, timeline]);
+  // The winner holds the centre long enough to read and to hover at any pace.
+  // It cannot hold much longer than this: the rank, the wallet and the badge
+  // breakdown all play underneath and need the screen back.
+  const scale = timeline.scale ?? 1,
+    splitHold = 1100 + 1400 * scale,
+    splitFade = 250 + 350 * scale;
   const splitPlaying =
-    !!splitDraws && elapsed < timeline.collapse + timeline.pulseMS;
-  const splitDecided = !!splitDraws && elapsed >= timeline.collapse;
+    !!splitDraws && elapsed < splitDecision + splitHold + splitFade;
+  const splitLeaving = !!splitDraws && elapsed >= splitDecision + splitHold;
+  const splitDecided = !!splitDraws && elapsed >= splitDecision;
   const rankKnown = !!run && elapsed >= timeline.rarity;
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
   const visibleGroups = groups.slice(-visibleCount || groups.length);
@@ -408,7 +479,22 @@ export default function RollExperience({
     // cannot fast-forward the number onto the screen.
     const start = gameNow();
     const alreadyElapsed = Math.max(0, start - run.startedAt);
-    const cues = revealCueTimes(timeline);
+    // The reveal only wakes on its own beats. A draw skill's split screen has
+    // beats of its own — the decision and the moment it lets go of the screen —
+    // and it would otherwise hang between two badge cues and only leave when
+    // the whole reveal ended.
+    const cues = [
+      ...new Set([
+        ...revealCueTimes(timeline),
+        ...(splitDraws
+          ? [
+              splitDecision,
+              splitDecision + splitHold,
+              splitDecision + splitHold + splitFade,
+            ]
+          : []),
+      ]),
+    ].sort((a, b) => a - b);
     const finish = (instant = false) => {
       if (stopped) return;
       stopped = true;
@@ -700,9 +786,10 @@ export default function RollExperience({
                 takes the centre and becomes the number that pays. */}
             {splitPlaying && (
               <DrawStage
-                key={run.id}
+                key={`draw-${run.id}`}
                 {...{ run, elapsed, timeline, reducedMotion, aura }}
-                leaving={splitDecided}
+                decided={splitDecided}
+                leaving={splitLeaving}
               />
             )}
             <NumberArtifact
@@ -719,6 +806,15 @@ export default function RollExperience({
                   : `${result.number}, ${result.tier}, ${formatEP(result.totalEP)} EP.${
                       bonusEP
                         ? ` +${formatEP(bonusEP)} EP extra from your multipliers.`
+                        : ""
+                    }${
+                      extraPicks.length
+                        ? ` Your draw skills also banked ${extraPicks.length} more number${extraPicks.length === 1 ? "" : "s"}: ${extraPicks
+                            .map(
+                              (pick) =>
+                                `${pick.number} for ${formatEP(Math.round(pick.scored.totalEP * bankedMultiplier))} EP`,
+                            )
+                            .join(", ")}.`
                         : ""
                     }`}
             </div>
@@ -753,6 +849,37 @@ export default function RollExperience({
                   )}{" "}
                   EP
                 </div>
+                {/* Every number a draw skill kept is paid, so the roll names
+                    them beside the one it committed: the reward for stacking
+                    them is visible, not a figure that silently grows. */}
+                {digitsDone && extraPicks.length > 0 && (
+                  <ul className="roll-extra-picks">
+                    <li className="roll-extra-picks-head">
+                      {extraPicks.length === 1
+                        ? "Also banked"
+                        : `Also banked (${extraPicks.length})`}
+                    </li>
+                    {extraPicks.map((pick) => (
+                      <li
+                        key={pick.number}
+                        className={`roll-extra-pick tint-${pick.tint}`}
+                      >
+                        <span className="roll-extra-pick-skill">
+                          {pick.name || "Draw skill"}
+                        </span>
+                        <span className="roll-extra-pick-number">
+                          {pick.number.toLocaleString("en-US")}
+                        </span>
+                        <span className="roll-extra-pick-ep">
+                          {formatEP(
+                            Math.round(pick.scored.totalEP * bankedMultiplier),
+                          )}{" "}
+                          EP
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {digitsDone && (
                   <div
                     className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}

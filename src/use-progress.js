@@ -12,10 +12,15 @@ import {
   recoverUnsavedRolls,
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
-import { runDrawPlan } from "./draw-plan.js";
+import { runDrawPicks } from "./draw-plan.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
-import { armedSkills, drawPlanFor, skillWaivesCooldown } from "./skills.js";
+import {
+  armedSkills,
+  drawPicksFor,
+  drawPlanFor,
+  skillWaivesCooldown,
+} from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings, offlineSettings, productById } from "./shop-data.js";
 import {
@@ -425,12 +430,15 @@ export function useProgress() {
             timing.cooldownMS = 0;
           // Every draw is an ordinary, independent roll scored by the verified
           // index; the plan only says how many to take and when to stop early.
+          // Each draw skill spends its own draws and keeps its own number, and
+          // the roll pays for every number it kept.
           let result,
-            draws = null;
+            draws = null,
+            picks = null;
           if (!plan) result = await generateRoll();
           else
-            ({ draws, result } = await runDrawPlan(
-              plan,
+            ({ draws, result, picks } = await runDrawPicks(
+              drawPicksFor(armed),
               async () => (await generateRoll()).number,
               restoreRoll,
             ));
@@ -452,6 +460,9 @@ export function useProgress() {
             ...timing,
             ...(armed.length ? { skills: armed } : {}),
             ...(draws ? { draws } : {}),
+            // Which draw skill kept which number. The roll pays for every one
+            // of them, so the settlement has to be able to name them again.
+            ...(picks && picks.length ? { picks } : {}),
             ...(flywheel ? { flywheel } : {}),
           };
           next = {
@@ -484,9 +495,24 @@ export function useProgress() {
           const result = await restoreRoll(pending.number);
           if (token !== generation.current)
             throw new Error("This game was reset. The roll was cancelled.");
+          // Every other number a draw skill kept is scored here, from the same
+          // verified index, so the settlement can pay each of them: the roll
+          // banks one number per skill, not only the one it commits.
+          const extras = [];
+          for (const pick of pending.picks ?? []) {
+            if (pick.number === pending.number) continue;
+            const scored = await restoreRoll(pick.number);
+            if (scored)
+              extras.push({
+                skill: pick.skill,
+                result: scored,
+                spent: pick.spent,
+              });
+          }
           next = applyProgress(previous, {
             ...action,
             result,
+            ...(extras.length ? { extras } : {}),
             cooldownUntil:
               pending.startedAt + pending.rollMS + pending.cooldownMS,
           });

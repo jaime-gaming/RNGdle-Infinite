@@ -1,64 +1,225 @@
-/* The split screen a draw skill earns: every draw the roll really took, side by
-   side, until the reveal collapses and the best one takes the centre.
+/* The split screen a draw skill earns: one panel per draw, filling the screen
+   behind visible dividing lines, each rolling its digits and earning its
+   badges in the open. When the best draw is known it flies to the centre and
+   covers the rest — grey until the pointer is over it, so the discarded draws
+   can still be read.
 
-   The stage is an overlay on the roll's number area, so the rest of the reveal
-   (badges, rank, wallet) keeps the layout it already has. It never loops: the
-   house rule is that nothing on the roll screen moves for the sake of moving.
+   The stage is a takeover of the roll screen, not of the game: it never
+   scores, it only shows what the roll already committed, and it hands the
+   screen back before the reveal ends.
 */
 .draw-stage {
-  position: absolute;
-  top: 48px;
+  --draw-box-font: 26px;
+  --draw-line: 2px;
+  position: fixed;
+  top: 0;
   left: 0;
   right: 0;
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  bottom: var(--draw-stage-bottom, 0px);
+  z-index: 6;
   pointer-events: none;
-  transition: opacity calc(0.4s * var(--reveal-scale, 1)) ease;
+  transition: opacity calc(0.5s * var(--reveal-scale, 1)) ease;
 }
 .draw-stage.is-leaving {
   opacity: 0;
 }
+/* Fewer, larger panels read better than eight tiny ones on a phone, where the
+   tab bar also owns the bottom of the screen. */
+@media (max-width: 760px) {
+  .draw-stage {
+    --draw-stage-bottom: calc(58px + env(safe-area-inset-bottom));
+  }
+}
 .draw-stage-label {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 0;
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   color: var(--muted);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 .draw-stage-label svg {
   color: var(--green);
 }
-.draw-lanes {
+
+/* The grid: the panels sit on the page background with the border colour
+   showing through the gaps, which is what draws every dividing line. */
+.draw-grid {
+  --cols: 2;
+  --rows: 2;
+  position: absolute;
+  inset: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: var(--lane-gap, 10px);
-  width: 100%;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--draw-line);
   margin: 0;
-  padding: 0;
+  padding: var(--draw-line);
   list-style: none;
+  background: var(--border);
+  overflow: hidden;
+  filter: grayscale(0) brightness(1);
+  transition: filter calc(0.5s * var(--reveal-scale, 1)) ease;
 }
-.draw-lane {
-  --lane-gap: 10px;
+.draw-grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--muted) 42%, transparent);
+  -webkit-backdrop-filter: grayscale(1) blur(1px);
+  backdrop-filter: grayscale(1) blur(1px);
+  opacity: 0;
+  transition: opacity calc(0.5s * var(--reveal-scale, 1)) ease;
+}
+.draw-stage[data-count="2"] .draw-grid {
+  --cols: 2;
+  --rows: 1;
+}
+.draw-stage[data-count="3"] .draw-grid {
+  --cols: 3;
+  --rows: 1;
+}
+.draw-stage[data-count="5"] .draw-grid,
+.draw-stage[data-count="6"] .draw-grid {
+  --cols: 3;
+  --rows: 2;
+}
+.draw-stage[data-count="7"] .draw-grid,
+.draw-stage[data-count="8"] .draw-grid {
+  --cols: 4;
+  --rows: 2;
+}
+/* The number is the point of every panel: it is sized for the panel it gets,
+   not for the screen. */
+.draw-stage[data-count="2"] {
+  --draw-box-font: 44px;
+}
+.draw-stage[data-count="3"],
+.draw-stage[data-count="4"] {
+  --draw-box-font: 34px;
+}
+.draw-stage[data-count="5"],
+.draw-stage[data-count="6"] {
+  --draw-box-font: 26px;
+}
+.draw-stage[data-count="7"],
+.draw-stage[data-count="8"] {
+  --draw-box-font: 21px;
+}
+
+.draw-panel {
+  flex: 1 1 calc((100% - (var(--cols) - 1) * var(--draw-line)) / var(--cols));
   display: flex;
-  flex: 1 1 0;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 0;
+  height: calc((100% - (var(--rows) - 1) * var(--draw-line)) / var(--rows));
+  padding: 10px 8px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.draw-panel-head {
+  display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  max-width: 150px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
-.draw-lane .number-box.draw-box {
-  --box-font: 16px;
-  width: 100%;
-  padding: 11px 9px;
+.draw-panel-tag {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+.draw-panel-tag.is-best {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+  background: var(--green-bg);
+  color: var(--green);
+}
+/* A number a draw skill kept is paid, not thrown away: it says so, in the
+   colour of the skill that kept it. */
+.draw-panel-tag.is-paid {
+  border-color: color-mix(
+    in srgb,
+    var(--claim-tint, var(--green)) 45%,
+    var(--border)
+  );
+  color: var(--claim-tint, var(--green));
+}
+.draw-panel-claim {
+  min-width: 0;
+  overflow: hidden;
+  padding: 1px 7px;
+  border: 1px solid
+    color-mix(in srgb, var(--claim-tint, var(--green)) 40%, var(--border));
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--claim-tint, var(--green)) 12%,
+    transparent
+  );
+  color: var(--claim-tint, var(--green));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.draw-panel-claim.tint-gold {
+  --claim-tint: #d9a441;
+}
+.draw-panel-claim.tint-pink {
+  --claim-tint: #d97ba6;
+}
+.draw-panel-claim.tint-cyan {
+  --claim-tint: #4bb3c4;
+}
+.draw-panel-claim.tint-violet {
+  --claim-tint: #8a7ad9;
+}
+.draw-panel-claim.tint-green {
+  --claim-tint: var(--green);
+}
+.draw-panel-claim.tint-orange {
+  --claim-tint: #d98241;
+}
+.draw-panel-claim.tint-steel {
+  --claim-tint: var(--secondary);
+}
+.draw-panel .number-box.draw-box {
+  max-width: 100%;
+  padding: 10px 12px;
   border-width: 2px;
+}
+.draw-panel .number-box.draw-box.is-spinning {
+  box-shadow:
+    0 0 10px 2px #94a3b840,
+    0 0 20px 6px #94a3b81f;
 }
 .draw-digits {
   display: flex;
@@ -66,103 +227,345 @@
   justify-content: center;
   font-family: var(--roll-font);
   font-weight: 700;
+  font-size: var(--draw-box-font, 24px);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
+  text-shadow: 0 1px 2px #ffffff80;
+}
+:root[data-theme="dark"] .draw-digits {
+  text-shadow: 0 1px 2px #ffffff33;
+}
+.draw-digit {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1ch;
+  transition:
+    width 0.4s,
+    opacity 0.4s;
+  transform-origin: center;
+}
+.draw-digit.is-blank {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
 }
 .draw-digit.is-scrambling {
   opacity: 0.55;
 }
-.draw-lane-ep {
-  font: 700 11px var(--roll-font);
-  color: var(--secondary);
+:root[data-theme="dark"] .draw-digit.is-scrambling {
+  color: #71717a;
 }
-.draw-lane.is-out .draw-lane-ep {
+.draw-ep {
+  font: 700 12px var(--roll-font);
   color: var(--muted);
-  text-decoration: line-through;
+  opacity: 0.5;
+  transition:
+    opacity 0.35s ease,
+    color 0.35s ease;
 }
-.draw-lane-tag {
+.draw-ep.is-known {
+  color: var(--text);
+  opacity: 1;
+  animation: draw-ep-in calc(0.4s * var(--reveal-scale, 1)) ease-out both;
+}
+@keyframes draw-ep-in {
+  from {
+    transform: scale(0.82);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.draw-badges,
+.draw-winner-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+.draw-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
-  border: 1px solid color-mix(in srgb, var(--green) 45%, var(--border));
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 7px 2px 5px;
+  border: 1px solid var(--rarity-border, var(--border));
   border-radius: 999px;
-  background: var(--green-bg);
-  color: var(--green);
+  background: var(--rarity-bg, var(--surface));
+  color: var(--rarity, var(--text));
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: draw-badge-in calc(0.42s * var(--reveal-scale, 1))
+    var(--ease-reveal, ease-out) both;
+}
+.draw-badge .emoji {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.draw-badge .emoji img {
+  width: 13px;
+  height: 13px;
+}
+.draw-badge-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.draw-badge-ep {
+  font-family: var(--roll-font);
   font-size: 9.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  opacity: 0.75;
+}
+.draw-badge-more {
+  padding: 2px 7px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 9.5px;
+}
+@keyframes draw-badge-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-/* The decision: the discarded draws fade where they stand, and the winner
-   slides to the centre of the row and grows into the number the reveal keeps.
-   The animation ends transparent because the number itself takes over. */
-.draw-stage.is-decided .draw-lane.is-out {
-  animation: lane-discard calc(0.5s * var(--reveal-scale, 1)) ease-out forwards;
+/* The decision: the winning draw takes the centre of the screen on top of the
+   grid, and everything behind it turns grey until the pointer is over the card
+   — the discarded draws stay readable, just not at full colour. */
+.draw-stage.is-decided .draw-grid {
+  filter: grayscale(1) brightness(0.92);
 }
-.draw-stage.is-decided .draw-lane.is-winner {
-  animation: lane-promote calc(0.55s * var(--reveal-scale, 1))
-    var(--ease-reveal, ease-out) forwards;
+.draw-stage.is-decided .draw-grid::after {
+  opacity: 1;
 }
-@keyframes lane-discard {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.84) translateY(10px);
-  }
+.draw-stage.is-peeking .draw-grid {
+  filter: grayscale(0) brightness(1);
 }
-@keyframes lane-promote {
-  from {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    /* (row centre − my slot) × one lane pitch: lands the winner dead centre. */
-    transform: translateX(
-        calc(
-          (0.5 * (var(--draw-count) - 1) - var(--winner-index)) *
-            (100% + var(--lane-gap))
-        )
-      )
-      scale(1.25);
-  }
+.draw-stage.is-peeking .draw-grid::after {
+  opacity: 0;
 }
-@media (max-width: 560px) {
-  .draw-lane .number-box.draw-box {
-    --box-font: 12px;
-    padding: 9px 6px;
-  }
-  .draw-lanes {
-    gap: 6px;
-  }
-  .draw-lane {
-    --lane-gap: 6px;
-    max-width: 96px;
-  }
-  .draw-lane-ep {
-    font-size: 10px;
-  }
-  /* Wrapped rows cannot slide a winner to a centre that is on another line, so
-     the promotion is a fade-in-place and the number takes the centre. */
-  .draw-lanes {
-    flex-wrap: wrap;
-  }
-  .draw-stage.is-decided .draw-lane.is-winner {
-    animation-name: lane-promote-wrapped;
-  }
+.draw-finale {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  pointer-events: none;
 }
-@keyframes lane-promote-wrapped {
-  from {
-    opacity: 1;
-    transform: scale(1);
+.draw-winner {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(520px, 100%);
+  max-height: 100%;
+  padding: 18px 22px 15px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  box-shadow: 0 26px 70px rgb(0 0 0 / 0.35);
+  cursor: pointer;
+  filter: grayscale(0.55);
+  transition:
+    transform calc(0.35s * var(--reveal-scale, 1)) var(--ease-reveal, ease-out),
+    filter calc(0.35s * var(--reveal-scale, 1)) ease,
+    box-shadow calc(0.35s * var(--reveal-scale, 1)) ease;
+}
+.draw-winner.is-peeking {
+  transform: scale(0.93);
+  filter: grayscale(0);
+  box-shadow: 0 16px 38px rgb(0 0 0 / 0.2);
+}
+.draw-winner-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.draw-winner-kicker svg {
+  color: var(--green);
+}
+.draw-winner .number-box {
+  max-width: 100%;
+}
+.draw-winner-box .draw-digits {
+  font-size: 34px;
+}
+.draw-winner-ep {
+  font: 700 22px var(--roll-font);
+  color: var(--text);
+}
+/* Every number a stacked rack pays, named under the one the roll committed. */
+.draw-winner-paid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.draw-winner-paid-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid
+    color-mix(in srgb, var(--claim-tint, var(--green)) 42%, var(--border));
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--claim-tint, var(--green)) 10%,
+    transparent
+  );
+  font-family: var(--roll-font);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.draw-winner-paid-item.is-headline {
+  border-width: 2px;
+}
+.draw-winner-paid-item.tint-gold {
+  --claim-tint: #d9a441;
+}
+.draw-winner-paid-item.tint-pink {
+  --claim-tint: #d97ba6;
+}
+.draw-winner-paid-item.tint-cyan {
+  --claim-tint: #4bb3c4;
+}
+.draw-winner-paid-item.tint-violet {
+  --claim-tint: #8a7ad9;
+}
+.draw-winner-paid-item.tint-green {
+  --claim-tint: var(--green);
+}
+.draw-winner-paid-item.tint-orange {
+  --claim-tint: #d98241;
+}
+.draw-winner-paid-item.tint-steel {
+  --claim-tint: var(--secondary);
+}
+.draw-winner-paid-skill {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--claim-tint, var(--green));
+}
+.draw-winner-paid-number {
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+.draw-winner-paid-ep {
+  color: var(--green);
+}
+.draw-winner-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10.5px;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .draw-stage[data-count="2"] .draw-grid {
+    --cols: 1;
+    --rows: 2;
   }
-  to {
-    opacity: 0;
-    transform: scale(1.2);
+  .draw-stage[data-count="3"] .draw-grid {
+    --cols: 1;
+    --rows: 3;
+  }
+  .draw-stage[data-count="5"] .draw-grid,
+  .draw-stage[data-count="6"] .draw-grid {
+    --cols: 2;
+    --rows: 3;
+  }
+  .draw-stage[data-count="7"] .draw-grid,
+  .draw-stage[data-count="8"] .draw-grid {
+    --cols: 2;
+    --rows: 4;
+  }
+  .draw-stage[data-count="2"] {
+    --draw-box-font: 32px;
+  }
+  .draw-stage[data-count="3"],
+  .draw-stage[data-count="4"] {
+    --draw-box-font: 24px;
+  }
+  .draw-stage[data-count="5"],
+  .draw-stage[data-count="6"] {
+    --draw-box-font: 19px;
+  }
+  .draw-stage[data-count="7"],
+  .draw-stage[data-count="8"] {
+    --draw-box-font: 16px;
+  }
+  .draw-panel {
+    gap: 5px;
+    padding: 7px 5px;
+  }
+  .draw-panel-head {
+    font-size: 9px;
+  }
+  .draw-badge,
+  .draw-badge-more {
+    font-size: 9px;
+    padding: 1px 5px 1px 4px;
+  }
+  .draw-badge .emoji img {
+    width: 11px;
+    height: 11px;
+  }
+  .draw-ep {
+    font-size: 11px;
+  }
+  /* Seven or eight draws leave a phone panel barely a fifth of the screen
+     high. The badge row gives up its emoji and its EP figures so two chips
+     share a line and the whole row still fits instead of being cut off. */
+  .draw-stage[data-count="7"] .draw-badge .emoji,
+  .draw-stage[data-count="8"] .draw-badge .emoji {
+    display: none;
+  }
+  .draw-stage[data-count="7"] .draw-badge-ep,
+  .draw-stage[data-count="8"] .draw-badge-ep {
+    display: none;
+  }
+  .draw-stage[data-count="7"] .draw-badge,
+  .draw-stage[data-count="8"] .draw-badge {
+    max-width: 46%;
+  }
+  .draw-winner {
+    gap: 8px;
+    padding: 14px 14px 12px;
+    border-radius: 16px;
+  }
+  .draw-winner-box .draw-digits {
+    font-size: 26px;
+  }
+  .draw-winner-ep {
+    font-size: 18px;
   }
 }

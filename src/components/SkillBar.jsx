@@ -158,23 +158,7 @@ const memberId = (member) =>
 // A member's charge as a 0–1 fraction. Passives are always-on: their circle
 // is simply full.
 const memberFraction = (member) =>
-  member.kind === "skill"
-    ? member.skill.charge / member.skill.charges
-    : 1;
-
-// The glyph a member wears, at whatever size the circle needs.
-function memberGlyph(member, size) {
-  if (member.kind === "skill")
-    return <SkillIcon icon={member.skill.icon} size={size} aria-hidden="true" />;
-  const passive = member.passive;
-  if (passive.kind === "pet")
-    return <CreatureIcon pet={passive.petId} size={size} aria-hidden="true" />;
-  if (passive.kind === "rebirth")
-    return <LegendMark size={size} aria-hidden="true" />;
-  if (passive.kind === "ultra")
-    return <InfinityMark size={size} aria-hidden="true" />;
-  return <SparkMark size={size} aria-hidden="true" />;
-}
+  member.kind === "skill" ? member.skill.charge / member.skill.charges : 1;
 
 function MemberCircle({ member, active }) {
   return member.kind === "skill" ? (
@@ -184,13 +168,25 @@ function MemberCircle({ member, active }) {
   );
 }
 
-// A stack: one bubble for a family of circles that fans out on hover,
-// keyboard focus or tap. The bubble itself is a constellation: every member of
-// the group gets its own little charge circle, and they sit on one shared
-// circumference — the least charged at the top, growing clockwise, so a glance
-// reads both the state of each skill and the shape of the whole group. Every
-// member keeps its own chip and tooltip once the fan is open.
-function SkillStack({ stackId, label, tint, icon, members, firingSet }) {
+// One circle for a whole family: the group's own icon in the middle and one
+// thin ring per member around it, each in that member's colour and each filled
+// as far as its charge goes. The rings are the members — counting them counts
+// the family — so a group of five takes no more room than a single skill.
+//
+// The fan keeps its job: hover, focus or tap opens the members as ordinary
+// circles with their own chips and tooltips.
+function groupRings(count, size) {
+  const outer = (size - 3) / 2,
+    inner = 12.5;
+  if (count < 1) return [];
+  if (count === 1) return [outer];
+  const step = Math.min(3.2, (outer - inner) / (count - 1)),
+    band = (count - 1) * step,
+    start = outer - (outer - inner - band) / 2;
+  return Array.from({ length: count }, (_, index) => start - index * step);
+}
+
+function SkillStack({ stackId, label, icon, members, firingSet }) {
   const [open, setOpen] = useState(false);
   const armed = members.some(
     (member) => member.kind === "skill" && member.skill.armed,
@@ -203,22 +199,14 @@ function SkillStack({ stackId, label, tint, icon, members, firingSet }) {
         : `${member.passive.name} ${member.passive.chip}, always active`,
     )
     .join(". ");
-  // The constellation geometry: least progress at twelve o'clock, ascending
-  // clockwise. Equal arcs between neighbours, whatever the group size.
-  const size = 56;
-  const mini = members.length <= 2 ? 26 : members.length === 3 ? 23 : 20;
-  const orbit = (size - mini) / 2;
-  const ordered = [...members].sort(
-    (a, b) => memberFraction(a) - memberFraction(b),
-  );
-  const placed = ordered.map((member, index) => {
-    const angle = ((-90 + (360 / ordered.length) * index) * Math.PI) / 180;
-    return {
-      member,
-      left: size / 2 + orbit * Math.cos(angle) - mini / 2,
-      top: size / 2 + orbit * Math.sin(angle) - mini / 2,
-    };
-  });
+  // A bigger family earns a slightly bigger circle: five thin rings on a
+  // 42px disc would be a smear, on 52px they stay readable rings.
+  const size = members.length <= 3 ? 42 : members.length <= 5 ? 46 : 52;
+  const radii = groupRings(members.length, size);
+  const stroke =
+    radii.length > 1
+      ? Math.max(1.2, Math.min(2.6, (radii[0] - radii[1]) * 0.85))
+      : 2.6;
   return (
     <div
       className={`skill-stack ${armed ? "is-armed" : ""} ${firing ? "is-firing" : ""} ${open ? "is-open" : ""}`}
@@ -235,38 +223,57 @@ function SkillStack({ stackId, label, tint, icon, members, firingSet }) {
         onClick={() => setOpen((value) => !value)}
       >
         <span
-          className="skill-stack-cluster"
+          className="skill-stack-ring"
           style={{ width: size, height: size }}
           aria-hidden="true"
         >
-          {placed.map(({ member, left, top }) => (
-            <span
-              key={memberId(member)}
-              className={`skill-stack-mini ${
-                member.kind === "skill"
-                  ? `tint-${member.skill.tint} ${member.skill.armed ? "is-armed" : ""}`
-                  : `tint-${member.passive.tint} is-passive`
-              } ${firingSet.has(memberId(member)) ? "is-firing" : ""}`}
-              style={{ left, top, width: mini, height: mini }}
-              title={
-                member.kind === "skill"
-                  ? `${member.skill.name} — ${member.skill.charge}/${member.skill.charges}`
-                  : member.passive.name
-              }
-            >
-              <ChargeRing
-                fraction={memberFraction(member)}
-                tint={
+          <svg
+            className="skill-ring-svg"
+            viewBox={`0 0 ${size} ${size}`}
+            aria-hidden="true"
+          >
+            {members.map((member, index) => {
+              const radius = radii[index] ?? radii.at(-1) ?? 0,
+                circumference = 2 * Math.PI * radius,
+                fraction = Math.min(1, Math.max(0, memberFraction(member))),
+                tint =
                   member.kind === "skill"
                     ? member.skill.tint
-                    : member.passive.tint
-                }
-                size={mini}
-              >
-                {memberGlyph(member, Math.max(9, mini - 14))}
-              </ChargeRing>
-            </span>
-          ))}
+                    : member.passive.tint;
+              return (
+                <g
+                  key={memberId(member)}
+                  className={`skill-stack-arc tint-${tint} ${
+                    member.kind === "skill" && member.skill.armed
+                      ? "is-armed"
+                      : ""
+                  } ${member.kind === "passive" ? "is-passive" : ""} ${
+                    firingSet.has(memberId(member)) ? "is-firing" : ""
+                  }`}
+                >
+                  <circle
+                    className="skill-stack-track"
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    style={{ strokeWidth: stroke }}
+                  />
+                  <circle
+                    className="skill-stack-fill"
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    style={{
+                      strokeWidth: stroke,
+                      strokeDasharray: circumference,
+                      strokeDashoffset: circumference * (1 - fraction),
+                    }}
+                  />
+                </g>
+              );
+            })}
+          </svg>
+          <span className="skill-ring-icon skill-stack-icon">{icon}</span>
         </span>
         <span className="skill-stack-count" aria-hidden="true">
           {members.length}
@@ -300,7 +307,6 @@ function GroupCircles({ stackId, label, tint, icon, members, firingSet }) {
     <SkillStack
       stackId={stackId}
       label={label}
-      tint={tint}
       icon={icon}
       members={members}
       firingSet={firingSet}

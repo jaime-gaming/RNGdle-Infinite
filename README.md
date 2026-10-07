@@ -115,8 +115,12 @@ effect and the charge state.
 
 Two things in that corner keep the arithmetic out of your head: related circles
 ride together in **stacks** — the pet bonus with its signature skill, the
-rebirth bonuses with their ladder skills — that fan out on hover, focus or tap
-while shop skills stand alone, and every circle only shows **what it adds**
+rebirth bonuses with their ladder skills. A stack is one circle, not a crowd:
+the family's icon in the middle and **one thin ring per member** around it,
+each in that skill's own colour and each filling as that skill charges, so
+counting the rings counts the family. Hover, focus or tap fans it out into the
+ordinary circles while shop skills stand alone, and every circle only shows
+**what it adds**
 ("×2 banked EP", "+5% EP", "2 draws, best kept") while hovered or focused. The
 **Σ button** opens the total — every equipped and companion skill with its
 charge, the banked-EP
@@ -155,18 +159,27 @@ are equipped from the Skills shelf, like shop skills.
 Every effect stays inside the honest-roll rule: **a skill may touch the roll,
 but never the scoring table.** Wallet multipliers only multiply banked EP, and
 draw skills compare the already-verified scores of numbers actually drawn and
-are capped at eight draws. When a skill fires, the effect is written into the
-committed roll, so a reload, a second tab or a retry can never re-fire it or
-re-roll for something better.
+are capped at eight draws. Draw skills **stack**, and stacking pays twice over:
+their budgets add up, so Double Vision's two draws and Bedrock's four spend six,
+and **each skill keeps a number of its own** — Double Vision keeps the best of
+its two, Bedrock the best of its four, and the roll banks both. A floor is a
+promise rather than a quantity, so the strongest one is the one that holds, and
+the whole plan still stops at the eight draws a roll may spend. When a skill
+fires, the effect is written into the committed roll, so a reload, a second tab
+or a retry can never re-fire it or re-roll for something better.
 
-A draw skill does its work where you can watch it. Every draw it takes lands on
-its own side of the screen **at the same time**, each with the EP it would have
-banked, and when the digits settle the numbers it discards fade where they stand
-while the best one is pulled into the centre and becomes the roll. Only that
-number is scored, ranked and paid: the draws you did not keep are shown with
-what they would have earned and then dropped, so a best-of skill never quietly
-banks two rolls at once. The activity feed keeps the receipt — _best of 3
-draws_ — next to the number that was kept.
+A draw skill does its work where you can watch it. The screen splits into **one
+panel per draw**, divided by visible lines, and every draw rolls its digits and
+earns its badges there **at the same time**, each with the EP it would have
+banked. Once the last badge has landed, the draw that scored the most EP is
+pulled into the **centre of the screen**, on top of the rest, which stay behind
+a **grey filter** until you put the pointer over the card — the discarded draws
+never vanish, they only stop competing for your eye. Each panel that a skill
+claimed says so, in that skill's colour, and the card in the middle lists every
+number being paid. The best number is the one ranked and shown as the roll; the
+others are banked beside it, because the draws behind them were really rolled.
+The activity feed keeps the receipt — _best of 3 draws_ — next to each number
+that was kept.
 
 The rack starts with **two slots**, for **shop skills only**. Rebirth rewards
 and companion signatures **ride free** beside the rack: equip every one you
