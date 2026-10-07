@@ -10,6 +10,7 @@ import NumberBox from "./NumberBox";
 import Emoji from "./Emoji";
 import { formatEP, groupResultBadges } from "../roll-data";
 import { restoreRoll } from "../roll-client";
+import { skillById } from "../skills.js";
 import { SCRAMBLE_MS } from "../roll-timeline";
 import "../draw-stage.css";
 
@@ -126,6 +127,23 @@ export default function DrawStage({
 }) {
   const numbers = run.draws ?? NO_DRAWS;
   const winner = run.number;
+  // Which draw skill kept which number. Stacking them does not only spend more
+  // draws: each skill keeps its own number and the roll pays for every one, so
+  // a panel that a skill kept is never a discarded draw.
+  const picks = useMemo(
+    () =>
+      (run.picks ?? []).map((pick) => {
+        const definition = pick.skill ? skillById.get(pick.skill) : null;
+        return {
+          number: pick.number,
+          name: definition?.name ?? "",
+          tint: definition?.tint ?? "green",
+        };
+      }),
+    [run.picks],
+  );
+  const claimFor = (number) =>
+    picks.find((pick) => pick.number === number) ?? null;
   const winnerIndex = Math.max(0, numbers.indexOf(winner));
   const done = timeline.digitTimes.filter((time) => elapsed >= time).length;
   const spinning = done < timeline.slots;
@@ -218,6 +236,8 @@ export default function DrawStage({
 
   if (numbers.length < 2) return null;
   const champ = draws[winnerIndex] ?? draws[0];
+  const scoredFor = (number) =>
+    number === winner ? (run.result ?? null) : (scores[number] ?? null);
 
   return (
     <div
@@ -231,7 +251,9 @@ export default function DrawStage({
       <p className="draw-stage-label">
         <Dices size={12} aria-hidden="true" />
         {decided
-          ? `Best of ${numbers.length} kept`
+          ? picks.length > 1
+            ? `${picks.length} numbers paid`
+            : `Best of ${numbers.length} kept`
           : spinning
             ? `${numbers.length} independent draws`
             : `${numbers.length} draws, best kept`}
@@ -239,6 +261,7 @@ export default function DrawStage({
       <ol className="draw-grid">
         {draws.map((draw, index) => {
           const isWinner = index === winnerIndex;
+          const claim = claimFor(draw.number);
           const shown = draw.beats.filter((time) => elapsed >= time).length;
           const epKnown = !spinning && !!draw.scored;
           return (
@@ -251,14 +274,23 @@ export default function DrawStage({
             >
               <span className="draw-panel-head">
                 <span className="draw-panel-label">Draw {index + 1}</span>
+                {claim && (
+                  <span className={`draw-panel-claim tint-${claim.tint}`}>
+                    {claim.name || "Kept"}
+                  </span>
+                )}
                 {decided && (
                   <span
-                    className={`draw-panel-tag ${isWinner ? "is-best" : ""}`}
+                    className={`draw-panel-tag ${isWinner ? "is-best" : ""} ${
+                      !isWinner && claim ? "is-paid" : ""
+                    }`}
                   >
                     {isWinner ? (
                       <>
                         <Check size={10} aria-hidden="true" /> Best
                       </>
+                    ) : claim ? (
+                      "Paid"
                     ) : (
                       "Discarded"
                     )}
@@ -331,9 +363,37 @@ export default function DrawStage({
                 limit={12}
               />
             </ul>
+            {/* Stacking draw skills pays more than one number, so the card
+                names them: each skill, the number it kept and what that
+                number was worth. */}
+            {picks.length > 1 && (
+              <ul className="draw-winner-paid">
+                {picks.map((pick) => {
+                  const scored = scoredFor(pick.number);
+                  return (
+                    <li
+                      key={`${pick.number}-${pick.name}`}
+                      className={`draw-winner-paid-item tint-${pick.tint} ${
+                        pick.number === winner ? "is-headline" : ""
+                      }`}
+                    >
+                      <span className="draw-winner-paid-skill">
+                        {pick.name || "Kept"}
+                      </span>
+                      <span className="draw-winner-paid-number">
+                        {pick.number.toLocaleString("en-US")}
+                      </span>
+                      <span className="draw-winner-paid-ep">
+                        {scored ? `${formatEP(scored.totalEP)} EP` : "—"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
             <span className="draw-winner-hint">
               <MousePointerClick size={12} aria-hidden="true" /> Hover to
-              compare the {numbers.length - 1} discarded{" "}
+              compare the {numbers.length - 1} other{" "}
               {numbers.length === 2 ? "draw" : "draws"}
             </span>
           </article>

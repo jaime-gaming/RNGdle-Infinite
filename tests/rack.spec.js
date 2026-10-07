@@ -164,12 +164,13 @@ test("draw skills are reported as one plan, never as a taller total", () => {
   // The same plan the draw itself spends: stacked budgets, the higher floor.
   expect(report.next).toMatchObject({ attempts: 6, floor: 25000 });
   expect(report.next.chips).toEqual([
-    `${6} draws, best kept`,
+    "6 draws · 2 numbers paid",
     "never below 25,000 EP",
   ]);
   expect(drawPlanFor(["twice", "bedrock"])).toEqual({
     attempts: 6,
     floor: 25000,
+    keeps: 2,
   });
 });
 

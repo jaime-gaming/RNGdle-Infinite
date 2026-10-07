@@ -195,7 +195,12 @@ export function rackReport(progress = {}) {
   // up here for display, and the plan they quote is the very same one the roll
   // spends — stacked draw budgets and all, inside the cap.
   const chips = [];
-  if (plan) chips.push(`${plan.attempts} draws, best kept`);
+  if (plan)
+    chips.push(
+      plan.keeps > 1
+        ? `${plan.attempts} draws · ${plan.keeps} numbers paid`
+        : `${plan.attempts} draws, best kept`,
+    );
   if (plan?.floor) chips.push(`never below ${amount(plan.floor)} EP`);
   if (walletMultiplier > 1) chips.push(`${times(walletMultiplier)} banked EP`);
   if (petLuck > 1) chips.push(`${times(petLuck)} companion luck`);

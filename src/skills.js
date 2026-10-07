@@ -485,35 +485,52 @@ export function armedSkillDefs(progress) {
 }
 
 // ---- Draw plan ------------------------------------------------------------
-// Every draw-modifying skill collapses into one rule: how many numbers to draw
-// and what EP floor stops the redraws early.
+// Draw skills no longer merge into one budget: each one keeps its own. Two of
+// them draw their own numbers and each keeps the best of them, so a roll can
+// pay more than once — the reward for stacking them as well as the reward for
+// spending the draws.
 //
-// Draw budgets stack: two skills that each draw twice draw four times, because
-// each one really does pay for its own ordinary draws. A floor is a promise
-// rather than a quantity, so stacking keeps the strongest one — the higher
-// floor is the one both skills can stand behind. The whole plan is still
-// capped: a roll can never spend more than SKILL_MAX_DRAWS ordinary draws, and
-// the cap is applied here so the rack can never promise a draw the game will
-// not make.
-export function drawPlanFor(ids = []) {
-  let attempts = 0,
-    floor = 0,
-    found = false;
+// Budgets still add up (Double Vision's two draws and Bedrock's four spend
+// six), a floor is a promise rather than a quantity so each skill keeps its
+// own, and the whole plan is capped: a roll can never spend more than
+// SKILL_MAX_DRAWS ordinary draws, and the cap is spent in order, so a skill
+// that finds the cupboard bare simply keeps nothing.
+//
+// `drawPicksFor` is what the roll spends; `drawPlanFor` is the same plan
+// collapsed for the rack, which only ever quotes the shape of the next roll.
+export function drawPicksFor(ids = []) {
+  const picks = [];
+  let spent = 0;
   for (const id of ids) {
     const skill = skillById.get(id);
     if (!skill) continue;
-    if (skill.kind === "best-of") {
-      attempts += skill.attempts;
-      found = true;
-    }
-    if (skill.kind === "floor") {
-      attempts += skill.attempts;
-      floor = Math.max(floor, skill.floor);
-      found = true;
-    }
+    const kind = skill.kind;
+    if (kind !== "best-of" && kind !== "floor") continue;
+    const budget = Math.min(skill.attempts, SKILL_MAX_DRAWS - spent);
+    // Eight draws are already spoken for: this skill fires for nothing.
+    if (budget <= 0) continue;
+    spent += budget;
+    picks.push({
+      id,
+      name: skill.name,
+      tint: skill.tint,
+      attempts: budget,
+      floor: kind === "floor" ? skill.floor : 0,
+    });
   }
-  if (!found) return null;
-  return { attempts: Math.min(attempts, SKILL_MAX_DRAWS), floor };
+  return picks;
+}
+
+export function drawPlanFor(ids = []) {
+  const picks = drawPicksFor(ids);
+  if (!picks.length) return null;
+  return {
+    attempts: picks.reduce((total, pick) => total + pick.attempts, 0),
+    floor: picks.reduce((best, pick) => Math.max(best, pick.floor), 0),
+    // How many numbers this roll would pay: one for every skill that gets to
+    // spend at least one draw.
+    keeps: picks.length,
+  };
 }
 
 export function skillWaivesCooldown(ids = []) {

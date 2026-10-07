@@ -1,37 +1,120 @@
 /* The rebirth page: a milestone with figures, a ladder and the two lists that
    answer "what do I lose, what do I keep". Nothing here renders before the
-   ladder unlocks. */
+   ladder unlocks.
+   The page is one ceremony: every block rises into place, the gauge winds
+   itself up to the number it is showing, and the rung you are standing on
+   keeps a slow pulse until it is done. Every one of those animations is
+   decoration — switch off motion and the page is exactly the same page. */
+@property --gauge-fill {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
 .rebirth-page {
   display: flex;
   flex-direction: column;
   gap: 22px;
   margin-bottom: 40px;
 }
+
+/* ---- The hero ------------------------------------------------------------ */
+/* The step you are on, with the ring that measures it. Two slow auroras drift
+   behind the copy so the band reads as an occasion rather than a card. */
 .rebirth-hero {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 24px;
-  padding: 24px 26px;
+  gap: 26px;
+  padding: 26px 28px 28px;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background:
-    radial-gradient(
-      ellipse at 12% 0%,
-      color-mix(in srgb, var(--green) 12%, transparent),
-      transparent 62%
-    ),
-    var(--surface);
+  border-radius: 18px;
+  background: var(--surface);
+  overflow: hidden;
+  animation: rebirth-rise 520ms var(--ease-reveal, ease-out) both;
+}
+.rebirth-hero::before,
+.rebirth-hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.rebirth-hero::before {
+  top: -140px;
+  left: -90px;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--green) 16%, transparent),
+    transparent 68%
+  );
+  animation: rebirth-aurora 18s ease-in-out infinite;
+}
+.rebirth-hero::after {
+  right: -120px;
+  bottom: -160px;
+  width: 340px;
+  height: 340px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--green) 11%, transparent),
+    transparent 70%
+  );
+  animation: rebirth-aurora 23s ease-in-out infinite reverse;
+}
+@keyframes rebirth-aurora {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate3d(18px, -14px, 0) scale(1.08);
+    opacity: 1;
+  }
+}
+@keyframes rebirth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rebirth-hero-copy,
+.rebirth-hero-progress {
+  position: relative;
+}
+.rebirth-hero-copy .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--green) 35%, var(--border));
+  border-radius: 999px;
+  background: var(--green-bg);
+  color: var(--green);
+  font: 700 9.5px/1.4 var(--roll-font);
+  letter-spacing: 0.14em;
 }
 .rebirth-hero-copy h2 {
-  margin: 6px 0 10px;
-  font-size: 26px;
+  margin: 12px 0 10px;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 .rebirth-hero-copy p {
-  margin: 0 0 18px;
+  margin: 0 0 20px;
   max-width: 56ch;
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.9;
   color: var(--secondary);
+}
+.rebirth-hero-copy p b {
+  color: var(--text);
+  font-family: var(--roll-font);
 }
 .rebirth-actions {
   display: flex;
@@ -45,12 +128,58 @@
   align-items: center;
   gap: 7px;
 }
+/* The rebirth button is the moment the whole page is about: it breathes once
+   every few seconds while the step is within reach. */
+.rebirth-actions .primary-button:not(:disabled) {
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 45%, transparent);
+  animation: rebirth-pulse 3.4s ease-in-out infinite;
+}
+@keyframes rebirth-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 40%, transparent);
+  }
+  55% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--green) 0%, transparent);
+  }
+}
 .rebirth-blocker {
   flex: 1 1 220px;
   font-size: 11px;
   line-height: 1.6;
   color: var(--muted);
 }
+/* This cycle, in the player's own numbers: what the run they are about to hand
+   back has actually done. */
+.rebirth-cycle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 20px 0 0;
+  padding: 13px 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+}
+.rebirth-cycle div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.rebirth-cycle dt {
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rebirth-cycle dd {
+  margin: 0;
+  font: 700 12.5px/1.4 var(--roll-font);
+  overflow-wrap: anywhere;
+}
+
+/* ---- The gauge ----------------------------------------------------------- */
 .rebirth-hero-progress {
   display: flex;
   flex-direction: column;
@@ -58,22 +187,51 @@
   gap: 18px;
 }
 .rebirth-gauge {
+  --gauge-fill: var(--fill, 0%);
   position: relative;
   display: grid;
   place-items: center;
-  width: 132px;
-  height: 132px;
+  width: 148px;
+  height: 148px;
   border-radius: 50%;
+  /* The sheen below is a rotating square: the ring's own circle is the only
+     shape it is allowed to paint in. */
+  overflow: hidden;
   background: conic-gradient(
-    var(--green) var(--fill, 0%),
+    var(--green) var(--gauge-fill),
     color-mix(in srgb, var(--border) 100%, transparent) 0
   );
-  transition: background 0.4s ease;
+  animation: rebirth-gauge 1100ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes rebirth-gauge {
+  from {
+    --gauge-fill: 0%;
+  }
+}
+/* A slow sheen crosses the ring while it is filling, so the number is being
+   counted up rather than simply printed. */
+.rebirth-gauge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--surface) 65%, transparent) 40deg,
+    transparent 90deg
+  );
+  animation: rebirth-gauge-sheen 2.8s linear infinite;
+}
+@keyframes rebirth-gauge-sheen {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .rebirth-gauge::after {
   content: "";
   position: absolute;
-  inset: 9px;
+  inset: 10px;
   border-radius: 50%;
   background: var(--surface);
 }
@@ -83,12 +241,12 @@
   z-index: 1;
 }
 .rebirth-gauge span {
-  font: 700 30px/1 var(--roll-font);
+  font: 700 32px/1 var(--roll-font);
 }
 .rebirth-gauge small {
-  margin-top: 4px;
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  margin-top: 5px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -142,38 +300,63 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--green);
-  transition: width 0.4s ease;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--green) 70%, transparent),
+    var(--green)
+  );
+  transition: width 0.5s ease;
 }
-.rebirth-preview-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 14px 0 0;
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--muted);
-}
-.rebirth-preview-note svg {
-  flex-shrink: 0;
-  margin-top: 3px;
-  color: var(--green);
-}
+
+/* ---- Blocks -------------------------------------------------------------- */
 .rebirth-block {
   padding: 22px 24px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--surface);
+  animation: rebirth-rise 520ms var(--ease-reveal, ease-out) both;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+/* The page is long: a block that is being read lifts a hair towards the
+   reader, so where you are is never in doubt. */
+.rebirth-block:hover {
+  border-color: color-mix(in srgb, var(--green) 28%, var(--border));
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--text) 6%, transparent);
+}
+.rebirth-page > .rebirth-block:nth-of-type(1) {
+  animation-delay: 60ms;
+}
+.rebirth-page > .rebirth-block:nth-of-type(2) {
+  animation-delay: 110ms;
+}
+.rebirth-page > .rebirth-block:nth-of-type(3) {
+  animation-delay: 160ms;
 }
 .rebirth-block > header {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .rebirth-block h3 {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 6px;
+  gap: 9px;
+  margin: 0 0 8px;
   font-size: 15px;
+}
+.rebirth-block > header h3 > svg {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--green) 30%, var(--border));
+  border-radius: 8px;
+  background: var(--green-bg);
+  color: var(--green);
+  box-sizing: border-box;
 }
 .rebirth-block > header p {
   margin: 0;
@@ -181,6 +364,11 @@
   font-size: 11.5px;
   line-height: 1.8;
   color: var(--secondary);
+}
+.rebirth-block > header p em {
+  color: var(--text);
+  font-style: normal;
+  font-weight: 600;
 }
 .rebirth-columns {
   display: grid;
@@ -199,10 +387,23 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 10px;
   font-size: 12px;
   color: var(--secondary);
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s ease;
+}
+.rebirth-list li:hover {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  transform: translateX(2px);
 }
 .rebirth-list li > svg {
+  flex-shrink: 0;
   margin-top: 2px;
   color: var(--green);
 }
@@ -224,8 +425,9 @@
   color: var(--muted);
 }
 
-/* The ladder: six rungs, each with its requirement, its progress and the skill
-   it hands over. */
+/* ---- The ladder ---------------------------------------------------------- */
+/* Six rungs, each with its requirement, its progress and the skill it hands
+   over. The one you are standing on is the only one that moves. */
 .rebirth-ladder {
   display: flex;
   flex-direction: column;
@@ -242,9 +444,9 @@
     );
   align-items: center;
   gap: 14px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: 12px;
   background: var(--bg);
   /* The ladder is re-keyed when a rebirth lands, so every rung replays its
      entrance: the finished one settles green, the next one steps up, and the
@@ -254,7 +456,11 @@
     border-color 0.35s ease,
     background 0.35s ease,
     opacity 0.35s ease,
-    filter 0.35s ease;
+    filter 0.35s ease,
+    transform 0.35s ease;
+}
+.rebirth-ladder li:hover {
+  transform: translateX(2px);
 }
 .rebirth-ladder li.is-current {
   border-color: color-mix(in srgb, var(--green) 45%, var(--border));
@@ -338,20 +544,36 @@
 .rebirth-rung-mark {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border: 1px solid var(--border);
   border-radius: 50%;
   color: var(--muted);
   background: var(--surface);
+  font: 700 10px var(--roll-font);
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 .rebirth-ladder li.is-done .rebirth-rung-mark {
   color: var(--green);
   border-color: color-mix(in srgb, var(--green) 45%, var(--border));
 }
+/* The step you are on keeps a slow pulse, so the eye finds it first. */
 .rebirth-ladder li.is-current .rebirth-rung-mark {
   color: var(--text);
   border-color: var(--text);
+  animation: rung-mark 2.6s ease-in-out infinite;
+}
+@keyframes rung-mark {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 45%, transparent);
+  }
+  55% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--green) 0%, transparent);
+  }
 }
 .rebirth-rung-head {
   display: flex;
@@ -373,8 +595,9 @@
   color: var(--muted);
 }
 .rebirth-rung-bar {
+  position: relative;
   display: block;
-  height: 5px;
+  height: 6px;
   border-radius: 999px;
   background: var(--hover);
   overflow: hidden;
@@ -383,8 +606,36 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--green);
-  transition: width 0.4s ease;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--green) 72%, transparent),
+    var(--green)
+  );
+  transition: width 0.5s ease;
+}
+/* The bar you are filling carries a shine that travels it, so a rung that is
+   nearly there reads as nearly there. */
+.rebirth-ladder li.is-current .rebirth-rung-bar span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 70%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: rung-shine 2.4s ease-in-out infinite;
+}
+@keyframes rung-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  60%,
+  100% {
+    transform: translateX(220%);
+  }
 }
 .rebirth-ladder li.is-locked .rebirth-rung-bar span {
   background: var(--muted);
@@ -401,9 +652,9 @@
 }
 .rebirth-reward-chip {
   flex-shrink: 0;
-  padding: 3px 7px;
+  padding: 3px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--surface);
   color: var(--secondary);
   font: 500 9.5px var(--roll-font);
@@ -429,52 +680,73 @@
 .rebirth-reward.is-earned > svg {
   color: var(--green);
 }
-
-/* This cycle, in the player's own numbers: what the run they are about to hand
-   back has actually done. */
-.rebirth-cycle {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px 14px;
-  margin: 18px 0 0;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
+/* The starting sum each rung pays, on the same line as its reward. */
+.rebirth-reward-starter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font: 500 10px var(--roll-font);
+  color: var(--secondary);
+  white-space: nowrap;
 }
-.rebirth-cycle div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.rebirth-cycle dt {
-  font-size: 9.5px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+.rebirth-reward-starter svg {
   color: var(--muted);
 }
-.rebirth-cycle dd {
-  margin: 0;
-  font: 700 12.5px/1.4 var(--roll-font);
-  overflow-wrap: anywhere;
+.rebirth-reward.is-earned .rebirth-reward-starter {
+  color: var(--green);
 }
 
-/* What the button would do to this save, right now. */
+/* ---- The preview: what the button would do to this save ------------------ */
 .rebirth-preview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 .rebirth-preview-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--bg);
+  overflow: hidden;
+  transition:
+    transform 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.rebirth-preview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--text) 7%, transparent);
+}
+/* A wash of the card's own colour at its top edge: give, take and keep read
+   apart before a word is read. */
+.rebirth-preview-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--muted);
+  opacity: 0.55;
+}
+.rebirth-preview-card.is-reset::before {
+  background: var(--warning);
+}
+.rebirth-preview-card.is-keep::before {
+  background: var(--green);
+}
+.rebirth-preview-card.is-gain::before {
+  background: var(--green);
+}
+.rebirth-preview-card.is-gain {
+  border-color: color-mix(in srgb, var(--green) 32%, var(--border));
+  background: color-mix(in srgb, var(--green-bg) 45%, var(--bg));
 }
 .rebirth-preview-card h4 {
   display: flex;
@@ -486,12 +758,21 @@
   text-transform: uppercase;
   color: var(--secondary);
 }
+.rebirth-preview-card h4 > svg {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border-radius: 7px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  box-sizing: border-box;
+}
 .rebirth-preview-card.is-reset h4 {
   color: var(--warning);
 }
-.rebirth-preview-card.is-keep h4 {
-  color: var(--green);
-}
+.rebirth-preview-card.is-keep h4,
 .rebirth-preview-card.is-gain h4 {
   color: var(--green);
 }
@@ -518,24 +799,116 @@
   line-height: 1.6;
   color: var(--muted);
 }
-
-/* The starting sum each rung pays, on the same line as its reward. */
-.rebirth-reward-starter {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  font: 500 10px var(--roll-font);
-  color: var(--secondary);
-  white-space: nowrap;
-}
-.rebirth-reward-starter svg {
+.rebirth-preview-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.7;
   color: var(--muted);
 }
-.rebirth-reward.is-earned .rebirth-reward-starter {
+.rebirth-preview-note svg {
+  flex-shrink: 0;
+  margin-top: 3px;
   color: var(--green);
 }
+.rebirth-preview-note b {
+  color: var(--text);
+  font-family: var(--roll-font);
+}
 
+/* ---- Ultra-rebirth ------------------------------------------------------- */
+/* The permanent bonus, explained where the ladder ends. */
+.rebirth-ultra-card {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.6fr);
+  gap: 22px;
+  align-items: start;
+}
+.rebirth-ultra-figure {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 22px 20px;
+  border: 1px solid color-mix(in srgb, var(--green) 30%, var(--border));
+  border-radius: 14px;
+  background: var(--green-bg);
+  text-align: center;
+  overflow: hidden;
+}
+/* A slow wheel of light behind the infinity mark: the one place on the page
+   that is allowed to look like prestige. */
+.rebirth-ultra-figure::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--green) 14%, transparent) 30deg,
+    transparent 70deg,
+    color-mix(in srgb, var(--green) 12%, transparent) 190deg,
+    transparent 240deg
+  );
+  animation: rebirth-gauge-sheen 14s linear infinite;
+  pointer-events: none;
+}
+.rebirth-ultra-figure > * {
+  position: relative;
+}
+.rebirth-ultra-figure svg {
+  color: var(--green);
+  animation: ultra-mark-breathe 4.6s ease-in-out infinite;
+}
+@keyframes ultra-mark-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    transform: scale(1.07);
+    filter: drop-shadow(
+      0 0 10px color-mix(in srgb, var(--green) 40%, transparent)
+    );
+  }
+}
+.rebirth-ultra-figure strong {
+  font: 700 26px/1.2 var(--roll-font);
+}
+.rebirth-ultra-figure span {
+  font-size: 10.5px;
+  color: var(--secondary);
+}
+.rebirth-ultra-state {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  font-size: 11.5px;
+  color: var(--secondary);
+}
+.rebirth-ultra-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--secondary);
+}
+.rebirth-ultra-note b {
+  font-family: var(--roll-font);
+}
 .rebirth-history-note {
   display: flex;
   align-items: center;
@@ -549,132 +922,87 @@
   flex-shrink: 0;
   color: var(--muted);
 }
-
-/* Ultra-rebirth: the permanent bonus, explained where the ladder ends. */
-.rebirth-ultra-card {
-  display: grid;
-  grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.6fr);
-  gap: 22px;
-  align-items: start;
-}
-.rebirth-ultra-figure {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 20px;
-  border: 1px solid color-mix(in srgb, var(--green) 30%, var(--border));
-  border-radius: 12px;
-  background: var(--green-bg);
-  text-align: center;
-}
-.rebirth-ultra-figure svg {
-  color: var(--green);
-}
-.rebirth-ultra-figure strong {
-  font: 700 24px/1.2 var(--roll-font);
-}
-.rebirth-ultra-figure span {
-  font-size: 10.5px;
-  color: var(--secondary);
-}
-.rebirth-ultra-state {
-  grid-column: 1 / -1;
-  margin: 0;
-  font-size: 11.5px;
-  color: var(--secondary);
-}
-.rebirth-footnote,
-.rebirth-ultra-note {
-  margin: 0;
-  font-size: 11.5px;
-  line-height: 1.8;
-  color: var(--secondary);
-}
-.rebirth-footnote {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.rebirth-footnote svg {
-  color: var(--green);
-}
-.rebirth-ultra-note b {
-  font-family: var(--roll-font);
-}
 .rebirth-ultra {
   background: var(--green-bg);
   color: var(--green);
   border-color: color-mix(in srgb, var(--green) 40%, var(--border));
 }
-@media (max-width: 900px) {
-  .rebirth-hero,
-  .rebirth-columns,
-  .rebirth-ultra-card {
-    grid-template-columns: 1fr;
+
+/* ---- The confirm dialog -------------------------------------------------- */
+/* The one decision on the page worth a ceremony of its own: the dialog comes
+   up out of the page instead of blinking into it. The rebirth dialog shares
+   the shop's shell, so it names both classes to win the slower entrance. */
+.rebirth-confirm.shop-confirm[open] {
+  animation: rebirth-dialog 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.rebirth-confirm::backdrop {
+  backdrop-filter: blur(3px);
+  animation: rebirth-backdrop 320ms ease both;
+}
+@keyframes rebirth-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
   }
-  .rebirth-preview-grid {
-    grid-template-columns: 1fr;
-  }
-  .rebirth-cycle {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .rebirth-ladder li {
-    grid-template-columns: 26px minmax(0, 1fr);
-    row-gap: 8px;
-  }
-  .rebirth-rung-bar,
-  .rebirth-rung-skill {
-    grid-column: 2;
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
-@media (max-width: 560px) {
-  .rebirth-hero {
-    padding: 20px;
+@keyframes rebirth-backdrop {
+  from {
+    opacity: 0;
   }
-  .rebirth-block {
-    padding: 18px;
+  to {
+    opacity: 1;
   }
-  .rebirth-figures {
-    grid-template-columns: 1fr 1fr;
+}
+.rebirth-confirm h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+.rebirth-confirm ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rebirth-confirm ul li {
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--secondary);
+  animation: rebirth-rise 380ms var(--ease-reveal, ease-out) both;
+}
+.rebirth-confirm ul li:nth-child(2) {
+  animation-delay: 70ms;
+}
+.rebirth-confirm ul li:nth-child(3) {
+  animation-delay: 130ms;
+}
+.rebirth-confirm ul li:nth-child(4) {
+  animation-delay: 190ms;
+}
+.rebirth-confirm ul li strong {
+  color: var(--text);
+  font-family: var(--roll-font);
+}
+.rebirth-confirm .danger-button {
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 45%, transparent);
+  animation: rebirth-danger 2.8s ease-in-out infinite;
+}
+@keyframes rebirth-danger {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 40%, transparent);
   }
-  /* Two columns of figures and a smaller ring keep the hero inside a phone. */
-  .rebirth-gauge {
-    width: 112px;
-    height: 112px;
-  }
-  .rebirth-gauge span {
-    font-size: 25px;
-  }
-  .rebirth-cycle {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 12px;
-    padding: 10px 12px;
-  }
-  .rebirth-preview-card {
-    padding: 14px;
-  }
-  .rebirth-hero-copy h2 {
-    font-size: 22px;
-  }
-  .rebirth-preview-note {
-    font-size: 11.5px;
-  }
-  .rebirth-reward-starter {
-    min-width: 0;
-    flex-shrink: 1;
-    white-space: normal;
-  }
-  /* One thumb-wide target per action on a phone. */
-  .rebirth-actions {
-    align-items: stretch;
-  }
-  .rebirth-actions .primary-button {
-    flex: 1 1 100%;
-    justify-content: center;
-  }
-  .rebirth-blocker {
-    flex-basis: 100%;
+  55% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--danger) 0%, transparent);
   }
 }
 
@@ -698,6 +1026,13 @@
   border: 1px solid rgb(217 164 65 / 0.4);
   border-radius: 10px;
   background: rgb(217 164 65 / 0.08);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.rebirth-legacy-figures > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgb(217 164 65 / 0.14);
 }
 .rebirth-legacy-figures dt {
   font: 500 10px var(--roll-font);
@@ -734,9 +1069,116 @@
   font: 500 12px var(--roll-font);
   color: var(--muted);
 }
+
+/* ---- Phones -------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .rebirth-hero,
+  .rebirth-columns,
+  .rebirth-ultra-card {
+    grid-template-columns: 1fr;
+  }
+  .rebirth-preview-grid {
+    grid-template-columns: 1fr;
+  }
+  .rebirth-cycle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rebirth-ladder li {
+    grid-template-columns: 26px minmax(0, 1fr);
+    row-gap: 8px;
+  }
+  .rebirth-rung-bar,
+  .rebirth-rung-skill {
+    grid-column: 2;
+  }
+}
 @media (max-width: 720px) {
   .rebirth-legacy-grid {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .rebirth-hero {
+    padding: 20px;
+  }
+  .rebirth-block {
+    padding: 18px;
+  }
+  .rebirth-figures {
+    grid-template-columns: 1fr 1fr;
+  }
+  /* Two columns of figures and a smaller ring keep the hero inside a phone. */
+  .rebirth-gauge {
+    width: 124px;
+    height: 124px;
+  }
+  .rebirth-gauge span {
+    font-size: 26px;
+  }
+  .rebirth-cycle {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    padding: 10px 12px;
+  }
+  .rebirth-preview-card {
+    padding: 14px;
+  }
+  .rebirth-hero-copy h2 {
+    font-size: 23px;
+  }
+  .rebirth-preview-note {
+    font-size: 11.5px;
+  }
+  .rebirth-reward-starter {
+    min-width: 0;
+    flex-shrink: 1;
+    white-space: normal;
+  }
+  /* One thumb-wide target per action on a phone. */
+  .rebirth-actions {
+    align-items: stretch;
+  }
+  .rebirth-actions .primary-button {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .rebirth-blocker {
+    flex-basis: 100%;
+  }
+}
+
+/* ---- Stillness ----------------------------------------------------------- */
+/* Motion is decoration here: with it switched off the page is the same page,
+   one frame older, and every number stays readable. */
+@media (prefers-reduced-motion: reduce) {
+  .rebirth-hero,
+  .rebirth-block,
+  .rebirth-confirm.shop-confirm[open],
+  .rebirth-confirm ul li,
+  .rebirth-ladder li,
+  .rebirth-ladder li.is-current,
+  .rebirth-ladder li.is-done {
+    animation: none !important;
+  }
+  .rebirth-hero::before,
+  .rebirth-hero::after,
+  .rebirth-gauge,
+  .rebirth-gauge::before,
+  .rebirth-ultra-figure::before,
+  .rebirth-ultra-figure svg,
+  .rebirth-ladder li.is-current .rebirth-rung-mark,
+  .rebirth-ladder li.is-current .rebirth-rung-bar span::after,
+  .rebirth-actions .primary-button:not(:disabled),
+  .rebirth-confirm .danger-button,
+  .rebirth-confirm::backdrop {
+    animation: none !important;
+  }
+  .rebirth-block:hover,
+  .rebirth-preview-card:hover,
+  .rebirth-ladder li:hover,
+  .rebirth-list li:hover,
+  .rebirth-legacy-figures > div:hover {
+    transform: none;
   }
 }
 
@@ -1066,7 +1508,8 @@
   border: 3px solid rgb(255 255 255 / 0.7);
   box-shadow: 0 0 30px rgb(255 255 255 / 0.35);
   opacity: 0;
-  animation: rebirth-ceremony-shock 3.3s cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
+  animation: rebirth-ceremony-shock 3.3s cubic-bezier(0.15, 0.6, 0.3, 1)
+    forwards;
 }
 .rebirth-ceremony-circle {
   position: relative;

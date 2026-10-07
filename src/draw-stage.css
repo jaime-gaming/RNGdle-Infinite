@@ -161,6 +161,56 @@
   background: var(--green-bg);
   color: var(--green);
 }
+/* A number a draw skill kept is paid, not thrown away: it says so, in the
+   colour of the skill that kept it. */
+.draw-panel-tag.is-paid {
+  border-color: color-mix(
+    in srgb,
+    var(--claim-tint, var(--green)) 45%,
+    var(--border)
+  );
+  color: var(--claim-tint, var(--green));
+}
+.draw-panel-claim {
+  min-width: 0;
+  overflow: hidden;
+  padding: 1px 7px;
+  border: 1px solid
+    color-mix(in srgb, var(--claim-tint, var(--green)) 40%, var(--border));
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--claim-tint, var(--green)) 12%,
+    transparent
+  );
+  color: var(--claim-tint, var(--green));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.draw-panel-claim.tint-gold {
+  --claim-tint: #d9a441;
+}
+.draw-panel-claim.tint-pink {
+  --claim-tint: #d97ba6;
+}
+.draw-panel-claim.tint-cyan {
+  --claim-tint: #4bb3c4;
+}
+.draw-panel-claim.tint-violet {
+  --claim-tint: #8a7ad9;
+}
+.draw-panel-claim.tint-green {
+  --claim-tint: var(--green);
+}
+.draw-panel-claim.tint-orange {
+  --claim-tint: #d98241;
+}
+.draw-panel-claim.tint-steel {
+  --claim-tint: var(--secondary);
+}
 .draw-panel .number-box.draw-box {
   max-width: 100%;
   padding: 10px 12px;
@@ -361,6 +411,74 @@
 .draw-winner-ep {
   font: 700 22px var(--roll-font);
   color: var(--text);
+}
+/* Every number a stacked rack pays, named under the one the roll committed. */
+.draw-winner-paid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.draw-winner-paid-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid
+    color-mix(in srgb, var(--claim-tint, var(--green)) 42%, var(--border));
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--claim-tint, var(--green)) 10%,
+    transparent
+  );
+  font-family: var(--roll-font);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.draw-winner-paid-item.is-headline {
+  border-width: 2px;
+}
+.draw-winner-paid-item.tint-gold {
+  --claim-tint: #d9a441;
+}
+.draw-winner-paid-item.tint-pink {
+  --claim-tint: #d97ba6;
+}
+.draw-winner-paid-item.tint-cyan {
+  --claim-tint: #4bb3c4;
+}
+.draw-winner-paid-item.tint-violet {
+  --claim-tint: #8a7ad9;
+}
+.draw-winner-paid-item.tint-green {
+  --claim-tint: var(--green);
+}
+.draw-winner-paid-item.tint-orange {
+  --claim-tint: #d98241;
+}
+.draw-winner-paid-item.tint-steel {
+  --claim-tint: var(--secondary);
+}
+.draw-winner-paid-skill {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--claim-tint, var(--green));
+}
+.draw-winner-paid-number {
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+.draw-winner-paid-ep {
+  color: var(--green);
 }
 .draw-winner-hint {
   display: inline-flex;
