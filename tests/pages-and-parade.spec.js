@@ -304,6 +304,104 @@ test("equipped skills stand alone while pet and rebirth families stack in the sk
   await expect(bar.locator('[data-skill="surplus"]')).toContainText("+3% EP");
 });
 
+test("a skill family is one circle: the icon in the middle, one ring per member, each in its own colour", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    profile: testProfile,
+    owned: [
+      "skill-bay-1",
+      "skill-bay-2",
+      "surge",
+      "reborn-drive",
+      "reborn-tempo",
+      "reborn-depth",
+    ],
+    skills: ["surge", "reborn-drive", "reborn-tempo", "reborn-depth"],
+    equippedSkills: ["surge", "reborn-drive", "reborn-tempo", "reborn-depth"],
+    pets: ["pebble"],
+    activePet: "pebble",
+    rebirths: 4,
+    ultraRebirths: 1,
+  });
+  await page.goto("/");
+  const family = page.locator('[data-stack="rebirth"]');
+  await expect(family).toBeVisible();
+  // One circle, not a constellation: a single ring element carries every arc.
+  await expect(family.locator(".skill-stack-ring")).toHaveCount(1);
+  const count = Number(
+    await family.locator(".skill-stack-count").textContent(),
+  );
+  expect(count).toBeGreaterThan(3);
+  await expect(family.locator(".skill-stack-arc")).toHaveCount(count);
+  // The family's own icon still sits in the middle of it.
+  await expect(
+    family.locator(".skill-stack-ring .skill-stack-icon"),
+  ).toBeVisible();
+  const arcs = await family.locator(".skill-stack-arc").evaluateAll((nodes) =>
+    nodes.map((node) => ({
+      radius: Number(node.querySelector("circle").getAttribute("r")),
+      colour: getComputedStyle(node.querySelector(".skill-stack-fill")).stroke,
+      tint: [...node.classList].find((name) => name.startsWith("tint-")),
+    })),
+  );
+  // Concentric: every ring sits strictly inside the one before it.
+  const radii = arcs.map((arc) => arc.radius);
+  expect(radii).toEqual([...radii].sort((a, b) => b - a));
+  expect(new Set(radii).size).toBe(radii.length);
+  // Each ring wears its own member's colour rather than one colour per group.
+  expect(arcs.every((arc) => arc.tint)).toBe(true);
+  expect(new Set(arcs.map((arc) => arc.colour)).size).toBeGreaterThan(2);
+  // …and the family still fans out into its individual chips on hover.
+  await family.hover();
+  await expect(family.locator('[data-skill="reborn-drive"]')).toBeVisible();
+  await expect(family.locator('[data-skill="reborn-depth"]')).toBeVisible();
+});
+
+test("the phone rack keeps the desktop corner and simply shrinks", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    profile: testProfile,
+    owned: ["surge", "twice"],
+    skills: ["surge", "twice"],
+    equippedSkills: ["surge", "twice"],
+    skillCharge: { surge: 2, twice: 3 },
+    pets: ["pebble"],
+    activePet: "pebble",
+    rebirths: 1,
+  });
+  const bar = page.locator(".skill-bar");
+  const ring = page.locator('[data-skill="surge"] .skill-ring');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await expect(bar).toBeVisible();
+  const deskBar = await bar.boundingBox();
+  const deskRing = await ring.boundingBox();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(200);
+  const phoneBar = await bar.boundingBox();
+  const phoneRing = await ring.boundingBox();
+  // Same corner as the desktop rack — top left, clear of the centred logo —
+  // just a little tighter against the edge.
+  expect(phoneBar.x).toBeLessThanOrEqual(deskBar.x);
+  expect(phoneBar.y).toBeLessThan(deskBar.y);
+  expect(phoneBar.x).toBeLessThan(30);
+  expect(phoneBar.y).toBeLessThan(120);
+  // …and the circles are the part that gives ground.
+  expect(phoneRing.width).toBeLessThan(deskRing.width);
+  expect(phoneRing.width).toBeGreaterThan(24);
+  // Nothing the rack sits beside ends up underneath it, and the page keeps its
+  // width on a phone.
+  const numberBox = await page.locator(".number-box").boundingBox();
+  expect(phoneBar.x + phoneBar.width).toBeLessThanOrEqual(numberBox.x);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
 test("profile export downloads a valid PNG account card with username and biggest roll", async ({
   page,
 }) => {

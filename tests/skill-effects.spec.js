@@ -8,6 +8,7 @@ import {
 import {
   SKILL_MAX_DRAWS,
   chargeAfterSettlement,
+  drawPicksFor,
   drawPlanFor,
   skillChargeFactor,
   skillById,
@@ -15,7 +16,7 @@ import {
   skillWalletMultiplier,
   skillWaivesCooldown,
 } from "../src/skills.js";
-import { runDrawPlan } from "../src/draw-plan.js";
+import { runDrawPicks, runDrawPlan } from "../src/draw-plan.js";
 import { PET_DROP_CHANCE, petDrop } from "../src/pets.js";
 import { parsePending } from "../src/progress.js";
 import { ROLL_DURATIONS, COOLDOWN_DURATIONS } from "../src/shop-data.js";
@@ -88,7 +89,7 @@ test("a wallet skill multiplies only the EP that reaches the wallet", () => {
 
 test("a best-of skill keeps the highest-scoring number it actually rolled", async () => {
   const plan = drawPlanFor(["twice"]);
-  expect(plan).toEqual({ attempts: 2, floor: 0 });
+  expect(plan).toEqual({ attempts: 2, floor: 0, keeps: 1 });
   const [roll, score] = staged([777777, 999999]);
   const { draws, result } = await runDrawPlan(plan, roll, score);
   // Both draws happen, and both are ordinary numbers the player rolled.
@@ -113,16 +114,117 @@ test("a best-of skill keeps the highest-scoring number it actually rolled", asyn
       evaluate(100000).totalEP,
     ),
   );
-  // Two draw skills combine into the larger budget, never the sum of them.
+  // Two draw skills stack into the sum of their budgets: two draws plus three
+  // is five, still only spending draws the game would really make.
   expect(drawPlanFor(["twice", "reborn-omen"])).toEqual({
-    attempts: 3,
+    attempts: 5,
     floor: 0,
+    keeps: 2,
   });
+});
+
+test("two draw skills each keep a number, and the roll pays for both", async () => {
+  // Double Vision spends two draws and Bedrock four; neither of these numbers
+  // reaches Bedrock's floor, so both budgets are spent in full. Each skill
+  // keeps the best of its own draws, and both numbers are banked.
+  const numbers = [88125, 375660, 861456, 90750, 577281, 25663];
+  const [roll, score] = staged([...numbers]);
+  const { draws, result, picks } = await runDrawPicks(
+    drawPicksFor(["twice", "bedrock"]),
+    roll,
+    score,
+  );
+  expect(draws).toEqual(numbers);
+  // Two picks, one per skill: Double Vision's best of two, Bedrock's best of
+  // four, each with the draws it actually spent.
+  expect(picks).toEqual([
+    { skill: "twice", number: 88125, spent: 2 },
+    { skill: "bedrock", number: 90750, spent: 4 },
+  ]);
+  // The number the roll commits is still the best-scoring of all of them.
+  expect(result.number).toBe(90750);
+  expect(result.totalEP).toBe(
+    Math.max(...numbers.map((number) => evaluate(number).totalEP)),
+  );
+
+  // And the settlement pays every number that was kept, not only the committed
+  // one: one banked line each, in the wallet and in the history.
+  const state = {
+    ...committed(),
+    skills: ["twice", "bedrock"],
+    equippedSkills: ["twice", "bedrock"],
+    skillCharge: { twice: 0, bedrock: 0 },
+    pendingRoll: {
+      id: "p1",
+      number: result.number,
+      startedAt: 1000,
+      rollMS: ROLL_DURATIONS[0],
+      cooldownMS: COOLDOWN_DURATIONS[0],
+      skills: ["twice", "bedrock"],
+      draws,
+      picks,
+    },
+  };
+  const extras = await Promise.all(
+    picks
+      .filter((pick) => pick.number !== result.number)
+      .map(async (pick) => ({
+        skill: pick.skill,
+        spent: pick.spent,
+        result: await score(pick.number),
+      })),
+  );
+  const paid = applyProgress(state, {
+    type: "complete",
+    id: "p1",
+    at: 2000,
+    cooldownUntil: 106000,
+    result,
+    extras,
+  });
+  const kept = picks.map((pick) => evaluate(pick.number).totalEP);
+  expect(paid.balance).toBe(kept.reduce((sum, ep) => sum + ep, 0));
+  const rolls = paid.history.filter((e) => e.type === "roll");
+  expect(rolls.map((e) => e.number)).toEqual([90750, 88125]);
+  expect(rolls.map((e) => e.ep)).toEqual([
+    evaluate(90750).totalEP,
+    evaluate(88125).totalEP,
+  ]);
+  // The extra line names the roll it came from and the draws its own skill
+  // spent, so the feed never claims it was the best of all six.
+  expect(rolls[1].with).toBe("p1");
+  expect(rolls[1].draws).toBe(2);
+  expect(rolls[1].skills).toEqual(["twice"]);
+  // One roll, one charge: paying twice is not charging twice.
+  expect(paid.skillCharge).toEqual({ twice: 0, bedrock: 0 });
+
+  // A reload carries the picks with the roll, and only as this roll could have
+  // made them: a forged pick — a number never drawn, or a skill that did not
+  // fire — is thrown out instead of paid.
+  expect(parsePending(state.pendingRoll).picks).toEqual(picks);
+  expect(() =>
+    parsePending({
+      ...state.pendingRoll,
+      picks: [{ skill: "twice", number: 1, spent: 2 }],
+    }),
+  ).toThrow("Invalid committed roll");
+  expect(() =>
+    parsePending({
+      ...state.pendingRoll,
+      picks: [{ skill: "surge", number: 88125, spent: 2 }],
+    }),
+  ).toThrow("Invalid committed roll");
+  expect(() =>
+    parsePending({
+      ...state.pendingRoll,
+      picks: [{ skill: "twice", number: 88125, spent: 99 }],
+    }),
+  ).toThrow("Invalid committed roll");
 });
 
 test("a floor skill stops at its floor and otherwise keeps the best draw", async () => {
   const plan = drawPlanFor(["bedrock"]);
-  expect(plan).toEqual({ attempts: 4, floor: 25000 });
+  expect(plan).toEqual({ attempts: 4, floor: 25000, keeps: 1 });
   // 4242 clears the floor, so the rest of the budget is never spent.
   const [roll, score] = staged([4242, 100000, 5, 5]);
   const early = await runDrawPlan(plan, roll, score);

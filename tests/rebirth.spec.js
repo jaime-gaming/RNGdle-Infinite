@@ -1177,3 +1177,71 @@ test("an ultra-rebirth runs the ceremony, wears the prestige mark and reads the 
   await page.getByRole("button", { name: /profile/i }).click();
   await expect(page.locator(".profile-prestige")).toContainText("Transcendent");
 });
+
+test("the rebirth page animates its gauge and ladder, and reduced motion leaves every one of them still", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    profile: testProfile,
+    discovered: ids.slice(0, 71),
+    cycleEarnedEP: 2_000_000,
+    history: earned(2_000_000),
+    rebirths: 2,
+    skills: ["reborn-drive"],
+    owned: ["reborn-drive"],
+  });
+  await page.goto("/#rebirth");
+  await expect(page.locator(".rebirth-gauge")).toBeVisible();
+  const moving = await page.evaluate(() => ({
+    hero: getComputedStyle(document.querySelector(".rebirth-hero"))
+      .animationName,
+    gauge: getComputedStyle(document.querySelector(".rebirth-gauge"))
+      .animationName,
+    sheen: getComputedStyle(
+      document.querySelector(".rebirth-gauge"),
+      "::before",
+    ).animationName,
+    mark: getComputedStyle(
+      document.querySelector(
+        ".rebirth-ladder li.is-current .rebirth-rung-mark",
+      ),
+    ).animationName,
+  }));
+  expect(moving).toEqual({
+    hero: "rebirth-rise",
+    gauge: "rebirth-gauge",
+    sheen: "rebirth-gauge-sheen",
+    mark: "rung-mark",
+  });
+  // The motion is decoration: the page reads at its final size and keeps its
+  // width on a phone.
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await expect(page.locator(".rebirth-gauge")).toBeVisible();
+  // Reduced motion takes every one of them — the gauge included — away, and
+  // the page still says what it has to say.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  const still = await page.evaluate(() =>
+    [
+      ...document.querySelectorAll(
+        ".rebirth-hero, .rebirth-gauge, .rebirth-block, .rebirth-ladder li, .rebirth-ladder li.is-current .rebirth-rung-mark",
+      ),
+    ].map((el) => getComputedStyle(el).animationName),
+  );
+  expect(still.length).toBeGreaterThan(4);
+  expect(still.every((name) => name === "none")).toBe(true);
+  await expect(page.locator(".rebirth-gauge")).toBeVisible();
+  // The confirm dialog is no exception: it still opens, it just arrives
+  // without the entrance.
+  await page.getByRole("button", { name: "Rebirth", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Keep:");
+  expect(
+    await dialog.evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe("none");
+});

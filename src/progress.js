@@ -27,6 +27,7 @@ import { petById, PET_IDS, petMultiplier } from "./pets.js";
 import manifest from "./data/game-index.json" with { type: "json" };
 import {
   chargeAfterSettlement,
+  drawPicksFor,
   drawPlanFor,
   parseEquippedSkills,
   parseSkillCharge,
@@ -711,7 +712,10 @@ export function applyProgress(state, action) {
   }
   if (action.type === "bookmark") {
     const id = typeof action.id === "string" ? action.id : "";
-    if (!id || !(state.history ?? []).some((e) => e.type === "roll" && e.id === id))
+    if (
+      !id ||
+      !(state.history ?? []).some((e) => e.type === "roll" && e.id === id)
+    )
       throw new Error("Only rolled numbers can be bookmarked.");
     const bookmarks = state.bookmarks ?? [];
     if (bookmarks.includes(id))
@@ -762,16 +766,15 @@ export function applyProgress(state, action) {
       profile: { id: action.id, username, createdAt: action.createdAt },
     };
   }
-  if (action.type === "complete") {
-    const { result, id, cooldownUntil } = action;
-    if (
-      typeof id !== "string" ||
-      !id ||
-      !validAmount(result?.totalEP) ||
-      !validAmount(result?.number) ||
-      result.number > 1000000 ||
-      !Array.isArray(result?.badges) ||
-      ![
+  // A scored roll, checked the same way wherever it comes from: the committed
+  // number, or one of the numbers a draw skill kept alongside it.
+  function validRollResult(result) {
+    return (
+      validAmount(result?.totalEP) &&
+      validAmount(result?.number) &&
+      result.number <= 1000000 &&
+      Array.isArray(result?.badges) &&
+      [
         "trash",
         "common",
         "uncommon",
@@ -780,15 +783,43 @@ export function applyProgress(state, action) {
         "anomaly",
         "mythic",
         "godly",
-      ].includes(result?.tier) ||
-      !validAmount(cooldownUntil)
-    )
+      ].includes(result?.tier)
+    );
+  }
+
+  if (action.type === "complete") {
+    const { result, id, cooldownUntil } = action;
+    if (!validRollResult(result) || !validAmount(cooldownUntil))
       throw new Error("Invalid roll");
     if (
       state.receipts.includes(id) ||
       state.history?.some((e) => e.id === id && e.type === "roll")
     )
       return state;
+    // Every other number a draw skill kept is a banked roll of its own: same
+    // verified index, same multipliers, its own badges and its own line in the
+    // history. Only the committed number carries the roll's own id — the rest
+    // hang off it, so a replay can never pay them twice.
+    const extra = (action.extras ?? []).map((entry, index) => {
+      const scored = entry?.result ?? entry;
+      if (!validRollResult(scored)) throw new Error("Invalid roll");
+      return {
+        result: scored,
+        skill:
+          typeof entry?.skill === "string" && skillById.has(entry.skill)
+            ? entry.skill
+            : null,
+        // How many draws the skill that kept this number actually spent, so
+        // the history can say it was kept out of two rather than out of the
+        // whole roll's six.
+        spent:
+          validAmount(entry?.spent) && entry.spent >= 1
+            ? Math.min(Math.floor(entry.spent), SKILL_MAX_DRAWS)
+            : 0,
+        key: index + 1,
+      };
+    });
+    const paid = [{ result, skill: null, key: 0 }, ...extra];
     // Companions, rebirth bonuses and wallet skills multiply only banked EP.
     // result.totalEP — the scored value shown, ranked and recorded — is never
     // modified.
@@ -800,30 +831,36 @@ export function applyProgress(state, action) {
       ultraRebirthMultiplier(state.ultraRebirths ?? 0) *
       surplusMultiplier(state.surplusBanked ?? 0) *
       skillWalletMultiplier(fired);
-    const credited =
-      multiplier === 1
-        ? result.totalEP
-        : Math.round(result.totalEP * multiplier);
-    const bonus = credited - result.totalEP;
-    const petBonus =
-      petFactor === 1
-        ? 0
-        : Math.round(result.totalEP * petFactor) - result.totalEP;
+    // The wallet pays for every number the roll kept, and every one of them
+    // counts towards the cycle: a stacked rack is meant to earn more, not the
+    // same reward spread over more draws.
+    let credited = 0,
+      cycleEP = cycleEarnedEp(state);
+    const discovered = new Set(state.discovered);
+    const paidEvents = paid.map(({ result: scored, skill, key, spent }) => {
+      const credit =
+        multiplier === 1
+          ? scored.totalEP
+          : Math.round(scored.totalEP * multiplier);
+      credited += credit;
+      cycleEP += scored.totalEP;
+      const earned = [
+        ...new Set(
+          scored.badges.map((b) => b.id).filter((id) => badgeIds.has(id)),
+        ),
+      ];
+      const unlocked = earned.filter((id) => !discovered.has(id));
+      for (const badge of earned) discovered.add(badge);
+      return { scored, skill, key, credit, spent, earned, unlocked };
+    });
     const balance = state.balance + credited,
       totalEarned = state.totalEarned + credited;
-    const cycleEP = cycleEarnedEp(state) + result.totalEP;
     if (
       !validAmount(balance) ||
       !validAmount(totalEarned) ||
       !validAmount(cycleEP)
     )
       throw new Error("EP balance limit reached.");
-    const earned = [
-      ...new Set(
-        result.badges.map((b) => b.id).filter((id) => badgeIds.has(id)),
-      ),
-    ];
-    const unlocked = earned.filter((id) => !state.discovered.includes(id));
     // Only the committed roll itself knows how many numbers it took, and only
     // when the roll is the one settling — never on a replay or an offline one.
     const drawCount =
@@ -833,32 +870,69 @@ export function applyProgress(state, action) {
         ? Math.min(state.pendingRoll.draws.length, SKILL_MAX_DRAWS)
         : 0;
     const at = action.at ?? Math.ceil(Date.now());
-    const events = [
-      {
-        id,
-        type: "roll",
-        at,
-        number: result.number,
-        tier: result.tier,
-        ep: result.totalEP,
-        ...(petBonus ? { petBonus, pet: state.activePet } : {}),
-        ...(bonus && bonus !== petBonus
-          ? { walletBonus: bonus, walletMultiplier: multiplier }
-          : {}),
-        ...(fired.length ? { skills: fired } : {}),
-        // How many numbers the roll actually took, when a skill paid for more
-        // than one: the history can then say the number was kept out of
-        // several, and that only the best of them was paid.
-        ...(drawCount > 1 ? { draws: drawCount } : {}),
-        badges: earned,
-        ...(action.source === "offline" ? { source: "offline" } : {}),
-        ...(action.source !== "offline" &&
-        state.pendingRoll?.id === id &&
-        state.pendingRoll.flywheel
-          ? { flywheel: state.pendingRoll.flywheel }
-          : {}),
+    // One banked roll per number the roll kept: the committed one first, then
+    // each number another draw skill chose. The extra lines carry the roll
+    // they came from, so the feed can keep them together without pretending
+    // they were separate rolls.
+    const events = paidEvents.flatMap(
+      ({ scored, skill, key, credit, spent, earned: badges, unlocked }) => {
+        const first = key === 0;
+        const ownBonus = credit - scored.totalEP;
+        const ownPetBonus =
+          petFactor === 1
+            ? 0
+            : Math.round(scored.totalEP * petFactor) - scored.totalEP;
+        return [
+          {
+            id: first ? id : `${id}:draw${key}`,
+            type: "roll",
+            at,
+            number: scored.number,
+            tier: scored.tier,
+            ep: scored.totalEP,
+            ...(ownPetBonus
+              ? { petBonus: ownPetBonus, pet: state.activePet }
+              : {}),
+            ...(ownBonus && ownBonus !== ownPetBonus
+              ? { walletBonus: ownBonus, walletMultiplier: multiplier }
+              : {}),
+            ...(skill ? { skills: [skill] } : {}),
+            ...(!skill && fired.length && first ? { skills: fired } : {}),
+            // How many numbers the roll actually took, when a skill paid for
+            // more than one: the history can then say the number was kept out
+            // of several.
+            ...(first
+              ? drawCount > 1
+                ? { draws: drawCount }
+                : {}
+              : spent > 1
+                ? { draws: spent }
+                : {}),
+            // The extra numbers name the roll that drew them.
+            ...(first ? {} : { with: id }),
+            badges,
+            ...(action.source === "offline" ? { source: "offline" } : {}),
+            ...(first &&
+            action.source !== "offline" &&
+            state.pendingRoll?.id === id &&
+            state.pendingRoll.flywheel
+              ? { flywheel: state.pendingRoll.flywheel }
+              : {}),
+          },
+          ...(unlocked.length
+            ? [
+                {
+                  id: first ? `${id}:unlock` : `${id}:unlock:${key}`,
+                  type: "unlock",
+                  at,
+                  number: scored.number,
+                  badges: unlocked,
+                },
+              ]
+            : []),
+        ];
       },
-    ];
+    );
     const droppedPet =
       typeof action.petDrop === "string" &&
       petById.has(action.petDrop) &&
@@ -872,14 +946,6 @@ export function applyProgress(state, action) {
         at,
         productId: droppedPet,
         name: petById.get(droppedPet).name,
-      });
-    if (unlocked.length)
-      events.push({
-        id: `${id}:unlock`,
-        type: "unlock",
-        at,
-        number: result.number,
-        badges: unlocked,
       });
     return {
       ...state,
@@ -896,12 +962,7 @@ export function applyProgress(state, action) {
       balance,
       totalEarned,
       cycleEarnedEP: cycleEP,
-      discovered: [
-        ...new Set([
-          ...state.discovered,
-          ...result.badges.map((b) => b.id).filter((id) => badgeIds.has(id)),
-        ]),
-      ],
+      discovered: [...discovered],
       cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
       receipts: [...state.receipts, id].slice(-128),
       ...(droppedPet
@@ -1322,6 +1383,31 @@ export function parsePending(p, owned = null) {
   const plan = drawPlanFor(skills);
   const waived = skillWaivesCooldown(skills);
   const draws = p.draws == null ? null : p.draws;
+  // Which draw skill kept which number: the list the settlement pays, so it is
+  // checked as strictly as the draws themselves. Every pick has to be a number
+  // this roll actually drew, a skill that fired on it, and each skill may
+  // appear once.
+  const picks = p.picks == null ? null : p.picks;
+  const pickIds = picks ? drawPicksFor(skills).map((pick) => pick.id) : [];
+  if (
+    picks !== null &&
+    (!plan ||
+      !Array.isArray(picks) ||
+      picks.length < 1 ||
+      picks.length > pickIds.length ||
+      new Set(picks.map((pick) => pick?.skill)).size !== picks.length ||
+      !picks.every(
+        (pick) =>
+          pickIds.includes(pick?.skill) &&
+          validAmount(pick?.number) &&
+          pick.number <= 1000000 &&
+          validAmount(pick?.spent) &&
+          pick.spent >= 1 &&
+          pick.spent <= SKILL_MAX_DRAWS &&
+          (draws ? draws.includes(pick.number) : pick.number === p.number),
+      ))
+  )
+    throw new Error("Invalid committed roll");
   if (
     typeof p.id !== "string" ||
     !p.id ||
@@ -1366,6 +1452,15 @@ export function parsePending(p, owned = null) {
     cooldownMS: p.cooldownMS,
     ...(skills.length ? { skills } : {}),
     ...(draws ? { draws } : {}),
+    ...(picks
+      ? {
+          picks: picks.map((pick) => ({
+            skill: pick.skill,
+            number: pick.number,
+            spent: Math.trunc(pick.spent),
+          })),
+        }
+      : {}),
     ...(p.flywheel ? { flywheel: p.flywheel } : {}),
   };
 }

@@ -346,20 +346,35 @@ test("armed skills are the equipped, unlocked, full circles", () => {
   expect(armedSkills(forged)).toEqual(["trail"]);
 });
 
-test("draw skills collapse into one plan and never invent EP", () => {
+test("draw skills keep their own budgets and never invent EP", () => {
   expect(drawPlanFor([])).toBeNull();
   expect(drawPlanFor(["surge"])).toBeNull();
-  expect(drawPlanFor(["twice"])).toEqual({ attempts: 2, floor: 0 });
-  expect(drawPlanFor(["bedrock"])).toEqual({ attempts: 4, floor: 25000 });
-  // Best-of and a floor stack into the larger budget and the higher floor.
-  expect(drawPlanFor(["twice", "bedrock"])).toEqual({
+  expect(drawPlanFor(["twice"])).toEqual({ attempts: 2, floor: 0, keeps: 1 });
+  expect(drawPlanFor(["bedrock"])).toEqual({
     attempts: 4,
     floor: 25000,
+    keeps: 1,
+  });
+  // Budgets stack — Double Vision draws twice and Bedrock would draw four, so
+  // together they draw six — while the floor stays the strongest promise, not
+  // the sum of the two.
+  expect(drawPlanFor(["twice", "bedrock"])).toEqual({
+    attempts: 6,
+    floor: 25000,
+    keeps: 2,
   });
   expect(drawPlanFor(["griffin-dive", "quarry"])).toEqual({
-    attempts: 5,
+    attempts: 8,
     floor: 100000,
+    keeps: 2,
   });
+  // Two draw skills pay two numbers, because each keeps its own.
+  expect(drawPlanFor(["twice", "bedrock"]).keeps).toBe(2);
+  // Stacking never invents draws past the cap: three draw skills would ask for
+  // eleven, and the plan stops at the eight a roll is allowed to spend.
+  expect(drawPlanFor(["twice", "bedrock", "quarry"]).attempts).toBe(
+    SKILL_MAX_DRAWS,
+  );
   // The wallet multiplier is a multiplier of banked EP and nothing else.
   expect(skillWalletMultiplier(["surge"])).toBe(2);
   expect(skillWalletMultiplier(["surge", "unicorn-wish"])).toBe(5);
@@ -387,12 +402,18 @@ test("the two late shop skills reuse effects that are already proven", () => {
   expect(drawPlanFor(["miser"])).toBeNull();
   // Triptych is a best-of-three: three ordinary draws, one kept.
   expect(triptych.kind).toBe("best-of");
-  expect(drawPlanFor(["triptych"])).toEqual({ attempts: 3, floor: 0 });
+  expect(drawPlanFor(["triptych"])).toEqual({
+    attempts: 3,
+    floor: 0,
+    keeps: 1,
+  });
   expect(triptych.attempts).toBeLessThanOrEqual(SKILL_MAX_DRAWS);
-  // Together they still only pick between numbers that were really drawn.
+  // Together they stack into eight draws and keep the floor, and still only
+  // pick between numbers that were really drawn.
   expect(drawPlanFor(["triptych", "quarry"])).toEqual({
-    attempts: 5,
+    attempts: 8,
     floor: 100000,
+    keeps: 2,
   });
 });
 
