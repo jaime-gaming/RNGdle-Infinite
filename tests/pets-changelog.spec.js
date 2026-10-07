@@ -288,7 +288,7 @@ test("the changelog reads like release notes, not like a chat log", () => {
       // v0.4.1 is a one-line note in the author's own words, not a
       // release-notes sentence: pinned verbatim instead of styled.
       if (entry.version === "v0.4.1") {
-        expect(line).toBe("QoLI, like basic UI changes :D");
+        expect(line).toBe("QoL, like basic UI changes :D");
         continue;
       }
       // One short line per change, always a finished sentence.

@@ -317,11 +317,29 @@ export default function RollExperience({
     : "REVEAL IN";
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
-  // A draw skill took more than one number: show them all, then keep the best.
+  // A draw skill took more than one number. The split screen owns the roll
+  // until every draw has rolled its digits and earned its badges; the best one
+  // then takes the centre of the screen, holds it, and leaves — the rest of the
+  // reveal (rank, wallet, breakdown) plays underneath once it has gone.
   const splitDraws = run && (run.draws ?? []).length > 1 ? run.draws : null;
+  const splitDecision = useMemo(() => {
+    if (!splitDraws) return 0;
+    const last = timeline.badgeTimes.at(-1);
+    return (
+      (Number.isFinite(last) ? last : timeline.collapse) +
+      0.35 * timeline.pulseMS
+    );
+  }, [splitDraws, timeline]);
+  // The winner holds the centre long enough to read and to hover at any pace.
+  // It cannot hold much longer than this: the rank, the wallet and the badge
+  // breakdown all play underneath and need the screen back.
+  const scale = timeline.scale ?? 1,
+    splitHold = 1100 + 1400 * scale,
+    splitFade = 250 + 350 * scale;
   const splitPlaying =
-    !!splitDraws && elapsed < timeline.collapse + timeline.pulseMS;
-  const splitDecided = !!splitDraws && elapsed >= timeline.collapse;
+    !!splitDraws && elapsed < splitDecision + splitHold + splitFade;
+  const splitLeaving = !!splitDraws && elapsed >= splitDecision + splitHold;
+  const splitDecided = !!splitDraws && elapsed >= splitDecision;
   const rankKnown = !!run && elapsed >= timeline.rarity;
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
   const visibleGroups = groups.slice(-visibleCount || groups.length);
@@ -408,7 +426,22 @@ export default function RollExperience({
     // cannot fast-forward the number onto the screen.
     const start = gameNow();
     const alreadyElapsed = Math.max(0, start - run.startedAt);
-    const cues = revealCueTimes(timeline);
+    // The reveal only wakes on its own beats. A draw skill's split screen has
+    // beats of its own — the decision and the moment it lets go of the screen —
+    // and it would otherwise hang between two badge cues and only leave when
+    // the whole reveal ended.
+    const cues = [
+      ...new Set([
+        ...revealCueTimes(timeline),
+        ...(splitDraws
+          ? [
+              splitDecision,
+              splitDecision + splitHold,
+              splitDecision + splitHold + splitFade,
+            ]
+          : []),
+      ]),
+    ].sort((a, b) => a - b);
     const finish = (instant = false) => {
       if (stopped) return;
       stopped = true;
@@ -700,9 +733,10 @@ export default function RollExperience({
                 takes the centre and becomes the number that pays. */}
             {splitPlaying && (
               <DrawStage
-                key={run.id}
+                key={`draw-${run.id}`}
                 {...{ run, elapsed, timeline, reducedMotion, aura }}
-                leaving={splitDecided}
+                decided={splitDecided}
+                leaving={splitLeaving}
               />
             )}
             <NumberArtifact

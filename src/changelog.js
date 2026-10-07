@@ -4,10 +4,7 @@ export const CHANGELOG = [
   {
     version: "v0.4.1",
     title: "tiny update",
-    body: [
-      "QoL, like basic UI changes :D",
-      "GitHub Pages now publishes the same build as the repository, including the latest assets and offline app files.",
-    ],
+    body: ["QoL, like basic UI changes :D"],
   },
   {
     version: "v0.4",

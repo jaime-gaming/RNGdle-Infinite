@@ -159,14 +159,16 @@ are capped at eight draws. When a skill fires, the effect is written into the
 committed roll, so a reload, a second tab or a retry can never re-fire it or
 re-roll for something better.
 
-A draw skill does its work where you can watch it. Every draw it takes lands on
-its own side of the screen **at the same time**, each with the EP it would have
-banked, and when the digits settle the numbers it discards fade where they stand
-while the best one is pulled into the centre and becomes the roll. Only that
-number is scored, ranked and paid: the draws you did not keep are shown with
-what they would have earned and then dropped, so a best-of skill never quietly
-banks two rolls at once. The activity feed keeps the receipt — _best of 3
-draws_ — next to the number that was kept.
+A draw skill does its work where you can watch it. The screen splits into **one
+panel per draw**, divided by visible lines, and every draw rolls its digits and
+earns its badges there **at the same time**, each with the EP it would have
+banked. Once the last badge has landed, the draw that scored the most EP is
+pulled into the **centre of the screen**, on top of the rest, which stay behind
+a **grey filter** until you put the pointer over the card — the discarded draws
+never vanish, they only stop competing for your eye. Only the kept number is
+scored, ranked and paid, so a best-of skill never quietly banks two rolls at
+once. The activity feed keeps the receipt — _best of 3 draws_ — next to the
+number that was kept.
 
 The rack starts with **two slots**, for **shop skills only**. Rebirth rewards
 and companion signatures **ride free** beside the rack: equip every one you
