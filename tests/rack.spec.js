@@ -161,14 +161,14 @@ test("draw skills are reported as one plan, never as a taller total", () => {
       skillCharge: { twice: 10, bedrock: 8 },
     }),
   );
-  // The same collapse the draw itself uses: more attempts, the higher floor.
-  expect(report.next).toMatchObject({ attempts: 4, floor: 25000 });
+  // The same plan the draw itself spends: stacked budgets, the higher floor.
+  expect(report.next).toMatchObject({ attempts: 6, floor: 25000 });
   expect(report.next.chips).toEqual([
-    `${4} draws, best kept`,
+    `${6} draws, best kept`,
     "never below 25,000 EP",
   ]);
   expect(drawPlanFor(["twice", "bedrock"])).toEqual({
-    attempts: 4,
+    attempts: 6,
     floor: 25000,
   });
 });

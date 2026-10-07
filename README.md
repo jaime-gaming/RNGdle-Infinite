@@ -155,9 +155,12 @@ are equipped from the Skills shelf, like shop skills.
 Every effect stays inside the honest-roll rule: **a skill may touch the roll,
 but never the scoring table.** Wallet multipliers only multiply banked EP, and
 draw skills compare the already-verified scores of numbers actually drawn and
-are capped at eight draws. When a skill fires, the effect is written into the
-committed roll, so a reload, a second tab or a retry can never re-fire it or
-re-roll for something better.
+are capped at eight draws. Draw skills **stack**: their budgets add up, so
+Double Vision's two draws and Bedrock's four spend six, while a floor is a
+promise rather than a quantity and the strongest one is the one that holds —
+the whole plan still stops at the eight draws a roll may spend. When a skill
+fires, the effect is written into the committed roll, so a reload, a second tab
+or a retry can never re-fire it or re-roll for something better.
 
 A draw skill does its work where you can watch it. The screen splits into **one
 panel per draw**, divided by visible lines, and every draw rolls its digits and

@@ -33,9 +33,9 @@ const seed = {
 const scored = new Map(DRAWS.map((number) => [number, evaluate(number)]));
 const keptEP = Math.max(...DRAWS.map((number) => scored.get(number).totalEP));
 
-async function startSplitRoll(page) {
-  await mockRandom(page, DRAWS);
-  await seedProgress(page, seed);
+async function startSplitRoll(page, overrides = {}) {
+  await mockRandom(page, overrides.draws ?? DRAWS);
+  await seedProgress(page, overrides.seed ?? seed);
   await page.goto("/");
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
@@ -165,6 +165,35 @@ test("the best draw takes the centre behind a grey filter the pointer lifts", as
   await expect(grid).toHaveCSS("filter", "grayscale(0) brightness(1)");
   // The discarded draws stay readable underneath, not hidden.
   await expect(page.locator(".draw-panel")).toHaveCount(DRAWS.length);
+});
+
+test("two draw skills stack their budgets into one plan of panels", async ({
+  page,
+}) => {
+  // Double Vision draws twice and Bedrock would draw four. Stacked, the roll
+  // spends six ordinary draws — not four — and keeps the best of the six, and
+  // none of these numbers reaches Bedrock's floor to stop it early.
+  const six = [88125, 375660, 861456, 90750, 577281, 25663];
+  await startSplitRoll(page, {
+    draws: six,
+    seed: {
+      ...seed,
+      owned: [...seed.owned, "twice"],
+      skills: ["bedrock", "twice"],
+      equippedSkills: ["bedrock", "twice"],
+      skillCharge: { bedrock: 9, twice: 9 },
+    },
+  });
+  await expect(page.locator(".draw-panel")).toHaveCount(six.length);
+  expect(
+    await runUntil(page, () =>
+      document.querySelector(".draw-stage")?.classList.contains("is-decided"),
+    ),
+  ).toBe(true);
+  await expect(page.locator(".draw-winner-kicker")).toContainText("Best of 6");
+  await expect(page.locator(".draw-winner-ep")).toHaveText(
+    `${formatEP(Math.max(...six.map((n) => evaluate(n).totalEP)))} EP`,
+  );
 });
 
 test("the split screen hands the roll back before the reveal ends", async ({

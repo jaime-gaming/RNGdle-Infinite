@@ -113,9 +113,10 @@ test("a best-of skill keeps the highest-scoring number it actually rolled", asyn
       evaluate(100000).totalEP,
     ),
   );
-  // Two draw skills combine into the larger budget, never the sum of them.
+  // Two draw skills stack into the sum of their budgets: two draws plus three
+  // is five, still only spending draws the game would really make.
   expect(drawPlanFor(["twice", "reborn-omen"])).toEqual({
-    attempts: 3,
+    attempts: 5,
     floor: 0,
   });
 });

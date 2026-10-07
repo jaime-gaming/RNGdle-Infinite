@@ -130,3 +130,24 @@ test("desktop and mobile layouts do not overflow", async ({ page }) => {
     fullPage: true,
   });
 });
+
+test("the phone header carries the game logo in the middle", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const logo = await page.locator(".wordmark").boundingBox();
+  const header = await page.locator(".header").boundingBox();
+  const controls = await page.locator(".header-right").boundingBox();
+  // Centred on the screen, and never overlapping the theme and account
+  // buttons that share the bar with it.
+  expect(
+    Math.round(logo.x + logo.width / 2 - (header.x + header.width / 2)),
+  ).toBe(0);
+  expect(logo.x + logo.width).toBeLessThanOrEqual(controls.x);
+  // The desktop bar is left alone: the logo still leads the row.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const wide = await page.locator(".wordmark").boundingBox();
+  expect(wide.x).toBeLessThan(120);
+});

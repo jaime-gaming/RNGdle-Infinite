@@ -191,8 +191,9 @@ export function rackReport(progress = {}) {
   const flywheelReady = ownsFlywheel && flywheelCharge >= flywheelNeeded;
   const absorbs = skillWaivesCooldown(armedIds) || flywheelReady;
 
-  // "No cooldown" and "n draws" affect the next roll's shape: they are summed
-  // for display only and never combined into a draw the game would not make.
+  // "No cooldown" and "n draws" affect the next roll's shape: they are added
+  // up here for display, and the plan they quote is the very same one the roll
+  // spends — stacked draw budgets and all, inside the cap.
   const chips = [];
   if (plan) chips.push(`${plan.attempts} draws, best kept`);
   if (plan?.floor) chips.push(`never below ${amount(plan.floor)} EP`);

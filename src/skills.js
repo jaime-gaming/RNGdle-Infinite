@@ -486,21 +486,34 @@ export function armedSkillDefs(progress) {
 
 // ---- Draw plan ------------------------------------------------------------
 // Every draw-modifying skill collapses into one rule: how many numbers to draw
-// and what EP floor stops the redraws early. Combining two of them never
-// invents a draw: it takes the larger attempt budget and the higher floor.
+// and what EP floor stops the redraws early.
+//
+// Draw budgets stack: two skills that each draw twice draw four times, because
+// each one really does pay for its own ordinary draws. A floor is a promise
+// rather than a quantity, so stacking keeps the strongest one — the higher
+// floor is the one both skills can stand behind. The whole plan is still
+// capped: a roll can never spend more than SKILL_MAX_DRAWS ordinary draws, and
+// the cap is applied here so the rack can never promise a draw the game will
+// not make.
 export function drawPlanFor(ids = []) {
-  let attempts = 1,
-    floor = 0;
+  let attempts = 0,
+    floor = 0,
+    found = false;
   for (const id of ids) {
     const skill = skillById.get(id);
     if (!skill) continue;
-    if (skill.kind === "best-of") attempts = Math.max(attempts, skill.attempts);
+    if (skill.kind === "best-of") {
+      attempts += skill.attempts;
+      found = true;
+    }
     if (skill.kind === "floor") {
-      attempts = Math.max(attempts, skill.attempts);
+      attempts += skill.attempts;
       floor = Math.max(floor, skill.floor);
+      found = true;
     }
   }
-  return attempts > 1 ? { attempts, floor } : null;
+  if (!found) return null;
+  return { attempts: Math.min(attempts, SKILL_MAX_DRAWS), floor };
 }
 
 export function skillWaivesCooldown(ids = []) {
@@ -671,14 +684,11 @@ export function skillEffectChips(skill) {
     case "waive":
       return ["no cooldown", "full reveal still plays"];
     case "best-of":
-      return [
-        `${skill.attempts} draws, best kept`,
-        "ordinary independent draws",
-      ];
+      return [`${skill.attempts} draws, best kept`, "stacks · ordinary draws"];
     case "floor":
       return [
         `never below ${skill.floor.toLocaleString("en-US")} EP`,
-        `up to ${skill.attempts} draws`,
+        `stacks · up to ${skill.attempts} draws`,
       ];
     case "pet-luck":
       return [`×${skill.value} companion luck`, "own random sample"];

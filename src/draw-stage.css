@@ -424,6 +424,21 @@
   .draw-ep {
     font-size: 11px;
   }
+  /* Seven or eight draws leave a phone panel barely a fifth of the screen
+     high. The badge row gives up its emoji and its EP figures so two chips
+     share a line and the whole row still fits instead of being cut off. */
+  .draw-stage[data-count="7"] .draw-badge .emoji,
+  .draw-stage[data-count="8"] .draw-badge .emoji {
+    display: none;
+  }
+  .draw-stage[data-count="7"] .draw-badge-ep,
+  .draw-stage[data-count="8"] .draw-badge-ep {
+    display: none;
+  }
+  .draw-stage[data-count="7"] .draw-badge,
+  .draw-stage[data-count="8"] .draw-badge {
+    max-width: 46%;
+  }
   .draw-winner {
     gap: 8px;
     padding: 14px 14px 12px;
