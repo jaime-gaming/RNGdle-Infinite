@@ -106,7 +106,9 @@ test("the cap never removes a cycle marker or a bookmarked roll, however full th
   expect(state.history.some((e) => e.id === "roll:2")).toBe(false);
   expect(state.history.some((e) => e.id === "roll:26")).toBe(false);
   expect(state.history.some((e) => e.id === "roll:27")).toBe(true);
-  expect(capHistory(state.history, state.bookmarks)).toBe(state.history);
+  expect(capHistory(state.history, state.bookmarks).history).toBe(
+    state.history,
+  );
 });
 
 test("cycles are the runs between markers, named by the marker that closes them", () => {
@@ -198,7 +200,7 @@ test("bulk delete by oldest removes the oldest entries first, skips bookmarks an
     "roll:6",
     "roll:7",
   ]);
-  expect(pruneOldest(state.history, ["roll:0"], 100).removed).toBe(6);
+  expect(pruneOldest(state.history, ["roll:0"], 100).removed).toHaveLength(6);
   expect(() => pruneCycle(state.history, [], "reb:1")).not.toThrow();
   expect(() =>
     applyProgress(state, { type: "history-prune", mode: "other", count: 1 }),
@@ -373,4 +375,54 @@ test("a roll that crosses 4,500 entries announces the warning once, from the rol
   ).toBeVisible();
   const after = await saved(page);
   expect(after.history).toHaveLength(HISTORY_WARNING);
+});
+
+test("profile figures read the same after bulk delete clears the oldest entries", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    history: rolls(HISTORY_WARNING),
+    balance: 1000,
+    totalEarned: 1000,
+  });
+  // Every row of the profile's figures, by its label.
+  const figures = () =>
+    page
+      .locator(".profile-history dl > div")
+      .evaluateAll((rows) =>
+        Object.fromEntries(
+          rows.map((row) => [
+            row.querySelector("dt").textContent,
+            row.querySelector("dd").textContent,
+          ]),
+        ),
+      );
+  await page.goto("/profile");
+  const before = await figures();
+  expect(before["Rolls completed"]).toBe(count(HISTORY_WARNING));
+  // Every roll pays the same, so the best roll is the first one logged.
+  expect(before["Best roll"]).toMatch(/^0 · /);
+  await page.goto("/history");
+  await page
+    .locator(".history-space")
+    .getByRole("button", { name: "Bulk delete", exact: true })
+    .click();
+  const panel = page.locator(".history-prune");
+  await expect(panel).toContainText(
+    "Profile and Rebirth figures keep counting what leaves this log",
+  );
+  await panel
+    .getByRole("button", { name: "Delete oldest 500", exact: true })
+    .click();
+  await page
+    .getByRole("group", { name: "Confirm deletion" })
+    .getByRole("button", { name: "Delete 500 entries", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Deleted 500 entries" }),
+  ).toBeVisible();
+  expect((await saved(page)).history).toHaveLength(HISTORY_WARNING - 500);
+  // A fresh load reads the saved log and the saved totals, and nothing moved.
+  await page.goto("/profile");
+  expect(await figures()).toEqual(before);
 });

@@ -381,7 +381,8 @@ other browser. Nothing is uploaded anywhere; the picture never leaves the page
 it was picked on.
 
 Your profile page shows **how far you have come**, all of
-it derived live from your save and your activity log rather than stored twice:
+it derived from your save and your activity log rather than stored twice, and
+never lowered when history is cleared:
 rolls completed, online vs offline, EP earned all-time, EP spent, your best
 roll, badges discovered, companions found free, skills unlocked, charged effects
 fired, Flywheel boosts used, rebirths and ultra-rebirths, and the date of your
@@ -398,9 +399,10 @@ either a whole finished rebirth (its entries go, its divider stays) or the
 oldest entries in steps of 500, 1,000 or 2,000. Bookmarked rolls and rebirth
 markers are never removed, and every cut asks for confirmation first. Once the
 log is full, the oldest entries that are not bookmarked make room for new rolls,
-so rolling never stops. The profile's figures are counted from this log, so they
-fall by what you remove; your balance, all-time EP, rebirths and collection stay
-as they are.
+so rolling never stops. Before an entry leaves the log, its figures are folded
+into a per-cycle total that the save keeps, so the profile and the Rebirth page
+go on counting it: clearing history never lowers them. Your balance, all-time EP,
+rebirths and collection stay as they are too.
 
 ![The profile page with the derived history and the PNG account card export](media/profile.png)
 

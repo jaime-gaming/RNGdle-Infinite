@@ -57,7 +57,7 @@ export default function About({ navigate, progress }) {
       points: [
         `${TASKS.filter((task) => task.cadence === "daily").length} daily and ${TASKS.filter((task) => task.cadence === "weekly").length} weekly tasks pay EP once per reset, when you claim them on the Tasks page. Unclaimed rewards expire at reset.`,
         "Task EP lands in your wallet only. It never counts towards a rebirth, and offline rolls do not count towards tasks.",
-        `The activity log keeps up to ${HISTORY_LIMIT.toLocaleString("en-US")} entries. From ${HISTORY_WARNING.toLocaleString("en-US")} History warns you and offers bulk delete, which clears a finished rebirth or the oldest entries. Bookmarked rolls and rebirth markers are never removed.`,
+        `The activity log keeps up to ${HISTORY_LIMIT.toLocaleString("en-US")} entries. From ${HISTORY_WARNING.toLocaleString("en-US")} History warns you and offers bulk delete, which clears a finished rebirth or the oldest entries. Bookmarked rolls and rebirth markers are never removed, and profile and Rebirth figures keep counting what leaves the log.`,
       ],
     },
     {

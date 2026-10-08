@@ -26,21 +26,34 @@ export function isKeptEntry(entry, bookmarks = []) {
   );
 }
 
+// Splits a log into what stays and what goes, both in their original order.
+function cutEntries(history, doomed) {
+  const kept = [];
+  const removed = [];
+  history.forEach((entry, index) =>
+    (doomed.has(index) ? removed : kept).push(entry),
+  );
+  return { history: kept, removed };
+}
+
 // The log brought back under the cap. Once it is over, the oldest removable
 // entries go; markers and bookmarks are passed over, so the log can never shed
-// the things it exists to keep.
+// the things it exists to keep. Returns the log and the entries that left it,
+// so their figures can be kept (see history-tally.js).
 export function capHistory(
   history = [],
   bookmarks = [],
   limit = HISTORY_LIMIT,
 ) {
   let excess = history.length - limit;
-  if (excess <= 0) return history;
-  return history.filter((entry) => {
-    if (excess <= 0 || isKeptEntry(entry, bookmarks)) return true;
+  if (excess <= 0) return { history, removed: [] };
+  const doomed = new Set();
+  history.forEach((entry, index) => {
+    if (excess <= 0 || isKeptEntry(entry, bookmarks)) return;
     excess--;
-    return false;
+    doomed.add(index);
   });
+  return cutEntries(history, doomed);
 }
 
 // How many entries bulk delete could remove at all.
@@ -97,7 +110,8 @@ export function historyCycles(history = [], bookmarks = []) {
 
 // Removes the removable entries of one finished cycle: those between the marker
 // before it and the marker that closes it. The markers stay, so the timeline
-// keeps its dividers and the cycle gate still finds its boundary.
+// keeps its dividers and the cycle gate still finds its boundary. Returns the
+// log and the entries that left it.
 export function pruneCycle(history, bookmarks, markerId) {
   const index = history.findIndex(
     (entry) => isCycleMarker(entry) && entry.id === markerId,
@@ -109,13 +123,11 @@ export function pruneCycle(history, bookmarks, markerId) {
     if (!isKeptEntry(history[i], bookmarks)) doomed.add(i);
   if (!doomed.size)
     throw new Error("There is nothing to delete in that cycle.");
-  return {
-    history: history.filter((_, i) => !doomed.has(i)),
-    removed: doomed.size,
-  };
+  return cutEntries(history, doomed);
 }
 
 // Removes the oldest removable entries, by time, up to the number asked for.
+// Returns the log and the entries that left it.
 export function pruneOldest(history, bookmarks, count) {
   const doomed = new Set(
     history
@@ -126,8 +138,5 @@ export function pruneOldest(history, bookmarks, count) {
       .map(({ index }) => index),
   );
   if (!doomed.size) throw new Error("There is nothing to delete.");
-  return {
-    history: history.filter((_, i) => !doomed.has(i)),
-    removed: doomed.size,
-  };
+  return cutEntries(history, doomed);
 }

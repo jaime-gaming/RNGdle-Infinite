@@ -831,10 +831,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
       )}
 
       <p className="rebirth-history-note">
-        <History size={13} aria-hidden="true" /> Every cycle stays in your
-        activity history —{" "}
+        <History size={13} aria-hidden="true" /> A rebirth never erases your
+        activity history; only bulk delete does.{" "}
         {(progress.history ?? []).length.toLocaleString("en-US")} entries so
-        far, going back to {when(cycle.startedAt)}.
+        far, and this cycle began {when(cycle.startedAt)}.
       </p>
 
       <dialog

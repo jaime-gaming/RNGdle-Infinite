@@ -114,9 +114,9 @@ function ProfileHistory({ progress }) {
         ))}
       </dl>
       <p className="profile-history-note">
-        Read from your activity log and current save — these figures are not
-        stored on their own, and the log keeps every cycle, not just the current
-        one.
+        Read from your activity log, the totals of entries cleared from it, and
+        your current save. The log keeps every cycle, not just the current one,
+        and clearing history never lowers these figures.
       </p>
     </section>
   );

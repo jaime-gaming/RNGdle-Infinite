@@ -249,9 +249,10 @@ export default function ActivityFeed({
         >
           <h2 id="history-prune-title">Bulk delete</h2>
           <p>
-            Rebirth markers and bookmarked rolls are never removed. Profile
-            figures are counted from this log, so they drop by what goes; your
-            balance, all-time EP and rebirths stay as they are.
+            Rebirth markers and bookmarked rolls are never removed. Profile and
+            Rebirth figures keep counting what leaves this log, so clearing
+            history never lowers them; your balance, all-time EP and rebirths
+            stay as they are.
           </p>
           <h3>Finished rebirths</h3>
           {cycles.finished.length ? (

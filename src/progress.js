@@ -57,6 +57,11 @@ import {
   pruneOldest,
 } from "./history-log.js";
 import {
+  archiveRemoved,
+  parseRemovedTotals,
+  tallyEntries,
+} from "./history-tally.js";
+import {
   claimTask,
   emptyTasks,
   parseTasks,
@@ -176,6 +181,8 @@ export function emptyProgress() {
     cooldownUntil: 0,
     receipts: [],
     history: [],
+    // What has left the log, one tally per cycle (see history-tally.js).
+    removedTotals: [],
     cycleEarnedEP: 0,
     pendingRoll: null,
     offline: null,
@@ -362,6 +369,14 @@ export function parseAndRepairProgress(raw) {
       `${dropped} activity-log ${dropped === 1 ? "entry was" : "entries were"} unreadable and ${dropped === 1 ? "was" : "were"} removed.`,
     );
   }
+  // What bulk delete or the cap took out of the log is kept as per-cycle
+  // tallies, so the profile still counts it. An unreadable tally is reset.
+  const removedRead = parseRemovedTotals(p.removedTotals);
+  if (removedRead.repaired)
+    note(
+      "some profile totals from removed activity were unreadable, so they were reset.",
+    );
+  const removedTotals = removedRead.totals;
   // Task progress belongs to the save alone, so an unreadable slot is simply
   // reset: nothing else in the save can vouch for it.
   const tasksRead = parseTasks(p.tasks);
@@ -374,13 +389,11 @@ export function parseAndRepairProgress(raw) {
   let petsInput = p.pets;
   if (p.pets != null && !Array.isArray(p.pets)) {
     note("companion list was unreadable, so it was rebuilt from your history.");
-    petsInput = history.flatMap((event) =>
-      event.type === "pet"
-        ? [event.productId]
-        : event.type === "purchase" && petById.has(event.productId)
-          ? [event.productId]
-          : [],
-    );
+    // Companions found or bought in entries that were since removed still count.
+    petsInput = [
+      ...tallyEntries(history).pets,
+      ...removedTotals.flatMap((tally) => tally?.pets ?? []),
+    ];
   }
   const pets = [
     ...new Set((petsInput ?? []).filter((id) => petById.has(id))),
@@ -489,6 +502,7 @@ export function parseAndRepairProgress(raw) {
   const progress = {
     version: 1,
     history,
+    removedTotals,
     cycleEarnedEP: cycleEarnedEp({
       history,
       ...(cycleOverride != null ? { cycleEarnedEP: cycleOverride } : {}),
@@ -640,7 +654,17 @@ export function applyProgress(state, action) {
   const next = applyEvent(state, action);
   if (next === state || !Array.isArray(next.history)) return next;
   if (next.history.length <= HISTORY_LIMIT) return next;
-  return { ...next, history: capHistory(next.history, next.bookmarks) };
+  // What the cap trims out of the log is kept in the profile's totals.
+  const cut = capHistory(next.history, next.bookmarks);
+  return {
+    ...next,
+    history: cut.history,
+    removedTotals: archiveRemoved(
+      next.removedTotals,
+      next.history,
+      cut.removed,
+    ),
+  };
 }
 
 function applyEvent(state, action) {
@@ -813,7 +837,12 @@ function applyEvent(state, action) {
           : null;
     if (!cut)
       throw new Error("Choose a finished cycle or a number of entries.");
-    return { ...state, history: cut.history };
+    // What leaves the log is kept in the profile's totals, not forgotten.
+    return {
+      ...state,
+      history: cut.history,
+      removedTotals: archiveRemoved(state.removedTotals, history, cut.removed),
+    };
   }
   if (action.type === "avatar") {
     if (!state.profile) throw new Error("Create a local profile first.");
