@@ -928,6 +928,22 @@
   border-color: color-mix(in srgb, var(--green) 40%, var(--border));
 }
 
+/* ---- Rollback: the last stage ------------------------------------------ */
+/* The same card as the prestige, worn in gold: it is the final stage, and it
+   pays more than any stage before it. */
+.rebirth-rollback {
+  background: rgb(217 164 65 / 0.14);
+  color: #a97c1f;
+  border-color: color-mix(in srgb, #d9a441 45%, var(--border));
+}
+.rebirth-rollback-figure {
+  border-color: color-mix(in srgb, #d9a441 45%, var(--border));
+  background: rgb(217 164 65 / 0.12);
+}
+.rebirth-rollback-figure svg {
+  color: #a97c1f;
+}
+
 /* ---- The confirm dialog -------------------------------------------------- */
 /* The one decision on the page worth a ceremony of its own: the dialog comes
    up out of the page instead of blinking into it. The rebirth dialog shares

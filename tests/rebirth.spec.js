@@ -1135,35 +1135,33 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
   await expect(page.locator(".roll-progress-links")).toContainText("1 rebirth");
 });
 
-test("an ultra-rebirth runs the ceremony, wears the prestige mark and reads the developer's note", async ({
+test("a prestige runs the ceremony, wears the prestige mark and reads the developer's note", async ({
   page,
 }) => {
-  // A finished ladder with a 20M-EP cycle — over the ultra's 15M gate.
+  // A finished ladder with a 35M-EP cycle — over the prestige's 30M gate.
   await seedProgress(page, { ...funded(), rebirths: REBIRTH_TOTAL });
   await page.goto("/#rebirth");
   const ultra = page.getByRole("button", {
-    name: "Ultra-rebirth",
+    name: "Prestige",
     exact: true,
   });
   await expect(ultra).toBeEnabled();
   await ultra.click();
-  await page.getByRole("button", { name: "Confirm ultra-rebirth" }).click();
+  await page.getByRole("button", { name: "Confirm prestige" }).click();
   // The ceremony plays over the page the moment the save lands: rays, the
   // mark and a title, pointer-transparent and gone by itself.
   await expect(page.locator(".ultra-ceremony")).toBeVisible();
   await expect(page.locator(".ultra-ceremony-title")).toContainText(
-    "ULTRA-REBIRTH 1",
+    "PRESTIGE 1",
   );
   await expect.poll(async () => (await saved(page)).ultraRebirths).toBe(1);
   // The ceremony ends on the roll page — back to the rebirth page for the
   // legacy panel: the figures, the exclusives and the note left at the top.
   await page.goto("/#rebirth");
   await expect(page.locator(".rebirth-legacy")).toContainText(
-    "Your ultra legacy",
+    "Your prestige legacy",
   );
-  await expect(page.locator(".rebirth-legacy")).toContainText(
-    "Transcendent title",
-  );
+  await expect(page.locator(".rebirth-legacy")).toContainText("Prestige title");
   await expect(page.locator(".rebirth-dev-note")).toContainText(
     "I didn't know you would get this far",
   );
@@ -1175,7 +1173,7 @@ test("an ultra-rebirth runs the ceremony, wears the prestige mark and reads the 
   );
   // …and the title only on the profile.
   await page.getByRole("button", { name: /profile/i }).click();
-  await expect(page.locator(".profile-prestige")).toContainText("Transcendent");
+  await expect(page.locator(".profile-prestige")).toContainText("Prestige");
 });
 
 test("the rebirth page animates its gauge and ladder, and reduced motion leaves every one of them still", async ({

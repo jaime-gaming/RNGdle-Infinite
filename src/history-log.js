@@ -2,8 +2,8 @@
 //
 // The log keeps every roll, discovery, purchase and rebirth, and it is capped so
 // a save cannot outgrow the browser's storage. Two things are never removed:
-// cycle markers (a rebirth or ultra-rebirth frames every cycle, and the cycle EP
-// gate reads them) and bookmarked rolls (the player asked to keep them).
+// cycle markers (a rebirth, prestige or Rollback frames every cycle, and the
+// cycle EP gate reads them) and bookmarked rolls (the player asked to keep them).
 // Everything else can go, either in bulk from History or, once the log is full,
 // oldest first, so a new roll always has somewhere to land.
 
@@ -15,7 +15,11 @@ export const HISTORY_LIMIT = 6000;
 export const HISTORY_WARNING = 4500;
 
 export function isCycleMarker(entry) {
-  return entry?.type === "rebirth" || entry?.type === "ultra-rebirth";
+  return (
+    entry?.type === "rebirth" ||
+    entry?.type === "ultra-rebirth" ||
+    entry?.type === "rollback"
+  );
 }
 
 // True for an entry that no removal may touch.
@@ -64,9 +68,11 @@ export function removableCount(history = [], bookmarks = []) {
   );
 }
 
+// The save keeps the prestige as "ultra-rebirth"; the player sees its name.
 function markerName(entry) {
+  if (entry.type === "rollback") return "Rollback";
   return entry.type === "ultra-rebirth"
-    ? `Ultra-rebirth ${entry.count}`
+    ? `Prestige ${entry.count}`
     : `Rebirth ${entry.count}`;
 }
 
@@ -81,7 +87,7 @@ function countRange(history, from, to, bookmarks) {
 }
 
 // The timeline split into cycles. Each finished cycle is the run of entries
-// that a rebirth (or ultra-rebirth) closed, and is named after that marker; the
+// that a rebirth, prestige or Rollback closed, and is named after that marker; the
 // cycle still in play has no marker yet and is reported on its own.
 export function historyCycles(history = [], bookmarks = []) {
   const finished = [];

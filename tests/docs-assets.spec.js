@@ -60,7 +60,7 @@ test("the README is a player guide whose images really exist", () => {
     "## How a roll works",
     "## Companions",
     "## Skills and the rack",
-    "## Rebirth and ultra-rebirth",
+    "## Rebirth, prestige and Rollback",
     "## Your profile, your data",
     "## Fairness",
     "## Running it locally",

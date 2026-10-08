@@ -18,6 +18,9 @@ import {
   ultraRebirthBlocker,
   nextRebirthSkill,
   ultraRebirthMultiplier,
+  rollbackBlocker,
+  rollbackMultiplier,
+  rollbackRequirement,
   cycleStarterEp,
   cycleEarnedEp,
   rebirthRequirement,
@@ -118,8 +121,8 @@ function freshProfileId() {
   }
 }
 
-// The wallet multiplier of a settled roll: companions, rebirth and
-// ultra-rebirth bonuses, and any wallet skill that fired. It only ever scales
+// The wallet multiplier of a settled roll: companions, rebirth, prestige and
+// Rollback bonuses, and any wallet skill that fired. It only ever scales
 // the EP that reaches the wallet — the scored roll, its tier and its rank
 // never move.
 export function walletMultiplier(
@@ -130,6 +133,7 @@ export function walletMultiplier(
     petMultiplier(progress.activePet) *
     rebirthMultiplier(progress.rebirths ?? 0) *
     ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
+    rollbackMultiplier(progress.rollbacks ?? 0) *
     surplusMultiplier(progress.surplusBanked ?? 0) *
     skillWalletMultiplier(skillIds ?? [])
   );
@@ -190,6 +194,7 @@ export function emptyProgress() {
     goalId: null,
     rebirths: 0,
     ultraRebirths: 0,
+    rollbacks: 0,
     surplusBanked: 0,
     cooldownWindow: null,
     pets: [],
@@ -333,7 +338,13 @@ export function parseAndRepairProgress(raw) {
   const ultraRebirths = repairAmount(p.ultraRebirths ?? 0);
   if ((p.ultraRebirths ?? 0) !== ultraRebirths)
     note(
-      `ultra-rebirth count was ${describeStored(p.ultraRebirths)}, so it was set to ${ultraRebirths}.`,
+      `prestige count was ${describeStored(p.ultraRebirths)}, so it was set to ${ultraRebirths}.`,
+    );
+  // The Rollback is one per account, so its count can only be 0 or 1.
+  const rollbacks = Math.min(1, repairAmount(p.rollbacks ?? 0));
+  if ((p.rollbacks ?? 0) !== rollbacks)
+    note(
+      `Rollback count was ${describeStored(p.rollbacks)}, so it was set to ${rollbacks}.`,
     );
   const surplusBanked = Math.min(repairAmount(p.surplusBanked ?? 0), 100);
   if ((p.surplusBanked ?? 0) !== surplusBanked)
@@ -515,6 +526,7 @@ export function parseAndRepairProgress(raw) {
     ),
     rebirths,
     ultraRebirths,
+    rollbacks,
     surplusBanked,
     offline,
     flywheelCharge,
@@ -583,18 +595,18 @@ function parseAvatar(value) {
   return validAvatar(value) ? value : "";
 }
 
-// What a new cycle hands back, shared by a rebirth and an ultra-rebirth.
+// What a new cycle hands back, shared by a rebirth, a prestige and the Rollback.
 //
 // A cycle restarts the run, not the account: the badge collection, everything
 // the wallet bought — upgrades, auras, tools and shop skills —, the companions
 // and the EP in the wallet start over. What the account *did* is never undone:
-// the activity history, the rebirth and ultra-rebirth counters with their
+// the activity history, the rebirth, prestige and Rollback counters with their
 // permanent bonuses, the skills the ladder already granted, the all-time EP
 // earned and the profile all stay.
 //
 // `granted` is the ladder skill this rebirth pays, which is earned rather than
 // bought and so joins the skills that survived, and `starter` is the EP the new
-// cycle begins with — paid by the rungs and ultra-rebirths the account keeps.
+// cycle begins with — paid by the rungs, prestiges and Rollback the account keeps.
 function startNewCycle(state, { granted = null, starter = 0 } = {}) {
   const owned = [];
   // Shop skills are purchases: they go back on the stall. Ladder skills were
@@ -688,8 +700,11 @@ function applyEvent(state, action) {
     const gate = rebirthRequirement(count);
     const surplus = rebirthSurplus(cycleEarnedEp(state), gate.ep);
     const starter =
-      cycleStarterEp(count + 1, state.ultraRebirths ?? 0) +
-      surplus.starterBonus;
+      cycleStarterEp(
+        count + 1,
+        state.ultraRebirths ?? 0,
+        state.rollbacks ?? 0,
+      ) + surplus.starterBonus;
     // The rung's price — badges and the EP this cycle earned — is written into
     // the log entry, so the history can say what a cycle was bought with.
     const cost = gate;
@@ -720,24 +735,24 @@ function applyEvent(state, action) {
     const count = state.ultraRebirths ?? 0;
     if (action.expectedUltraRebirths !== count)
       throw new Error(
-        "This ultra-rebirth belongs to an older cycle. Reload and try again.",
+        "This prestige belongs to an older cycle. Reload and try again.",
       );
     const now = action.at ?? Math.ceil(Date.now());
     if (!validAmount(now) || now > 8640000000000000)
-      throw new Error("Invalid ultra-rebirth time");
+      throw new Error("Invalid prestige time");
     const blocked = ultraRebirthBlocker(state, now);
     if (blocked) throw new Error(blocked);
-    if (!validAmount(count + 1))
-      throw new Error("Ultra-rebirth limit reached.");
+    if (!validAmount(count + 1)) throw new Error("Prestige limit reached.");
     // The same fresh start a rebirth gives, taken at the top of the ladder
     // with half the collection in hand. It costs the run, never the account:
     // history, rebirths, ladder skills and every permanent bonus stay, and the
-    // ultra-rebirth adds ten more points forever.
+    // prestige adds ten more points forever.
     // The same overshoot dividend as a rung: the ultra gate is a floor too.
     const ultraCost = ultraRebirthRequirement();
     const surplus = rebirthSurplus(cycleEarnedEp(state), ultraCost.ep);
     const starter =
-      cycleStarterEp(state.rebirths ?? 0, count + 1) + surplus.starterBonus;
+      cycleStarterEp(state.rebirths ?? 0, count + 1, state.rollbacks ?? 0) +
+      surplus.starterBonus;
     const cost = ultraCost;
     return {
       ...startNewCycle(state, { starter }),
@@ -753,6 +768,44 @@ function applyEvent(state, action) {
           count: count + 1,
           ...(starter ? { grant: starter } : {}),
           ...(cost ? { cost: cost.ep } : {}),
+        },
+      ]),
+    };
+  }
+  if (action.type === "rollback") {
+    const rollbacks = state.rollbacks ?? 0;
+    if (action.expectedRollbacks !== rollbacks)
+      throw new Error(
+        "This Rollback belongs to an older cycle. Reload and try again.",
+      );
+    const now = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(now) || now > 8640000000000000)
+      throw new Error("Invalid Rollback time");
+    const blocked = rollbackBlocker(state, now);
+    if (blocked) throw new Error(blocked);
+    // The last stage of the game. It starts the run over exactly like a
+    // prestige, but it pays the largest starting sum and the largest permanent
+    // bonus, and it can be taken once: the count only ever goes from 0 to 1.
+    // Like every other stage it costs the run, never the account.
+    const rollbackCost = rollbackRequirement();
+    const surplus = rebirthSurplus(cycleEarnedEp(state), rollbackCost.ep);
+    const starter =
+      cycleStarterEp(state.rebirths ?? 0, state.ultraRebirths ?? 0, 1) +
+      surplus.starterBonus;
+    return {
+      ...startNewCycle(state, { starter }),
+      profile: state.profile,
+      rollbacks: 1,
+      surplusBanked:
+        (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
+      history: appendHistory(state.history, [
+        {
+          id: action.eventId ?? "rollback:1",
+          type: "rollback",
+          at: now,
+          count: 1,
+          ...(starter ? { grant: starter } : {}),
+          ...(rollbackCost ? { cost: rollbackCost.ep } : {}),
         },
       ]),
     };
@@ -947,6 +1000,7 @@ function applyEvent(state, action) {
       petFactor *
       rebirthMultiplier(state.rebirths ?? 0) *
       ultraRebirthMultiplier(state.ultraRebirths ?? 0) *
+      rollbackMultiplier(state.rollbacks ?? 0) *
       surplusMultiplier(state.surplusBanked ?? 0) *
       skillWalletMultiplier(fired);
     // The wallet pays for every number the roll kept, and every one of them
@@ -1474,6 +1528,14 @@ function parseHistory(value) {
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
         ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
       };
+    } else if (e.type === "rollback") {
+      if (!validAmount(e.count) || e.count < 1) return [];
+      next = {
+        ...base,
+        count: e.count,
+        ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
+        ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
+      };
     } else if (e.type === "pet") {
       if (
         typeof e.productId !== "string" ||
@@ -1634,7 +1696,8 @@ export function recoverUnsavedRolls(stored, temporary, unsaved = null) {
   // A roll from an earlier cycle can never be replayed into a later one.
   if (
     (stored.rebirths ?? 0) !== (temporary.rebirths ?? 0) ||
-    (stored.ultraRebirths ?? 0) !== (temporary.ultraRebirths ?? 0)
+    (stored.ultraRebirths ?? 0) !== (temporary.ultraRebirths ?? 0) ||
+    (stored.rollbacks ?? 0) !== (temporary.rollbacks ?? 0)
   )
     return stored;
   let merged = stored;

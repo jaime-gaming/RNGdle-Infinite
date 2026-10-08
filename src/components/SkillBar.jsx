@@ -117,7 +117,7 @@ function SkillCircle({ skill, active }) {
   );
 }
 
-// One always-on bonus circle: pet, rebirth, ultra-rebirth or surplus.
+// One always-on bonus circle: pet, rebirth, prestige, Rollback or surplus.
 function PassiveCircle({ passive }) {
   return (
     <div
@@ -132,7 +132,7 @@ function PassiveCircle({ passive }) {
           <CreatureIcon pet={passive.petId} size={17} aria-hidden="true" />
         ) : passive.kind === "rebirth" ? (
           <LegendMark size={17} aria-hidden="true" />
-        ) : passive.kind === "ultra" ? (
+        ) : passive.kind === "ultra" || passive.kind === "rollback" ? (
           <InfinityMark size={17} aria-hidden="true" />
         ) : (
           <SparkMark size={17} aria-hidden="true" />
@@ -552,7 +552,8 @@ export default function SkillBar({
           ))}
           {!report.next.walletParts.length && (
             <span className="rack-panel-empty">
-              A companion, a wallet skill or an ultra-rebirth bonus raises this.
+              A companion, a wallet skill, a prestige or the Rollback raises
+              this.
             </span>
           )}
           <span className="rack-panel-label">Skills</span>

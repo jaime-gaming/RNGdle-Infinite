@@ -105,7 +105,8 @@
   color: var(--green);
   background: var(--green-bg);
 }
-.event-ultra-rebirth {
+.event-ultra-rebirth,
+.event-rollback {
   color: #a97c1f;
   background: rgb(217 164 65 / 0.14);
 }

@@ -20,7 +20,7 @@ account, works on desktop and mobile.
 - [Flywheel](#flywheel)
 - [Tasks](#tasks)
 - [The shop](#the-shop)
-- [Rebirth and ultra-rebirth](#rebirth-and-ultra-rebirth)
+- [Rebirth, prestige and Rollback](#rebirth-prestige-and-rollback)
 - [Your profile, your data](#your-profile-your-data)
 - [Fairness](#fairness)
 - [Saving, privacy and guests](#saving-privacy-and-guests)
@@ -125,7 +125,7 @@ ordinary circles while shop skills stand alone, and every circle only shows
 ("×2 banked EP", "+5% EP", "2 draws, best kept") while hovered or focused. The
 **Σ button** opens the total — every equipped and companion skill with its
 charge, the banked-EP
-multiplier with each part named (companion, rebirth, ultra-rebirth, surplus and
+multiplier with each part named (companion, rebirth, prestige, Rollback, surplus and
 wallet skills), the draw plan for the next roll, and whether it is
 cooldown-free. That panel is the only place the total is written out, so it is
 never contradicted.
@@ -292,7 +292,7 @@ The 56 products in the catalogue come to 151.12 M EP, and the most expensive of
 them costs 18 M. Everything you buy is yours for the rest of the cycle: a
 rebirth puts the whole catalogue back on the shelf.
 
-## Rebirth and ultra-rebirth
+## Rebirth, prestige and Rollback
 
 Rebirth is a **ladder**, not a single wall, and it is driven by the run you are
 playing: a slice of the badge collection **and** EP the current cycle has
@@ -340,23 +340,32 @@ permanent bonuses with their own explanation. Each rebirth:
 
 ![The rebirth ladder: collection progress, the current rung, one blurred preview and the steps beyond](media/rebirth.png)
 
-Finish the sixth rung and **ultra-rebirth** unlocks: the same clean slate,
-taken from **50% of the collection (118 badges) and 30,000,000 EP** earned in
-the cycle, in exchange for a **permanent, stackable +10% to banked EP** for
-every ultra-rebirth, and a cosmetic mark next to your profile. It pays its own
-**1,000,000 EP** on top of the rungs you keep — a ladder-complete ultra-rebirth
-starts the next cycle with 2,500,000 EP — and any EP the cycle scored over the
-ultra's 30,000,000 gate pays the same surplus dividend as a rung. It costs the
-run, never the account — history, rebirths and their +2% rung bonuses all
-stay. Both resets require typing the word (`REBIRTH` or `ULTRA`) and cannot be
-undone.
+Finish the sixth rung and a **prestige** (the ultra-rebirth in the save)
+unlocks: the same clean slate, taken from **50% of the collection (118 badges)
+and 30,000,000 EP** earned in the cycle, in exchange for a **permanent,
+stackable +10% to banked EP** for every prestige, and a cosmetic mark next to
+your profile. It pays its own **1,000,000 EP** on top of the rungs you keep — a
+ladder-complete prestige starts the next cycle with 2,500,000 EP — and any EP
+the cycle scored over the prestige's 30,000,000 gate pays the same surplus
+dividend as a rung. It costs the run, never the account — history, rebirths and
+their +2% rung bonuses all stay. A prestige can be repeated.
+
+After **three prestiges** a **Rollback** opens. It is the **last stage of the
+game**, and it can be taken **once per account, for life**: the same clean slate
+and the same gate as a prestige (50% of the collection and 30,000,000 EP earned
+in the cycle), for a **permanent +25% to banked EP** — the largest bonus in the
+game — and **5,000,000 EP** to start the next cycle, the largest starting sum.
+Prestige stays open until you take the Rollback. After it the ladder is closed,
+and nothing comes after it. Like every stage, it costs the run and never the
+account.
 
 Taking one is **a moment**: a full-screen ceremony of rays, confetti and a
 slamming title plays over the page (still and invisible under reduced motion,
 pointer-transparent either way), and the account keeps the exclusives that
-come with it — a **gold halo behind every roll**, the **Transcendent** title
-on the profile, and the **ultra legacy panel** on the rebirth page: your
-ultra count, the permanent bonus broken down, which exclusives are wearing,
+come with it — a **gold halo behind every roll**, the **Prestige** title on
+the profile, and the **prestige legacy panel** on the rebirth page: your
+prestige count, whether the Rollback is taken, the permanent bonus broken down,
+which exclusives are wearing,
 and **a note from the developer** left at the top of the ladder for whoever
 climbed it.
 
@@ -367,7 +376,7 @@ back, what you keep, and what you gain, starting sum included.
 
 A rebirth never erases the activity history. Every cycle stays readable roll by
 roll, and a **dotted line** marks the point where a rebirth handed the run back
-and a new cycle began: _Rebirth 1_, _Rebirth 2_, _Ultra-rebirth 1_. Only you remove
+and a new cycle began: _Rebirth 1_, _Rebirth 2_, _Prestige 1_, _Rollback_. Only you remove
 entries, with bulk delete (see [Your profile, your data](#your-profile-your-data)).
 
 ## Your profile, your data
@@ -385,7 +394,7 @@ it derived from your save and your activity log rather than stored twice, and
 never lowered when history is cleared:
 rolls completed, online vs offline, EP earned all-time, EP spent, your best
 roll, badges discovered, companions found free, skills unlocked, charged effects
-fired, Flywheel boosts used, rebirths and ultra-rebirths, and the date of your
+fired, Flywheel boosts used, rebirths, prestiges and the Rollback, and the date of your
 first and latest entry.
 
 The activity feed also lets you **bookmark up to three rolls**: a Bookmark
@@ -422,7 +431,7 @@ Delete account & progress remains the only way to remove it.
   numbers with ties included. Nothing a player owns changes what a number is
   worth.
 - **Bonuses stay in the wallet.** Companions, wallet skills and the rebirth and
-  ultra-rebirth bonuses multiply only the EP that lands in your wallet. Scored
+  prestige and Rollback bonuses multiply only the EP that lands in your wallet. Scored
   EP, tier and rank are identical for everyone.
 - **Tasks never touch the odds.** Task rewards are fixed EP, paid once per reset,
   and they never count towards a rebirth. Offline rolls cannot complete one.
@@ -539,9 +548,9 @@ their EP and count in your history, but charging is online-only.
 **What happens to my purchases when I rebirth?** They go back on the shelf:
 a rebirth restarts the run — every purchase, the companions, the badge
 collection and the EP in your wallet. Your history, your rebirths, the skills
-the ladder granted and every permanent bonus stay. An ultra-rebirth gives the
-same fresh start after half the collection and 30,000,000 cycle EP, for a
-bigger bonus.
+the ladder granted and every permanent bonus stay. A prestige gives the same
+fresh start after half the collection and 30,000,000 cycle EP, for a bigger
+bonus. The Rollback, once after three prestiges, is the last stage.
 
 **Is this the official RNGdle?** No. It is an independent recreation, built from
 public rules and reference data. See credits below.

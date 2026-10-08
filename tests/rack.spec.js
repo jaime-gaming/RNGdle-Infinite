@@ -107,7 +107,7 @@ test("rebirth bonuses are named parts of the wallet total", () => {
       value: 1 + REBIRTH_BONUS_PER_REBIRTH * 2,
     },
   ]);
-  // It stacks with a companion and the ultra bonus, each part still named.
+  // It stacks with a companion and the prestige bonus, each part still named.
   const stacked = rackReport(
     armed({
       rebirths: 1,
@@ -127,7 +127,7 @@ test("rebirth bonuses are named parts of the wallet total", () => {
   );
 });
 
-test("a companion and an ultra-rebirth bonus are part of the same total", () => {
+test("a companion and a prestige bonus are part of the same total", () => {
   const report = rackReport(
     armed({
       owned: ["surge"],
@@ -146,7 +146,7 @@ test("a companion and an ultra-rebirth bonus are part of the same total", () => 
   );
   expect(report.next.walletParts.map((part) => part.label)).toEqual([
     "Static Kit companion",
-    "Ultra-rebirth ×2",
+    "Prestige ×2",
     "Surge",
   ]);
   expect(report.walletSummary).toContain("Static Kit companion +13%");

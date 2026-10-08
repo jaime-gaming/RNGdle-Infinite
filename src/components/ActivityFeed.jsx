@@ -115,7 +115,7 @@ export default function ActivityFeed({
             (filter === "Rolls" && e.type === "roll") ||
             (filter === "Offline" && e.source === "offline") ||
             (filter === "Rebirths" &&
-              ["rebirth", "ultra-rebirth"].includes(e.type)) ||
+              ["rebirth", "ultra-rebirth", "rollback"].includes(e.type)) ||
             (filter === "Bookmarks" &&
               e.type === "roll" &&
               bookmarks.includes(e.id)) ||
@@ -476,12 +476,16 @@ export default function ActivityFeed({
             <React.Fragment key={event.id}>
               {/* A rebirth ends a cycle, not the story: the log keeps every
                   entry and draws a dotted line where the new one begins. */}
-              {(event.type === "rebirth" || event.type === "ultra-rebirth") && (
+              {(event.type === "rebirth" ||
+                event.type === "ultra-rebirth" ||
+                event.type === "rollback") && (
                 <li className="activity-divider">
                   <span className="activity-divider-label">
-                    {event.type === "ultra-rebirth"
-                      ? `Ultra-rebirth ${event.count}`
-                      : `Rebirth ${event.count}`}
+                    {event.type === "rollback"
+                      ? "Rollback"
+                      : event.type === "ultra-rebirth"
+                        ? `Prestige ${event.count}`
+                        : `Rebirth ${event.count}`}
                   </span>
                 </li>
               )}
@@ -497,7 +501,8 @@ export default function ActivityFeed({
                     <PawPrint size={19} />
                   ) : event.type === "rebirth" ? (
                     <RotateCcw size={19} />
-                  ) : event.type === "ultra-rebirth" ? (
+                  ) : event.type === "ultra-rebirth" ||
+                    event.type === "rollback" ? (
                     <InfinityIcon size={19} />
                   ) : event.type === "task" ? (
                     <ListChecks size={19} />
@@ -523,10 +528,12 @@ export default function ActivityFeed({
                               : event.type === "rebirth"
                                 ? `Rebirth ${event.count}`
                                 : event.type === "ultra-rebirth"
-                                  ? `Ultra-rebirth ${event.count}`
-                                  : event.type === "task"
-                                    ? `Task claimed · ${event.name}`
-                                    : `Equipped ${event.name}`}
+                                  ? `Prestige ${event.count}`
+                                  : event.type === "rollback"
+                                    ? "Rollback"
+                                    : event.type === "task"
+                                      ? `Task claimed · ${event.name}`
+                                      : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString(undefined, {
@@ -664,6 +671,15 @@ export default function ActivityFeed({
                       reset. History, rebirths and bonuses stayed, the cycle
                       began with {formatEP(event.grant ?? 0)} EP, and the
                       permanent wallet bonus grew by 10 points.
+                    </p>
+                  ) : event.type === "rollback" ? (
+                    <p>
+                      The Rollback started the run over, the last stage of the
+                      game: the collection, every purchase, the companions and
+                      the wallet reset. History, rebirths, prestiges and bonuses
+                      stayed, the cycle began with {formatEP(event.grant ?? 0)}{" "}
+                      EP, and the permanent wallet bonus grew by 25%. Nothing
+                      comes after it.
                     </p>
                   ) : event.type === "task" ? (
                     <p className="activity-transaction">

@@ -94,7 +94,7 @@ function ProfileHistory({ progress }) {
     ["Skills unlocked", `${stats.skills} of ${stats.skillsTotal}`],
     ["Charged effects fired", stats.skillsUsed.toLocaleString("en-US")],
     ["Flywheel boosts used", stats.boostsUsed.toLocaleString("en-US")],
-    ["Rebirths · ultra-rebirths", `${stats.rebirths} · ${stats.ultraRebirths}`],
+    ["Rebirths · prestiges", `${stats.rebirths} · ${stats.ultraRebirths}`],
     [
       "First · latest entry",
       `${when(stats.firstEventAt)} · ${when(stats.lastEventAt)}`,
@@ -294,8 +294,9 @@ export default function LocalProfile({
       </h2>
       {profile && (progress?.ultraRebirths ?? 0) > 0 && (
         <p className="profile-prestige">
-          <span aria-hidden="true">✦</span> Transcendent ·{" "}
-          {progress.ultraRebirths} ultra-rebirth
+          <span aria-hidden="true">✦</span>{" "}
+          {progress.rollbacks > 0 ? "Rollback taken" : "Prestige"} ·{" "}
+          {progress.ultraRebirths} prestige
           {progress.ultraRebirths === 1 ? "" : "s"} beyond the ladder
         </p>
       )}

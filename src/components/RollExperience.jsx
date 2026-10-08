@@ -27,6 +27,7 @@ import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
 import DrawStage from "./DrawStage";
+import PaidNumbers from "./PaidNumbers";
 import { petById, petBonusLabel } from "../pets.js";
 import { skillById, skillForPet } from "../skills.js";
 import { walletMultiplier } from "../progress.js";
@@ -249,6 +250,9 @@ export default function RollExperience({
   const generateButton = useRef(null);
   creditCallback.current = onComplete;
   const result = run?.result;
+  // More than one number is paid: each paid number is shown on its own card,
+  // and no total EP is counted up on screen for the roll.
+  const stacked = (run?.picks ?? []).length > 1;
   const groups = useMemo(
     () => (result ? groupResultBadges(result.badges) : []),
     [result],
@@ -280,7 +284,7 @@ export default function RollExperience({
     (run.skills ?? []).includes(companionSkill.id);
   // What actually lands in the wallet: the settlement's own formula, so the
   // on-screen sum matches the credit to the EP — companion, rebirth bonuses,
-  // ultra-rebirth and every wallet skill that fired, never the score.
+  // prestige, the Rollback and every wallet skill that fired, never the score.
   const firedSkills = run?.skills ?? [];
   const bankedMultiplier = result ? walletMultiplier(session, firedSkills) : 1;
   // Every draw skill keeps its own number, and every number it keeps is a
@@ -319,6 +323,29 @@ export default function RollExperience({
       cancelled = true;
     };
   }, [run?.id, keptNumbers.length]);
+  // Every paid number, the one the roll committed included, each with the EP
+  // it banks. A number whose score is still loading shows a dash for now.
+  const paidItems = useMemo(
+    () =>
+      (run?.picks ?? [])
+        .filter((pick) => pick.number != null)
+        .map((pick, index) => {
+          const definition = skillById.get(pick.skill);
+          const best = pick.number === result?.number;
+          const scored = best ? result : (keptScores[pick.number] ?? null);
+          return {
+            key: `${index}-${pick.number}`,
+            skill: definition?.name ?? "",
+            tint: definition?.tint ?? "green",
+            number: pick.number,
+            ep: scored
+              ? `${formatEP(Math.round(scored.totalEP * bankedMultiplier))} EP`
+              : "—",
+            best,
+          };
+        }),
+    [run?.picks, result, keptScores, bankedMultiplier],
+  );
   const extraPicks = useMemo(
     () =>
       keptNumbers
@@ -343,7 +370,7 @@ export default function RollExperience({
   const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0) - extraEP);
   const bonusParts = bonusEP > 0 ? walletParts(session, firedSkills) : [];
   const floatingCharges = useMemo(() => {
-    if (!result || result.totalEP === null) return [];
+    if (!result || result.totalEP === null || stacked) return [];
     if (!bonusParts.length) return [{ id: "base", ep: creditedEP, label: "" }];
     const list = [{ id: "base", ep: result.totalEP, label: "" }];
     let running = result.totalEP;
@@ -357,7 +384,7 @@ export default function RollExperience({
       if (gain > 0) list.push({ id: part.id, ep: gain, label: part.label });
     });
     return list;
-  }, [result, bonusParts, creditedEP]);
+  }, [result, bonusParts, creditedEP, stacked]);
   const cooldownDeadline = Math.max(session.cooldownUntil, localCooldownUntil);
   const cooldownWindow =
     session.cooldownWindow ?? parseCooldownWindow(null, cooldownDeadline, run);
@@ -662,7 +689,9 @@ export default function RollExperience({
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
       style={{ "--reveal-scale": timeline.scale }}
       data-settled={!!run && runSettled}
-      data-prestige={session.ultraRebirths > 0 || undefined}
+      data-prestige={
+        session.ultraRebirths > 0 || session.rollbacks > 0 || undefined
+      }
       data-phase={
         !run ? "idle" : !digitsDone ? "digits" : busy ? "badges" : "complete"
       }
@@ -833,53 +862,27 @@ export default function RollExperience({
                     }}
                   />
                 )}
-                <div
-                  className={`roll-ep ${rankKnown ? result.tier : "neutral"}`}
-                  data-testid="roll-ep"
-                >
-                  {visibleCount ? (
-                    <AnimatedCount
-                      value={shownEP}
-                      duration={500 * timeline.scale}
-                      initialValue={0}
-                      reducedMotion={instant}
-                    />
-                  ) : (
-                    "???"
-                  )}{" "}
-                  EP
-                </div>
-                {/* Every number a draw skill kept is paid, so the roll names
-                    them beside the one it committed: the reward for stacking
-                    them is visible, not a figure that silently grows. */}
-                {digitsDone && extraPicks.length > 0 && (
-                  <ul className="roll-extra-picks">
-                    <li className="roll-extra-picks-head">
-                      {extraPicks.length === 1
-                        ? "Also banked"
-                        : `Also banked (${extraPicks.length})`}
-                    </li>
-                    {extraPicks.map((pick) => (
-                      <li
-                        key={pick.number}
-                        className={`roll-extra-pick tint-${pick.tint}`}
-                      >
-                        <span className="roll-extra-pick-skill">
-                          {pick.name || "Draw skill"}
-                        </span>
-                        <span className="roll-extra-pick-number">
-                          {pick.number.toLocaleString("en-US")}
-                        </span>
-                        <span className="roll-extra-pick-ep">
-                          {formatEP(
-                            Math.round(pick.scored.totalEP * bankedMultiplier),
-                          )}{" "}
-                          EP
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                {!stacked && (
+                  <div
+                    className={`roll-ep ${rankKnown ? result.tier : "neutral"}`}
+                    data-testid="roll-ep"
+                  >
+                    {visibleCount ? (
+                      <AnimatedCount
+                        value={shownEP}
+                        duration={500 * timeline.scale}
+                        initialValue={0}
+                        reducedMotion={instant}
+                      />
+                    ) : (
+                      "???"
+                    )}{" "}
+                    EP
+                  </div>
                 )}
+                {/* Every number a draw skill kept is paid: each one is a card
+                    of its own, side by side, with the EP it banks. */}
+                {digitsDone && stacked && <PaidNumbers items={paidItems} />}
                 {digitsDone && (
                   <div
                     className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}

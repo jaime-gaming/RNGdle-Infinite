@@ -19,6 +19,7 @@ import { petById } from "./pets.js";
 import {
   REBIRTH_BONUS_PER_REBIRTH,
   REBIRTH_TOTAL,
+  ROLLBACK_BONUS,
   ULTRA_BONUS_PER_REBIRTH,
   surplusMultiplier,
 } from "./rebirth.js";
@@ -27,8 +28,8 @@ import {
 //
 // Everything a player owns is described somewhere, but the *total* was only
 // visible by adding it up in your head: Surge doubles banked EP, Double Vision
-// draws twice, Bedrock sets a floor, the companion and the ultra-rebirth bonus
-// multiply again. This module collects those numbers in one place so the rack,
+// draws twice, Bedrock sets a floor, the companion, the prestige and the
+// Rollback bonuses multiply again. This module collects those numbers in one place so the rack,
 // the shop and the activity feed all quote the same figures.
 //
 // It is presentation only. Nothing here can change a draw, a score or a price.
@@ -64,8 +65,14 @@ export function walletParts(progress, armed) {
   if (ultras > 0)
     parts.push({
       id: "ultra",
-      label: `Ultra-rebirth ×${ultras}`,
+      label: `Prestige ×${ultras}`,
       value: 1 + ULTRA_BONUS_PER_REBIRTH * ultras,
+    });
+  if ((progress.rollbacks ?? 0) > 0)
+    parts.push({
+      id: "rollback",
+      label: "Rollback",
+      value: 1 + ROLLBACK_BONUS,
     });
   const surplus = progress.surplusBanked ?? 0;
   if (surplus > 0)
@@ -158,13 +165,25 @@ export function rackReport(progress = {}) {
     passives.push({
       id: "ultra",
       kind: "ultra",
-      name: `Ultra-rebirth ×${ultras}`,
+      name: `Prestige ×${ultras}`,
       chip: `+${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}% EP`,
       value: 1 + ULTRA_BONUS_PER_REBIRTH * ultras,
       tint: "gold",
       fraction: 1,
-      effect: `Permanent +${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}% banked EP from ${ultras} ultra-rebirth${ultras === 1 ? "" : "s"}`,
+      effect: `Permanent +${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}% banked EP from ${ultras} prestige${ultras === 1 ? "" : "s"}`,
       meta: "Beyond the ladder · always on",
+    });
+  if ((progress.rollbacks ?? 0) > 0)
+    passives.push({
+      id: "rollback",
+      kind: "rollback",
+      name: "Rollback",
+      chip: `+${Math.round(ROLLBACK_BONUS * 100)}% EP`,
+      value: 1 + ROLLBACK_BONUS,
+      tint: "gold",
+      fraction: 1,
+      effect: `Permanent +${Math.round(ROLLBACK_BONUS * 100)}% banked EP from your Rollback`,
+      meta: "The last stage · always on",
     });
   const surplus = progress.surplusBanked ?? 0;
   if (surplus > 0)

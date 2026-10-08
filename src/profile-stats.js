@@ -36,6 +36,7 @@ export function accountStats(progress = {}) {
     boostsUsed: total.boosts,
     rebirths: progress.rebirths ?? 0,
     ultraRebirths: progress.ultraRebirths ?? 0,
+    rollbacks: progress.rollbacks ?? 0,
     firstEventAt: total.first,
     lastEventAt: total.last,
   };
@@ -138,6 +139,7 @@ export function exportPayload(progress = {}) {
       flywheelCharge: progress.flywheelCharge ?? 0,
       rebirths: stats.rebirths,
       ultraRebirths: stats.ultraRebirths,
+      rollbacks: stats.rollbacks,
       goalId: progress.goalId ?? null,
       history: progress.history ?? [],
     },
@@ -208,7 +210,8 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   ctx.fillRect(0, 0, width, height);
 
   // Outer frame
-  ctx.strokeStyle = stats.ultraRebirths > 0 ? "#d9a441" : "#2e313d";
+  ctx.strokeStyle =
+    stats.ultraRebirths > 0 || stats.rollbacks > 0 ? "#d9a441" : "#2e313d";
   ctx.lineWidth = 3;
   drawRoundedRect(ctx, 18, 18, width - 36, height - 36, 20);
   ctx.stroke();
@@ -250,7 +253,15 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   if (stats.ultraRebirths > 0) {
     ctx.fillStyle = "#d9a441";
     ctx.font = '700 14px "Space Mono", monospace';
-    ctx.fillText(`✦ TRANSCENDENT (ULTRA ×${stats.ultraRebirths})`, 54, 154);
+    // The prestige is the player's name for the ultra-rebirth; the Rollback is
+    // the last stage, so it is named on the same line.
+    ctx.fillText(
+      stats.rollbacks > 0
+        ? `✦ ROLLBACK · PRESTIGE ×${stats.ultraRebirths}`
+        : `✦ PRESTIGE ×${stats.ultraRebirths}`,
+      54,
+      154,
+    );
   } else {
     ctx.fillStyle = "#9d9a93";
     ctx.font = '500 14px "Plus Jakarta Sans Variable", system-ui, sans-serif';
@@ -325,7 +336,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     {
       label: "REBIRTHS & PRESTIGE",
       value: `${stats.rebirths} / 6`,
-      sub: `${stats.ultraRebirths} Ultra · +${progress.surplusBanked ?? 0}% surplus`,
+      sub: `${stats.ultraRebirths} Prestige${stats.rollbacks > 0 ? " · Rollback" : ""} · +${progress.surplusBanked ?? 0}% surplus`,
     },
     {
       label: "COMPANIONS",

@@ -191,9 +191,54 @@ test("two draw skills stack their budgets into one plan of panels", async ({
     ),
   ).toBe(true);
   await expect(page.locator(".draw-winner-kicker")).toContainText("Best of 6");
-  await expect(page.locator(".draw-winner-ep")).toHaveText(
+  // Two numbers are paid, each on its own card with its own EP. The best of
+  // the six is the one the roll commits, and no headline total is shown.
+  await expect(page.locator(".draw-winner-ep")).toHaveCount(0);
+  await expect(page.locator(".draw-winner .paid-number")).toHaveCount(2);
+  await expect(
+    page.locator(".draw-winner .paid-number.is-best .paid-number-ep"),
+  ).toHaveText(
     `${formatEP(Math.max(...six.map((n) => evaluate(n).totalEP)))} EP`,
   );
+});
+
+test("a stacked roll counts up no total while its numbers reveal, and ends on one card per number", async ({
+  page,
+}) => {
+  const six = [88125, 375660, 861456, 90750, 577281, 25663];
+  await startSplitRoll(page, {
+    draws: six,
+    seed: {
+      ...seed,
+      owned: [...seed.owned, "twice"],
+      skills: ["bedrock", "twice"],
+      equippedSkills: ["bedrock", "twice"],
+      skillCharge: { bedrock: 9, twice: 9 },
+    },
+  });
+  // The committed number's EP is never counted up on screen: the headline is
+  // not there at all while the reveal plays.
+  expect(
+    await runUntil(
+      page,
+      () =>
+        document.querySelector(".roll-experience")?.dataset.phase === "badges",
+    ),
+  ).toBe(true);
+  await expect(page.locator(".roll-ep")).toHaveCount(0);
+  expect(
+    await runUntil(
+      page,
+      () =>
+        document.querySelector(".roll-experience")?.dataset.phase ===
+        "complete",
+    ),
+  ).toBe(true);
+  await expect(page.locator(".roll-ep")).toHaveCount(0);
+  await expect(page.locator(".result-summary .paid-number")).toHaveCount(2);
+  await expect(
+    page.locator(".result-summary .paid-number.is-best .paid-number-ep"),
+  ).toHaveText(`${formatEP(keptEP)} EP`);
 });
 
 test("the split screen hands the roll back before the reveal ends", async ({

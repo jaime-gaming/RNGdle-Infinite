@@ -1,4 +1,5 @@
 import { productById, shopProducts } from "./shop-data.js";
+import { isCycleMarker } from "./history-log.js";
 
 // Goals are a view over the existing economy, never another reward system.
 export function availableGoals(progress) {
@@ -38,9 +39,9 @@ export function currentGoal(progress) {
     : recommendedGoal(progress);
 }
 export function rollReceipt(progress, id) {
-  const cycleStart = progress.history.findLastIndex(
-    (e) => e.type === "rebirth",
-  );
+  // The cycle in play starts at its last marker: a rebirth, a prestige or the
+  // Rollback. A roll from before that marker belongs to an earlier cycle.
+  const cycleStart = progress.history.findLastIndex(isCycleMarker);
   const roll = progress.history.findLast(
     (e, i) =>
       i > cycleStart &&

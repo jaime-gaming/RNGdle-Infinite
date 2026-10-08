@@ -123,7 +123,8 @@ export function useProgress() {
         if (
           next.profile?.id !== current.current.profile.id ||
           next.rebirths !== current.current.rebirths ||
-          next.ultraRebirths !== current.current.ultraRebirths
+          next.ultraRebirths !== current.current.ultraRebirths ||
+          next.rollbacks !== current.current.rollbacks
         )
           reset(next);
         else {
@@ -169,7 +170,8 @@ export function useProgress() {
           !current.current.profile ||
           current.current.profile.id !== next.profile.id ||
           current.current.rebirths !== next.rebirths ||
-          current.current.ultraRebirths !== next.ultraRebirths
+          current.current.ultraRebirths !== next.ultraRebirths ||
+          current.current.rollbacks !== next.rollbacks
         ) {
           reset(next);
           return;
@@ -218,7 +220,8 @@ export function useProgress() {
             if (
               stored.profile?.id !== previous.profile.id ||
               stored.rebirths !== previous.rebirths ||
-              stored.ultraRebirths !== previous.ultraRebirths
+              stored.ultraRebirths !== previous.ultraRebirths ||
+              stored.rollbacks !== previous.rollbacks
             ) {
               reset(stored);
               return {
@@ -236,14 +239,16 @@ export function useProgress() {
           }
         }
         if (
-          ["rebirth", "ultra-rebirth"].includes(action.type) &&
+          ["rebirth", "ultra-rebirth", "rollback"].includes(action.type) &&
           previous.profile &&
           (!readable || !navigator.locks?.request)
         )
           throw new Error(
-            action.type === "ultra-rebirth"
-              ? "Ultra-rebirth requires working local storage and Web Locks support."
-              : "Rebirth requires working local storage and Web Locks support.",
+            action.type === "rollback"
+              ? "The Rollback requires working local storage and Web Locks support."
+              : action.type === "ultra-rebirth"
+                ? "Prestige requires working local storage and Web Locks support."
+                : "Rebirth requires working local storage and Web Locks support.",
           );
         if (action.type === "delete") {
           if (!previous.profile || previous.profile.id !== action.profileId)
@@ -546,7 +551,8 @@ export function useProgress() {
               if (
                 latest.profile?.id !== previous.profile.id ||
                 latest.rebirths !== previous.rebirths ||
-                latest.ultraRebirths !== previous.ultraRebirths
+                latest.ultraRebirths !== previous.ultraRebirths ||
+                latest.rollbacks !== previous.rollbacks
               ) {
                 reset(latest);
                 return {
@@ -582,23 +588,27 @@ export function useProgress() {
                   action.type === "rebirth"
                     ? "Rebirth could not be saved. Your progress has not been reset."
                     : action.type === "ultra-rebirth"
-                      ? "Ultra-rebirth could not be saved. Your progress has not been reset."
-                      : action.type.startsWith("offline-")
-                        ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
-                        : action.type === "register"
-                          ? "Sign-up could not be saved. Your guest progress is still available in this tab."
-                          : action.type === "draw"
-                            ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
-                            : action.type === "goal"
-                              ? "Your goal could not be saved. Your previous goal and EP are unchanged."
-                              : "Purchase or equipment change not saved. Your EP has not been spent.",
+                      ? "Prestige could not be saved. Your progress has not been reset."
+                      : action.type === "rollback"
+                        ? "The Rollback could not be saved. Your progress has not been reset."
+                        : action.type.startsWith("offline-")
+                          ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
+                          : action.type === "register"
+                            ? "Sign-up could not be saved. Your guest progress is still available in this tab."
+                            : action.type === "draw"
+                              ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
+                              : action.type === "goal"
+                                ? "Your goal could not be saved. Your previous goal and EP are unchanged."
+                                : "Purchase or equipment change not saved. Your EP has not been spent.",
               };
           }
         }
         if (
           next !== previous &&
           !next.profile &&
-          ["draw", "complete", "rebirth", "ultra-rebirth"].includes(action.type)
+          ["draw", "complete", "rebirth", "ultra-rebirth", "rollback"].includes(
+            action.type,
+          )
         ) {
           try {
             sessionStorage.setItem(
@@ -628,7 +638,11 @@ export function useProgress() {
             sessionStorage.removeItem(GUEST_ROLL_KEY);
           } catch {}
         }
-        if (action.type === "rebirth" || action.type === "ultra-rebirth") {
+        if (
+          action.type === "rebirth" ||
+          action.type === "ultra-rebirth" ||
+          action.type === "rollback"
+        ) {
           try {
             if (previous.profile && action.type === "rebirth")
               clearPresence(previous.profile.id);

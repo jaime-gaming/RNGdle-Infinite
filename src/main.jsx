@@ -53,6 +53,7 @@ import { petDrop, petById } from "./pets.js";
 import {
   rebirthUnlocked,
   rebirthReady,
+  rollbackAvailable,
   ultraRebirthAvailable,
 } from "./rebirth.js";
 import { gameNow } from "./game-clock.js";
@@ -157,14 +158,16 @@ function App() {
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [toast, setToast] = useState("");
-  // The ultra-rebirth earns a moment: a full-screen ceremony that lives in
-  // the app shell (the rebirth page navigates away the moment it succeeds),
-  // plays over whatever is on screen, then removes itself. Pointer-transparent
-  // and animation-driven — reduced motion never sees it at all.
-  const [ultraCeremony, setUltraCeremony] = useState(false);
+  // A prestige (the ultra-rebirth in the save) earns a moment, and so does the
+  // Rollback, the last stage, in its own words. The ceremony is a full-screen
+  // moment that lives in the app shell (the rebirth page navigates away the
+  // moment it succeeds), plays over whatever is on screen, then removes itself.
+  // Pointer-transparent and animation-driven — reduced motion never sees it.
+  // The state names the moment: "prestige", "rollback", or null for none.
+  const [ultraCeremony, setUltraCeremony] = useState(null);
   useEffect(() => {
     if (!ultraCeremony) return;
-    const timer = setTimeout(() => setUltraCeremony(false), 2700);
+    const timer = setTimeout(() => setUltraCeremony(null), 2700);
     return () => clearTimeout(timer);
   }, [ultraCeremony]);
   // A plain rebirth earns a smaller moment: a spinning rainbow ring over the
@@ -469,11 +472,12 @@ function App() {
   // A ready task shows a dot in the header and the tab bar, until it is claimed.
   const tasksReady = taskSummary(session.tasks, gameNow()).ready > 0;
   // The mobile tab bar marks the rebirth tab ready the moment either a rung
-  // or the ultra is available.
+  // or a prestige or the Rollback is available.
   const rebirthReadyNow =
     rebirthVisible &&
     (rebirthReady(session, gameNow()) ||
-      ultraRebirthAvailable(session, gameNow()));
+      ultraRebirthAvailable(session, gameNow()) ||
+      rollbackAvailable(session, gameNow()));
   // A direct link to a page that has not been unlocked yet simply goes home:
   // no locked panel, no counter, nothing to explain the mystery early.
   useEffect(() => {
@@ -560,12 +564,20 @@ function App() {
           {session.ultraRebirths > 0 && (
             <span
               className="ultra-mark"
-              title={`Ultra-rebirth ${session.ultraRebirths} · +${Math.round(
-                session.ultraRebirths * 10,
-              )}% EP on every banked roll`}
+              title={
+                session.rollbacks > 0
+                  ? `Rollback taken · Prestige ×${session.ultraRebirths} · +${Math.round(
+                      session.ultraRebirths * 10 + 25,
+                    )}% EP on every banked roll`
+                  : `Prestige ×${session.ultraRebirths} · +${Math.round(
+                      session.ultraRebirths * 10,
+                    )}% EP on every banked roll`
+              }
             >
-              <InfinityIcon size={13} aria-hidden="true" /> Ultra ×
-              {session.ultraRebirths}
+              <InfinityIcon size={13} aria-hidden="true" />{" "}
+              {session.rollbacks > 0
+                ? "Rollback"
+                : `Prestige ×${session.ultraRebirths}`}
             </span>
           )}
           <RebirthNav
@@ -826,7 +838,8 @@ function App() {
               onDone={(message, meta) => {
                 navigate("roll");
                 notify(message ?? "Rebirth complete.");
-                if (meta?.ultra) setUltraCeremony(true);
+                if (meta?.rollback) setUltraCeremony("rollback");
+                else if (meta?.ultra) setUltraCeremony("prestige");
                 else setRebirthRing(true);
               }}
             />
@@ -1205,10 +1218,14 @@ function App() {
             <InfinityMark size={64} />
           </span>
           <strong className="ultra-ceremony-title">
-            ULTRA-REBIRTH {session.ultraRebirths}
+            {ultraCeremony === "rollback"
+              ? "ROLLBACK"
+              : `PRESTIGE ${session.ultraRebirths}`}
           </strong>
           <span className="ultra-ceremony-sub">
-            the run starts again — the account never does
+            {ultraCeremony === "rollback"
+              ? "the last stage — the run starts again, the account never does"
+              : "the run starts again — the account never does"}
           </span>
           <span className="ultra-ceremony-confetti">
             {Array.from({ length: 12 }, (_, index) => (

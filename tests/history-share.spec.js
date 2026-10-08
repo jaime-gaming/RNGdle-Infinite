@@ -153,13 +153,14 @@ test("a rebirth opens a new cycle in the log without erasing the old one", () =>
 test("the feed draws a dotted line where each rebirth began a cycle", () => {
   const feed = fs.readFileSync("src/components/ActivityFeed.jsx", "utf8");
   const css = fs.readFileSync("src/activity.css", "utf8");
-  // The line comes from the log itself: every rebirth and ultra-rebirth entry
-  // opens a cycle, and it is labelled with the one it was.
+  // The line comes from the log itself: every rebirth, prestige and Rollback
+  // entry opens a cycle, and it is labelled with the one it was.
   expect(feed).toContain('className="activity-divider"');
   expect(feed).toMatch(
     /event\.type === "rebirth"[\s\S]{0,240}activity-divider/,
   );
-  expect(feed).toContain("Ultra-rebirth ${event.count}");
+  expect(feed).toContain("Prestige ${event.count}");
+  expect(feed).toContain("Rollback");
   expect(feed).toContain("Rebirth ${event.count}");
   // Dotted, not solid: a boundary drawn in the log's own hand.
   expect(css).toContain(".activity-divider");

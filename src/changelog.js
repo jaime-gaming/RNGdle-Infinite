@@ -7,12 +7,12 @@ export const CHANGELOG = [
     body: [
       "daily and weekly tasks pay EP once per reset, for rolling, finding rare numbers, discovering badges and firing skills.",
       "claim a finished task on the new Tasks page; a dot in the header and the tab bar shows when one is ready.",
-      "the activity log keeps up to 6,000 entries, and from 4,500 it warns you and offers bulk delete.",
-      "bulk delete clears a finished rebirth or the oldest entries, and bookmarked rolls are never removed.",
-      "what leaves the log still counts in your profile and Rebirth figures, so they never drop.",
-      "once the log is full, the oldest entries that are not bookmarked make room for new rolls.",
+      "the activity log keeps up to 6,000 entries; from 4,500 it warns you, and once full the oldest unbookmarked make room.",
+      "bulk delete clears a finished rebirth or the oldest entries, never bookmarked rolls; what leaves still counts in your profile.",
       "the share and bookmark buttons in History are icon-only, and their names stay for screen readers.",
       "a roll that failed to save is never credited twice, even when its history entry has been removed.",
+      "the ultra-rebirth is now a prestige; after three, a one-time Rollback ends the ladder with the biggest bonus and start.",
+      "a roll that pays several numbers shows each one as a card, and no total EP counts up while they are revealed.",
     ],
   },
   {

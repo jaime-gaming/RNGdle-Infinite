@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { Check, Dices, MousePointerClick, Trophy } from "lucide-react";
 import NumberBox from "./NumberBox";
+import PaidNumbers from "./PaidNumbers";
 import Emoji from "./Emoji";
 import { formatEP, groupResultBadges } from "../roll-data";
 import { restoreRoll } from "../roll-client";
@@ -144,6 +145,10 @@ export default function DrawStage({
   );
   const claimFor = (number) =>
     picks.find((pick) => pick.number === number) ?? null;
+  // More than one number is paid: the cards name each number and its own EP,
+  // and the single headline EP of the best one is left out, so no total reads
+  // as the roll's worth while the numbers are still being revealed.
+  const stacked = picks.length > 1;
   const winnerIndex = Math.max(0, numbers.indexOf(winner));
   const done = timeline.digitTimes.filter((time) => elapsed >= time).length;
   const spinning = done < timeline.slots;
@@ -353,9 +358,11 @@ export default function DrawStage({
                 reducedMotion={reducedMotion}
               />
             </NumberBox>
-            <span className="draw-winner-ep">
-              {champ.scored ? `${formatEP(champ.scored.totalEP)} EP` : "—"}
-            </span>
+            {!stacked && (
+              <span className="draw-winner-ep">
+                {champ.scored ? `${formatEP(champ.scored.totalEP)} EP` : "—"}
+              </span>
+            )}
             <ul className="draw-winner-badges">
               <BadgeChips
                 groups={champ.groups}
@@ -364,32 +371,22 @@ export default function DrawStage({
               />
             </ul>
             {/* Stacking draw skills pays more than one number, so the card
-                names them: each skill, the number it kept and what that
-                number was worth. */}
-            {picks.length > 1 && (
-              <ul className="draw-winner-paid">
-                {picks.map((pick) => {
+                names them side by side: each skill, the number it kept and
+                what that number was worth. No total is added up here. */}
+            {stacked && (
+              <PaidNumbers
+                items={picks.map((pick) => {
                   const scored = scoredFor(pick.number);
-                  return (
-                    <li
-                      key={`${pick.number}-${pick.name}`}
-                      className={`draw-winner-paid-item tint-${pick.tint} ${
-                        pick.number === winner ? "is-headline" : ""
-                      }`}
-                    >
-                      <span className="draw-winner-paid-skill">
-                        {pick.name || "Kept"}
-                      </span>
-                      <span className="draw-winner-paid-number">
-                        {pick.number.toLocaleString("en-US")}
-                      </span>
-                      <span className="draw-winner-paid-ep">
-                        {scored ? `${formatEP(scored.totalEP)} EP` : "—"}
-                      </span>
-                    </li>
-                  );
+                  return {
+                    key: `${pick.number}-${pick.name}`,
+                    skill: pick.name || "Kept",
+                    tint: pick.tint,
+                    number: pick.number,
+                    ep: scored ? `${formatEP(scored.totalEP)} EP` : "—",
+                    best: pick.number === winner,
+                  };
                 })}
-              </ul>
+              />
             )}
             <span className="draw-winner-hint">
               <MousePointerClick size={12} aria-hidden="true" /> Hover to

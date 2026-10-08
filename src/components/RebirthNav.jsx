@@ -6,6 +6,7 @@ import {
   discoveredCount,
   rebirthRequirement,
   rebirthUnlocked,
+  rollbackAvailable,
   ultraRebirthAvailable,
   ultraRebirthRequirement,
 } from "../rebirth.js";
@@ -21,6 +22,7 @@ export default function RebirthNav({ progress, active, onClick }) {
   const count = discoveredCount(progress);
   const rebirths = progress.rebirths ?? 0;
   const ultras = progress.ultraRebirths ?? 0;
+  const rollbacks = progress.rollbacks ?? 0;
   // A step asks for badges and for EP the cycle has earned; the ring follows
   // whichever of the two is furthest from done, so it always shows the real
   // distance to the next rung.
@@ -28,6 +30,30 @@ export default function RebirthNav({ progress, active, onClick }) {
   // Nothing at all before the unlock: no icon, no ring, no hint that rebirth
   // exists. The ladder announces itself once the collection is far enough.
   if (!rebirthUnlocked(progress)) return null;
+  // The Rollback is the last stage: once it is taken the ladder is complete and
+  // the ring stays full, with nothing left to reach.
+  if (rollbacks > 0)
+    return (
+      <button
+        className={`rebirth-nav ${active ? "active" : ""}`}
+        aria-current={active ? "page" : undefined}
+        aria-label="Rebirth, the Rollback is taken: the ladder is complete"
+        title="The Rollback is taken: the ladder is complete"
+        onClick={onClick}
+      >
+        <span
+          className="rebirth-ring"
+          style={{ "--fill": "100%" }}
+          aria-hidden="true"
+        >
+          <InfinityIcon size={13} />
+        </span>
+        <span className="rebirth-nav-text">
+          <span className="rebirth-nav-label">Rebirth</span>
+          <span className="rebirth-nav-count">Rollback</span>
+        </span>
+      </button>
+    );
   const step = requirement ?? ultraRebirthRequirement();
   const target = step.badges;
   const earned = cycleEarnedEp(progress);
@@ -38,8 +64,9 @@ export default function RebirthNav({ progress, active, onClick }) {
   const percent = Math.round(fraction * 100);
   const ready = requirement
     ? count >= requirement.badges && earned >= requirement.ep
-    : ultraRebirthAvailable(progress, gameNow());
-  const rung = requirement ? requirement.rebirth : "Ultra";
+    : ultraRebirthAvailable(progress, gameNow()) ||
+      rollbackAvailable(progress, gameNow());
+  const rung = requirement ? requirement.rebirth : "Prestige";
   return (
     <button
       className={`rebirth-nav ${ready ? "is-ready" : ""} ${active ? "active" : ""}`}
@@ -77,7 +104,7 @@ export default function RebirthNav({ progress, active, onClick }) {
                 ? `${count}/${target} · ${rung}/${REBIRTH_TOTAL}`
                 : `${formatEPCompact(earned)}/${formatEPCompact(step.ep)} EP`
               : short === "badges"
-                ? `${count}/${target} · Ultra`
+                ? `${count}/${target} · Prestige`
                 : `${formatEPCompact(earned)}/${formatEPCompact(step.ep)} EP`}
           {ultras > 0 && !ready ? ` · U×${ultras}` : ""}
         </span>

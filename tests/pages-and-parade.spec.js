@@ -251,14 +251,10 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
   await expect(
     page.getByRole("heading", { name: /What it resets/ }),
   ).toBeVisible();
-  // The ultra-rebirth bonus is explained, but its button waits for a full
+  // The prestige bonus is explained, but its button waits for a full
   // collection.
-  await expect(
-    page.getByRole("heading", { name: /ultra-rebirth/i }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Ultra-rebirth/ })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole("heading", { name: /prestige/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Prestige/ })).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Rebirth", exact: true }),
   ).toBeVisible();
