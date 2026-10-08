@@ -22,6 +22,7 @@ import {
   ScrollText,
   UserRound,
   Sparkles,
+  ListChecks,
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
@@ -42,6 +43,9 @@ import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
+import Tasks from "./components/Tasks";
+import { taskSummary } from "./tasks.js";
+import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
 import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
@@ -273,6 +277,21 @@ function App() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 3500);
   };
+  // The log's space warnings are announced once, when a roll or a claim carries
+  // it across a level. An account that loads already past a level stays quiet:
+  // the History page shows the warning for as long as it applies.
+  const historySize = session.history?.length ?? 0;
+  const lastHistorySize = useRef(historySize);
+  useEffect(() => {
+    const before = lastHistorySize.current;
+    lastHistorySize.current = historySize;
+    if (before < HISTORY_LIMIT && historySize >= HISTORY_LIMIT)
+      notify(
+        "Entry space is full. The oldest entries now make room for new rolls.",
+      );
+    else if (before < HISTORY_WARNING && historySize >= HISTORY_WARNING)
+      notify("Low entry space. Open History to bulk delete old entries.");
+  }, [historySize]);
   // Real URLs, so a page and its shelf can be linked, bookmarked and reloaded
   // directly. The address bar is the source of truth, never component state.
   const push = (target, path, section = "") => {
@@ -447,6 +466,8 @@ function App() {
     blocked: !!session.pendingRoll || !!session.offline?.batch,
   });
   const rebirthVisible = rebirthUnlocked(session);
+  // A ready task shows a dot in the header and the tab bar, until it is claimed.
+  const tasksReady = taskSummary(session.tasks, gameNow()).ready > 0;
   // The mobile tab bar marks the rebirth tab ready the moment either a rung
   // or the ultra is available.
   const rebirthReadyNow =
@@ -500,19 +521,27 @@ function App() {
           <div className="nav-divider" />
           <nav aria-label="Main navigation">
             {[
+              ["tasks", "Tasks", ListChecks],
               ["shop", "Shop", ShoppingBag],
               ["badges", "Badges", Medal],
               ["history", "History", History],
             ].map(([destination, label, Icon]) => (
               <button
                 key={destination}
-                aria-label={label}
+                aria-label={
+                  destination === "tasks" && tasksReady
+                    ? "Tasks, ready to claim"
+                    : label
+                }
                 aria-current={page === destination ? "page" : undefined}
                 className={page === destination ? "active" : ""}
                 onClick={() => navigate(destination)}
               >
                 <Icon size={16} />
                 <span>{label}</span>
+                {destination === "tasks" && tasksReady && (
+                  <i className="nav-ready-dot" aria-hidden="true" />
+                )}
               </button>
             ))}
           </nav>
@@ -803,6 +832,32 @@ function App() {
             />
           </>
         )}
+        {page === "tasks" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <ListChecks size={25} />
+              </div>
+              <div>
+                <h1>Tasks</h1>
+                <p>
+                  Small goals that pay EP. Daily tasks reset at local midnight,
+                  weekly ones on Monday.
+                </p>
+              </div>
+            </div>
+            <Tasks
+              key={epoch}
+              progress={session}
+              onAction={dispatch}
+              notify={notify}
+              openSignup={openAuth}
+            />
+          </>
+        )}
         {page === "shop" && (
           <Shop
             key={`${epoch}:${shopSection}:${shopFamily}`}
@@ -1026,6 +1081,7 @@ function App() {
         page={page}
         rebirthVisible={rebirthVisible}
         rebirthReady={rebirthReadyNow}
+        tasksReady={tasksReady}
         navigate={navigate}
       />
       {modal && (

@@ -85,10 +85,17 @@ test("History offers a share action for rolls, and only for rolls", async ({
   await expect(
     page.locator('[data-event-type="purchase"] .activity-share'),
   ).toHaveCount(0);
-  await row.getByRole("button", { name: "Share roll 604827" }).click();
+  // The share control is icon-only: no words, just the icon and its name.
+  const share = row.getByRole("button", { name: "Share roll 604827" });
+  await expect(share).toHaveText("");
+  await share.click();
+  // The copied state is announced through the name, since there is no label.
   await expect(
-    row.getByRole("button", { name: "Share roll 604827" }),
-  ).toContainText("Copied");
+    row.getByRole("button", {
+      name: "Copied roll 604827 result and link",
+      exact: true,
+    }),
+  ).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     buildShareTextFromHistory(archived),
   );
@@ -97,7 +104,7 @@ test("History offers a share action for rolls, and only for rolls", async ({
 test("the archive share reuses the palette of the live share control", () => {
   const source = fs.readFileSync("src/components/ActivityFeed.jsx", "utf8");
   expect(source).toContain("buildShareTextFromHistory");
-  expect(source).toContain("aria-label={`Share roll ${event.number}`}");
+  expect(source).toContain("`Share roll ${event.number}`");
   // The live share button stays the only share control on the roll page.
   const roll = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
   expect(roll.match(/async function share\(/g)).toHaveLength(1);

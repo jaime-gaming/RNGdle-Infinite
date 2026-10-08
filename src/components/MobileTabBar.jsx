@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Dices,
+  ListChecks,
   ShoppingBag,
   Medal,
   History,
@@ -17,12 +18,30 @@ export default function MobileTabBar({
   page,
   rebirthVisible,
   rebirthReady,
+  tasksReady,
   navigate,
 }) {
   const tabs = [
     { id: "roll", label: "Roll", icon: Dices, go: () => navigate("roll") },
-    { id: "shop", label: "Shop", icon: ShoppingBag, go: () => navigate("shop") },
-    { id: "badges", label: "Badges", icon: Medal, go: () => navigate("badges") },
+    {
+      id: "tasks",
+      label: "Tasks",
+      icon: ListChecks,
+      ready: tasksReady,
+      go: () => navigate("tasks"),
+    },
+    {
+      id: "shop",
+      label: "Shop",
+      icon: ShoppingBag,
+      go: () => navigate("shop"),
+    },
+    {
+      id: "badges",
+      label: "Badges",
+      icon: Medal,
+      go: () => navigate("badges"),
+    },
     {
       id: "history",
       label: "History",
@@ -54,9 +73,7 @@ export default function MobileTabBar({
           type="button"
           className={`${page === id ? "active" : ""} ${ready ? "is-ready" : ""}`}
           aria-current={page === id ? "page" : undefined}
-          aria-label={
-            id === "rebirth" && ready ? "Rebirth, ready" : undefined
-          }
+          aria-label={ready ? `${label}, ready` : undefined}
           onClick={go}
         >
           <span className="mobile-tabbar-icon" aria-hidden="true">

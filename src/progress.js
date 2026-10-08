@@ -49,6 +49,24 @@ import {
 } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
+import {
+  capHistory,
+  HISTORY_LIMIT,
+  HISTORY_WARNING,
+  pruneCycle,
+  pruneOldest,
+} from "./history-log.js";
+import {
+  claimTask,
+  emptyTasks,
+  parseTasks,
+  periodKey,
+  RARE_OR_BETTER,
+  recordTally,
+  taskById,
+  TASK_CADENCES,
+} from "./tasks.js";
+export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 // Guests have no saved account, so the one thing worth protecting — the roll
 // they already committed and its deadline — lives in sessionStorage under this
@@ -123,15 +141,11 @@ function firedSkills(state, id, source) {
 
 // The activity log is the account's story, so a new cycle never clears it:
 // rebirths, rolls, purchases and unlocks from every past cycle stay readable.
-// It is capped instead — the oldest entries go first, and only for accounts
-// long enough to have collected thousands of them, so the save cannot outgrow
-// the browser's storage.
-export const HISTORY_LIMIT = 5000;
+// Entries are only ever appended here. The cap is applied once, in
+// applyProgress, so every action makes room the same way: the oldest entries
+// that are neither cycle markers nor bookmarked rolls go first.
 function appendHistory(history, events = []) {
-  const merged = [...(history ?? []), ...events];
-  return merged.length > HISTORY_LIMIT
-    ? merged.slice(merged.length - HISTORY_LIMIT)
-    : merged;
+  return [...(history ?? []), ...events];
 }
 
 // Equipping is free. A newly unlocked skill takes a free slot instead of
@@ -178,6 +192,7 @@ export function emptyProgress() {
     skillCharge: {},
     loadouts: [],
     bookmarks: [],
+    tasks: emptyTasks(),
   };
 }
 
@@ -347,6 +362,11 @@ export function parseAndRepairProgress(raw) {
       `${dropped} activity-log ${dropped === 1 ? "entry was" : "entries were"} unreadable and ${dropped === 1 ? "was" : "were"} removed.`,
     );
   }
+  // Task progress belongs to the save alone, so an unreadable slot is simply
+  // reset: nothing else in the save can vouch for it.
+  const tasksRead = parseTasks(p.tasks);
+  if (tasksRead.repaired)
+    note("task progress was unreadable, so it was reset.");
   // Lists that the rest of the save can vouch for are rebuilt from it: the
   // activity log remembers every companion found or bought, and purchases
   // plus rebirths re-unlock every skill. Nothing else can vouch for a wallet
@@ -500,6 +520,7 @@ export function parseAndRepairProgress(raw) {
     equippedSkills,
     loadouts: parseLoadouts(p.loadouts),
     bookmarks: parseBookmarks(p.bookmarks, history),
+    tasks: tasksRead.tasks,
     skillCharge,
     cooldownUntil,
     receipts: [
@@ -613,7 +634,16 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
     loadouts: [],
   };
 }
+// Every action goes through here, so the log is capped the same way for all of
+// them. Only an action that actually changed the save can grow the log.
 export function applyProgress(state, action) {
+  const next = applyEvent(state, action);
+  if (next === state || !Array.isArray(next.history)) return next;
+  if (next.history.length <= HISTORY_LIMIT) return next;
+  return { ...next, history: capHistory(next.history, next.bookmarks) };
+}
+
+function applyEvent(state, action) {
   if (action.type === "rebirth") {
     const count = state.rebirths ?? 0;
     if (action.expectedRebirths !== count)
@@ -725,6 +755,65 @@ export function applyProgress(state, action) {
         `You can keep up to ${BOOKMARK_LIMIT} bookmarked rolls. Remove one first.`,
       );
     return { ...state, bookmarks: [...bookmarks, id] };
+  }
+  // A task pays its reward into the wallet once per reset. It is a reward for
+  // play, not a sale, so it is logged as income and never counts towards the
+  // rebirth gate, which reads only rolls.
+  if (action.type === "claim-task") {
+    const task = taskById(action.id);
+    if (!task) throw new Error("That task does not exist.");
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid task time");
+    const reward = task.reward;
+    const balance = state.balance + reward;
+    const totalEarned = state.totalEarned + reward;
+    if (!validAmount(balance) || !validAmount(totalEarned))
+      throw new Error("EP balance limit reached.");
+    return {
+      ...state,
+      tasks: claimTask(state.tasks, task, at),
+      balance,
+      totalEarned,
+      history: appendHistory(state.history, [
+        {
+          id:
+            action.eventId ?? `task:${task.id}:${periodKey(task.cadence, at)}`,
+          type: "task",
+          at,
+          taskId: task.id,
+          cadence: task.cadence,
+          name: task.title,
+          ep: reward,
+        },
+      ]),
+    };
+  }
+  // Bulk delete from History. The cut is worked out here, from the save as it
+  // is now, so a stale screen can never remove the wrong entries. Cycle markers
+  // and bookmarked rolls are never part of a cut.
+  if (action.type === "history-prune") {
+    const bookmarks = state.bookmarks ?? [];
+    const history = state.history ?? [];
+    const cut =
+      action.mode === "cycle"
+        ? pruneCycle(
+            history,
+            bookmarks,
+            typeof action.marker === "string" ? action.marker : "",
+          )
+        : action.mode === "oldest" &&
+            Number.isSafeInteger(action.count) &&
+            action.count >= 1
+          ? pruneOldest(
+              history,
+              bookmarks,
+              Math.min(action.count, HISTORY_LIMIT),
+            )
+          : null;
+    if (!cut)
+      throw new Error("Choose a finished cycle or a number of entries.");
+    return { ...state, history: cut.history };
   }
   if (action.type === "avatar") {
     if (!state.profile) throw new Error("Create a local profile first.");
@@ -933,6 +1022,27 @@ export function applyProgress(state, action) {
         ];
       },
     );
+    // Tasks count online rolls only: an offline roll is a passive reward, not
+    // something the player went and did. The committed number is the roll;
+    // the numbers a draw skill kept are wallet income, not extra rolls.
+    const committed = paidEvents[0];
+    const tasks =
+      action.source === "offline"
+        ? (state.tasks ?? emptyTasks())
+        : recordTally(
+            state.tasks,
+            {
+              rolls: 1,
+              rare: RARE_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+              discovered: paidEvents.reduce(
+                (total, paid) => total + paid.unlocked.length,
+                0,
+              ),
+              banked: credited,
+              skills: fired.length ? 1 : 0,
+            },
+            at,
+          );
     const droppedPet =
       typeof action.petDrop === "string" &&
       petById.has(action.petDrop) &&
@@ -950,6 +1060,7 @@ export function applyProgress(state, action) {
     return {
       ...state,
       history: appendHistory(state.history, events),
+      tasks,
       pendingRoll: null,
       // Turbo makes the settled roll count more than once towards Flywheel.
       flywheelCharge: flywheelAfterSettlement(
@@ -1362,6 +1473,25 @@ function parseHistory(value) {
         if (!validAmount(e.ep)) return [];
         next.ep = e.ep;
       }
+    } else if (e.type === "task") {
+      // A claimed task: the reward it paid, with the name it had when claimed.
+      if (
+        !TASK_CADENCES.includes(e.cadence) ||
+        typeof e.taskId !== "string" ||
+        !e.taskId ||
+        e.taskId.length > 60 ||
+        typeof e.name !== "string" ||
+        e.name.length > 100 ||
+        !validAmount(e.ep)
+      )
+        return [];
+      next = {
+        ...base,
+        taskId: e.taskId,
+        cadence: e.cadence,
+        name: e.name,
+        ep: e.ep,
+      };
     } else return [];
     seen.add(e.id);
     return [next];
@@ -1467,7 +1597,11 @@ export function parsePending(p, owned = null) {
 
 // Only roll settlement can succeed in memory after a failed write. Reapply those
 // receipts to the latest shared wallet instead of overwriting other tabs' spending.
-export function recoverUnsavedRolls(stored, temporary) {
+// `unsaved` names the rolls this tab settled while saving was failing. Without
+// it, every roll the tab remembers that the stored log lacks would be replayed,
+// and a roll that was saved earlier and has since been removed from the log
+// (by bulk delete, or by the cap) would be credited a second time.
+export function recoverUnsavedRolls(stored, temporary, unsaved = null) {
   // A roll from an earlier cycle can never be replayed into a later one.
   if (
     (stored.rebirths ?? 0) !== (temporary.rebirths ?? 0) ||
@@ -1476,10 +1610,8 @@ export function recoverUnsavedRolls(stored, temporary) {
     return stored;
   let merged = stored;
   for (const event of temporary.history ?? []) {
-    if (
-      event.type !== "roll" ||
-      merged.history.some((e) => e.type === "roll" && e.id === event.id)
-    )
+    if (event.type !== "roll" || (unsaved && !unsaved.has(event.id))) continue;
+    if (merged.history.some((e) => e.type === "roll" && e.id === event.id))
       continue;
     const pending = merged.pendingRoll;
     merged = applyProgress(merged, {

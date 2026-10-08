@@ -1,12 +1,15 @@
 import React, { memo } from "react";
 import { currentGoal, rollReceipt } from "../gameplay-loop.js";
 import { BADGE_TOTAL } from "../rebirth.js";
+import { gameNow } from "../game-clock.js";
+import { taskSummary } from "../tasks.js";
 import { formatEP } from "../roll-data.js";
 import "../progress-links.css";
 // Keep progression as quiet links, outside the original reveal and breakdown.
 export default memo(function RollProgress({ progress, runId, navigate }) {
   const goal = currentGoal(progress),
-    receipt = rollReceipt(progress, runId);
+    receipt = rollReceipt(progress, runId),
+    tasks = taskSummary(progress.tasks, gameNow());
   return (
     <section className="roll-progress-links" aria-label="Progress">
       <p>
@@ -27,6 +30,15 @@ export default memo(function RollProgress({ progress, runId, navigate }) {
             {progress.rebirths === 1 ? "rebirth" : "rebirths"}
           </span>
         )}
+        <span>
+          {" "}
+          ·{" "}
+          <button onClick={() => navigate("tasks")}>
+            {tasks.ready
+              ? `${tasks.ready} ${tasks.ready === 1 ? "task" : "tasks"} ready to claim`
+              : `${tasks.claimed} / ${tasks.total} tasks claimed`}
+          </button>
+        </span>
       </p>
       {goal ? (
         <p>

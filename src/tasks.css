@@ -1,0 +1,177 @@
+/* The Tasks page: a summary strip, then one group per cadence. Cards follow the
+   shop's surfaces, and a card that can be claimed is the only one that turns
+   green, so the page reads at a glance. */
+.tasks-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin: 0 0 8px;
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 12px;
+}
+.tasks-summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tasks-summary strong {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+.task-group {
+  margin-top: 30px;
+}
+.task-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.task-group-head h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.task-reset {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.task-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.task-card.is-claimable {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  background: var(--green-bg);
+}
+.task-card.is-claimed {
+  opacity: 0.7;
+}
+.task-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.task-card h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.task-reward {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--green) 35%, var(--border));
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.task-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.task-bar {
+  width: 100%;
+  height: 8px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow: hidden;
+}
+.task-bar::-webkit-progress-bar {
+  background: var(--hover);
+  border-radius: 999px;
+}
+.task-bar::-webkit-progress-value {
+  background: var(--green);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.task-bar::-moz-progress-bar {
+  background: var(--green);
+  border-radius: 999px;
+}
+.task-card-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+}
+.task-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.task-card-foot .primary-button {
+  margin-top: 0;
+}
+.task-claimed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+}
+.task-note {
+  margin: 34px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+@media (max-width: 760px) {
+  .tasks-summary {
+    padding: 16px;
+  }
+  .task-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The header's Tasks tab carries a dot while a reward is waiting. */
+.header nav button {
+  position: relative;
+}
+.nav-ready-dot {
+  position: absolute;
+  top: 7px;
+  right: -7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 2px var(--bg);
+  animation: tabbar-dot-pulse 2.2s ease-in-out infinite;
+}

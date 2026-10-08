@@ -28,6 +28,7 @@ import { allBadgeMetadata } from "../src/infinite-badges.js";
 test("every top navigation destination is a real path, not a hash fragment", () => {
   expect(PAGES).toEqual([
     "roll",
+    "tasks",
     "shop",
     "badges",
     "history",

@@ -100,6 +100,9 @@ export function useProgress() {
     [epoch, setEpoch] = useState(0);
   const current = useRef(initial.progress),
     healthy = useRef(!initial.warning),
+    // The rolls this tab settled while saving was failing, by id. Only these
+    // are owed again when the save recovers (see recoverUnsavedRolls).
+    unsaved = useRef(new Set()),
     generation = useRef(0),
     queue = useRef(Promise.resolve());
   function reset(next = emptyProgress()) {
@@ -108,6 +111,7 @@ export function useProgress() {
     current.current = next;
     setProgress(next);
     healthy.current = true;
+    unsaved.current = new Set();
     setWarning("");
   }
   useEffect(() => {
@@ -125,11 +129,14 @@ export function useProgress() {
         else {
           const merged = healthy.current
             ? next
-            : recoverUnsavedRolls(next, current.current);
+            : recoverUnsavedRolls(next, current.current, unsaved.current);
           current.current = merged;
           setProgress(merged);
           healthy.current = merged === next;
-          if (healthy.current) setWarning("");
+          if (healthy.current) {
+            unsaved.current = new Set();
+            setWarning("");
+          }
         }
       } catch {
         healthy.current = false;
@@ -153,6 +160,8 @@ export function useProgress() {
         try {
           localStorage.setItem(PROGRESS_KEY, event.detail);
           healthy.current = true;
+          // The linked save replaces this tab's storage, unsaved rolls included.
+          unsaved.current = new Set();
         } catch {
           healthy.current = false;
         }
@@ -167,11 +176,14 @@ export function useProgress() {
         }
         const merged = healthy.current
           ? next
-          : recoverUnsavedRolls(next, current.current);
+          : recoverUnsavedRolls(next, current.current, unsaved.current);
         current.current = merged;
         setProgress(merged);
         healthy.current = merged === next;
-        if (healthy.current) setWarning("");
+        if (healthy.current) {
+          unsaved.current = new Set();
+          setWarning("");
+        }
       } catch {
         healthy.current = false;
         setWarning(
@@ -217,7 +229,7 @@ export function useProgress() {
             }
             previous = healthy.current
               ? stored
-              : recoverUnsavedRolls(stored, previous);
+              : recoverUnsavedRolls(stored, previous, unsaved.current);
           } catch {
             readable = false;
             healthy.current = false;
@@ -546,6 +558,7 @@ export function useProgress() {
             }
             localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
             healthy.current = true;
+            unsaved.current = new Set();
             setWarning("");
             // Live to the other device the moment this one saves.
             broadcastSync(next);
@@ -554,6 +567,14 @@ export function useProgress() {
             setWarning(
               "Local saving is unavailable or full. New draws and purchases require saving. A committed result may be temporarily credited in this tab until saving works again; no saved history has been deleted.",
             );
+            if (action.type === "complete") {
+              // The settled roll is kept in memory only, so remember exactly
+              // which rolls those are: they are the only ones owed on recovery.
+              const known = new Set(previous.history.map((e) => e.id));
+              for (const event of next.history)
+                if (event.type === "roll" && !known.has(event.id))
+                  unsaved.current.add(event.id);
+            }
             if (action.type !== "complete")
               return {
                 ok: false,
@@ -632,6 +653,10 @@ export function useProgress() {
             ? next.offline.batch.numbers.length - next.offline.batch.index
             : 0,
           ...(committed ? { run: committed } : {}),
+          // Bulk delete reports how many entries it actually removed.
+          ...(action.type === "history-prune"
+            ? { removed: previous.history.length - next.history.length }
+            : {}),
         };
       } catch (error) {
         return { ok: false, message: error.message };

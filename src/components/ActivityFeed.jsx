@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   History,
@@ -10,15 +10,39 @@ import {
   RotateCcw,
   Share2,
   Bookmark,
+  ListChecks,
+  TriangleAlert,
   Infinity as InfinityIcon,
 } from "lucide-react";
 import NumberBox from "./NumberBox";
 import { skillById, skillEffectChips } from "../skills.js";
 import { badges } from "../badges";
 import { formatEP, buildShareTextFromHistory } from "../roll-data";
+import {
+  HISTORY_LIMIT,
+  HISTORY_WARNING,
+  historyCycles,
+  removableCount,
+} from "../history-log.js";
+import { CADENCE_NAME } from "../tasks.js";
 import "../activity.css";
 const byId = new Map(badges.map((b) => [b.canonicalId, b]));
-const filters = ["All activity", "Rolls", "Badge unlocks", "Shop", "Offline"];
+const filters = [
+  "All activity",
+  "Rolls",
+  "Badge unlocks",
+  "Shop",
+  "Tasks",
+  "Offline",
+];
+// The oldest-first sizes the bulk delete offers for "little by little".
+const OLDEST_STEPS = [500, 1000, 2000];
+const count = (n) => n.toLocaleString("en-US");
+const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
+const shortDate = (at) =>
+  at == null
+    ? ""
+    : new Date(at).toLocaleDateString(undefined, { dateStyle: "medium" });
 function BadgeList({ ids, openBadge }) {
   return (
     <div className="activity-badges">
@@ -53,11 +77,35 @@ export default function ActivityFeed({
   const copiedTimer = useRef(null);
   const [query, setQuery] = useState(""),
     [tier, setTier] = useState("all");
+  // Bulk delete: the panel is opened from the space warning, and a cut waits
+  // for its own confirmation before anything is removed.
+  const [pruneOpen, setPruneOpen] = useState(false),
+    [pending, setPending] = useState(null),
+    [pruning, setPruning] = useState(false),
+    [pruneError, setPruneError] = useState("");
   const lens = progress.owned.includes("archive-lens");
   const history = progress.history ?? [];
   // A few rolls can be pinned for later: the bookmarks live on the save, so
   // they survive reloads, rebirths and other tabs.
   const bookmarks = progress.bookmarks ?? [];
+  const cycles = useMemo(
+    () => historyCycles(history, bookmarks),
+    [history, bookmarks],
+  );
+  const removable = useMemo(
+    () => removableCount(history, bookmarks),
+    [history, bookmarks],
+  );
+  const spaceFull = history.length >= HISTORY_LIMIT;
+  const lowSpace = history.length >= HISTORY_WARNING;
+  // Below the warning level there is nothing to make room for, so the panel
+  // closes rather than waiting, open, for the next time the log fills up.
+  useEffect(() => {
+    if (!lowSpace) {
+      setPruneOpen(false);
+      setPending(null);
+    }
+  }, [lowSpace]);
   const events = useMemo(
     () =>
       history
@@ -72,7 +120,8 @@ export default function ActivityFeed({
               e.type === "roll" &&
               bookmarks.includes(e.id)) ||
             (filter === "Badge unlocks" && e.type === "unlock") ||
-            (filter === "Shop" && ["purchase", "equip"].includes(e.type)),
+            (filter === "Shop" && ["purchase", "equip"].includes(e.type)) ||
+            (filter === "Tasks" && e.type === "task"),
         )
         .filter(
           (e) =>
@@ -102,6 +151,23 @@ export default function ActivityFeed({
         "Clipboard isn’t available. Try copying from a secure browser window.",
       );
     }
+  }
+  // Confirming runs the cut the player picked. The save works out what that
+  // removes, so the count shown here can only ever be a preview of it.
+  async function confirmPrune() {
+    if (!pending) return;
+    setPruning(true);
+    setPruneError("");
+    const outcome = await onAction?.(pending.action);
+    setPruning(false);
+    if (!outcome?.ok) {
+      setPruneError(outcome?.message ?? "Nothing was deleted.");
+      return;
+    }
+    setPending(null);
+    notify?.(
+      `Deleted ${count(outcome.removed ?? 0)} entries. Bookmarked rolls and rebirth markers were kept.`,
+    );
   }
   return (
     <>
@@ -140,7 +206,161 @@ export default function ActivityFeed({
           {history.filter((e) => e.type === "roll").length.toLocaleString()}{" "}
           recorded rolls
         </span>
+        <span>
+          {count(history.length)} of {count(HISTORY_LIMIT)} entries kept
+        </span>
       </div>
+      {lowSpace && (
+        <section
+          className={`history-space ${spaceFull ? "is-full" : ""}`}
+          role="status"
+          aria-labelledby="history-space-title"
+        >
+          <div>
+            <h2 id="history-space-title">
+              <TriangleAlert size={16} aria-hidden="true" />
+              {spaceFull ? "Entry space is full" : "Low entry space"}
+            </h2>
+            <p>
+              {spaceFull
+                ? `The log holds ${count(HISTORY_LIMIT)} entries. New rolls now push out the oldest entries that are not bookmarked. Bulk delete to choose what goes.`
+                : `${count(history.length)} of ${count(HISTORY_LIMIT)} entries kept. Bulk delete clears a finished rebirth or your oldest entries, and bookmarked rolls are never removed.`}
+            </p>
+          </div>
+          <button
+            className="secondary-button"
+            aria-expanded={pruneOpen}
+            aria-controls="history-prune"
+            onClick={() => {
+              setPruneOpen((open) => !open);
+              setPending(null);
+              setPruneError("");
+            }}
+          >
+            {pruneOpen ? "Hide bulk delete" : "Bulk delete"}
+          </button>
+        </section>
+      )}
+      {lowSpace && pruneOpen && (
+        <section
+          className="history-prune"
+          id="history-prune"
+          aria-labelledby="history-prune-title"
+        >
+          <h2 id="history-prune-title">Bulk delete</h2>
+          <p>
+            Rebirth markers and bookmarked rolls are never removed. Profile
+            figures are counted from this log, so they drop by what goes; your
+            balance, all-time EP and rebirths stay as they are.
+          </p>
+          <h3>Finished rebirths</h3>
+          {cycles.finished.length ? (
+            <ul className="history-prune-cycles">
+              {cycles.finished.map((cycle) => (
+                <li key={cycle.marker}>
+                  <div>
+                    <strong>{cycle.label}</strong>
+                    <span>
+                      {cycle.entries
+                        ? `${count(cycle.entries)} entries`
+                        : "Nothing to delete"}
+                      {cycle.kept
+                        ? ` · ${count(cycle.kept)} bookmarked kept`
+                        : ""}
+                      {cycle.started != null
+                        ? ` · ${shortDate(cycle.started)} to ${shortDate(cycle.ended)}`
+                        : ""}
+                    </span>
+                  </div>
+                  <button
+                    className="danger-button"
+                    disabled={!cycle.entries || pruning}
+                    aria-label={`Delete ${count(cycle.entries)} entries from the cycle ${lowerFirst(cycle.label)}`}
+                    onClick={() =>
+                      setPending({
+                        action: {
+                          type: "history-prune",
+                          mode: "cycle",
+                          marker: cycle.marker,
+                        },
+                        count: cycle.entries,
+                        what: `from the cycle ${lowerFirst(cycle.label)}`,
+                      })
+                    }
+                  >
+                    Delete
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="history-prune-empty">
+              No rebirth has finished yet, so there is no whole cycle to clear.
+            </p>
+          )}
+          <p className="history-prune-current">
+            The cycle in play holds {count(cycles.current.entries)} removable
+            entries. Clear it a little at a time below.
+          </p>
+          <h3>Oldest entries</h3>
+          <div className="history-prune-steps">
+            {OLDEST_STEPS.map((size) => (
+              <button
+                key={size}
+                className="secondary-button"
+                disabled={!removable || pruning}
+                onClick={() =>
+                  setPending({
+                    action: {
+                      type: "history-prune",
+                      mode: "oldest",
+                      count: size,
+                    },
+                    count: Math.min(size, removable),
+                    what: "from the oldest",
+                  })
+                }
+              >
+                Delete oldest {count(size)}
+              </button>
+            ))}
+          </div>
+          {pending && (
+            <div
+              className="history-prune-confirm"
+              role="group"
+              aria-label="Confirm deletion"
+            >
+              <p>
+                Delete {count(pending.count)} entries {pending.what}? Bookmarked
+                rolls and rebirth markers stay. This cannot be undone.
+              </p>
+              {pruneError && <p role="alert">{pruneError}</p>}
+              <div className="history-prune-actions">
+                <button
+                  className="secondary-button"
+                  disabled={pruning}
+                  onClick={() => {
+                    setPending(null);
+                    setPruneError("");
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="danger-button"
+                  disabled={pruning}
+                  onClick={confirmPrune}
+                >
+                  {pruning
+                    ? "Deleting…"
+                    : `Delete ${count(pending.count)} entries`}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
       <div
         className="activity-filters"
         role="group"
@@ -150,22 +370,20 @@ export default function ActivityFeed({
           ...filters,
           "Bookmarks",
           ...(progress.rebirths ? ["Rebirths"] : []),
-        ].map(
-          (name) => (
-            <button
-              key={name}
-              aria-pressed={filter === name}
-              onClick={() => {
-                setFilter(name);
-                setLimit(50);
-              }}
-            >
-              {name === "Bookmarks" && bookmarks.length
-                ? `Bookmarks (${bookmarks.length}/3)`
-                : name}
-            </button>
-          ),
-        )}
+        ].map((name) => (
+          <button
+            key={name}
+            aria-pressed={filter === name}
+            onClick={() => {
+              setFilter(name);
+              setLimit(50);
+            }}
+          >
+            {name === "Bookmarks" && bookmarks.length
+              ? `Bookmarks (${bookmarks.length}/3)`
+              : name}
+          </button>
+        ))}
       </div>
       {lens ? (
         <div className="archive-controls">
@@ -232,9 +450,9 @@ export default function ActivityFeed({
         </p>
       )}
       <p className="activity-note">
-        Newest first · Activity is recorded from this update onward; older rolls
-        cannot be reconstructed. Nothing is automatically trimmed. Browser
-        storage limits still apply.
+        Newest first · The log keeps up to {count(HISTORY_LIMIT)} entries, and
+        bookmarked rolls are never removed. Activity is recorded from this
+        update onward; older rolls cannot be reconstructed.
       </p>
       {!events.length ? (
         <section className="activity-empty">
@@ -280,6 +498,8 @@ export default function ActivityFeed({
                     <RotateCcw size={19} />
                   ) : event.type === "ultra-rebirth" ? (
                     <InfinityIcon size={19} />
+                  ) : event.type === "task" ? (
+                    <ListChecks size={19} />
                   ) : (
                     <Check size={19} />
                   )}
@@ -303,7 +523,9 @@ export default function ActivityFeed({
                                 ? `Rebirth ${event.count}`
                                 : event.type === "ultra-rebirth"
                                   ? `Ultra-rebirth ${event.count}`
-                                  : `Equipped ${event.name}`}
+                                  : event.type === "task"
+                                    ? `Task claimed · ${event.name}`
+                                    : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString(undefined, {
@@ -351,51 +573,59 @@ export default function ActivityFeed({
                               })}
                             </span>
                           )}
-                          <button
-                            type="button"
-                            className={`activity-bookmark ${
-                              bookmarks.includes(event.id) ? "is-saved" : ""
-                            }`}
-                            onClick={() => toggleBookmark(event)}
-                            aria-pressed={bookmarks.includes(event.id)}
-                            aria-label={
-                              bookmarks.includes(event.id)
-                                ? `Remove bookmark from roll ${event.number}`
-                                : `Bookmark roll ${event.number}`
-                            }
-                            title={
-                              bookmarks.includes(event.id)
-                                ? "Remove bookmark"
-                                : "Keep this roll handy (up to 3)"
-                            }
-                          >
-                            <Bookmark
-                              size={13}
-                              fill={
+                          <div className="activity-actions">
+                            <button
+                              type="button"
+                              className={`activity-bookmark ${
+                                bookmarks.includes(event.id) ? "is-saved" : ""
+                              }`}
+                              onClick={() => toggleBookmark(event)}
+                              aria-pressed={bookmarks.includes(event.id)}
+                              aria-label={
                                 bookmarks.includes(event.id)
-                                  ? "currentColor"
-                                  : "none"
+                                  ? `Remove bookmark from roll ${event.number}`
+                                  : `Bookmark roll ${event.number}`
                               }
-                            />
-                            {bookmarks.includes(event.id)
-                              ? "Bookmarked"
-                              : "Bookmark"}
-                          </button>
-                          <button
-                            type="button"
-                            className="activity-share"
-                            onClick={() => shareRoll(event)}
-                            aria-label={`Share roll ${event.number}`}
-                          >
-                            {copiedId === event.id ? (
-                              <Check size={13} />
-                            ) : (
-                              <Share2 size={13} />
-                            )}
-                            {copiedId === event.id
-                              ? "Copied result + link"
-                              : "Share this roll"}
-                          </button>
+                              title={
+                                bookmarks.includes(event.id)
+                                  ? "Remove bookmark"
+                                  : "Keep this roll handy (up to 3)"
+                              }
+                            >
+                              <Bookmark
+                                size={15}
+                                aria-hidden="true"
+                                fill={
+                                  bookmarks.includes(event.id)
+                                    ? "currentColor"
+                                    : "none"
+                                }
+                              />
+                            </button>
+                            <button
+                              type="button"
+                              className={`activity-share ${
+                                copiedId === event.id ? "is-copied" : ""
+                              }`}
+                              onClick={() => shareRoll(event)}
+                              aria-label={
+                                copiedId === event.id
+                                  ? `Copied roll ${event.number} result and link`
+                                  : `Share roll ${event.number}`
+                              }
+                              title={
+                                copiedId === event.id
+                                  ? "Copied result + link"
+                                  : "Share this roll"
+                              }
+                            >
+                              {copiedId === event.id ? (
+                                <Check size={15} aria-hidden="true" />
+                              ) : (
+                                <Share2 size={15} aria-hidden="true" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <details>
@@ -433,6 +663,11 @@ export default function ActivityFeed({
                       reset. History, rebirths and bonuses stayed, the cycle
                       began with {formatEP(event.grant ?? 0)} EP, and the
                       permanent wallet bonus grew by 10 points.
+                    </p>
+                  ) : event.type === "task" ? (
+                    <p className="activity-transaction">
+                      <strong>+{formatEP(event.ep)} EP</strong> ·{" "}
+                      {CADENCE_NAME[event.cadence]} task, paid into your wallet
                     </p>
                   ) : (
                     <p className="activity-transaction">

@@ -18,6 +18,7 @@ account, works on desktop and mobile.
 - [Companions](#companions)
 - [Skills and the rack](#skills-and-the-rack)
 - [Flywheel](#flywheel)
+- [Tasks](#tasks)
 - [The shop](#the-shop)
 - [Rebirth and ultra-rebirth](#rebirth-and-ultra-rebirth)
 - [Your profile, your data](#your-profile-your-data)
@@ -206,6 +207,28 @@ consume it. A full five-roll cycle averages 93 seconds per roll at the fastest
 pace before Flywheel — and with everything maxed, the average cycle is about
 **11 seconds per roll**.
 
+## Tasks
+
+Tasks are small goals that pay EP. **Daily** tasks reset at local midnight and
+**weekly** ones on Monday. Each pays once per reset, when you claim it on the
+**Tasks** page; a dot on the Tasks tab says when one is ready.
+
+| Cadence | Task                         |     Reward |
+| ------- | ---------------------------- | ---------: |
+| Daily   | Roll 10 numbers              |  10,000 EP |
+| Daily   | Roll a Rare or better        |  15,000 EP |
+| Daily   | Discover 3 new badges        |  15,000 EP |
+| Weekly  | Roll 100 numbers             | 150,000 EP |
+| Weekly  | Bank 1,000,000 EP from rolls | 150,000 EP |
+| Weekly  | Fire a skill on 5 rolls      | 120,000 EP |
+
+Only online rolls count: an offline roll is a reward for being away, not for
+play. _Discover_ counts badges you have not found yet in the current cycle, so
+once the collection is complete that task waits for a rebirth. Progress lives on
+the save, not in the activity log, so clearing history never un-finishes a task.
+A reward goes into your wallet and is logged as income. Unclaimed rewards expire
+when their reset comes, and task EP never counts towards a rebirth's cycle gate.
+
 ## The shop
 
 `/shop` is the shop's front door: **one button per shelf** — Skills, Pace,
@@ -342,9 +365,10 @@ run, how many rolls and badges it produced, its best number and the EP those
 rolls earned, and a preview of the three things the button does — what you hand
 back, what you keep, and what you gain, starting sum included.
 
-Nothing is ever erased from the activity history. Every cycle stays readable
-roll by roll, and a **dotted line** marks the point where a rebirth handed the
-run back and a new cycle began: _Rebirth 1_, _Rebirth 2_, _Ultra-rebirth 1_.
+A rebirth never erases the activity history. Every cycle stays readable roll by
+roll, and a **dotted line** marks the point where a rebirth handed the run back
+and a new cycle began: _Rebirth 1_, _Rebirth 2_, _Ultra-rebirth 1_. Only you remove
+entries, with bulk delete (see [Your profile, your data](#your-profile-your-data)).
 
 ## Your profile, your data
 
@@ -368,6 +392,16 @@ button on every roll entry pins it for later, the Bookmarks filter shows only
 pinned rolls, and the pins live on the save — so they survive reloads,
 rebirths and other tabs. A fourth pin asks you to remove one first.
 
+**Entry space.** The activity log keeps up to **6,000 entries**. From **4,500**,
+History says the space is running low and opens **Bulk delete**, which clears
+either a whole finished rebirth (its entries go, its divider stays) or the
+oldest entries in steps of 500, 1,000 or 2,000. Bookmarked rolls and rebirth
+markers are never removed, and every cut asks for confirmation first. Once the
+log is full, the oldest entries that are not bookmarked make room for new rolls,
+so rolling never stops. The profile's figures are counted from this log, so they
+fall by what you remove; your balance, all-time EP, rebirths and collection stay
+as they are.
+
 ![The profile page with the derived history and the PNG account card export](media/profile.png)
 
 **Export my data** downloads a PNG account card of your save — your account
@@ -388,6 +422,8 @@ Delete account & progress remains the only way to remove it.
 - **Bonuses stay in the wallet.** Companions, wallet skills and the rebirth and
   ultra-rebirth bonuses multiply only the EP that lands in your wallet. Scored
   EP, tier and rank are identical for everyone.
+- **Tasks never touch the odds.** Task rewards are fixed EP, paid once per reset,
+  and they never count towards a rebirth. Offline rolls cannot complete one.
 - **No pay-to-win, no real money.** Everything costs in-game EP only.
 - **One-shot effects stay one-shot.** A charged skill is snapshotted into the
   committed roll, so nothing can be re-fired, re-rolled or double-credited.

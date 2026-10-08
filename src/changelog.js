@@ -2,6 +2,19 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.5",
+    title: "daily and weekly tasks pay EP, and history holds more entries",
+    body: [
+      "daily and weekly tasks pay EP once per reset, for rolling, finding rare numbers, discovering badges and firing skills.",
+      "claim a finished task on the new Tasks page; a dot in the header and the tab bar shows when one is ready.",
+      "the activity log keeps up to 6,000 entries, and from 4,500 it warns you and offers bulk delete.",
+      "bulk delete clears a finished rebirth or the oldest entries, and bookmarked rolls are never removed.",
+      "once the log is full, the oldest entries that are not bookmarked make room for new rolls.",
+      "the share and bookmark buttons in History are icon-only, and their names stay for screen readers.",
+      "a roll that failed to save is never credited twice, even when its history entry has been removed.",
+    ],
+  },
+  {
     version: "v0.4.1",
     title: "tiny update",
     body: [

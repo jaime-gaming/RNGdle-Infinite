@@ -3,6 +3,7 @@ import {
   Dices,
   Medal,
   Clock3,
+  ListChecks,
   ShoppingBag,
   PawPrint,
   Sparkles,
@@ -21,6 +22,8 @@ import {
   rebirthUnlocked,
 } from "../rebirth.js";
 import { SKILLS } from "../skills.js";
+import { TASKS } from "../tasks.js";
+import { HISTORY_LIMIT, HISTORY_WARNING } from "../history-log.js";
 import { GAME_URL, formatEP } from "../roll-data";
 import "../about.css";
 
@@ -48,6 +51,15 @@ export default function About({ navigate, progress }) {
     },
   ];
   const topics = [
+    {
+      icon: ListChecks,
+      title: "Tasks and the activity log",
+      points: [
+        `${TASKS.filter((task) => task.cadence === "daily").length} daily and ${TASKS.filter((task) => task.cadence === "weekly").length} weekly tasks pay EP once per reset, when you claim them on the Tasks page. Unclaimed rewards expire at reset.`,
+        "Task EP lands in your wallet only. It never counts towards a rebirth, and offline rolls do not count towards tasks.",
+        `The activity log keeps up to ${HISTORY_LIMIT.toLocaleString("en-US")} entries. From ${HISTORY_WARNING.toLocaleString("en-US")} History warns you and offers bulk delete, which clears a finished rebirth or the oldest entries. Bookmarked rolls and rebirth markers are never removed.`,
+      ],
+    },
     {
       icon: ShoppingBag,
       title: "The shop",
