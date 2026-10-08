@@ -531,6 +531,18 @@ export const shopProducts = [
     description:
       "Unlock number search and roll-tier filters across your entire activity archive. Your basic feed stays free.",
   },
+  {
+    // Repeatable: every purchase adds one token instead of ownership, and the
+    // tokens are spent on the Tasks page. One purchase every three days.
+    id: "task-skip",
+    kind: "utility",
+    name: "Task Skip",
+    price: 60000,
+    icon: "skip",
+    repeatable: true,
+    description:
+      "Swap one open task on your Tasks list for the next one in its pool: one token per use, kept across rebirths. You can buy one every three days, and hold up to three.",
+  },
   // Skills are charged one-shot effects; every one is defined in skills.js so
   // the shop, the save file and the roll engine read the same numbers.
   ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({

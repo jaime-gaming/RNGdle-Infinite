@@ -8,15 +8,20 @@ import {
   recoverUnsavedRolls,
 } from "../src/progress.js";
 import {
+  activeTaskIds,
   emptyTasks,
   nextReset,
   periodKey,
   recordTally,
+  skipStatus,
   taskById,
   taskProgress,
   taskSummary,
+  TASK_CADENCES,
+  TASK_METRICS,
   TASKS,
 } from "../src/tasks.js";
+import { formatEP } from "../src/roll-data.js";
 import { cycleEarnedEp, rebirthRequirement } from "../src/rebirth.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
@@ -36,13 +41,10 @@ const roll = (id, time, tier = "trash", ep = 1000, badges = []) => ({
   result: { number: 1, totalEP: ep, tier, badges },
 });
 
-const zeroCounts = () => ({
-  rolls: 0,
-  rare: 0,
-  discovered: 0,
-  banked: 0,
-  skills: 0,
-});
+const zeroCounts = () =>
+  Object.fromEntries(TASK_METRICS.map((metric) => [metric, 0]));
+
+const DAY = 24 * 60 * 60 * 1000;
 
 test("periods are local days and Monday-started weeks, and reset at local midnight", () => {
   // Thursday 8 October 2026 counts as its own day, and the week before it
@@ -111,11 +113,16 @@ test("a task pays its reward once per reset, into the wallet and the log", () =>
       at: at(2026, 10, 8, 21),
     }),
   ).toThrow(/already claimed/);
-  // A task that is not finished is refused, and pays nothing.
+  // A task on the list that is not finished is refused, and pays nothing.
+  const unfinished = activeTaskIds(
+    claimed.tasks,
+    "daily",
+    at(2026, 10, 8, 21),
+  ).find((id) => id !== "daily-rolls");
   expect(() =>
     applyProgress(claimed, {
       type: "claim-task",
-      id: "daily-rare",
+      id: unfinished,
       at: at(2026, 10, 8, 21),
     }),
   ).toThrow(/Finish this task/);
@@ -142,7 +149,7 @@ test("a new period starts from zero, so an unclaimed reward expires at reset", (
   expect(() =>
     applyProgress(state, {
       type: "claim-task",
-      id: "daily-rolls",
+      id: activeTaskIds(state.tasks, "daily", tomorrow)[0],
       at: tomorrow,
     }),
   ).toThrow(/Finish this task/);
@@ -251,8 +258,10 @@ test("unreadable task progress is reset and reported, while a save without tasks
       period: "2026-10-08",
       counts: { ...zeroCounts(), rolls: 2 },
       claimed: ["daily-rolls"],
+      swaps: [],
     },
-    weekly: { period: "", counts: zeroCounts(), claimed: [] },
+    weekly: { period: "", counts: zeroCounts(), claimed: [], swaps: [] },
+    skip: { tokens: 0, boughtAt: null },
   });
 });
 
@@ -313,19 +322,26 @@ test("the Tasks page lists both cadences, and a finished task is claimed once fr
   page,
 }) => {
   const now = Date.now();
-  const counts = { ...zeroCounts(), rolls: 10 };
-  await seedProgress(page, {
-    balance: 2000,
-    totalEarned: 2000,
-    tasks: {
-      daily: { period: periodKey("daily", now), counts, claimed: [] },
-      weekly: {
-        period: periodKey("weekly", now),
-        counts: { ...zeroCounts(), rolls: 40 },
-        claimed: [],
-      },
+  // Whatever the day deals, the first daily task is finished and the weekly
+  // list is partway along. The page shows exactly the tasks the day deals.
+  const [dailyId] = activeTaskIds(emptyTasks(), "daily", now);
+  const daily = taskById(dailyId);
+  const tasks = {
+    ...emptyTasks(),
+    daily: {
+      period: periodKey("daily", now),
+      counts: { ...zeroCounts(), [daily.metric]: daily.goal },
+      claimed: [],
+      swaps: [],
     },
-  });
+    weekly: {
+      period: periodKey("weekly", now),
+      counts: { ...zeroCounts(), rolls: 40 },
+      claimed: [],
+      swaps: [],
+    },
+  };
+  await seedProgress(page, { balance: 2000, totalEarned: 2000, tasks });
   await page.goto("/tasks");
   await expect(
     page.getByRole("heading", { name: "Tasks", exact: true }),
@@ -334,90 +350,93 @@ test("the Tasks page lists both cadences, and a finished task is claimed once fr
     await expect(
       page.getByRole("heading", { name, exact: true }),
     ).toBeVisible();
-  for (const task of TASKS)
-    await expect(page.locator(`[data-task="${task.id}"]`)).toBeVisible();
-  await expect(page.locator('[data-task="daily-rolls"]')).toHaveAttribute(
+  for (const cadence of TASK_CADENCES)
+    for (const id of activeTaskIds(tasks, cadence, now))
+      await expect(page.locator(`[data-task="${id}"]`)).toBeVisible();
+  // Only the tasks on the list are shown: the rest of each pool stays hidden.
+  await expect(page.locator("[data-task]")).toHaveCount(
+    TASK_CADENCES.length * 3,
+  );
+  await expect(page.locator(`[data-task="${dailyId}"]`)).toHaveAttribute(
     "data-state",
     "claimable",
   );
-  await expect(page.locator('[data-task="weekly-rolls"]')).toHaveAttribute(
-    "data-state",
-    "open",
-  );
-  await expect(page.locator('[data-task="weekly-rolls"]')).toContainText(
-    "40 / 100",
-  );
   await expect(page.locator(".tasks-summary")).toContainText(
-    "1 ready to claim",
+    `${taskSummary(tasks, now).ready} ready to claim`,
   );
 
   await page
-    .getByRole("button", { name: "Claim reward for Roll 10 numbers" })
+    .getByRole("button", { name: `Claim reward for ${daily.title}` })
     .click();
-  await expect(page.getByRole("status")).toContainText("+10,000 EP claimed");
-  await expect(page.locator('[data-task="daily-rolls"]')).toHaveAttribute(
+  await expect(page.getByRole("status")).toContainText(
+    `+${formatEP(daily.reward)} EP claimed`,
+  );
+  await expect(page.locator(`[data-task="${dailyId}"]`)).toHaveAttribute(
     "data-state",
     "claimed",
   );
   await expect(
-    page.getByRole("button", { name: "Claim reward for Roll 10 numbers" }),
+    page.getByRole("button", { name: `Claim reward for ${daily.title}` }),
   ).toHaveCount(0);
   const saved = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)),
     PROGRESS_KEY,
   );
-  expect(saved.balance).toBe(12000);
-  expect(saved.tasks.daily.claimed).toEqual(["daily-rolls"]);
-  expect(saved.history.at(-1)).toMatchObject({ type: "task", ep: 10000 });
+  expect(saved.balance).toBe(2000 + daily.reward);
+  expect(saved.tasks.daily.claimed).toEqual([dailyId]);
+  expect(saved.history.at(-1)).toMatchObject({
+    type: "task",
+    ep: daily.reward,
+  });
 });
 
 test("a ready task shows in the header and on the roll page until it is claimed", async ({
   page,
 }) => {
   const now = Date.now();
-  await seedProgress(page, {
-    tasks: {
-      daily: {
-        period: periodKey("daily", now),
-        counts: { ...zeroCounts(), rolls: 10 },
-        claimed: [],
-      },
-      weekly: {
-        period: periodKey("weekly", now),
-        counts: zeroCounts(),
-        claimed: [],
-      },
+  const [dailyId] = activeTaskIds(emptyTasks(), "daily", now);
+  const daily = taskById(dailyId);
+  const tasks = {
+    ...emptyTasks(),
+    daily: {
+      period: periodKey("daily", now),
+      counts: { ...zeroCounts(), [daily.metric]: daily.goal },
+      claimed: [],
+      swaps: [],
     },
-  });
+  };
+  const ready = taskSummary(tasks, now).ready;
+  await seedProgress(page, { tasks });
   await page.goto("/");
   const tab = page
     .getByRole("navigation", { name: "Main navigation" })
     .getByRole("button", { name: "Tasks, ready to claim" });
   await expect(tab.locator(".nav-ready-dot")).toHaveCount(1);
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "1 task ready to claim",
+    `${ready} ${ready === 1 ? "task" : "tasks"} ready to claim`,
   );
   await page
     .locator(".roll-progress-links")
     .getByRole("button", {
-      name: "1 task ready to claim",
+      name: `${ready} ${ready === 1 ? "task" : "tasks"} ready to claim`,
     })
     .click();
   await expect(
     page.getByRole("heading", { name: "Tasks", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Claim reward for Roll 10 numbers" })
+    .getByRole("button", { name: `Claim reward for ${daily.title}` })
     .click();
+  const after = taskSummary(
+    { ...tasks, daily: { ...tasks.daily, claimed: [dailyId] } },
+    now,
+  ).ready;
   await expect(
     page
       .getByRole("navigation", { name: "Main navigation" })
-      .getByRole("button", {
-        name: "Tasks",
-        exact: true,
-      }),
+      .getByRole("button", { name: "Tasks", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".nav-ready-dot")).toHaveCount(0);
+  await expect(page.locator(".nav-ready-dot")).toHaveCount(after ? 1 : 0);
 });
 
 test("a claimed task is written to History, and the Tasks filter shows only those", async ({
@@ -450,4 +469,344 @@ test("a claimed task is written to History, and the Tasks filter shows only thos
     .getByRole("button", { name: "Tasks", exact: true })
     .click();
   await expect(page.locator(".activity-event")).toHaveCount(1);
+});
+
+test("each period deals three of eight tasks, the same on every device, and the list changes from day to day", () => {
+  for (const cadence of TASK_CADENCES)
+    expect(TASKS.filter((task) => task.cadence === cadence)).toHaveLength(8);
+  const day = (d) => at(2026, 10, d, 12);
+  const list = activeTaskIds(emptyTasks(), "daily", day(8));
+  expect(list).toHaveLength(3);
+  expect(new Set(list).size).toBe(3);
+  // Nothing about the list is stored, so any save at this moment deals the same
+  // three, whatever it held before.
+  const elsewhere = {
+    ...emptyTasks(),
+    daily: {
+      period: "2026-10-01",
+      counts: zeroCounts(),
+      claimed: [],
+      swaps: [],
+    },
+  };
+  expect(activeTaskIds(elsewhere, "daily", day(8))).toEqual(list);
+  // A fortnight of days does not keep returning one list.
+  const lists = new Set(
+    Array.from({ length: 14 }, (_, i) =>
+      activeTaskIds(emptyTasks(), "daily", day(8 + i)).join("|"),
+    ),
+  );
+  expect(lists.size).toBeGreaterThan(7);
+  for (const id of activeTaskIds(emptyTasks(), "weekly", day(8)))
+    expect(taskById(id).cadence).toBe("weekly");
+});
+
+test("an online roll counts Epic or better, and a Rare that is not Epic does not", () => {
+  let state = { ...emptyProgress(), profile: testProfile };
+  state = applyProgress(
+    state,
+    roll("rare-1", at(2026, 10, 8, 9), "rare", 15000),
+  );
+  expect(state.tasks.daily.counts).toMatchObject({ rare: 1, epic: 0 });
+  state = applyProgress(
+    state,
+    roll("epic-1", at(2026, 10, 8, 10), "epic", 40000),
+  );
+  expect(state.tasks.daily.counts).toMatchObject({ rare: 2, epic: 1 });
+});
+
+test("a Task Skip swaps an open task for the next one in its pool, which starts from zero", () => {
+  const day = at(2026, 10, 8, 12);
+  // Two skips bought three days apart: the second purchase waits for the first.
+  let state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    balance: 200000,
+    totalEarned: 200000,
+  };
+  state = applyProgress(state, {
+    type: "buy",
+    id: "task-skip",
+    at: at(2026, 10, 5, 12),
+  });
+  expect(() =>
+    applyProgress(state, {
+      type: "buy",
+      id: "task-skip",
+      at: at(2026, 10, 6, 12),
+    }),
+  ).toThrow(/available in/);
+  state = applyProgress(state, { type: "buy", id: "task-skip", at: day });
+  // Bought just now, so the next purchase is three days away.
+  expect(skipStatus(state.tasks, day)).toMatchObject({
+    tokens: 2,
+    waitMs: 3 * DAY,
+  });
+  // Rolls made today give every metric a count, so a new task could start ahead.
+  for (let i = 0; i < 3; i++)
+    state = applyProgress(state, roll(`k${i}`, day + i * 60000, "epic", 40000));
+  const listed = activeTaskIds(state.tasks, "daily", day);
+  const out = listed.find(
+    (id) => taskProgress(state.tasks, taskById(id), day).state === "open",
+  );
+  // A finished task is claimed, not skipped.
+  const finished = {
+    ...state,
+    tasks: recordTally(
+      state.tasks,
+      { ...zeroCounts(), [taskById(out).metric]: taskById(out).goal },
+      day,
+    ),
+  };
+  expect(() =>
+    applyProgress(finished, { type: "skip-task", id: out, at: day }),
+  ).toThrow(/Claim a finished task/);
+  // An open task is swapped, one token is spent, and no EP moves.
+  const swapped = applyProgress(state, { type: "skip-task", id: out, at: day });
+  expect(swapped.balance).toBe(state.balance);
+  expect(skipStatus(swapped.tasks, day).tokens).toBe(1);
+  const after = activeTaskIds(swapped.tasks, "daily", day);
+  expect(after).toHaveLength(3);
+  expect(after).not.toContain(out);
+  const incoming = after.find((id) => !listed.includes(id));
+  expect(incoming).toBeDefined();
+  expect(taskById(incoming).cadence).toBe("daily");
+  // The new task's metric already counts today's rolls, yet it starts at zero.
+  expect(taskProgress(swapped.tasks, taskById(incoming), day)).toMatchObject({
+    count: 0,
+    state: "open",
+  });
+  // A task skipped this period never comes back, even after another swap.
+  const again = applyProgress(swapped, {
+    type: "skip-task",
+    id: incoming,
+    at: day,
+  });
+  expect(activeTaskIds(again.tasks, "daily", day)).not.toContain(out);
+  // Both tokens are spent, so a third skip has nothing to use.
+  expect(() =>
+    applyProgress(again, {
+      type: "skip-task",
+      id: activeTaskIds(again.tasks, "daily", day)[0],
+      at: day,
+    }),
+  ).toThrow(/no Task Skip/);
+  // The next day is a new deal, and yesterday's swaps belong to yesterday.
+  const tomorrow = at(2026, 10, 9, 12);
+  expect(activeTaskIds(again.tasks, "daily", tomorrow)).toEqual(
+    activeTaskIds(emptyTasks(), "daily", tomorrow),
+  );
+});
+
+test("a claimed task cannot be skipped, and the refused skip spends nothing", () => {
+  const day = at(2026, 10, 8, 12);
+  let state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    balance: 200000,
+    totalEarned: 200000,
+  };
+  state = applyProgress(state, { type: "buy", id: "task-skip", at: day });
+  for (let i = 0; i < 10; i++)
+    state = applyProgress(state, roll(`c${i}`, day + i * 60000));
+  expect(activeTaskIds(state.tasks, "daily", day)).toContain("daily-rolls");
+  state = applyProgress(state, {
+    type: "claim-task",
+    id: "daily-rolls",
+    at: day + 3600000,
+  });
+  expect(() =>
+    applyProgress(state, {
+      type: "skip-task",
+      id: "daily-rolls",
+      at: day + 3600000,
+    }),
+  ).toThrow(/claimed task cannot be skipped/);
+  expect(state.tasks.daily.claimed).toEqual(["daily-rolls"]);
+  expect(skipStatus(state.tasks, day).tokens).toBe(1);
+});
+
+test("a Task Skip costs its price, is bought once every three days, and holds three", () => {
+  const start = 500000;
+  let state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    balance: start,
+    totalEarned: start,
+  };
+  state = applyProgress(state, {
+    type: "buy",
+    id: "task-skip",
+    at: at(2026, 10, 1, 12),
+  });
+  expect(state.balance).toBe(start - 60000);
+  // A Skip is a use, not an item: it never joins the owned list, and it is
+  // logged as a purchase like any other.
+  expect(state.owned).not.toContain("task-skip");
+  expect(state.history.at(-1)).toMatchObject({
+    type: "purchase",
+    productId: "task-skip",
+    ep: 60000,
+  });
+  // Two hours later the wait still runs, and nothing is spent.
+  expect(() =>
+    applyProgress(state, {
+      type: "buy",
+      id: "task-skip",
+      at: at(2026, 10, 1, 14),
+    }),
+  ).toThrow(/available in/);
+  state = applyProgress(state, {
+    type: "buy",
+    id: "task-skip",
+    at: at(2026, 10, 4, 12),
+  });
+  state = applyProgress(state, {
+    type: "buy",
+    id: "task-skip",
+    at: at(2026, 10, 7, 12),
+  });
+  expect(skipStatus(state.tasks, at(2026, 10, 7, 13))).toMatchObject({
+    tokens: 3,
+  });
+  // A save holds three at most.
+  expect(() =>
+    applyProgress(state, {
+      type: "buy",
+      id: "task-skip",
+      at: at(2026, 10, 10, 12),
+    }),
+  ).toThrow(/already hold 3/);
+  // Too dear is refused, with no change.
+  const broke = {
+    ...emptyProgress(),
+    profile: testProfile,
+    balance: 1000,
+    totalEarned: 1000,
+  };
+  expect(() =>
+    applyProgress(broke, {
+      type: "buy",
+      id: "task-skip",
+      at: at(2026, 10, 1, 12),
+    }),
+  ).toThrow(/Not enough EP/);
+});
+
+test("skip tokens, purchase time and swaps reload exactly, and a forged swap is dropped", () => {
+  const day = at(2026, 10, 8, 12);
+  let state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    balance: 200000,
+    totalEarned: 200000,
+  };
+  state = applyProgress(state, { type: "buy", id: "task-skip", at: day });
+  const [first] = activeTaskIds(state.tasks, "daily", day);
+  state = applyProgress(state, { type: "skip-task", id: first, at: day });
+  expect(parseProgress(JSON.stringify(state))).toEqual(state);
+  // A swap that takes out a task that was never on the list, and brings in one
+  // that already was, cannot have happened: it is dropped on load and reported.
+  const forged = parseAndRepairProgress(
+    JSON.stringify({
+      ...emptyProgress(),
+      tasks: {
+        ...emptyTasks(),
+        daily: {
+          period: "2026-10-08",
+          counts: zeroCounts(),
+          claimed: [],
+          swaps: [{ out: "daily-spot", in: "daily-rolls", base: 0 }],
+        },
+      },
+    }),
+  );
+  expect(forged.progress.tasks.daily.swaps).toEqual([]);
+  expect(forged.repairs.join(" ")).toContain("task progress was unreadable");
+  // More tokens than a save can hold is not trusted either.
+  const greedy = parseAndRepairProgress(
+    JSON.stringify({
+      ...emptyProgress(),
+      tasks: { ...emptyTasks(), skip: { tokens: 9, boughtAt: 0 } },
+    }),
+  );
+  expect(greedy.progress.tasks.skip).toEqual({ tokens: 0, boughtAt: null });
+  expect(greedy.repairs.join(" ")).toContain("task progress was unreadable");
+});
+
+test("the Tasks page swaps an open task only after a confirm, and spends one token", async ({
+  page,
+}) => {
+  const now = Date.now();
+  await seedProgress(page, {
+    tasks: { ...emptyTasks(), skip: { tokens: 1, boughtAt: now - 4 * DAY } },
+  });
+  await page.goto("/tasks");
+  const [id] = activeTaskIds(emptyTasks(), "daily", now);
+  const task = taskById(id);
+  const card = page.locator(`[data-task="${id}"]`);
+  await expect(card).toHaveAttribute("data-state", "open");
+  await expect(
+    page.locator(".tasks-stat").filter({ hasText: "Task Skips" }),
+  ).toContainText("1 of 3 held");
+  await card.getByRole("button", { name: `Skip ${task.title}` }).click();
+  await expect(card).toContainText("Swap this task for another?");
+  await card.getByRole("button", { name: "Keep" }).click();
+  await expect(
+    card.getByRole("button", { name: `Skip ${task.title}` }),
+  ).toBeVisible();
+  await card.getByRole("button", { name: `Skip ${task.title}` }).click();
+  await card
+    .getByRole("button", { name: `Confirm skip of ${task.title}` })
+    .click();
+  await expect(page.locator(`[data-task="${id}"]`)).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText("Task Skip used");
+  const saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)),
+    PROGRESS_KEY,
+  );
+  expect(saved.tasks.skip.tokens).toBe(0);
+  expect(saved.tasks.daily.swaps).toMatchObject([{ out: id }]);
+  // No token left: every Skip on the page is off, and says why.
+  await expect(page.locator(".task-skip").first()).toBeDisabled();
+});
+
+test("the Task Skip sits on the Tools shelf, is bought again rather than owned, and waits three days", async ({
+  page,
+}) => {
+  await seedProgress(page, { balance: 500000, totalEarned: 500000 });
+  await page.goto("/shop/tools");
+  const card = page.locator('[data-product="task-skip"]');
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: "Buy for 60,000 EP" }).click();
+  await page
+    .getByRole("button", { name: "Confirm purchase", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  // Still on sale, with the wait counting down instead of "Purchased".
+  await expect(card.getByRole("button", { name: /Next in 3d/ })).toBeDisabled();
+  const saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)),
+    PROGRESS_KEY,
+  );
+  expect(saved.owned).not.toContain("task-skip");
+  expect(saved.tasks.skip.tokens).toBe(1);
+  expect(saved.balance).toBe(500000 - 60000);
+});
+
+test("the Tasks page fits a narrow phone without sideways scrolling", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await seedProgress(page, {
+    profile: testProfile,
+    discovered: allBadgeMetadata.slice(0, 12).map((b) => b.id),
+  });
+  await page.goto("/tasks");
+  await expect(page.locator(".tasks-stat").first()).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });

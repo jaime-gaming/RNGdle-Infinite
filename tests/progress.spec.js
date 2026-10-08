@@ -81,8 +81,9 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
           .filter((p) => p.kind === "aura")
           .at(-1)?.id ?? "none",
       );
+    // A repeatable product is never owned: its second buy waits instead.
     expect(() => applyProgress(state, { type: "buy", id: item.id })).toThrow(
-      "already own",
+      item.repeatable ? "available in" : "already own",
     );
   }
   const reset = applyProgress(state, { type: "equip", id: "none" });

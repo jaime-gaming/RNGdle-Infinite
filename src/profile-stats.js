@@ -1,4 +1,9 @@
-import { BADGE_TOTAL, cycleEarnedEp, discoveredCount } from "./rebirth.js";
+import {
+  BADGE_TOTAL,
+  cycleEarnedEp,
+  discoveredCount,
+  prestigeShown,
+} from "./rebirth.js";
 import { PETS } from "./pets.js";
 import { SKILLS, skillSlots } from "./skills.js";
 import { LATEST_VERSION } from "./changelog.js";
@@ -334,9 +339,11 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
       sub: `${Math.round((stats.uniqueBadges / Math.max(1, stats.badgesTotal)) * 100)}% of collection`,
     },
     {
-      label: "REBIRTHS & PRESTIGE",
+      label: prestigeShown(stats) ? "REBIRTHS & PRESTIGE" : "REBIRTHS",
       value: `${stats.rebirths} / 6`,
-      sub: `${stats.ultraRebirths} Prestige${stats.rollbacks > 0 ? " · Rollback" : ""} · +${progress.surplusBanked ?? 0}% surplus`,
+      sub: prestigeShown(stats)
+        ? `${stats.ultraRebirths} Prestige${stats.rollbacks > 0 ? " · Rollback" : ""} · +${progress.surplusBanked ?? 0}% surplus`
+        : `+${progress.surplusBanked ?? 0}% surplus`,
     },
     {
       label: "COMPANIONS",

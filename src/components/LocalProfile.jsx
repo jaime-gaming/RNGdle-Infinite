@@ -13,6 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { validUsername } from "../progress.js";
+import { prestigeShown } from "../rebirth.js";
 import { AVATAR_ACCEPT, fileToAvatar } from "../avatar.js";
 import {
   accountStats,
@@ -94,7 +95,9 @@ function ProfileHistory({ progress }) {
     ["Skills unlocked", `${stats.skills} of ${stats.skillsTotal}`],
     ["Charged effects fired", stats.skillsUsed.toLocaleString("en-US")],
     ["Flywheel boosts used", stats.boostsUsed.toLocaleString("en-US")],
-    ["Rebirths · prestiges", `${stats.rebirths} · ${stats.ultraRebirths}`],
+    prestigeShown(stats)
+      ? ["Rebirths · prestiges", `${stats.rebirths} · ${stats.ultraRebirths}`]
+      : ["Rebirths", `${stats.rebirths}`],
     [
       "First · latest entry",
       `${when(stats.firstEventAt)} · ${when(stats.lastEventAt)}`,

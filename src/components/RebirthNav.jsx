@@ -2,31 +2,22 @@ import React from "react";
 import { Sparkles, Infinity as InfinityIcon } from "lucide-react";
 import {
   REBIRTH_TOTAL,
-  cycleEarnedEp,
-  discoveredCount,
-  rebirthRequirement,
+  rebirthProgress,
   rebirthUnlocked,
   rollbackAvailable,
   ultraRebirthAvailable,
-  ultraRebirthRequirement,
 } from "../rebirth.js";
 import { formatEPCompact } from "../roll-data.js";
 import { gameNow } from "../game-clock.js";
 import "../rebirth-nav.css";
 
 // Rebirth in the top bar, styled apart from the ordinary page buttons: a ring
-// that fills towards the badges the next rung of the ladder asks for. It stays
-// put after a rebirth empties the collection, so the ladder always has a
-// visible next step.
+// that fills with the same mixed percentage the Rebirth page shows (half the
+// collection, half the cycle's EP). It stays put after a rebirth empties the
+// collection, so the ladder always has a visible next step.
 export default function RebirthNav({ progress, active, onClick }) {
-  const count = discoveredCount(progress);
-  const rebirths = progress.rebirths ?? 0;
   const ultras = progress.ultraRebirths ?? 0;
   const rollbacks = progress.rollbacks ?? 0;
-  // A step asks for badges and for EP the cycle has earned; the ring follows
-  // whichever of the two is furthest from done, so it always shows the real
-  // distance to the next rung.
-  const requirement = rebirthRequirement(rebirths);
   // Nothing at all before the unlock: no icon, no ring, no hint that rebirth
   // exists. The ladder announces itself once the collection is far enough.
   if (!rebirthUnlocked(progress)) return null;
@@ -54,19 +45,26 @@ export default function RebirthNav({ progress, active, onClick }) {
         </span>
       </button>
     );
-  const step = requirement ?? ultraRebirthRequirement();
+  const view = rebirthProgress(progress);
+  const { step, count, earned, percent } = view;
   const target = step.badges;
-  const earned = cycleEarnedEp(progress);
-  const badgeFraction = Math.min(1, count / Math.max(1, target));
-  const epFraction = Math.min(1, earned / Math.max(1, step.ep));
-  const short = badgeFraction <= epFraction ? "badges" : "EP";
-  const fraction = Math.min(badgeFraction, epFraction);
-  const percent = Math.round(fraction * 100);
-  const ready = requirement
-    ? count >= requirement.badges && earned >= requirement.ep
-    : ultraRebirthAvailable(progress, gameNow()) ||
-      rollbackAvailable(progress, gameNow());
-  const rung = requirement ? requirement.rebirth : "Prestige";
+  // The shorter bar names what the next step is waiting for.
+  const short = view.badgeFraction <= view.epFraction ? "badges" : "EP";
+  const now = gameNow();
+  const ready =
+    step.kind === "rung"
+      ? count >= step.badges && earned >= step.ep
+      : step.kind === "prestige"
+        ? ultraRebirthAvailable(progress, now)
+        : rollbackAvailable(progress, now);
+  const rung =
+    step.kind === "rung"
+      ? step.rebirth
+      : step.kind === "prestige"
+        ? "Prestige"
+        : "Rollback";
+  const stepLabel =
+    step.kind === "rung" ? `${rung}/${REBIRTH_TOTAL}` : `${rung}`;
   return (
     <button
       className={`rebirth-nav ${ready ? "is-ready" : ""} ${active ? "active" : ""}`}
@@ -75,8 +73,8 @@ export default function RebirthNav({ progress, active, onClick }) {
         ready
           ? `Rebirth, step ${rung} ready`
           : short === "badges"
-            ? `Rebirth, ${count} of ${target} badges towards step ${rung}`
-            : `Rebirth, ${formatEPCompact(earned)} of ${formatEPCompact(step.ep)} EP towards step ${rung}`
+            ? `Rebirth, ${count} of ${target} badges towards step ${rung}, ${percent}% overall`
+            : `Rebirth, ${formatEPCompact(earned)} of ${formatEPCompact(step.ep)} EP towards step ${rung}, ${percent}% overall`
       }
       title={
         ready
@@ -99,13 +97,9 @@ export default function RebirthNav({ progress, active, onClick }) {
         <span className="rebirth-nav-count">
           {ready
             ? "Ready"
-            : requirement
-              ? short === "badges"
-                ? `${count}/${target} · ${rung}/${REBIRTH_TOTAL}`
-                : `${formatEPCompact(earned)}/${formatEPCompact(step.ep)} EP`
-              : short === "badges"
-                ? `${count}/${target} · Prestige`
-                : `${formatEPCompact(earned)}/${formatEPCompact(step.ep)} EP`}
+            : short === "badges"
+              ? `${count}/${target} · ${stepLabel}`
+              : `${formatEPCompact(earned)}/${formatEPCompact(step.ep)} EP`}
           {ultras > 0 && !ready ? ` · U×${ultras}` : ""}
         </span>
       </span>

@@ -117,9 +117,10 @@ effect and the charge state.
 Two things in that corner keep the arithmetic out of your head: related circles
 ride together in **stacks** — the pet bonus with its signature skill, the
 rebirth bonuses with their ladder skills. A stack is one circle, not a crowd:
-the family's icon in the middle and **one thin ring per member** around it,
-each in that skill's own colour and each filling as that skill charges, so
-counting the rings counts the family. Hover, focus or tap fans it out into the
+the family's icon sits in the middle, and every member owns an **equal slice of
+that one circumference**, with a small gap between slices. Each slice keeps its
+skill's own colour and fills as that skill charges, so counting the slices
+counts the family. Hover, focus or tap fans it out into the
 ordinary circles while shop skills stand alone, and every circle only shows
 **what it adds**
 ("×2 banked EP", "+5% EP", "2 draws, best kept") while hovered or focused. The
@@ -210,17 +211,30 @@ pace before Flywheel — and with everything maxed, the average cycle is about
 ## Tasks
 
 Tasks are small goals that pay EP. **Daily** tasks reset at local midnight and
-**weekly** ones on Monday. Each pays once per reset, when you claim it on the
-**Tasks** page; a dot on the Tasks tab says when one is ready.
+**weekly** ones on Monday. Each cadence has a pool of eight tasks, and every
+period three of them go on your list. The three come from the period and the
+task itself, so everyone gets the same three on the same day or week. Each pays
+once per reset, when you claim it on the **Tasks** page; a dot on the Tasks tab
+says when one is ready.
 
 | Cadence | Task                         |     Reward |
 | ------- | ---------------------------- | ---------: |
 | Daily   | Roll 10 numbers              |  10,000 EP |
 | Daily   | Roll a Rare or better        |  15,000 EP |
+| Daily   | Roll an Epic or better       |  25,000 EP |
+| Daily   | Land a multi-number roll     |  20,000 EP |
+| Daily   | Bank 50,000 EP from rolls    |  12,000 EP |
+| Daily   | Fire a skill once            |  10,000 EP |
 | Daily   | Discover 3 new badges        |  15,000 EP |
+| Daily   | Discover a new badge         |   8,000 EP |
 | Weekly  | Roll 100 numbers             | 150,000 EP |
 | Weekly  | Bank 1,000,000 EP from rolls | 150,000 EP |
 | Weekly  | Fire a skill on 5 rolls      | 120,000 EP |
+| Weekly  | Fire a skill on 10 rolls     | 260,000 EP |
+| Weekly  | Roll 5 Rare or better        | 120,000 EP |
+| Weekly  | Roll 2 Epic or better        | 200,000 EP |
+| Weekly  | Land 3 multi-number rolls    | 160,000 EP |
+| Weekly  | Discover 15 new badges       | 150,000 EP |
 
 Only online rolls count: an offline roll is a reward for being away, not for
 play. _Discover_ counts badges you have not found yet in the current cycle, so
@@ -229,7 +243,12 @@ the save, not in the activity log, so clearing history never un-finishes a task.
 A reward goes into your wallet and is logged as income. Unclaimed rewards expire
 when their reset comes, and task EP never counts towards a rebirth's cycle gate.
 
-## The shop
+**Task Skip** is a Shop product on the Tools shelf. Using one swaps an open task
+on your list, one that is neither claimed nor finished, for the next task in its
+pool that is not on the list yet. Each purchase adds one use; you can hold up to
+three, and you can buy one every three days on the game clock. Buying one costs
+60,000 EP like any purchase. Using it costs nothing and is not written to the
+activity log.
 
 `/shop` is the shop's front door: **one button per shelf** — Skills, Pace,
 Companions, Auras and Tools, plus **Offline once the Offline Roller is yours**
@@ -296,7 +315,11 @@ rebirth puts the whole catalogue back on the shelf.
 
 Rebirth is a **ladder**, not a single wall, and it is driven by the run you are
 playing: a slice of the badge collection **and** EP the current cycle has
-earned. No shop purchase is ever part of a rung.
+earned. No shop purchase is ever part of a rung. The percentage on the Rebirth
+page and on the top-bar ring is one number for the step in play: the collection
+and the cycle's EP, half each, rounded down, so it reads 100% only when both are
+done. Until the sixth rung is finished, Prestige does not appear anywhere: the
+page shows a faded teaser where it will sit.
 
 | Rung | Required | Badges |   Cycle EP | Granted skill  |
 | ---: | -------: | -----: | ---------: | -------------- |
@@ -351,13 +374,13 @@ dividend as a rung. It costs the run, never the account — history, rebirths an
 their +2% rung bonuses all stay. A prestige can be repeated.
 
 After **three prestiges** a **Rollback** opens. It is the **last stage of the
-game**, and it can be taken **once per account, for life**: the same clean slate
-and the same gate as a prestige (50% of the collection and 30,000,000 EP earned
-in the cycle), for a **permanent +25% to banked EP** — the largest bonus in the
-game — and **5,000,000 EP** to start the next cycle, the largest starting sum.
-Prestige stays open until you take the Rollback. After it the ladder is closed,
-and nothing comes after it. Like every stage, it costs the run and never the
-account.
+game**, and it can be taken **once per account, for life**. It needs all six
+rungs, three prestiges, and a bigger gate than a prestige: **75% of the
+collection (177 badges)** and **60,000,000 EP** earned in the cycle. It gives a
+**permanent +25% to banked EP** — the largest bonus in the game — and
+**5,000,000 EP** to start the next cycle, the largest starting sum. Prestige
+closes once the third one is done, so the Rollback is the only way out. Like
+every stage, it costs the run and never the account.
 
 Taking one is **a moment**: a full-screen ceremony of rays, confetti and a
 slamming title plays over the page (still and invisible under reduced motion,
@@ -484,10 +507,10 @@ failed-write recovery.
   relay on `/__sync`; a static deployment runs `npm run relay` (store in
   `.cache/sync-rooms`) and points the game at it with `?relay=https://host:8787`
   or the relay field on the device link page. The technical table states plainly
-  whether the room is `On disk at …` or `In memory only`, and a memory-only
-  relay says it forgets a room once nobody is listening. The save itself still
-  never leaves the players' browsers — the relay keeps only the latest blob it
-  was given, to hand it back later. Not sure the relay is reachable? _Send now_
+  whether the room is `On disk at …` or `In memory only`. A memory-only relay
+  keeps a room while it runs (a month untouched at most) and forgets every room
+  when it restarts. The save itself still never leaves the players' browsers —
+  the relay keeps only the latest blob it was given, to hand it back later. Not sure the relay is reachable? _Send now_
   shows the queue and the save is kept locally until it gets through.
   ![The device link page in Settings](media/devices.png)
 
@@ -512,12 +535,13 @@ skip purchase confirmations, or make the Auto-Roll ability start armed. The
 device link is the one entry that opens **its own page** (the summary card in
 Settings stays a summary, with a link to the full technical view).
 
-On phones the layout hands the navigation to a **bottom tab bar** — Roll,
-Shop, Badges, History, Settings, plus Rebirth once the ladder shows — while
-the top bar keeps the logo, the theme switch and the profile button, so the
-screen stays for the game instead of a wall of buttons. The footer never
-paints on phones; its links (How to play, Changelog, the real game) live in
-Settings → More instead.
+On phones the navigation moves to a **bottom bar** of five buttons: **Tasks**
+and **More** on the left, **Roll** in the centre, **Badges** and **Shop** on the
+right. More opens a small menu with **History**, **Settings**, and **Rebirth**
+once the ladder shows, with a dot when a rebirth is ready. The top bar keeps the
+logo, the theme switch and the profile button, so the screen stays for the game
+instead of a wall of buttons. The footer never paints on phones; its links (How
+to play, Changelog, the real game) live in Settings → More instead.
 
 The game is also **installable as an app**: a manifest, icons and a
 pass-through service worker make the browser offer "Add to Home screen", and

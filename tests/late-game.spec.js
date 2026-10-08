@@ -88,7 +88,10 @@ test("every late tier requires its predecessor, charges exactly once and preserv
     }
     p = buy(p, item.id, at);
     expect(p.balance).toBe(before - item.price);
-    expect(() => buy(p, item.id)).toThrow("already own");
+    // A repeatable product is never owned: its second buy waits instead.
+    expect(() => buy(p, item.id)).toThrow(
+      item.repeatable ? "available in" : "already own",
+    );
     p = parseProgress(JSON.stringify(p));
   }
   expect(p.history[0].ep).toBe(75000);

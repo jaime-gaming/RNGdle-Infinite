@@ -177,6 +177,14 @@ export const SpeedMark = (props) => (
   </Mark>
 );
 
+// The Task Skip: two opposing arrows, one task swapped for the next.
+export const SkipMark = (props) => (
+  <Mark {...props}>
+    <path d="M4.2 8.6h11.4M12.2 5.4l3.4 3.2-3.4 3.2" />
+    <path d="M19.8 15.4H8.4M11.8 12.2l-3.4 3.2 3.4 3.2" />
+  </Mark>
+);
+
 export const ClockMark = (props) => (
   <Mark {...props}>
     <circle cx="12" cy="12" r="6.6" />

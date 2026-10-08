@@ -329,6 +329,11 @@ nav button.active {
   width: 100%;
   margin-top: 24px;
 }
+/* While the draw overlay is up it shows every number the roll drew, so the
+   summary underneath (the same cards again) stays out of sight until it lifts. */
+.result-summary.is-behind-draw {
+  visibility: hidden;
+}
 .result-summary.is-spinning-summary {
   margin-top: 40px;
   margin-bottom: 24px;

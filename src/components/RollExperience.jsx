@@ -849,7 +849,7 @@ export default function RollExperience({
             </div>
             {result.totalEP !== null && (
               <div
-                className={`result-summary ${!digitsDone ? "is-spinning-summary" : ""}`}
+                className={`result-summary ${!digitsDone ? "is-spinning-summary" : ""} ${splitPlaying ? "is-behind-draw" : ""}`}
               >
                 {digitsDone && (
                   <RankSummary

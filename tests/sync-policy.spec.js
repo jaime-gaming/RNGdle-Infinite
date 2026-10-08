@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { emptyProgress } from "../src/progress.js";
-import { syncDecision } from "../src/sync-policy.js";
+import { pendingStamp, syncDecision } from "../src/sync-policy.js";
 
 const profile = {
   id: "account-owner",
@@ -60,4 +60,14 @@ test("a guest clock cannot replace an account, while account conflicts keep the 
       1000,
     ),
   ).toEqual({ direction: "send", savedAt: 11 });
+});
+
+test("a pending change is stamped at the moment it was made, or one step past the last accepted save when that is later", () => {
+  // The change is newer than the last accepted save: its own moment is the stamp.
+  expect(pendingStamp(100, 250)).toBe(250);
+  // The other device's clock ran ahead: the change still beats the save it
+  // would otherwise tie with, instead of being lost on a tie.
+  expect(pendingStamp(300, 250)).toBe(301);
+  expect(pendingStamp(250, 250)).toBe(251);
+  expect(pendingStamp(0, 0)).toBe(1);
 });

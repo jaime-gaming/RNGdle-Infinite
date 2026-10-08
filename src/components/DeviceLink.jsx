@@ -278,9 +278,9 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
   }
 
   // What the live transport actually is, and where the room is kept. A relay
-  // that writes rooms to disk survives both devices being closed; one that
-  // keeps them in memory only hands the newest save to whoever is listening
-  // right now. Neither case is an error, so neither is worded like one.
+  // that writes rooms to disk survives both devices being closed and a restart;
+  // one that keeps them in memory keeps them for as long as it runs. Neither
+  // case is an error, so neither is worded like one.
   const transport = health
     ? "Relay (HTTP)"
     : "Browser-to-browser (P2P via WebRTC)";
@@ -292,14 +292,13 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
       : "In memory only"
     : "—";
   // The note has to describe the transport that actually answered, including
-  // what its store can and cannot do: a memory-only relay hands the newest
-  // save to whoever is listening, but it does not keep a room once everybody
-  // has left, and the page must not promise otherwise.
+  // what its store can and cannot do: a memory-only relay keeps a room while it
+  // runs, and loses every room when it restarts. The page says so.
   const note = !health
     ? "This deployment has no relay of its own, so saves travel browser-to-browser through WebRTC, with a free public broker handling only the initial handshake. Both devices therefore have to be open at the same time at least once. Treat the link like a password: whoever holds it plays this account."
     : health.store === "disk"
       ? "The relay above keeps rooms on its own disk, so either device may be closed and catch up later, and the newer save wins when both played apart. Treat the link like a password: whoever holds it plays this account."
-      : "The relay above keeps rooms in memory: it is the fastest path while a device is listening, and it hands over the newest save the moment the other side opens the link — but it forgets a room once nobody is listening. Run your own relay with a store to keep a room alive while both devices are closed. Treat the link like a password: whoever holds it plays this account.";
+      : "The relay above keeps rooms in memory. A room stays with it for as long as the relay runs, so a device that was closed still gets the newest save when it opens the link; a room nobody touches for a month is dropped. A restart of the relay forgets every room, so run your own relay with a store to keep rooms across restarts. Treat the link like a password: whoever holds it plays this account.";
 
   const details = [
     ["Transport", transport],

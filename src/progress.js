@@ -66,13 +66,18 @@ import {
 } from "./history-tally.js";
 import {
   claimTask,
+  EPIC_OR_BETTER,
   emptyTasks,
   parseTasks,
   periodKey,
   RARE_OR_BETTER,
   recordTally,
+  SKIP_HOLD_LIMIT,
+  skipStatus,
+  skipTask,
   taskById,
   TASK_CADENCES,
+  waitText,
 } from "./tasks.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
@@ -662,6 +667,46 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
 }
 // Every action goes through here, so the log is capped the same way for all of
 // them. Only an action that actually changed the save can grow the log.
+// A repeatable product is bought again and again, and every purchase adds a use
+// instead of ownership, so it never enters the owned list. The Task Skip is the
+// only one, and it waits three days between purchases on the game clock, so a
+// stack of uses cannot be bought in one sitting.
+function buyTaskSkip(state, item, action) {
+  const at = action.at ?? Math.ceil(Date.now());
+  if (!validAmount(at) || at > 8640000000000000)
+    throw new Error("Invalid purchase time");
+  const status = skipStatus(state.tasks, at);
+  if (status.tokens >= SKIP_HOLD_LIMIT)
+    throw new Error(
+      `You already hold ${SKIP_HOLD_LIMIT} Task Skips. Use one first. No EP was spent.`,
+    );
+  if (status.waitMs > 0)
+    throw new Error(
+      `The next Task Skip is available in ${waitText(status.waitMs)}. No EP was spent.`,
+    );
+  if (state.balance < item.price)
+    throw new Error("Not enough EP for this item.");
+  const tasks = state.tasks ?? emptyTasks();
+  return {
+    ...state,
+    history: appendHistory(state.history, [
+      {
+        id: action.eventId ?? `buy:${item.id}:${at}`,
+        type: "purchase",
+        at,
+        productId: item.id,
+        name: item.name,
+        ep: item.price,
+      },
+    ]),
+    balance: state.balance - item.price,
+    tasks: {
+      ...tasks,
+      skip: { tokens: status.tokens + 1, boughtAt: at },
+    },
+  };
+}
+
 export function applyProgress(state, action) {
   const next = applyEvent(state, action);
   if (next === state || !Array.isArray(next.history)) return next;
@@ -832,6 +877,17 @@ function applyEvent(state, action) {
         `You can keep up to ${BOOKMARK_LIMIT} bookmarked rolls. Remove one first.`,
       );
     return { ...state, bookmarks: [...bookmarks, id] };
+  }
+  // A Task Skip uses one token from the save to swap an open task on the list.
+  // The token was bought in the Shop; using it costs no EP and is not logged,
+  // because it changes what you are asked to do, not what you have paid.
+  if (action.type === "skip-task") {
+    const task = taskById(action.id);
+    if (!task) throw new Error("That task does not exist.");
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid task time");
+    return { ...state, tasks: skipTask(state.tasks, task, at) };
   }
   // A task pays its reward into the wallet once per reset. It is a reward for
   // play, not a sale, so it is logged as income and never counts towards the
@@ -1117,6 +1173,10 @@ function applyEvent(state, action) {
             {
               rolls: 1,
               rare: RARE_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+              epic: EPIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+              // A roll that paid more than one number, which only a draw skill
+              // can make happen.
+              multi: paidEvents.length > 1 ? 1 : 0,
               discovered: paidEvents.reduce(
                 (total, paid) => total + paid.unlocked.length,
                 0,
@@ -1176,6 +1236,7 @@ function applyEvent(state, action) {
   if (action.type === "buy") {
     const item = productById.get(action.id);
     if (!item) throw new Error("That item is not available.");
+    if (item.repeatable) return buyTaskSkip(state, item, action);
     if (state.owned.includes(item.id))
       throw new Error("You already own this item.");
     if (item.requires && !state.owned.includes(item.requires))

@@ -306,7 +306,8 @@
   stroke-linecap: round;
   transition: stroke-dashoffset 320ms ease-out;
 }
-.skill-stack-arc.is-passive .skill-stack-fill {
+.skill-stack-arc.is-passive .skill-stack-fill,
+.skill-stack-arc .skill-stack-fill {
   stroke-linecap: butt;
 }
 .skill-stack-arc.is-armed .skill-stack-fill,

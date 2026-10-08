@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ArrowRightLeft,
   Check,
   ChevronRight,
   Coins,
@@ -29,6 +30,7 @@ import {
   AURA_FAMILIES,
 } from "../shop-data";
 import { LOADOUT_LIMIT } from "../progress.js";
+import { SKIP_INTERVAL_MS, skipStatus, waitText } from "../tasks.js";
 import { gameNow } from "../game-clock.js";
 import { pathForSubpage, pathForShelfFamily } from "../router.js";
 import { currentGoal, validGoal } from "../gameplay-loop.js";
@@ -76,6 +78,7 @@ import {
   QuarryMark,
   SingularityMark,
   SkillMark,
+  SkipMark,
   SolsticeMark,
   SparkMark,
   RackMark,
@@ -102,6 +105,7 @@ import "../shop.css";
 const icons = {
   speed: SpeedMark,
   clock: ClockMark,
+  skip: SkipMark,
   flywheel: FlywheelMark,
   stars: StarfallMark,
   aurora: AuroraMark,
@@ -126,6 +130,7 @@ const icons = {
   auto: AutomationMark,
   core: CoreMark,
   lens: LensMark,
+  skip: ArrowRightLeft,
   surge: SurgeMark,
   trail: TrailMark,
   bounce: BounceMark,
@@ -213,10 +218,11 @@ export default function Shop({
   const goalReady = !!goal && progress.balance >= goal.price;
   // The skill stall: three shop skills on sale at a time, rotating every five
   // minutes on the shared game clock, so every tab and the purchase guard
-  // agree on the stock. The one-second ticker only runs on this shelf.
+  // agree on the stock. The one-second ticker runs on the shelves that count
+  // down: the skill stall and the tools, where a Task Skip waits three days.
   const [clock, setClock] = useState(() => gameNow());
   useEffect(() => {
-    if (shelf?.id !== "skills") return;
+    if (shelf?.id !== "skills" && shelf?.id !== "tools") return;
     const timer = setInterval(() => setClock(gameNow()), 1000);
     return () => clearInterval(timer);
   }, [shelf?.id]);
@@ -315,15 +321,26 @@ export default function Shop({
     );
     const profileGated = !!(item.requiresProfile && !progress.profile);
     const stocked = item.kind !== "skill" || stock.includes(item.id);
+    // A repeatable product is never owned. It is blocked while its wait runs or
+    // while the save already holds the most it can, and says which.
+    const repeat = item.repeatable ? skipStatus(progress.tasks, clock) : null;
+    const blocked =
+      !!repeat && (repeat.waitMs > 0 || repeat.tokens >= repeat.limit);
     return {
       owned,
       requires,
       profileGated,
       stocked,
+      repeat,
+      blocked,
       affordable: progress.balance >= item.price,
-      available: !owned && !requires && !profileGated && stocked,
+      available: !owned && !requires && !profileGated && stocked && !blocked,
       affordableNow:
-        !owned && !requires && stocked && progress.balance >= item.price,
+        !owned &&
+        !requires &&
+        stocked &&
+        !blocked &&
+        progress.balance >= item.price,
     };
   }
   // An upgrade behind a purchase you have not made is not on the shelf at all.
@@ -390,6 +407,21 @@ export default function Shop({
             {item.from} <small>→</small> <b>{item.slots}</b>
           </span>
           <small>SKILL SLOTS · SWAPPING IS FREE</small>
+        </>
+      );
+    if (item.repeatable)
+      return (
+        <>
+          <Icon size={25} />
+          <span>
+            <b>{state.repeat.tokens}</b>{" "}
+            <small>of {state.repeat.limit} held</small>
+          </span>
+          <small>
+            {state.repeat.waitMs > 0
+              ? `NEXT IN ${waitText(state.repeat.waitMs).toUpperCase()}`
+              : `ONE EVERY ${SKIP_INTERVAL_MS / 86400000} DAYS · SPEND ON TASKS`}
+          </small>
         </>
       );
     if (item.kind === "utility")
@@ -581,7 +613,7 @@ export default function Shop({
               (state.owned && !aura && !skill) ||
               (!state.owned &&
                 !state.profileGated &&
-                (!state.affordable || state.requires))
+                (!state.affordable || state.requires || state.blocked))
             }
             onClick={() => {
               if (state.profileGated) return openSignup();
@@ -612,6 +644,12 @@ export default function Shop({
                 <>
                   <Check size={14} /> Purchased
                 </>
+              )
+            ) : item.repeatable && state.blocked ? (
+              state.repeat.waitMs > 0 ? (
+                `Next in ${waitText(state.repeat.waitMs)}`
+              ) : (
+                `Holding ${state.repeat.limit}`
               )
             ) : (
               `Buy for ${formatEP(item.price)} EP`
@@ -701,6 +739,8 @@ export default function Shop({
     if (state.requires) return `Requires ${requiresName(item)} first.`;
     if (!state.owned && !state.affordable)
       return `${formatEP(item.price - progress.balance)} more EP needed`;
+    if (item.repeatable)
+      return `${state.repeat.tokens} of ${state.repeat.limit} held · spend them on the Tasks page`;
     if (state.owned) {
       if (item.kind === "aura") return "";
       if (item.kind === "skill") {
@@ -1076,8 +1116,8 @@ export default function Shop({
             <div className="shop-goal-copy">
               <strong>Pick your goal</strong>
               <span>
-                Tap any item on any shelf — the one you tap becomes your
-                savings goal. No EP is spent.
+                Tap any item on any shelf — the one you tap becomes your savings
+                goal. No EP is spent.
               </span>
               {goalTracked && (
                 <span className="shop-goal-current">
@@ -1687,7 +1727,7 @@ export default function Shop({
               <ShoppingBag size={26} />
             </div>
             <p className="eyebrow">
-              KEPT TILL REBIRTH{" "}
+              {selected.repeatable ? "USED ON TASKS" : "KEPT TILL REBIRTH"}{" "}
               {selected.kind === "aura"
                 ? "COSMETIC"
                 : selected.kind === "skill"
@@ -1708,13 +1748,15 @@ export default function Shop({
                   : selected.kind === "skill-slot"
                     ? `widens your rack to ${selected.slots} slots; existing charge is kept.`
                     : selected.kind === "utility"
-                      ? selected.id === "auto-roll"
-                        ? "adds Auto-Roll to the rack: one click arms it, one stands it down."
-                        : selected.id === "persistence-core"
-                          ? "lets Auto-Roll remember its switch and run in background tabs."
-                          : selected.id === "offline-roller"
-                            ? "earns one roll per 10 minutes away, up to 144 per absence. A local profile is required."
-                            : "unlocks advanced history search."
+                      ? selected.id === "task-skip"
+                        ? "swaps one open task on your Tasks list for the next one in its pool, using one token. Tokens are kept across rebirths."
+                        : selected.id === "auto-roll"
+                          ? "adds Auto-Roll to the rack: one click arms it, one stands it down."
+                          : selected.id === "persistence-core"
+                            ? "lets Auto-Roll remember its switch and run in background tabs."
+                            : selected.id === "offline-roller"
+                              ? "earns one roll per 10 minutes away, up to 144 per absence. A local profile is required."
+                              : "unlocks advanced history search."
                       : selected.kind === "pace"
                         ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge.`
                         : selected.kind === "offline"

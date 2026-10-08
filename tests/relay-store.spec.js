@@ -250,3 +250,33 @@ test("with no store the relay is a memory-only room, and health says so", async 
     await host.close();
   }
 });
+
+test("a memory-only room outlives the device that wrote it, and only goes after a month untouched", async () => {
+  const host = await startRelay({ storeDir: null });
+  try {
+    const room = await create(host.base);
+    const pushed = await push(host.base, room, {
+      state: JSON.stringify({ n: 2 }),
+      savedAt: 2_000_000,
+    });
+    expect(pushed.body.ok).toBe(true);
+    // A device listens for a moment and leaves. Nothing is swept on a timer, so
+    // the room is still there for the other device to catch up from.
+    await hello(host.base, room);
+    expect(host.relay.rooms.has(room.room)).toBe(true);
+    const late = await hello(host.base, room);
+    expect(JSON.parse(late.latest.state)).toEqual({ n: 2 });
+    // Opening the room counts as using it; a day later it is still kept.
+    host.relay.reap(Date.now() + 24 * 60 * 60_000);
+    expect(host.relay.rooms.has(room.room)).toBe(true);
+    // A month without anybody touching it is the only thing that forgets it.
+    // The listener's departure is seen by the relay a moment after it leaves.
+    await expect
+      .poll(() => host.relay.rooms.get(room.room)?.members.size)
+      .toBe(0);
+    host.relay.reap(Date.now() + 31 * 24 * 60 * 60_000);
+    expect(host.relay.rooms.has(room.room)).toBe(false);
+  } finally {
+    await host.close();
+  }
+});

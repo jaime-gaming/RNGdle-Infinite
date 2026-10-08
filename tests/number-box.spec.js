@@ -234,6 +234,8 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     "offline-vault-2": 11000000,
     // v0.3 skills and the two rack upgrades.
     surge: 180000,
+    // v0.6: the Task Skip, a repeatable utility bought every three days.
+    "task-skip": 60000,
     trail: 320000,
     bounce: 500000,
     twice: 900000,
@@ -261,7 +263,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(56);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(57);
   // A skill product carries its effect in skills.js, never inside the product:
   // the shop only mirrors the catalogue so both read the same numbers.
   for (const product of shopProducts.filter((p) => p.kind === "skill")) {

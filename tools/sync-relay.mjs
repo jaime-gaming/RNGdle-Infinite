@@ -11,8 +11,9 @@
 // the other comes back it is handed everything that happened. That works for
 // every combination — both open, one closed, both closed, alternating — with
 // the newest save winning whenever two devices played apart. Pass
-// `store: null` (or run with SYNC_STORE=none) for a memory-only relay that
-// forgets a room as soon as nobody is listening.
+// `store: null` (or run with SYNC_STORE=none) for a memory-only relay: it keeps
+// every room for as long as it runs, so a closed device is still caught up, and
+// it only forgets a room after a month untouched, or when the process restarts.
 //
 // Endpoints (same origin in dev, thanks to the Vite plugin; CORS-open when
 // stood up alone so a static site can point at it):
@@ -37,7 +38,10 @@ import {
 import path from "node:path";
 
 const ROOM_TTL_MS = 30 * 24 * 60 * 60 * 1000; // A room is kept for a month.
-const MEMORY_TTL_MS = 5 * 60_000; // A memory-only room, five minutes.
+// A memory-only room is the only copy the other device can reach while the
+// first one is closed, so it is kept as long as a disk room would be.
+const MEMORY_TTL_MS = ROOM_TTL_MS;
+const REAP_MS = 60 * 60_000; // How often a memory-only relay looks for idle rooms.
 const DEFAULT_STORE = path.resolve(".cache/sync-rooms");
 const MAX_STATE_BYTES = 4 * 1024 * 1024; // Generous for any real save.
 const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
@@ -92,7 +96,7 @@ export function createSyncRelay({
   storeDir = process.env.SYNC_STORE === "none" ? null : DEFAULT_STORE,
   ttlMs = storeDir ? ROOM_TTL_MS : MEMORY_TTL_MS,
 } = {}) {
-  const rooms = new Map(); // room -> { key, latest, members: Map, sweep }
+  const rooms = new Map(); // room -> { key, latest, members: Map, sweep, touchedAt }
   const loading = new Map(); // room -> Promise, so two requests load one room
 
   // Health is answered to any browser that opens the game, so it names the
@@ -168,7 +172,10 @@ export function createSyncRelay({
 
   async function openRoom(room, key) {
     let entry = rooms.get(room);
-    if (entry) return guarded(entry, key);
+    if (entry) {
+      entry.touchedAt = Date.now();
+      return guarded(entry, key);
+    }
     if (!loading.has(room)) {
       loading.set(
         room,
@@ -177,13 +184,17 @@ export function createSyncRelay({
     }
     const stored = await loading.get(room);
     entry = rooms.get(room);
-    if (entry) return guarded(entry, key);
+    if (entry) {
+      entry.touchedAt = Date.now();
+      return guarded(entry, key);
+    }
     if (stored && stored.key && stored.key !== key) return { wrongKey: true };
     entry = {
       key: stored?.key || key,
       latest: stored?.latest ?? null,
       members: new Map(),
       sweep: null,
+      touchedAt: Date.now(),
     };
     rooms.set(room, entry);
     return entry;
@@ -210,22 +221,28 @@ export function createSyncRelay({
   }
 
   function sweepRoom(room, entry) {
-    if (entry.members.size || entry.sweep) return;
-    entry.sweep = setTimeout(
-      () => {
-        const current = rooms.get(room);
-        if (!current || current.members.size) return;
-        // A persisted room leaves memory but stays on disk, ready for the next
-        // device that opens the link. A memory-only room simply goes away.
-        rooms.delete(room);
-        if (!storeDir) return;
-        const updatedAt = Number(current.updatedAt) || Date.now();
-        if (Date.now() - updatedAt > ttlMs)
-          unlink(fileFor(room)).catch(() => {});
-      },
-      storeDir ? 60_000 : MEMORY_TTL_MS,
-    );
+    // A memory-only room is never swept on its own: nobody else can reach it
+    // except through this process, so it stays until reapIdle decides it is
+    // stale.
+    if (!storeDir || entry.members.size || entry.sweep) return;
+    entry.sweep = setTimeout(() => {
+      const current = rooms.get(room);
+      if (!current || current.members.size) return;
+      // A persisted room leaves memory but stays on disk, ready for the next
+      // device that opens the link.
+      rooms.delete(room);
+      const updatedAt = Number(current.updatedAt) || Date.now();
+      if (Date.now() - updatedAt > ttlMs) unlink(fileFor(room)).catch(() => {});
+    }, 60_000);
     entry.sweep.unref?.();
+  }
+
+  // Memory-only housekeeping: a room nobody has opened or written for the whole
+  // TTL is forgotten. Rooms with someone listening are never touched.
+  function reapIdle(now = Date.now()) {
+    for (const [room, entry] of rooms)
+      if (!entry.members.size && now - (entry.touchedAt ?? 0) > ttlMs)
+        rooms.delete(room);
   }
 
   // Housekeeping on the store itself: drop rooms nobody has touched in a
@@ -371,6 +388,7 @@ export function createSyncRelay({
         latest: null,
         members: new Map(),
         sweep: null,
+        touchedAt: Date.now(),
       };
       rooms.set(room, entry);
       // The room is on the store before anybody is told its address: a second
@@ -399,8 +417,13 @@ export function createSyncRelay({
   }
 
   const ready = pruneStore();
+  // Only a memory-only relay needs the reaper: a disk room is always on file.
+  if (!storeDir) {
+    const reaper = setInterval(() => reapIdle(), REAP_MS);
+    reaper.unref?.();
+  }
 
-  return { handle, rooms, ready, storeDir };
+  return { handle, rooms, ready, storeDir, reap: reapIdle };
 }
 
 // Standalone mode: `node tools/sync-relay.mjs` (or `npm run relay`) for a

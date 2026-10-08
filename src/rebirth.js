@@ -82,9 +82,15 @@ export function cycleStarterEp(rebirths = 0, ultraRebirths = 0, rollbacks = 0) {
 // life, after three prestiges. It starts the run over exactly like a prestige,
 // and it pays more than every stage before it: the largest bonus and the
 // largest starting sum. Nothing comes after it.
-export const ROLLBACK_AFTER_PRESTIGES = 3;
+// Prestige can be repeated three times. The third closes it for good, and the
+// Rollback — which needs those three — becomes the only way out of the ladder.
+export const PRESTIGE_LIMIT = 3;
+export const ROLLBACK_AFTER_PRESTIGES = PRESTIGE_LIMIT;
 export const ROLLBACK_BONUS = 0.25;
 export const ROLLBACK_STARTER_EP = 5000000;
+// The Rollback asks for more than a prestige does: three quarters of the
+// collection, and a cycle that has earned twice a prestige's EP.
+export const ROLLBACK_STEP = { badges: 0.75, ep: 60000000 };
 
 export function rollbackMultiplier(rollbacks = 0) {
   return 1 + ROLLBACK_BONUS * Math.min(1, Math.max(0, rollbacks));
@@ -128,6 +134,15 @@ export function surplusMultiplier(surplusBankedPercent = 0) {
   return 1 + percent / 100;
 }
 
+// Prestige stays out of sight until the ladder is finished: the sixth rebirth,
+// or any prestige already taken. Every screen that names it asks this question.
+export function prestigeShown(progress) {
+  return (
+    (progress?.rebirths ?? 0) >= REBIRTH_TOTAL ||
+    (progress?.ultraRebirths ?? 0) > 0
+  );
+}
+
 // Rebirth stays completely out of sight until the ladder unlocks: no badge, no
 // teaser, no counter. The nav entry, the page and the help page all ask this one
 // question, so the reveal can never be half-done.
@@ -165,10 +180,63 @@ export function ultraRebirthRequirement() {
   };
 }
 
-// The Rollback asks what a prestige asks: the same collection and the same EP
-// in the cycle. The last stage is rewarded more, not made harder to reach.
+// The Rollback asks for more than a prestige. Prestige is the stage you can
+// repeat; the Rollback is the last stage there is, so it is the hardest gate.
 export function rollbackRequirement() {
-  return ultraRebirthRequirement();
+  return {
+    percent: Math.round(ROLLBACK_STEP.badges * 100),
+    badges: Math.ceil(BADGE_TOTAL * ROLLBACK_STEP.badges),
+    ep: ROLLBACK_STEP.ep,
+  };
+}
+
+// The step the page is working towards: a rung, then Prestige until three are
+// done, then the Rollback. Null once the Rollback is taken.
+export function nextStep(progress) {
+  const rung = rebirthRequirement(progress.rebirths ?? 0);
+  if (rung) return { kind: "rung", ...rung };
+  if ((progress.rollbacks ?? 0) >= 1) return null;
+  if ((progress.ultraRebirths ?? 0) < PRESTIGE_LIMIT)
+    return { kind: "prestige", ...ultraRebirthRequirement() };
+  return { kind: "rollback", ...rollbackRequirement() };
+}
+
+const fractionOf = (done, goal) => Math.min(1, done / Math.max(1, goal));
+
+// The one percentage the Rebirth page and the top-bar ring show. It mixes the
+// collection and the cycle's EP half and half, and it is rounded down, so it
+// only reads 100% when both are done: a full collection with no EP is not a
+// finished step.
+export function rebirthProgress(progress) {
+  const step = nextStep(progress);
+  const count = discoveredCount(progress);
+  const earned = cycleEarnedEp(progress);
+  if (!step)
+    return {
+      step: null,
+      count,
+      earned,
+      badgeFraction: 1,
+      epFraction: 1,
+      percent: 100,
+    };
+  return {
+    step,
+    count,
+    earned,
+    badgeFraction: fractionOf(count, step.badges),
+    epFraction: fractionOf(earned, step.ep),
+    percent: blendedPercent(count, earned, step),
+  };
+}
+
+// The blend itself, for any step: the collection count and the cycle's EP
+// against that step's gate. The page gauge, the top-bar ring and every rung bar
+// all read it, so the same step never shows two numbers.
+export function blendedPercent(count, earned, step) {
+  const badges = fractionOf(count, step.badges);
+  const ep = fractionOf(earned, step.ep);
+  return Math.min(100, Math.floor(((badges + ep) / 2) * 100));
 }
 
 // What the cycle in play has earned: the scored EP of every roll since the
@@ -218,6 +286,8 @@ export function rebirthBlocker(progress, now) {
   if (!requirement) {
     if ((progress.rollbacks ?? 0) >= 1)
       return "The Rollback ended the ladder, so there are no more rebirths.";
+    if ((progress.ultraRebirths ?? 0) >= PRESTIGE_LIMIT)
+      return "Three prestiges are done. The Rollback is the only way out now.";
     const prestige = ultraRebirthRequirement();
     return `The rebirth ladder is complete. Prestige is unlocked at ${prestige.badges} badges and ${formatEP(prestige.ep)} EP earned in a cycle.`;
   }
@@ -249,6 +319,8 @@ export function rebirthReady(progress, now) {
 export function ultraRebirthBlocker(progress, now) {
   if ((progress.rollbacks ?? 0) >= 1)
     return "Your Rollback ended the ladder, so there are no more prestiges.";
+  if ((progress.ultraRebirths ?? 0) >= PRESTIGE_LIMIT)
+    return "Three prestiges are done. Prestige is closed; the Rollback is the only way out.";
   if ((progress.rebirths ?? 0) < REBIRTH_TOTAL)
     return `Finish the whole rebirth ladder first: ${REBIRTH_TOTAL - (progress.rebirths ?? 0)} rebirths to go.`;
   const requirement = ultraRebirthRequirement();
@@ -265,6 +337,7 @@ export function ultraRebirthAvailable(progress, now) {
   const requirement = ultraRebirthRequirement();
   return (
     (progress.rollbacks ?? 0) < 1 &&
+    (progress.ultraRebirths ?? 0) < PRESTIGE_LIMIT &&
     (progress.rebirths ?? 0) >= REBIRTH_TOTAL &&
     discoveredCount(progress) >= requirement.badges &&
     cycleEarnedEp(progress) >= requirement.ep &&

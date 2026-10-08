@@ -60,9 +60,15 @@ const top = (extra = {}) => ({
   ...extra,
 });
 
-test("the Rollback stays shut until three prestiges, then asks what a prestige asks", () => {
+test("the Rollback stays shut until three prestiges, then asks for more than a prestige", () => {
   expect(ROLLBACK_AFTER_PRESTIGES).toBe(3);
-  expect(rollbackRequirement()).toEqual(ultraRebirthRequirement());
+  // Higher than a prestige on both counts: more of the collection, more EP.
+  expect(rollbackRequirement().badges).toBeGreaterThan(
+    ultraRebirthRequirement().badges,
+  );
+  expect(rollbackRequirement().ep).toBeGreaterThan(
+    ultraRebirthRequirement().ep,
+  );
   // Two prestiges: still shut, and the reason counts the one left to go.
   expect(rollbackBlocker(top({ ultraRebirths: 2 }), 300000)).toMatch(
     /Reach 3 prestiges.*1 to go/,
@@ -86,7 +92,7 @@ test("the Rollback stays shut until three prestiges, then asks what a prestige a
       top({ ultraRebirths: 3, history: earned(gate.ep - 1) }),
       300000,
     ),
-  ).toMatch(/Earn 30,000,000 EP this cycle to Rollback/);
+  ).toMatch(/Earn 60,000,000 EP this cycle to Rollback/);
   // The whole ladder comes first.
   expect(
     rollbackBlocker(
@@ -96,10 +102,14 @@ test("the Rollback stays shut until three prestiges, then asks what a prestige a
   ).toMatch(/ladder first/);
 });
 
-test("prestige stays open after three prestiges, until the Rollback is taken", () => {
+test("prestige closes after three, so the Rollback is the only way out", () => {
+  // Two prestiges leave the third one open.
+  expect(ultraRebirthAvailable(top({ ultraRebirths: 2 }), 300000)).toBe(true);
+  // The third closes prestige for good, even with the whole gate met.
   const three = top({ ultraRebirths: 3 });
-  expect(ultraRebirthAvailable(three, 300000)).toBe(true);
-  expect(ultraRebirthBlocker(three, 300000)).toBe("");
+  expect(ultraRebirthAvailable(three, 300000)).toBe(false);
+  expect(ultraRebirthBlocker(three, 300000)).toMatch(/Prestige is closed/);
+  expect(rollbackAvailable(three, 300000)).toBe(true);
   // The Rollback ends the ladder: no prestige after it, and no second Rollback.
   const done = top({ ultraRebirths: 3, rollbacks: 1 });
   expect(ultraRebirthBlocker(done, 300000)).toMatch(
@@ -272,7 +282,10 @@ test("the Rollback button waits for three prestiges and says how many are left",
 test("the Rollback takes the run once, shows its ceremony and closes prestige", async ({
   page,
 }) => {
-  await seedProgress(page, uiState({ ultraRebirths: 3 }));
+  await seedProgress(
+    page,
+    uiState({ ultraRebirths: 3, history: earned(gate.ep) }),
+  );
   await page.goto("/#rebirth");
   const rollback = page
     .locator(".rebirth-page")

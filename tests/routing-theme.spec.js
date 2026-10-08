@@ -199,11 +199,15 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
     "triptych",
     "offline-vault-3",
   ];
-  const before = shopProducts.filter((p) => !addedInV05.includes(p.id));
+  // The Task Skip came after v0.5, so it is not part of the repriced set.
+  const addedLater = ["task-skip"];
+  const before = shopProducts.filter(
+    (p) => !addedInV05.includes(p.id) && !addedLater.includes(p.id),
+  );
   expect(before).toHaveLength(49);
   expect(before.reduce((sum, p) => sum + p.price, 0)).toBe(107250000);
   expect(107250000).toBeLessThan(131145000);
-  expect(shopProducts).toHaveLength(56);
+  expect(shopProducts).toHaveLength(57);
   // The first upgrade of each visible chain stays reachable early.
   expect(price["quickwind-1"]).toBeLessThanOrEqual(30000);
   expect(price["clockwork-1"]).toBeLessThanOrEqual(50000);

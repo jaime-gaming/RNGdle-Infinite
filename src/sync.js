@@ -19,7 +19,7 @@
 
 import Peer from "peerjs";
 import { PROGRESS_KEY, parseProgress } from "./progress.js";
-import { syncDecision } from "./sync-policy.js";
+import { pendingStamp, syncDecision } from "./sync-policy.js";
 
 const LINK_KEY = "rng-infinite-sync-v1";
 const RELAY_KEY = "rng-infinite-sync-endpoint-v1";
@@ -152,6 +152,21 @@ export function setRelayEndpoint(endpoint) {
     openLink();
   } else emit();
   return trimmed;
+}
+
+// A change that has not reached the room yet is stamped with the moment it was
+// made, never with the stamp of the last save the room accepted. Otherwise an
+// older save from the other device could beat a change that is actually newer.
+// The stamp is taken once per change, so every message that goes out while it
+// waits carries the same number.
+let stampedFor = 0;
+function queuedStamp() {
+  if (pending && stampedFor !== dirtyAt) {
+    savedAt = pendingStamp(savedAt, dirtyAt);
+    stampedFor = dirtyAt;
+    persistLink();
+  }
+  return savedAt;
 }
 
 function persistLink() {
@@ -432,7 +447,7 @@ function attachConnection(connection) {
     sendPeerMessage({
       type: "state",
       state: currentSave(),
-      savedAt,
+      savedAt: queuedStamp(),
       device,
     });
   });
@@ -472,7 +487,7 @@ function handlePeerMessage(message) {
       type: "pong",
       at: Date.now(),
       state: currentSave(),
-      savedAt,
+      savedAt: queuedStamp(),
       device,
     });
     return;
@@ -491,7 +506,7 @@ function handlePeerMessage(message) {
 function reconcile(remote) {
   if (!remote || !Number.isFinite(remote.savedAt) || !remote.state) return;
   const decision = syncDecision(
-    { state: currentSave(), savedAt, device },
+    { state: currentSave(), savedAt: queuedStamp(), device },
     remote,
   );
   if (decision.direction === "receive") {
@@ -633,14 +648,15 @@ function relayApplyLatest(latest, onEmpty) {
     onEmpty?.();
     return;
   }
+  const local = queuedStamp();
   if (
-    latest.savedAt > savedAt ||
-    (latest.savedAt === savedAt && latest.device < device)
+    latest.savedAt > local ||
+    (latest.savedAt === local && latest.device < device)
   ) {
     receiveRemote(latest);
   } else if (
-    latest.savedAt < savedAt ||
-    (latest.savedAt === savedAt && latest.device !== device)
+    latest.savedAt < local ||
+    (latest.savedAt === local && latest.device !== device)
   ) {
     void relayPushState(currentSave());
   }

@@ -241,6 +241,20 @@ test("a stacked roll counts up no total while its numbers reveal, and ends on on
   ).toHaveText(`${formatEP(keptEP)} EP`);
 });
 
+test("the result summary stays out of sight while the draw overlay is up", async ({
+  page,
+}) => {
+  await startSplitRoll(page);
+  // The summary underneath already lists every number, so it must not show
+  // through the overlay. It comes back once the overlay lifts.
+  const summary = page.locator(".result-summary");
+  await expect(summary).toHaveCSS("visibility", "hidden");
+  expect(
+    await runUntil(page, () => !document.querySelector(".draw-stage")),
+  ).toBe(true);
+  await expect(summary).toHaveCSS("visibility", "visible");
+});
+
 test("the split screen hands the roll back before the reveal ends", async ({
   page,
 }) => {
