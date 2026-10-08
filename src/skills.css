@@ -228,18 +228,13 @@
     left: 10px;
     gap: 8px;
   }
-  .skill-slot > .skill-ring {
+  /* A plain circle and a family are the same size, so they shrink together:
+     the family's own svg is sized here, not scaled, and its slices, stroke and
+     icon all follow the one box. */
+  .skill-slot > .skill-ring,
+  .skill-stack-ring {
     width: 36px !important;
     height: 36px !important;
-  }
-  /* The group circle is drawn to its own scale, so it shrinks the same way:
-     rings, icon and the count badge together. */
-  .skill-stack-ring {
-    transform: scale(0.86);
-    transform-origin: center;
-  }
-  .skill-stack-bubble:hover .skill-stack-ring {
-    transform: scale(0.92);
   }
   .skill-stack-members {
     max-width: min(300px, calc(100vw - 76px));
@@ -282,11 +277,11 @@
 .skill-stack-bubble:focus-visible {
   box-shadow: 0 0 0 2px var(--accent, var(--green));
 }
-/* One circle, one ring per member: the group's own icon sits in the middle and
-   the members ride around it as concentric arcs, each in its own colour and
-   each filled as far as its charge goes. Outermost first — the newest charge
-   grows on the inside, so the ring you read first is the one that is closest
-   to firing. */
+/* One circle, one slice per member: the group's own icon sits in the middle and
+   every member takes its own arc of the same circle, with a small gap between
+   neighbours, in its own colour and filled as far as its charge goes. The
+   circle is the same size as a plain skill's, so a family never looks bigger
+   than the circles beside it. */
 .skill-stack-ring {
   position: relative;
   display: grid;

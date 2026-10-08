@@ -350,6 +350,21 @@ test("a skill family is one circle: the icon in the middle, every member a slice
   await expect(
     family.locator(".skill-stack-ring .skill-stack-icon"),
   ).toBeVisible();
+  // The group is one circle the same size as a single skill, and its lines are
+  // thicker (5 against the single skill's 3), so the group reads as one thing.
+  const single = await page
+    .locator(".skill-bar .skill-ring")
+    .first()
+    .boundingBox();
+  const group = await family.locator(".skill-stack-ring").boundingBox();
+  expect(Math.round(group.width)).toBe(Math.round(single.width));
+  expect(Math.round(group.height)).toBe(Math.round(single.height));
+  expect(
+    await family
+      .locator(".skill-stack-fill")
+      .first()
+      .evaluate((node) => getComputedStyle(node).strokeWidth),
+  ).toBe("5px");
   const arcs = await family.locator(".skill-stack-arc").evaluateAll((nodes) =>
     nodes.map((node) => {
       const [track] = node.querySelectorAll("circle");

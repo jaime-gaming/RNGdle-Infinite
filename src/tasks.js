@@ -3,41 +3,54 @@
 // Progress is kept on the save rather than read back from the activity log, so
 // bulk deleting history never un-finishes a task and the log can be trimmed
 // freely. Each cadence remembers the period it is counting, a local calendar day
-// or a local week that starts on Monday, with the tallies made inside it and the
-// tasks already claimed. The first action in a new period starts from zero, so
-// nothing has to run on a timer to reset.
+// or a local week that starts on Monday, with the tallies made inside it, the
+// tasks already claimed and whether the list bonus was taken. The first action in
+// a new period starts from zero, so nothing has to run on a timer to reset.
 //
-// Each cadence has a pool of tasks. A period deals three of them onto the list,
+// Each cadence has a pool of tasks. A period deals four of them onto the list,
 // in an order that depends only on the period's key and each task's id, so every
-// device shows the same three without storing them. A Task Skip swaps one open
+// device shows the same ones without storing them. A Task Skip swaps one open
 // task on the list for the next pool task that is not on it. The swap is saved
-// with the period, together with the count its new task starts from.
+// with the period, together with the running count its new task starts from; a
+// peak task reads the best roll of the period instead, as it always does.
+//
+// Finishing every task on a list pays a bonus once more, on top of the rewards.
 
 export const TASK_CADENCES = ["daily", "weekly"];
 
 // What a task can count. Each settled online roll adds to these, and a task
-// reads one of them against its goal.
+// reads one of them against its goal. Peak metrics keep the best single roll of
+// the period instead of a running total.
 export const TASK_METRICS = [
   "rolls",
   "rare",
   "epic",
+  "mythic",
   "multi",
   "discovered",
   "banked",
   "skills",
+  "pets",
+  "peakEP",
+  "peakBadges",
 ];
+export const PEAK_METRICS = ["peakEP", "peakBadges"];
 
-// The tiers at or above Rare, and at or above Epic, in the scoring table.
+// The tiers at or above Rare, Epic, and Mythic, in the scoring table.
 export const RARE_OR_BETTER = ["rare", "epic", "anomaly", "mythic", "godly"];
 export const EPIC_OR_BETTER = ["epic", "anomaly", "mythic", "godly"];
+export const MYTHIC_OR_BETTER = ["mythic", "godly"];
 
 // How many tasks a period puts on each cadence's list.
-export const ACTIVE_PER_PERIOD = 3;
+export const ACTIVE_PER_PERIOD = 4;
 // A Task Skip is bought once per interval, and a save holds at most the limit.
 export const SKIP_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
 export const SKIP_HOLD_LIMIT = 3;
+// The bonus for claiming every task on a list in one period.
+export const LIST_BONUS = { daily: 100000, weekly: 500000 };
 
 export const TASKS = [
+  // ---- Daily: twelve tasks, four on the list each day --------------------
   {
     id: "daily-rolls",
     cadence: "daily",
@@ -45,7 +58,7 @@ export const TASKS = [
     detail: "Online rolls count, whatever they score.",
     metric: "rolls",
     goal: 10,
-    reward: 10000,
+    reward: 20000,
   },
   {
     id: "daily-rare",
@@ -54,7 +67,25 @@ export const TASKS = [
     detail: "Rare, Epic, Anomaly, Mythic or GODLY. About one roll in four.",
     metric: "rare",
     goal: 1,
-    reward: 15000,
+    reward: 25000,
+  },
+  {
+    id: "daily-epic",
+    cadence: "daily",
+    title: "Roll an Epic or better",
+    detail: "Epic, Anomaly, Mythic or GODLY. About one roll in ten.",
+    metric: "epic",
+    goal: 1,
+    reward: 50000,
+  },
+  {
+    id: "daily-mythic",
+    cadence: "daily",
+    title: "Roll a Mythic or GODLY",
+    detail: "The top two tiers. About one roll in a hundred.",
+    metric: "mythic",
+    goal: 1,
+    reward: 150000,
   },
   {
     id: "daily-discover",
@@ -63,25 +94,16 @@ export const TASKS = [
     detail: "Badges you have not found yet in this cycle.",
     metric: "discovered",
     goal: 3,
-    reward: 15000,
-  },
-  {
-    id: "daily-epic",
-    cadence: "daily",
-    title: "Roll an Epic or better",
-    detail: "Epic, Anomaly, Mythic or GODLY. A rarer hit than Rare.",
-    metric: "epic",
-    goal: 1,
     reward: 25000,
   },
   {
-    id: "daily-multi",
+    id: "daily-badges",
     cadence: "daily",
-    title: "Land a multi-number roll",
-    detail: "A draw skill keeps two or more numbers on the same roll.",
-    metric: "multi",
-    goal: 1,
-    reward: 20000,
+    title: "Earn 22 badges on one roll",
+    detail: "Every badge the number carries counts, found before or not.",
+    metric: "peakBadges",
+    goal: 22,
+    reward: 80000,
   },
   {
     id: "daily-bank",
@@ -90,7 +112,34 @@ export const TASKS = [
     detail: "Everything rolls pay into your wallet, bonuses included.",
     metric: "banked",
     goal: 50000,
-    reward: 12000,
+    reward: 20000,
+  },
+  {
+    id: "daily-bank-big",
+    cadence: "daily",
+    title: "Bank 250,000 EP from rolls",
+    detail: "The same wallet count, at a bigger pace.",
+    metric: "banked",
+    goal: 250000,
+    reward: 60000,
+  },
+  {
+    id: "daily-peak",
+    cadence: "daily",
+    title: "Land a roll worth 200,000 EP",
+    detail: "The number's own EP, before any bonus. About one roll in 120.",
+    metric: "peakEP",
+    goal: 200000,
+    reward: 100000,
+  },
+  {
+    id: "daily-multi",
+    cadence: "daily",
+    title: "Land a multi-number roll",
+    detail: "A draw skill keeps two or more numbers on the same roll.",
+    metric: "multi",
+    goal: 1,
+    reward: 50000,
   },
   {
     id: "daily-skill",
@@ -99,17 +148,18 @@ export const TASKS = [
     detail: "Any skill that fires on a roll counts, once per roll.",
     metric: "skills",
     goal: 1,
-    reward: 10000,
+    reward: 15000,
   },
   {
-    id: "daily-spot",
+    id: "daily-pet",
     cadence: "daily",
-    title: "Discover a new badge",
-    detail: "Any badge you have not found yet in this cycle.",
-    metric: "discovered",
+    title: "Find a companion",
+    detail: "Companions turn up on about one roll in 250.",
+    metric: "pets",
     goal: 1,
-    reward: 8000,
+    reward: 100000,
   },
+  // ---- Weekly: twelve tasks, four on the list each week ------------------
   {
     id: "weekly-rolls",
     cadence: "weekly",
@@ -117,25 +167,7 @@ export const TASKS = [
     detail: "Online rolls count from Monday to Monday.",
     metric: "rolls",
     goal: 100,
-    reward: 150000,
-  },
-  {
-    id: "weekly-bank",
-    cadence: "weekly",
-    title: "Bank 1,000,000 EP from rolls",
-    detail: "Everything rolls pay into your wallet, bonuses included.",
-    metric: "banked",
-    goal: 1000000,
-    reward: 150000,
-  },
-  {
-    id: "weekly-skills",
-    cadence: "weekly",
-    title: "Fire a skill on 5 rolls",
-    detail: "Each roll counts once, however many skills fire on it.",
-    metric: "skills",
-    goal: 5,
-    reward: 120000,
+    reward: 200000,
   },
   {
     id: "weekly-rare",
@@ -144,7 +176,7 @@ export const TASKS = [
     detail: "Rare, Epic, Anomaly, Mythic or GODLY, from Monday to Monday.",
     metric: "rare",
     goal: 5,
-    reward: 120000,
+    reward: 150000,
   },
   {
     id: "weekly-epic",
@@ -153,16 +185,16 @@ export const TASKS = [
     detail: "The rarer tiers only: Epic, Anomaly, Mythic or GODLY.",
     metric: "epic",
     goal: 2,
-    reward: 200000,
+    reward: 300000,
   },
   {
-    id: "weekly-multi",
+    id: "weekly-mythic",
     cadence: "weekly",
-    title: "Land 3 multi-number rolls",
-    detail: "Each roll counts once, however many numbers it pays.",
-    metric: "multi",
-    goal: 3,
-    reward: 160000,
+    title: "Roll 10 Mythic or GODLY",
+    detail: "The top two tiers, from Monday to Monday. A long shot.",
+    metric: "mythic",
+    goal: 10,
+    reward: 900000,
   },
   {
     id: "weekly-discover",
@@ -171,16 +203,70 @@ export const TASKS = [
     detail: "Badges you have not found yet in this cycle.",
     metric: "discovered",
     goal: 15,
-    reward: 150000,
+    reward: 200000,
   },
   {
-    id: "weekly-skills-ten",
+    id: "weekly-bank",
+    cadence: "weekly",
+    title: "Bank 1,000,000 EP from rolls",
+    detail: "Everything rolls pay into your wallet, bonuses included.",
+    metric: "banked",
+    goal: 1000000,
+    reward: 200000,
+  },
+  {
+    id: "weekly-bank-big",
+    cadence: "weekly",
+    title: "Bank 5,000,000 EP from rolls",
+    detail: "The long haul: five million banked from Monday to Monday.",
+    metric: "banked",
+    goal: 5000000,
+    reward: 600000,
+  },
+  {
+    id: "weekly-peak",
+    cadence: "weekly",
+    title: "Land a roll worth 500,000 EP",
+    detail: "The number's own EP. About one roll in 500.",
+    metric: "peakEP",
+    goal: 500000,
+    reward: 500000,
+  },
+  {
+    id: "weekly-multi",
+    cadence: "weekly",
+    title: "Land 3 multi-number rolls",
+    detail: "Each roll counts once, however many numbers it pays.",
+    metric: "multi",
+    goal: 3,
+    reward: 250000,
+  },
+  {
+    id: "weekly-skills",
     cadence: "weekly",
     title: "Fire a skill on 10 rolls",
-    detail: "The long version: each roll counts once, from Monday to Monday.",
+    detail: "Each roll counts once, however many skills fire on it.",
     metric: "skills",
     goal: 10,
-    reward: 260000,
+    reward: 300000,
+  },
+  {
+    id: "weekly-pets",
+    cadence: "weekly",
+    title: "Find 2 companions",
+    detail: "Companions turn up on about one roll in 250.",
+    metric: "pets",
+    goal: 2,
+    reward: 500000,
+  },
+  {
+    id: "weekly-badges",
+    cadence: "weekly",
+    title: "Earn 25 badges on one roll",
+    detail: "The biggest numbers carry the most badges.",
+    metric: "peakBadges",
+    goal: 25,
+    reward: 600000,
   },
 ];
 
@@ -196,6 +282,7 @@ const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
 const addCapped = (total, amount) =>
   Math.min(Number.MAX_SAFE_INTEGER, (total ?? 0) + amount);
 const isPoolId = (cadence, id) => TASK_BY_ID.get(id)?.cadence === cadence;
+const isPeak = (metric) => PEAK_METRICS.includes(metric);
 
 // A small, stable string hash (FNV-1a). Every device runs the same arithmetic,
 // so a period deals the same tasks everywhere without storing them.
@@ -222,7 +309,13 @@ function zeroCounts() {
 }
 
 function emptySlot() {
-  return { period: "", counts: zeroCounts(), claimed: [], swaps: [] };
+  return {
+    period: "",
+    counts: zeroCounts(),
+    claimed: [],
+    swaps: [],
+    bonus: false,
+  };
 }
 
 // `boughtAt: null` means no Task Skip has ever been bought, so the first one
@@ -273,11 +366,15 @@ function currentSlot(tasks, cadence, at) {
   const period = periodKey(cadence, at);
   const stored = tasks?.[cadence];
   if (stored?.period === period)
-    return { ...stored, swaps: stored.swaps ?? [] };
-  return { period, counts: zeroCounts(), claimed: [], swaps: [] };
+    return {
+      ...stored,
+      swaps: stored.swaps ?? [],
+      bonus: stored.bonus === true,
+    };
+  return { period, counts: zeroCounts(), claimed: [], swaps: [], bonus: false };
 }
 
-// The ids on a cadence's list at a moment: the three dealt for the period, with
+// The ids on a cadence's list at a moment: the ones dealt for the period, with
 // any skip of this period swapped in, in the order the swaps were made.
 export function activeTaskIds(tasks, cadence, at) {
   const slot = currentSlot(tasks, cadence, at);
@@ -294,11 +391,12 @@ export function activeTasks(tasks, cadence, at) {
   return activeTaskIds(tasks, cadence, at).map((id) => TASK_BY_ID.get(id));
 }
 
-// How far a task has got this period. A task swapped in by a skip counts from
-// the moment it was swapped in, not from the start of the period.
+// How far a task has got this period. A running total counts from the moment a
+// task was swapped in; a peak keeps the best roll of the period, whenever it was.
 function progressOf(slot, task) {
-  const swap = slot.swaps.find((entry) => entry.in === task.id);
   const total = slot.counts[task.metric] ?? 0;
+  if (isPeak(task.metric)) return total;
+  const swap = slot.swaps.find((entry) => entry.in === task.id);
   return Math.max(0, total - (swap?.base ?? 0));
 }
 
@@ -318,17 +416,45 @@ export function taskProgress(tasks, task, at) {
   };
 }
 
+// The ids of a cadence's list that are finished and not yet claimed.
+export function claimableIds(tasks, cadence, at) {
+  return activeTaskIds(tasks, cadence, at).filter(
+    (id) => taskProgress(tasks, TASK_BY_ID.get(id), at).state === "claimable",
+  );
+}
+
+// Where the list bonus of a cadence stands: how many of its tasks are claimed,
+// and whether the bonus itself is open, ready to claim, or taken.
+export function listBonusState(tasks, cadence, at) {
+  const slot = currentSlot(tasks, cadence, at);
+  const list = activeTaskIds(tasks, cadence, at);
+  const done = list.filter((id) => slot.claimed.includes(id)).length;
+  const state = slot.bonus
+    ? "claimed"
+    : done === list.length
+      ? "claimable"
+      : "open";
+  return {
+    reward: LIST_BONUS[cadence],
+    done,
+    total: list.length,
+    state,
+  };
+}
+
 export function taskSummary(tasks, at) {
   let ready = 0;
   let claimed = 0;
   let total = 0;
-  for (const cadence of TASK_CADENCES)
+  for (const cadence of TASK_CADENCES) {
     for (const task of activeTasks(tasks, cadence, at)) {
       total++;
       const { state } = taskProgress(tasks, task, at);
       if (state === "claimable") ready++;
       if (state === "claimed") claimed++;
     }
+    if (listBonusState(tasks, cadence, at).state === "claimable") ready++;
+  }
   return { ready, claimed, total };
 }
 
@@ -371,13 +497,18 @@ export function recordTally(tasks, tally, at) {
     }
     const slot = currentSlot(tasks, cadence, at);
     const counts = { ...slot.counts };
-    for (const metric of TASK_METRICS)
-      counts[metric] = addCapped(counts[metric], tally[metric] ?? 0);
+    for (const metric of TASK_METRICS) {
+      const amount = tally[metric] ?? 0;
+      counts[metric] = isPeak(metric)
+        ? Math.max(counts[metric] ?? 0, amount)
+        : addCapped(counts[metric], amount);
+    }
     next[cadence] = {
       period,
       counts,
       claimed: slot.claimed,
       swaps: slot.swaps,
+      bonus: slot.bonus,
     };
   }
   return { ...emptyTasks(), ...tasks, ...next };
@@ -404,6 +535,24 @@ export function claimTask(tasks, task, at) {
   };
 }
 
+// Marks a cadence's list bonus as taken for the current reset. The caller
+// credits the reward. The reducer pays it as soon as the last task of a list is
+// claimed, so it never waits for a separate click; this refuses a bonus that is
+// not earned or is already taken.
+export function claimListBonus(tasks, cadence, at) {
+  const bonus = listBonusState(tasks, cadence, at);
+  if (bonus.state === "claimed")
+    throw new Error("This list bonus is already claimed for this reset.");
+  if (bonus.state !== "claimable")
+    throw new Error("Claim every task on the list first.");
+  const slot = currentSlot(tasks, cadence, at);
+  return {
+    ...emptyTasks(),
+    ...tasks,
+    [cadence]: { ...slot, period: periodKey(cadence, at), bonus: true },
+  };
+}
+
 // A Task Skip: one open task on the list is swapped for the next pool task that
 // is not on the list and was not skipped this period, and one token is used. The
 // new task starts at zero from this moment. A claimed task is already paid for,
@@ -425,7 +574,11 @@ export function skipTask(tasks, task, at) {
     (id) => !active.includes(id) && !used.has(id),
   );
   if (!incoming) throw new Error("No other task is left for this reset.");
-  const base = slot.counts[TASK_BY_ID.get(incoming).metric] ?? 0;
+  // A peak counts from the best roll of the period, so it has no base to pass.
+  const incomingTask = TASK_BY_ID.get(incoming);
+  const base = isPeak(incomingTask.metric)
+    ? 0
+    : (slot.counts[incomingTask.metric] ?? 0);
   return {
     ...emptyTasks(),
     ...tasks,
@@ -483,7 +636,8 @@ export function parseTasks(value) {
       !!slot.counts &&
       typeof slot.counts === "object" &&
       Array.isArray(slot.claimed) &&
-      (slot.swaps === undefined || Array.isArray(slot.swaps));
+      (slot.swaps === undefined || Array.isArray(slot.swaps)) &&
+      (slot.bonus === undefined || typeof slot.bonus === "boolean");
     if (!readable) {
       repaired = true;
       tasks[cadence] = emptySlot();
@@ -510,6 +664,7 @@ export function parseTasks(value) {
       counts,
       claimed: [...new Set(slot.claimed.filter((id) => ids.includes(id)))],
       swaps,
+      bonus: slot.bonus === true,
     };
   }
   let skip = emptySkip();

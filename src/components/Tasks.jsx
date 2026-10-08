@@ -1,24 +1,32 @@
 import React, { useEffect, useState } from "react";
 import {
   ArrowRightLeft,
+  BadgeCheck,
   CalendarDays,
   Check,
+  CheckCheck,
   Coins,
+  Crown,
   Dices,
   Gem,
+  Gift,
   Layers,
   Medal,
+  PawPrint,
   Sparkles,
   Timer,
+  TrendingUp,
   Zap,
 } from "lucide-react";
 import {
   ACTIVE_PER_PERIOD,
   CADENCE_NAME,
+  LIST_BONUS,
   SKIP_INTERVAL_MS,
   TASKS,
   TASK_CADENCES,
   activeTasks,
+  listBonusState,
   nextReset,
   skipStatus,
   taskProgress,
@@ -34,15 +42,20 @@ export function resetCountdown(ms) {
   return waitText(ms);
 }
 
-// Each kind of task has its own mark, so a list reads at a glance.
-const METRIC_ICON = {
-  rolls: Dices,
-  rare: Sparkles,
-  epic: Gem,
-  multi: Layers,
-  discovered: Medal,
-  banked: Coins,
-  skills: Zap,
+// Each kind of task has a short name and its own mark, so a list reads at a
+// glance: what it asks for, not only how much it pays.
+const KIND = {
+  rolls: { name: "Volume", icon: Dices },
+  rare: { name: "Rarity", icon: Sparkles },
+  epic: { name: "Rarity", icon: Gem },
+  mythic: { name: "Rarity", icon: Crown },
+  multi: { name: "Draw", icon: Layers },
+  discovered: { name: "Badges", icon: Medal },
+  peakBadges: { name: "Badges", icon: BadgeCheck },
+  banked: { name: "Income", icon: Coins },
+  peakEP: { name: "Big roll", icon: TrendingUp },
+  skills: { name: "Skills", icon: Zap },
+  pets: { name: "Companion", icon: PawPrint },
 };
 
 const count = (n) => n.toLocaleString("en-US");
@@ -68,13 +81,89 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
       ? `Next purchase in ${waitText(skips.waitMs)}`
       : "Buy one in the Shop, Tools shelf";
 
-  async function claim(task) {
+  // Each list with what it shows: its tasks as views, and what is ready to pay.
+  const lists = TASK_CADENCES.map((cadence) => {
+    const tasks = activeTasks(progress.tasks, cadence, now);
+    const views = tasks.map((task) => ({
+      task,
+      ...taskProgress(progress.tasks, task, now),
+    }));
+    const ready = views.filter((view) => view.state === "claimable");
+    const bonus = listBonusState(progress.tasks, cadence, now);
+    return {
+      cadence,
+      views,
+      ready,
+      readyEP: ready.reduce((sum, view) => sum + view.task.reward, 0),
+      bonus,
+      // Claiming every ready task now would finish the list and pay its bonus.
+      finishes:
+        bonus.state === "open" && bonus.done + ready.length === bonus.total,
+      reset: nextReset(cadence, now) - now,
+    };
+  });
+  const readyEP = lists.reduce(
+    (sum, list) =>
+      sum +
+      list.readyEP +
+      (list.bonus.state === "claimable" ? list.bonus.reward : 0),
+    0,
+  );
+  const busy = !!pending;
+
+  async function claim(list, task) {
+    // This claim is the last one on the list when every other task is claimed.
+    const finishes =
+      list.bonus.state === "open" && list.bonus.done + 1 === list.bonus.total;
     setPending(task.id);
     const outcome = await onAction?.({ type: "claim-task", id: task.id });
     setPending("");
-    if (outcome?.ok)
-      notify?.(`+${formatEP(task.reward)} EP claimed: ${task.title}.`);
-    else notify?.(outcome?.message ?? "That task could not be claimed.");
+    if (outcome?.ok) {
+      notify?.({
+        kind: "reward",
+        title: `+${formatEP(task.reward)} EP`,
+        text: task.title,
+      });
+      if (finishes)
+        notify?.({
+          kind: "milestone",
+          title: `${CADENCE_NAME[task.cadence]} list complete`,
+          text: `+${formatEP(LIST_BONUS[task.cadence])} EP list bonus paid.`,
+        });
+    } else
+      notify?.({
+        kind: "error",
+        text: outcome?.message ?? "That task could not be claimed.",
+      });
+  }
+
+  async function claimAll(list) {
+    setPending(`all-${list.cadence}`);
+    const outcome = await onAction?.({
+      type: "claim-all-tasks",
+      cadence: list.cadence,
+    });
+    setPending("");
+    if (outcome?.ok) {
+      const bonus = list.finishes || list.bonus.state === "claimable";
+      const total = list.readyEP + (bonus ? LIST_BONUS[list.cadence] : 0);
+      const tasks = list.ready.length;
+      const claimedText = `${tasks} ${tasks === 1 ? "task" : "tasks"} claimed`;
+      notify?.({
+        kind: "reward",
+        title: `+${formatEP(total)} EP`,
+        text:
+          tasks && bonus
+            ? `${claimedText}, list bonus included.`
+            : bonus
+              ? `${CADENCE_NAME[list.cadence]} list bonus collected.`
+              : `${claimedText}.`,
+      });
+    } else
+      notify?.({
+        kind: "error",
+        text: outcome?.message ?? "Nothing could be claimed yet.",
+      });
   }
 
   async function skip(task) {
@@ -83,10 +172,16 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
     const outcome = await onAction?.({ type: "skip-task", id: task.id });
     setPending("");
     if (outcome?.ok)
-      notify?.(
-        `Task Skip used on ${task.title}. Check your list for the new task.`,
-      );
-    else notify?.(outcome?.message ?? "That task could not be skipped.");
+      notify?.({
+        kind: "info",
+        title: "Task Skip used",
+        text: `${task.title} is swapped out. The new task is on your list.`,
+      });
+    else
+      notify?.({
+        kind: "error",
+        text: outcome?.message ?? "That task could not be skipped.",
+      });
   }
 
   function skipHint() {
@@ -121,8 +216,13 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
         <div className="tasks-stat">
           <span className="tasks-stat-label">Ready</span>
           <strong>
-            {summary.ready} <small>ready to claim</small>
+            {summary.ready} <small>to claim</small>
           </strong>
+          <small className="tasks-stat-note">
+            {readyEP > 0
+              ? `Worth +${formatEP(readyEP)} EP together`
+              : "Nothing waiting for you"}
+          </small>
         </div>
         <div className="tasks-stat">
           <span className="tasks-stat-label">Claimed</span>
@@ -138,12 +238,9 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
           <small className="tasks-stat-note">{skipNote}</small>
         </div>
       </section>
-      {TASK_CADENCES.map((cadence) => {
-        const list = activeTasks(progress.tasks, cadence, now);
-        const views = list.map((task) =>
-          taskProgress(progress.tasks, task, now),
-        );
-        const reset = nextReset(cadence, now) - now;
+      {lists.map((list) => {
+        const { cadence, views, bonus } = list;
+        const allClaimed = bonus.state === "claimed";
         return (
           <section
             className="task-group"
@@ -159,23 +256,43 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
               </div>
               <div className="task-group-meta">
                 <span className="task-segments" aria-hidden="true">
-                  {views.map((view, index) => (
-                    <span key={index} className={`task-seg is-${view.state}`} />
+                  {views.map((view) => (
+                    <span
+                      key={view.task.id}
+                      className={`task-seg is-${view.state}`}
+                    />
                   ))}
                 </span>
                 <span className="task-reset">
                   <Timer size={13} aria-hidden="true" />
-                  Resets in {resetCountdown(reset)}
+                  Resets in {resetCountdown(list.reset)}
                 </span>
+                {list.ready.length > 0 && (
+                  <button
+                    className="primary-button task-claim-all"
+                    disabled={busy}
+                    aria-label={`Claim all ready ${cadence} tasks`}
+                    onClick={() => claimAll(list)}
+                  >
+                    <CheckCheck size={14} aria-hidden="true" />
+                    {pending === `all-${cadence}`
+                      ? "Claiming…"
+                      : `Claim all (${list.ready.length})`}
+                  </button>
+                )}
               </div>
             </header>
             <ul className="task-list">
-              {list.map((task, index) => {
-                const view = views[index];
+              {views.map((view) => {
+                const { task } = view;
                 const shown = Math.min(view.count, view.goal);
-                const Icon = METRIC_ICON[task.metric] ?? CalendarDays;
+                const kind = KIND[task.metric] ?? {
+                  name: "Task",
+                  icon: CalendarDays,
+                };
+                const Icon = kind.icon;
                 const asking = confirming === task.id;
-                const busy = !!pending;
+                const percent = Math.round((shown / view.goal) * 100);
                 return (
                   <li
                     key={task.id}
@@ -188,6 +305,7 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
                         <Icon size={18} />
                       </span>
                       <div className="task-card-title">
+                        <span className="task-kind">{kind.name}</span>
                         <h3>{task.title}</h3>
                         <p>{task.detail}</p>
                       </div>
@@ -205,6 +323,7 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
                       />
                       <span className="task-count">
                         {count(shown)} / {count(view.goal)}
+                        <span className="task-percent"> · {percent}%</span>
                       </span>
                     </div>
                     <div className="task-card-foot">
@@ -218,7 +337,7 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
                           className="primary-button task-claim"
                           disabled={busy}
                           aria-label={`Claim reward for ${task.title}`}
-                          onClick={() => claim(task)}
+                          onClick={() => claim(list, task)}
                         >
                           {pending === task.id ? "Claiming…" : "Claim"}
                         </button>
@@ -237,7 +356,7 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
                       )}
                       {view.state === "open" && asking && (
                         <span className="task-confirm">
-                          <span>Swap this task for another?</span>
+                          <span>Swap it for another? Uses a Task Skip.</span>
                           <button
                             className="primary-button"
                             disabled={busy}
@@ -259,15 +378,49 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
                 );
               })}
             </ul>
+            <div
+              className={`task-bonus is-${bonus.state}`}
+              data-bonus={cadence}
+              data-state={bonus.state}
+            >
+              <span className="task-bonus-icon" aria-hidden="true">
+                {allClaimed ? <CheckCheck size={16} /> : <Gift size={16} />}
+              </span>
+              <div className="task-bonus-text">
+                <strong>
+                  {CADENCE_NAME[cadence]} list bonus · +{formatEP(bonus.reward)}{" "}
+                  EP
+                </strong>
+                <span>
+                  {allClaimed
+                    ? "Paid. Every task on this list is claimed."
+                    : bonus.state === "claimable"
+                      ? "Ready to collect."
+                      : `${bonus.done} of ${bonus.total} claimed. Claim them all to unlock it.`}
+                </span>
+              </div>
+              {bonus.state === "claimable" && (
+                <button
+                  className="primary-button task-claim"
+                  disabled={busy}
+                  aria-label={`Collect ${cadence} list bonus`}
+                  onClick={() => claimAll(list)}
+                >
+                  Collect
+                </button>
+              )}
+            </div>
           </section>
         );
       })}
       <p className="task-note">
-        A reward is paid into your wallet once, when you claim it. Unclaimed
-        rewards expire when their reset comes. Offline rolls do not count, and
-        task EP never counts towards a rebirth. A Task Skip swaps one open task
-        for another from its pool. You can buy one every{" "}
-        {SKIP_INTERVAL_MS / 86400000} days in the Shop, and hold up to three.
+        A reward is paid into your wallet once, when you claim it. Finishing
+        every task on a list also pays its list bonus, the moment the last one
+        is claimed. Unclaimed rewards expire when their reset comes. Offline
+        rolls do not count, and task EP never counts towards a rebirth. A Task
+        Skip swaps one open task for another from its pool. You can buy one
+        every {SKIP_INTERVAL_MS / 86400000} days in the Shop, and hold up to
+        three.
       </p>
     </>
   );

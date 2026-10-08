@@ -1,0 +1,156 @@
+/* In-game notices: a short stack of cards at the bottom of the page. The stack
+   itself takes no pointer input, so the page under it stays usable between the
+   cards; each card takes the pointer for itself. */
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(440px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.toast {
+  --toast-accent: var(--secondary);
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 8px 10px 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--toast-accent);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 26px #00000020;
+  font-size: 12px;
+  line-height: 1.4;
+  animation: toast-in 0.28s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.toast.is-leaving {
+  animation: toast-out 0.2s ease-in both;
+}
+/* Each kind wears one colour: the rail on the left and the mark both take it. */
+.toast.is-info {
+  --toast-accent: var(--secondary);
+}
+.toast.is-reward {
+  --toast-accent: var(--green);
+}
+.toast.is-milestone {
+  --toast-accent: #d9a441;
+}
+.toast.is-warning {
+  --toast-accent: var(--warning);
+}
+.toast.is-error {
+  --toast-accent: var(--danger);
+}
+.toast-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--toast-accent) 16%, transparent);
+  color: var(--toast-accent);
+}
+.toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.toast-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink, var(--text));
+}
+.toast-text {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.toast-title + .toast-text {
+  color: var(--secondary);
+}
+.toast-count {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.toast-action {
+  flex: none;
+  padding: 5px 11px;
+  border: 1px solid var(--toast-accent);
+  border-radius: 999px;
+  background: none;
+  color: var(--toast-accent);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toast-action:hover,
+.toast-action:focus-visible {
+  background: color-mix(in srgb, var(--toast-accent) 14%, transparent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--toast-accent);
+}
+.toast-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.toast-close:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.toast-close:focus-visible {
+  outline: 2px solid var(--toast-accent);
+  outline-offset: 1px;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+/* The phone's tab bar sits at the bottom edge, so the stack lifts above it. */
+@media (max-width: 760px) {
+  .toast-stack {
+    bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+}

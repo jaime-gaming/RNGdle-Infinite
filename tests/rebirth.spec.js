@@ -898,7 +898,9 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   await other
     .locator('[data-product="starfall"] button:not(.shop-tag)')
     .click();
-  await expect(other.locator(".toast")).toContainText("changed");
+  await expect(other.locator(".toast", { hasText: "changed" })).toContainText(
+    "changed",
+  );
   // The stale tab neither spent EP nor revived an old purchase: the rebirth
   // handed the shelf back, so nothing was sold and the wallet holds only the
   // sum the new cycle started with — the rung's share plus the surplus of

@@ -16,7 +16,6 @@ import {
   X,
   Search,
   ChevronRight,
-  Check,
   ArrowLeft,
   SlidersHorizontal,
   ScrollText,
@@ -45,6 +44,8 @@ import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
 import Tasks from "./components/Tasks";
 import { taskSummary } from "./tasks.js";
+import { freshRareBadges, newlyReady } from "./notice-rules.js";
+import { badgeMetadata } from "./roll-data.js";
 import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
 import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
@@ -63,10 +64,13 @@ import Changelog from "./components/Changelog";
 import {
   BadgeMark,
   CompanionMark,
+  CreatureIcon,
   InfinityMark,
   SkillMark,
   RollMark,
 } from "./components/game-icons.jsx";
+import Toasts from "./components/Toasts";
+import { useToasts } from "./use-toasts.js";
 import RebirthNav from "./components/RebirthNav";
 import MobileTabBar from "./components/MobileTabBar";
 import InstallApp from "./components/InstallApp";
@@ -123,6 +127,15 @@ function shopSectionFromLocation(target) {
   return named(hash) || named(subpageFromLocation(target));
 }
 
+// Used by the notices: a badge's rarity as the game writes it.
+const NO_BADGES = [];
+const RARITY_NAME = {
+  epic: "Epic",
+  anomaly: "Anomaly",
+  mythic: "Mythic",
+  godly: "GODLY",
+};
+
 function App() {
   const [page, setPage] = useState(() => pageFromLocation(location));
   const [theme, setTheme] = useState(() => {
@@ -157,7 +170,9 @@ function App() {
   const [pickingGoal, setPickingGoal] = useState(false);
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
-  const [toast, setToast] = useState("");
+  // Notices: a short stack of cards, one per thing that just happened. See
+  // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
+  const { toasts, notify, dismiss: dismissToast } = useToasts();
   // A prestige (the ultra-rebirth in the save) earns a moment, and so does the
   // Rollback, the last stage, in its own words. The ceremony is a full-screen
   // moment that lives in the app shell (the rebirth page navigates away the
@@ -216,10 +231,14 @@ function App() {
     return subscribeSync((state, note) => {
       if (state === "live" && announced !== "live") {
         announced = "live";
-        notify("Devices linked — both devices now play the same account live.");
+        notify({
+          kind: "milestone",
+          title: "Devices linked",
+          text: "Both devices now play the same account, live.",
+        });
       } else if (state === "error" && announced !== "error") {
         announced = "error";
-        notify(note);
+        notify({ kind: "error", text: note || "The device link was lost." });
       } else if (state !== "error") announced = state;
     });
   }, []);
@@ -259,27 +278,26 @@ function App() {
       setSeenVersion(LATEST_VERSION);
     }
     if (outcome.ok && drop) {
-      notify(`New companion: ${petById.get(drop).name} joined you.`);
+      notify({
+        kind: "milestone",
+        title: "New companion",
+        text: `${petById.get(drop).name} joined you and multiplies the EP you bank.`,
+        icon: <CreatureIcon pet={drop} size={18} />,
+      });
       setArrivalPet(drop);
       clearTimeout(arrivalTimer.current);
       arrivalTimer.current = setTimeout(() => setArrivalPet(null), 5600);
     }
-    if (!outcome.ok) notify(outcome.message);
+    if (!outcome.ok) notify({ kind: "error", text: outcome.message });
     return outcome;
   }
   const [search, setSearch] = useState("");
   const [rarity, setRarity] = useState("All rarities");
   const [group, setGroup] = useState("All sets");
   const [sort, setSort] = useState("Default");
-  const toastTimer = useRef(null);
   const arrivalTimer = useRef(null);
   const previousFocus = useRef(null);
   const modalRef = useRef(null);
-  const notify = (text) => {
-    setToast(text);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 3500);
-  };
   // The log's space warnings are announced once, when a roll or a claim carries
   // it across a level. An account that loads already past a level stays quiet:
   // the History page shows the warning for as long as it applies.
@@ -288,13 +306,64 @@ function App() {
   useEffect(() => {
     const before = lastHistorySize.current;
     lastHistorySize.current = historySize;
+    const openHistory = {
+      label: "Open History",
+      onSelect: () => navigate("history"),
+    };
     if (before < HISTORY_LIMIT && historySize >= HISTORY_LIMIT)
-      notify(
-        "Entry space is full. The oldest entries now make room for new rolls.",
-      );
+      notify({
+        kind: "warning",
+        title: "Entry space is full",
+        text: "The oldest entries now make room for new rolls.",
+        action: openHistory,
+      });
     else if (before < HISTORY_WARNING && historySize >= HISTORY_WARNING)
-      notify("Low entry space. Open History to bulk delete old entries.");
+      notify({
+        kind: "warning",
+        title: "Low entry space",
+        text: "Open History to bulk delete old entries.",
+        action: openHistory,
+      });
   }, [historySize]);
+  // Two things the player waits for earn a notice when they first appear: a
+  // task that can be claimed, and a badge of Epic or better. The first load is
+  // quiet, and one roll that finishes several things is one notice. The badge
+  // notice stays off the roll page, where the result already shows the badges.
+  const readyTasks = taskSummary(session.tasks, gameNow()).ready;
+  const lastReadyTasks = useRef(readyTasks);
+  useEffect(() => {
+    const rose = newlyReady(lastReadyTasks.current, readyTasks);
+    lastReadyTasks.current = readyTasks;
+    if (rose > 0 && page !== "tasks")
+      notify({
+        kind: "milestone",
+        title:
+          readyTasks === 1
+            ? "Task ready to claim"
+            : `${readyTasks} tasks ready to claim`,
+        text: "The reward waits on the Tasks page.",
+        action: { label: "Open Tasks", onSelect: () => navigate("tasks") },
+      });
+  }, [readyTasks]);
+  const discovered = session.discovered ?? NO_BADGES;
+  const lastDiscovered = useRef(discovered);
+  useEffect(() => {
+    const fresh = freshRareBadges(lastDiscovered.current, discovered, (id) =>
+      badgeMetadata.get(id),
+    );
+    lastDiscovered.current = discovered;
+    if (page === "roll" || !fresh.length) return;
+    const names = fresh.map((badge) => badge.name);
+    notify({
+      kind: "milestone",
+      title:
+        fresh.length === 1
+          ? `${RARITY_NAME[fresh[0].rarity]} badge found`
+          : `${fresh.length} rare badges found`,
+      text: names.join(", "),
+      action: { label: "Open Badges", onSelect: () => navigate("badges") },
+    });
+  }, [discovered]);
   // Real URLs, so a page and its shelf can be linked, bookmarked and reloaded
   // directly. The address bar is the source of truth, never component state.
   const push = (target, path, section = "") => {
@@ -413,7 +482,6 @@ function App() {
   }, [theme]);
   useEffect(
     () => () => {
-      clearTimeout(toastTimer.current);
       clearTimeout(arrivalTimer.current);
     },
     [],
@@ -837,7 +905,11 @@ function App() {
               onAction={dispatch}
               onDone={(message, meta) => {
                 navigate("roll");
-                notify(message ?? "Rebirth complete.");
+                notify({
+                  kind: "milestone",
+                  title: "Rebirth complete",
+                  text: message ?? "The new cycle has started.",
+                });
                 if (meta?.rollback) setUltraCeremony("rollback");
                 else if (meta?.ultra) setUltraCeremony("prestige");
                 else setRebirthRing(true);
@@ -1200,12 +1272,7 @@ function App() {
           </section>
         </div>
       )}
-      {toast && (
-        <div className="toast" role="status">
-          <Check size={16} />
-          {toast}
-        </div>
-      )}
+      <Toasts items={toasts} onDismiss={dismissToast} />
 
       {/* The ceremony: rays, a slam of the title and a storm of confetti for
           the ultra-rebirth itself. Pointer-transparent (never in the way of

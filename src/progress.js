@@ -65,9 +65,15 @@ import {
   tallyEntries,
 } from "./history-tally.js";
 import {
+  CADENCE_NAME,
+  claimableIds,
+  claimListBonus,
   claimTask,
   EPIC_OR_BETTER,
   emptyTasks,
+  LIST_BONUS,
+  listBonusState,
+  MYTHIC_OR_BETTER,
   parseTasks,
   periodKey,
   RARE_OR_BETTER,
@@ -707,6 +713,54 @@ function buyTaskSkip(state, item, action) {
   };
 }
 
+// Pays the given finished tasks of one cadence into the wallet, and the list
+// bonus too when that claim finishes the list. Each payment is logged as income
+// with the name it had when paid, like any other task reward.
+function payTasks(state, cadence, at, ids, eventId = null) {
+  const stamp = periodKey(cadence, at);
+  let tasks = state.tasks ?? emptyTasks();
+  let paid = 0;
+  const events = [];
+  for (const id of ids) {
+    const task = taskById(id);
+    tasks = claimTask(tasks, task, at);
+    paid += task.reward;
+    events.push({
+      id: eventId ?? `task:${task.id}:${stamp}`,
+      type: "task",
+      at,
+      taskId: task.id,
+      cadence,
+      name: task.title,
+      ep: task.reward,
+    });
+  }
+  if (listBonusState(tasks, cadence, at).state === "claimable") {
+    tasks = claimListBonus(tasks, cadence, at);
+    paid += LIST_BONUS[cadence];
+    events.push({
+      id: `bonus:${cadence}:${stamp}`,
+      type: "task",
+      at,
+      taskId: `${cadence}-list`,
+      cadence,
+      name: `${CADENCE_NAME[cadence]} list complete`,
+      ep: LIST_BONUS[cadence],
+    });
+  }
+  const balance = state.balance + paid;
+  const totalEarned = state.totalEarned + paid;
+  if (!validAmount(balance) || !validAmount(totalEarned))
+    throw new Error("EP balance limit reached.");
+  return {
+    ...state,
+    tasks,
+    balance,
+    totalEarned,
+    history: appendHistory(state.history, events),
+  };
+}
+
 export function applyProgress(state, action) {
   const next = applyEvent(state, action);
   if (next === state || !Array.isArray(next.history)) return next;
@@ -891,36 +945,32 @@ function applyEvent(state, action) {
   }
   // A task pays its reward into the wallet once per reset. It is a reward for
   // play, not a sale, so it is logged as income and never counts towards the
-  // rebirth gate, which reads only rolls.
+  // rebirth gate, which reads only rolls. Finishing the last task of a list also
+  // pays the list bonus, in the same step.
   if (action.type === "claim-task") {
     const task = taskById(action.id);
     if (!task) throw new Error("That task does not exist.");
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid task time");
-    const reward = task.reward;
-    const balance = state.balance + reward;
-    const totalEarned = state.totalEarned + reward;
-    if (!validAmount(balance) || !validAmount(totalEarned))
-      throw new Error("EP balance limit reached.");
-    return {
-      ...state,
-      tasks: claimTask(state.tasks, task, at),
-      balance,
-      totalEarned,
-      history: appendHistory(state.history, [
-        {
-          id:
-            action.eventId ?? `task:${task.id}:${periodKey(task.cadence, at)}`,
-          type: "task",
-          at,
-          taskId: task.id,
-          cadence: task.cadence,
-          name: task.title,
-          ep: reward,
-        },
-      ]),
-    };
+    return payTasks(state, task.cadence, at, [task.id], action.eventId);
+  }
+  // Claims every finished task of one list at once, and the list bonus if the
+  // claims finish the list. Nothing is claimed twice: a task already paid is not
+  // in the ready set any more.
+  if (action.type === "claim-all-tasks") {
+    if (!TASK_CADENCES.includes(action.cadence))
+      throw new Error("That task list does not exist.");
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid task time");
+    const ids = claimableIds(state.tasks, action.cadence, at);
+    if (
+      !ids.length &&
+      listBonusState(state.tasks, action.cadence, at).state !== "claimable"
+    )
+      throw new Error("Nothing to claim yet.");
+    return payTasks(state, action.cadence, at, ids);
   }
   // Bulk delete from History. The cut is worked out here, from the save as it
   // is now, so a stale screen can never remove the wrong entries. Cycle markers
@@ -1165,6 +1215,14 @@ function applyEvent(state, action) {
     // something the player went and did. The committed number is the roll;
     // the numbers a draw skill kept are wallet income, not extra rolls.
     const committed = paidEvents[0];
+    const droppedPet =
+      typeof action.petDrop === "string" &&
+      petById.has(action.petDrop) &&
+      !(state.pets ?? []).includes(action.petDrop)
+        ? action.petDrop
+        : null;
+    // Tasks count the committed number, which is the roll. Peaks take the
+    // number's own EP and badge count, before any bonus or multiplier.
     const tasks =
       action.source === "offline"
         ? (state.tasks ?? emptyTasks())
@@ -1174,6 +1232,7 @@ function applyEvent(state, action) {
               rolls: 1,
               rare: RARE_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
               epic: EPIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+              mythic: MYTHIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
               // A roll that paid more than one number, which only a draw skill
               // can make happen.
               multi: paidEvents.length > 1 ? 1 : 0,
@@ -1183,15 +1242,12 @@ function applyEvent(state, action) {
               ),
               banked: credited,
               skills: fired.length ? 1 : 0,
+              pets: droppedPet ? 1 : 0,
+              peakEP: committed.scored.totalEP,
+              peakBadges: committed.scored.badges.length,
             },
             at,
           );
-    const droppedPet =
-      typeof action.petDrop === "string" &&
-      petById.has(action.petDrop) &&
-      !(state.pets ?? []).includes(action.petDrop)
-        ? action.petDrop
-        : null;
     if (droppedPet)
       events.push({
         id: `${id}:pet`,

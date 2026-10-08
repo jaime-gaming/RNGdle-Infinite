@@ -397,10 +397,12 @@ export default function RollExperience({
     : "REVEAL IN";
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
-  // A draw skill took more than one number. The split screen owns the roll
-  // until every draw has rolled its digits and earned its badges; the best one
-  // then takes the centre of the screen, holds it, and leaves — the rest of the
-  // reveal (rank, wallet, breakdown) plays underneath once it has gone.
+  // A draw skill took more than one number. The split screen shows every draw
+  // while each rolls its digits and earns its badges. Once the best is known it
+  // stays up with every number on it, until the player minimizes it to one
+  // number's stats or the next roll opens it again. Its open state lives here,
+  // not in the stage, because the result summary under it stays hidden for as
+  // long as the screen is open.
   const splitDraws = run && (run.draws ?? []).length > 1 ? run.draws : null;
   const splitDecision = useMemo(() => {
     if (!splitDraws) return 0;
@@ -410,15 +412,14 @@ export default function RollExperience({
       0.35 * timeline.pulseMS
     );
   }, [splitDraws, timeline]);
-  // The winner holds the centre long enough to read and to hover at any pace.
-  // It cannot hold much longer than this: the rank, the wallet and the badge
-  // breakdown all play underneath and need the screen back.
-  const scale = timeline.scale ?? 1,
-    splitHold = 1100 + 1400 * scale,
-    splitFade = 250 + 350 * scale;
-  const splitPlaying =
-    !!splitDraws && elapsed < splitDecision + splitHold + splitFade;
-  const splitLeaving = !!splitDraws && elapsed >= splitDecision + splitHold;
+  const [splitView, setSplitView] = useState({
+    run: null,
+    open: true,
+    number: null,
+  });
+  const splitOwned = !!run && splitView.run === run.id;
+  const splitOpen = !!splitDraws && (!splitOwned || splitView.open);
+  const splitPick = splitOwned && !splitView.open ? splitView.number : null;
   const splitDecided = !!splitDraws && elapsed >= splitDecision;
   const rankKnown = !!run && elapsed >= timeline.rarity;
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
@@ -437,6 +438,7 @@ export default function RollExperience({
       busy ||
       cooldown > 0 ||
       awaitingSettlement ||
+      splitOpen ||
       session.offline?.batch ||
       session.pendingRoll
     )
@@ -465,6 +467,7 @@ export default function RollExperience({
     busy,
     cooldown,
     awaitingSettlement,
+    splitOpen,
     session.pendingRoll,
     session.offline?.batch,
     localCooldownUntil,
@@ -506,20 +509,13 @@ export default function RollExperience({
     // cannot fast-forward the number onto the screen.
     const start = gameNow();
     const alreadyElapsed = Math.max(0, start - run.startedAt);
-    // The reveal only wakes on its own beats. A draw skill's split screen has
-    // beats of its own — the decision and the moment it lets go of the screen —
-    // and it would otherwise hang between two badge cues and only leave when
-    // the whole reveal ended.
+    // The reveal only wakes on its own beats. A draw skill's split screen has a
+    // beat of its own, the decision, and it would otherwise hang between two
+    // badge cues until the whole reveal ended.
     const cues = [
       ...new Set([
         ...revealCueTimes(timeline),
-        ...(splitDraws
-          ? [
-              splitDecision,
-              splitDecision + splitHold,
-              splitDecision + splitHold + splitFade,
-            ]
-          : []),
+        ...(splitDraws ? [splitDecision] : []),
       ]),
     ].sort((a, b) => a - b);
     const finish = (instant = false) => {
@@ -813,18 +809,25 @@ export default function RollExperience({
           <section className="active-roll" aria-label="Your roll">
             {/* Every draw the roll took, side by side, until the best of them
                 takes the centre and becomes the number that pays. */}
-            {splitPlaying && (
+            {splitDraws && (
               <DrawStage
                 key={`draw-${run.id}`}
                 {...{ run, elapsed, timeline, reducedMotion, aura }}
                 decided={splitDecided}
-                leaving={splitLeaving}
+                open={splitOpen}
+                picked={splitPick}
+                onPick={(number) =>
+                  setSplitView({ run: run.id, open: false, number })
+                }
+                onExpand={() =>
+                  setSplitView({ run: run.id, open: true, number: null })
+                }
               />
             )}
             <NumberArtifact
               key={run.id}
               {...{ run, elapsed, timeline, reducedMotion, aura }}
-              behind={!!splitDraws && !splitDecided}
+              behind={splitOpen}
               dockedPet={companionSkillFiring ? session.activePet : null}
             />
             <div className="roll-announcement sr-only" role="status">
@@ -849,7 +852,7 @@ export default function RollExperience({
             </div>
             {result.totalEP !== null && (
               <div
-                className={`result-summary ${!digitsDone ? "is-spinning-summary" : ""} ${splitPlaying ? "is-behind-draw" : ""}`}
+                className={`result-summary ${!digitsDone ? "is-spinning-summary" : ""} ${splitOpen ? "is-behind-draw" : ""}`}
               >
                 {digitsDone && (
                   <RankSummary

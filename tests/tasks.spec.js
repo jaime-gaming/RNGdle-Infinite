@@ -8,6 +8,7 @@ import {
   recoverUnsavedRolls,
 } from "../src/progress.js";
 import {
+  ACTIVE_PER_PERIOD,
   activeTaskIds,
   emptyTasks,
   nextReset,
@@ -68,11 +69,13 @@ test("online rolls advance every task they count, and offline rolls advance none
     roll("a", at(2026, 10, 8, 9), "rare", 15000),
   );
   expect(online.tasks.daily.period).toBe("2026-10-08");
+  // The peak is the best single roll of the period: this roll's own EP.
   expect(online.tasks.daily.counts).toEqual({
     ...zeroCounts(),
     rolls: 1,
     rare: 1,
     banked: 15000,
+    peakEP: 15000,
   });
   expect(online.tasks.weekly.counts).toEqual(online.tasks.daily.counts);
   // An offline roll is a passive reward, so it is never counted as play.
@@ -97,13 +100,14 @@ test("a task pays its reward once per reset, into the wallet and the log", () =>
     id: "daily-rolls",
     at: at(2026, 10, 8, 20),
   });
-  expect(claimed.balance - before).toBe(10000);
-  expect(claimed.totalEarned - state.totalEarned).toBe(10000);
+  const reward = taskById("daily-rolls").reward;
+  expect(claimed.balance - before).toBe(reward);
+  expect(claimed.totalEarned - state.totalEarned).toBe(reward);
   expect(claimed.history.at(-1)).toMatchObject({
     type: "task",
     taskId: "daily-rolls",
     cadence: "daily",
-    ep: 10000,
+    ep: reward,
   });
   // Claimed once: the same task cannot pay again in the same reset.
   expect(() =>
@@ -201,7 +205,7 @@ test("task EP never counts towards a rebirth, and claimed tasks survive one", ()
     id: "daily-rolls",
     at: at(2026, 10, 8, 20),
   });
-  expect(state.balance).toBe(10000 + 10000);
+  expect(state.balance).toBe(10000 + taskById("daily-rolls").reward);
   // The gate reads roll EP only: the 10,000 reward is not cycle EP.
   expect(cycleEarnedEp(state)).toBe(10000);
   // A roll that clears the first rung's EP gate, then the rebirth itself.
@@ -259,8 +263,15 @@ test("unreadable task progress is reset and reported, while a save without tasks
       counts: { ...zeroCounts(), rolls: 2 },
       claimed: ["daily-rolls"],
       swaps: [],
+      bonus: false,
     },
-    weekly: { period: "", counts: zeroCounts(), claimed: [], swaps: [] },
+    weekly: {
+      period: "",
+      counts: zeroCounts(),
+      claimed: [],
+      swaps: [],
+      bonus: false,
+    },
     skip: { tokens: 0, boughtAt: null },
   });
 });
@@ -355,22 +366,22 @@ test("the Tasks page lists both cadences, and a finished task is claimed once fr
       await expect(page.locator(`[data-task="${id}"]`)).toBeVisible();
   // Only the tasks on the list are shown: the rest of each pool stays hidden.
   await expect(page.locator("[data-task]")).toHaveCount(
-    TASK_CADENCES.length * 3,
+    TASK_CADENCES.length * ACTIVE_PER_PERIOD,
   );
   await expect(page.locator(`[data-task="${dailyId}"]`)).toHaveAttribute(
     "data-state",
     "claimable",
   );
   await expect(page.locator(".tasks-summary")).toContainText(
-    `${taskSummary(tasks, now).ready} ready to claim`,
+    `${taskSummary(tasks, now).ready} to claim`,
   );
 
   await page
     .getByRole("button", { name: `Claim reward for ${daily.title}` })
     .click();
-  await expect(page.getByRole("status")).toContainText(
-    `+${formatEP(daily.reward)} EP claimed`,
-  );
+  const notice = page.locator("article.toast.is-reward");
+  await expect(notice).toContainText(`+${formatEP(daily.reward)} EP`);
+  await expect(notice).toContainText(daily.title);
   await expect(page.locator(`[data-task="${dailyId}"]`)).toHaveAttribute(
     "data-state",
     "claimed",
@@ -471,15 +482,15 @@ test("a claimed task is written to History, and the Tasks filter shows only thos
   await expect(page.locator(".activity-event")).toHaveCount(1);
 });
 
-test("each period deals three of eight tasks, the same on every device, and the list changes from day to day", () => {
+test("each period deals four of twelve tasks, the same on every device, and the list changes from day to day", () => {
   for (const cadence of TASK_CADENCES)
-    expect(TASKS.filter((task) => task.cadence === cadence)).toHaveLength(8);
+    expect(TASKS.filter((task) => task.cadence === cadence)).toHaveLength(12);
   const day = (d) => at(2026, 10, d, 12);
   const list = activeTaskIds(emptyTasks(), "daily", day(8));
-  expect(list).toHaveLength(3);
-  expect(new Set(list).size).toBe(3);
+  expect(list).toHaveLength(ACTIVE_PER_PERIOD);
+  expect(new Set(list).size).toBe(ACTIVE_PER_PERIOD);
   // Nothing about the list is stored, so any save at this moment deals the same
-  // three, whatever it held before.
+  // four, whatever it held before.
   const elsewhere = {
     ...emptyTasks(),
     daily: {
@@ -566,14 +577,17 @@ test("a Task Skip swaps an open task for the next one in its pool, which starts 
   expect(swapped.balance).toBe(state.balance);
   expect(skipStatus(swapped.tasks, day).tokens).toBe(1);
   const after = activeTaskIds(swapped.tasks, "daily", day);
-  expect(after).toHaveLength(3);
+  expect(after).toHaveLength(ACTIVE_PER_PERIOD);
   expect(after).not.toContain(out);
   const incoming = after.find((id) => !listed.includes(id));
   expect(incoming).toBeDefined();
   expect(taskById(incoming).cadence).toBe("daily");
-  // The new task's metric already counts today's rolls, yet it starts at zero.
-  expect(taskProgress(swapped.tasks, taskById(incoming), day)).toMatchObject({
-    count: 0,
+  // The new task's metric already counts today's rolls. A running total starts
+  // at zero from the swap, while a peak reads the best roll of the period (here
+  // one worth 40,000 EP), so a peak swapped in later can already be on its way.
+  const incomingTask = taskById(incoming);
+  expect(taskProgress(swapped.tasks, incomingTask, day)).toMatchObject({
+    count: incomingTask.metric === "peakEP" ? 40000 : 0,
     state: "open",
   });
   // A task skipped this period never comes back, even after another swap.
@@ -750,7 +764,7 @@ test("the Tasks page swaps an open task only after a confirm, and spends one tok
     page.locator(".tasks-stat").filter({ hasText: "Task Skips" }),
   ).toContainText("1 of 3 held");
   await card.getByRole("button", { name: `Skip ${task.title}` }).click();
-  await expect(card).toContainText("Swap this task for another?");
+  await expect(card).toContainText("Swap it for another?");
   await card.getByRole("button", { name: "Keep" }).click();
   await expect(
     card.getByRole("button", { name: `Skip ${task.title}` }),

@@ -104,12 +104,13 @@
   color: var(--muted);
   letter-spacing: 0.02em;
 }
+/* Four tasks a list, so two columns: a 2 by 2 grid with no orphan card. */
 .task-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 .task-card {
@@ -258,6 +259,86 @@
   font-size: 11px;
   color: var(--muted);
   line-height: 1.8;
+}
+.task-kind {
+  display: block;
+  margin-bottom: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.task-percent {
+  color: var(--secondary);
+}
+.task-claim-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+/* The list bonus sits under its tasks: dashed while it is still to earn, solid
+   once it is ready to collect or has been paid. */
+.task-bonus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.task-bonus-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--hover);
+  color: var(--secondary);
+}
+.task-bonus-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.task-bonus-text strong {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+}
+.task-bonus-text span {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.task-bonus.is-claimed {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--green) 40%, var(--border));
+}
+.task-bonus.is-claimed .task-bonus-icon {
+  background: var(--green);
+  color: var(--bg);
+}
+.task-bonus.is-claimable {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--green) 60%, var(--border));
+  background: linear-gradient(180deg, var(--green-bg), var(--surface));
+}
+.task-bonus.is-claimable .task-bonus-icon {
+  background: var(--green);
+  color: var(--bg);
+}
+.task-bonus .task-claim {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 @keyframes task-seg-pulse {
   0%,

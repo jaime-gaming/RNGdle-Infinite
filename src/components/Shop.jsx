@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
-  ArrowRightLeft,
   Check,
   ChevronRight,
   Coins,
@@ -130,7 +129,6 @@ const icons = {
   auto: AutomationMark,
   core: CoreMark,
   lens: LensMark,
-  skip: ArrowRightLeft,
   surge: SurgeMark,
   trail: TrailMark,
   bounce: BounceMark,

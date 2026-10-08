@@ -1591,37 +1591,6 @@ footer button:hover,
   letter-spacing: -2px;
   margin: 25px 0;
 }
-.toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 4px 25px #00000015;
-  padding: 14px 20px;
-  font-size: 12px;
-  max-width: 90%;
-  animation: toast-in 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-.toast svg {
-  color: var(--green);
-}
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 12px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -1785,10 +1754,6 @@ footer button:hover,
   }
   .content-main {
     padding: 24px 16px 40px;
-  }
-  /* Toasts and the corner skill rack must clear the tab bar. */
-  .toast {
-    bottom: calc(78px + env(safe-area-inset-bottom));
   }
   /* The phone layout ends at the tab bar: the footer only adds a scroll
      tail, and its destinations live in Settings and the tab bar. */

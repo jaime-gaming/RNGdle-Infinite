@@ -8,8 +8,8 @@ import { buildRevealTimeline } from "../src/roll-timeline.js";
 // A draw skill spends several ordinary draws and keeps the best. This is the
 // screen that says so: one panel per draw, filling the screen behind visible
 // dividing lines, every draw rolling its digits and earning its badges in the
-// open, and the best one taking the centre behind a grey filter that lifts
-// under the pointer.
+// open. When the best is known every number stays on the screen, the best one
+// marked, and tapping a number minimizes the screen to that number's stats.
 
 // Four numbers, none of which reaches Bedrock's 25,000 EP floor, so the skill
 // spends its whole budget of four draws and keeps the best of them.
@@ -128,7 +128,7 @@ test("each quadrant rolls its own digits and earns its own badges", async ({
   await expect(page.locator(".draw-stage")).not.toHaveClass(/is-decided/);
 });
 
-test("the best draw takes the centre behind a grey filter the pointer lifts", async ({
+test("the best draw is marked, and every number stays on the grid", async ({
   page,
 }) => {
   await startSplitRoll(page);
@@ -137,34 +137,59 @@ test("the best draw takes the centre behind a grey filter the pointer lifts", as
       document.querySelector(".draw-stage")?.classList.contains("is-decided"),
     ),
   ).toBe(true);
-  await expect(page.locator(".draw-winner")).toBeVisible();
-  // The winner is the draw that scored the most EP, stated in words.
-  await expect(page.locator(".draw-winner-ep")).toHaveText(
-    `${formatEP(keptEP)} EP`,
+  // Nothing flies to the centre and nothing greys out: every number is still
+  // there, and the one the roll keeps is marked as the best.
+  await expect(page.locator(".draw-panel")).toHaveCount(DRAWS.length);
+  await expect(page.locator(".draw-card")).toHaveCount(0);
+  await expect(page.locator(".draw-stage-label")).toContainText(
+    "Best of 4 kept",
   );
-  await expect(page.locator(".draw-winner-kicker")).toContainText("Best of 4");
   await expect(
     page.locator(".draw-panel.is-winner .draw-panel-tag"),
   ).toHaveText("Best");
   await expect(page.locator(".draw-panel.is-out").first()).toContainText(
     "Discarded",
   );
-  // Grey until the pointer is over it: the discarded draws are still there,
-  // just not in colour.
-  const grid = page.locator(".draw-grid");
-  await expect(grid).toHaveCSS("filter", "grayscale(1) brightness(0.92)");
-  await expect(page.locator(".draw-winner")).toHaveCSS(
-    "filter",
-    "grayscale(0.55)",
+  await expect(page.locator(".draw-grid")).toHaveCSS("filter", "none");
+  await expect(page.locator(".draw-grid")).toHaveCSS("pointer-events", "auto");
+});
+
+test("tapping a number minimizes the screen to its stats, and All numbers brings it back", async ({
+  page,
+}) => {
+  await startSplitRoll(page);
+  expect(
+    await runUntil(page, () =>
+      document.querySelector(".draw-stage")?.classList.contains("is-decided"),
+    ),
+  ).toBe(true);
+  // The first discarded draw, not the best one.
+  const discarded = DRAWS.find((number) => number !== KEPT);
+  await page.locator(".draw-panel.is-out .draw-pick").first().click();
+  await expect(page.locator(".draw-stage")).toHaveCount(0);
+  const card = page.locator(".draw-card");
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("Discarded");
+  const digits = await card
+    .locator(".draw-digits")
+    .evaluate((node) => node.textContent.replace(/\s/g, ""));
+  expect(digits).toBe(String(discarded));
+  // Its own stats: the EP it was worth and its badge count, read from the same
+  // verified index the other panels use.
+  await expect(card.locator(".draw-card-ep")).toHaveText(
+    `${formatEP(scored.get(discarded).totalEP)} EP`,
   );
-  const box = await page.locator(".draw-winner").boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.move(box.x + box.width / 2 + 4, box.y + box.height / 2 + 4);
-  await page.waitForTimeout(900);
-  await expect(page.locator(".draw-stage")).toHaveClass(/is-peeking/);
-  await expect(grid).toHaveCSS("filter", "grayscale(0) brightness(1)");
-  // The discarded draws stay readable underneath, not hidden.
+  await expect(card.locator(".result-rank .rank-pill")).toHaveText(
+    scored.get(discarded).tier,
+  );
+  // The rest of the screen is back underneath, and the grid is one tap away.
+  await expect(page.locator(".result-summary")).toHaveCSS(
+    "visibility",
+    "visible",
+  );
+  await card.getByRole("button", { name: "All numbers" }).click();
   await expect(page.locator(".draw-panel")).toHaveCount(DRAWS.length);
+  await expect(page.locator(".draw-card")).toHaveCount(0);
 });
 
 test("two draw skills stack their budgets into one plan of panels", async ({
@@ -190,13 +215,15 @@ test("two draw skills stack their budgets into one plan of panels", async ({
       document.querySelector(".draw-stage")?.classList.contains("is-decided"),
     ),
   ).toBe(true);
-  await expect(page.locator(".draw-winner-kicker")).toContainText("Best of 6");
-  // Two numbers are paid, each on its own card with its own EP. The best of
-  // the six is the one the roll commits, and no headline total is shown.
-  await expect(page.locator(".draw-winner-ep")).toHaveCount(0);
-  await expect(page.locator(".draw-winner .paid-number")).toHaveCount(2);
+  await expect(page.locator(".draw-stage-label")).toContainText(
+    "2 numbers paid",
+  );
+  // Two numbers are paid. Minimized to the best one, the card names both, each
+  // with its own EP, and the best is the one the roll commits.
+  await page.locator(".draw-stage-minimize").click();
+  await expect(page.locator(".draw-card .paid-number")).toHaveCount(2);
   await expect(
-    page.locator(".draw-winner .paid-number.is-best .paid-number-ep"),
+    page.locator(".draw-card .paid-number.is-best .paid-number-ep"),
   ).toHaveText(
     `${formatEP(Math.max(...six.map((n) => evaluate(n).totalEP)))} EP`,
   );
@@ -241,36 +268,28 @@ test("a stacked roll counts up no total while its numbers reveal, and ends on on
   ).toHaveText(`${formatEP(keptEP)} EP`);
 });
 
-test("the result summary stays out of sight while the draw overlay is up", async ({
+test("the result summary stays out of sight while the draw screen is open", async ({
   page,
 }) => {
   await startSplitRoll(page);
   // The summary underneath already lists every number, so it must not show
-  // through the overlay. It comes back once the overlay lifts.
+  // through the screen. It comes back once the screen is minimized.
   const summary = page.locator(".result-summary");
   await expect(summary).toHaveCSS("visibility", "hidden");
   expect(
-    await runUntil(page, () => !document.querySelector(".draw-stage")),
+    await runUntil(page, () =>
+      document.querySelector(".draw-stage")?.classList.contains("is-decided"),
+    ),
   ).toBe(true);
+  await expect(summary).toHaveCSS("visibility", "hidden");
+  await page.locator(".draw-stage-minimize").click();
   await expect(summary).toHaveCSS("visibility", "visible");
 });
 
-test("the split screen hands the roll back before the reveal ends", async ({
+test("the screen stays up after the reveal, and minimizing hands the roll back", async ({
   page,
 }) => {
   await startSplitRoll(page);
-  // Watch the roll screen itself: the phase it is in at the exact commit that
-  // takes the split stage away is the honest answer to "does it let go in
-  // time", and no amount of clock stepping can blur it.
-  await page.evaluate(() => {
-    window.__leftPhase = null;
-    const stage = document.querySelector(".draw-stage");
-    new MutationObserver(() => {
-      if (!document.querySelector(".draw-stage"))
-        window.__leftPhase ??=
-          document.querySelector(".roll-experience")?.dataset.phase;
-    }).observe(stage.parentElement, { childList: true, subtree: true });
-  });
   expect(
     await runUntil(
       page,
@@ -279,10 +298,13 @@ test("the split screen hands the roll back before the reveal ends", async ({
         "complete",
     ),
   ).toBe(true);
-  // It let go while the reveal was still running, not at the end of it.
-  expect(await page.evaluate(() => window.__leftPhase)).toBe("badges");
+  // The reveal has ended and every number is still on the screen.
+  await expect(page.locator(".draw-panel")).toHaveCount(DRAWS.length);
+  await expect(page.locator(".draw-stage")).toBeVisible();
+  // Minimizing hands the roll back: the kept number is the one that pays.
+  await page.locator(".draw-stage-minimize").click();
   await expect(page.locator(".draw-stage")).toHaveCount(0);
-  // The roll kept going underneath: the kept number is the one that pays.
+  await expect(page.locator(".draw-card")).toContainText(String(KEPT));
   await expect(page.locator(".number-artifact")).toContainText(String(KEPT));
   await expect(page.locator(".roll-ep")).toHaveText(`${formatEP(keptEP)} EP`);
 });

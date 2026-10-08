@@ -13,10 +13,17 @@ import {
 } from "./game-icons.jsx";
 import "../skills.css";
 
+// Every circle on the rack is the same size: a plain skill, an always-on bonus
+// and a family alike. CSS shrinks them together on a phone (see skills.css).
+const CIRCLE_SIZE = 42;
+// A family draws its slices on that one circle with a heavier stroke than a
+// plain ring, so the group reads as a group without growing.
+const FAMILY_STROKE = 5;
+
 // A ring that fills with charge. No running commentary on the ring itself: the
 // contribution chip appears on hover, and the tooltip carries the whole
 // explanation for anyone who wants the sentence.
-function ChargeRing({ fraction, tint, size = 42, children }) {
+function ChargeRing({ fraction, tint, size = CIRCLE_SIZE, children }) {
   const radius = (size - 5) / 2,
     circumference = 2 * Math.PI * radius;
   return (
@@ -190,11 +197,12 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
         : `${member.passive.name} ${member.passive.chip}, always active`,
     )
     .join(". ");
-  // A bigger family earns a slightly bigger circle, so every slice stays wide
-  // enough to read. The stroke is the same for the whole circle.
-  const size = members.length <= 3 ? 42 : members.length <= 5 ? 46 : 52;
-  const stroke = 3;
-  const radius = (size - stroke) / 2 - 0.5;
+  // The family is exactly the size of one plain circle, however many members
+  // it holds: the slices share that circle, and the stroke is the same all the
+  // way round.
+  const size = CIRCLE_SIZE;
+  const stroke = FAMILY_STROKE;
+  const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const slice = 360 / members.length;
   return (

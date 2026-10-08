@@ -118,7 +118,8 @@ Two things in that corner keep the arithmetic out of your head: related circles
 ride together in **stacks** — the pet bonus with its signature skill, the
 rebirth bonuses with their ladder skills. A stack is one circle, not a crowd:
 the family's icon sits in the middle, and every member owns an **equal slice of
-that one circumference**, with a small gap between slices. Each slice keeps its
+that one circumference**, with a small gap between slices. The circle is the
+same size as a single skill's, with thicker lines, so the two read as one row. Each slice keeps its
 skill's own colour and fills as that skill charges, so counting the slices
 counts the family. Hover, focus or tap fans it out into the
 ordinary circles while shop skills stand alone, and every circle only shows
@@ -174,14 +175,15 @@ A draw skill does its work where you can watch it. The screen splits into **one
 panel per draw**, divided by visible lines, and every draw rolls its digits and
 earns its badges there **at the same time**, each with the EP it would have
 banked. Once the last badge has landed, the draw that scored the most EP is
-pulled into the **centre of the screen**, on top of the rest, which stay behind
-a **grey filter** until you put the pointer over the card — the discarded draws
-never vanish, they only stop competing for your eye. Each panel that a skill
-claimed says so, in that skill's colour, and the card in the middle lists every
-number being paid. The best number is the one ranked and shown as the roll; the
-others are banked beside it, because the draws behind them were really rolled.
-The activity feed keeps the receipt — _best of 3 draws_ — next to each number
-that was kept.
+marked **Best**, and **every number stays on the screen**: nothing flies to the
+centre and nothing is greyed out. Tap a number and the screen minimizes to a card
+with that number's own stats, its rank, EP and badges; **All numbers** brings the
+grid back. The next roll waits while the grid is open, so a roll is never started
+over the numbers you are still looking at. Each panel that a skill claimed says
+so, in that skill's colour, and a stacked roll lists every number being paid. The
+best number is the one ranked and shown as the roll; the others are banked beside
+it, because the draws behind them were really rolled. The activity feed keeps the
+receipt — _best of 3 draws_ — next to each number that was kept.
 
 The rack starts with **two slots**, for **shop skills only**. Rebirth rewards
 and companion signatures **ride free** beside the rack: equip every one you
@@ -211,37 +213,58 @@ pace before Flywheel — and with everything maxed, the average cycle is about
 ## Tasks
 
 Tasks are small goals that pay EP. **Daily** tasks reset at local midnight and
-**weekly** ones on Monday. Each cadence has a pool of eight tasks, and every
-period three of them go on your list. The three come from the period and the
-task itself, so everyone gets the same three on the same day or week. Each pays
-once per reset, when you claim it on the **Tasks** page; a dot on the Tasks tab
-says when one is ready.
+**weekly** ones on Monday. Each cadence has a pool of twelve tasks, and every
+period four of them go on your list. The four come from the period and the task
+itself, so everyone gets the same four on the same day or week. Each pays once
+per reset, when you claim it on the **Tasks** page, one at a time or with
+**Claim all**. A dot on the Tasks tab says when one is ready, and a notice says
+what just became ready.
+
+Finishing every task on a list also pays its **list bonus**: 100,000 EP for the
+daily list and 500,000 EP for the weekly one. It is paid in the same step as the
+last claim, once per reset, and it is logged as a task.
+
+Some tasks read your best roll rather than a running total. **Land a roll worth
+…** and **Earn N badges on one roll** count the best single roll of the period,
+so a bigger roll replaces a smaller one instead of adding to it. A task swapped
+in later by a Task Skip can therefore already be met by a roll earlier that
+period.
 
 | Cadence | Task                         |     Reward |
 | ------- | ---------------------------- | ---------: |
-| Daily   | Roll 10 numbers              |  10,000 EP |
-| Daily   | Roll a Rare or better        |  15,000 EP |
-| Daily   | Roll an Epic or better       |  25,000 EP |
-| Daily   | Land a multi-number roll     |  20,000 EP |
-| Daily   | Bank 50,000 EP from rolls    |  12,000 EP |
-| Daily   | Fire a skill once            |  10,000 EP |
-| Daily   | Discover 3 new badges        |  15,000 EP |
-| Daily   | Discover a new badge         |   8,000 EP |
-| Weekly  | Roll 100 numbers             | 150,000 EP |
-| Weekly  | Bank 1,000,000 EP from rolls | 150,000 EP |
-| Weekly  | Fire a skill on 5 rolls      | 120,000 EP |
-| Weekly  | Fire a skill on 10 rolls     | 260,000 EP |
-| Weekly  | Roll 5 Rare or better        | 120,000 EP |
-| Weekly  | Roll 2 Epic or better        | 200,000 EP |
-| Weekly  | Land 3 multi-number rolls    | 160,000 EP |
-| Weekly  | Discover 15 new badges       | 150,000 EP |
+| Daily   | Roll 10 numbers              |  20,000 EP |
+| Daily   | Roll a Rare or better        |  25,000 EP |
+| Daily   | Roll an Epic or better       |  50,000 EP |
+| Daily   | Roll a Mythic or GODLY       | 150,000 EP |
+| Daily   | Discover 3 new badges        |  25,000 EP |
+| Daily   | Earn 22 badges on one roll   |  80,000 EP |
+| Daily   | Bank 50,000 EP from rolls    |  20,000 EP |
+| Daily   | Bank 250,000 EP from rolls   |  60,000 EP |
+| Daily   | Land a roll worth 200,000 EP | 100,000 EP |
+| Daily   | Land a multi-number roll     |  50,000 EP |
+| Daily   | Fire a skill once            |  15,000 EP |
+| Daily   | Find a companion             | 100,000 EP |
+| Weekly  | Roll 100 numbers             | 200,000 EP |
+| Weekly  | Roll 5 Rare or better        | 150,000 EP |
+| Weekly  | Roll 2 Epic or better        | 300,000 EP |
+| Weekly  | Roll 10 Mythic or GODLY      | 900,000 EP |
+| Weekly  | Discover 15 new badges       | 200,000 EP |
+| Weekly  | Bank 1,000,000 EP from rolls | 200,000 EP |
+| Weekly  | Bank 5,000,000 EP from rolls | 600,000 EP |
+| Weekly  | Land a roll worth 500,000 EP | 500,000 EP |
+| Weekly  | Land 3 multi-number rolls    | 250,000 EP |
+| Weekly  | Fire a skill on 10 rolls     | 300,000 EP |
+| Weekly  | Find 2 companions            | 500,000 EP |
+| Weekly  | Earn 25 badges on one roll   | 600,000 EP |
 
 Only online rolls count: an offline roll is a reward for being away, not for
 play. _Discover_ counts badges you have not found yet in the current cycle, so
-once the collection is complete that task waits for a rebirth. Progress lives on
-the save, not in the activity log, so clearing history never un-finishes a task.
-A reward goes into your wallet and is logged as income. Unclaimed rewards expire
-when their reset comes, and task EP never counts towards a rebirth's cycle gate.
+once the collection is complete that task waits for a rebirth. _Find a
+companion_ counts the companion a roll drops, about one roll in 250. Progress
+lives on the save, not in the activity log, so clearing history never un-finishes
+a task. A reward goes into your wallet and is logged as income. Unclaimed rewards
+expire when their reset comes, and task EP never counts towards a rebirth's
+cycle gate.
 
 **Task Skip** is a Shop product on the Tools shelf. Using one swaps an open task
 on your list, one that is neither claimed nor finished, for the next task in its

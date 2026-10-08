@@ -255,8 +255,8 @@ nav button.active {
 .artifact-stage {
   position: relative;
 }
-/* While a draw skill's split screen is playing, the number itself waits behind
-   it: it takes the stage the moment the best draw is chosen. */
+/* While a draw skill's split screen is open, the number itself waits behind
+   it. It comes back once the screen is minimized to one number's stats. */
 .artifact-stage.is-behind {
   opacity: 0;
 }
@@ -329,8 +329,9 @@ nav button.active {
   width: 100%;
   margin-top: 24px;
 }
-/* While the draw overlay is up it shows every number the roll drew, so the
-   summary underneath (the same cards again) stays out of sight until it lifts. */
+/* While the draw screen is open it shows every number the roll drew, so the
+   summary underneath (the same cards again) stays out of sight until it is
+   minimized. */
 .result-summary.is-behind-draw {
   visibility: hidden;
 }
