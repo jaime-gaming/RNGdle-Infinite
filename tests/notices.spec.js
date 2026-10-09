@@ -1,5 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
-import { mockRandom } from "./helpers/random-roll.js";
+import { mockRandom, showRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import {
   pushToast,
@@ -196,4 +196,27 @@ test("an Epic badge found on the roll page itself posts no notice, since the res
   await expect(
     page.locator("article.toast", { hasText: "Epic badge found" }),
   ).toHaveCount(0);
+});
+
+test("a failure shows its own mark and alert role, and never the tick of a finished action", async ({
+  page,
+}) => {
+  // The clipboard refuses the share, so the share fails for real in the page.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error("blocked")) },
+    });
+  });
+  await showRoll(page, 1337);
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  const failure = page.locator('.toast[data-kind="error"]');
+  await expect(failure).toContainText("Clipboard isn");
+  await expect(failure).toHaveAttribute("role", "alert");
+  await expect(failure.locator(".toast-mark svg")).toHaveClass(
+    /lucide-circle-alert/,
+  );
+  await expect(failure.locator(".toast-mark svg")).not.toHaveClass(
+    /lucide-check/,
+  );
 });

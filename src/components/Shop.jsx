@@ -221,7 +221,9 @@ export default function Shop({
   // A tracked goal is a choice; anything else the banner shows is the
   // recommendation, which is what the banner says.
   const goalTracked =
-    !!goal && !!progress.goalId && validGoal(progress.goalId, progress.owned);
+    !!goal &&
+    !!progress.goalId &&
+    validGoal(progress.goalId, progress.owned, progress.pets);
   const goalSaved = goal ? Math.min(progress.balance, goal.price) : 0;
   const goalPercent = goal
     ? Math.min(100, (progress.balance / goal.price) * 100)
@@ -304,18 +306,19 @@ export default function Shop({
           if (type === "goal") {
             // The pick is done the moment the goal lands.
             onPickingGoal(false);
-            notify(
-              id
+            notify({
+              kind: "done",
+              text: id
                 ? "Goal updated. No EP spent."
                 : "Goal cleared. The shop recommends the next step.",
-            );
+            });
           } else if (type === "equip-skill")
-            notify("Skill rack updated. Free.");
-          else notify("Appearance updated.");
+            notify({ kind: "done", text: "Skill rack updated. Free." });
+          else notify({ kind: "done", text: "Appearance updated." });
         }
       } else {
         setPurchaseError(result.message);
-        notify(result.message);
+        notify({ kind: "error", text: result.message });
       }
     } finally {
       busy.current = false;
@@ -1176,7 +1179,7 @@ export default function Shop({
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => onOpenShelf(shelfOfProduct(goal))}
+                onClick={() => onOpenShelf(shelfOfProduct(goal), goal.id)}
               >
                 View on shelf
               </button>
@@ -1612,7 +1615,14 @@ export default function Shop({
         </section>
       )}
       {shelf?.id === "companions" && (
-        <PetShelf progress={progress} onAction={onAction} notify={notify} />
+        <PetShelf
+          progress={progress}
+          onAction={onAction}
+          notify={notify}
+          focus={focusProduct}
+          pickingGoal={pickingGoal}
+          onPickingGoal={onPickingGoal}
+        />
       )}
       {shelf?.id === "tools" && (
         <section className="shop-category" id="shop-tools" tabIndex={-1}>

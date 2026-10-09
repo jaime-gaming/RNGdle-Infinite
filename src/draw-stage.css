@@ -193,6 +193,12 @@ button.draw-pick:focus-visible {
   text-transform: uppercase;
   color: var(--muted);
 }
+/* "Draw 6" stays on one line: a long claim name is what gives way, not the
+   number of the draw. */
+.draw-panel-label {
+  flex: none;
+  white-space: nowrap;
+}
 .draw-panel-tag {
   padding: 1px 6px;
   border: 1px solid var(--border);
@@ -565,4 +571,17 @@ button.draw-pick:focus-visible {
   .draw-stage[data-count="8"] .draw-badge {
     max-width: 46%;
   }
+}
+
+/* The roll's own button, centred under the numbers. It has a strip of its own:
+   a button over the middle of the grid would sit on a number whenever two or
+   three of them share a row. The strip keeps its height while the roll is
+   still busy, so the numbers do not jump when the button arrives. */
+.draw-stage-roll {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 96px;
+  padding: 0 12px 10px;
 }

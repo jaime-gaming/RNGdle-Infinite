@@ -232,6 +232,7 @@ export function DrawDetail({
   stacked,
   paidItems,
   rollAgain,
+  summary = null,
   openBadge,
   theme,
   onBack,
@@ -277,6 +278,7 @@ export function DrawDetail({
       )}
       {rollAgain}
       {stacked && <PaidNumbers items={paidItems} />}
+      {summary}
       <div className="breakdown-wrap">
         <BadgeBreakdown
           result={scored}
@@ -302,6 +304,7 @@ export default function DrawStage({
   aura,
   decided = false,
   scores = NO_SCORES,
+  roll = null,
   onPick,
 }) {
   const numbers = run.draws ?? NO_DRAWS;
@@ -452,6 +455,7 @@ export default function DrawStage({
           );
         })}
       </ol>
+      {roll && <div className="draw-stage-roll">{roll}</div>}
     </div>
   );
 }

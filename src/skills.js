@@ -73,7 +73,7 @@ export const SKILLS = [
     kind: "pet-luck",
     value: 4,
     charges: 5,
-    price: 320000,
+    price: 160000,
     description:
       "A companion is four times as likely to turn up on the next roll. Companion luck is its own sample and never touches your number.",
   },

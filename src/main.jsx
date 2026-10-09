@@ -51,6 +51,7 @@ import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
 import { petDrop, petById } from "./pets.js";
+import { goalItem } from "./gameplay-loop.js";
 import {
   rebirthUnlocked,
   rebirthReady,
@@ -388,11 +389,11 @@ function App() {
     // Leaving the shop disarms goal picking: it belongs to the shop floor.
     if (target !== "shop") setPickingGoal(false);
     setSettingsSection("");
-    // Opening the shop on a product (a goal link, a recap) opens the shelf that
-    // sells it, so the card is on screen when the page renders.
+    // Opening the shop on a product or a companion (a goal link, a recap) opens
+    // the shelf that sells it, so the card is on screen when the page renders.
     const section =
-      target === "shop" && productById.has(focusProduct)
-        ? shelfOfProduct(productById.get(focusProduct))
+      target === "shop" && goalItem(focusProduct)
+        ? shelfOfProduct(goalItem(focusProduct))
         : "";
     setShopFocus(target === "shop" ? focusProduct : null);
     setShopSection(section);
@@ -405,9 +406,9 @@ function App() {
       section,
     );
   };
-  const openShelf = (id) => {
+  const openShelf = (id, focus = null) => {
     const section = SHOP_SECTIONS.some((entry) => entry.id === id) ? id : "";
-    setShopFocus(null);
+    setShopFocus(focus);
     setShopSection(section);
     setShopFamily("");
     setPage("shop");

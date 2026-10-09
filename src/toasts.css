@@ -41,6 +41,9 @@
 .toast.is-info {
   --toast-accent: var(--secondary);
 }
+.toast.is-done {
+  --toast-accent: var(--green);
+}
 .toast.is-reward {
   --toast-accent: var(--green);
 }

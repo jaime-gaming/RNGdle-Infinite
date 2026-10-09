@@ -702,18 +702,19 @@ export default function RollExperience({
     if (mounted.current && activeRun.current === run.id)
       setSettleError(outcome.ok ? "" : outcome.message);
   }
-  async function share() {
+  async function share(shared = result) {
     const sharedRun = run.id;
     try {
-      await navigator.clipboard.writeText(buildShareText(result));
+      await navigator.clipboard.writeText(buildShareText(shared));
       if (!mounted.current || activeRun.current !== sharedRun) return;
       setCopied(true);
       clearTimeout(copiedTimer.current);
       copiedTimer.current = setTimeout(() => setCopied(false), 2500);
     } catch {
-      notify(
-        "Clipboard isn’t available. Try copying from a secure browser window.",
-      );
+      notify({
+        kind: "error",
+        text: "Clipboard isn’t available. Try copying from a secure browser window.",
+      });
     }
   }
 
@@ -763,6 +764,77 @@ export default function RollExperience({
       </button>
     </div>
   );
+  // The EP balance a roll's result carries: the wallet, the EP this roll is
+  // about to credit while it settles, and the goal line under it. A paid
+  // number shows the same two, since it pays into the same wallet.
+  const sessionTotal = digitsDone ? (
+    <div
+      className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
+      aria-hidden={elapsed < timeline.sessionShow}
+    >
+      <span>
+        <AnimatedCount
+          value={
+            session.balance +
+            (elapsed >= timeline.sessionCount && !runSettled ? creditedEP : 0)
+          }
+          duration={1500 * timeline.scale}
+          reducedMotion={instant}
+        />{" "}
+        EP
+        {elapsed >= timeline.sessionCount &&
+          elapsed < timeline.end &&
+          !instant &&
+          floatingCharges.map((charge, index) => (
+            <span
+              key={charge.id}
+              className={`floating-ep ${index > 0 ? "is-bonus-charge" : ""}`}
+              style={{ "--charge-index": index }}
+            >
+              +{formatEP(charge.ep)}
+              {charge.label ? ` · ${charge.label}` : ""}
+            </span>
+          ))}
+      </span>
+      <small>Your EP balance</small>
+      {/* Savings sit with the wallet they are measured against,
+          and only once the reveal has settled and the EP is
+          actually credited. */}
+      {!busy && runSettled && preferences.showGoalRecap && (
+        <GoalRecap progress={session} runId={run.id} navigate={navigate} />
+      )}
+    </div>
+  ) : null;
+  // The share line and the roll's status under it. A paid number shares its
+  // own result, not the roll's.
+  const shareRowFor = (shared) => (
+    <div className="share-row">
+      <button
+        ref={shareButton}
+        className={`share-button ${!busy ? "is-highlighted" : ""}`}
+        onClick={() => share(shared)}
+      >
+        {copied ? <Check size={15} /> : <Share2 size={15} />}{" "}
+        {copied ? "Copied result + link!" : "Share"}
+      </button>
+      <span>
+        {busy ? (
+          "REVEALING YOUR ROLL"
+        ) : cooldown || reserving ? (
+          <>
+            {waitWord} <b>{formatDuration(cooldown || reservedSeconds)}</b>
+          </>
+        ) : awaitingSettlement ? (
+          "SETTLING YOUR RESULT"
+        ) : (
+          "YOUR NEXT ROLL IS READY"
+        )}
+      </span>
+    </div>
+  );
+  // A paid number that is not the roll's own result: its stats show the
+  // balance and the share line the roll's result shows.
+  const paidDetail = splitDetail && !!claimFor(run, splitPick);
   return (
     <div
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
@@ -902,6 +974,7 @@ export default function RollExperience({
                 {...{ run, elapsed, timeline, reducedMotion, aura }}
                 decided={splitDecided}
                 scores={drawScores}
+                roll={rollAgainControl}
                 onPick={(number) => setSplitView({ run: run.id, number })}
               />
             )}
@@ -932,6 +1005,14 @@ export default function RollExperience({
                 stacked={stacked}
                 paidItems={paidItems}
                 rollAgain={rollAgainControl}
+                summary={
+                  paidDetail ? (
+                    <>
+                      {sessionTotal}
+                      {shareRowFor(splitDetailScored)}
+                    </>
+                  ) : null
+                }
                 openBadge={openBadge}
                 theme={theme}
                 onBack={() => setSplitView({ run: run.id, number: null })}
@@ -1000,79 +1081,11 @@ export default function RollExperience({
                 {/* Every number a draw skill kept is paid: each one is a card
                     of its own, side by side, with the EP it banks. */}
                 {digitsDone && stacked && <PaidNumbers items={paidItems} />}
-                {digitsDone && (
-                  <div
-                    className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
-                    aria-hidden={elapsed < timeline.sessionShow}
-                  >
-                    <span>
-                      <AnimatedCount
-                        value={
-                          session.balance +
-                          (elapsed >= timeline.sessionCount && !runSettled
-                            ? creditedEP
-                            : 0)
-                        }
-                        duration={1500 * timeline.scale}
-                        reducedMotion={instant}
-                      />{" "}
-                      EP
-                      {elapsed >= timeline.sessionCount &&
-                        elapsed < timeline.end &&
-                        !instant &&
-                        floatingCharges.map((charge, index) => (
-                          <span
-                            key={charge.id}
-                            className={`floating-ep ${index > 0 ? "is-bonus-charge" : ""}`}
-                            style={{ "--charge-index": index }}
-                          >
-                            +{formatEP(charge.ep)}
-                            {charge.label ? ` · ${charge.label}` : ""}
-                          </span>
-                        ))}
-                    </span>
-                    <small>Your EP balance</small>
-                    {/* Savings sit with the wallet they are measured against,
-                        and only once the reveal has settled and the EP is
-                        actually credited. */}
-                    {!busy && runSettled && preferences.showGoalRecap && (
-                      <GoalRecap
-                        progress={session}
-                        runId={run.id}
-                        navigate={navigate}
-                      />
-                    )}
-                  </div>
-                )}
-                {rankKnown && (
-                  <div className="share-row">
-                    <button
-                      ref={shareButton}
-                      className={`share-button ${!busy ? "is-highlighted" : ""}`}
-                      onClick={share}
-                    >
-                      {copied ? <Check size={15} /> : <Share2 size={15} />}{" "}
-                      {copied ? "Copied result + link!" : "Share"}
-                    </button>
-                    <span>
-                      {busy ? (
-                        "REVEALING YOUR ROLL"
-                      ) : cooldown || reserving ? (
-                        <>
-                          {waitWord}{" "}
-                          <b>{formatDuration(cooldown || reservedSeconds)}</b>
-                        </>
-                      ) : awaitingSettlement ? (
-                        "SETTLING YOUR RESULT"
-                      ) : (
-                        "YOUR NEXT ROLL IS READY"
-                      )}
-                    </span>
-                  </div>
-                )}
+                {sessionTotal}
+                {rankKnown && shareRowFor(result)}
               </div>
             )}
-            {!splitDetail && rollAgainControl}
+            {!splitDetail && !splitOpen && rollAgainControl}
             {error && (
               <p className="roll-load-error" role="alert">
                 {error} No roll or EP was awarded. Use Retry &amp; Roll to try

@@ -547,7 +547,7 @@ export function parseAndRepairProgress(raw) {
     offline,
     flywheelCharge,
     profile,
-    goalId: validGoal(p.goalId, owned) ? p.goalId : null,
+    goalId: validGoal(p.goalId, owned, pets) ? p.goalId : null,
     balance,
     totalEarned,
     discovered: [...new Set(p.discovered.filter((id) => badgeIds.has(id)))],
@@ -663,8 +663,9 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
     discovered: [],
     equipped: "none",
     // The tracked goal is a preference, not a reward: it survives when it is
-    // still reachable from an empty workshop.
-    goalId: validGoal(state.goalId, owned) ? state.goalId : null,
+    // still reachable from an empty workshop. Companions go back in the wild
+    // at a rebirth too, so a companion goal is reachable again.
+    goalId: validGoal(state.goalId, owned, []) ? state.goalId : null,
     flywheelCharge: 0,
     // Offline earnings are a tool, and the tool was handed back.
     offline: null,
@@ -916,7 +917,7 @@ function applyEvent(state, action) {
     };
   }
   if (action.type === "goal") {
-    if (action.id !== null && !validGoal(action.id, state.owned))
+    if (action.id !== null && !validGoal(action.id, state.owned, state.pets))
       throw new Error(
         "Choose an unowned item with its prerequisites unlocked.",
       );
@@ -1307,6 +1308,8 @@ function applyEvent(state, action) {
               (state.activePet ?? "none") === "none"
                 ? droppedPet
                 : state.activePet,
+            // A companion you were saving for turns up on its own: met.
+            goalId: state.goalId === droppedPet ? null : (state.goalId ?? null),
           }
         : {}),
     };
@@ -1413,6 +1416,7 @@ function applyEvent(state, action) {
       ),
       // Buying a companion equips it, matching how auras behave.
       activePet: pet.id,
+      goalId: state.goalId === pet.id ? null : (state.goalId ?? null),
       history: appendHistory(state.history, [
         {
           id:

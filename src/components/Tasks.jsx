@@ -174,7 +174,7 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
     setPending("");
     if (outcome?.ok)
       notify?.({
-        kind: "info",
+        kind: "done",
         title: "Task Skip used",
         text: `${task.title} is swapped out. The new task is on your list.`,
       });

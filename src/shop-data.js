@@ -718,6 +718,8 @@ const SHELF_KINDS = {
 
 export function shelfOfProduct(item) {
   if (!item) return "";
+  // A companion set as a goal is not a catalogue product, but it has a shelf.
+  if (item.kind === "companion") return "companions";
   const shelf = SHOP_SECTIONS.find((section) =>
     (SHELF_KINDS[section.id] ?? []).includes(item.kind),
   );

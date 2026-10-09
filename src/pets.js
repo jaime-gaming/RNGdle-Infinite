@@ -22,7 +22,7 @@ export const PETS = [
     name: "Pebble",
     accent: "#a8a29e",
     multiplier: 1.05,
-    price: 45000,
+    price: 25000,
     dropWeight: 40,
     description:
       "A small loyal rock. Does very little, extremely reliably. Adds 5% to the EP that reaches your wallet.",
@@ -32,7 +32,7 @@ export const PETS = [
     name: "Lumen Moth",
     accent: "#fbbf24",
     multiplier: 1.09,
-    price: 120000,
+    price: 60000,
     dropWeight: 30,
     description:
       "Drawn to bright numbers. Flutters around the reveal and adds 9% to banked EP.",
@@ -42,7 +42,7 @@ export const PETS = [
     name: "Static Kit",
     accent: "#fb923c",
     multiplier: 1.13,
-    price: 320000,
+    price: 160000,
     dropWeight: 22,
     description:
       "A fox with a permanent case of bed-hair. Adds 13% to banked EP.",
@@ -52,7 +52,7 @@ export const PETS = [
     name: "Lunar Snail",
     accent: "#a78bfa",
     multiplier: 1.17,
-    price: 560000,
+    price: 280000,
     dropWeight: 16,
     description:
       "Crosses the whole screen during a single cooldown. Adds 17% to banked EP.",
@@ -62,7 +62,7 @@ export const PETS = [
     name: "Tide Jelly",
     accent: "#38bdf8",
     multiplier: 1.21,
-    price: 900000,
+    price: 450000,
     dropWeight: 12,
     description:
       "Drifts through the cooldown without a care. Adds 21% to banked EP.",
@@ -72,7 +72,7 @@ export const PETS = [
     name: "Amber Bee",
     accent: "#facc15",
     multiplier: 1.26,
-    price: 1400000,
+    price: 700000,
     dropWeight: 9,
     description:
       "Counts every digit on the way past, three times. Adds 26% to banked EP.",
@@ -82,7 +82,7 @@ export const PETS = [
     name: "Ledger Corvid",
     accent: "#818cf8",
     multiplier: 1.31,
-    price: 2100000,
+    price: 1050000,
     dropWeight: 7,
     description:
       "Keeps meticulous notes on every number you roll. Adds 31% to banked EP.",
@@ -92,7 +92,7 @@ export const PETS = [
     name: "Archive Owl",
     accent: "#f59e0b",
     multiplier: 1.37,
-    price: 3200000,
+    price: 1600000,
     dropWeight: 5,
     description:
       "Has read the entire badge catalogue twice. Adds 37% to banked EP.",
@@ -102,7 +102,7 @@ export const PETS = [
     name: "Patient Turtle",
     accent: "#34d399",
     multiplier: 1.43,
-    price: 4800000,
+    price: 2400000,
     dropWeight: 4,
     description:
       "Slow, unhurried, and never in a rush for a bad number. Adds 43% to banked EP.",
@@ -112,7 +112,7 @@ export const PETS = [
     name: "Storm Griffin",
     accent: "#60a5fa",
     multiplier: 1.5,
-    price: 7000000,
+    price: 3500000,
     dropWeight: 3,
     description:
       "Circles the reveal three times before it settles. Adds 50% to banked EP.",
@@ -122,7 +122,7 @@ export const PETS = [
     name: "Astral Unicorn",
     accent: "#f472b6",
     multiplier: 1.6,
-    price: 10000000,
+    price: 5000000,
     dropWeight: 2,
     description:
       "Rare, radiant and slightly smug about it. Adds 60% to banked EP.",
@@ -132,7 +132,7 @@ export const PETS = [
     name: "Void Serpent",
     accent: "#8b5cf6",
     multiplier: 1.7,
-    price: 14000000,
+    price: 7000000,
     dropWeight: 1,
     description:
       "Swallows whole cooldowns and looks for more. Adds 70% to banked EP.",
@@ -142,7 +142,7 @@ export const PETS = [
     name: "Ember Dragonet",
     accent: "#ef4444",
     multiplier: 1.8,
-    price: 20000000,
+    price: 10000000,
     dropWeight: 1,
     description:
       "Small, smug and faintly on fire. The largest companion bonus: 80%.",

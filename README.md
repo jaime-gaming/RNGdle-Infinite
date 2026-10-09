@@ -78,7 +78,7 @@ and the run around it — and only because you decided it should.
 ## Companions
 
 There are **13 companions**, from Pebble at **+5%** to Ember Dragonet at
-**+80%**, priced from 45,000 EP to 20,000,000 EP. You can buy one in the shop,
+**+80%**, priced from 25,000 EP to 10,000,000 EP. You can buy one in the shop,
 or find one free at roughly **1 in 250 rolls** — a lucky roll drops a random
 companion you do not own yet, and it is worn automatically if you do not already
 wear one.
@@ -150,7 +150,7 @@ are equipped from the Skills shelf, like shop skills.
 | Skill             |         Price | Charges | Effect                                                   |
 | ----------------- | ------------: | ------: | -------------------------------------------------------- |
 | **Surge**         |    180,000 EP |       5 | The next roll banks double EP                            |
-| **Trail**         |    320,000 EP |       5 | The next roll finds companions four times as often       |
+| **Trail**         |    160,000 EP |       5 | The next roll finds companions four times as often       |
 | **Bounce**        |    500,000 EP |       4 | The next roll has no cooldown (the reveal still plays)   |
 | **Double Vision** |    900,000 EP |       7 | Draws two numbers and keeps the one that scores more EP  |
 | **Bedrock**       |  1,600,000 EP |       6 | Redraws to at least 25,000 EP, at most four draws        |
@@ -179,7 +179,8 @@ landed, the draw that scored the most EP is **filled green** and marked **Best**
 and **every number stays on the screen**: nothing flies to the centre and nothing
 is greyed out. Tap a number and it opens at full size, with its own rank, EP and
 badges and the roll's button in the middle; the best one opens as the roll's own
-result. **All numbers** brings the screen back. Auto-Roll keeps turning while the
+result, and a paid one also shows your EP balance and shares its own result. The
+roll's button sits centred under the numbers. **All numbers** brings the screen back. Auto-Roll keeps turning while the
 screen is open, and stands still only while a single number is open. Each panel
 that a skill claimed says so, in that skill's colour, and a stacked roll lists
 every number being paid. The
@@ -291,7 +292,10 @@ only a doorway to the shelf that sells it, with a meter against its price. The
 the shop recommends), how the wallet is doing against it, and the shelf that
 sells it. Setting one is a deliberate choice: press **Set goal** on the banner,
 then **tap any item on any shelf** and that item becomes your goal — no EP is
-ever spent on it. A shelf keeps its own
+ever spent on it. A companion you have not found yet can be your goal too: press
+**Set as goal** on its card (or tap it in pick mode), and it is the one the
+banner, the roll screen and the featured picks point at. A companion goal is
+met the moment you find it, by buying or by a lucky drop. A shelf keeps its own
 **sticky bar**: a button back to all shelves and the count of what is on it.
 Every shelf shows everything it has, and a description is held to three lines
 so a shelf reads as a list, not a wall of text. Every shelf reads **from the
@@ -307,7 +311,7 @@ that shelf.
 | -------------- | --------------------------------------------------------------------------------------------------------------------- |
 | **Skills**     | Nine charged effects (three on sale at a time, restocked every 5 minutes), the two skill bays, and the Flywheel tiers |
 | **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time                                    |
-| **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                                                       |
+| **Companions** | Thirteen companions from 25,000 EP, or free if a roll drops one                                                       |
 | **Auras**      | Twenty-six cosmetic looks in five families, each family its own page, equipped one at a time                          |
 | **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                                                    |
 | **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                                                       |

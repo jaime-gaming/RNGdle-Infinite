@@ -201,10 +201,16 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     try {
       await createDeviceLink();
       setState(syncStatus());
-      notify?.("Link created. Open it on your other device.");
+      notify?.({
+        kind: "done",
+        text: "Link created. Open it on your other device.",
+      });
     } catch {
       setState(syncStatus());
-      notify?.("Could not create the link. Try again.");
+      notify?.({
+        kind: "error",
+        text: "Could not create the link. Try again.",
+      });
     } finally {
       setCreating(false);
     }
@@ -214,9 +220,12 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     try {
       await navigator.clipboard.writeText(buildDeviceLink());
       flash("link");
-      notify?.("Device link copied.");
+      notify?.({ kind: "done", text: "Device link copied." });
     } catch {
-      notify?.("Copying was blocked — select the link and copy it by hand.");
+      notify?.({
+        kind: "warning",
+        text: "Copying was blocked — select the link and copy it by hand.",
+      });
     }
   }
 
@@ -226,28 +235,41 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     setSending(false);
     notify?.(
       result.ok
-        ? "Save sent — the other device will pick it up."
+        ? {
+            kind: "done",
+            text: "Save sent — the other device will pick it up.",
+          }
         : result.reason === "offline"
-          ? "The other device is not reachable right now."
-          : "There was nothing new to send.",
+          ? {
+              kind: "warning",
+              text: "The other device is not reachable right now.",
+            }
+          : { kind: "info", text: "There was nothing new to send." },
     );
   }
 
   async function copyCode() {
     const text = buildPeerCode();
     if (!text) {
-      notify?.(
-        "Create a local profile first — a guest save is not worth carrying.",
-      );
+      notify?.({
+        kind: "warning",
+        text: "Create a local profile first — a guest save is not worth carrying.",
+      });
       return;
     }
     setCode(text);
     try {
       await navigator.clipboard.writeText(text);
       flash("code");
-      notify?.("Account code copied. Paste it on your other device.");
+      notify?.({
+        kind: "done",
+        text: "Account code copied. Paste it on your other device.",
+      });
     } catch {
-      notify?.("Code ready below — select it and copy it by hand.");
+      notify?.({
+        kind: "info",
+        text: "Code ready below — select it and copy it by hand.",
+      });
     }
   }
 
@@ -255,16 +277,21 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     const result = adoptPeerCode(code);
     if (result.ok) {
       setCode("");
-      notify?.("Account adopted from the code. Keep it somewhere safe.");
+      notify?.({
+        kind: "done",
+        text: "Account adopted from the code. Keep it somewhere safe.",
+      });
       return;
     }
-    notify?.(
-      {
-        empty: "Paste an account code first.",
-        guest: "That code carries a guest save, which is not worth adopting.",
-        unreadable: "That code could not be read. Copy it again, whole.",
-      }[result.reason] ?? "That code could not be read.",
-    );
+    notify?.({
+      kind: "error",
+      text:
+        {
+          empty: "Paste an account code first.",
+          guest: "That code carries a guest save, which is not worth adopting.",
+          unreadable: "That code could not be read. Copy it again, whole.",
+        }[result.reason] ?? "That code could not be read.",
+    });
   }
 
   function saveRelay() {
@@ -272,8 +299,14 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     setRelay(next);
     notify?.(
       next
-        ? `Relay set to ${next}. Will be used when reachable.`
-        : "Relay cleared — using browser-to-browser P2P.",
+        ? {
+            kind: "done",
+            text: `Relay set to ${next}. Will be used when reachable.`,
+          }
+        : {
+            kind: "info",
+            text: "Relay cleared — using browser-to-browser P2P.",
+          },
     );
   }
 
@@ -391,7 +424,10 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
               onClick={() => {
                 unlinkDevices();
                 setState(syncStatus());
-                notify?.("Devices unlinked. Each browser keeps its own save.");
+                notify?.({
+                  kind: "done",
+                  text: "Devices unlinked. Each browser keeps its own save.",
+                });
               }}
             >
               <Unplug size={14} /> Unlink
@@ -478,7 +514,10 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
             onClick={() => {
               setRelayEndpoint("");
               setRelay(relayEndpoint());
-              notify?.("Relay cleared — using browser-to-browser P2P.");
+              notify?.({
+                kind: "info",
+                text: "Relay cleared — using browser-to-browser P2P.",
+              });
             }}
           >
             Reset

@@ -2,7 +2,11 @@ import { test, expect } from "./helpers/clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
-import { groupResultBadges, formatEP } from "../src/roll-data.js";
+import {
+  groupResultBadges,
+  formatEP,
+  buildShareText,
+} from "../src/roll-data.js";
 import { buildRevealTimeline } from "../src/roll-timeline.js";
 
 // A draw skill spends several ordinary draws and keeps the best. The overview
@@ -506,4 +510,85 @@ test("the split stage keeps the whole reveal's own schedule", () => {
   expect(timeline.end).toBe(REVEAL_MS);
   expect(timeline.badgeTimes.at(-1)).toBeGreaterThan(timeline.collapse);
   expect(timeline.slots).toBe(6);
+});
+
+test("the overview's roll button sits centred under the numbers, clear of every number", async ({
+  page,
+}) => {
+  await startSplitRoll(page);
+  expect(await runUntil(page, decided)).toBe(true);
+  expect(await runUntil(page, complete)).toBe(true);
+  await expect(page.locator(".draw-stage .generate")).toBeVisible();
+  // The button rises into its strip over a short transition; measure it once
+  // it has settled, not halfway up.
+  await expect(page.locator(".draw-stage-roll .generate-wrap")).toHaveCSS(
+    "max-height",
+    "96px",
+  );
+  const geometry = await page.evaluate(() => {
+    const box = (el) => el.getBoundingClientRect();
+    const button = box(document.querySelector(".draw-stage .generate"));
+    const tabBar = document.querySelector(".mobile-tabbar");
+    const tabTop =
+      tabBar && getComputedStyle(tabBar).display !== "none"
+        ? box(tabBar).top
+        : window.innerHeight;
+    const overlaps = [...document.querySelectorAll(".draw-box")].some((el) => {
+      const r = box(el);
+      return (
+        r.left < button.right &&
+        r.right > button.left &&
+        r.top < button.bottom &&
+        r.bottom > button.top
+      );
+    });
+    return {
+      centre: button.left + button.width / 2,
+      width: window.innerWidth,
+      overlaps,
+      bottom: button.bottom,
+      tabTop,
+    };
+  });
+  // Centred on the screen, under every number and above the tab bar.
+  expect(Math.abs(geometry.centre - geometry.width / 2)).toBeLessThan(4);
+  expect(geometry.overlaps).toBe(false);
+  expect(geometry.bottom).toBeLessThanOrEqual(geometry.tabTop);
+});
+
+test("a paid number's stats show the EP balance and share that number's own result", async ({
+  page,
+  context,
+}) => {
+  const six = [88125, 375660, 861456, 90750, 577281, 25663];
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await startSplitRoll(page, {
+    draws: six,
+    seed: {
+      ...seed,
+      owned: [...seed.owned, "twice"],
+      skills: ["bedrock", "twice"],
+      equippedSkills: ["bedrock", "twice"],
+      skillCharge: { bedrock: 9, twice: 9 },
+    },
+  });
+  expect(await runUntil(page, decided)).toBe(true);
+  expect(await runUntil(page, complete)).toBe(true);
+  // The paid number that is not the best: a roll's own result would show its
+  // balance and its share line, and so does its stats page.
+  await page
+    .locator(".draw-panel", { has: page.locator(".draw-panel-tag.is-paid") })
+    .locator(".draw-pick")
+    .click();
+  const detail = page.locator(".draw-detail");
+  await expect(detail.locator(".session-total")).toContainText(
+    "Your EP balance",
+  );
+  await detail.getByRole("button", { name: "Share", exact: true }).click();
+  await expect(
+    detail.getByRole("button", { name: "Copied result + link!", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    buildShareText(evaluate(25663)),
+  );
 });

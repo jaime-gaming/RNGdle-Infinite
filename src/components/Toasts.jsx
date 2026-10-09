@@ -3,6 +3,7 @@ import {
   Check,
   CircleAlert,
   Coins,
+  Info,
   Sparkles,
   TriangleAlert,
   X,
@@ -10,11 +11,13 @@ import {
 import "../toasts.css";
 
 // The notice cards. Each kind has its own mark, so a glance says whether it was
-// a reward, a milestone, a warning or a failure. A notice waits for its time,
-// pauses while the pointer or the keyboard is on it, and leaves on its own, by
-// the close button, or by its action.
+// done, a plain piece of information, a reward, a milestone, a warning or a
+// failure. Only a finished action gets the tick; a failure never does. A notice
+// waits for its time, pauses while the pointer or the keyboard is on it, and
+// leaves on its own, by the close button, or by its action.
 const KIND_ICON = {
-  info: Check,
+  info: Info,
+  done: Check,
   reward: Coins,
   milestone: Sparkles,
   warning: TriangleAlert,

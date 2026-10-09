@@ -236,7 +236,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     surge: 180000,
     // v0.6: the Task Skip, a repeatable utility bought once a day.
     "task-skip": 125000,
-    trail: 320000,
+    trail: 160000,
     bounce: 500000,
     twice: 900000,
     bedrock: 1600000,

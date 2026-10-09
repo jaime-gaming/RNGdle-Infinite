@@ -32,10 +32,14 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
       const result = await onAction({ type: "equip", id });
       notify?.(
         result.ok
-          ? id === "none"
-            ? "Original appearance restored. No EP spent."
-            : `${productById.get(id).name} equipped. No EP spent.`
-          : result.message,
+          ? {
+              kind: "done",
+              text:
+                id === "none"
+                  ? "Original appearance restored. No EP spent."
+                  : `${productById.get(id).name} equipped. No EP spent.`,
+            }
+          : { kind: "error", text: result.message },
       );
     } finally {
       setPending(false);

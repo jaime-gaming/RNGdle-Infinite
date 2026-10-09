@@ -136,7 +136,8 @@ export default function ActivityFeed({
   );
   async function toggleBookmark(event) {
     const result = await onAction?.({ type: "bookmark", id: event.id });
-    if (result && !result.ok && result.message) notify?.(result.message);
+    if (result && !result.ok && result.message)
+      notify?.({ kind: "error", text: result.message });
   }
   // Any archived roll can be shared later: the text is rebuilt from the entry
   // the save kept, so it can only ever state what the roll actually earned.
@@ -147,9 +148,10 @@ export default function ActivityFeed({
       clearTimeout(copiedTimer.current);
       copiedTimer.current = setTimeout(() => setCopiedId(""), 2200);
     } catch {
-      notify?.(
-        "Clipboard isn’t available. Try copying from a secure browser window.",
-      );
+      notify?.({
+        kind: "error",
+        text: "Clipboard isn’t available. Try copying from a secure browser window.",
+      });
     }
   }
   // Confirming runs the cut the player picked. The save works out what that
@@ -165,9 +167,10 @@ export default function ActivityFeed({
       return;
     }
     setPending(null);
-    notify?.(
-      `Deleted ${count(outcome.removed ?? 0)} entries. Bookmarked rolls and rebirth markers were kept.`,
-    );
+    notify?.({
+      kind: "done",
+      text: `Deleted ${count(outcome.removed ?? 0)} entries. Bookmarked rolls and rebirth markers were kept.`,
+    });
   }
   return (
     <>
