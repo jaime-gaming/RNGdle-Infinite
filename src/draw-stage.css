@@ -188,6 +188,16 @@ button.draw-pick:focus-visible {
   text-transform: uppercase;
   color: var(--muted);
 }
+.draw-panel-more[data-side="left"] {
+  right: auto;
+  left: 10px;
+  text-align: left;
+}
+.draw-panel-more[data-side="right"] {
+  left: auto;
+  right: 10px;
+  text-align: right;
+}
 .draw-panel-head {
   display: flex;
   align-items: center;

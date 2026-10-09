@@ -598,9 +598,10 @@ test("the overview's roll button is centred and covers no number, wherever it si
   await startSplitRoll(page);
   expect(await runUntil(page, decided)).toBe(true);
   expect(await runUntil(page, complete)).toBe(true);
-  // Five numbers on a desktop put a hint at the crossing, so the button stays in
-  // the strip; either way the placement holds.
+  // Five numbers on a desktop: the tap hints sit in the outer corners, so the
+  // crossing is free and the button takes it.
   const hub = (await page.locator(".draw-hub").count()) === 1;
+  expect(hub).toBe(true);
   await expectButtonPlaced(page, { hub });
 });
 

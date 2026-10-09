@@ -373,6 +373,22 @@ export default function DrawStage({
       const stage = stageRef.current;
       const grid = gridRef.current;
       if (!stage || !grid) return;
+      // The tap hint sits in the outer bottom corner of its panel: panels on the
+      // left half of the grid keep it on the left, the others on the right. That
+      // leaves the middle of the grid to the roll button.
+      const cols = Math.max(
+        1,
+        Number.parseInt(
+          getComputedStyle(grid).getPropertyValue("--cols"),
+          10,
+        ) || 1,
+      );
+      grid.querySelectorAll(".draw-panel").forEach((panel, index) => {
+        const side = index % cols < cols / 2 ? "left" : "right";
+        panel
+          .querySelector(".draw-panel-more")
+          ?.setAttribute("data-side", side);
+      });
       stage.classList.add("is-probing");
       const box = grid.getBoundingClientRect();
       const origin = stage.getBoundingClientRect();
