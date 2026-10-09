@@ -424,6 +424,13 @@ button.draw-pick:focus-visible {
 .draw-panel.is-winner .draw-badge-more {
   border-color: color-mix(in srgb, var(--bg) 55%, transparent);
 }
+/* The chips keep their names and EP on the green, in the page colour: their
+   rarity tints were picked for the plain page and lose contrast on the green. */
+.draw-panel.is-winner .draw-badge {
+  border-color: color-mix(in srgb, var(--bg) 55%, transparent);
+  background: color-mix(in srgb, var(--bg) 14%, transparent);
+  color: var(--bg);
+}
 
 /* One number's own stats, in the page flow, at the size of the roll's own
    result: its number, its rank and EP, the roll's button in the middle, then
@@ -479,6 +486,15 @@ button.draw-pick:focus-visible {
   justify-content: flex-start;
   width: 100%;
   max-width: 640px;
+}
+/* The skill rack holds the top-left corner of every roll screen. Where the
+   column reaches the page's left edge (a phone, or a narrow window), the back
+   row starts after the rack, so "All numbers" is never under its circles. */
+@media (max-width: 800px) {
+  .draw-detail-bar,
+  .draw-back-row {
+    padding-left: 58px;
+  }
 }
 
 @media (max-width: 760px) {

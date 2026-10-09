@@ -176,6 +176,16 @@ test("the best draw is filled green, and every number stays on the grid", async 
     expect(other.background).not.toBe(best.background);
   await expect(page.locator(".draw-grid")).toHaveCSS("filter", "none");
   await expect(page.locator(".draw-grid")).toHaveCSS("pointer-events", "auto");
+  // The best one's chips are written in the same page colour as its EP, so
+  // their names read on the green in either theme.
+  const chipColor = await page
+    .locator(".draw-panel.is-winner .draw-badge")
+    .first()
+    .evaluate((node) => getComputedStyle(node).color);
+  const epColor = await page
+    .locator(".draw-panel.is-winner .draw-ep")
+    .evaluate((node) => getComputedStyle(node).color);
+  expect(chipColor).toBe(epColor);
 });
 
 test("the overview is a takeover: opaque, nothing under it scrolls, nothing shows through", async ({
@@ -405,6 +415,10 @@ test("on a phone the overview fits the screen, and a number's stats open in plac
   await expect
     .poll(async () => (await page.locator(".draw-detail-bar").boundingBox())?.y)
     .toBeLessThan(200);
+  // The skill rack keeps the corner, so "All numbers" starts past its circles.
+  const rack = await page.locator(".skill-bar").boundingBox();
+  const back = await page.locator(".draw-detail-back").boundingBox();
+  expect(back.x).toBeGreaterThanOrEqual(rack.x + rack.width);
   await page.getByRole("button", { name: "All numbers" }).click();
   await expect(page.locator(".draw-stage-minimize")).toBeVisible();
   await page.locator(".draw-stage-minimize").click();
@@ -412,6 +426,11 @@ test("on a phone the overview fits the screen, and a number's stats open in plac
   await expect
     .poll(async () => (await page.locator(".draw-back-row").boundingBox())?.y)
     .toBeLessThan(200);
+  const rackAtBest = await page.locator(".skill-bar").boundingBox();
+  const backAtBest = await page
+    .locator(".draw-back-row .draw-detail-back")
+    .boundingBox();
+  expect(backAtBest.x).toBeGreaterThanOrEqual(rackAtBest.x + rackAtBest.width);
 });
 
 // Auto-Roll armed from the rack, on a roll whose first draw keeps four numbers.
