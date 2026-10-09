@@ -1,4 +1,10 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Check, Dices, LayoutGrid } from "lucide-react";
 import NumberBox from "./NumberBox";
 import PaidNumbers from "./PaidNumbers";
@@ -295,6 +301,42 @@ export function DrawDetail({
   );
 }
 
+// The roll button in the middle of the overview, where the panels meet. Its
+// radius is the button's plus a margin. It is only shown where it covers no
+// digit, label, chip, hint or icon; anywhere else it stays in the strip below.
+const HUB_RADIUS = 36;
+
+// A text leaf is measured by its words, not by its box: a hint can span a whole
+// panel while its words sit in the middle of it.
+function inkBox(el) {
+  const hasText = [...el.childNodes].some(
+    (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+  );
+  if (!hasText) return el.getBoundingClientRect();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return range.getBoundingClientRect();
+}
+
+function hubIsClear(grid, x, y) {
+  return ![...grid.querySelectorAll(".draw-panel *")].some((el) => {
+    if (el.children.length > 0) return false;
+    const style = getComputedStyle(el);
+    if (style.visibility === "hidden" || Number(style.opacity) === 0) {
+      return false;
+    }
+    const box = inkBox(el);
+    return (
+      box.width > 0 &&
+      box.height > 0 &&
+      box.left < x + HUB_RADIUS &&
+      box.right > x - HUB_RADIUS &&
+      box.top < y + HUB_RADIUS &&
+      box.bottom > y - HUB_RADIUS
+    );
+  });
+}
+
 // The overview: every draw on one screen, with nothing behind it.
 export default function DrawStage({
   run,
@@ -315,6 +357,35 @@ export default function DrawStage({
   const rarityKnown = elapsed >= timeline.rarity;
   const scramble = useScramble(spinning, timeline.slots, reducedMotion);
   const [frame, setFrame] = useState({ top: 0, bottom: 0 });
+  const stageRef = useRef(null);
+  const gridRef = useRef(null);
+  // Where the roll button sits in the middle, relative to the overview, or null
+  // when it stays in the strip under the panels.
+  const [hub, setHub] = useState(null);
+  const hasRoll = roll !== null;
+
+  // Decided once the reveal is over, and again when the window changes: the
+  // panels are then final. The strip is hidden while this measures, so the grid
+  // is measured at the height it has when the button is in the middle.
+  useLayoutEffect(() => {
+    if (!hasRoll) return undefined;
+    const probe = () => {
+      const stage = stageRef.current;
+      const grid = gridRef.current;
+      if (!stage || !grid) return;
+      stage.classList.add("is-probing");
+      const box = grid.getBoundingClientRect();
+      const origin = stage.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      const clear = hubIsClear(grid, x, y);
+      stage.classList.remove("is-probing");
+      setHub(clear ? { x: x - origin.left, y: y - origin.top } : null);
+    };
+    probe();
+    window.addEventListener("resize", probe);
+    return () => window.removeEventListener("resize", probe);
+  }, [decided, numbers.length, hasRoll, frame.top, frame.bottom]);
 
   // The overview is a takeover, not a panel: it starts under the header and
   // stops above the phone tab bar. Both are measured, and measured again when
@@ -360,6 +431,7 @@ export default function DrawStage({
   return (
     <div
       className={`draw-stage ${decided ? "is-decided" : ""}`}
+      ref={stageRef}
       style={{ top: `${frame.top}px`, bottom: `${frame.bottom}px` }}
       data-count={numbers.length}
       aria-hidden={decided ? undefined : "true"}
@@ -383,7 +455,7 @@ export default function DrawStage({
           </button>
         )}
       </p>
-      <ol className="draw-grid">
+      <ol className="draw-grid" ref={gridRef}>
         {draws.map((draw, index) => {
           const isWinner = index === winnerIndex;
           const claim = claimFor(run, draw.number);
@@ -455,7 +527,17 @@ export default function DrawStage({
           );
         })}
       </ol>
-      {roll && <div className="draw-stage-roll">{roll}</div>}
+      {roll &&
+        (hub ? (
+          <div
+            className="draw-hub"
+            style={{ left: `${hub.x}px`, top: `${hub.y}px` }}
+          >
+            {roll}
+          </div>
+        ) : (
+          <div className="draw-stage-roll">{roll}</div>
+        ))}
     </div>
   );
 }

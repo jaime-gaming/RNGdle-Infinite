@@ -9,6 +9,11 @@
 html.draw-takeover {
   overflow: hidden;
 }
+/* The skill rack is not part of the overview: it sits out while the overview is
+   up, so none of its icons cover a panel. */
+html.draw-takeover .skill-bar {
+  visibility: hidden;
+}
 /* The install prompt waits while a multi-number roll is on screen, rather than
    covering the overview's label or the way back from a number's stats. */
 html.draw-split .install-app {
@@ -584,4 +589,45 @@ button.draw-pick:focus-visible {
   align-items: center;
   min-height: 96px;
   padding: 0 12px 10px;
+}
+
+/* The roll button in the middle of the overview, where the panels meet. It only
+   appears where the layout measured that it covers nothing; otherwise the strip
+   under the panels holds it. */
+.draw-stage.is-probing .draw-stage-roll {
+  display: none;
+}
+.draw-hub {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+}
+.roll-experience .draw-hub .generate-wrap:not(.is-away) {
+  width: auto;
+  max-height: none;
+}
+.roll-experience .draw-hub .generate {
+  width: 64px;
+  height: 64px;
+  padding: 6px;
+  gap: 4px;
+  flex-direction: column;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.roll-experience .draw-hub .generate::before,
+.roll-experience .draw-hub .generate::after {
+  border-radius: 50%;
+}
+/* While waiting, the circle shows the clock and the time only. */
+.roll-experience .draw-hub .generate-word {
+  display: none;
+}
+.roll-experience .draw-hub .generate-time {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
 }

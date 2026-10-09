@@ -458,6 +458,7 @@ export function useProgress() {
               drawPicksFor(armed),
               async () => (await generateRoll()).number,
               restoreRoll,
+              { ordinary: true },
             ));
           // No digits reach the UI until the draw has been committed below.
           if (token !== generation.current)

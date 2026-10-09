@@ -1790,7 +1790,8 @@ export function parsePending(p, owned = null) {
       (!plan ||
         !Array.isArray(draws) ||
         draws.length < 1 ||
-        draws.length > Math.min(plan.attempts, SKILL_MAX_DRAWS) ||
+        // The skills' draws, plus the roll's own ordinary draw when it made one.
+        draws.length > Math.min(plan.attempts + 1, SKILL_MAX_DRAWS + 1) ||
         !draws.every((number) => validAmount(number) && number <= 1000000) ||
         !draws.includes(p.number)))
   )

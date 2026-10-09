@@ -259,7 +259,12 @@ export default function RollExperience({
   const result = run?.result;
   // More than one number is paid: each paid number is shown on its own card,
   // and no total EP is counted up on screen for the roll.
-  const stacked = (run?.picks ?? []).length > 1;
+  // Every number a draw skill kept is listed as paid. A plain draw can win, so a
+  // single paid number is listed too when it is not the roll's own number.
+  const paidPicks = run?.picks ?? [];
+  const stacked =
+    paidPicks.length > 1 ||
+    (paidPicks.length === 1 && paidPicks[0].number !== run?.number);
   const groups = useMemo(
     () => (result ? groupResultBadges(result.badges) : []),
     [result],
@@ -332,27 +337,45 @@ export default function RollExperience({
   }, [run?.id, keptNumbers.length]);
   // Every paid number, the one the roll committed included, each with the EP
   // it banks. A number whose score is still loading shows a dash for now.
-  const paidItems = useMemo(
-    () =>
-      (run?.picks ?? [])
-        .filter((pick) => pick.number != null)
-        .map((pick, index) => {
-          const definition = skillById.get(pick.skill);
-          const best = pick.number === result?.number;
-          const scored = best ? result : (keptScores[pick.number] ?? null);
-          return {
-            key: `${index}-${pick.number}`,
-            skill: definition?.name ?? "",
-            tint: definition?.tint ?? "green",
-            number: pick.number,
-            ep: scored
-              ? `${formatEP(Math.round(scored.totalEP * bankedMultiplier))} EP`
-              : "—",
-            best,
-          };
-        }),
-    [run?.picks, result, keptScores, bankedMultiplier],
-  );
+  // Every paid number is a card. When a plain draw won, the roll's own number is
+  // not a skill's pick, so its card leads the list as the Best one, by itself.
+  const paidItems = useMemo(() => {
+    const picks = run?.picks ?? [];
+    const cards = picks
+      .filter((pick) => pick.number != null)
+      .map((pick, index) => {
+        const definition = skillById.get(pick.skill);
+        const best = pick.number === result?.number;
+        const scored = best ? result : (keptScores[pick.number] ?? null);
+        return {
+          key: `${index}-${pick.number}`,
+          skill: definition?.name ?? "",
+          tint: definition?.tint ?? "green",
+          number: pick.number,
+          ep: scored
+            ? `${formatEP(Math.round(scored.totalEP * bankedMultiplier))} EP`
+            : "—",
+          best,
+        };
+      });
+    if (!result || picks.some((pick) => pick.number === result.number)) {
+      return cards;
+    }
+    return [
+      {
+        key: `ordinary-${result.number}`,
+        skill: "Ordinary draw",
+        tint: "green",
+        number: result.number,
+        ep:
+          result.totalEP !== null
+            ? `${formatEP(Math.round(result.totalEP * bankedMultiplier))} EP`
+            : "—",
+        best: true,
+      },
+      ...cards,
+    ];
+  }, [run?.picks, result, keptScores, bankedMultiplier]);
   const extraPicks = useMemo(
     () =>
       keptNumbers
@@ -744,7 +767,11 @@ export default function RollExperience({
           "DRAWING…"
         ) : cooldown ? (
           <>
-            <Clock3 size={18} /> {waitWord} {formatDuration(cooldown)}
+            <Clock3 size={18} />
+            <span className="generate-label">
+              <span className="generate-word">{waitWord}</span>{" "}
+              <span className="generate-time">{formatDuration(cooldown)}</span>
+            </span>
             <CooldownFill
               window={cooldownWindow}
               reducedMotion={reducedMotion}
@@ -752,7 +779,13 @@ export default function RollExperience({
           </>
         ) : reserving ? (
           <>
-            <Clock3 size={18} /> {waitWord} {formatDuration(reservedSeconds)}
+            <Clock3 size={18} />
+            <span className="generate-label">
+              <span className="generate-word">{waitWord}</span>{" "}
+              <span className="generate-time">
+                {formatDuration(reservedSeconds)}
+              </span>
+            </span>
           </>
         ) : awaitingSettlement ? (
           "RESULT PENDING"

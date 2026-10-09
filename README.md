@@ -167,7 +167,7 @@ their budgets add up, so Double Vision's two draws and Bedrock's four spend six,
 and **each skill keeps a number of its own** — Double Vision keeps the best of
 its two, Bedrock the best of its four, and the roll banks both. A floor is a
 promise rather than a quantity, so the strongest one is the one that holds, and
-the whole plan still stops at the eight draws a roll may spend. When a skill
+the whole plan still stops at the eight draws a roll may spend. A live roll with a draw skill also makes one ordinary draw of its own, after theirs: a plain number that can win like any other, while the numbers the skills kept stay paid either way. When a skill
 fires, the effect is written into the committed roll, so a reload, a second tab
 or a retry can never re-fire it or re-roll for something better.
 
@@ -180,7 +180,7 @@ and **every number stays on the screen**: nothing flies to the centre and nothin
 is greyed out. Tap a number and it opens at full size, with its own rank, EP and
 badges and the roll's button in the middle; the best one opens as the roll's own
 result, and a paid one also shows your EP balance and shares its own result. The
-roll's button sits centred under the numbers. **All numbers** brings the screen back. Auto-Roll keeps turning while the
+roll's button sits where the panels meet when that spot covers no number, label or hint, and centred under the numbers otherwise. **All numbers** brings the screen back. Auto-Roll keeps turning while the
 screen is open, and stands still only while a single number is open. Each panel
 that a skill claimed says so, in that skill's colour, and a stacked roll lists
 every number being paid. The

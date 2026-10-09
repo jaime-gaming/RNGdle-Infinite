@@ -545,9 +545,14 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   expect(() => parsePending(pending({ draws: [604827, 12] }))).toThrow(
     /Invalid committed roll/,
   );
+  // Double Vision draws twice; a live roll adds one ordinary draw after them, so
+  // three draws are the most it can commit and a fourth is forged.
   expect(() =>
-    parsePending(pending({ skills: ["twice"], draws: [604827, 12, 13] })),
+    parsePending(pending({ skills: ["twice"], draws: [604827, 12, 13, 14] })),
   ).toThrow(/Invalid committed roll/);
+  expect(
+    parsePending(pending({ skills: ["twice"], draws: [604827, 12, 13] })).draws,
+  ).toEqual([604827, 12, 13]);
   expect(() =>
     parsePending(pending({ skills: ["twice"], draws: [1, 2] })),
   ).toThrow(/Invalid committed roll/);
@@ -557,7 +562,7 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   expect(honest.draws).toEqual([604827, 999, 42]);
   const plan = drawPlanFor(["twice", "bedrock"]);
   expect(honest.draws.length).toBeLessThanOrEqual(
-    Math.min(plan.attempts, SKILL_MAX_DRAWS),
+    Math.min(plan.attempts + 1, SKILL_MAX_DRAWS + 1),
   );
   // Timings still cannot outrun the upgrades the save paid for.
   expect(() =>
