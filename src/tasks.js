@@ -14,7 +14,8 @@
 // with the period, together with the running count its new task starts from; a
 // peak task reads the best roll of the period instead, as it always does.
 //
-// Finishing every task on a list pays a bonus once more, on top of the rewards.
+// Finishing every task on a list unlocks a bonus once more, on top of the
+// rewards. The player collects the bonus with its own button.
 
 export const TASK_CADENCES = ["daily", "weekly"];
 
@@ -565,9 +566,8 @@ export function claimTask(tasks, task, at) {
 }
 
 // Marks a cadence's list bonus as taken for the current reset. The caller
-// credits the reward. The reducer pays it as soon as the last task of a list is
-// claimed, so it never waits for a separate click; this refuses a bonus that is
-// not earned or is already taken.
+// credits the reward. The reducer calls this when the player collects a finished
+// list's bonus; it refuses a bonus that is not earned or is already taken.
 export function claimListBonus(tasks, cadence, at) {
   const bonus = listBonusState(tasks, cadence, at);
   if (bonus.state === "claimed")

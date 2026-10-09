@@ -97,9 +97,6 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
       ready,
       readyEP: ready.reduce((sum, view) => sum + view.task.reward, 0),
       bonus,
-      // Claiming every ready task now would finish the list and pay its bonus.
-      finishes:
-        bonus.state === "open" && bonus.done + ready.length === bonus.total,
       reset: nextReset(cadence, now) - now,
     };
   });
@@ -129,7 +126,7 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
         notify?.({
           kind: "milestone",
           title: `${CADENCE_NAME[task.cadence]} list complete`,
-          text: `+${formatEP(LIST_BONUS[task.cadence])} EP list bonus paid.`,
+          text: `+${formatEP(LIST_BONUS[task.cadence])} EP list bonus ready to collect.`,
         });
     } else
       notify?.({
@@ -138,32 +135,23 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
       });
   }
 
-  async function claimAll(list) {
-    setPending(`all-${list.cadence}`);
+  async function collect(list) {
+    setPending(`bonus-${list.cadence}`);
     const outcome = await onAction?.({
-      type: "claim-all-tasks",
+      type: "collect-list-bonus",
       cadence: list.cadence,
     });
     setPending("");
-    if (outcome?.ok) {
-      const bonus = list.finishes || list.bonus.state === "claimable";
-      const total = list.readyEP + (bonus ? LIST_BONUS[list.cadence] : 0);
-      const tasks = list.ready.length;
-      const claimedText = `${tasks} ${tasks === 1 ? "task" : "tasks"} claimed`;
+    if (outcome?.ok)
       notify?.({
         kind: "reward",
-        title: `+${formatEP(total)} EP`,
-        text:
-          tasks && bonus
-            ? `${claimedText}, list bonus included.`
-            : bonus
-              ? `${CADENCE_NAME[list.cadence]} list bonus collected.`
-              : `${claimedText}.`,
+        title: `+${formatEP(LIST_BONUS[list.cadence])} EP`,
+        text: `${CADENCE_NAME[list.cadence]} list bonus collected.`,
       });
-    } else
+    else
       notify?.({
         kind: "error",
-        text: outcome?.message ?? "Nothing could be claimed yet.",
+        text: outcome?.message ?? "The list bonus could not be collected yet.",
       });
   }
 
@@ -268,19 +256,6 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
                   <Timer size={13} aria-hidden="true" />
                   Resets in {resetCountdown(list.reset)}
                 </span>
-                {list.ready.length > 0 && (
-                  <button
-                    className="primary-button task-claim-all"
-                    disabled={busy}
-                    aria-label={`Claim all ready ${cadence} tasks`}
-                    onClick={() => claimAll(list)}
-                  >
-                    <CheckCheck size={14} aria-hidden="true" />
-                    {pending === `all-${cadence}`
-                      ? "Claiming…"
-                      : `Claim all (${list.ready.length})`}
-                  </button>
-                )}
               </div>
             </header>
             <ul className="task-list">
@@ -397,7 +372,7 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
                     ? "Paid. Every task on this list is claimed."
                     : bonus.state === "claimable"
                       ? "Ready to collect."
-                      : `${bonus.done} of ${bonus.total} claimed. Claim them all to unlock it.`}
+                      : `${bonus.done} of ${bonus.total} claimed. Claim every task to unlock it.`}
                 </span>
               </div>
               {bonus.state === "claimable" && (
@@ -405,9 +380,9 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
                   className="primary-button task-claim"
                   disabled={busy}
                   aria-label={`Collect ${cadence} list bonus`}
-                  onClick={() => claimAll(list)}
+                  onClick={() => collect(list)}
                 >
-                  Collect
+                  {pending === `bonus-${cadence}` ? "Collecting…" : "Collect"}
                 </button>
               )}
             </div>
@@ -416,11 +391,11 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
       })}
       <p className="task-note">
         A reward is paid into your wallet once, when you claim it. Finishing
-        every task on a list also pays its list bonus, the moment the last one
-        is claimed. Unclaimed rewards expire when their reset comes. Offline
-        rolls do not count, and task EP never counts towards a rebirth. A Task
-        Skip swaps one open task for another from its pool. You can buy one a
-        day in the Shop, no more than {SKIP_WINDOW_LIMIT} in any{" "}
+        every task on a list unlocks its list bonus, which you collect with its
+        own button. Unclaimed rewards and bonuses expire when their reset comes.
+        Offline rolls do not count, and task EP never counts towards a rebirth.
+        A Task Skip swaps one open task for another from its pool. You can buy
+        one a day in the Shop, no more than {SKIP_WINDOW_LIMIT} in any{" "}
         {SKIP_WINDOW_MS / 86400000} days, and hold up to three.
       </p>
     </>

@@ -272,14 +272,6 @@
 .task-percent {
   color: var(--secondary);
 }
-.task-claim-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 0;
-  padding: 7px 12px;
-  font-size: 12px;
-}
 /* The list bonus sits under its tasks: dashed while it is still to earn, solid
    once it is ready to collect or has been paid. */
 .task-bonus {

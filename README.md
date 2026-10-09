@@ -219,13 +219,13 @@ Tasks are small goals that pay EP. **Daily** tasks reset at local midnight and
 **weekly** ones on Monday. Each cadence has a pool of twelve tasks, and every
 period four of them go on your list. The four come from the period and the task
 itself, so everyone gets the same four on the same day or week. Each pays once
-per reset, when you claim it on the **Tasks** page, one at a time or with
-**Claim all**. A dot on the Tasks tab says when one is ready, and a notice says
-what just became ready.
+per reset, when you claim it on the **Tasks** page, one at a time. A dot on the
+Tasks tab says when one is ready, and a notice says what just became ready.
 
-Finishing every task on a list also pays its **list bonus**: 100,000 EP for the
-daily list and 500,000 EP for the weekly one. It is paid in the same step as the
-last claim, once per reset, and it is logged as a task.
+Finishing every task on a list unlocks its **list bonus**: 100,000 EP for the
+daily list and 500,000 EP for the weekly one. The bonus waits under its list
+until you press **Collect**. It pays once per reset, is logged as a task, and
+expires with the rest when the reset comes.
 
 Some tasks read your best roll rather than a running total. **Land a roll worth
 …** and **Earn N badges on one roll** count the best single roll of the period,

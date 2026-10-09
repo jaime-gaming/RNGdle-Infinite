@@ -6,7 +6,7 @@ export const CHANGELOG = [
     title:
       "tasks pay EP, aura set R4ND0MN3S5 arrives, and history holds more entries",
     body: [
-      "tasks pay EP once per reset: claim one at a time or all at once, and a notice reports each claim and list bonus.",
+      "tasks pay EP once per reset, one claim at a time; a finished list unlocks its bonus, which its own Collect button pays.",
       "a Task Skip costs 125,000 EP, one a day and no more than three in any five days; its tokens are spent on Tasks.",
       "a new aura set, R4ND0MN3S5, adds four looks: binary rain, static, scrambled digits and a hex dump.",
       "the log holds 6,000 entries and warns from 4,500; bulk delete keeps bookmarks, and removed entries still count in your profile.",

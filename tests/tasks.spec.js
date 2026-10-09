@@ -11,6 +11,7 @@ import {
   ACTIVE_PER_PERIOD,
   activeTaskIds,
   emptyTasks,
+  LIST_BONUS,
   nextReset,
   periodKey,
   recordTally,
@@ -399,6 +400,75 @@ test("the Tasks page lists both cadences, and a finished task is claimed once fr
     type: "task",
     ep: daily.reward,
   });
+});
+
+test("a finished list waits for its own Collect button, and no button claims the whole list", async ({
+  page,
+}) => {
+  const now = Date.now();
+  // Every task on today's daily list is finished, so each one can be claimed,
+  // and the list bonus is ready to collect once the last of them is claimed.
+  const tally = Object.fromEntries(TASK_METRICS.map((metric) => [metric, 0]));
+  Object.assign(tally, {
+    rolls: 100,
+    rare: 10,
+    epic: 10,
+    mythic: 10,
+    multi: 10,
+    discovered: 10,
+    banked: 10000000,
+    skills: 10,
+    pets: 1,
+    peakEP: 1000000,
+    peakBadges: 30,
+  });
+  const tasks = recordTally(emptyTasks(), tally, now);
+  const list = activeTaskIds(tasks, "daily", now).map((id) => taskById(id));
+  const rewards = list.reduce((sum, task) => sum + task.reward, 0);
+  await seedProgress(page, { balance: 2000, totalEarned: 2000, tasks });
+  await page.goto("/tasks");
+  await expect(page.getByRole("button", { name: /Claim all/i })).toHaveCount(0);
+  const bonus = page.locator('[data-bonus="daily"]');
+  await expect(bonus).toHaveAttribute("data-state", "open");
+
+  for (const task of list) {
+    await page
+      .getByRole("button", { name: `Claim reward for ${task.title}` })
+      .click();
+    await expect(
+      page.getByRole("button", { name: `Claim reward for ${task.title}` }),
+    ).toHaveCount(0);
+  }
+  // The last claim finishes the list, but the bonus is still waiting for its
+  // own button, so the wallet holds only the four rewards.
+  await expect(bonus).toHaveAttribute("data-state", "claimable");
+  await expect(bonus).toContainText("Ready to collect.");
+  let saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)),
+    PROGRESS_KEY,
+  );
+  expect(saved.balance).toBe(2000 + rewards);
+  expect(saved.history.filter((e) => e.taskId === "daily-list")).toHaveLength(
+    0,
+  );
+
+  await page.getByRole("button", { name: "Collect daily list bonus" }).click();
+  await expect(bonus).toHaveAttribute("data-state", "claimed");
+  const notice = page.locator("article.toast.is-reward", {
+    hasText: "list bonus collected",
+  });
+  await expect(notice).toContainText(`+${formatEP(LIST_BONUS.daily)} EP`);
+  saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)),
+    PROGRESS_KEY,
+  );
+  expect(saved.balance).toBe(2000 + rewards + LIST_BONUS.daily);
+  expect(saved.history.filter((e) => e.taskId === "daily-list")).toHaveLength(
+    1,
+  );
+  await expect(
+    page.getByRole("button", { name: "Collect daily list bonus" }),
+  ).toHaveCount(0);
 });
 
 test("a ready task shows in the header and on the roll page until it is claimed", async ({

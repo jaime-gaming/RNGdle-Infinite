@@ -66,13 +66,11 @@ import {
 } from "./history-tally.js";
 import {
   CADENCE_NAME,
-  claimableIds,
   claimListBonus,
   claimTask,
   EPIC_OR_BETTER,
   emptyTasks,
   LIST_BONUS,
-  listBonusState,
   MYTHIC_OR_BETTER,
   parseTasks,
   periodKey,
@@ -720,41 +718,39 @@ function buyTaskSkip(state, item, action) {
   };
 }
 
-// Pays the given finished tasks of one cadence into the wallet, and the list
-// bonus too when that claim finishes the list. Each payment is logged as income
-// with the name it had when paid, like any other task reward.
-function payTasks(state, cadence, at, ids, eventId = null) {
-  const stamp = periodKey(cadence, at);
-  let tasks = state.tasks ?? emptyTasks();
-  let paid = 0;
-  const events = [];
-  for (const id of ids) {
-    const task = taskById(id);
-    tasks = claimTask(tasks, task, at);
-    paid += task.reward;
-    events.push({
-      id: eventId ?? `task:${task.id}:${stamp}`,
-      type: "task",
-      at,
-      taskId: task.id,
-      cadence,
-      name: task.title,
-      ep: task.reward,
-    });
-  }
-  if (listBonusState(tasks, cadence, at).state === "claimable") {
-    tasks = claimListBonus(tasks, cadence, at);
-    paid += LIST_BONUS[cadence];
-    events.push({
-      id: `bonus:${cadence}:${stamp}`,
-      type: "task",
-      at,
-      taskId: `${cadence}-list`,
-      cadence,
-      name: `${CADENCE_NAME[cadence]} list complete`,
-      ep: LIST_BONUS[cadence],
-    });
-  }
+// Pays one finished task of a cadence into the wallet, logged as income with the
+// name it had when paid, like any other task reward. The list bonus is not paid
+// here: finishing the list only unlocks it, and collectBonus pays it.
+function payTask(state, task, at, eventId = null) {
+  const tasks = claimTask(state.tasks ?? emptyTasks(), task, at);
+  const balance = state.balance + task.reward;
+  const totalEarned = state.totalEarned + task.reward;
+  if (!validAmount(balance) || !validAmount(totalEarned))
+    throw new Error("EP balance limit reached.");
+  return {
+    ...state,
+    tasks,
+    balance,
+    totalEarned,
+    history: appendHistory(state.history, [
+      {
+        id: eventId ?? `task:${task.id}:${periodKey(task.cadence, at)}`,
+        type: "task",
+        at,
+        taskId: task.id,
+        cadence: task.cadence,
+        name: task.title,
+        ep: task.reward,
+      },
+    ]),
+  };
+}
+
+// Pays the list bonus of one cadence once every task on its list is claimed. It
+// is logged as a task line, and never counts towards a rebirth.
+function collectBonus(state, cadence, at, eventId = null) {
+  const tasks = claimListBonus(state.tasks ?? emptyTasks(), cadence, at);
+  const paid = LIST_BONUS[cadence];
   const balance = state.balance + paid;
   const totalEarned = state.totalEarned + paid;
   if (!validAmount(balance) || !validAmount(totalEarned))
@@ -764,7 +760,17 @@ function payTasks(state, cadence, at, ids, eventId = null) {
     tasks,
     balance,
     totalEarned,
-    history: appendHistory(state.history, events),
+    history: appendHistory(state.history, [
+      {
+        id: eventId ?? `bonus:${cadence}:${periodKey(cadence, at)}`,
+        type: "task",
+        at,
+        taskId: `${cadence}-list`,
+        cadence,
+        name: `${CADENCE_NAME[cadence]} list bonus`,
+        ep: paid,
+      },
+    ]),
   };
 }
 
@@ -952,32 +958,25 @@ function applyEvent(state, action) {
   }
   // A task pays its reward into the wallet once per reset. It is a reward for
   // play, not a sale, so it is logged as income and never counts towards the
-  // rebirth gate, which reads only rolls. Finishing the last task of a list also
-  // pays the list bonus, in the same step.
+  // rebirth gate, which reads only rolls. Finishing the last task of a list only
+  // unlocks its bonus: the bonus has its own action, below.
   if (action.type === "claim-task") {
     const task = taskById(action.id);
     if (!task) throw new Error("That task does not exist.");
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid task time");
-    return payTasks(state, task.cadence, at, [task.id], action.eventId);
+    return payTask(state, task, at, action.eventId);
   }
-  // Claims every finished task of one list at once, and the list bonus if the
-  // claims finish the list. Nothing is claimed twice: a task already paid is not
-  // in the ready set any more.
-  if (action.type === "claim-all-tasks") {
+  // The list bonus of a finished list, collected on its own from the Tasks page.
+  // It pays once per reset, and only when every task on the list is claimed.
+  if (action.type === "collect-list-bonus") {
     if (!TASK_CADENCES.includes(action.cadence))
       throw new Error("That task list does not exist.");
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid task time");
-    const ids = claimableIds(state.tasks, action.cadence, at);
-    if (
-      !ids.length &&
-      listBonusState(state.tasks, action.cadence, at).state !== "claimable"
-    )
-      throw new Error("Nothing to claim yet.");
-    return payTasks(state, action.cadence, at, ids);
+    return collectBonus(state, action.cadence, at, action.eventId);
   }
   // Bulk delete from History. The cut is worked out here, from the save as it
   // is now, so a stale screen can never remove the wrong entries. Cycle markers

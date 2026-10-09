@@ -74,10 +74,10 @@ test("a peak keeps the best single roll of the period, and a running total adds 
   expect(PEAK_METRICS).toEqual(["peakEP", "peakBadges"]);
 });
 
-test("claiming every ready task pays them all in one step, logs each, and refuses when none is ready", () => {
+test("each ready task is claimed on its own, and a claim pays only its reward", () => {
   let state = { ...emptyProgress(), profile: testProfile };
-  // Fifteen Rare-or-better rolls, one of them worth 250,000 EP, and enough EP
-  // banked to finish whichever banking task is on the list.
+  // Twelve Rare-or-better rolls, one of them worth 300,000 EP, so several tasks
+  // on the list are finished at once.
   for (let i = 0; i < 12; i++)
     state = applyProgress(
       state,
@@ -85,36 +85,32 @@ test("claiming every ready task pays them all in one step, logs each, and refuse
     );
   const ready = claimableIds(state.tasks, "daily", day);
   expect(ready.length).toBeGreaterThan(1);
-  const expected = ready.reduce((sum, id) => sum + taskById(id).reward, 0);
-  const before = state.balance;
-  const paid = applyProgress(state, {
-    type: "claim-all-tasks",
-    cadence: "daily",
-    at: day,
-  });
-  const bonus = listBonusState(paid.tasks, "daily", day).state === "claimed";
-  // The rolls themselves paid into the wallet too, so the claim is the gap.
-  expect(paid.balance - before).toBe(expected + (bonus ? LIST_BONUS.daily : 0));
-  expect(paid.history.filter((e) => e.type === "task")).toHaveLength(
-    ready.length + (bonus ? 1 : 0),
-  );
-  expect(claimableIds(paid.tasks, "daily", day)).toEqual([]);
+  for (const [index, id] of ready.entries()) {
+    const before = state.balance;
+    state = applyProgress(state, { type: "claim-task", id, at: day });
+    // The rolls themselves paid into the wallet too, so the claim is the gap.
+    expect(state.balance - before).toBe(taskById(id).reward);
+    expect(state.history.filter((e) => e.type === "task")).toHaveLength(
+      index + 1,
+    );
+  }
+  expect(claimableIds(state.tasks, "daily", day)).toEqual([]);
   expect(() =>
-    applyProgress(paid, { type: "claim-all-tasks", cadence: "daily", at: day }),
-  ).toThrow(/Nothing to claim yet/);
+    applyProgress(state, { type: "claim-task", id: ready[0], at: day }),
+  ).toThrow(/already claimed/);
   expect(() =>
-    applyProgress(paid, {
-      type: "claim-all-tasks",
+    applyProgress(state, {
+      type: "collect-list-bonus",
       cadence: "monthly",
       at: day,
     }),
   ).toThrow(/does not exist/);
 });
 
-test("finishing the last task on a list pays its bonus once, in the same step, and logs it", () => {
+test("finishing the last task unlocks the list bonus; collecting it pays once, in its own step", () => {
   // Build a state where every task on today's daily list is ready at once, by
-  // counting enough of every metric. Then claim them one at a time: the bonus
-  // comes with the last claim, and never again.
+  // counting enough of every metric. Then claim them one at a time: none of the
+  // claims pays the bonus, and it waits for its own collect action.
   let tasks = emptyTasks();
   const every = {
     ...zeroCounts(),
@@ -138,13 +134,37 @@ test("finishing the last task on a list pays its bonus once, in the same step, a
     expect(taskProgress(state.tasks, taskById(id), day).state).toBe(
       "claimable",
     );
-  for (const [index, id] of list.entries()) {
+  // The bonus cannot be collected while a task on the list is still unclaimed.
+  expect(() =>
+    applyProgress(state, {
+      type: "collect-list-bonus",
+      cadence: "daily",
+      at: day,
+    }),
+  ).toThrow(/Claim every task on the list first/);
+  for (const id of list) {
     const before = state.balance;
     state = applyProgress(state, { type: "claim-task", id, at: day });
-    const paid = state.balance - before;
-    const last = index === list.length - 1;
-    expect(paid).toBe(taskById(id).reward + (last ? LIST_BONUS.daily : 0));
+    expect(state.balance - before).toBe(taskById(id).reward);
   }
+  expect(listBonusState(state.tasks, "daily", day)).toMatchObject({
+    state: "claimable",
+    done: ACTIVE_PER_PERIOD,
+  });
+  expect(state.history.filter((e) => e.taskId === "daily-list")).toHaveLength(
+    0,
+  );
+  // A finished list is ready to collect, so the Tasks tab counts the bonus.
+  // The same tally also finishes the weekly list, which the count includes.
+  const weekly = claimableIds(state.tasks, "weekly", day).length;
+  expect(taskSummary(state.tasks, day).ready).toBe(1 + weekly);
+  const before = state.balance;
+  state = applyProgress(state, {
+    type: "collect-list-bonus",
+    cadence: "daily",
+    at: day,
+  });
+  expect(state.balance - before).toBe(LIST_BONUS.daily);
   expect(listBonusState(state.tasks, "daily", day)).toMatchObject({
     state: "claimed",
     done: ACTIVE_PER_PERIOD,
@@ -156,6 +176,17 @@ test("finishing the last task on a list pays its bonus once, in the same step, a
     cadence: "daily",
     ep: LIST_BONUS.daily,
   });
+  // Once per reset: a second collect is refused, and pays nothing.
+  const paidOnce = state.balance;
+  expect(() =>
+    applyProgress(state, {
+      type: "collect-list-bonus",
+      cadence: "daily",
+      at: day,
+    }),
+  ).toThrow(/already claimed/);
+  expect(state.balance).toBe(paidOnce);
+  expect(taskSummary(state.tasks, day).ready).toBe(weekly);
   expect(claimableIds(state.tasks, "daily", day)).toEqual([]);
   expect(taskSummary(state.tasks, day).claimed).toBeGreaterThanOrEqual(
     ACTIVE_PER_PERIOD,
