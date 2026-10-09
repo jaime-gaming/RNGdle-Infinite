@@ -136,3 +136,64 @@ test("a roll that finishes a task posts a notice that opens the Tasks page", asy
     page.getByRole("heading", { name: "Tasks", exact: true }),
   ).toBeVisible();
 });
+
+test("an Epic badge found while the roll is off the roll page posts a notice that opens Badges", async ({
+  page,
+}) => {
+  // 13589 earns Ascension, an Epic badge, on its first roll.
+  await mockRandom(page, [13589]);
+  await seedProgress(page, {});
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "GENERATE", exact: true }),
+  ).toBeEnabled();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await page.getByRole("button", { name: "GENERATE", exact: true }).click();
+  // The reveal keeps running on the clock while the player is on the Shop.
+  await page.getByRole("button", { name: "Shop", exact: true }).click();
+  for (let step = 0; step < 300; step++) {
+    const done = await page.evaluate(
+      () =>
+        document.querySelector(".roll-experience")?.dataset.phase ===
+        "complete",
+    );
+    if (done) break;
+    await page.clock.runFor(250);
+  }
+  const notice = page.locator("article.toast", {
+    hasText: "Epic badge found",
+  });
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText("Ascension");
+  await notice.getByRole("button", { name: "Open Badges" }).click();
+  await expect(page).toHaveURL(/badges/);
+});
+
+test("an Epic badge found on the roll page itself posts no notice, since the result shows it", async ({
+  page,
+}) => {
+  await mockRandom(page, [13589]);
+  await seedProgress(page, {});
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "GENERATE", exact: true }),
+  ).toBeEnabled();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await page.getByRole("button", { name: "GENERATE", exact: true }).click();
+  for (let step = 0; step < 300; step++) {
+    const done = await page.evaluate(
+      () =>
+        document.querySelector(".roll-experience")?.dataset.phase ===
+        "complete",
+    );
+    if (done) break;
+    await page.clock.runFor(250);
+  }
+  await expect(page.locator(".roll-experience")).toHaveAttribute(
+    "data-phase",
+    "complete",
+  );
+  await expect(
+    page.locator("article.toast", { hasText: "Epic badge found" }),
+  ).toHaveCount(0);
+});
