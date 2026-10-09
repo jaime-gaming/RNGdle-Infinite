@@ -3,16 +3,17 @@
 export const CHANGELOG = [
   {
     version: "v0.5",
-    title: "daily and weekly tasks pay EP, and history holds more entries",
+    title:
+      "tasks pay EP, aura set R4ND0MN3S5 arrives, and history holds more entries",
     body: [
-      "daily and weekly tasks pay EP once per reset, and finishing every task on a list pays a bonus on top.",
-      "claim finished tasks one at a time or all at once; a notice says what just happened, and a dot marks ready tasks.",
-      "the activity log keeps up to 6,000 entries; from 4,500 it warns you, and once full the oldest unbookmarked make room.",
-      "bulk delete clears a finished rebirth or the oldest entries, never bookmarked rolls; what leaves still counts in your profile.",
+      "tasks pay EP once per reset: claim one at a time or all at once, and a notice reports each claim and list bonus.",
+      "a Task Skip costs 125,000 EP, one a day and no more than three in any five days; its tokens are spent on Tasks.",
+      "a new aura set, R4ND0MN3S5, adds four looks: binary rain, static, scrambled digits and a hex dump.",
+      "the log holds 6,000 entries and warns from 4,500; bulk delete keeps bookmarks, and removed entries still count in your profile.",
       "the share and bookmark buttons in History are icon-only, and their names stay for screen readers.",
-      "a roll that failed to save is never credited twice, even when its history entry has been removed.",
+      "a roll is never credited twice, even after a failed save or once its history entry and receipt have gone.",
       "past the sixth rebirth a door opens; the Rebirth page shows what waits behind it.",
-      "a roll that pays several numbers keeps them all on screen; tap one to see its stats, and no total counts up.",
+      "a roll that pays several numbers keeps them all on one screen; the best turns green, tapping one shows its stats, and no total counts up.",
     ],
   },
   {

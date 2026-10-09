@@ -3,6 +3,7 @@ import { Check, Dices, LayoutGrid } from "lucide-react";
 import NumberBox from "./NumberBox";
 import PaidNumbers from "./PaidNumbers";
 import RankSummary from "./RankSummary";
+import BadgeBreakdown from "./BadgeBreakdown";
 import Emoji from "./Emoji";
 import { formatEP, groupResultBadges } from "../roll-data";
 import { restoreRoll } from "../roll-client";
@@ -15,21 +16,27 @@ import "../draw-stage.css";
 // saving already commits exactly one of them — this is the part the player
 // used to have to take on trust.
 //
-// The screen is split into one panel per draw: every draw rolls its digits and
-// earns its badges in the open, on the same clock. When the last badge has
-// landed the best draw is marked, and every number stays on screen. Nothing
-// flies to the centre, nothing greys out, and nothing leaves by itself. Tapping
-// a number minimizes the screen to a card with that number's stats, and "All
-// numbers" opens the screen again. Nothing here scores anything: the numbers
-// were drawn and scored before the roll was committed, and the worker re-reads
-// them from the same verified index.
+// The overview is a takeover of the roll screen: one panel per draw, every draw
+// rolling its digits and earning its badges in the open. When the last badge
+// has landed the best draw is marked green, and every number stays on screen.
+// Nothing behind the overview is visible or scrolls. Tapping a number opens its
+// own stats in the page flow: the best one is the roll's own result, any other
+// one is shown at the same size, with the roll's button in the middle.
+// Nothing here scores anything: the numbers were drawn and scored before the
+// roll was committed, and the worker re-reads them from the same verified index.
 const NO_DRAWS = [];
+const NO_SCORES = {};
 const randomDigits = (count) =>
   Array.from({ length: count }, () => String(Math.floor(Math.random() * 10)));
 
-// How many badge chips a panel lists before the rest becomes a count: eight
-// panels can be on screen at once, and no panel may swallow the number.
-const MAX_CHIPS = 6;
+// How many badge chips a panel lists before the rest becomes a count. The more
+// panels are on screen, the fewer chips each one can take, so none is cut off.
+function chipLimitFor(count) {
+  if (count <= 2) return 6;
+  if (count <= 4) return 4;
+  if (count <= 6) return 3;
+  return 2;
+}
 
 function useScramble(spinning, slots, reducedMotion) {
   const [scramble, setScramble] = useState(() => randomDigits(slots));
@@ -55,6 +62,46 @@ function laneBeats(beats, count) {
     { length: count },
     (_, index) => beats[Math.round((index * (beats.length - 1)) / (count - 1))],
   );
+}
+
+// The scored result of every draw a roll took, by number, read from the same
+// verified index the settlement uses. The committed draw is already in
+// `run.result`, so only the others are read. A run's draws never change, so each
+// one is read once per run, and the result is only ever for the run it was read
+// for.
+export function useDrawScores(run) {
+  const runId = run?.id ?? null;
+  const [held, setHeld] = useState({ run: null, scores: NO_SCORES });
+  useEffect(() => {
+    if (!run || (run.draws ?? []).length < 2) return;
+    let cancelled = false;
+    for (const number of run.draws) {
+      if (number === run.number) continue;
+      restoreRoll(number)
+        .then((scored) => {
+          if (cancelled || !scored) return;
+          setHeld((current) => {
+            const base = current.run === runId ? current.scores : NO_SCORES;
+            return base[number]
+              ? current
+              : { run: runId, scores: { ...base, [number]: scored } };
+          });
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [runId]);
+  return held.run === runId ? held.scores : NO_SCORES;
+}
+
+// The skill that kept a number, if one did: its name and its tint.
+export function claimFor(run, number) {
+  const pick = (run.picks ?? []).find((entry) => entry.number === number);
+  if (!pick) return null;
+  const definition = pick.skill ? skillById.get(pick.skill) : null;
+  return { name: definition?.name ?? "", tint: definition?.tint ?? "green" };
 }
 
 // One number, landing digit by digit exactly as the headline number does: the
@@ -90,7 +137,7 @@ function Digits({ number, slots, done, scramble, reducedMotion }) {
   );
 }
 
-function BadgeChips({ groups, shown, limit = MAX_CHIPS }) {
+function BadgeChips({ groups, shown, limit }) {
   const revealed = groups.slice(-shown || groups.length);
   const chips = revealed.slice(0, limit);
   const hidden = revealed.length - chips.length;
@@ -131,93 +178,122 @@ function DecisionTag({ best, claim }) {
   );
 }
 
-// One number's stats, shown once the screen is minimized. It sits in the page
-// flow, above the roll's own number, so the result under it stays readable.
-function DrawCard({
+// The roll's own number box, drawn still: the same box and the same digits the
+// reveal ends on, with nothing left to scramble.
+function StaticArtifact({ number, tier, aura }) {
+  const target = String(number);
+  const size =
+    target.length <= 3
+      ? 72
+      : target.length === 4
+        ? 60
+        : target.length === 5
+          ? 48
+          : 36;
+  return (
+    <div className={`artifact-stage aura-${aura}`} data-aura={aura}>
+      <NumberBox
+        tier={tier}
+        aura={aura}
+        role="img"
+        className={`number-artifact ${tier} is-breathing`}
+        aria-label={`Number ${target}`}
+      >
+        <span
+          className="artifact-digits"
+          style={{ fontSize: `${size}px` }}
+          aria-hidden="true"
+        >
+          {Array.from(target).map((digit, index) => (
+            <span key={index} className="artifact-digit">
+              {digit}
+            </span>
+          ))}
+        </span>
+      </NumberBox>
+    </div>
+  );
+}
+
+// One number that is not the committed one, shown the way the roll shows its
+// own: the number, its rank and EP, the roll's button in the middle, and every
+// badge it earned. It is in the page flow, so the page scrolls as it does for
+// any result.
+export function DrawDetail({
   number,
   index,
   count,
-  best,
-  claim,
   scored,
-  groups,
+  claim,
   aura,
-  timeline,
   reducedMotion,
-  scramble,
-  paid,
-  onExpand,
+  scale,
+  bankedMultiplier,
+  stacked,
+  paidItems,
+  rollAgain,
+  openBadge,
+  theme,
+  onBack,
 }) {
+  const groups = useMemo(() => groupResultBadges(scored.badges), [scored]);
+  const banked = Math.round(scored.totalEP * bankedMultiplier);
   return (
     <section
-      className="draw-card"
+      className="draw-detail"
       aria-label={`Draw ${index + 1} of ${count}: ${number}`}
     >
-      <div className="draw-card-head">
-        <span className="draw-card-kicker">
-          <Dices size={12} aria-hidden="true" />
-          Draw {index + 1} of {count}
-          <DecisionTag best={best} claim={claim} />
-        </span>
+      <div className="draw-detail-bar">
         <button
           type="button"
-          className="secondary-button draw-card-expand"
-          onClick={onExpand}
+          className="secondary-button draw-detail-back"
+          onClick={onBack}
         >
           <LayoutGrid size={13} aria-hidden="true" />
           All numbers
         </button>
+        <span className="draw-detail-kicker">
+          <Dices size={12} aria-hidden="true" />
+          Draw {index + 1} of {count}
+          <DecisionTag best={false} claim={claim} />
+        </span>
       </div>
-      <div className="draw-card-main">
-        <NumberBox
-          compact
-          aura={aura}
-          tier={scored?.tier ?? "neutral"}
-          className="draw-card-box"
-        >
-          <Digits
-            number={number}
-            slots={timeline.slots}
-            done={timeline.slots}
-            scramble={scramble}
-            reducedMotion={reducedMotion}
-          />
-        </NumberBox>
-        <div className="draw-card-stats">
-          {scored ? (
-            <>
-              {/* The card is opened on purpose, after the decision, so the rank
-                  it states is shown at once rather than on the reveal's beat. */}
-              <RankSummary
-                result={scored}
-                visible
-                rankKnown
-                instant={reducedMotion}
-                scale={timeline.scale}
-              />
-              <span className="draw-card-ep">
-                {formatEP(scored.totalEP)} EP
-              </span>
-              <span className="draw-card-meta">
-                {groups.length} {groups.length === 1 ? "badge" : "badges"}
-                {claim ? ` · paid with ${claim.name || "a draw skill"}` : ""}
-              </span>
-            </>
-          ) : (
-            <span className="draw-card-meta">Reading this number…</span>
-          )}
-        </div>
+      <StaticArtifact number={number} tier={scored.tier} aura={aura} />
+      <RankSummary
+        result={scored}
+        visible
+        rankKnown
+        instant={reducedMotion}
+        scale={scale}
+      />
+      <div className={`roll-ep ${scored.tier}`} data-testid="draw-detail-ep">
+        {formatEP(scored.totalEP)} EP
       </div>
-      {scored && groups.length > 0 && (
-        <ul className="draw-card-badges">
-          <BadgeChips groups={groups} shown={groups.length} limit={24} />
-        </ul>
+      {claim && (
+        <p className="draw-detail-paid">
+          Paid with <b>{claim.name || "a draw skill"}</b> · banks{" "}
+          {formatEP(banked)} EP
+        </p>
       )}
-      {paid && <PaidNumbers items={paid} />}
+      {rollAgain}
+      {stacked && <PaidNumbers items={paidItems} />}
+      <div className="breakdown-wrap">
+        <BadgeBreakdown
+          result={scored}
+          groups={groups}
+          visibleCount={groups.length}
+          summaryVisible
+          staged={false}
+          openBadge={openBadge}
+          reducedMotion={reducedMotion}
+          theme={theme}
+        />
+      </div>
     </section>
   );
 }
 
+// The overview: every draw on one screen, with nothing behind it.
 export default function DrawStage({
   run,
   elapsed,
@@ -225,74 +301,36 @@ export default function DrawStage({
   reducedMotion,
   aura,
   decided = false,
-  open = true,
-  picked = null,
+  scores = NO_SCORES,
   onPick,
-  onExpand,
 }) {
   const numbers = run.draws ?? NO_DRAWS;
   const winner = run.number;
-  // Which draw skill kept which number. Stacking them does not only spend more
-  // draws: each skill keeps its own number and the roll pays for every one, so
-  // a panel that a skill kept is never a discarded draw.
-  const picks = useMemo(
-    () =>
-      (run.picks ?? []).map((pick) => {
-        const definition = pick.skill ? skillById.get(pick.skill) : null;
-        return {
-          number: pick.number,
-          name: definition?.name ?? "",
-          tint: definition?.tint ?? "green",
-        };
-      }),
-    [run.picks],
-  );
-  const claimFor = (number) =>
-    picks.find((pick) => pick.number === number) ?? null;
-  // More than one number is paid: the cards name each number and its own EP,
-  // and the single headline EP of the best one is left out, so no total reads
-  // as the roll's worth while the numbers are still being revealed.
-  const stacked = picks.length > 1;
   const winnerIndex = Math.max(0, numbers.indexOf(winner));
   const done = timeline.digitTimes.filter((time) => elapsed >= time).length;
   const spinning = done < timeline.slots;
   const rarityKnown = elapsed >= timeline.rarity;
   const scramble = useScramble(spinning, timeline.slots, reducedMotion);
-  const [scores, setScores] = useState({});
-  const [stageTop, setStageTop] = useState(0);
+  const [frame, setFrame] = useState({ top: 0, bottom: 0 });
 
-  // The split screen is a takeover: it starts under the header and stops above
-  // the phone tab bar, whatever those happen to measure on this device.
+  // The overview is a takeover, not a panel: it starts under the header and
+  // stops above the phone tab bar. Both are measured, and measured again when
+  // the window changes size, so the panels never sit under either one.
   useLayoutEffect(() => {
-    const header = document.querySelector(".header");
-    setStageTop(
-      header
-        ? Math.max(0, Math.round(header.getBoundingClientRect().bottom))
-        : 0,
-    );
-  }, []);
-
-  // Each discarded draw is scored from the same verified index so its panel can
-  // state what it was worth and list the badges it earned. The kept one is
-  // already scored in `run.result`. One pass per committed roll: the draws of a
-  // run never change.
-  useEffect(() => {
-    let cancelled = false;
-    for (const number of numbers) {
-      if (number === winner) continue;
-      restoreRoll(number)
-        .then((scored) => {
-          if (cancelled || !scored) return;
-          setScores((current) =>
-            current[number] ? current : { ...current, [number]: scored },
-          );
-        })
-        .catch(() => {});
-    }
-    return () => {
-      cancelled = true;
+    const measure = () => {
+      const header = document.querySelector(".header");
+      const bar = document.querySelector(".mobile-tabbar");
+      setFrame({
+        top: header
+          ? Math.max(0, Math.round(header.getBoundingClientRect().bottom))
+          : 0,
+        bottom: bar ? Math.round(bar.getBoundingClientRect().height) : 0,
+      });
     };
-  }, [run.id]);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   const draws = useMemo(
     () =>
@@ -311,59 +349,23 @@ export default function DrawStage({
   );
 
   if (numbers.length < 2) return null;
-  const champ = draws[winnerIndex] ?? draws[0];
-  const scoredFor = (number) =>
-    number === winner ? (run.result ?? null) : (scores[number] ?? null);
-  const paidItems = picks.map((pick) => {
-    const scored = scoredFor(pick.number);
-    return {
-      key: `${pick.number}-${pick.name}`,
-      skill: pick.name || "Kept",
-      tint: pick.tint,
-      number: pick.number,
-      ep: scored ? `${formatEP(scored.totalEP)} EP` : "—",
-      best: pick.number === winner,
-    };
-  });
-
-  // Minimized: one number's stats, in the page flow. The number is the one the
-  // player tapped, or the best one when they chose "Minimize" on the screen.
-  if (decided && !open) {
-    const shown = picked ?? winner;
-    const index = Math.max(0, numbers.indexOf(shown));
-    const draw = draws[index];
-    const claim = claimFor(shown);
-    return (
-      <DrawCard
-        number={shown}
-        index={index}
-        count={numbers.length}
-        best={shown === winner}
-        claim={shown === winner ? null : claim}
-        scored={draw.scored}
-        groups={draw.groups}
-        aura={aura}
-        timeline={timeline}
-        reducedMotion={reducedMotion}
-        scramble={scramble}
-        paid={stacked ? paidItems : null}
-        onExpand={onExpand}
-      />
-    );
-  }
+  // More than one number is paid: each paid number is a card of its own on its
+  // stats screen, and no total EP is counted up on the overview.
+  const paid = (run.picks ?? []).length;
+  const chipLimit = chipLimitFor(numbers.length);
 
   return (
     <div
       className={`draw-stage ${decided ? "is-decided" : ""}`}
-      style={{ top: `${stageTop}px` }}
+      style={{ top: `${frame.top}px`, bottom: `${frame.bottom}px` }}
       data-count={numbers.length}
       aria-hidden={decided ? undefined : "true"}
     >
       <p className="draw-stage-label">
         <Dices size={12} aria-hidden="true" />
         {decided
-          ? picks.length > 1
-            ? `${picks.length} numbers paid`
+          ? paid > 1
+            ? `${paid} numbers paid`
             : `Best of ${numbers.length} kept`
           : spinning
             ? `${numbers.length} independent draws`
@@ -381,9 +383,10 @@ export default function DrawStage({
       <ol className="draw-grid">
         {draws.map((draw, index) => {
           const isWinner = index === winnerIndex;
-          const claim = claimFor(draw.number);
+          const claim = claimFor(run, draw.number);
           const shown = draw.beats.filter((time) => elapsed >= time).length;
           const epKnown = !spinning && !!draw.scored;
+          const pickable = decided && !!draw.scored;
           const body = (
             <>
               <span className="draw-panel-head">
@@ -417,7 +420,11 @@ export default function DrawStage({
                 {epKnown ? `${formatEP(draw.scored.totalEP)} EP` : "—"}
               </span>
               <ul className="draw-badges">
-                <BadgeChips groups={draw.groups} shown={shown} />
+                <BadgeChips
+                  groups={draw.groups}
+                  shown={shown}
+                  limit={chipLimit}
+                />
               </ul>
               {decided && (
                 <span className="draw-panel-more">Tap for stats</span>
@@ -429,7 +436,7 @@ export default function DrawStage({
               key={`${run.id}-${index}`}
               className={`draw-panel ${decided ? (isWinner ? "is-winner" : "is-out") : ""}`}
             >
-              {decided ? (
+              {pickable ? (
                 <button
                   type="button"
                   className="draw-pick"

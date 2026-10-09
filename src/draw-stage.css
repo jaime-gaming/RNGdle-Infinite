@@ -1,14 +1,19 @@
-/* The split screen a draw skill earns: one panel per draw, filling the screen
-   behind visible dividing lines, each rolling its digits and earning its
-   badges in the open. When the best draw is known every number stays on the
-   grid, the best one marked. Tapping a number minimizes the screen to a card
-   with that number's stats, in the page flow, so the roll's result stays
-   readable under it.
+/* The overview a draw skill earns: one panel per draw, filling the screen behind
+   visible dividing lines, each rolling its digits and earning its badges in the
+   open. When the best draw is known it is filled green, and every number stays
+   on the screen. Tapping a number opens its own stats in the page flow.
 
-   The stage is a takeover of the roll screen, not of the game: it never
-   scores, it only shows what the roll already committed. It stays up until the
-   player minimizes it, and the next roll is not started while it is open.
-*/
+   The overview is a takeover of the roll screen, not of the game: it never
+   scores, it only shows what the roll already committed. Nothing behind it is
+   visible, and nothing under it scrolls while it is up (html.draw-takeover). */
+html.draw-takeover {
+  overflow: hidden;
+}
+/* The install prompt waits while a multi-number roll is on screen, rather than
+   covering the overview's label or the way back from a number's stats. */
+html.draw-split .install-app {
+  display: none;
+}
 .draw-stage {
   --draw-box-font: 26px;
   --draw-line: 2px;
@@ -16,24 +21,21 @@
   top: 0;
   left: 0;
   right: 0;
-  bottom: var(--draw-stage-bottom, 0px);
+  bottom: 0;
   z-index: 6;
-  pointer-events: none;
-  transition: opacity calc(0.5s * var(--reveal-scale, 1)) ease;
-}
-/* Fewer, larger panels read better than eight tiny ones on a phone, where the
-   tab bar also owns the bottom of the screen. */
-@media (max-width: 760px) {
-  .draw-stage {
-    --draw-stage-bottom: calc(58px + env(safe-area-inset-bottom));
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  background: var(--bg);
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 .draw-stage-label {
-  position: absolute;
-  top: 10px;
-  left: 50%;
+  position: relative;
   z-index: 3;
-  transform: translateX(-50%);
+  align-self: center;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -73,12 +75,14 @@
 }
 
 /* The grid: the panels sit on the page background with the border colour
-   showing through the gaps, which is what draws every dividing line. */
+   showing through the gaps, which is what draws every dividing line. It takes
+   whatever height the label leaves, and it never scrolls. */
 .draw-grid {
   --cols: 2;
   --rows: 2;
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
@@ -136,7 +140,7 @@
   overflow: hidden;
 }
 /* The whole panel is the button once the best is known, so a tap anywhere on a
-   number picks it. Before that it is a plain box with the same layout. */
+   number opens it. Before that it is a plain box with the same layout. */
 .draw-pick {
   position: relative;
   display: flex;
@@ -321,8 +325,7 @@ button.draw-pick:focus-visible {
     transform: scale(1);
   }
 }
-.draw-badges,
-.draw-card-badges {
+.draw-badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -385,50 +388,63 @@ button.draw-pick:focus-visible {
   }
 }
 
-/* The decision: every number stays on the grid. The best one is outlined and
-   every panel can be tapped for that number's stats. */
+/* The decision: every number stays on the grid. The best one is filled with the
+   theme's green, and the text on it turns to the page colour so it reads. Every
+   panel can be tapped for that number's stats. */
 .draw-stage.is-decided .draw-grid,
 .draw-stage.is-decided .draw-stage-label {
   pointer-events: auto;
 }
 .draw-panel.is-winner {
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--green) 55%, transparent);
+  background: var(--green);
+  color: var(--bg);
+}
+.draw-panel.is-winner .draw-panel-head,
+.draw-panel.is-winner .draw-panel-more,
+.draw-panel.is-winner .draw-ep,
+.draw-panel.is-winner .draw-badge-more {
+  color: var(--bg);
+}
+.draw-panel.is-winner .draw-ep {
+  opacity: 1;
+}
+.draw-panel.is-winner .draw-panel-tag.is-best {
+  border-color: transparent;
+  background: var(--bg);
+  color: var(--green);
+}
+.draw-panel.is-winner .draw-panel-claim {
+  border-color: color-mix(in srgb, var(--bg) 55%, transparent);
+  background: transparent;
+  color: var(--bg);
+}
+.draw-panel.is-winner .draw-pick:hover {
+  background: color-mix(in srgb, var(--bg) 10%, transparent);
+}
+.draw-panel.is-winner .draw-badge-more {
+  border-color: color-mix(in srgb, var(--bg) 55%, transparent);
 }
 
-/* The minimized screen: one number's stats, as a card in the page flow above
-   the roll's own number. It is not a takeover, so the result under it reads. */
-.draw-card {
-  --draw-box-font: 30px;
+/* One number's own stats, in the page flow, at the size of the roll's own
+   result: its number, its rank and EP, the roll's button in the middle, then
+   every badge it earned. */
+.draw-detail {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: min(640px, 100%);
-  margin: 4px auto 14px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--surface);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 0.12);
-  animation: draw-card-in calc(0.32s * var(--reveal-scale, 1)) ease-out both;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 640px;
 }
-@keyframes draw-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.draw-card-head {
+.draw-detail-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 10px;
+  width: 100%;
 }
-.draw-card-kicker {
+.draw-detail-kicker {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -438,10 +454,10 @@ button.draw-pick:focus-visible {
   text-transform: uppercase;
   color: var(--muted);
 }
-.draw-card-kicker svg {
+.draw-detail-kicker svg {
   color: var(--green);
 }
-.draw-card-expand {
+.draw-detail-back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -449,44 +465,20 @@ button.draw-pick:focus-visible {
   padding: 6px 12px;
   font-size: 12px;
 }
-.draw-card-main {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  min-width: 0;
-}
-.draw-card .number-box.draw-card-box {
-  max-width: 100%;
-  padding: 10px 14px;
-}
-.draw-card-stats {
-  display: flex;
-  flex: 1 1 200px;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  min-width: 0;
-}
-.draw-card-stats .result-rank {
-  height: auto;
-  margin-bottom: 0;
-}
-.draw-card-ep {
-  font: 700 22px var(--roll-font);
-  color: var(--text);
-}
-.draw-card-meta {
-  font-size: 11.5px;
+.draw-detail-paid {
+  margin: 0;
+  font-size: 12px;
   color: var(--muted);
 }
-.draw-card-badges {
+.draw-detail-paid b {
+  color: var(--text);
+  font-weight: 700;
+}
+.draw-back-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 640px;
 }
 
 @media (max-width: 760px) {
@@ -556,13 +548,5 @@ button.draw-pick:focus-visible {
   .draw-stage[data-count="7"] .draw-badge,
   .draw-stage[data-count="8"] .draw-badge {
     max-width: 46%;
-  }
-  .draw-card {
-    gap: 9px;
-    padding: 12px;
-    border-radius: 16px;
-  }
-  .draw-card-ep {
-    font-size: 18px;
   }
 }

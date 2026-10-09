@@ -43,8 +43,11 @@ export const MYTHIC_OR_BETTER = ["mythic", "godly"];
 
 // How many tasks a period puts on each cadence's list.
 export const ACTIVE_PER_PERIOD = 4;
-// A Task Skip is bought once per interval, and a save holds at most the limit.
-export const SKIP_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
+// A Task Skip can be bought once a day, and no more than SKIP_WINDOW_LIMIT in
+// any SKIP_WINDOW_MS. A save holds at most SKIP_HOLD_LIMIT unused ones.
+export const SKIP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+export const SKIP_WINDOW_MS = 5 * 24 * 60 * 60 * 1000;
+export const SKIP_WINDOW_LIMIT = 3;
 export const SKIP_HOLD_LIMIT = 3;
 // The bonus for claiming every task on a list in one period.
 export const LIST_BONUS = { daily: 100000, weekly: 500000 };
@@ -318,10 +321,22 @@ function emptySlot() {
   };
 }
 
-// `boughtAt: null` means no Task Skip has ever been bought, so the first one
-// is never held back by the three-day wait.
+// `bought` holds the times of the last few Task Skips bought, oldest first. It
+// is all the wait needs: one a day, and a fourth only once the oldest of the
+// last three has left the window. An empty list never holds a purchase back.
 function emptySkip() {
-  return { tokens: 0, boughtAt: null };
+  return { tokens: 0, bought: [] };
+}
+
+// The purchase times the wait reads, sanitized. Never more than the window
+// counts, so a long-running save cannot grow this list.
+function skipPurchases(tasks) {
+  const bought = tasks?.skip?.bought;
+  if (!Array.isArray(bought)) return [];
+  return bought
+    .filter((at) => validAmount(at))
+    .sort((a, b) => a - b)
+    .slice(-SKIP_WINDOW_LIMIT);
 }
 
 export function emptyTasks() {
@@ -462,13 +477,27 @@ export function taskSummary(tasks, at) {
 // bought. Both read the save alone, so every tab says the same thing.
 export function skipStatus(tasks, at) {
   const stored = tasks?.skip ?? emptySkip();
+  const bought = skipPurchases(tasks);
+  // One a day. And once three were bought in the window, the oldest of them has
+  // to leave it before another can be bought.
+  const daily = bought.length ? bought.at(-1) + SKIP_INTERVAL_MS - at : 0;
+  const windowed =
+    bought.length >= SKIP_WINDOW_LIMIT ? bought[0] + SKIP_WINDOW_MS - at : 0;
   return {
     tokens: Math.min(SKIP_HOLD_LIMIT, stored.tokens ?? 0),
     limit: SKIP_HOLD_LIMIT,
-    waitMs:
-      stored.boughtAt == null
-        ? 0
-        : Math.max(0, stored.boughtAt + SKIP_INTERVAL_MS - at),
+    waitMs: Math.max(0, daily, windowed),
+  };
+}
+
+// The Task Skip save after one purchase at `at`: one more token, and the time
+// goes on the record the window reads. The caller has already checked the wait
+// and the hold limit.
+export function boughtSkip(tasks, at) {
+  const stored = tasks?.skip ?? emptySkip();
+  return {
+    tokens: Math.min(SKIP_HOLD_LIMIT, stored.tokens ?? 0) + 1,
+    bought: [...skipPurchases(tasks), at].slice(-SKIP_WINDOW_LIMIT),
   };
 }
 
@@ -670,14 +699,24 @@ export function parseTasks(value) {
   let skip = emptySkip();
   if (value.skip !== undefined) {
     const stored = value.skip;
+    // A save from before the window kept only its last purchase.
+    const bought = Array.isArray(stored?.bought)
+      ? stored.bought
+      : stored?.boughtAt == null
+        ? []
+        : [stored.boughtAt];
     const readable =
       !!stored &&
       typeof stored === "object" &&
       !Array.isArray(stored) &&
       validAmount(stored.tokens) &&
       stored.tokens <= SKIP_HOLD_LIMIT &&
-      (stored.boughtAt === null || validAmount(stored.boughtAt));
-    if (readable) skip = { tokens: stored.tokens, boughtAt: stored.boughtAt };
+      bought.every((at) => validAmount(at));
+    if (readable)
+      skip = {
+        tokens: stored.tokens,
+        bought: [...bought].sort((a, b) => a - b).slice(-SKIP_WINDOW_LIMIT),
+      };
     else repaired = true;
   }
   tasks.skip = skip;

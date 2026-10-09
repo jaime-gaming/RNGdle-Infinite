@@ -171,16 +171,18 @@ the whole plan still stops at the eight draws a roll may spend. When a skill
 fires, the effect is written into the committed roll, so a reload, a second tab
 or a retry can never re-fire it or re-roll for something better.
 
-A draw skill does its work where you can watch it. The screen splits into **one
+A draw skill does its work where you can watch it. The screen becomes **one
 panel per draw**, divided by visible lines, and every draw rolls its digits and
 earns its badges there **at the same time**, each with the EP it would have
-banked. Once the last badge has landed, the draw that scored the most EP is
-marked **Best**, and **every number stays on the screen**: nothing flies to the
-centre and nothing is greyed out. Tap a number and the screen minimizes to a card
-with that number's own stats, its rank, EP and badges; **All numbers** brings the
-grid back. The next roll waits while the grid is open, so a roll is never started
-over the numbers you are still looking at. Each panel that a skill claimed says
-so, in that skill's colour, and a stacked roll lists every number being paid. The
+banked. Nothing behind the screen is visible or scrolls. Once the last badge has
+landed, the draw that scored the most EP is **filled green** and marked **Best**,
+and **every number stays on the screen**: nothing flies to the centre and nothing
+is greyed out. Tap a number and it opens at full size, with its own rank, EP and
+badges and the roll's button in the middle; the best one opens as the roll's own
+result. **All numbers** brings the screen back. Auto-Roll keeps turning while the
+screen is open, and stands still only while a single number is open. Each panel
+that a skill claimed says so, in that skill's colour, and a stacked roll lists
+every number being paid. The
 best number is the one ranked and shown as the roll; the others are banked beside
 it, because the draws behind them were really rolled. The activity feed keeps the
 receipt — _best of 3 draws_ — next to each number that was kept.
@@ -269,9 +271,9 @@ cycle gate.
 **Task Skip** is a Shop product on the Tools shelf. Using one swaps an open task
 on your list, one that is neither claimed nor finished, for the next task in its
 pool that is not on the list yet. Each purchase adds one use; you can hold up to
-three, and you can buy one every three days on the game clock. Buying one costs
-60,000 EP like any purchase. Using it costs nothing and is not written to the
-activity log.
+three, you can buy one a day on the game clock, and no more than three in any
+five days. Buying one costs 125,000 EP like any purchase. Using it costs nothing
+and is not written to the activity log.
 
 `/shop` is the shop's front door: **one button per shelf** — Skills, Pace,
 Companions, Auras and Tools, plus **Offline once the Offline Roller is yours**
@@ -306,12 +308,14 @@ that shelf.
 | **Skills**     | Nine charged effects (three on sale at a time, restocked every 5 minutes), the two skill bays, and the Flywheel tiers |
 | **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time                                    |
 | **Companions** | Thirteen companions from 45,000 EP, or free if a roll drops one                                                       |
-| **Auras**      | Twenty-two cosmetic looks in four families, each family its own page, equipped one at a time                          |
+| **Auras**      | Twenty-six cosmetic looks in five families, each family its own page, equipped one at a time                          |
 | **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                                                    |
 | **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                                                       |
 
-The Auras shelf is the one long shelf, so it is split into **four families** —
-sky and starlight, earth and weather, made things, deep and dark. `/shop/auras`
+The Auras shelf is the one long shelf, so it is split into **five families** —
+sky and starlight, earth and weather, made things, deep and dark, and
+**R4ND0MN3S5**, four looks that are random by nature: falling binary digits,
+static, scrambled digits and a hex dump. `/shop/auras`
 is the index: one **banner per family**, each in that family's own gradient and
 its own typeface, wearing its three best looks as live previews. A banner is a
 door, not a decoration — it opens the set as a page of its own,

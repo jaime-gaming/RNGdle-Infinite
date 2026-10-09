@@ -272,7 +272,7 @@ test("unreadable task progress is reset and reported, while a save without tasks
       swaps: [],
       bonus: false,
     },
-    skip: { tokens: 0, boughtAt: null },
+    skip: { tokens: 0, bought: [] },
   });
 });
 
@@ -528,12 +528,13 @@ test("an online roll counts Epic or better, and a Rare that is not Epic does not
 
 test("a Task Skip swaps an open task for the next one in its pool, which starts from zero", () => {
   const day = at(2026, 10, 8, 12);
-  // Two skips bought three days apart: the second purchase waits for the first.
+  // Skips bought a day apart: the second purchase waits for the first, and the
+  // third waits for the window to clear.
   let state = {
     ...emptyProgress(),
     profile: testProfile,
-    balance: 200000,
-    totalEarned: 200000,
+    balance: 500000,
+    totalEarned: 500000,
   };
   state = applyProgress(state, {
     type: "buy",
@@ -544,14 +545,20 @@ test("a Task Skip swaps an open task for the next one in its pool, which starts 
     applyProgress(state, {
       type: "buy",
       id: "task-skip",
-      at: at(2026, 10, 6, 12),
+      at: at(2026, 10, 5, 18),
     }),
   ).toThrow(/available in/);
+  state = applyProgress(state, {
+    type: "buy",
+    id: "task-skip",
+    at: at(2026, 10, 6, 12),
+  });
   state = applyProgress(state, { type: "buy", id: "task-skip", at: day });
-  // Bought just now, so the next purchase is three days away.
+  // Bought just now: a day is not the limit here. Three were bought in the last
+  // five days, so the next one waits until the first of them leaves the window.
   expect(skipStatus(state.tasks, day)).toMatchObject({
-    tokens: 2,
-    waitMs: 3 * DAY,
+    tokens: 3,
+    waitMs: 2 * DAY,
   });
   // Rolls made today give every metric a count, so a new task could start ahead.
   for (let i = 0; i < 3; i++)
@@ -575,7 +582,7 @@ test("a Task Skip swaps an open task for the next one in its pool, which starts 
   // An open task is swapped, one token is spent, and no EP moves.
   const swapped = applyProgress(state, { type: "skip-task", id: out, at: day });
   expect(swapped.balance).toBe(state.balance);
-  expect(skipStatus(swapped.tasks, day).tokens).toBe(1);
+  expect(skipStatus(swapped.tasks, day).tokens).toBe(2);
   const after = activeTaskIds(swapped.tasks, "daily", day);
   expect(after).toHaveLength(ACTIVE_PER_PERIOD);
   expect(after).not.toContain(out);
@@ -597,11 +604,18 @@ test("a Task Skip swaps an open task for the next one in its pool, which starts 
     at: day,
   });
   expect(activeTaskIds(again.tasks, "daily", day)).not.toContain(out);
-  // Both tokens are spent, so a third skip has nothing to use.
+  // Three tokens: the third swap spends the last one, so a fourth has nothing
+  // to use.
+  const last = applyProgress(again, {
+    type: "skip-task",
+    id: activeTaskIds(again.tasks, "daily", day)[0],
+    at: day,
+  });
+  expect(skipStatus(last.tasks, day).tokens).toBe(0);
   expect(() =>
-    applyProgress(again, {
+    applyProgress(last, {
       type: "skip-task",
-      id: activeTaskIds(again.tasks, "daily", day)[0],
+      id: activeTaskIds(last.tasks, "daily", day)[0],
       at: day,
     }),
   ).toThrow(/no Task Skip/);
@@ -640,7 +654,7 @@ test("a claimed task cannot be skipped, and the refused skip spends nothing", ()
   expect(skipStatus(state.tasks, day).tokens).toBe(1);
 });
 
-test("a Task Skip costs its price, is bought once every three days, and holds three", () => {
+test("a Task Skip costs its price, is bought once a day, and no more than three in five days", () => {
   const start = 500000;
   let state = {
     ...emptyProgress(),
@@ -653,16 +667,16 @@ test("a Task Skip costs its price, is bought once every three days, and holds th
     id: "task-skip",
     at: at(2026, 10, 1, 12),
   });
-  expect(state.balance).toBe(start - 60000);
+  expect(state.balance).toBe(start - 125000);
   // A Skip is a use, not an item: it never joins the owned list, and it is
   // logged as a purchase like any other.
   expect(state.owned).not.toContain("task-skip");
   expect(state.history.at(-1)).toMatchObject({
     type: "purchase",
     productId: "task-skip",
-    ep: 60000,
+    ep: 125000,
   });
-  // Two hours later the wait still runs, and nothing is spent.
+  // Two hours later the daily wait still runs, and nothing is spent.
   expect(() =>
     applyProgress(state, {
       type: "buy",
@@ -673,14 +687,14 @@ test("a Task Skip costs its price, is bought once every three days, and holds th
   state = applyProgress(state, {
     type: "buy",
     id: "task-skip",
-    at: at(2026, 10, 4, 12),
+    at: at(2026, 10, 2, 12),
   });
   state = applyProgress(state, {
     type: "buy",
     id: "task-skip",
-    at: at(2026, 10, 7, 12),
+    at: at(2026, 10, 3, 12),
   });
-  expect(skipStatus(state.tasks, at(2026, 10, 7, 13))).toMatchObject({
+  expect(skipStatus(state.tasks, at(2026, 10, 3, 13))).toMatchObject({
     tokens: 3,
   });
   // A save holds three at most.
@@ -688,9 +702,36 @@ test("a Task Skip costs its price, is bought once every three days, and holds th
     applyProgress(state, {
       type: "buy",
       id: "task-skip",
-      at: at(2026, 10, 10, 12),
+      at: at(2026, 10, 4, 12),
     }),
   ).toThrow(/already hold 3/);
+  // A swap frees a hold slot, but three purchases already sit in the five days:
+  // the fourth waits until the first of them is five days old.
+  const [spent] = activeTaskIds(state.tasks, "daily", at(2026, 10, 3, 13));
+  state = applyProgress(state, {
+    type: "skip-task",
+    id: spent,
+    at: at(2026, 10, 3, 13),
+  });
+  expect(() =>
+    applyProgress(state, {
+      type: "buy",
+      id: "task-skip",
+      at: at(2026, 10, 4, 12),
+    }),
+  ).toThrow(/available in 2d 0h/);
+  expect(skipStatus(state.tasks, at(2026, 10, 4, 12))).toMatchObject({
+    tokens: 2,
+    waitMs: 2 * DAY,
+  });
+  // Five days after the first purchase the window is open again.
+  state = applyProgress(state, {
+    type: "buy",
+    id: "task-skip",
+    at: at(2026, 10, 6, 12),
+  });
+  expect(state.tasks.skip.tokens).toBe(3);
+  expect(state.tasks.skip.bought).toHaveLength(3);
   // Too dear is refused, with no change.
   const broke = {
     ...emptyProgress(),
@@ -744,7 +785,17 @@ test("skip tokens, purchase time and swaps reload exactly, and a forged swap is 
       tasks: { ...emptyTasks(), skip: { tokens: 9, boughtAt: 0 } },
     }),
   );
-  expect(greedy.progress.tasks.skip).toEqual({ tokens: 0, boughtAt: null });
+  expect(greedy.progress.tasks.skip).toEqual({ tokens: 0, bought: [] });
+  // A save from before the window kept only its last purchase time. It loads
+  // as a window of one, and nothing about it is reported as unreadable.
+  const legacy = parseAndRepairProgress(
+    JSON.stringify({
+      ...emptyProgress(),
+      tasks: { ...emptyTasks(), skip: { tokens: 2, boughtAt: day } },
+    }),
+  );
+  expect(legacy.progress.tasks.skip).toEqual({ tokens: 2, bought: [day] });
+  expect(legacy.repairs).toEqual([]);
   expect(greedy.repairs.join(" ")).toContain("task progress was unreadable");
 });
 
@@ -785,27 +836,27 @@ test("the Tasks page swaps an open task only after a confirm, and spends one tok
   await expect(page.locator(".task-skip").first()).toBeDisabled();
 });
 
-test("the Task Skip sits on the Tools shelf, is bought again rather than owned, and waits three days", async ({
+test("the Task Skip sits on the Tools shelf, is bought again rather than owned, and waits a day", async ({
   page,
 }) => {
   await seedProgress(page, { balance: 500000, totalEarned: 500000 });
   await page.goto("/shop/tools");
   const card = page.locator('[data-product="task-skip"]');
   await expect(card).toBeVisible();
-  await card.getByRole("button", { name: "Buy for 60,000 EP" }).click();
+  await card.getByRole("button", { name: "Buy for 125,000 EP" }).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   // Still on sale, with the wait counting down instead of "Purchased".
-  await expect(card.getByRole("button", { name: /Next in 3d/ })).toBeDisabled();
+  await expect(card.getByRole("button", { name: /Next in 1d/ })).toBeDisabled();
   const saved = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)),
     PROGRESS_KEY,
   );
   expect(saved.owned).not.toContain("task-skip");
   expect(saved.tasks.skip.tokens).toBe(1);
-  expect(saved.balance).toBe(500000 - 60000);
+  expect(saved.balance).toBe(500000 - 125000);
 });
 
 test("the Tasks page fits a narrow phone without sideways scrolling", async ({

@@ -195,6 +195,7 @@ nav button.active {
   width: 100%;
   max-width: 640px;
   padding-top: 48px;
+  scroll-margin-top: 64px;
 }
 .roll-vignette {
   position: fixed;

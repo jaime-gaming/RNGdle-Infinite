@@ -29,7 +29,12 @@ import {
   AURA_FAMILIES,
 } from "../shop-data";
 import { LOADOUT_LIMIT } from "../progress.js";
-import { SKIP_INTERVAL_MS, skipStatus, waitText } from "../tasks.js";
+import {
+  SKIP_WINDOW_LIMIT,
+  SKIP_WINDOW_MS,
+  skipStatus,
+  waitText,
+} from "../tasks.js";
 import { gameNow } from "../game-clock.js";
 import { pathForSubpage, pathForShelfFamily } from "../router.js";
 import { currentGoal, validGoal } from "../gameplay-loop.js";
@@ -85,6 +90,10 @@ import {
   DownpourMark,
   BlueprintMark,
   InkblotMark,
+  StaticMark,
+  BitStormMark,
+  ScrambleMark,
+  HexDumpMark,
   MiserMark,
   TriptychMark,
   SpeedMark,
@@ -144,6 +153,10 @@ const icons = {
   downpour: DownpourMark,
   blueprint: BlueprintMark,
   inkblot: InkblotMark,
+  static: StaticMark,
+  bitstorm: BitStormMark,
+  scramble: ScrambleMark,
+  hexdump: HexDumpMark,
 };
 // The shelves come from the catalogue, so routing, the hub, the featured picks
 // and the deep links all read the same list. This map only paints them.
@@ -217,7 +230,7 @@ export default function Shop({
   // The skill stall: three shop skills on sale at a time, rotating every five
   // minutes on the shared game clock, so every tab and the purchase guard
   // agree on the stock. The one-second ticker runs on the shelves that count
-  // down: the skill stall and the tools, where a Task Skip waits three days.
+  // down: the skill stall and the tools, where a Task Skip waits a day.
   const [clock, setClock] = useState(() => gameNow());
   useEffect(() => {
     if (shelf?.id !== "skills" && shelf?.id !== "tools") return;
@@ -418,7 +431,7 @@ export default function Shop({
           <small>
             {state.repeat.waitMs > 0
               ? `NEXT IN ${waitText(state.repeat.waitMs).toUpperCase()}`
-              : `ONE EVERY ${SKIP_INTERVAL_MS / 86400000} DAYS · SPEND ON TASKS`}
+              : `ONE A DAY · MAX ${SKIP_WINDOW_LIMIT} IN ${SKIP_WINDOW_MS / 86400000} DAYS`}
           </small>
         </>
       );
@@ -1522,7 +1535,7 @@ export default function Shop({
               <p>
                 {auraFamily
                   ? `One set of the shelf. ${auraGroups[0]?.items.length ?? 0} looks, cosmetic only.`
-                  : "Four sets, cosmetic only; wear one at a time."}
+                  : `${AURA_FAMILIES.length} sets, cosmetic only; wear one at a time.`}
               </p>
             </div>
             <button

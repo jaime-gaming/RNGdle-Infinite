@@ -79,6 +79,7 @@ import {
   RARE_OR_BETTER,
   recordTally,
   SKIP_HOLD_LIMIT,
+  boughtSkip,
   skipStatus,
   skipTask,
   taskById,
@@ -100,6 +101,9 @@ export const PRE_REPAIR_BACKUP_KEY = "rng-infinite-progress-pre-repair-v1";
 export const LOADOUT_LIMIT = 4;
 const badgeIds = new Set(metadata.map((b) => b.id));
 const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
+// The settled rolls the save remembers by id. Older rolls leave the list; the
+// watermark (receiptFloor) is what still refuses a copy of one of them.
+const RECEIPT_LIMIT = 128;
 
 // Closest legal amount to a stored value: whole EP figures stay untouched,
 // finite non-negative numbers are truncated into range, and anything else
@@ -195,6 +199,7 @@ export function emptyProgress() {
     equipped: "none",
     cooldownUntil: 0,
     receipts: [],
+    receiptFloor: 0,
     history: [],
     // What has left the log, one tally per cycle (see history-tally.js).
     removedTotals: [],
@@ -564,7 +569,8 @@ export function parseAndRepairProgress(raw) {
       ...new Set(
         p.receipts.filter((id) => typeof id === "string" && id.length <= 100),
       ),
-    ].slice(-128),
+    ].slice(-RECEIPT_LIMIT),
+    receiptFloor: validAmount(p.receiptFloor) ? p.receiptFloor : 0,
   };
   return { progress, repairs };
 }
@@ -675,8 +681,8 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
 // them. Only an action that actually changed the save can grow the log.
 // A repeatable product is bought again and again, and every purchase adds a use
 // instead of ownership, so it never enters the owned list. The Task Skip is the
-// only one, and it waits three days between purchases on the game clock, so a
-// stack of uses cannot be bought in one sitting.
+// only one: one purchase a day, and no more than three in any five days, on the
+// game clock, so a stack of uses cannot be bought in one sitting.
 function buyTaskSkip(state, item, action) {
   const at = action.at ?? Math.ceil(Date.now());
   if (!validAmount(at) || at > 8640000000000000)
@@ -708,7 +714,7 @@ function buyTaskSkip(state, item, action) {
     balance: state.balance - item.price,
     tasks: {
       ...tasks,
-      skip: { tokens: status.tokens + 1, boughtAt: at },
+      skip: boughtSkip(state.tasks, at),
     },
   };
 }
@@ -1073,6 +1079,18 @@ function applyEvent(state, action) {
       state.history?.some((e) => e.id === id && e.type === "roll")
     )
       return state;
+    // Once the receipts have started forgetting, the newest forgotten roll sets
+    // a watermark: a settlement timed at or before it that is no longer
+    // remembered is an old copy of a roll already paid, so it is refused. The
+    // roll that is pending right now always passes, so a clock that moved
+    // backwards between sessions cannot cost a live roll its EP.
+    const receiptFloor = state.receiptFloor ?? 0;
+    if (
+      state.pendingRoll?.id !== id &&
+      validAmount(action.at) &&
+      action.at <= receiptFloor
+    )
+      return state;
     // Every other number a draw skill kept is a banked roll of its own: same
     // verified index, same multipliers, its own badges and its own line in the
     // history. Only the committed number carries the roll's own id — the rest
@@ -1274,7 +1292,11 @@ function applyEvent(state, action) {
       cycleEarnedEP: cycleEP,
       discovered: [...discovered],
       cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
-      receipts: [...state.receipts, id].slice(-128),
+      receipts: [...state.receipts, id].slice(-RECEIPT_LIMIT),
+      receiptFloor:
+        state.receipts.length >= RECEIPT_LIMIT && validAmount(action.at)
+          ? Math.max(receiptFloor, action.at)
+          : receiptFloor,
       ...(droppedPet
         ? {
             pets: [...new Set([...(state.pets ?? []), droppedPet])].sort(

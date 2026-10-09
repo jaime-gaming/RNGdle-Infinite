@@ -5,11 +5,12 @@ import { evaluate } from "./helpers/index.js";
 import { groupResultBadges, formatEP } from "../src/roll-data.js";
 import { buildRevealTimeline } from "../src/roll-timeline.js";
 
-// A draw skill spends several ordinary draws and keeps the best. This is the
-// screen that says so: one panel per draw, filling the screen behind visible
-// dividing lines, every draw rolling its digits and earning its badges in the
-// open. When the best is known every number stays on the screen, the best one
-// marked, and tapping a number minimizes the screen to that number's stats.
+// A draw skill spends several ordinary draws and keeps the best. The overview
+// shows one panel per draw, filling the screen behind visible dividing lines,
+// every draw rolling its digits and earning its badges in the open. When the
+// best is known it is filled green and every number stays on the screen. A tap
+// opens that number: the best one is the roll's own result, any other one shows
+// its own stats at the same size, with the roll's button in the middle.
 
 // Four numbers, none of which reaches Bedrock's 25,000 EP floor, so the skill
 // spends its whole budget of four draws and keeps the best of them.
@@ -56,6 +57,18 @@ async function runUntil(page, ready, limit = 60) {
   return page.evaluate(ready);
 }
 
+const decided = () =>
+  document.querySelector(".draw-stage")?.classList.contains("is-decided");
+const complete = () =>
+  document.querySelector(".roll-experience")?.dataset.phase === "complete";
+
+function parseRgb(color) {
+  return color
+    .match(/\d+(\.\d+)?/g)
+    .slice(0, 3)
+    .map(Number);
+}
+
 test("every draw gets its own quadrant, divided by visible lines", async ({
   page,
 }) => {
@@ -77,11 +90,14 @@ test("every draw gets its own quadrant, divided by visible lines", async ({
   // Dividing lines: a real, visible gap between neighbours, both ways.
   expect(Math.round(panels[1].x - (panels[0].x + panels[0].w))).toBe(2);
   expect(Math.round(panels[2].y - (panels[0].y + panels[0].h))).toBe(2);
-  // The takeover starts under the header and covers what is left of the
-  // viewport, so no panel is pushed off the screen.
+  // The overview takes the screen from under the header to the bottom edge,
+  // and every panel sits inside it.
   const header = await page.locator(".header").boundingBox();
+  const stage = await page.locator(".draw-stage").boundingBox();
   const viewport = page.viewportSize();
-  expect(panels[0].y).toBeCloseTo(header.y + header.height + 2, 0);
+  expect(stage.y).toBeCloseTo(header.y + header.height, 0);
+  expect(stage.y + stage.height).toBeCloseTo(viewport.height, 0);
+  expect(panels[0].y).toBeGreaterThanOrEqual(stage.y);
   expect(panels.at(-1).y + panels.at(-1).h).toBeLessThanOrEqual(
     viewport.height + 1,
   );
@@ -128,19 +144,13 @@ test("each quadrant rolls its own digits and earns its own badges", async ({
   await expect(page.locator(".draw-stage")).not.toHaveClass(/is-decided/);
 });
 
-test("the best draw is marked, and every number stays on the grid", async ({
+test("the best draw is filled green, and every number stays on the grid", async ({
   page,
 }) => {
   await startSplitRoll(page);
-  expect(
-    await runUntil(page, () =>
-      document.querySelector(".draw-stage")?.classList.contains("is-decided"),
-    ),
-  ).toBe(true);
-  // Nothing flies to the centre and nothing greys out: every number is still
-  // there, and the one the roll keeps is marked as the best.
+  expect(await runUntil(page, decided)).toBe(true);
   await expect(page.locator(".draw-panel")).toHaveCount(DRAWS.length);
-  await expect(page.locator(".draw-card")).toHaveCount(0);
+  await expect(page.locator(".draw-detail")).toHaveCount(0);
   await expect(page.locator(".draw-stage-label")).toContainText(
     "Best of 4 kept",
   );
@@ -150,46 +160,116 @@ test("the best draw is marked, and every number stays on the grid", async ({
   await expect(page.locator(".draw-panel.is-out").first()).toContainText(
     "Discarded",
   );
+  // The best is filled with the theme's green and the others stay plain, so it
+  // reads from across the screen in either theme.
+  const fills = await page.locator(".draw-panel").evaluateAll((nodes) =>
+    nodes.map((node) => ({
+      winner: node.classList.contains("is-winner"),
+      background: getComputedStyle(node).backgroundColor,
+    })),
+  );
+  const best = fills.find((fill) => fill.winner);
+  const [r, g, b] = parseRgb(best.background);
+  expect(g).toBeGreaterThan(r + 30);
+  expect(g).toBeGreaterThan(b + 10);
+  for (const other of fills.filter((fill) => !fill.winner))
+    expect(other.background).not.toBe(best.background);
   await expect(page.locator(".draw-grid")).toHaveCSS("filter", "none");
   await expect(page.locator(".draw-grid")).toHaveCSS("pointer-events", "auto");
 });
 
-test("tapping a number minimizes the screen to its stats, and All numbers brings it back", async ({
+test("the overview is a takeover: opaque, nothing under it scrolls, nothing shows through", async ({
   page,
 }) => {
   await startSplitRoll(page);
-  expect(
-    await runUntil(page, () =>
-      document.querySelector(".draw-stage")?.classList.contains("is-decided"),
-    ),
-  ).toBe(true);
+  await expect(page.locator("html")).toHaveClass(/draw-takeover/);
+  await expect(page.locator("html")).toHaveCSS("overflow", "hidden");
+  const stage = page.locator(".draw-stage");
+  // An opaque colour, not a translucent one: the page never shows through.
+  await expect(stage).toHaveCSS("background-color", /^rgb\(/);
+  const box = await stage.boundingBox();
+  for (const [fx, fy] of [
+    [0.02, 0.02],
+    [0.5, 0.5],
+    [0.98, 0.98],
+    [0.02, 0.98],
+    [0.98, 0.02],
+  ]) {
+    const inside = await page.evaluate(
+      ([x, y]) => !!document.elementFromPoint(x, y)?.closest(".draw-stage"),
+      [box.x + box.width * fx, box.y + box.height * fy],
+    );
+    expect(inside, `point ${fx},${fy}`).toBe(true);
+  }
+  // Scrolling over the overview moves nothing underneath it.
+  const before = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 600);
+  expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  // Nothing is cut off inside a panel: the grid never needs to scroll.
+  const fits = await page
+    .locator(".draw-panel")
+    .evaluateAll((nodes) =>
+      nodes.every(
+        (n) =>
+          n.scrollHeight <= n.clientHeight + 1 &&
+          n.scrollWidth <= n.clientWidth + 1,
+      ),
+    );
+  expect(fits).toBe(true);
+});
+
+test("tapping a number opens its own stats at the roll's size, and All numbers brings the overview back", async ({
+  page,
+}) => {
+  await startSplitRoll(page);
+  expect(await runUntil(page, decided)).toBe(true);
+  expect(await runUntil(page, complete)).toBe(true);
   // The first discarded draw, not the best one.
   const discarded = DRAWS.find((number) => number !== KEPT);
   await page.locator(".draw-panel.is-out .draw-pick").first().click();
   await expect(page.locator(".draw-stage")).toHaveCount(0);
-  const card = page.locator(".draw-card");
-  await expect(card).toBeVisible();
-  await expect(card).toContainText("Discarded");
-  const digits = await card
-    .locator(".draw-digits")
-    .evaluate((node) => node.textContent.replace(/\s/g, ""));
-  expect(digits).toBe(String(discarded));
-  // Its own stats: the EP it was worth and its badge count, read from the same
-  // verified index the other panels use.
-  await expect(card.locator(".draw-card-ep")).toHaveText(
+  const detail = page.locator(".draw-detail");
+  await expect(detail).toBeVisible();
+  await expect(detail).toContainText("Discarded");
+  // Its own number, large, as the roll shows its own.
+  await expect(detail.locator(".artifact-digits")).toHaveText(
+    String(discarded),
+  );
+  // Its own stats: the EP it was worth, its rank and its badges, read from the
+  // same verified index the other panels use.
+  await expect(detail.locator('[data-testid="draw-detail-ep"]')).toHaveText(
     `${formatEP(scored.get(discarded).totalEP)} EP`,
   );
-  await expect(card.locator(".result-rank .rank-pill")).toHaveText(
+  await expect(detail.locator(".result-rank .rank-pill")).toHaveText(
     scored.get(discarded).tier,
   );
-  // The rest of the screen is back underneath, and the grid is one tap away.
-  await expect(page.locator(".result-summary")).toHaveCSS(
-    "visibility",
-    "visible",
-  );
-  await card.getByRole("button", { name: "All numbers" }).click();
+  await expect(detail.locator(".badge-breakdown")).toBeVisible();
+  // The roll's own button, in the middle of the stats.
+  const button = detail.locator(".generate");
+  await expect(button).toBeVisible();
+  const box = await button.boundingBox();
+  const viewport = page.viewportSize();
+  expect(Math.abs(box.x + box.width / 2 - viewport.width / 2)).toBeLessThan(4);
+  // All numbers goes back to the overview, with every number on it.
+  await detail.getByRole("button", { name: "All numbers" }).click();
   await expect(page.locator(".draw-panel")).toHaveCount(DRAWS.length);
-  await expect(page.locator(".draw-card")).toHaveCount(0);
+  await expect(page.locator(".draw-detail")).toHaveCount(0);
+});
+
+test("tapping the best number shows the roll's own result, with a way back to the numbers", async ({
+  page,
+}) => {
+  await startSplitRoll(page);
+  expect(await runUntil(page, decided)).toBe(true);
+  await page.locator(".draw-panel.is-winner .draw-pick").click();
+  await expect(page.locator(".draw-stage")).toHaveCount(0);
+  await expect(page.locator(".draw-detail")).toHaveCount(0);
+  expect(await runUntil(page, complete)).toBe(true);
+  await expect(page.locator(".number-artifact")).toContainText(String(KEPT));
+  await expect(page.locator(".roll-ep")).toHaveText(`${formatEP(keptEP)} EP`);
+  await page.getByRole("button", { name: "All numbers" }).click();
+  await expect(page.locator(".draw-panel")).toHaveCount(DRAWS.length);
 });
 
 test("two draw skills stack their budgets into one plan of panels", async ({
@@ -210,20 +290,27 @@ test("two draw skills stack their budgets into one plan of panels", async ({
     },
   });
   await expect(page.locator(".draw-panel")).toHaveCount(six.length);
-  expect(
-    await runUntil(page, () =>
-      document.querySelector(".draw-stage")?.classList.contains("is-decided"),
-    ),
-  ).toBe(true);
+  expect(await runUntil(page, decided)).toBe(true);
   await expect(page.locator(".draw-stage-label")).toContainText(
     "2 numbers paid",
   );
-  // Two numbers are paid. Minimized to the best one, the card names both, each
-  // with its own EP, and the best is the one the roll commits.
+  // The paid number that is not the best one opens with its own card, the
+  // numbers it is paid with, and the EP it banks.
+  const paid = page.locator(".draw-panel", {
+    has: page.locator(".draw-panel-tag.is-paid"),
+  });
+  await paid.locator(".draw-pick").click();
+  const detail = page.locator(".draw-detail");
+  await expect(detail).toContainText("Paid with");
+  await expect(detail.locator(".paid-number")).toHaveCount(2);
+  // Minimized to the best one, the roll shows the best number as paid, and the
+  // card names both numbers, each with its own EP.
+  await detail.getByRole("button", { name: "All numbers" }).click();
   await page.locator(".draw-stage-minimize").click();
-  await expect(page.locator(".draw-card .paid-number")).toHaveCount(2);
+  expect(await runUntil(page, complete)).toBe(true);
+  await expect(page.locator(".result-summary .paid-number")).toHaveCount(2);
   await expect(
-    page.locator(".draw-card .paid-number.is-best .paid-number-ep"),
+    page.locator(".result-summary .paid-number.is-best .paid-number-ep"),
   ).toHaveText(
     `${formatEP(Math.max(...six.map((n) => evaluate(n).totalEP)))} EP`,
   );
@@ -253,14 +340,8 @@ test("a stacked roll counts up no total while its numbers reveal, and ends on on
     ),
   ).toBe(true);
   await expect(page.locator(".roll-ep")).toHaveCount(0);
-  expect(
-    await runUntil(
-      page,
-      () =>
-        document.querySelector(".roll-experience")?.dataset.phase ===
-        "complete",
-    ),
-  ).toBe(true);
+  expect(await runUntil(page, complete)).toBe(true);
+  await page.locator(".draw-stage-minimize").click();
   await expect(page.locator(".roll-ep")).toHaveCount(0);
   await expect(page.locator(".result-summary .paid-number")).toHaveCount(2);
   await expect(
@@ -268,45 +349,131 @@ test("a stacked roll counts up no total while its numbers reveal, and ends on on
   ).toHaveText(`${formatEP(keptEP)} EP`);
 });
 
-test("the result summary stays out of sight while the draw screen is open", async ({
+test("the result summary stays out of sight while the overview is open", async ({
   page,
 }) => {
   await startSplitRoll(page);
   // The summary underneath already lists every number, so it must not show
-  // through the screen. It comes back once the screen is minimized.
+  // through the screen. It comes back once the overview is closed.
   const summary = page.locator(".result-summary");
   await expect(summary).toHaveCSS("visibility", "hidden");
-  expect(
-    await runUntil(page, () =>
-      document.querySelector(".draw-stage")?.classList.contains("is-decided"),
-    ),
-  ).toBe(true);
+  expect(await runUntil(page, decided)).toBe(true);
   await expect(summary).toHaveCSS("visibility", "hidden");
   await page.locator(".draw-stage-minimize").click();
   await expect(summary).toHaveCSS("visibility", "visible");
 });
 
-test("the screen stays up after the reveal, and minimizing hands the roll back", async ({
+test("the overview stays up after the reveal, and minimizing hands the roll back", async ({
   page,
 }) => {
   await startSplitRoll(page);
-  expect(
-    await runUntil(
-      page,
-      () =>
-        document.querySelector(".roll-experience")?.dataset.phase ===
-        "complete",
-    ),
-  ).toBe(true);
+  expect(await runUntil(page, complete)).toBe(true);
   // The reveal has ended and every number is still on the screen.
   await expect(page.locator(".draw-panel")).toHaveCount(DRAWS.length);
   await expect(page.locator(".draw-stage")).toBeVisible();
   // Minimizing hands the roll back: the kept number is the one that pays.
   await page.locator(".draw-stage-minimize").click();
   await expect(page.locator(".draw-stage")).toHaveCount(0);
-  await expect(page.locator(".draw-card")).toContainText(String(KEPT));
   await expect(page.locator(".number-artifact")).toContainText(String(KEPT));
   await expect(page.locator(".roll-ep")).toHaveText(`${formatEP(keptEP)} EP`);
+});
+
+test("on a phone the overview fits the screen, and a number's stats open in place", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await startSplitRoll(page);
+  expect(await runUntil(page, decided)).toBe(true);
+  // The overview stops above the phone's tab bar, and nothing in it scrolls.
+  const stage = await page.locator(".draw-stage").boundingBox();
+  const tabs = await page.locator(".mobile-tabbar").boundingBox();
+  expect(stage.y + stage.height).toBeLessThanOrEqual(tabs.y + 1);
+  const fits = await page
+    .locator(".draw-grid, .draw-panel")
+    .evaluateAll((nodes) =>
+      nodes.every(
+        (n) =>
+          n.scrollHeight <= n.clientHeight + 1 &&
+          n.scrollWidth <= n.clientWidth + 1,
+      ),
+    );
+  expect(fits).toBe(true);
+  // A number opened from the overview starts at its own top, so the way back
+  // to the numbers is on screen, not scrolled out of sight.
+  await page.locator(".draw-panel.is-out .draw-pick").first().click();
+  await expect(page.locator(".draw-detail")).toBeVisible();
+  await expect
+    .poll(async () => (await page.locator(".draw-detail-bar").boundingBox())?.y)
+    .toBeLessThan(200);
+  await page.getByRole("button", { name: "All numbers" }).click();
+  await expect(page.locator(".draw-stage-minimize")).toBeVisible();
+  await page.locator(".draw-stage-minimize").click();
+  await expect(page.locator(".number-artifact")).toContainText(String(KEPT));
+  await expect
+    .poll(async () => (await page.locator(".draw-back-row").boundingBox())?.y)
+    .toBeLessThan(200);
+});
+
+// Auto-Roll armed from the rack, on a roll whose first draw keeps four numbers.
+// The overview of that first roll is up and decided when this returns.
+async function armedAutoRoll(page) {
+  await mockRandom(page, DRAWS);
+  await seedProgress(page, { ...seed, owned: [...seed.owned, "auto-roll"] });
+  await page.goto("/");
+  // The roll data loads first, as it does for any player; the clock only starts
+  // to move once the page is ready.
+  await expect(
+    page.getByRole("button", { name: "GENERATE", exact: true }),
+  ).toBeEnabled();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await expect(page.locator(".auto-roll-control")).toBeVisible();
+  await page.locator(".auto-roll-control").click();
+  // The first roll starts by itself, and its overview opens.
+  expect(
+    await runUntil(page, () => !!document.querySelector(".draw-stage"), 300),
+  ).toBe(true);
+  expect(await runUntil(page, decided, 400)).toBe(true);
+}
+
+test("auto-roll keeps turning while the overview is open", async ({ page }) => {
+  await armedAutoRoll(page);
+  // Nothing is touched: the overview stays up, and the next roll starts under it.
+  await expect(page.locator(".draw-stage")).toBeVisible();
+  expect(
+    await runUntil(
+      page,
+      () =>
+        document.querySelector(".roll-experience")?.dataset.phase === "digits",
+      400,
+    ),
+  ).toBe(true);
+});
+
+test("auto-roll stands still while a number is open, and turns again once the overview is back", async ({
+  page,
+}) => {
+  await armedAutoRoll(page);
+  // Looking at a number up close stops the rolls: three minutes pass and no
+  // roll starts while the stats are open.
+  await page.locator(".draw-panel.is-out .draw-pick").first().click();
+  await expect(page.locator(".draw-detail")).toBeVisible();
+  for (let step = 0; step < 180; step++) await page.clock.runFor(1000);
+  await expect(page.locator(".draw-detail")).toBeVisible();
+  await expect(page.locator(".roll-experience")).toHaveAttribute(
+    "data-phase",
+    "complete",
+  );
+  // Back on the overview, the next roll starts again.
+  await page.getByRole("button", { name: "All numbers" }).click();
+  await expect(page.locator(".draw-stage")).toBeVisible();
+  expect(
+    await runUntil(
+      page,
+      () =>
+        document.querySelector(".roll-experience")?.dataset.phase === "digits",
+      400,
+    ),
+  ).toBe(true);
 });
 
 test("the split stage keeps the whole reveal's own schedule", () => {

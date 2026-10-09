@@ -408,6 +408,52 @@ export const shopProducts = [
     description:
       "Two mirrored blooms of ink breathe in the corners of the box: dark, symmetric and faintly alive.",
   },
+  // R4ND0MN3S5: the set for things that are random by nature. Its looks flicker,
+  // fall and jitter in steps, never in smooth curves.
+  {
+    id: "static",
+    kind: "aura",
+    name: "Static Veil",
+    price: 260000,
+    family: "randomness",
+    swatch: ["#e2e8f0", "#475569"],
+    icon: "static",
+    description:
+      "Film grain and dead-channel snow crawl over your rarity box, never quite settling on a picture.",
+  },
+  {
+    id: "bitstorm",
+    kind: "aura",
+    name: "Bit Storm",
+    price: 880000,
+    family: "randomness",
+    swatch: ["#22c55e", "#14532d"],
+    icon: "bitstorm",
+    description:
+      "Rows of ones and zeros fall behind your number, a terminal that is always reading and never finishes.",
+  },
+  {
+    id: "scramble",
+    kind: "aura",
+    name: "Scramble",
+    price: 1800000,
+    family: "randomness",
+    swatch: ["#fcd34d", "#78350f"],
+    icon: "scramble",
+    description:
+      "Random digits flicker in the corners and reroll on every beat, as if the number has not decided yet.",
+  },
+  {
+    id: "hexdump",
+    kind: "aura",
+    name: "Hex Dump",
+    price: 3000000,
+    family: "randomness",
+    swatch: ["#38bdf8", "#1e3a8a"],
+    icon: "hexdump",
+    description:
+      "Hex fragments drift around the box: the raw data under every roll, read out in the open.",
+  },
   {
     id: "offline-roller",
     kind: "utility",
@@ -533,15 +579,16 @@ export const shopProducts = [
   },
   {
     // Repeatable: every purchase adds one token instead of ownership, and the
-    // tokens are spent on the Tasks page. One purchase every three days.
+    // tokens are spent on the Tasks page. One purchase a day, and no more than
+    // three in any five days.
     id: "task-skip",
     kind: "utility",
     name: "Task Skip",
-    price: 60000,
+    price: 125000,
     icon: "skip",
     repeatable: true,
     description:
-      "Swap one open task on your Tasks list for the next one in its pool: one token per use, kept across rebirths. You can buy one every three days, and hold up to three.",
+      "Swap one open task on your Tasks list for the next one in its pool: one token per use, kept across rebirths. You can buy one a day, no more than three in any five days, and hold up to three.",
   },
   // Skills are charged one-shot effects; every one is defined in skills.js so
   // the shop, the save file and the roll engine read the same numbers.
@@ -604,6 +651,16 @@ export const AURA_FAMILIES = [
     // An inscription cut into stone: wide serif capitals.
     font: 'Georgia, "Times New Roman", serif',
     tracking: "0.22em",
+    casing: "uppercase",
+    weight: 700,
+  },
+  {
+    // Terminal labels: the monospace face of a machine that is guessing.
+    id: "randomness",
+    label: "R4ND0MN3S5",
+    blurb: "Binary rain, static, scrambled digits and hex.",
+    font: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace',
+    tracking: "0.1em",
     casing: "uppercase",
     weight: 700,
   },

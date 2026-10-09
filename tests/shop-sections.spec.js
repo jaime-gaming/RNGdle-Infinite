@@ -566,9 +566,9 @@ test("an aura family is a page of its own, reached from its banner", async ({
     const font = await banner
       .locator(".aura-family-copy strong")
       .evaluate((el) => getComputedStyle(el).fontFamily);
-    expect(font.toLowerCase()).toContain(
-      family.font.includes("Space Mono") ? "space mono" : "georgia",
-    );
+    // The first face of the family's own stack is the one the banner wears.
+    const first = family.font.split(",")[0].replace(/["']/g, "").trim();
+    expect(font.toLowerCase()).toContain(first.toLowerCase());
   }
   // Opening one is a real navigation, and the breadcrumb grows a step.
   await page.locator('.aura-family-banner[data-family="celestial"]').click();

@@ -11,7 +11,13 @@ import {
 import SkillBar from "./SkillBar";
 import PetParade from "./PetParade";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
-import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
+import {
+  Clock3,
+  Check,
+  LayoutGrid,
+  Share2,
+  Infinity as InfinityIcon,
+} from "lucide-react";
 import {
   buildRevealTimeline,
   SCRAMBLE_MS,
@@ -26,7 +32,7 @@ import { rollSettings, formatDuration } from "../shop-data";
 import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
-import DrawStage from "./DrawStage";
+import DrawStage, { DrawDetail, claimFor, useDrawScores } from "./DrawStage";
 import PaidNumbers from "./PaidNumbers";
 import { petById, petBonusLabel } from "../pets.js";
 import { skillById, skillForPet } from "../skills.js";
@@ -243,6 +249,7 @@ export default function RollExperience({
   const activeCompanion = petById.get(session.activePet) ?? null;
   const finishedRun = useRef(null);
   const shareButton = useRef(null);
+  const rollSection = useRef(null);
   const creditCallback = useRef(onComplete);
   const copiedTimer = useRef(null);
   const activeRun = useRef(null);
@@ -397,12 +404,11 @@ export default function RollExperience({
     : "REVEAL IN";
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
-  // A draw skill took more than one number. The split screen shows every draw
-  // while each rolls its digits and earns its badges. Once the best is known it
-  // stays up with every number on it, until the player minimizes it to one
-  // number's stats or the next roll opens it again. Its open state lives here,
-  // not in the stage, because the result summary under it stays hidden for as
-  // long as the screen is open.
+  // A draw skill took more than one number. The overview shows every draw while
+  // each rolls its digits and earns its badges. Tapping a number opens it: the
+  // best one is the roll's own result, any other one shows its own stats. The
+  // view lives here, keyed by the run, so the next roll always opens on the
+  // overview again.
   const splitDraws = run && (run.draws ?? []).length > 1 ? run.draws : null;
   const splitDecision = useMemo(() => {
     if (!splitDraws) return 0;
@@ -412,15 +418,46 @@ export default function RollExperience({
       0.35 * timeline.pulseMS
     );
   }, [splitDraws, timeline]);
-  const [splitView, setSplitView] = useState({
-    run: null,
-    open: true,
-    number: null,
-  });
+  const [splitView, setSplitView] = useState({ run: null, number: null });
   const splitOwned = !!run && splitView.run === run.id;
-  const splitOpen = !!splitDraws && (!splitOwned || splitView.open);
-  const splitPick = splitOwned && !splitView.open ? splitView.number : null;
+  const splitPick = splitOwned ? splitView.number : null;
+  const splitOpen = !!splitDraws && splitPick == null;
+  const drawScores = useDrawScores(splitDraws ? run : null);
+  // A number other than the committed one, once its own stats are read. The
+  // committed number is the roll's own result, so it never takes this screen.
+  const splitDetailScored =
+    splitPick != null && splitPick !== result?.number
+      ? (drawScores[splitPick] ?? null)
+      : null;
+  const splitDetail = !!splitDetailScored;
+  // Any single number on screen (its own stats, or the best one's result) means
+  // the numbers are being looked at up close, so auto-roll stands still. The
+  // overview does not stop it: the rolls keep turning under it.
+  const splitClose = !!splitDraws && !splitOpen;
   const splitDecided = !!splitDraws && elapsed >= splitDecision;
+  // The overview is a takeover: nothing under it may scroll while it is up.
+  useEffect(() => {
+    if (!splitOpen) return;
+    document.documentElement.classList.add("draw-takeover");
+    return () => document.documentElement.classList.remove("draw-takeover");
+  }, [splitOpen]);
+  // A multi-number roll keeps the install prompt out of the way for as long as
+  // it is on screen: the prompt would otherwise cover the way back to the numbers.
+  const splitRun = !!splitDraws;
+  useEffect(() => {
+    if (!splitRun) return;
+    document.documentElement.classList.add("draw-split");
+    return () => document.documentElement.classList.remove("draw-split");
+  }, [splitRun]);
+  // A number opened from the overview starts at the top of the roll, so its way
+  // back to the numbers is the first thing on screen, wherever the page was.
+  useEffect(() => {
+    if (splitPick == null || !rollSection.current) return;
+    rollSection.current.scrollIntoView({
+      block: "start",
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, [splitPick, reducedMotion]);
   const rankKnown = !!run && elapsed >= timeline.rarity;
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
   const visibleGroups = groups.slice(-visibleCount || groups.length);
@@ -438,7 +475,7 @@ export default function RollExperience({
       busy ||
       cooldown > 0 ||
       awaitingSettlement ||
-      splitOpen ||
+      splitClose ||
       session.offline?.batch ||
       session.pendingRoll
     )
@@ -467,7 +504,7 @@ export default function RollExperience({
     busy,
     cooldown,
     awaitingSettlement,
-    splitOpen,
+    splitClose,
     session.pendingRoll,
     session.offline?.batch,
     localCooldownUntil,
@@ -680,6 +717,52 @@ export default function RollExperience({
     }
   }
 
+  // The roll's button. It is the same control on the roll's own result and on a
+  // number's own stats, so it reads and behaves the same wherever it appears.
+  const rollAgainControl = (
+    <div
+      className={`generate-wrap ${busy ? "is-away" : ""}`}
+      aria-hidden={busy}
+      inert={busy ? true : undefined}
+    >
+      <button
+        ref={generateButton}
+        className={`generate ${cooldown || reserving || loading || drawing ? "cooling" : ""}`}
+        disabled={
+          loading ||
+          drawing ||
+          busy ||
+          reserving ||
+          awaitingSettlement ||
+          !!session.offline?.batch ||
+          !!settleError
+        }
+        onClick={generate}
+      >
+        {drawing ? (
+          "DRAWING…"
+        ) : cooldown ? (
+          <>
+            <Clock3 size={18} /> {waitWord} {formatDuration(cooldown)}
+            <CooldownFill
+              window={cooldownWindow}
+              reducedMotion={reducedMotion}
+            />
+          </>
+        ) : reserving ? (
+          <>
+            <Clock3 size={18} /> {waitWord} {formatDuration(reservedSeconds)}
+          </>
+        ) : awaitingSettlement ? (
+          "RESULT PENDING"
+        ) : error ? (
+          "RETRY & ROLL"
+        ) : (
+          "ROLL AGAIN"
+        )}
+      </button>
+    </div>
+  );
   return (
     <div
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
@@ -806,30 +889,61 @@ export default function RollExperience({
         </section>
       ) : (
         <>
-          <section className="active-roll" aria-label="Your roll">
+          <section
+            ref={rollSection}
+            className="active-roll"
+            aria-label="Your roll"
+          >
             {/* Every draw the roll took, side by side, until the best of them
                 takes the centre and becomes the number that pays. */}
-            {splitDraws && (
+            {splitOpen && (
               <DrawStage
                 key={`draw-${run.id}`}
                 {...{ run, elapsed, timeline, reducedMotion, aura }}
                 decided={splitDecided}
-                open={splitOpen}
-                picked={splitPick}
-                onPick={(number) =>
-                  setSplitView({ run: run.id, open: false, number })
-                }
-                onExpand={() =>
-                  setSplitView({ run: run.id, open: true, number: null })
-                }
+                scores={drawScores}
+                onPick={(number) => setSplitView({ run: run.id, number })}
               />
             )}
-            <NumberArtifact
-              key={run.id}
-              {...{ run, elapsed, timeline, reducedMotion, aura }}
-              behind={splitOpen}
-              dockedPet={companionSkillFiring ? session.activePet : null}
-            />
+            {splitDraws && !splitOpen && !splitDetail && (
+              <div className="draw-back-row">
+                <button
+                  type="button"
+                  className="secondary-button draw-detail-back"
+                  onClick={() => setSplitView({ run: run.id, number: null })}
+                >
+                  <LayoutGrid size={13} aria-hidden="true" />
+                  All numbers
+                </button>
+              </div>
+            )}
+            {splitDetail ? (
+              <DrawDetail
+                key={`detail-${run.id}-${splitPick}`}
+                number={splitPick}
+                index={splitDraws.indexOf(splitPick)}
+                count={splitDraws.length}
+                scored={splitDetailScored}
+                claim={claimFor(run, splitPick)}
+                aura={aura}
+                reducedMotion={reducedMotion}
+                scale={timeline.scale}
+                bankedMultiplier={bankedMultiplier}
+                stacked={stacked}
+                paidItems={paidItems}
+                rollAgain={rollAgainControl}
+                openBadge={openBadge}
+                theme={theme}
+                onBack={() => setSplitView({ run: run.id, number: null })}
+              />
+            ) : (
+              <NumberArtifact
+                key={run.id}
+                {...{ run, elapsed, timeline, reducedMotion, aura }}
+                behind={splitOpen}
+                dockedPet={companionSkillFiring ? session.activePet : null}
+              />
+            )}
             <div className="roll-announcement sr-only" role="status">
               {!digitsDone
                 ? `Revealing ${splitDraws ? `${splitDraws.length} numbers` : "your number"}. ${timeline.digitTimes.filter((t) => elapsed >= t).length} of ${timeline.slots} digits settled.`
@@ -850,7 +964,7 @@ export default function RollExperience({
                         : ""
                     }`}
             </div>
-            {result.totalEP !== null && (
+            {!splitDetail && result.totalEP !== null && (
               <div
                 className={`result-summary ${!digitsDone ? "is-spinning-summary" : ""} ${splitOpen ? "is-behind-draw" : ""}`}
               >
@@ -958,49 +1072,7 @@ export default function RollExperience({
                 )}
               </div>
             )}
-            <div
-              className={`generate-wrap ${busy ? "is-away" : ""}`}
-              aria-hidden={busy}
-              inert={busy ? true : undefined}
-            >
-              <button
-                ref={generateButton}
-                className={`generate ${cooldown || reserving || loading || drawing ? "cooling" : ""}`}
-                disabled={
-                  loading ||
-                  drawing ||
-                  busy ||
-                  reserving ||
-                  awaitingSettlement ||
-                  !!session.offline?.batch ||
-                  !!settleError
-                }
-                onClick={generate}
-              >
-                {drawing ? (
-                  "DRAWING…"
-                ) : cooldown ? (
-                  <>
-                    <Clock3 size={18} /> {waitWord} {formatDuration(cooldown)}
-                    <CooldownFill
-                      window={cooldownWindow}
-                      reducedMotion={reducedMotion}
-                    />
-                  </>
-                ) : reserving ? (
-                  <>
-                    <Clock3 size={18} /> {waitWord}{" "}
-                    {formatDuration(reservedSeconds)}
-                  </>
-                ) : awaitingSettlement ? (
-                  "RESULT PENDING"
-                ) : error ? (
-                  "RETRY & ROLL"
-                ) : (
-                  "ROLL AGAIN"
-                )}
-              </button>
-            </div>
+            {!splitDetail && rollAgainControl}
             {error && (
               <p className="roll-load-error" role="alert">
                 {error} No roll or EP was awarded. Use Retry &amp; Roll to try
@@ -1016,7 +1088,7 @@ export default function RollExperience({
               </div>
             )}
           </section>
-          {digitsDone && result.totalEP !== null && (
+          {digitsDone && result.totalEP !== null && !splitDetail && (
             <div className="breakdown-wrap">
               <BadgeBreakdown
                 {...{

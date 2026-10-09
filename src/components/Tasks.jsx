@@ -22,7 +22,8 @@ import {
   ACTIVE_PER_PERIOD,
   CADENCE_NAME,
   LIST_BONUS,
-  SKIP_INTERVAL_MS,
+  SKIP_WINDOW_LIMIT,
+  SKIP_WINDOW_MS,
   TASKS,
   TASK_CADENCES,
   activeTasks,
@@ -418,9 +419,9 @@ export default function Tasks({ progress, onAction, notify, openSignup }) {
         every task on a list also pays its list bonus, the moment the last one
         is claimed. Unclaimed rewards expire when their reset comes. Offline
         rolls do not count, and task EP never counts towards a rebirth. A Task
-        Skip swaps one open task for another from its pool. You can buy one
-        every {SKIP_INTERVAL_MS / 86400000} days in the Shop, and hold up to
-        three.
+        Skip swaps one open task for another from its pool. You can buy one a
+        day in the Shop, no more than {SKIP_WINDOW_LIMIT} in any{" "}
+        {SKIP_WINDOW_MS / 86400000} days, and hold up to three.
       </p>
     </>
   );
