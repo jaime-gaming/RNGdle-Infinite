@@ -167,7 +167,7 @@ their budgets add up, so Double Vision's two draws and Bedrock's four spend six,
 and **each skill keeps a number of its own** — Double Vision keeps the best of
 its two, Bedrock the best of its four, and the roll banks both. A floor is a
 promise rather than a quantity, so the strongest one is the one that holds, and
-the whole plan still stops at the eight draws a roll may spend. A live roll with a draw skill also makes one ordinary draw of its own, after theirs: a plain number that can win like any other, while the numbers the skills kept stay paid either way. When a skill
+the skills together still stop at the eight draws a roll may spend. A live roll with a draw skill also makes one ordinary draw of its own, after theirs: a plain number that can win like any other, while the numbers the skills kept stay paid either way. When a skill
 fires, the effect is written into the committed roll, so a reload, a second tab
 or a retry can never re-fire it or re-roll for something better.
 
