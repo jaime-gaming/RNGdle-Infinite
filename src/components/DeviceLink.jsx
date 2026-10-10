@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Check,
   Copy,
@@ -39,7 +40,7 @@ import "../settings.css";
 const STATUS_COPY = {
   live: (detail) => detail || "Devices live",
   waiting: () => "Waiting for the other device…",
-  connecting: () => "Connecting…",
+  connecting: (detail) => detail || "Connecting…",
   offline: () => "This device is offline",
   error: (detail) => detail || "Connection failed.",
   off: () => "Not linked",
@@ -124,9 +125,10 @@ export function DeviceLinkSummary({ progress, navigate }) {
       <p className="settings-group-note">
         Saves move between your own devices over an encrypted WebRTC channel — a
         free public broker handles only the initial handshake — or through a
-        relay you run yourself when one answers. Devices catch up as soon as
-        they can see each other; a relay with a store keeps the room while both
-        are closed.
+        relay you run yourself when one answers. One device is the account
+        controller; actions from the other are sent to it, so the two screens
+        cannot start competing rolls. Disconnected changes queue and sync when
+        the link returns.
       </p>
       <div className="setting-row">
         <div className="setting-copy">
@@ -135,7 +137,9 @@ export function DeviceLinkSummary({ progress, navigate }) {
             {linked
               ? state.pending
                 ? "You have changes waiting to reach the other device."
-                : "Both devices share one save. Closing one does not delete anything."
+                : state.isWriter
+                  ? "This device controls the shared save. Actions from the other device run here."
+                  : "Actions are sent to the main device, preventing simultaneous rolls and conflicting saves."
               : progress?.profile
                 ? "Create a link, then open it on your other device whenever you like."
                 : "Guests can open a link, but a local profile is needed to start one."}
@@ -344,6 +348,16 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     ["Store", store],
     ["Room", state.room || "—"],
     ["This device", state.device || "—"],
+    [
+      "Roll controller",
+      state.ownerDevice
+        ? state.isWriter
+          ? "This device"
+          : "The other linked device"
+        : linked
+          ? "Waiting to agree safely"
+          : "—",
+    ],
     ["Devices connected", linked ? String(state.peers || 1) : "—"],
     ["Last exchange", state.lastSyncAt ? formatMoment(state.lastSyncAt) : "—"],
     [
@@ -439,6 +453,25 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
                 ? "A change is queued here and goes out with the next connection."
                 : "The link is open. Changes sync every second while both devices are online.")}
           </p>
+          <div className="device-link-qr" data-testid="device-link-qr">
+            <QRCodeSVG
+              value={buildDeviceLink()}
+              size={184}
+              level="H"
+              includeMargin
+              title="RNGdle Infinite"
+              role="img"
+              aria-label="QR code for your private device link"
+            />
+            <div>
+              <strong>Scan to link another device</strong>
+              <p>
+                Scan with the other device’s camera to open this link. The QR
+                contains your private device key, so only share it with someone
+                you trust.
+              </p>
+            </div>
+          </div>
         </>
       ) : !progress?.profile ? (
         <p className="sync-hint">

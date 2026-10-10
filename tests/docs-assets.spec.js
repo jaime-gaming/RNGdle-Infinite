@@ -45,31 +45,30 @@ test("every companion has its own drawing, and no companion borrows another", ()
   }
 });
 
-test("the README is a player guide whose images really exist", () => {
+test("the README is a short player guide whose images really exist", () => {
   const readme = fs.readFileSync("README.md", "utf8");
   const images = [...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(
     (match) => match[1],
   );
-  expect(images.length).toBeGreaterThanOrEqual(6);
+  expect(images.length).toBeGreaterThanOrEqual(4);
   for (const image of images) {
     expect(fs.existsSync(image), `README points at a missing image: ${image}`);
   }
-  // The public page explains the game, so it talks about playable things
-  // rather than about modules and helper functions.
+  // Friendly, not exhaustive: the player guide stays short and skimmable.
+  expect(readme.split("\n").length).toBeLessThanOrEqual(150);
   for (const section of [
-    "## How a roll works",
-    "## Companions",
-    "## Skills and the rack",
-    "## Rebirth, prestige and Rollback",
-    "## Your profile, your data",
-    "## Fairness",
-    "## Running it locally",
+    "## The basics",
+    "## Ways to grow",
+    "## Your progress",
+    "## FAQ",
+    "## Credits",
+    "## Run it locally",
   ])
     expect(readme).toContain(section);
   expect(readme).toContain("https://jaime-gaming.github.io/RNGdle-Infinite/");
   expect(readme).not.toMatch(/^## (Main files|Tests)$/m);
-  // Anything that looks like a source path belongs in the last section only.
-  const body = readme.slice(0, readme.indexOf("## Running it locally"));
+  // Anything that looks like a source path belongs in the agent notes only.
+  const body = readme.slice(0, readme.indexOf("## Run it locally"));
   expect(body).not.toMatch(/src\/[\w-]+\.jsx?/);
 });
 

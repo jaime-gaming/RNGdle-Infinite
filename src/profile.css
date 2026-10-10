@@ -187,6 +187,18 @@
   object-fit: cover;
   display: block;
 }
+.avatar-mark[data-sync-status] {
+  transition: box-shadow 180ms ease;
+}
+.avatar-mark[data-sync-status="connected"] {
+  box-shadow: 0 0 0 2px #279653;
+}
+.avatar-mark[data-sync-status="pending"] {
+  box-shadow: 0 0 0 2px #d99a16;
+}
+.avatar-mark[data-sync-status="error"] {
+  box-shadow: 0 0 0 2px #d34242;
+}
 .profile-title {
   display: flex;
   align-items: center;

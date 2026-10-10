@@ -31,6 +31,11 @@ import RankSummary from "./RankSummary";
 import { rollSettings, formatDuration } from "../shop-data";
 import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
+import {
+  notificationPermission,
+  showRankNotification,
+} from "../notifications.js";
+import { rankMeetsMinimum } from "../settings.js";
 import NumberBox from "./NumberBox";
 import DrawStage, { DrawDetail, claimFor, useDrawScores } from "./DrawStage";
 import PaidNumbers from "./PaidNumbers";
@@ -248,6 +253,8 @@ export default function RollExperience({
   const reducedMotion = useMotionPreference();
   const activeCompanion = petById.get(session.activePet) ?? null;
   const finishedRun = useRef(null);
+  const rankAlertRun = useRef(null);
+  const rankAlertSent = useRef(null);
   const shareButton = useRef(null);
   const rollSection = useRef(null);
   const creditCallback = useRef(onComplete);
@@ -498,6 +505,25 @@ export default function RollExperience({
   const visibleGroups = groups.slice(-visibleCount || groups.length);
   const shownEP = visibleGroups.reduce((sum, g) => sum + g.lead.ep, 0);
 
+  // A matching rank stays on screen: Auto-Roll was disarmed as soon as the
+  // committed draw was known, and the desktop alert waits until its stats have
+  // finished revealing. Keeping this keyed by run prevents duplicate alerts.
+  useEffect(() => {
+    const alert = rankAlertRun.current;
+    if (
+      !run ||
+      alert?.id !== run.id ||
+      elapsed < timeline.end ||
+      rankAlertSent.current === run.id
+    )
+      return;
+    rankAlertSent.current = run.id;
+    setAutoRoll(false);
+    showRankNotification(alert.rank, {
+      onClick: () => navigate("roll"),
+    });
+  }, [run?.id, elapsed, timeline.end, navigate]);
+
   useEffect(() => {
     if (!ownsAutoRoll || error || settleError) {
       setAutoRoll(false);
@@ -679,6 +705,30 @@ export default function RollExperience({
 
   function begin(committed) {
     if (!committed || activeRun.current === committed.id) return;
+    const minimumRank = preferences.notifyRank;
+    const rolledRank = committed.result?.tier;
+    const notificationsEnabled =
+      preferences.notifyReady && notificationPermission() === "granted";
+    const rankMatched =
+      notificationsEnabled && rankMeetsMinimum(rolledRank, minimumRank);
+    const draws = committed.draws ?? [];
+    rankAlertRun.current = rankMatched
+      ? { id: committed.id, rank: rolledRank }
+      : null;
+    if (rankMatched) {
+      // Turn Auto-Roll off before the result settles, so no queued roll can
+      // replace the rank the player asked to inspect.
+      setAutoRoll(false);
+      if (draws.length > 1) {
+        const winnerIndex =
+          Number.isSafeInteger(committed.winnerIndex) &&
+          committed.winnerIndex >= 0 &&
+          committed.winnerIndex < draws.length
+            ? committed.winnerIndex
+            : Math.max(0, draws.indexOf(committed.number));
+        setSplitView({ run: committed.id, index: winnerIndex });
+      }
+    }
     activeRun.current = committed.id;
     setError("");
     clearTimeout(copiedTimer.current);

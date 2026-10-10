@@ -378,3 +378,96 @@ test("a memory-only room outlives the device that wrote it, and only goes after 
     await host.close();
   }
 });
+
+// Account actions travel through the room as messages. Only a session that is
+// actually connected may send one, it reaches the other device and nobody else,
+// and anything that is not an action or its reply is refused.
+function listen(base, { room, key }, session, device) {
+  const controller = new AbortController();
+  const frames = [];
+  const done = (async () => {
+    const response = await fetch(
+      `${base}/stream?room=${room}&key=${key}&session=${session}&device=${device}`,
+      { signal: controller.signal },
+    );
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    try {
+      while (true) {
+        const { value, done: finished } = await reader.read();
+        if (finished) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+        for (const part of parts) {
+          const line = part.split("\n").find((row) => row.startsWith("data: "));
+          if (line) frames.push(JSON.parse(line.slice(6)));
+        }
+      }
+    } catch {}
+  })();
+  return {
+    frames,
+    close: () => controller.abort(),
+    done,
+  };
+}
+
+test("account actions are forwarded only between connected devices of one room", async () => {
+  const store = await mkdtemp(path.join(tmpdir(), "rngdle-relay-"));
+  const host = await startRelay({ storeDir: store });
+  try {
+    const room = await create(host.base);
+    const owner = listen(host.base, room, "session-owner-1", "device-owner");
+    const guest = listen(host.base, room, "session-guest-1", "device-guest");
+    await expect
+      .poll(() => host.relay.rooms.get(room.room)?.members.size ?? 0)
+      .toBe(2);
+
+    const action = {
+      type: "action",
+      id: "req-1",
+      from: "device-guest",
+      to: "device-owner",
+      action: { type: "draw" },
+    };
+    const post = (session, body) =>
+      fetch(
+        `${host.base}/message?room=${room.room}&key=${room.key}&session=${session}`,
+        {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(body),
+        },
+      );
+
+    // The guest's request reaches the owner, and the guest does not hear its own.
+    const sent = await post("session-guest-1", { message: action });
+    expect(sent.status).toBe(200);
+    await expect
+      .poll(() => owner.frames.some((frame) => frame.type === "message"))
+      .toBe(true);
+    const delivered = owner.frames.find((frame) => frame.type === "message");
+    expect(delivered.message).toEqual(action);
+    expect(delivered.session).toBe("session-guest-1");
+    expect(guest.frames.some((frame) => frame.type === "message")).toBe(false);
+
+    // A session that is not in the room cannot inject a message.
+    const stranger = await post("session-nobody-1", { message: action });
+    expect(stranger.status).toBe(409);
+
+    // Only actions and their replies are relayed — never arbitrary frames.
+    const junk = await post("session-guest-1", {
+      message: { type: "state", state: "x" },
+    });
+    expect(junk.status).toBe(400);
+
+    owner.close();
+    guest.close();
+    await Promise.all([owner.done, guest.done]);
+  } finally {
+    await host.close();
+    await rm(store, { recursive: true, force: true });
+  }
+});

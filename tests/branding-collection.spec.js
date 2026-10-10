@@ -7,7 +7,7 @@ import { allBadgeMetadata as metadata } from "../src/infinite-badges.js";
 const progress = (page) =>
   page.getByRole("progressbar", { name: "Badge collection progress" });
 
-test("new logo loads, links home, and navigation follows Shop–Tasks–Badges–History in keyboard order", async ({
+test("the original RNGdle Infinite wordmark links home and navigation keeps keyboard order", async ({
   page,
 }) => {
   await page.goto("/#history");
