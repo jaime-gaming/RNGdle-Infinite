@@ -33,6 +33,7 @@
     "@sparticuz/chromium": "^153.0.0",
     "@twemoji/svg": "^15.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "peer": "^1.0.2",
     "prettier": "^3.9.6",
     "vite": "^6.1.0"
   }

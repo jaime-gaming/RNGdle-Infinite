@@ -532,13 +532,47 @@ function schedulePeerReconnect(epoch = linkEpoch) {
   }, delay);
 }
 
+// Skip the backoff: used when the network or the tab comes back.
+function retryPeerNow() {
+  if (!room || !key || !peer || peer.destroyed) return;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+  reconnectAttempt = 0;
+  clearTimeout(reconnectTimer);
+  reconnectTimer = 0;
+  if (peer.disconnected) {
+    try {
+      peer.reconnect();
+    } catch {}
+  }
+  if (peerSlot === "a") connectToPeer();
+}
+
+// The signaling broker is PeerJS's free cloud unless the player (or a test)
+// points the link at their own PeerJS server, the same way the relay can be
+// moved. A broker is only ever a meeting point: the save never passes through it.
+const PEER_BROKER_KEY = "rng-infinite-peer-broker";
+export function peerBrokerOptions() {
+  let broker = null;
+  try {
+    broker = JSON.parse(localStorage.getItem(PEER_BROKER_KEY) ?? "null");
+  } catch {}
+  if (!broker?.host) return { debug: 0 };
+  return {
+    debug: 0,
+    host: String(broker.host),
+    port: Number(broker.port) || 443,
+    path: typeof broker.path === "string" ? broker.path : "/",
+    secure: broker.secure !== false,
+  };
+}
+
 function openPeerSlot(slot) {
   peerSlot = slot;
   const id = peerIdFor(slot);
   const epoch = linkEpoch;
   let candidate;
   try {
-    candidate = new Peer(id, { debug: 0 });
+    candidate = new Peer(id, peerBrokerOptions());
     peer = candidate;
   } catch {
     setStatus(
@@ -1272,7 +1306,13 @@ if (typeof window !== "undefined") {
         savedAt: Math.max(savedAt + 1, dirtyAt || Date.now()),
         device,
       });
-    }
+    } else if (peer && !peer.destroyed && !conn?.open) retryPeerNow();
+  });
+  // A phone that wakes up or a tab that comes back to the front should not
+  // wait out a long backoff before the link is retried.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    if (room && peer && !peer.destroyed && !conn?.open) retryPeerNow();
   });
   window.addEventListener("offline", () => {
     if (room)
