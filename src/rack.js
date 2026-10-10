@@ -21,6 +21,7 @@ import {
   REBIRTH_TOTAL,
   ROLLBACK_BONUS,
   ULTRA_BONUS_PER_REBIRTH,
+  rollbackMultiplier,
   surplusMultiplier,
 } from "./rebirth.js";
 
@@ -68,12 +69,14 @@ export function walletParts(progress, armed) {
       label: `Prestige ×${ultras}`,
       value: 1 + ULTRA_BONUS_PER_REBIRTH * ultras,
     });
-  if ((progress.rollbacks ?? 0) > 0)
+  if ((progress.rollbacks ?? 0) > 0) {
+    const rollbacks = progress.rollbacks;
     parts.push({
       id: "rollback",
-      label: "Rollback",
-      value: 1 + ROLLBACK_BONUS,
+      label: rollbacks > 1 ? `Rollback ×${rollbacks}` : "Rollback",
+      value: rollbackMultiplier(rollbacks),
     });
+  }
   const surplus = progress.surplusBanked ?? 0;
   if (surplus > 0)
     parts.push({
@@ -173,18 +176,21 @@ export function rackReport(progress = {}) {
       effect: `Permanent +${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}% banked EP from ${ultras} prestige${ultras === 1 ? "" : "s"}`,
       meta: "Beyond the ladder · always on",
     });
-  if ((progress.rollbacks ?? 0) > 0)
+  if ((progress.rollbacks ?? 0) > 0) {
+    const rollbacks = progress.rollbacks;
+    const bonus = Math.round(ROLLBACK_BONUS * 100 * rollbacks);
     passives.push({
       id: "rollback",
       kind: "rollback",
-      name: "Rollback",
-      chip: `+${Math.round(ROLLBACK_BONUS * 100)}% EP`,
-      value: 1 + ROLLBACK_BONUS,
+      name: rollbacks > 1 ? `Rollback ×${rollbacks}` : "Rollback",
+      chip: `+${bonus}% EP`,
+      value: rollbackMultiplier(rollbacks),
       tint: "gold",
       fraction: 1,
-      effect: `Permanent +${Math.round(ROLLBACK_BONUS * 100)}% banked EP from your Rollback`,
+      effect: `Permanent +${bonus}% banked EP from ${rollbacks} Rollback${rollbacks === 1 ? "" : "s"}`,
       meta: "The last stage · always on",
     });
+  }
   const surplus = progress.surplusBanked ?? 0;
   if (surplus > 0)
     passives.push({

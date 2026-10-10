@@ -1,8 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="RNGdle Infinite">
-  <rect width="64" height="64" rx="14" fill="#13151b" />
-  <rect x="15" y="15" width="34" height="34" rx="10" fill="none" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" />
-  <circle cx="25" cy="25" r="3.6" fill="#ffffff" />
-  <circle cx="39" cy="39" r="3.6" fill="#ffffff" />
-  <circle cx="39" cy="25" r="2.4" fill="#89c4a8" />
-  <circle cx="25" cy="39" r="2.4" fill="#89c4a8" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="RNG above an infinity symbol">
+  <title>RNG ∞</title>
+  <desc>RNG above an infinity symbol</desc>
+  <defs>
+    <linearGradient id="mint" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#83c7a2" />
+      <stop offset="100%" stop-color="#dcf8d4" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" fill="#15151b" />
+  <text
+    x="64"
+    y="47"
+    fill="url(#mint)"
+    font-family="DejaVu Sans, Arial, sans-serif"
+    font-size="35"
+    font-weight="700"
+    letter-spacing="1.5"
+    text-anchor="middle"
+  >RNG</text>
+  <path
+    d="M 64 84 C 53 71 45 66 36 66 C 24 66 17 74 17 84 C 17 95 24 103 36 103 C 45 103 53 97 64 84 C 75 71 83 66 92 66 C 104 66 111 74 111 84 C 111 95 104 103 92 103 C 83 103 75 97 64 84"
+    fill="none"
+    stroke="url(#mint)"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>

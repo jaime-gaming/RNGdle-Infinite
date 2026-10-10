@@ -229,7 +229,7 @@ export function emptyProgress() {
 // Bookmarks pin a few rolls the player wants to find again. They reference
 // history entries by id, so a repaired save drops any mark whose roll did not
 // survive the repair, and the cap is part of the save's shape, not the UI's.
-export const BOOKMARK_LIMIT = 10;
+export const BOOKMARK_LIMIT = 3;
 function parseBookmarks(value, history) {
   if (!Array.isArray(value)) return [];
   const rolls = new Set(
@@ -358,8 +358,8 @@ export function parseAndRepairProgress(raw) {
     note(
       `prestige count was ${describeStored(p.ultraRebirths)}, so it was set to ${ultraRebirths}.`,
     );
-  // The Rollback is one per account, so its count can only be 0 or 1.
-  const rollbacks = Math.min(1, repairAmount(p.rollbacks ?? 0));
+  // Rollbacks can be taken again and again, so the count is any whole number.
+  const rollbacks = repairAmount(p.rollbacks ?? 0);
   if ((p.rollbacks ?? 0) !== rollbacks)
     note(
       `Rollback count was ${describeStored(p.rollbacks)}, so it was set to ${rollbacks}.`,
@@ -855,11 +855,8 @@ function applyEvent(state, action) {
     const gate = rebirthRequirement(count);
     const surplus = rebirthSurplus(cycleEarnedEp(state), gate.ep);
     const starter =
-      cycleStarterEp(
-        count + 1,
-        state.ultraRebirths ?? 0,
-        state.rollbacks ?? 0,
-      ) + surplus.starterBonus;
+      cycleStarterEp(count + 1, state.ultraRebirths ?? 0) +
+      surplus.starterBonus;
     // The rung's price — badges and the EP this cycle earned — is written into
     // the log entry, so the history can say what a cycle was bought with.
     const cost = gate;
@@ -905,8 +902,7 @@ function applyEvent(state, action) {
     const ultraCost = ultraRebirthRequirement();
     const surplus = rebirthSurplus(cycleEarnedEp(state), ultraCost.ep);
     const starter =
-      cycleStarterEp(state.rebirths ?? 0, count + 1, state.rollbacks ?? 0) +
-      surplus.starterBonus;
+      cycleStarterEp(state.rebirths ?? 0, count + 1) + surplus.starterBonus;
     const cost = ultraCost;
     return {
       ...startNewCycle(state, { starter }),
@@ -937,27 +933,30 @@ function applyEvent(state, action) {
       throw new Error("Invalid Rollback time");
     const blocked = rollbackBlocker(state, now);
     if (blocked) throw new Error(blocked);
-    // The last stage of the game. It starts the run over exactly like a
-    // prestige, but it pays the largest starting sum and the largest permanent
-    // bonus, and it can be taken once: the count only ever goes from 0 to 1.
-    // Like every other stage it costs the run, never the account.
+    if (!validAmount(rollbacks + 1))
+      throw new Error("Rollback count limit reached.");
+    // The last stage of the game, and it can be repeated. It starts the run
+    // over from zero: no starting sum of its own, only what the ladder already
+    // pays, plus the surplus dividend. Each Rollback adds a permanent bonus
+    // that stacks with the ones before it. Like every other stage it costs the
+    // run, never the account.
     const rollbackCost = rollbackRequirement();
     const surplus = rebirthSurplus(cycleEarnedEp(state), rollbackCost.ep);
     const starter =
-      cycleStarterEp(state.rebirths ?? 0, state.ultraRebirths ?? 0, 1) +
+      cycleStarterEp(state.rebirths ?? 0, state.ultraRebirths ?? 0) +
       surplus.starterBonus;
     return {
       ...startNewCycle(state, { starter }),
       profile: state.profile,
-      rollbacks: 1,
+      rollbacks: rollbacks + 1,
       surplusBanked:
         (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
       history: appendHistory(state.history, [
         {
-          id: action.eventId ?? "rollback:1",
+          id: action.eventId ?? `rollback:${rollbacks + 1}`,
           type: "rollback",
           at: now,
-          count: 1,
+          count: rollbacks + 1,
           ...(starter ? { grant: starter } : {}),
           ...(rollbackCost ? { cost: rollbackCost.ep } : {}),
         },
@@ -1185,11 +1184,9 @@ function applyEvent(state, action) {
       cycleEP = cycleEarnedEp(state);
     const discovered = new Set(state.discovered);
     const paidEvents = paid.map(({ result: scored, skill, key, spent }) => {
-      const appliesSkillMultiplier =
-        key === 0 || (skill && skillById.get(skill)?.kind === "floor");
-      const multiplier = appliesSkillMultiplier
-        ? baseMultiplier * skillMultiplier
-        : baseMultiplier;
+      // Every number the roll keeps is a banked roll of its own, so every one
+      // of them pays the same multipliers, wallet skills included.
+      const multiplier = baseMultiplier * skillMultiplier;
       const credit =
         multiplier === 1
           ? scored.totalEP
@@ -1203,7 +1200,16 @@ function applyEvent(state, action) {
       ];
       const unlocked = earned.filter((id) => !discovered.has(id));
       for (const badge of earned) discovered.add(badge);
-      return { scored, skill, key, credit, spent, earned, unlocked };
+      return {
+        scored,
+        skill,
+        key,
+        credit,
+        spent,
+        earned,
+        unlocked,
+        multiplier,
+      };
     });
     const balance = state.balance + credited,
       totalEarned = state.totalEarned + credited;
@@ -1227,7 +1233,16 @@ function applyEvent(state, action) {
     // they came from, so the feed can keep them together without pretending
     // they were separate rolls.
     const events = paidEvents.flatMap(
-      ({ scored, skill, key, credit, spent, earned: badges, unlocked }) => {
+      ({
+        scored,
+        skill,
+        key,
+        credit,
+        spent,
+        earned: badges,
+        unlocked,
+        multiplier,
+      }) => {
         const first = key === 0;
         const ownBonus = credit - scored.totalEP;
         const ownPetBonus =

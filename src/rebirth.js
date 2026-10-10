@@ -70,30 +70,29 @@ export function rebirthMultiplier(rebirths = 0) {
 export const REBIRTH_STARTER_EP = 250000;
 export const ULTRA_STARTER_EP = 1000000;
 
-export function cycleStarterEp(rebirths = 0, ultraRebirths = 0, rollbacks = 0) {
+export function cycleStarterEp(rebirths = 0, ultraRebirths = 0) {
   return (
     REBIRTH_STARTER_EP * Math.max(0, rebirths) +
-    ULTRA_STARTER_EP * Math.max(0, ultraRebirths) +
-    ROLLBACK_STARTER_EP * Math.min(1, Math.max(0, rollbacks))
+    ULTRA_STARTER_EP * Math.max(0, ultraRebirths)
   );
 }
 
-// The Rollback is the last stage of the game. An account takes it once, for
-// life, after three prestiges. It starts the run over exactly like a prestige,
-// and it pays more than every stage before it: the largest bonus and the
-// largest starting sum. Nothing comes after it.
+// The Rollback is the last stage of the game, and it can be taken again and
+// again. It opens after three prestiges. Each one restarts the run from zero:
+// it adds no starting sum of its own, so the new run starts with what the
+// ladder already pays, and it adds a permanent +25% that stacks with every
+// Rollback before it.
 // Prestige can be repeated three times. The third closes it for good, and the
 // Rollback — which needs those three — becomes the only way out of the ladder.
 export const PRESTIGE_LIMIT = 3;
 export const ROLLBACK_AFTER_PRESTIGES = PRESTIGE_LIMIT;
 export const ROLLBACK_BONUS = 0.25;
-export const ROLLBACK_STARTER_EP = 5000000;
 // The Rollback asks for more than a prestige does: three quarters of the
 // collection, and a cycle that has earned twice a prestige's EP.
 export const ROLLBACK_STEP = { badges: 0.75, ep: 60000000 };
 
 export function rollbackMultiplier(rollbacks = 0) {
-  return 1 + ROLLBACK_BONUS * Math.min(1, Math.max(0, rollbacks));
+  return 1 + ROLLBACK_BONUS * Math.max(0, rollbacks);
 }
 
 // The gate is a floor, not a ceiling. Badges set the pace of the ladder
@@ -195,7 +194,6 @@ export function rollbackRequirement() {
 export function nextStep(progress) {
   const rung = rebirthRequirement(progress.rebirths ?? 0);
   if (rung) return { kind: "rung", ...rung };
-  if ((progress.rollbacks ?? 0) >= 1) return null;
   if ((progress.ultraRebirths ?? 0) < PRESTIGE_LIMIT)
     return { kind: "prestige", ...ultraRebirthRequirement() };
   return { kind: "rollback", ...rollbackRequirement() };
@@ -284,8 +282,6 @@ function commitmentBlocker(progress, now) {
 export function rebirthBlocker(progress, now) {
   const requirement = rebirthRequirement(progress.rebirths ?? 0);
   if (!requirement) {
-    if ((progress.rollbacks ?? 0) >= 1)
-      return "The Rollback ended the ladder, so there are no more rebirths.";
     if ((progress.ultraRebirths ?? 0) >= PRESTIGE_LIMIT)
       return "Three prestiges are done. The Rollback is the only way out now.";
     const prestige = ultraRebirthRequirement();
@@ -315,10 +311,9 @@ export function rebirthReady(progress, now) {
 // resting place, and the button only ever appears once the requirement is met.
 // It gives the same fresh run a rebirth does — collection, purchases,
 // companions and wallet — and keeps the account's history, rebirths and bonuses.
-// Once the Rollback is taken the ladder is over, so prestige closes for good.
+// Once three prestiges are done, prestige closes for good; the Rollback is the
+// only way out from there, and it can be taken again and again.
 export function ultraRebirthBlocker(progress, now) {
-  if ((progress.rollbacks ?? 0) >= 1)
-    return "Your Rollback ended the ladder, so there are no more prestiges.";
   if ((progress.ultraRebirths ?? 0) >= PRESTIGE_LIMIT)
     return "Three prestiges are done. Prestige is closed; the Rollback is the only way out.";
   if ((progress.rebirths ?? 0) < REBIRTH_TOTAL)
@@ -336,7 +331,6 @@ export function ultraRebirthBlocker(progress, now) {
 export function ultraRebirthAvailable(progress, now) {
   const requirement = ultraRebirthRequirement();
   return (
-    (progress.rollbacks ?? 0) < 1 &&
     (progress.ultraRebirths ?? 0) < PRESTIGE_LIMIT &&
     (progress.rebirths ?? 0) >= REBIRTH_TOTAL &&
     discoveredCount(progress) >= requirement.badges &&
@@ -345,12 +339,10 @@ export function ultraRebirthAvailable(progress, now) {
   );
 }
 
-// The Rollback opens after the third prestige and can be taken once for life.
-// It needs the whole ladder, the prestige count, and the collection and EP a
-// prestige asks for. Taking it ends the ladder.
+// The Rollback opens after the third prestige and can be taken again and
+// again. It needs the whole ladder, the prestige count, and the collection and
+// EP the Rollback asks for. Taking it restarts the run from zero.
 export function rollbackBlocker(progress, now) {
-  if ((progress.rollbacks ?? 0) >= 1)
-    return "Your Rollback is taken. It is the last stage of the game.";
   if ((progress.rebirths ?? 0) < REBIRTH_TOTAL)
     return `Finish the whole rebirth ladder first: ${REBIRTH_TOTAL - (progress.rebirths ?? 0)} rebirths to go.`;
   const prestiges = progress.ultraRebirths ?? 0;

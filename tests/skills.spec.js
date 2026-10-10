@@ -143,8 +143,8 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
     at: 1,
   });
   expect(back.equippedSkills).toEqual(["trail", "surge"]);
-  // Rebirth rewards and companion signatures ride free beside the rack: a
-  // full rack still takes them, and they take no slot.
+  // Rebirth rewards ride free beside the rack: a full rack still takes them,
+  // and they take no slot. A companion signature does take one.
   const signature = skillForPet("pebble");
   const full = {
     ...back,
@@ -158,14 +158,27 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
     at: 1,
   });
   expect(withReborn.equippedSkills).toEqual(["trail", "surge", "reborn-drive"]);
-  const withBoth = applyProgress(withReborn, {
+  // The rack is full of shop skills, so the signature waits for a free slot.
+  expect(() =>
+    applyProgress(withReborn, {
+      type: "equip-skill",
+      id: signature.id,
+      at: 1,
+    }),
+  ).toThrow(/rack holds 2 shop skills/);
+  const unslotted = applyProgress(withReborn, {
+    type: "equip-skill",
+    id: "surge",
+    equipped: false,
+    at: 1,
+  });
+  const withBoth = applyProgress(unslotted, {
     type: "equip-skill",
     id: signature.id,
     at: 1,
   });
   expect(withBoth.equippedSkills).toEqual([
     "trail",
-    "surge",
     "reborn-drive",
     signature.id,
   ]);
@@ -176,13 +189,13 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
     equipped: false,
     at: 1,
   });
-  expect(without.equippedSkills).toEqual(["trail", "surge", signature.id]);
+  expect(without.equippedSkills).toEqual(["trail", signature.id]);
 });
 
-test("only shop skills take rack slots, and trimming keeps the free ones", () => {
+test("shop skills and companion signatures take rack slots, and trimming keeps the free ones", () => {
   expect(skillTakesSlot("surge")).toBe(true);
   expect(skillTakesSlot("reborn-drive")).toBe(false);
-  expect(skillTakesSlot(skillForPet("pebble").id)).toBe(false);
+  expect(skillTakesSlot(skillForPet("pebble").id)).toBe(true);
   // Trimming keeps every free skill and the shop skills in order, wherever
   // the free ones sit in the list.
   expect(trimToSlots(["reborn-drive", "surge", "trail", "bounce"], 2)).toEqual([
@@ -210,13 +223,12 @@ test("a repaired save keeps its free skills no matter how full the rack is", () 
     activePet: "pebble",
     equippedSkills: ["surge", "trail", "bounce", "reborn-drive", signature.id],
   });
-  // Two slots hold two shop skills; the ladder's reward and the companion's
-  // signature stay on, in place.
+  // Two slots hold two shop skills, so the companion's signature, which also
+  // takes a slot, is trimmed off. The ladder's reward stays on, in place.
   expect(parseEquippedSkills(progress.equippedSkills, progress)).toEqual([
     "surge",
     "trail",
     "reborn-drive",
-    signature.id,
   ]);
 });
 

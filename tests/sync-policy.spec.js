@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { emptyProgress } from "../src/progress.js";
-import { pendingStamp, syncDecision } from "../src/sync-policy.js";
+import {
+  chooseSyncOwner,
+  isSyncWriter,
+  pendingStamp,
+  syncDecision,
+} from "../src/sync-policy.js";
 
 const profile = {
   id: "account-owner",
@@ -70,4 +75,17 @@ test("a pending change is stamped at the moment it was made, or one step past th
   expect(pendingStamp(300, 250)).toBe(301);
   expect(pendingStamp(250, 250)).toBe(251);
   expect(pendingStamp(0, 0)).toBe(1);
+});
+
+test("linked devices agree on one writer, and a legacy link waits until both devices are known", () => {
+  expect(chooseSyncOwner(["owner", "guest"], ["owner"])).toBe("owner");
+  expect(chooseSyncOwner(["guest", "owner"], [])).toBe("guest");
+  expect(chooseSyncOwner(["only-device"], [])).toBe("");
+  // Conflicting legacy declarations still resolve identically at both ends.
+  expect(
+    chooseSyncOwner(["z-device", "a-device"], ["z-device", "a-device"]),
+  ).toBe("a-device");
+  expect(isSyncWriter("owner", "owner")).toBe(true);
+  expect(isSyncWriter("guest", "owner")).toBe(false);
+  expect(isSyncWriter("guest", "")).toBe(false);
 });

@@ -8,12 +8,14 @@ import {
   Eye,
   Gamepad2,
   RotateCcw,
+  RefreshCw,
   ScrollText,
   Shirt,
   Volume2,
 } from "lucide-react";
 import AuraWardrobe from "./AuraWardrobe";
 import { useSettings } from "../use-settings.jsx";
+import { NOTIFICATION_RANKS } from "../settings.js";
 import {
   notificationPermission,
   playReadyChime,
@@ -23,6 +25,10 @@ import {
 import { DeviceLinkSummary } from "./DeviceLink.jsx";
 import { openInstallBanner } from "./InstallApp.jsx";
 import "../settings.css";
+
+function rankLabel(rank) {
+  return rank ? rank[0].toUpperCase() + rank.slice(1) : "";
+}
 
 function Toggle({ id, label, description, checked, onChange, disabled }) {
   return (
@@ -48,7 +54,15 @@ function Toggle({ id, label, description, checked, onChange, disabled }) {
   );
 }
 
-export default function Settings({ notify, progress, onAction, navigate }) {
+export default function Settings({
+  notify,
+  progress,
+  onAction,
+  navigate,
+  appUpdate,
+  onStartUpdate,
+  onStopUpdate,
+}) {
   const { settings, update, reset, saveError } = useSettings();
   const [permission, setPermission] = useState(notificationPermission);
   useEffect(() => {
@@ -58,6 +72,7 @@ export default function Settings({ notify, progress, onAction, navigate }) {
   }, []);
   const unsupported = permission === "unsupported";
   const denied = permission === "denied";
+  const notificationsActive = settings.notifyReady && permission === "granted";
 
   async function toggleNotifications(next) {
     if (!next) {
@@ -70,7 +85,7 @@ export default function Settings({ notify, progress, onAction, navigate }) {
       update({ notifyReady: true });
       notify?.({
         kind: "done",
-        text: "Desktop notifications enabled for finished cooldowns.",
+        text: "Desktop notifications enabled for ready rolls and rank alerts.",
       });
     } else {
       update({ notifyReady: false });
@@ -91,8 +106,8 @@ export default function Settings({ notify, progress, onAction, navigate }) {
           <Bell size={16} aria-hidden="true" /> Alerts
         </h2>
         <p className="settings-group-note">
-          Alerts only announce a cooldown that has already finished. They never
-          roll for you, never award EP, and never change your timings.
+          Desktop alerts can announce a finished cooldown or a rank you choose.
+          They never roll for you, award EP, or change your timings.
         </p>
         <Toggle
           id="setting-notify-ready"
@@ -108,6 +123,39 @@ export default function Settings({ notify, progress, onAction, navigate }) {
           disabled={unsupported || denied}
           onChange={toggleNotifications}
         />
+        <div className="setting-row setting-rank-row">
+          <div className="setting-copy">
+            <label htmlFor="setting-notify-rank">
+              Notify me at this rank or higher
+            </label>
+            <p>
+              {unsupported
+                ? "This browser does not support rank alerts."
+                : denied
+                  ? "Allow desktop notifications in browser settings to use a rank alert."
+                  : notificationsActive
+                    ? settings.notifyRank
+                      ? `A roll at ${rankLabel(settings.notifyRank)} rank or higher will alert you. Auto-Roll stops so you can review its stats.`
+                      : "Choose a minimum rank. Rolls at that rank or higher will alert you and stop Auto-Roll for review."
+                    : "Turn on desktop notifications above to choose a minimum rank and stop Auto-Roll on a match."}
+            </p>
+          </div>
+          <select
+            id="setting-notify-rank"
+            value={settings.notifyRank ?? ""}
+            disabled={unsupported || denied || !notificationsActive}
+            onChange={(event) =>
+              update({ notifyRank: event.target.value || null })
+            }
+          >
+            <option value="">No rank alert</option>
+            {NOTIFICATION_RANKS.map((rank) => (
+              <option key={rank} value={rank}>
+                {rankLabel(rank)} or higher
+              </option>
+            ))}
+          </select>
+        </div>
         <Toggle
           id="setting-notify-sound"
           label="Play a chime when a roll is ready"
@@ -301,6 +349,27 @@ export default function Settings({ notify, progress, onAction, navigate }) {
           Settings are saved in this browser only, separately from your game
           progress. They are kept when you delete your account.
         </small>
+      </div>
+      <div className="settings-update">
+        <button
+          type="button"
+          className="secondary-button"
+          data-testid="settings-update"
+          onClick={() =>
+            appUpdate?.active ? onStopUpdate?.() : onStartUpdate?.()
+          }
+        >
+          <RefreshCw
+            size={14}
+            className={appUpdate?.active ? "is-spinning" : undefined}
+            aria-hidden="true"
+          />
+          {appUpdate?.active ? "Stop update attempt" : "Reload until updated"}
+        </button>
+        <p data-testid="update-status" role="status" aria-live="polite">
+          {appUpdate?.message ||
+            "Checks for the newest published build and reloads this page until it arrives. Your game progress and settings are kept."}
+        </p>
       </div>
     </section>
   );

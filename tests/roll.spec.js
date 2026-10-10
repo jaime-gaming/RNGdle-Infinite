@@ -113,6 +113,9 @@ test("completed rolls persist EP exactly once and enforce the saved cooldown", a
   page,
 }) => {
   await seedProgress(page);
+  // Two full reveals with reloads take about 20 seconds alone and run slower
+  // while the rest of the suite shares the machine, so give it room.
+  test.setTimeout(90000);
   await startRoll(page, 1337);
   await page.clock.runFor(buildRevealTimeline(4, 14).end + 20);
   await expect(page.locator(".session-total>span")).toHaveText(

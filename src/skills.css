@@ -218,39 +218,82 @@
 .skill-slot:not(.is-armed) .skill-tooltip-state {
   color: var(--muted);
 }
-@media (max-width: 720px) {
-  /* The phone keeps the same corner as the desktop — top left, under the
-     header — with the circles a size down so the column stays out of the way
-     of a thumb-wide screen. Tooltips open to the right exactly as they do
-     there, because there is room for them on this side. */
+@media (max-width: 760px) {
+  /* On phones the rack becomes a compact, full-width dock below the header.
+     Keeping every circle in one short row gives the roll room and keeps the
+     summary, Auto-Roll and skill families reachable without a tall side rail. */
   .skill-bar {
-    top: 68px;
-    left: 10px;
-    gap: 8px;
+    top: 64px;
+    left: 8px;
+    right: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 6px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 10%);
   }
-  /* A plain circle and a family are the same size, so they shrink together:
-     the family's own svg is sized here, not scaled, and its slices, stroke and
-     icon all follow the one box. */
+  /* A single size for plain circles, families, abilities and the summary keeps
+     the whole dock balanced, even on the narrowest supported phone. */
   .skill-slot > .skill-ring,
   .skill-stack-ring {
-    width: 36px !important;
-    height: 36px !important;
+    width: 31px !important;
+    height: 31px !important;
   }
   .skill-stack,
   .skill-stack-bubble {
-    width: 36px;
-    height: 36px;
+    width: 31px;
+    height: 31px;
   }
   .skill-stack {
-    flex-basis: 36px;
+    flex-basis: 31px;
   }
+  .skill-stack-count {
+    right: -1px;
+    bottom: -1px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    font-size: 8px;
+    line-height: 12px;
+  }
+  .skill-slot.is-armed::after,
+  .skill-stack.is-armed > .skill-stack-bubble::after {
+    inset: -2px;
+  }
+  /* Touch popovers open as a panel beneath the dock instead of spilling off
+     the right edge of whichever tiny circle was tapped. */
   .skill-stack-members {
-    max-width: min(300px, calc(100vw - 76px));
+    position: fixed;
+    top: 116px;
+    left: 8px;
+    right: 8px;
+    transform: none;
+    max-width: none;
+    justify-content: center;
     flex-wrap: wrap;
+    z-index: 1;
+  }
+  .skill-stack-members::before {
+    top: -8px;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 8px;
   }
   .skill-tooltip {
-    top: 30px;
-    width: min(232px, calc(100vw - 70px));
+    position: fixed;
+    top: 116px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    z-index: 1;
   }
 }
 /* Motion is decoration here: the state is still readable from the ring. */
@@ -576,17 +619,20 @@
   color: var(--green);
   font-size: 10px;
 }
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .skill-contribution {
     display: none;
   }
   .skill-summary {
-    width: 34px;
-    height: 22px;
+    width: 30px;
+    height: 20px;
   }
   .rack-panel {
-    left: 0;
-    top: calc(100% + 8px);
-    width: min(296px, calc(100vw - 24px));
+    position: fixed;
+    top: 116px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
   }
 }

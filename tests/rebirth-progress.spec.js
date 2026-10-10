@@ -73,12 +73,18 @@ test("prestige is out of sight until the sixth rebirth", () => {
   expect(prestigeShown({ rebirths: 0, ultraRebirths: 1 })).toBe(true);
 });
 
-test("the steps run: six rungs, then three prestiges, then the Rollback once", () => {
+test("the steps run: six rungs, then three prestiges, then the Rollback again and again", () => {
   expect(nextStep({ rebirths: 0 }).kind).toBe("rung");
   expect(nextStep({ rebirths: 6, ultraRebirths: 0 }).kind).toBe("prestige");
   expect(nextStep({ rebirths: 6, ultraRebirths: 2 }).kind).toBe("prestige");
   expect(nextStep({ rebirths: 6, ultraRebirths: 3 }).kind).toBe("rollback");
-  expect(nextStep({ rebirths: 6, ultraRebirths: 3, rollbacks: 1 })).toBeNull();
+  // A Rollback does not end the steps: the next one is always the Rollback.
+  expect(nextStep({ rebirths: 6, ultraRebirths: 3, rollbacks: 1 }).kind).toBe(
+    "rollback",
+  );
+  expect(nextStep({ rebirths: 6, ultraRebirths: 3, rollbacks: 5 }).kind).toBe(
+    "rollback",
+  );
   // Prestige closes after the third: the Rollback is the only way out.
   expect(
     ultraRebirthAvailable(

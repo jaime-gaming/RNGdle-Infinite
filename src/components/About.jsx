@@ -20,7 +20,6 @@ import {
   REBIRTH_TOTAL,
   ROLLBACK_AFTER_PRESTIGES,
   ROLLBACK_BONUS,
-  ROLLBACK_STARTER_EP,
   ULTRA_REBIRTH_STEP,
   prestigeShown,
   rebirthUnlocked,
@@ -108,7 +107,7 @@ export default function About({ navigate, progress }) {
         ...(showsRebirth
           ? [
               prestigeShown(progress)
-                ? `Rebirth unlocks step by step: the first asks for a fifth of the collection and ${formatEP(REBIRTH_STEPS[0].ep)} EP earned this cycle; the final rung asks for 45% and ${formatEP(REBIRTH_STEPS.at(-1).ep)} EP. Each of the ${REBIRTH_TOTAL} steps grants an exclusive skill, a permanent +2% banked-EP bonus and 250,000 EP to start the next cycle. A prestige (the ultra-rebirth in the save) asks for half the collection and ${formatEP(ULTRA_REBIRTH_STEP.ep)} cycle EP, then adds a permanent +10% bonus and 1,000,000 starting EP. After ${ROLLBACK_AFTER_PRESTIGES} prestiges, the Rollback is the last stage, taken once: +${Math.round(ROLLBACK_BONUS * 100)}% and ${formatEP(ROLLBACK_STARTER_EP)} starting EP, and nothing comes after it. Resets clear the run, not your aura collection, activity history or permanent bonuses.`
+                ? `Rebirth unlocks step by step: the first asks for a fifth of the collection and ${formatEP(REBIRTH_STEPS[0].ep)} EP earned this cycle; the final rung asks for 45% and ${formatEP(REBIRTH_STEPS.at(-1).ep)} EP. Each of the ${REBIRTH_TOTAL} steps grants an exclusive skill, a permanent +2% banked-EP bonus and 250,000 EP to start the next cycle. A prestige (the ultra-rebirth in the save) asks for half the collection and ${formatEP(ULTRA_REBIRTH_STEP.ep)} cycle EP, then adds a permanent +10% bonus and 1,000,000 starting EP. After ${ROLLBACK_AFTER_PRESTIGES} prestiges, the Rollback is the last stage and can be taken again and again: each one restarts the run from zero and adds +${Math.round(ROLLBACK_BONUS * 100)}% permanent EP, stacking with the ones before it. Resets clear the run, not your aura collection, activity history or permanent bonuses.`
                 : `Rebirth unlocks step by step: the first asks for a fifth of the collection and ${formatEP(REBIRTH_STEPS[0].ep)} EP earned this cycle; the final rung asks for 45% and ${formatEP(REBIRTH_STEPS.at(-1).ep)} EP. Each of the ${REBIRTH_TOTAL} steps grants an exclusive skill, a permanent +2% banked-EP bonus and 250,000 EP to start the next cycle. Resets clear the run, not your aura collection, activity history or permanent bonuses.`,
             ]
           : []),

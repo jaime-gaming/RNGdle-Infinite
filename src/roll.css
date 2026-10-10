@@ -1262,3 +1262,14 @@ nav button.active {
     opacity: 0;
   }
 }
+
+/* The phone's horizontal skill dock sits below the sticky app header, so the
+   active result starts after it instead of behind it. */
+@media (max-width: 760px) {
+  .active-roll {
+    padding-top: 68px;
+  }
+  .idle-roll {
+    padding-top: max(12vh, 58px);
+  }
+}

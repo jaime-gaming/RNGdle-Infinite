@@ -677,12 +677,12 @@ export default function ActivityFeed({
                     </p>
                   ) : event.type === "rollback" ? (
                     <p>
-                      The Rollback started the run over, the last stage of the
-                      game: the collection, every purchase, the companions and
-                      the wallet reset. History, rebirths, prestiges and bonuses
-                      stayed, the cycle began with {formatEP(event.grant ?? 0)}{" "}
-                      EP, and the permanent wallet bonus grew by 25%. Nothing
-                      comes after it.
+                      The Rollback started the run over from zero: the
+                      collection, every purchase, the companions and the wallet
+                      reset. History, rebirths, prestiges and bonuses stayed,
+                      the cycle began with {formatEP(event.grant ?? 0)} EP, and
+                      the permanent wallet bonus grew by 25%. The Rollback can
+                      be taken again.
                     </p>
                   ) : event.type === "task" ? (
                     <p className="activity-transaction">

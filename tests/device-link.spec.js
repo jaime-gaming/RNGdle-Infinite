@@ -45,6 +45,7 @@ test("one link joins two browsers to the same account, live", async ({
   });
   await pageA.goto("/settings/link");
   await expect(pageA.getByTestId("sync-create")).toBeVisible();
+  await expect(pageA.getByTestId("profile-sync-indicator")).toHaveCount(0);
   await pageA.getByTestId("sync-create").click();
 
   // The link is a URL with the room and its key inside: no account on any
@@ -55,6 +56,10 @@ test("one link joins two browsers to the same account, live", async ({
   await expect(pageA.getByTestId("sync-status")).toContainText(
     /Waiting for the other device/,
   );
+  await expect(pageA.getByTestId("profile-sync-indicator")).toHaveAttribute(
+    "data-sync-status",
+    "pending",
+  );
 
   const contextB = await browser.newContext();
   const pageB = await contextB.newPage();
@@ -63,6 +68,10 @@ test("one link joins two browsers to the same account, live", async ({
   // The guest browser adopts A's account — no reload, no button, the relay
   // simply wrote it — and both sides report the pairing.
   await expect(pageA.getByTestId("sync-status")).toContainText(/live/);
+  await expect(pageA.getByTestId("profile-sync-indicator")).toHaveAttribute(
+    "data-sync-status",
+    "connected",
+  );
   await expect
     .poll(async () => (await saved(pageB))?.profile?.username, {
       timeout: 10000,
@@ -364,6 +373,16 @@ test("settings keeps the summary and the link page keeps the details", async ({
   // The page states the link, the room, this device and the relay's store.
   await page.getByTestId("sync-create").click();
   await expect(page.getByTestId("sync-link")).toBeVisible();
+  const qr = page.getByTestId("device-link-qr");
+  await expect(qr).toBeVisible();
+  await expect(
+    qr.locator(
+      'svg[role="img"][aria-label="QR code for your private device link"]',
+    ),
+  ).toBeVisible();
+  await expect(qr.locator("svg path").first()).toBeAttached();
+  await expect(qr.locator("svg title")).toHaveText("RNGdle Infinite");
+  await expect(qr.locator("svg image")).toHaveCount(0);
   const details = page.getByTestId("link-details");
   await expect(details).toContainText("Relay");
   await expect(details).toContainText("Store");
@@ -426,4 +445,66 @@ test("a change made while the relay is unreachable is queued and sent later", as
   );
 
   await context.close();
+});
+
+test("linked screens never settle two rolls: the main device draws for both", async ({
+  browser,
+}) => {
+  const contextA = await browser.newContext();
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, {
+    balance: 5000000,
+    totalEarned: 5000000,
+    owned: [],
+  });
+  await pageA.goto("/settings/link");
+  await pageA.getByTestId("sync-create").click();
+  const link = await pageA.getByTestId("sync-link").inputValue();
+
+  const contextB = await browser.newContext();
+  const pageB = await contextB.newPage();
+  await pageB.goto(link);
+  await expect
+    .poll(async () => (await saved(pageB))?.profile?.username, {
+      timeout: 10000,
+    })
+    .toBe("LuckyTester");
+  await pageB.goto("/settings/link");
+  await expect(pageB.getByTestId("sync-status")).toContainText(/live/, {
+    timeout: 10000,
+  });
+
+  // B asks for a roll. The main device draws it, and both screens reveal the
+  // one number it committed.
+  await pageB.goto("/");
+  await pageB.getByRole("button", { name: "GENERATE", exact: true }).click();
+  await expect
+    .poll(async () => (await saved(pageA))?.pendingRoll?.id ?? null, {
+      timeout: 15000,
+    })
+    .not.toBeNull();
+  const rollId = (await saved(pageA)).pendingRoll.id;
+  await expect
+    .poll(async () => (await saved(pageB))?.pendingRoll?.id ?? null, {
+      timeout: 15000,
+    })
+    .toBe(rollId);
+
+  // Both screens now wait on the same roll: neither offers a second draw.
+  await expect(
+    pageB.getByRole("button", { name: "GENERATE", exact: true }),
+  ).toHaveCount(0);
+  await pageA.goto("/");
+  await expect(
+    pageA.getByRole("button", { name: "GENERATE", exact: true }),
+  ).toHaveCount(0);
+
+  // The save never holds more than one roll, on either device.
+  const settled = (state) =>
+    new Set([...(state.receipts ?? []), state.pendingRoll?.id].filter(Boolean));
+  expect([...settled(await saved(pageA))]).toEqual([rollId]);
+  expect([...settled(await saved(pageB))]).toEqual([rollId]);
+
+  await contextB.close();
+  await contextA.close();
 });

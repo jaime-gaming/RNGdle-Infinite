@@ -47,11 +47,7 @@ test("history bookmarks pin up to three rolls, persist, and respect the cap", as
   await expect(
     page.getByRole("button", { name: "Bookmarks (3/3)" }),
   ).toBeVisible();
-  expect((await saved(page)).bookmarks).toEqual([
-    "roll:3",
-    "roll:2",
-    "roll:1",
-  ]);
+  expect((await saved(page)).bookmarks).toEqual(["roll:3", "roll:2", "roll:1"]);
 
   // The Bookmarks filter shows only pinned rolls.
   await page.getByRole("button", { name: "Bookmarks (3/3)" }).click();
@@ -62,11 +58,7 @@ test("history bookmarks pin up to three rolls, persist, and respect the cap", as
   await marked(1001).click();
   await mark(1000).click();
   await expect(marked(1000)).toBeVisible();
-  expect((await saved(page)).bookmarks).toEqual([
-    "roll:3",
-    "roll:2",
-    "roll:0",
-  ]);
+  expect((await saved(page)).bookmarks).toEqual(["roll:3", "roll:2", "roll:0"]);
 });
 
 test("a repaired save drops bookmarks whose roll is gone", async ({ page }) => {

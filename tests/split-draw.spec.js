@@ -431,10 +431,11 @@ test("on a phone the overview fits the screen, and a number's stats open in plac
   await expect
     .poll(async () => (await page.locator(".draw-detail-bar").boundingBox())?.y)
     .toBeLessThan(200);
-  // The skill rack keeps the corner, so "All numbers" starts past its circles.
+  // The phone dock sits above the detail controls, so "All numbers" starts
+  // below the rack rather than behind its circles.
   const rack = await page.locator(".skill-bar").boundingBox();
   const back = await page.locator(".draw-detail-back").boundingBox();
-  expect(back.x).toBeGreaterThanOrEqual(rack.x + rack.width);
+  expect(back.y).toBeGreaterThanOrEqual(rack.y + rack.height);
   await page.getByRole("button", { name: "All numbers" }).click();
   await expect(page.locator(".draw-stage-minimize")).toBeVisible();
   await page.locator(".draw-stage-minimize").click();
@@ -446,7 +447,9 @@ test("on a phone the overview fits the screen, and a number's stats open in plac
   const backAtBest = await page
     .locator(".draw-back-row .draw-detail-back")
     .boundingBox();
-  expect(backAtBest.x).toBeGreaterThanOrEqual(rackAtBest.x + rackAtBest.width);
+  // The phone rack is a horizontal dock above the roll, so the way back sits
+  // below it, never behind its circles.
+  expect(backAtBest.y).toBeGreaterThanOrEqual(rackAtBest.y + rackAtBest.height);
 });
 
 // Auto-Roll armed from the rack, on a roll whose first draw keeps four numbers.

@@ -1,10 +1,16 @@
 import { test, expect } from "@playwright/test";
 import {
   defaultSettings,
+  NOTIFICATION_RANKS,
+  rankMeetsMinimum,
   parseSettings,
   SETTINGS_KEY,
 } from "../src/settings.js";
 import { formatEP, formatEPCompact } from "../src/roll-data.js";
+import {
+  RANK_NOTIFICATION_TAG,
+  showRankNotification,
+} from "../src/notifications.js";
 import { emptyProgress, applyProgress } from "../src/progress.js";
 import {
   offlineSettings,
@@ -40,6 +46,7 @@ test("settings default to a quiet, unchanged game and are keyed separately from 
   expect(defaultSettings).toEqual({
     notifyReady: false,
     notifySound: false,
+    notifyRank: null,
     reduceMotion: "system",
     compactNumbers: false,
     showSkillBar: true,
@@ -48,6 +55,71 @@ test("settings default to a quiet, unchanged game and are keyed separately from 
     autoRollDefault: false,
   });
   expect(parseSettings(null)).toEqual(defaultSettings);
+});
+
+test("rank alerts accept only known ranks and use the chosen rank as a minimum", () => {
+  expect(NOTIFICATION_RANKS).toEqual([
+    "trash",
+    "common",
+    "uncommon",
+    "rare",
+    "epic",
+    "anomaly",
+    "mythic",
+    "godly",
+  ]);
+  expect(parseSettings(JSON.stringify({ notifyRank: "epic" })).notifyRank).toBe(
+    "epic",
+  );
+  // Old exact-number preferences are intentionally not carried into rank alerts.
+  expect(
+    parseSettings(JSON.stringify({ notifyNumber: 604827 })).notifyRank,
+  ).toBe(null);
+  for (const notifyRank of ["legendary", "EPIC", 4, null])
+    expect(parseSettings(JSON.stringify({ notifyRank })).notifyRank).toBe(null);
+  expect(rankMeetsMinimum("godly", "epic")).toBe(true);
+  expect(rankMeetsMinimum("epic", "epic")).toBe(true);
+  expect(rankMeetsMinimum("common", "epic")).toBe(false);
+  expect(rankMeetsMinimum("unknown", "epic")).toBe(false);
+  expect(rankMeetsMinimum("godly", "unknown")).toBe(false);
+});
+
+test("rank desktop alerts use their own tag and never expose an exact number", () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "Notification");
+  class FakeNotification {
+    static permission = "granted";
+    constructor(title, options) {
+      this.title = title;
+      this.options = options;
+    }
+    close() {}
+  }
+  Object.defineProperty(globalThis, "Notification", {
+    configurable: true,
+    value: FakeNotification,
+  });
+  try {
+    let clicked = false;
+    const notification = showRankNotification("godly", {
+      onClick: () => {
+        clicked = true;
+      },
+    });
+    expect(notification.title).toBe("Godly rank reached");
+    expect(notification.options).toMatchObject({
+      tag: RANK_NOTIFICATION_TAG,
+      silent: true,
+    });
+    expect(notification.options.body).not.toMatch(/\d/);
+    notification.onclick();
+    expect(clicked).toBe(true);
+    expect(showRankNotification("not-a-rank")).toBeNull();
+    FakeNotification.permission = "denied";
+    expect(showRankNotification("epic")).toBeNull();
+  } finally {
+    if (original) Object.defineProperty(globalThis, "Notification", original);
+    else delete globalThis.Notification;
+  }
 });
 
 test("stored settings are validated field by field and never throw on junk", () => {

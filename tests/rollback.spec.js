@@ -11,7 +11,6 @@ import {
   REBIRTH_TOTAL,
   ROLLBACK_AFTER_PRESTIGES,
   ROLLBACK_BONUS,
-  ROLLBACK_STARTER_EP,
   ULTRA_BONUS_PER_REBIRTH,
   ULTRA_STARTER_EP,
   cycleStarterEp,
@@ -103,7 +102,7 @@ test("the Rollback stays shut until three prestiges, then asks for more than a p
   ).toMatch(/ladder first/);
 });
 
-test("prestige closes after three, so the Rollback is the only way out", () => {
+test("prestige closes after three, and the Rollback is the only way out", () => {
   // Two prestiges leave the third one open.
   expect(ultraRebirthAvailable(top({ ultraRebirths: 2 }), 300000)).toBe(true);
   // The third closes prestige for good, even with the whole gate met.
@@ -111,36 +110,29 @@ test("prestige closes after three, so the Rollback is the only way out", () => {
   expect(ultraRebirthAvailable(three, 300000)).toBe(false);
   expect(ultraRebirthBlocker(three, 300000)).toMatch(/Prestige is closed/);
   expect(rollbackAvailable(three, 300000)).toBe(true);
-  // The Rollback ends the ladder: no prestige after it, and no second Rollback.
-  const done = top({ ultraRebirths: 3, rollbacks: 1 });
-  expect(ultraRebirthBlocker(done, 300000)).toMatch(
-    /Rollback ended the ladder/,
-  );
-  expect(ultraRebirthAvailable(done, 300000)).toBe(false);
-  expect(rollbackAvailable(done, 300000)).toBe(false);
-  expect(rollbackBlocker(done, 300000)).toMatch(/is taken/);
-  expect(rebirthBlocker(done, 300000)).toMatch(/Rollback ended the ladder/);
+  // A Rollback taken does not reopen prestige, and it does not close the
+  // Rollback: it stays available for the next run.
+  const taken = top({ ultraRebirths: 3, rollbacks: 1 });
+  expect(ultraRebirthAvailable(taken, 300000)).toBe(false);
+  expect(ultraRebirthBlocker(taken, 300000)).toMatch(/Prestige is closed/);
+  expect(rollbackAvailable(taken, 300000)).toBe(true);
+  expect(rebirthBlocker(taken, 300000)).toMatch(/Rollback is the only way out/);
 });
 
-test("the Rollback is the biggest stage: the largest bonus and starting sum, counted once", () => {
+test("each Rollback stacks +25% without limit, and adds no starting sum of its own", () => {
   expect(ROLLBACK_BONUS).toBeGreaterThan(ULTRA_BONUS_PER_REBIRTH);
-  expect(ROLLBACK_STARTER_EP).toBeGreaterThan(ULTRA_STARTER_EP);
-  expect(ULTRA_STARTER_EP).toBeGreaterThan(REBIRTH_STARTER_EP);
   expect(rollbackMultiplier(0)).toBe(1);
   expect(rollbackMultiplier(1)).toBeCloseTo(1 + ROLLBACK_BONUS, 6);
-  expect(rollbackMultiplier(2)).toBe(rollbackMultiplier(1));
-  // The starting sums are cumulative: the Rollback's own sum lands once.
-  expect(cycleStarterEp(REBIRTH_TOTAL, 3, 1)).toBe(
-    REBIRTH_STARTER_EP * REBIRTH_TOTAL +
-      ULTRA_STARTER_EP * 3 +
-      ROLLBACK_STARTER_EP,
-  );
-  expect(cycleStarterEp(REBIRTH_TOTAL, 3, 2)).toBe(
-    cycleStarterEp(REBIRTH_TOTAL, 3, 1),
+  expect(rollbackMultiplier(2)).toBeCloseTo(1 + ROLLBACK_BONUS * 2, 6);
+  expect(rollbackMultiplier(10)).toBeCloseTo(1 + ROLLBACK_BONUS * 10, 6);
+  // The starting sums are the ladder's: a Rollback pays nothing extra, however
+  // many of them the account has taken.
+  expect(cycleStarterEp(REBIRTH_TOTAL, 3)).toBe(
+    REBIRTH_STARTER_EP * REBIRTH_TOTAL + ULTRA_STARTER_EP * 3,
   );
 });
 
-test("taking the Rollback restarts the run once, pays its sum, and is refused twice", () => {
+test("taking the Rollback restarts the run, and it can be taken again", () => {
   const ready = top({
     ultraRebirths: 3,
     owned: ["quickwind-1", "starfall"],
@@ -155,17 +147,17 @@ test("taking the Rollback restarts the run once, pays its sum, and is refused tw
   expect(after.rollbacks).toBe(1);
   expect(after.rebirths).toBe(REBIRTH_TOTAL);
   expect(after.ultraRebirths).toBe(3);
-  // The run restarts and Rollback pays its starting sum; the aura and its
-  // equipped look stay while the ordinary upgrade is handed back.
+  // The run restarts from zero; the aura and its equipped look stay while the
+  // ordinary upgrade is handed back. The wallet gets only the ladder's sum.
   expect(after.discovered).toEqual([]);
   expect(after.owned).toEqual(["starfall"]);
   expect(after.equipped).toBe("starfall");
-  expect(after.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 3, 1));
+  expect(after.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 3));
   expect(after.history.at(-1)).toMatchObject({
     id: "rb1",
     type: "rollback",
     count: 1,
-    grant: cycleStarterEp(REBIRTH_TOTAL, 3, 1),
+    grant: cycleStarterEp(REBIRTH_TOTAL, 3),
     cost: gate.ep,
   });
   // The bonus is permanent: it multiplies banked EP like every stage.
@@ -175,7 +167,7 @@ test("taking the Rollback restarts the run once, pays its sum, and is refused tw
       rollbackMultiplier(1),
     6,
   );
-  // A stale tab is refused, a second Rollback is refused, and so is a prestige.
+  // A stale tab is refused.
   expect(() =>
     applyProgress(ready, {
       type: "rollback",
@@ -183,20 +175,32 @@ test("taking the Rollback restarts the run once, pays its sum, and is refused tw
       at: 300000,
     }),
   ).toThrow(/older cycle/);
-  expect(() =>
-    applyProgress(after, {
-      type: "rollback",
-      expectedRollbacks: 1,
-      at: 400000,
-    }),
-  ).toThrow(/is taken/);
+  // A second Rollback is taken once the run meets the gate again, and it
+  // stacks on the first.
+  const again = applyProgress(
+    { ...top({ ultraRebirths: 3 }), rollbacks: 1, history: earned(gate.ep) },
+    { type: "rollback", expectedRollbacks: 1, at: 400000, eventId: "rb2" },
+  );
+  expect(again.rollbacks).toBe(2);
+  expect(again.history.at(-1)).toMatchObject({
+    id: "rb2",
+    type: "rollback",
+    count: 2,
+  });
+  expect(walletMultiplier(again)).toBeCloseTo(
+    rebirthMultiplier(REBIRTH_TOTAL) *
+      ultraRebirthMultiplier(3) *
+      rollbackMultiplier(2),
+    6,
+  );
+  // Prestige stays closed after a Rollback.
   expect(() =>
     applyProgress(after, {
       type: "ultra-rebirth",
       expectedUltraRebirths: 3,
       at: 400000,
     }),
-  ).toThrow(/Rollback ended the ladder/);
+  ).toThrow(/Prestige is closed/);
   // Two prestiges are not enough to take it.
   expect(() =>
     applyProgress(top({ ultraRebirths: 2 }), {
@@ -215,20 +219,20 @@ test("the Rollback's surplus pays the same dividend as a prestige's", () => {
     { type: "rollback", expectedRollbacks: 0, at: 300000 },
   );
   expect(after.balance).toBe(
-    cycleStarterEp(REBIRTH_TOTAL, 3, 1) + surplus.starterBonus,
+    cycleStarterEp(REBIRTH_TOTAL, 3) + surplus.starterBonus,
   );
   expect(after.surplusBanked).toBe(Math.round(surplus.bankedBonus * 100));
 });
 
-test("a save carries at most one Rollback, and its history entry is read back", () => {
+test("a save keeps every Rollback taken, and its history entry is read back", () => {
   const after = applyProgress(top({ ultraRebirths: 3 }), {
     type: "rollback",
     expectedRollbacks: 0,
     at: 300000,
   });
-  const forged = { ...JSON.parse(JSON.stringify(after)), rollbacks: 7 };
-  const parsed = parseProgress(JSON.stringify(forged));
-  expect(parsed.rollbacks).toBe(1);
+  const stacked = { ...JSON.parse(JSON.stringify(after)), rollbacks: 7 };
+  const parsed = parseProgress(JSON.stringify(stacked));
+  expect(parsed.rollbacks).toBe(7);
   expect(parsed.history.at(-1)).toMatchObject({ type: "rollback", count: 1 });
   // A save from before the Rollback existed simply has none.
   const legacy = JSON.parse(JSON.stringify(after));
@@ -271,22 +275,22 @@ const uiState = (extra = {}) => ({
   ...extra,
 });
 
-test("the Rollback button waits for three prestiges and says how many are left", async ({
+test("the Rollback is not shown at all until three prestiges are done", async ({
   page,
 }) => {
   await seedProgress(page, uiState({ ultraRebirths: 2 }));
   await page.goto("/#rebirth");
-  const rollback = page
-    .locator(".rebirth-page")
-    .getByRole("button", { name: "Rollback", exact: true });
-  await expect(rollback).toBeDisabled();
-  await expect(rollback).toHaveAttribute("title", /Reach 3 prestiges/);
-  await expect(page.locator(".rebirth-rollback-block")).toContainText(
-    "2 of 3 prestiges done",
-  );
+  await expect(page.locator(".rebirth-page")).toBeVisible();
+  await expect(
+    page
+      .locator(".rebirth-page")
+      .getByRole("button", { name: "Rollback", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator(".rebirth-rollback-block")).toHaveCount(0);
+  await expect(page.locator(".rebirth-page")).not.toContainText("Rollback");
 });
 
-test("the Rollback takes the run once, shows its ceremony and closes prestige", async ({
+test("the Rollback appears after the third prestige and takes the run", async ({
   page,
 }) => {
   await seedProgress(
@@ -306,12 +310,13 @@ test("the Rollback takes the run once, shows its ceremony and closes prestige", 
   await expect.poll(async () => (await saved(page)).rollbacks).toBe(1);
   expect((await saved(page)).owned).toEqual(auraIds);
   expect((await saved(page)).equipped).toBe("prism");
-  // Afterwards the page reads as finished: no prestige, no second Rollback.
+  // Afterwards the page shows the count, and the Rollback is still there for
+  // the next run. Prestige stays closed.
   await page.goto("/#rebirth");
   await expect(page.locator(".rebirth-hero h2")).toContainText(
-    "Rollback taken",
+    "1 Rollback taken",
   );
-  await expect(page.locator(".rebirth-legacy")).toContainText("Taken");
+  await expect(page.locator(".rebirth-legacy")).toContainText("1 taken");
   await expect(
     page
       .locator(".rebirth-page")
@@ -321,6 +326,37 @@ test("the Rollback takes the run once, shows its ceremony and closes prestige", 
     page
       .locator(".rebirth-page")
       .getByRole("button", { name: "Rollback", exact: true }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   await expect(page.locator(".ultra-mark")).toContainText("Rollback");
+});
+
+test("the Rollback can be taken again and again, each one stacking", async ({
+  page,
+}) => {
+  await seedProgress(
+    page,
+    uiState({
+      ultraRebirths: 3,
+      rollbacks: 1,
+      history: earned(gate.ep),
+    }),
+  );
+  await page.goto("/#rebirth");
+  const rollback = page
+    .locator(".rebirth-page")
+    .getByRole("button", { name: "Rollback", exact: true });
+  await expect(rollback).toBeEnabled();
+  await rollback.click();
+  await page.getByRole("button", { name: "Confirm Rollback" }).click();
+  await expect.poll(async () => (await saved(page)).rollbacks).toBe(2);
+  // The take ends on the activity page, so the rebirth page is read again.
+  await page.goto("/#rebirth");
+  await expect(page.locator(".rebirth-hero h2")).toContainText(
+    "2 Rollbacks taken",
+  );
+  await expect(
+    page
+      .locator(".rebirth-page")
+      .getByRole("button", { name: "Rollback", exact: true }),
+  ).toBeVisible();
 });

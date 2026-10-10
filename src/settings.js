@@ -1,11 +1,23 @@
 // Local, non-scoring preferences. Settings never touch randomness, EP, prices,
 // cooldown deadlines, or saved progress: they only change presentation and alerts.
+import gameIndex from "./data/game-index.json" with { type: "json" };
+
 export const SETTINGS_KEY = "rng-infinite-settings-v1";
+export const NOTIFICATION_RANKS = Object.freeze(
+  gameIndex.tiers.map(({ id }) => id),
+);
+
+export function rankMeetsMinimum(actualRank, minimumRank) {
+  const actual = NOTIFICATION_RANKS.indexOf(actualRank);
+  const minimum = NOTIFICATION_RANKS.indexOf(minimumRank);
+  return actual >= 0 && minimum >= 0 && actual >= minimum;
+}
 
 export const defaultSettings = {
   // Alerts
   notifyReady: false,
   notifySound: false,
+  notifyRank: null,
   // Presentation
   reduceMotion: "system", // "system" | "on" | "off"
   compactNumbers: false,
@@ -38,6 +50,8 @@ export function parseSettings(raw) {
   const next = { ...defaultSettings };
   for (const key of booleans)
     if (typeof value[key] === "boolean") next[key] = value[key];
+  if (NOTIFICATION_RANKS.includes(value.notifyRank))
+    next.notifyRank = value.notifyRank;
   // v0.2 saves stored the Flywheel meter toggle under its old name; the rack
   // that replaced it keeps the same preference.
   if (

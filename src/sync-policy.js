@@ -24,6 +24,24 @@ function stamp(value) {
 // the last save the room accepted, or the moment the change was made, whichever
 // is later. The step matters when the other device's clock runs ahead, so the
 // change still beats the save it would otherwise tie with.
+// A single stable writer prevents simultaneous actions from independent
+// browsers. Existing links without a declared owner elect one only after both
+// device IDs are known; until then they fail closed instead of splitting.
+export function chooseSyncOwner(devices = [], declaredOwners = []) {
+  const members = [
+    ...new Set(devices.filter((id) => typeof id === "string" && id)),
+  ];
+  const declared = [
+    ...new Set(declaredOwners.filter((id) => members.includes(id))),
+  ].sort();
+  if (declared.length) return declared[0];
+  return members.length > 1 ? members.sort()[0] : "";
+}
+
+export function isSyncWriter(device, ownerDevice) {
+  return !!device && !!ownerDevice && device === ownerDevice;
+}
+
 export function pendingStamp(savedAt, dirtyAt) {
   return Math.max(stamp(savedAt) + 1, stamp(dirtyAt));
 }

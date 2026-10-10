@@ -1499,8 +1499,9 @@ export default function Shop({
                   <SparkMark size={14} /> Companion &amp; rebirth skills
                 </h3>
                 <p>
-                  Earned, not bought: rebirth skills ride free and never
-                  take a slot, but companion skills do. Equip them here like any other skill.
+                  Earned, not bought: rebirth skills ride free and never take a
+                  slot, but companion skills do. Equip them here like any other
+                  skill.
                 </p>
                 <span className="free-skills-count">
                   {freeEquipped} of {freeSkills.length} equipped

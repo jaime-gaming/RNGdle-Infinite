@@ -14,7 +14,7 @@ import {
 import "../skills.css";
 
 // Every circle on the rack is the same size: a plain skill, an always-on bonus
-// and a family alike. CSS shrinks them together on a phone (see skills.css).
+// and a family alike. CSS packs them into a horizontal dock on a phone.
 const CIRCLE_SIZE = 42;
 // A family draws its slices on that one circle with a heavier stroke than a
 // plain ring, so the group reads as a group without growing.
@@ -316,15 +316,15 @@ function GroupCircles({ stackId, label, tint, icon, members, firingSet }) {
   );
 }
 
-// The rack that lives in the corner of the Roll page.
+// The rack that lives in the Roll page: a desktop corner rail and a phone dock.
 //
-// Three kinds of circle share one column: charged skills (fill over online
+// Three kinds of circle share one rack: charged skills (fill over online
 // rolls, fire on the next one), Flywheel, and the Auto-Roll switch, which is
 // simply an ability you click on or off. Related circles ride together — the
 // pet bonus with its signature skill, the rebirth bonuses with their ladder
-// skills — while shop skills stand alone. The column also carries the single
-// indicator of what the rack adds up to — the totals the next roll will get,
-// with every contribution named.
+// skills — while shop skills stand alone. The rack also carries the single
+// indicator of what it adds up to — the totals the next roll will get, with
+// every contribution named.
 export default function SkillBar({
   progress,
   firing = [],
