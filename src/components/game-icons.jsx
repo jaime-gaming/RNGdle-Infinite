@@ -177,6 +177,14 @@ export const SpeedMark = (props) => (
   </Mark>
 );
 
+// The Task Skip: two opposing arrows, one task swapped for the next.
+export const SkipMark = (props) => (
+  <Mark {...props}>
+    <path d="M4.2 8.6h11.4M12.2 5.4l3.4 3.2-3.4 3.2" />
+    <path d="M19.8 15.4H8.4M11.8 12.2l-3.4 3.2 3.4 3.2" />
+  </Mark>
+);
+
 export const ClockMark = (props) => (
   <Mark {...props}>
     <circle cx="12" cy="12" r="6.6" />
@@ -502,6 +510,41 @@ export const InkblotMark = (props) => (
       className="tone"
       d="M12 9.9a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4Z"
     />
+  </Mark>
+);
+
+// R4ND0MN3S5: four marks for things that are random by nature.
+export const StaticMark = (props) => (
+  <Mark {...props}>
+    <rect x="4.2" y="4.2" width="15.6" height="15.6" rx="2.6" />
+    <path d="M7.4 7.8h2.6M12.2 7.8h4.4M7.4 11.8h.1M10.4 11.8h3.2M15.8 11.8h.1M7.4 15.8h3.4M13.4 15.8h3.2" />
+    <path className="tone" d="M14.6 14.6h1.2v1.2h-1.2Z" />
+  </Mark>
+);
+
+export const BitStormMark = (props) => (
+  <Mark {...props}>
+    <path d="M4.6 8.2 6.2 6.6v10.8M4.2 17.4h4" />
+    <rect x="9.6" y="6.6" width="4.8" height="10.8" rx="2.4" />
+    <path d="M16.8 8.2 18.4 6.6v10.8M16.4 17.4h4" />
+  </Mark>
+);
+
+export const ScrambleMark = (props) => (
+  <Mark {...props}>
+    <rect x="4.2" y="4.2" width="15.6" height="15.6" rx="3.6" />
+    <circle cx="8.6" cy="8.6" r="1" className="tone" />
+    <circle cx="15.4" cy="8.6" r="1" />
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="8.6" cy="15.4" r="1" />
+    <circle cx="15.4" cy="15.4" r="1" className="tone" />
+  </Mark>
+);
+
+export const HexDumpMark = (props) => (
+  <Mark {...props}>
+    <path d="M9.6 4.4 7.8 19.6M16.2 4.4l-1.8 15.2M4.8 9.4h14.4M4.4 14.6h14.4" />
+    <path className="tone" d="M16.6 16.6h3.4v3.4h-3.4Z" />
   </Mark>
 );
 

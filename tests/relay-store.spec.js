@@ -1,6 +1,14 @@
 import { test, expect } from "@playwright/test";
 import { createServer } from "node:http";
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createSyncRelay, beats } from "../tools/sync-relay.mjs";
@@ -168,6 +176,96 @@ test("a room outlives the relay: a device that returns later is caught up", asyn
   }
 });
 
+test("a failed room write is reported and leaves the last durable save in place", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "rngdle-relay-"));
+  const store = path.join(root, "rooms");
+  const moved = path.join(root, "rooms-preserved");
+  let host;
+  try {
+    host = await startRelay({ storeDir: store });
+    const room = await create(host.base);
+    const first = await push(host.base, room, {
+      state: JSON.stringify({ version: "durable" }),
+      savedAt: 100,
+    });
+    expect(first.body.ok).toBe(true);
+
+    // Replace the directory with a regular file to force the next atomic store
+    // write to fail, including on environments where chmod is ineffective.
+    await rename(store, moved);
+    await writeFile(store, "not a directory", "utf8");
+    const failed = await push(host.base, room, {
+      state: JSON.stringify({ version: "not-durable" }),
+      savedAt: 200,
+    });
+    expect(failed.status).toBe(500);
+    expect(failed.body).toEqual({ error: "relay-error" });
+    expect(host.relay.rooms.get(room.room).latest.savedAt).toBe(100);
+
+    await unlink(store);
+    await rename(moved, store);
+    await host.close();
+    host = null;
+
+    const fresh = await startRelay({ storeDir: store });
+    try {
+      expect(JSON.parse((await hello(fresh.base, room)).latest.state)).toEqual({
+        version: "durable",
+      });
+    } finally {
+      await fresh.close();
+    }
+  } finally {
+    await host?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a room is not announced or retained in memory when its first write fails", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "rngdle-relay-"));
+  const blockedStore = path.join(root, "not-a-directory");
+  await writeFile(blockedStore, "blocker", "utf8");
+  try {
+    const host = await startRelay({ storeDir: blockedStore });
+    try {
+      const response = await fetch(`${host.base}/create`, { method: "POST" });
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: "relay-error" });
+      expect(host.relay.rooms.size).toBe(0);
+    } finally {
+      await host.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("parallel writes to one room persist the highest accepted stamp", async () => {
+  const store = await mkdtemp(path.join(tmpdir(), "rngdle-relay-"));
+  let host;
+  try {
+    host = await startRelay({ storeDir: store });
+    const room = await create(host.base);
+    const updates = await Promise.all(
+      Array.from({ length: 12 }, (_, sequence) =>
+        push(host.base, room, {
+          state: JSON.stringify({ sequence, padding: "x".repeat(120_000) }),
+          savedAt: sequence + 1,
+        }),
+      ),
+    );
+    expect(updates.every((update) => update.status === 200)).toBe(true);
+    const saved = JSON.parse(
+      await readFile(path.join(store, `${room.room}.json`), "utf8"),
+    );
+    expect(saved.latest.savedAt).toBe(12);
+    expect(JSON.parse(saved.latest.state).sequence).toBe(11);
+  } finally {
+    await host?.close();
+    await rm(store, { recursive: true, force: true });
+  }
+});
+
 test("a wrong key is refused and an abandoned room is swept away", async () => {
   const store = await mkdtemp(path.join(tmpdir(), "rngdle-relay-"));
   try {
@@ -246,6 +344,36 @@ test("with no store the relay is a memory-only room, and health says so", async 
     expect(pushed.body.ok).toBe(true);
     const late = await hello(host.base, room);
     expect(JSON.parse(late.latest.state)).toEqual({ n: 1 });
+  } finally {
+    await host.close();
+  }
+});
+
+test("a memory-only room outlives the device that wrote it, and only goes after a month untouched", async () => {
+  const host = await startRelay({ storeDir: null });
+  try {
+    const room = await create(host.base);
+    const pushed = await push(host.base, room, {
+      state: JSON.stringify({ n: 2 }),
+      savedAt: 2_000_000,
+    });
+    expect(pushed.body.ok).toBe(true);
+    // A device listens for a moment and leaves. Nothing is swept on a timer, so
+    // the room is still there for the other device to catch up from.
+    await hello(host.base, room);
+    expect(host.relay.rooms.has(room.room)).toBe(true);
+    const late = await hello(host.base, room);
+    expect(JSON.parse(late.latest.state)).toEqual({ n: 2 });
+    // Opening the room counts as using it; a day later it is still kept.
+    host.relay.reap(Date.now() + 24 * 60 * 60_000);
+    expect(host.relay.rooms.has(room.room)).toBe(true);
+    // A month without anybody touching it is the only thing that forgets it.
+    // The listener's departure is seen by the relay a moment after it leaves.
+    await expect
+      .poll(() => host.relay.rooms.get(room.room)?.members.size)
+      .toBe(0);
+    host.relay.reap(Date.now() + 31 * 24 * 60 * 60_000);
+    expect(host.relay.rooms.has(room.room)).toBe(false);
   } finally {
     await host.close();
   }

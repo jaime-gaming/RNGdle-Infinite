@@ -7,35 +7,67 @@ import { SKILL_MAX_DRAWS, drawPicksFor } from "./skills.js";
 // number the roll commits and shows; the others are paid and recorded beside
 // it rather than thrown away.
 //
+// A live roll with a draw skill also makes one ordinary draw of its own, after
+// the skills'. That number is a plain draw and can win like any other; the
+// skill numbers stay paid whether they win or not.
+//
 // `roll` draws one uniform number and `score` re-reads it from the verified
 // index, so nothing here can invent EP, bias a draw or edit a number: it only
 // chooses between numbers the player genuinely rolled.
-export async function runDrawPicks(picks, roll, score) {
+export async function runDrawPicks(
+  picks,
+  roll,
+  score,
+  { ordinary = false } = {},
+) {
   const draws = [];
   const kept = [];
   let best = null;
+  let winnerSkill = null;
+  let winnerIndex = null;
   for (const pick of picks) {
     const attempts = Math.min(
       pick.attempts ?? 1,
       SKILL_MAX_DRAWS - draws.length,
     );
     let bestHere = null,
+      bestHereIndex = null,
       spent = 0;
     for (let attempt = 0; attempt < attempts; attempt++) {
       spent++;
       const number = await roll();
+      const drawIndex = draws.length;
       draws.push(number);
       const scored = await score(number);
-      if (!bestHere || scored.totalEP > bestHere.totalEP) bestHere = scored;
+      if (!bestHere || scored.totalEP > bestHere.totalEP) {
+        bestHere = scored;
+        bestHereIndex = drawIndex;
+      }
       // A floor skill stops the moment a draw is good enough; the rest of its
       // own budget is never spent, and the next skill starts drawing again.
       if (pick.floor > 0 && scored.totalEP >= pick.floor) break;
     }
     if (!bestHere) continue;
     kept.push({ skill: pick.id, number: bestHere.number, spent });
-    if (!best || bestHere.totalEP > best.totalEP) best = bestHere;
+    if (!best || bestHere.totalEP > best.totalEP) {
+      best = bestHere;
+      winnerSkill = pick.id;
+      winnerIndex = bestHereIndex;
+    }
   }
-  return { draws, result: best, picks: kept };
+  if (ordinary) {
+    const number = await roll();
+    const drawIndex = draws.length;
+    draws.push(number);
+    const scored = await score(number);
+    // Ties keep the skill's number: the plain draw has to beat it outright.
+    if (!best || scored.totalEP > best.totalEP) {
+      best = scored;
+      winnerSkill = null;
+      winnerIndex = drawIndex;
+    }
+  }
+  return { draws, result: best, picks: kept, winnerSkill, winnerIndex };
 }
 
 // One budget, one number: the shape a single draw skill has always had, and

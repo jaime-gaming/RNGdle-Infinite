@@ -1,6 +1,7 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import {
   productById,
+  productPrice,
   offlineSettings,
   ROLL_DURATIONS,
   COOLDOWN_DURATIONS,
@@ -18,6 +19,9 @@ import {
   ultraRebirthBlocker,
   nextRebirthSkill,
   ultraRebirthMultiplier,
+  rollbackBlocker,
+  rollbackMultiplier,
+  rollbackRequirement,
   cycleStarterEp,
   cycleEarnedEp,
   rebirthRequirement,
@@ -49,6 +53,42 @@ import {
 } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { parseOffline } from "./offline.js";
+import {
+  capHistory,
+  HISTORY_LIMIT,
+  HISTORY_WARNING,
+  pruneCycle,
+  pruneOldest,
+} from "./history-log.js";
+import {
+  archiveRemoved,
+  parseRemovedTotals,
+  tallyEntries,
+} from "./history-tally.js";
+import {
+  auraEventAuraIds,
+  claimAuraEvent,
+  CADENCE_NAME,
+  claimListBonus,
+  claimTask,
+  EPIC_OR_BETTER,
+  emptyTasks,
+  LIST_BONUS,
+  MYTHIC_OR_BETTER,
+  parseTasks,
+  periodKey,
+  RARE_OR_BETTER,
+  recordEventTaskClaim,
+  recordTally,
+  SKIP_HOLD_LIMIT,
+  boughtSkip,
+  skipStatus,
+  skipTask,
+  taskById,
+  TASK_CADENCES,
+  waitText,
+} from "./tasks.js";
+export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 // Guests have no saved account, so the one thing worth protecting — the roll
 // they already committed and its deadline — lives in sessionStorage under this
@@ -63,6 +103,9 @@ export const PRE_REPAIR_BACKUP_KEY = "rng-infinite-progress-pre-repair-v1";
 export const LOADOUT_LIMIT = 4;
 const badgeIds = new Set(metadata.map((b) => b.id));
 const validAmount = (n) => Number.isSafeInteger(n) && n >= 0;
+// The settled rolls the save remembers by id. Older rolls leave the list; the
+// watermark (receiptFloor) is what still refuses a copy of one of them.
+const RECEIPT_LIMIT = 128;
 
 // Closest legal amount to a stored value: whole EP figures stay untouched,
 // finite non-negative numbers are truncated into range, and anything else
@@ -95,8 +138,8 @@ function freshProfileId() {
   }
 }
 
-// The wallet multiplier of a settled roll: companions, rebirth and
-// ultra-rebirth bonuses, and any wallet skill that fired. It only ever scales
+// The wallet multiplier of a settled roll: companions, rebirth, prestige and
+// Rollback bonuses, and any wallet skill that fired. It only ever scales
 // the EP that reaches the wallet — the scored roll, its tier and its rank
 // never move.
 export function walletMultiplier(
@@ -107,6 +150,7 @@ export function walletMultiplier(
     petMultiplier(progress.activePet) *
     rebirthMultiplier(progress.rebirths ?? 0) *
     ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
+    rollbackMultiplier(progress.rollbacks ?? 0) *
     surplusMultiplier(progress.surplusBanked ?? 0) *
     skillWalletMultiplier(skillIds ?? [])
   );
@@ -123,15 +167,11 @@ function firedSkills(state, id, source) {
 
 // The activity log is the account's story, so a new cycle never clears it:
 // rebirths, rolls, purchases and unlocks from every past cycle stay readable.
-// It is capped instead — the oldest entries go first, and only for accounts
-// long enough to have collected thousands of them, so the save cannot outgrow
-// the browser's storage.
-export const HISTORY_LIMIT = 5000;
+// Entries are only ever appended here. The cap is applied once, in
+// applyProgress, so every action makes room the same way: the oldest entries
+// that are neither cycle markers nor bookmarked rolls go first.
 function appendHistory(history, events = []) {
-  const merged = [...(history ?? []), ...events];
-  return merged.length > HISTORY_LIMIT
-    ? merged.slice(merged.length - HISTORY_LIMIT)
-    : merged;
+  return [...(history ?? []), ...events];
 }
 
 // Equipping is free. A newly unlocked skill takes a free slot instead of
@@ -161,7 +201,10 @@ export function emptyProgress() {
     equipped: "none",
     cooldownUntil: 0,
     receipts: [],
+    receiptFloor: 0,
     history: [],
+    // What has left the log, one tally per cycle (see history-tally.js).
+    removedTotals: [],
     cycleEarnedEP: 0,
     pendingRoll: null,
     offline: null,
@@ -169,6 +212,7 @@ export function emptyProgress() {
     goalId: null,
     rebirths: 0,
     ultraRebirths: 0,
+    rollbacks: 0,
     surplusBanked: 0,
     cooldownWindow: null,
     pets: [],
@@ -178,6 +222,7 @@ export function emptyProgress() {
     skillCharge: {},
     loadouts: [],
     bookmarks: [],
+    tasks: emptyTasks(),
   };
 }
 
@@ -311,7 +356,13 @@ export function parseAndRepairProgress(raw) {
   const ultraRebirths = repairAmount(p.ultraRebirths ?? 0);
   if ((p.ultraRebirths ?? 0) !== ultraRebirths)
     note(
-      `ultra-rebirth count was ${describeStored(p.ultraRebirths)}, so it was set to ${ultraRebirths}.`,
+      `prestige count was ${describeStored(p.ultraRebirths)}, so it was set to ${ultraRebirths}.`,
+    );
+  // The Rollback is one per account, so its count can only be 0 or 1.
+  const rollbacks = Math.min(1, repairAmount(p.rollbacks ?? 0));
+  if ((p.rollbacks ?? 0) !== rollbacks)
+    note(
+      `Rollback count was ${describeStored(p.rollbacks)}, so it was set to ${rollbacks}.`,
     );
   const surplusBanked = Math.min(repairAmount(p.surplusBanked ?? 0), 100);
   if ((p.surplusBanked ?? 0) !== surplusBanked)
@@ -347,6 +398,25 @@ export function parseAndRepairProgress(raw) {
       `${dropped} activity-log ${dropped === 1 ? "entry was" : "entries were"} unreadable and ${dropped === 1 ? "was" : "were"} removed.`,
     );
   }
+  // What bulk delete or the cap took out of the log is kept as per-cycle
+  // tallies, so the profile still counts it. An unreadable tally is reset.
+  const removedRead = parseRemovedTotals(p.removedTotals);
+  if (removedRead.repaired)
+    note(
+      "some profile totals from removed activity were unreadable, so they were reset.",
+    );
+  const removedTotals = removedRead.totals;
+  // Task progress belongs to the save alone, so an unreadable slot is simply
+  // reset: nothing else in the save can vouch for it.
+  const tasksRead = parseTasks(p.tasks);
+  if (tasksRead.repaired)
+    note("task progress was unreadable, so it was reset.");
+  // A completed transmission is the receipt for its four permanent aura
+  // unlocks, so keep them in the wardrobe even if an older save lost the
+  // corresponding owned-list entries.
+  for (const id of auraEventAuraIds(tasksRead.tasks))
+    if (productById.get(id)?.kind === "aura" && !owned.includes(id))
+      owned.push(id);
   // Lists that the rest of the save can vouch for are rebuilt from it: the
   // activity log remembers every companion found or bought, and purchases
   // plus rebirths re-unlock every skill. Nothing else can vouch for a wallet
@@ -354,13 +424,11 @@ export function parseAndRepairProgress(raw) {
   let petsInput = p.pets;
   if (p.pets != null && !Array.isArray(p.pets)) {
     note("companion list was unreadable, so it was rebuilt from your history.");
-    petsInput = history.flatMap((event) =>
-      event.type === "pet"
-        ? [event.productId]
-        : event.type === "purchase" && petById.has(event.productId)
-          ? [event.productId]
-          : [],
-    );
+    // Companions found or bought in entries that were since removed still count.
+    petsInput = [
+      ...tallyEntries(history).pets,
+      ...removedTotals.flatMap((tally) => tally?.pets ?? []),
+    ];
   }
   const pets = [
     ...new Set((petsInput ?? []).filter((id) => petById.has(id))),
@@ -469,6 +537,7 @@ export function parseAndRepairProgress(raw) {
   const progress = {
     version: 1,
     history,
+    removedTotals,
     cycleEarnedEP: cycleEarnedEp({
       history,
       ...(cycleOverride != null ? { cycleEarnedEP: cycleOverride } : {}),
@@ -481,11 +550,12 @@ export function parseAndRepairProgress(raw) {
     ),
     rebirths,
     ultraRebirths,
+    rollbacks,
     surplusBanked,
     offline,
     flywheelCharge,
     profile,
-    goalId: validGoal(p.goalId, owned) ? p.goalId : null,
+    goalId: validGoal(p.goalId, owned, pets) ? p.goalId : null,
     balance,
     totalEarned,
     discovered: [...new Set(p.discovered.filter((id) => badgeIds.has(id)))],
@@ -500,13 +570,15 @@ export function parseAndRepairProgress(raw) {
     equippedSkills,
     loadouts: parseLoadouts(p.loadouts),
     bookmarks: parseBookmarks(p.bookmarks, history),
+    tasks: tasksRead.tasks,
     skillCharge,
     cooldownUntil,
     receipts: [
       ...new Set(
         p.receipts.filter((id) => typeof id === "string" && id.length <= 100),
       ),
-    ].slice(-128),
+    ].slice(-RECEIPT_LIMIT),
+    receiptFloor: validAmount(p.receiptFloor) ? p.receiptFloor : 0,
   };
   return { progress, repairs };
 }
@@ -548,20 +620,22 @@ function parseAvatar(value) {
   return validAvatar(value) ? value : "";
 }
 
-// What a new cycle hands back, shared by a rebirth and an ultra-rebirth.
+// What a new cycle hands back, shared by a rebirth, a prestige and the Rollback.
 //
-// A cycle restarts the run, not the account: the badge collection, everything
-// the wallet bought — upgrades, auras, tools and shop skills —, the companions
-// and the EP in the wallet start over. What the account *did* is never undone:
-// the activity history, the rebirth and ultra-rebirth counters with their
-// permanent bonuses, the skills the ladder already granted, the all-time EP
-// earned and the profile all stay.
+// A cycle restarts the run, not the account: the badge collection, non-aura
+// purchases, companions and wallet start over. Every owned aura is part of the
+// lasting collection, so it stays equipped or in the wardrobe. What the
+// account *did* is never undone: the activity history, rebirth, prestige and
+// Rollback counters with their permanent bonuses, ladder skills, all-time EP
+// and profile all stay.
 //
 // `granted` is the ladder skill this rebirth pays, which is earned rather than
 // bought and so joins the skills that survived, and `starter` is the EP the new
-// cycle begins with — paid by the rungs and ultra-rebirths the account keeps.
+// cycle begins with — paid by the rungs, prestiges and Rollback the account keeps.
 function startNewCycle(state, { granted = null, starter = 0 } = {}) {
-  const owned = [];
+  const owned = [...new Set(state.owned ?? [])].filter(
+    (id) => productById.get(id)?.kind === "aura",
+  );
   // Shop skills are purchases: they go back on the stall. Ladder skills were
   // paid for by the rebirths the cycle keeps, so they stay unlocked.
   const kept = (state.skills ?? []).filter(
@@ -597,10 +671,11 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
     balance: starter,
     totalEarned: state.totalEarned + starter,
     discovered: [],
-    equipped: "none",
+    equipped: owned.includes(state.equipped) ? state.equipped : "none",
     // The tracked goal is a preference, not a reward: it survives when it is
-    // still reachable from an empty workshop.
-    goalId: validGoal(state.goalId, owned) ? state.goalId : null,
+    // still reachable from an empty workshop. Companions go back in the wild
+    // at a rebirth too, so a companion goal is reachable again.
+    goalId: validGoal(state.goalId, owned, []) ? state.goalId : null,
     flywheelCharge: 0,
     // Offline earnings are a tool, and the tool was handed back.
     offline: null,
@@ -613,7 +688,153 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
     loadouts: [],
   };
 }
+// Every action goes through here, so the log is capped the same way for all of
+// them. Only an action that actually changed the save can grow the log.
+// A repeatable product is bought again and again, and every purchase adds a use
+// instead of ownership, so it never enters the owned list. The Task Skip is the
+// only one: one purchase a day, and no more than three in any five days, on the
+// game clock, so a stack of uses cannot be bought in one sitting.
+function buyTaskSkip(state, item, action) {
+  const at = action.at ?? Math.ceil(Date.now());
+  if (!validAmount(at) || at > 8640000000000000)
+    throw new Error("Invalid purchase time");
+  const status = skipStatus(state.tasks, at);
+  const price = productPrice(item, at);
+  if (status.tokens >= SKIP_HOLD_LIMIT)
+    throw new Error(
+      `You already hold ${SKIP_HOLD_LIMIT} Task Skips. Use one first. No EP was spent.`,
+    );
+  if (status.waitMs > 0)
+    throw new Error(
+      `The next Task Skip is available in ${waitText(status.waitMs)}. No EP was spent.`,
+    );
+  if (state.balance < price) throw new Error("Not enough EP for this item.");
+  const tasks = state.tasks ?? emptyTasks();
+  return {
+    ...state,
+    history: appendHistory(state.history, [
+      {
+        id: action.eventId ?? `buy:${item.id}:${at}`,
+        type: "purchase",
+        at,
+        productId: item.id,
+        name: item.name,
+        ep: price,
+      },
+    ]),
+    balance: state.balance - price,
+    tasks: {
+      ...tasks,
+      skip: boughtSkip(state.tasks, at),
+    },
+  };
+}
+
+// Collected event missions unlock their matching aura as an ordinary wardrobe
+// item. The mission receipt restores that owned-list entry after a save repair.
+function grantEventAuras(state, tasks) {
+  const earned = auraEventAuraIds(tasks).filter(
+    (id) => productById.get(id)?.kind === "aura",
+  );
+  const current = state.owned ?? [];
+  const additions = earned.filter((id) => !current.includes(id));
+  return {
+    ...state,
+    tasks,
+    ...(additions.length
+      ? {
+          owned: [...current, ...additions],
+          // Match a normal aura purchase: the first one is shown straight away,
+          // while later mission rewards never replace a player's choice.
+          equipped:
+            (state.equipped ?? "none") === "none"
+              ? additions[0]
+              : state.equipped,
+          goalId: additions.includes(state.goalId)
+            ? null
+            : (state.goalId ?? null),
+        }
+      : {}),
+  };
+}
+
+// Pays one finished task of a cadence into the wallet, logged as income with the
+// name it had when paid, like any other task reward. The list bonus is not paid
+// here: finishing the list only unlocks it, and collectBonus pays it.
+function payTask(state, task, at, eventId = null) {
+  let tasks = claimTask(state.tasks ?? emptyTasks(), task, at);
+  tasks = recordEventTaskClaim(tasks, at);
+  const balance = state.balance + task.reward;
+  const totalEarned = state.totalEarned + task.reward;
+  if (!validAmount(balance) || !validAmount(totalEarned))
+    throw new Error("EP balance limit reached.");
+  return grantEventAuras(
+    {
+      ...state,
+      balance,
+      totalEarned,
+      history: appendHistory(state.history, [
+        {
+          id: eventId ?? `task:${task.id}:${periodKey(task.cadence, at)}`,
+          type: "task",
+          at,
+          taskId: task.id,
+          cadence: task.cadence,
+          name: task.title,
+          ep: task.reward,
+        },
+      ]),
+    },
+    tasks,
+  );
+}
+
+// Pays the list bonus of one cadence once every task on its list is claimed. It
+// is logged as a task line, and never counts towards a rebirth.
+function collectBonus(state, cadence, at, eventId = null) {
+  const tasks = claimListBonus(state.tasks ?? emptyTasks(), cadence, at);
+  const paid = LIST_BONUS[cadence];
+  const balance = state.balance + paid;
+  const totalEarned = state.totalEarned + paid;
+  if (!validAmount(balance) || !validAmount(totalEarned))
+    throw new Error("EP balance limit reached.");
+  return {
+    ...state,
+    tasks,
+    balance,
+    totalEarned,
+    history: appendHistory(state.history, [
+      {
+        id: eventId ?? `bonus:${cadence}:${periodKey(cadence, at)}`,
+        type: "task",
+        at,
+        taskId: `${cadence}-list`,
+        cadence,
+        name: `${CADENCE_NAME[cadence]} list bonus`,
+        ep: paid,
+      },
+    ]),
+  };
+}
+
 export function applyProgress(state, action) {
+  const next = applyEvent(state, action);
+  if (next === state || !Array.isArray(next.history)) return next;
+  if (next.history.length <= HISTORY_LIMIT) return next;
+  // What the cap trims out of the log is kept in the profile's totals.
+  const cut = capHistory(next.history, next.bookmarks);
+  return {
+    ...next,
+    history: cut.history,
+    removedTotals: archiveRemoved(
+      next.removedTotals,
+      next.history,
+      cut.removed,
+    ),
+  };
+}
+
+function applyEvent(state, action) {
   if (action.type === "rebirth") {
     const count = state.rebirths ?? 0;
     if (action.expectedRebirths !== count)
@@ -634,15 +855,17 @@ export function applyProgress(state, action) {
     const gate = rebirthRequirement(count);
     const surplus = rebirthSurplus(cycleEarnedEp(state), gate.ep);
     const starter =
-      cycleStarterEp(count + 1, state.ultraRebirths ?? 0) +
-      surplus.starterBonus;
+      cycleStarterEp(
+        count + 1,
+        state.ultraRebirths ?? 0,
+        state.rollbacks ?? 0,
+      ) + surplus.starterBonus;
     // The rung's price — badges and the EP this cycle earned — is written into
     // the log entry, so the history can say what a cycle was bought with.
     const cost = gate;
-    // The run starts over — collection, everything bought, companions and the
-    // wallet — while the account keeps its history, its rebirths and every
-    // bonus it earned. Receipts stay too, so a roll from an earlier cycle can
-    // never be settled twice into the new one.
+    // The run starts over — collection, non-aura purchases, companions and the
+    // wallet — while every owned aura and account record stays. Receipts stay
+    // too, so a roll from an earlier cycle can never settle into the new one.
     return {
       ...startNewCycle(state, { granted, starter }),
       profile: state.profile,
@@ -666,24 +889,24 @@ export function applyProgress(state, action) {
     const count = state.ultraRebirths ?? 0;
     if (action.expectedUltraRebirths !== count)
       throw new Error(
-        "This ultra-rebirth belongs to an older cycle. Reload and try again.",
+        "This prestige belongs to an older cycle. Reload and try again.",
       );
     const now = action.at ?? Math.ceil(Date.now());
     if (!validAmount(now) || now > 8640000000000000)
-      throw new Error("Invalid ultra-rebirth time");
+      throw new Error("Invalid prestige time");
     const blocked = ultraRebirthBlocker(state, now);
     if (blocked) throw new Error(blocked);
-    if (!validAmount(count + 1))
-      throw new Error("Ultra-rebirth limit reached.");
+    if (!validAmount(count + 1)) throw new Error("Prestige limit reached.");
     // The same fresh start a rebirth gives, taken at the top of the ladder
     // with half the collection in hand. It costs the run, never the account:
-    // history, rebirths, ladder skills and every permanent bonus stay, and the
-    // ultra-rebirth adds ten more points forever.
+    // history, aura collection, rebirths, ladder skills and every permanent
+    // bonus stay, and the prestige adds ten more points forever.
     // The same overshoot dividend as a rung: the ultra gate is a floor too.
     const ultraCost = ultraRebirthRequirement();
     const surplus = rebirthSurplus(cycleEarnedEp(state), ultraCost.ep);
     const starter =
-      cycleStarterEp(state.rebirths ?? 0, count + 1) + surplus.starterBonus;
+      cycleStarterEp(state.rebirths ?? 0, count + 1, state.rollbacks ?? 0) +
+      surplus.starterBonus;
     const cost = ultraCost;
     return {
       ...startNewCycle(state, { starter }),
@@ -703,8 +926,46 @@ export function applyProgress(state, action) {
       ]),
     };
   }
+  if (action.type === "rollback") {
+    const rollbacks = state.rollbacks ?? 0;
+    if (action.expectedRollbacks !== rollbacks)
+      throw new Error(
+        "This Rollback belongs to an older cycle. Reload and try again.",
+      );
+    const now = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(now) || now > 8640000000000000)
+      throw new Error("Invalid Rollback time");
+    const blocked = rollbackBlocker(state, now);
+    if (blocked) throw new Error(blocked);
+    // The last stage of the game. It starts the run over exactly like a
+    // prestige, but it pays the largest starting sum and the largest permanent
+    // bonus, and it can be taken once: the count only ever goes from 0 to 1.
+    // Like every other stage it costs the run, never the account.
+    const rollbackCost = rollbackRequirement();
+    const surplus = rebirthSurplus(cycleEarnedEp(state), rollbackCost.ep);
+    const starter =
+      cycleStarterEp(state.rebirths ?? 0, state.ultraRebirths ?? 0, 1) +
+      surplus.starterBonus;
+    return {
+      ...startNewCycle(state, { starter }),
+      profile: state.profile,
+      rollbacks: 1,
+      surplusBanked:
+        (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
+      history: appendHistory(state.history, [
+        {
+          id: action.eventId ?? "rollback:1",
+          type: "rollback",
+          at: now,
+          count: 1,
+          ...(starter ? { grant: starter } : {}),
+          ...(rollbackCost ? { cost: rollbackCost.ep } : {}),
+        },
+      ]),
+    };
+  }
   if (action.type === "goal") {
-    if (action.id !== null && !validGoal(action.id, state.owned))
+    if (action.id !== null && !validGoal(action.id, state.owned, state.pets))
       throw new Error(
         "Choose an unowned item with its prerequisites unlocked.",
       );
@@ -725,6 +986,79 @@ export function applyProgress(state, action) {
         `You can keep up to ${BOOKMARK_LIMIT} bookmarked rolls. Remove one first.`,
       );
     return { ...state, bookmarks: [...bookmarks, id] };
+  }
+  // A Task Skip uses one token from the save to swap an open task on the list.
+  // The token was bought in the Shop; using it costs no EP and is not logged,
+  // because it changes what you are asked to do, not what you have paid.
+  if (action.type === "skip-task") {
+    const task = taskById(action.id);
+    if (!task) throw new Error("That task does not exist.");
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid task time");
+    return { ...state, tasks: skipTask(state.tasks, task, at) };
+  }
+  // Completing an event mission makes its aura collectible on Tasks. The
+  // collection stays open for missions completed before the event ended.
+  if (action.type === "claim-event-aura") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid event claim time");
+    const tasks = claimAuraEvent(state.tasks ?? emptyTasks(), action.id);
+    return grantEventAuras(state, tasks);
+  }
+  // A task pays its reward into the wallet once per reset. It is a reward for
+  // play, not a sale, so it is logged as income and never counts towards the
+  // rebirth gate, which reads only rolls. Finishing the last task of a list only
+  // unlocks its bonus: the bonus has its own action, below.
+  if (action.type === "claim-task") {
+    const task = taskById(action.id);
+    if (!task) throw new Error("That task does not exist.");
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid task time");
+    return payTask(state, task, at, action.eventId);
+  }
+  // The list bonus of a finished list, collected on its own from the Tasks page.
+  // It pays once per reset, and only when every task on the list is claimed.
+  if (action.type === "collect-list-bonus") {
+    if (!TASK_CADENCES.includes(action.cadence))
+      throw new Error("That task list does not exist.");
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid task time");
+    return collectBonus(state, action.cadence, at, action.eventId);
+  }
+  // Bulk delete from History. The cut is worked out here, from the save as it
+  // is now, so a stale screen can never remove the wrong entries. Cycle markers
+  // and bookmarked rolls are never part of a cut.
+  if (action.type === "history-prune") {
+    const bookmarks = state.bookmarks ?? [];
+    const history = state.history ?? [];
+    const cut =
+      action.mode === "cycle"
+        ? pruneCycle(
+            history,
+            bookmarks,
+            typeof action.marker === "string" ? action.marker : "",
+          )
+        : action.mode === "oldest" &&
+            Number.isSafeInteger(action.count) &&
+            action.count >= 1
+          ? pruneOldest(
+              history,
+              bookmarks,
+              Math.min(action.count, HISTORY_LIMIT),
+            )
+          : null;
+    if (!cut)
+      throw new Error("Choose a finished cycle or a number of entries.");
+    // What leaves the log is kept in the profile's totals, not forgotten.
+    return {
+      ...state,
+      history: cut.history,
+      removedTotals: archiveRemoved(state.removedTotals, history, cut.removed),
+    };
   }
   if (action.type === "avatar") {
     if (!state.profile) throw new Error("Create a local profile first.");
@@ -796,6 +1130,18 @@ export function applyProgress(state, action) {
       state.history?.some((e) => e.id === id && e.type === "roll")
     )
       return state;
+    // Once the receipts have started forgetting, the newest forgotten roll sets
+    // a watermark: a settlement timed at or before it that is no longer
+    // remembered is an old copy of a roll already paid, so it is refused. The
+    // roll that is pending right now always passes, so a clock that moved
+    // backwards between sessions cannot cost a live roll its EP.
+    const receiptFloor = state.receiptFloor ?? 0;
+    if (
+      state.pendingRoll?.id !== id &&
+      validAmount(action.at) &&
+      action.at <= receiptFloor
+    )
+      return state;
     // Every other number a draw skill kept is a banked roll of its own: same
     // verified index, same multipliers, its own badges and its own line in the
     // history. Only the committed number carries the roll's own id — the rest
@@ -829,6 +1175,7 @@ export function applyProgress(state, action) {
       petFactor *
       rebirthMultiplier(state.rebirths ?? 0) *
       ultraRebirthMultiplier(state.ultraRebirths ?? 0) *
+      rollbackMultiplier(state.rollbacks ?? 0) *
       surplusMultiplier(state.surplusBanked ?? 0) *
       skillWalletMultiplier(fired);
     // The wallet pays for every number the roll kept, and every one of them
@@ -933,12 +1280,43 @@ export function applyProgress(state, action) {
         ];
       },
     );
+    // Tasks count online rolls only: an offline roll is a passive reward, not
+    // something the player went and did. The committed number is the roll;
+    // the numbers a draw skill kept are wallet income, not extra rolls.
+    const committed = paidEvents[0];
     const droppedPet =
       typeof action.petDrop === "string" &&
       petById.has(action.petDrop) &&
       !(state.pets ?? []).includes(action.petDrop)
         ? action.petDrop
         : null;
+    // Tasks count the committed number, which is the roll. Peaks take the
+    // number's own EP and badge count, before any bonus or multiplier.
+    const tasks =
+      action.source === "offline"
+        ? (state.tasks ?? emptyTasks())
+        : recordTally(
+            state.tasks,
+            {
+              rolls: 1,
+              rare: RARE_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+              epic: EPIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+              mythic: MYTHIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+              // A roll that paid more than one number, which only a draw skill
+              // can make happen.
+              multi: paidEvents.length > 1 ? 1 : 0,
+              discovered: paidEvents.reduce(
+                (total, paid) => total + paid.unlocked.length,
+                0,
+              ),
+              banked: credited,
+              skills: fired.length ? 1 : 0,
+              pets: droppedPet ? 1 : 0,
+              peakEP: committed.scored.totalEP,
+              peakBadges: committed.scored.badges.length,
+            },
+            at,
+          );
     if (droppedPet)
       events.push({
         id: `${id}:pet`,
@@ -947,41 +1325,57 @@ export function applyProgress(state, action) {
         productId: droppedPet,
         name: petById.get(droppedPet).name,
       });
-    return {
-      ...state,
-      history: appendHistory(state.history, events),
-      pendingRoll: null,
-      // Turbo makes the settled roll count more than once towards Flywheel.
-      flywheelCharge: flywheelAfterSettlement(
-        state,
-        id,
-        action.source,
-        skillChargeFactor(fired),
-      ),
-      skillCharge: chargeAfterSettlement(state, id, action.source),
-      balance,
-      totalEarned,
-      cycleEarnedEP: cycleEP,
-      discovered: [...discovered],
-      cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
-      receipts: [...state.receipts, id].slice(-128),
-      ...(droppedPet
-        ? {
-            pets: [...new Set([...(state.pets ?? []), droppedPet])].sort(
-              (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
-            ),
-            // A first pet is worn immediately; later drops never swap your choice.
-            activePet:
-              (state.activePet ?? "none") === "none"
-                ? droppedPet
-                : state.activePet,
-          }
-        : {}),
-    };
+    return grantEventAuras(
+      {
+        ...state,
+        history: appendHistory(state.history, events),
+        tasks,
+        pendingRoll: null,
+        // Turbo makes the settled roll count more than once towards Flywheel.
+        flywheelCharge: flywheelAfterSettlement(
+          state,
+          id,
+          action.source,
+          skillChargeFactor(fired),
+        ),
+        skillCharge: chargeAfterSettlement(state, id, action.source),
+        balance,
+        totalEarned,
+        cycleEarnedEP: cycleEP,
+        discovered: [...discovered],
+        cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
+        receipts: [...state.receipts, id].slice(-RECEIPT_LIMIT),
+        receiptFloor:
+          state.receipts.length >= RECEIPT_LIMIT && validAmount(action.at)
+            ? Math.max(receiptFloor, action.at)
+            : receiptFloor,
+        ...(droppedPet
+          ? {
+              pets: [...new Set([...(state.pets ?? []), droppedPet])].sort(
+                (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
+              ),
+              // A first pet is worn immediately; later drops never swap your choice.
+              activePet:
+                (state.activePet ?? "none") === "none"
+                  ? droppedPet
+                  : state.activePet,
+              // A companion you were saving for turns up on its own: met.
+              goalId:
+                state.goalId === droppedPet ? null : (state.goalId ?? null),
+            }
+          : {}),
+      },
+      tasks,
+    );
   }
   if (action.type === "buy") {
     const item = productById.get(action.id);
     if (!item) throw new Error("That item is not available.");
+    if (item.repeatable) return buyTaskSkip(state, item, action);
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid purchase time");
+    const price = productPrice(item, at);
     if (state.owned.includes(item.id))
       throw new Error("You already own this item.");
     if (item.requires && !state.owned.includes(item.requires))
@@ -992,7 +1386,7 @@ export function applyProgress(state, action) {
       ["offline", "offline-cap"].includes(item.kind) &&
       (state.offline?.batch ||
         (state.offline &&
-          (action.at ?? Math.ceil(Date.now())) - state.offline.lastSeenAt >=
+          at - state.offline.lastSeenAt >=
             offlineSettings(state.owned).intervalMS))
     )
       throw new Error(
@@ -1003,16 +1397,12 @@ export function applyProgress(state, action) {
     // buyable when the dialog opened simply sells out past the rotation.
     if (
       item.kind === "skill" &&
-      !skillStock(
-        skillStockWindow(action.at ?? Math.ceil(Date.now())),
-        state.owned,
-      ).includes(item.id)
+      !skillStock(skillStockWindow(at), state.owned).includes(item.id)
     )
       throw new Error(
         `${item.name} is out of stock. The skill shelf restocks every five minutes; no EP was spent.`,
       );
-    if (state.balance < item.price)
-      throw new Error("Not enough EP for this item.");
+    if (state.balance < price) throw new Error("Not enough EP for this item.");
     return {
       ...state,
       history: appendHistory(state.history, [
@@ -1021,13 +1411,13 @@ export function applyProgress(state, action) {
             action.eventId ??
             `buy:${item.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
           type: "purchase",
-          at: action.at ?? Math.ceil(Date.now()),
+          at,
           productId: item.id,
           name: item.name,
-          ep: item.price,
+          ep: price,
         },
       ]),
-      balance: state.balance - item.price,
+      balance: state.balance - price,
       goalId: state.goalId === item.id ? null : (state.goalId ?? null),
       ...(item.kind === "pace"
         ? {
@@ -1080,6 +1470,7 @@ export function applyProgress(state, action) {
       ),
       // Buying a companion equips it, matching how auras behave.
       activePet: pet.id,
+      goalId: state.goalId === pet.id ? null : (state.goalId ?? null),
       history: appendHistory(state.history, [
         {
           id:
@@ -1240,6 +1631,7 @@ export function applyProgress(state, action) {
 function parseHistory(value) {
   if (!Array.isArray(value)) return [];
   const seen = new Set();
+  const rolls = new Set();
   return value.flatMap((e) => {
     if (
       !e ||
@@ -1286,6 +1678,11 @@ function parseHistory(value) {
           tier:
             manifest.tiers.findLast((tier) => e.ep >= tier.minEP)?.id ?? e.tier,
           ...(e.source === "offline" ? { source: "offline" } : {}),
+          ...(typeof e.with === "string" &&
+          e.with.length <= 160 &&
+          rolls.has(e.with)
+            ? { with: e.with }
+            : {}),
           ...(["boost", "charge"].includes(e.flywheel)
             ? { flywheel: e.flywheel }
             : {}),
@@ -1334,6 +1731,14 @@ function parseHistory(value) {
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
         ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
       };
+    } else if (e.type === "rollback") {
+      if (!validAmount(e.count) || e.count < 1) return [];
+      next = {
+        ...base,
+        count: e.count,
+        ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
+        ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
+      };
     } else if (e.type === "pet") {
       if (
         typeof e.productId !== "string" ||
@@ -1362,8 +1767,28 @@ function parseHistory(value) {
         if (!validAmount(e.ep)) return [];
         next.ep = e.ep;
       }
+    } else if (e.type === "task") {
+      // A claimed task: the reward it paid, with the name it had when claimed.
+      if (
+        !TASK_CADENCES.includes(e.cadence) ||
+        typeof e.taskId !== "string" ||
+        !e.taskId ||
+        e.taskId.length > 60 ||
+        typeof e.name !== "string" ||
+        e.name.length > 100 ||
+        !validAmount(e.ep)
+      )
+        return [];
+      next = {
+        ...base,
+        taskId: e.taskId,
+        cadence: e.cadence,
+        name: e.name,
+        ep: e.ep,
+      };
     } else return [];
     seen.add(e.id);
+    if (e.type === "roll") rolls.add(e.id);
     return [next];
   });
 }
@@ -1408,6 +1833,78 @@ export function parsePending(p, owned = null) {
       ))
   )
     throw new Error("Invalid committed roll");
+  const hasWinnerSkill = Object.prototype.hasOwnProperty.call(p, "winnerSkill");
+  const hasWinnerIndex = Object.prototype.hasOwnProperty.call(p, "winnerIndex");
+  let winnerSkill = null;
+  if (picks !== null) {
+    if (hasWinnerSkill) {
+      if (
+        p.winnerSkill !== null &&
+        (typeof p.winnerSkill !== "string" || !pickIds.includes(p.winnerSkill))
+      )
+        throw new Error("Invalid committed roll");
+      winnerSkill = p.winnerSkill;
+    } else {
+      // Saves written before winner tracking can still tell which skill's pick
+      // supplied the committed number: ties have always kept the first pick.
+      winnerSkill =
+        picks.find((pick) => pick.number === p.number)?.skill ?? null;
+    }
+    if (
+      (winnerSkill !== null &&
+        !picks.some(
+          (pick) => pick.skill === winnerSkill && pick.number === p.number,
+        )) ||
+      (winnerSkill === null && picks.some((pick) => pick.number === p.number))
+    )
+      throw new Error("Invalid committed roll");
+  } else if (hasWinnerSkill || hasWinnerIndex) {
+    throw new Error("Invalid committed roll");
+  }
+  let winnerIndex = null;
+  if (draws !== null && Array.isArray(draws)) {
+    let inferredIndex = draws.indexOf(p.number);
+    if (picks !== null) {
+      if (winnerSkill !== null) {
+        let start = 0;
+        inferredIndex = null;
+        for (const pick of picks) {
+          const end = Math.min(start + Math.trunc(pick.spent), draws.length);
+          if (pick.skill === winnerSkill) {
+            for (let index = start; index < end; index++)
+              if (draws[index] === pick.number) {
+                inferredIndex = index;
+                break;
+              }
+            break;
+          }
+          start = end;
+        }
+      } else if (
+        hasWinnerSkill &&
+        draws.length > 0 &&
+        draws.at(-1) === p.number
+      ) {
+        // A plain draw is always the final draw in a live multi-draw roll.
+        inferredIndex = draws.length - 1;
+      }
+    }
+    winnerIndex = hasWinnerIndex ? p.winnerIndex : inferredIndex;
+    if (
+      !Number.isSafeInteger(winnerIndex) ||
+      winnerIndex < 0 ||
+      winnerIndex >= draws.length ||
+      draws[winnerIndex] !== p.number ||
+      (winnerSkill !== null && winnerIndex !== inferredIndex) ||
+      (hasWinnerSkill &&
+        winnerSkill === null &&
+        picks !== null &&
+        winnerIndex !== draws.length - 1)
+    )
+      throw new Error("Invalid committed roll");
+  } else if (hasWinnerIndex) {
+    throw new Error("Invalid committed roll");
+  }
   if (
     typeof p.id !== "string" ||
     !p.id ||
@@ -1426,7 +1923,8 @@ export function parsePending(p, owned = null) {
       (!plan ||
         !Array.isArray(draws) ||
         draws.length < 1 ||
-        draws.length > Math.min(plan.attempts, SKILL_MAX_DRAWS) ||
+        // The skills' draws, plus the roll's own ordinary draw when it made one.
+        draws.length > Math.min(plan.attempts + 1, SKILL_MAX_DRAWS + 1) ||
         !draws.every((number) => validAmount(number) && number <= 1000000) ||
         !draws.includes(p.number)))
   )
@@ -1459,6 +1957,8 @@ export function parsePending(p, owned = null) {
             number: pick.number,
             spent: Math.trunc(pick.spent),
           })),
+          winnerSkill,
+          ...(winnerIndex !== null ? { winnerIndex } : {}),
         }
       : {}),
     ...(p.flywheel ? { flywheel: p.flywheel } : {}),
@@ -1467,35 +1967,76 @@ export function parsePending(p, owned = null) {
 
 // Only roll settlement can succeed in memory after a failed write. Reapply those
 // receipts to the latest shared wallet instead of overwriting other tabs' spending.
-export function recoverUnsavedRolls(stored, temporary) {
+// `unsaved` names the rolls this tab settled while saving was failing. Without
+// it, every roll the tab remembers that the stored log lacks would be replayed,
+// and a roll that was saved earlier and has since been removed from the log
+// (by bulk delete, or by the cap) would be credited a second time.
+export function recoverUnsavedRolls(stored, temporary, unsaved = null) {
   // A roll from an earlier cycle can never be replayed into a later one.
   if (
     (stored.rebirths ?? 0) !== (temporary.rebirths ?? 0) ||
-    (stored.ultraRebirths ?? 0) !== (temporary.ultraRebirths ?? 0)
+    (stored.ultraRebirths ?? 0) !== (temporary.ultraRebirths ?? 0) ||
+    (stored.rollbacks ?? 0) !== (temporary.rollbacks ?? 0)
   )
     return stored;
   let merged = stored;
-  for (const event of temporary.history ?? []) {
+  const rolls = (temporary.history ?? []).filter(
+    (event) => event.type === "roll",
+  );
+  const rollById = new Map(rolls.map((event) => [event.id, event]));
+  const roots = new Set();
+  for (const event of rolls) {
+    if (unsaved && !unsaved.has(event.id)) continue;
+    // Secondary numbers belong to their committed roll. Replaying one as a new
+    // roll would lose the original multipliers, task tally and receipt.
+    roots.add(typeof event.with === "string" ? event.with : event.id);
+  }
+  for (const id of roots) {
+    const event = rollById.get(id);
+    if (!event) continue;
     if (
-      event.type !== "roll" ||
-      merged.history.some((e) => e.type === "roll" && e.id === event.id)
+      merged.receipts?.includes(id) ||
+      merged.history.some((entry) => entry.type === "roll" && entry.id === id)
     )
       continue;
+    const extras = rolls
+      .filter(
+        (entry) =>
+          entry.with === id &&
+          !merged.history.some(
+            (saved) => saved.type === "roll" && saved.id === entry.id,
+          ),
+      )
+      .map((entry) => ({
+        skill: entry.skills?.find((skill) => skillById.has(skill)) ?? null,
+        spent: validAmount(entry.draws) && entry.draws >= 1 ? entry.draws : 1,
+        result: {
+          number: entry.number,
+          totalEP: entry.ep,
+          tier: entry.tier,
+          badges: entry.badges.map((badge) => ({ id: badge })),
+        },
+      }));
+    const petDrop = (temporary.history ?? []).find(
+      (entry) => entry.type === "pet" && entry.id === `${id}:pet`,
+    )?.productId;
     const pending = merged.pendingRoll;
     merged = applyProgress(merged, {
       type: "complete",
-      id: event.id,
+      id,
       source: event.source,
       at: event.at,
       result: {
         number: event.number,
         totalEP: event.ep,
         tier: event.tier,
-        badges: event.badges.map((id) => ({ id })),
+        badges: event.badges.map((badge) => ({ id: badge })),
       },
+      ...(extras.length ? { extras } : {}),
+      ...(typeof petDrop === "string" ? { petDrop } : {}),
       cooldownUntil: Math.max(merged.cooldownUntil, temporary.cooldownUntil),
     });
-    if (pending && pending.id !== event.id)
+    if (pending && pending.id !== id)
       merged = { ...merged, pendingRoll: pending };
   }
   return merged;

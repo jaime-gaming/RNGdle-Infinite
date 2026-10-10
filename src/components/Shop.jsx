@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Coins,
   LayoutGrid,
+  ListChecks,
   Repeat,
   ShoppingBag,
   Target,
@@ -13,6 +14,7 @@ import {
 import {
   shopProducts,
   productById,
+  productPrice,
   productUnlocked,
   productsOnShelf,
   rollSettings,
@@ -29,6 +31,14 @@ import {
   AURA_FAMILIES,
 } from "../shop-data";
 import { LOADOUT_LIMIT } from "../progress.js";
+import {
+  AURA_EVENT_END_AT,
+  AURA_EVENT_START_AT,
+  SKIP_WINDOW_LIMIT,
+  SKIP_WINDOW_MS,
+  skipStatus,
+  waitText,
+} from "../tasks.js";
 import { gameNow } from "../game-clock.js";
 import { pathForSubpage, pathForShelfFamily } from "../router.js";
 import { currentGoal, validGoal } from "../gameplay-loop.js";
@@ -76,6 +86,7 @@ import {
   QuarryMark,
   SingularityMark,
   SkillMark,
+  SkipMark,
   SolsticeMark,
   SparkMark,
   RackMark,
@@ -83,6 +94,10 @@ import {
   DownpourMark,
   BlueprintMark,
   InkblotMark,
+  StaticMark,
+  BitStormMark,
+  ScrambleMark,
+  HexDumpMark,
   MiserMark,
   TriptychMark,
   SpeedMark,
@@ -102,6 +117,7 @@ import "../shop.css";
 const icons = {
   speed: SpeedMark,
   clock: ClockMark,
+  skip: SkipMark,
   flywheel: FlywheelMark,
   stars: StarfallMark,
   aurora: AuroraMark,
@@ -141,6 +157,10 @@ const icons = {
   downpour: DownpourMark,
   blueprint: BlueprintMark,
   inkblot: InkblotMark,
+  static: StaticMark,
+  bitstorm: BitStormMark,
+  scramble: ScrambleMark,
+  hexdump: HexDumpMark,
 };
 // The shelves come from the catalogue, so routing, the hub, the featured picks
 // and the deep links all read the same list. This map only paints them.
@@ -182,6 +202,8 @@ export default function Shop({
     dialog = useRef(null),
     returnFocus = useRef(null),
     returnKind = useRef(null);
+  const [clock, setClock] = useState(() => gameNow());
+  const currentPrice = (item) => productPrice(item, clock);
   const shelf = SHOP_SECTIONS.find((entry) => entry.id === section) ?? null;
   const auraFamily =
     section === "auras"
@@ -201,11 +223,13 @@ export default function Shop({
   );
   const charges = flywheelRequired(progress.owned);
   const rack = rackReport(progress);
-  const goal = currentGoal(progress);
+  const goal = currentGoal(progress, clock);
   // A tracked goal is a choice; anything else the banner shows is the
   // recommendation, which is what the banner says.
   const goalTracked =
-    !!goal && !!progress.goalId && validGoal(progress.goalId, progress.owned);
+    !!goal &&
+    !!progress.goalId &&
+    validGoal(progress.goalId, progress.owned, progress.pets);
   const goalSaved = goal ? Math.min(progress.balance, goal.price) : 0;
   const goalPercent = goal
     ? Math.min(100, (progress.balance / goal.price) * 100)
@@ -213,13 +237,16 @@ export default function Shop({
   const goalReady = !!goal && progress.balance >= goal.price;
   // The skill stall: three shop skills on sale at a time, rotating every five
   // minutes on the shared game clock, so every tab and the purchase guard
-  // agree on the stock. The one-second ticker only runs on this shelf.
-  const [clock, setClock] = useState(() => gameNow());
+  // agree on the stock. The one-second ticker runs on the shelves that count
+  // down or refresh: the skill stall, tools and the event offer on Auras.
   useEffect(() => {
-    if (shelf?.id !== "skills") return;
+    if (!["skills", "tools", "auras"].includes(shelf?.id)) return;
     const timer = setInterval(() => setClock(gameNow()), 1000);
     return () => clearInterval(timer);
   }, [shelf?.id]);
+  const randomnessOfferAvailable =
+    clock >= AURA_EVENT_START_AT && clock < AURA_EVENT_END_AT;
+  const selectedPrice = selected ? currentPrice(selected) : 0;
   const stockWindow = skillStockWindow(clock);
   const stock = skillStock(stockWindow, progress.owned);
   const stockSecondsLeft = Math.max(
@@ -287,18 +314,19 @@ export default function Shop({
           if (type === "goal") {
             // The pick is done the moment the goal lands.
             onPickingGoal(false);
-            notify(
-              id
+            notify({
+              kind: "done",
+              text: id
                 ? "Goal updated. No EP spent."
                 : "Goal cleared. The shop recommends the next step.",
-            );
+            });
           } else if (type === "equip-skill")
-            notify("Skill rack updated. Free.");
-          else notify("Appearance updated.");
+            notify({ kind: "done", text: "Skill rack updated. Free." });
+          else notify({ kind: "done", text: "Appearance updated." });
         }
       } else {
         setPurchaseError(result.message);
-        notify(result.message);
+        notify({ kind: "error", text: result.message });
       }
     } finally {
       busy.current = false;
@@ -310,20 +338,29 @@ export default function Shop({
   // stock right now is visible but not available.
   function stateOf(item) {
     const owned = progress.owned.includes(item.id);
+    const price = currentPrice(item);
     const requires = !!(
       item.requires && !progress.owned.includes(item.requires)
     );
     const profileGated = !!(item.requiresProfile && !progress.profile);
     const stocked = item.kind !== "skill" || stock.includes(item.id);
+    // A repeatable product is never owned. It is blocked while its wait runs or
+    // while the save already holds the most it can, and says which.
+    const repeat = item.repeatable ? skipStatus(progress.tasks, clock) : null;
+    const blocked =
+      !!repeat && (repeat.waitMs > 0 || repeat.tokens >= repeat.limit);
     return {
       owned,
       requires,
       profileGated,
       stocked,
-      affordable: progress.balance >= item.price,
-      available: !owned && !requires && !profileGated && stocked,
+      repeat,
+      blocked,
+      price,
+      affordable: progress.balance >= price,
+      available: !owned && !requires && !profileGated && stocked && !blocked,
       affordableNow:
-        !owned && !requires && stocked && progress.balance >= item.price,
+        !owned && !requires && stocked && !blocked && progress.balance >= price,
     };
   }
   // An upgrade behind a purchase you have not made is not on the shelf at all.
@@ -390,6 +427,21 @@ export default function Shop({
             {item.from} <small>→</small> <b>{item.slots}</b>
           </span>
           <small>SKILL SLOTS · SWAPPING IS FREE</small>
+        </>
+      );
+    if (item.repeatable)
+      return (
+        <>
+          <Icon size={25} />
+          <span>
+            <b>{state.repeat.tokens}</b>{" "}
+            <small>of {state.repeat.limit} held</small>
+          </span>
+          <small>
+            {state.repeat.waitMs > 0
+              ? `NEXT IN ${waitText(state.repeat.waitMs).toUpperCase()}`
+              : `ONE A DAY · MAX ${SKIP_WINDOW_LIMIT} IN ${SKIP_WINDOW_MS / 86400000} DAYS`}
+          </small>
         </>
       );
     if (item.kind === "utility")
@@ -568,7 +620,7 @@ export default function Shop({
           )}
           <div className="shop-price">
             <Coins size={15} />
-            {formatEP(item.price)} EP
+            {formatEP(state.price)} EP
           </div>
           <button
             className={
@@ -581,7 +633,7 @@ export default function Shop({
               (state.owned && !aura && !skill) ||
               (!state.owned &&
                 !state.profileGated &&
-                (!state.affordable || state.requires))
+                (!state.affordable || state.requires || state.blocked))
             }
             onClick={() => {
               if (state.profileGated) return openSignup();
@@ -613,8 +665,14 @@ export default function Shop({
                   <Check size={14} /> Purchased
                 </>
               )
+            ) : item.repeatable && state.blocked ? (
+              state.repeat.waitMs > 0 ? (
+                `Next in ${waitText(state.repeat.waitMs)}`
+              ) : (
+                `Holding ${state.repeat.limit}`
+              )
             ) : (
-              `Buy for ${formatEP(item.price)} EP`
+              `Buy for ${formatEP(state.price)} EP`
             )}
           </button>
           {(() => {
@@ -700,7 +758,9 @@ export default function Shop({
     if (state.profileGated) return "Needs a saved local profile.";
     if (state.requires) return `Requires ${requiresName(item)} first.`;
     if (!state.owned && !state.affordable)
-      return `${formatEP(item.price - progress.balance)} more EP needed`;
+      return `${formatEP(state.price - progress.balance)} more EP needed`;
+    if (item.repeatable)
+      return `${state.repeat.tokens} of ${state.repeat.limit} held · spend them on the Tasks page`;
     if (state.owned) {
       if (item.kind === "aura") return "";
       if (item.kind === "skill") {
@@ -793,9 +853,10 @@ export default function Shop({
     // A pick already in the window is never offered twice.
     const unpicked = (items) =>
       items.filter((item) => !picks.some((pick) => pick.item.id === item.id));
-    const cheapest = (items) => [...items].sort((a, b) => a.price - b.price)[0];
+    const cheapest = (items) =>
+      [...items].sort((a, b) => currentPrice(a) - currentPrice(b))[0];
     take(
-      currentGoal(progress),
+      currentGoal(progress, clock),
       progress.goalId ? "Your goal" : "Recommended next",
     );
     take(
@@ -817,10 +878,10 @@ export default function Shop({
   // one level per path rather than the whole track, so the status line counts
   // these, never the catalogue size: a shelf must never claim to be showing ten
   // items while two cards are drawn. Every shelf reads cheapest first.
-  const byPrice = (a, b) => a.price - b.price;
+  const byPrice = (a, b) => currentPrice(a) - currentPrice(b);
   const shelfItemsNow = (() => {
     if (!shelf) return [];
-    // The auras shelf is an index of four banners until a family is opened.
+    // The auras shelf is an index of five banners until a family is opened.
     if (shelf.id === "auras")
       return auraFamily
         ? productsOnShelf("auras")
@@ -909,7 +970,7 @@ export default function Shop({
   function bannerAuras(entry) {
     return productsOnShelf("auras")
       .filter((item) => item.family === entry.id)
-      .sort((a, b) => b.price - a.price)
+      .sort((a, b) => currentPrice(b) - currentPrice(a))
       .slice(0, 3);
   }
   function familyBanner(entry, { link = true } = {}) {
@@ -1076,8 +1137,8 @@ export default function Shop({
             <div className="shop-goal-copy">
               <strong>Pick your goal</strong>
               <span>
-                Tap any item on any shelf — the one you tap becomes your
-                savings goal. No EP is spent.
+                Tap any item on any shelf — the one you tap becomes your savings
+                goal. No EP is spent.
               </span>
               {goalTracked && (
                 <span className="shop-goal-current">
@@ -1125,7 +1186,7 @@ export default function Shop({
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => onOpenShelf(shelfOfProduct(goal))}
+                onClick={() => onOpenShelf(shelfOfProduct(goal), goal.id)}
               >
                 View on shelf
               </button>
@@ -1212,11 +1273,12 @@ export default function Shop({
               <div className="shop-spotlight">
                 {featured.map(({ item, label }) => {
                   const Icon = icons[item.icon] ?? ShoppingBag;
+                  const price = currentPrice(item);
                   const held =
-                    item.price > 0
+                    price > 0
                       ? Math.min(
                           100,
-                          Math.round((progress.balance / item.price) * 100),
+                          Math.round((progress.balance / price) * 100),
                         )
                       : 0;
                   return (
@@ -1254,9 +1316,9 @@ export default function Shop({
                         </span>
                         <span className="spotlight-cta">
                           <span className="spotlight-price">
-                            {progress.balance >= item.price
-                              ? `Ready now · ${formatEP(item.price)} EP`
-                              : `${formatEP(item.price - progress.balance)} EP to go`}
+                            {progress.balance >= price
+                              ? `Ready now · ${formatEP(price)} EP`
+                              : `${formatEP(price - progress.balance)} EP to go`}
                           </span>
                           <span className="spotlight-open">
                             Open{" "}
@@ -1291,7 +1353,7 @@ export default function Shop({
               {shelf.id === "companions"
                 ? `${progress.pets?.length ?? 0} / ${PETS.length} found`
                 : shelf.id === "auras" && !auraFamily
-                  ? // The index has no cards to count — its four banners are
+                  ? // The index has no cards to count — its five banners are
                     // the shelf, so it counts sets instead of calling itself
                     // locked.
                     `${AURA_FAMILIES.length} sets · ${productsOnShelf("auras").length} looks`
@@ -1484,7 +1546,7 @@ export default function Shop({
               <p>
                 {auraFamily
                   ? `One set of the shelf. ${auraGroups[0]?.items.length ?? 0} looks, cosmetic only.`
-                  : "Four sets, cosmetic only; wear one at a time."}
+                  : `${AURA_FAMILIES.length} sets, cosmetic only; wear one at a time.`}
               </p>
             </div>
             <button
@@ -1536,6 +1598,25 @@ export default function Shop({
           {auraFamily && (
             <>
               {familyBanner(auraFamily, { link: false })}
+              {auraFamily.id === "randomness" && randomnessOfferAvailable && (
+                <aside
+                  className="aura-event-offer"
+                  aria-label="R4ND0MN3S5 event offer"
+                >
+                  <p>
+                    Hey! You can get them for free! But, if you want to get them
+                    before, you'll have to pay more...
+                  </p>
+                  <button
+                    type="button"
+                    className="aura-event-task-link"
+                    onClick={() => navigate("tasks")}
+                  >
+                    <ListChecks size={14} aria-hidden="true" />
+                    Get free auras on Tasks
+                  </button>
+                </aside>
+              )}
               {auraGroups.map((group) => (
                 <div className="shop-family" key={group.family.id}>
                   <div className="shop-family-heading">
@@ -1561,7 +1642,14 @@ export default function Shop({
         </section>
       )}
       {shelf?.id === "companions" && (
-        <PetShelf progress={progress} onAction={onAction} notify={notify} />
+        <PetShelf
+          progress={progress}
+          onAction={onAction}
+          notify={notify}
+          focus={focusProduct}
+          pickingGoal={pickingGoal}
+          onPickingGoal={onPickingGoal}
+        />
       )}
       {shelf?.id === "tools" && (
         <section className="shop-category" id="shop-tools" tabIndex={-1}>
@@ -1659,7 +1747,8 @@ export default function Shop({
         </nav>
       )}
       <p className="shop-save-note">
-        Purchases cost in-game EP only, and they are yours until you rebirth.{" "}
+        Purchases cost in-game EP only. Rebirth resets the run but keeps every
+        aura you own.{" "}
         {progress.profile
           ? `Saved locally as ${progress.profile.username}.`
           : "Sign up to keep your wallet across reloads."}
@@ -1687,7 +1776,11 @@ export default function Shop({
               <ShoppingBag size={26} />
             </div>
             <p className="eyebrow">
-              KEPT TILL REBIRTH{" "}
+              {selected.repeatable
+                ? "USED ON TASKS"
+                : selected.kind === "aura"
+                  ? "KEPT THROUGH REBIRTH"
+                  : "KEPT TILL REBIRTH"}{" "}
               {selected.kind === "aura"
                 ? "COSMETIC"
                 : selected.kind === "skill"
@@ -1700,7 +1793,7 @@ export default function Shop({
             </p>
             <h2 id="purchase-title">Buy {selected.name}?</h2>
             <p>
-              This spends <strong>{formatEP(selected.price)} EP</strong> and{" "}
+              This spends <strong>{formatEP(selectedPrice)} EP</strong> and{" "}
               {selected.kind === "aura"
                 ? "equips your new aura."
                 : selected.kind === "skill"
@@ -1708,13 +1801,15 @@ export default function Shop({
                   : selected.kind === "skill-slot"
                     ? `widens your rack to ${selected.slots} slots; existing charge is kept.`
                     : selected.kind === "utility"
-                      ? selected.id === "auto-roll"
-                        ? "adds Auto-Roll to the rack: one click arms it, one stands it down."
-                        : selected.id === "persistence-core"
-                          ? "lets Auto-Roll remember its switch and run in background tabs."
-                          : selected.id === "offline-roller"
-                            ? "earns one roll per 10 minutes away, up to 144 per absence. A local profile is required."
-                            : "unlocks advanced history search."
+                      ? selected.id === "task-skip"
+                        ? "swaps one open task on your Tasks list for the next one in its pool, using one token. Tokens are kept across rebirths."
+                        : selected.id === "auto-roll"
+                          ? "adds Auto-Roll to the rack: one click arms it, one stands it down."
+                          : selected.id === "persistence-core"
+                            ? "lets Auto-Roll remember its switch and run in background tabs."
+                            : selected.id === "offline-roller"
+                              ? "earns one roll per 10 minutes away, up to 144 per absence. A local profile is required."
+                              : "unlocks advanced history search."
                       : selected.kind === "pace"
                         ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge.`
                         : selected.kind === "offline"
@@ -1744,7 +1839,7 @@ export default function Shop({
             <div className="purchase-balance">
               <span>Balance after purchase</span>
               <strong>
-                {formatEP(Math.max(0, progress.balance - selected.price))} EP
+                {formatEP(Math.max(0, progress.balance - selectedPrice))} EP
               </strong>
             </div>
             {purchaseError && <p role="alert">{purchaseError}</p>}
@@ -1760,7 +1855,7 @@ export default function Shop({
                 className="primary-button"
                 disabled={
                   pending ||
-                  progress.balance < selected.price ||
+                  progress.balance < selectedPrice ||
                   progress.owned.includes(selected.id) ||
                   !!(
                     selected.requires &&

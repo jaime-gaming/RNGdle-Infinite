@@ -82,6 +82,10 @@ test("companion multipliers stay ordered, and never reach the draw", () => {
   expect(PETS.map((p) => p.price).sort((a, b) => a - b)).toEqual(
     PETS.map((p) => p.price),
   );
+  expect(PETS.map((pet) => pet.price)).toEqual([
+    125000, 300000, 600000, 900000, 1250000, 1650000, 2050000, 2500000, 3100000,
+    3800000, 5000000, 7000000, 10000000,
+  ]);
   expect(petMultiplier("none")).toBe(1);
   expect(petMultiplier("not-a-pet")).toBe(1);
   expect(walletEP(5801, "none")).toBe(5801);
@@ -228,13 +232,14 @@ test("the changelog lists every release and flags an unseen version", () => {
   // v0.3 was the shop wave, and v0.4 carries the rebirth rework together with
   // the shelves it regrouped afterwards.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.5",
     "v0.4.1",
     "v0.4",
     "v0.3",
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.4.1");
+  expect(LATEST_VERSION).toBe("v0.5");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");

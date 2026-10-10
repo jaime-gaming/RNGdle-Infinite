@@ -1,4 +1,5 @@
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
+import { AURA_EVENT_END_AT, AURA_EVENT_START_AT } from "./tasks.js";
 
 // Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
@@ -408,6 +409,56 @@ export const shopProducts = [
     description:
       "Two mirrored blooms of ink breathe in the corners of the box: dark, symmetric and faintly alive.",
   },
+  // R4ND0MN3S5: the set for things that are random by nature. Its looks flicker,
+  // fall and jitter in steps, never in smooth curves.
+  {
+    id: "static",
+    kind: "aura",
+    name: "Static Veil",
+    price: 260000,
+    eventPrice: 840000,
+    family: "randomness",
+    swatch: ["#e2e8f0", "#475569"],
+    icon: "static",
+    description:
+      "Film grain and dead-channel snow crawl over your rarity box, never quite settling on a picture.",
+  },
+  {
+    id: "bitstorm",
+    kind: "aura",
+    name: "Bit Storm",
+    price: 880000,
+    eventPrice: 2640000,
+    family: "randomness",
+    swatch: ["#22c55e", "#14532d"],
+    icon: "bitstorm",
+    description:
+      "Rows of ones and zeros fall behind your number, a terminal that is always reading and never finishes.",
+  },
+  {
+    id: "scramble",
+    kind: "aura",
+    name: "Scramble",
+    price: 1800000,
+    eventPrice: 5400000,
+    family: "randomness",
+    swatch: ["#fcd34d", "#78350f"],
+    icon: "scramble",
+    description:
+      "Random digits flicker in the corners and reroll on every beat, as if the number has not decided yet.",
+  },
+  {
+    id: "hexdump",
+    kind: "aura",
+    name: "Hex Dump",
+    price: 3000000,
+    eventPrice: 9000000,
+    family: "randomness",
+    swatch: ["#38bdf8", "#1e3a8a"],
+    icon: "hexdump",
+    description:
+      "Hex fragments drift around the box: the raw data under every roll, read out in the open.",
+  },
   {
     id: "offline-roller",
     kind: "utility",
@@ -531,6 +582,19 @@ export const shopProducts = [
     description:
       "Unlock number search and roll-tier filters across your entire activity archive. Your basic feed stays free.",
   },
+  {
+    // Repeatable: every purchase adds one token instead of ownership, and the
+    // tokens are spent on the Tasks page. One purchase a day, and no more than
+    // three in any five days.
+    id: "task-skip",
+    kind: "utility",
+    name: "Task Skip",
+    price: 125000,
+    icon: "skip",
+    repeatable: true,
+    description:
+      "Swap one open task on your Tasks list for the next one in its pool: one token per use, kept across rebirths. You can buy one a day, no more than three in any five days, and hold up to three.",
+  },
   // Skills are charged one-shot effects; every one is defined in skills.js so
   // the shop, the save file and the roll engine read the same numbers.
   ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({
@@ -551,23 +615,22 @@ export const shopProducts = [
 // featured picks, a deep link and the back button can never disagree about
 // where an item is sold. Companions keep their shelf too; it is owned by the
 // companion component rather than by this catalogue.
-// Auras are grouped into families so the shelf reads as four small collections
+// Auras are grouped into families so the shelf reads as five small collections
 // instead of one long list. Cosmetic only: a family never changes a price, an
 // order of purchase or anything a roll can score.
 export const AURA_FAMILIES = [
   {
     id: "celestial",
-    label: "Sky and starlight",
+    label: "Spaaaaaace",
     blurb: "Constellations, rings and haloes.",
-    // Star-chart labels: spaced capitals in the monospace face.
     font: '"Space Mono", monospace',
-    tracking: "0.18em",
-    casing: "uppercase",
+    tracking: "0.04em",
+    casing: "none",
     weight: 700,
   },
   {
     id: "element",
-    label: "Earth and weather",
+    label: "Earth",
     blurb: "Glass, tide, leaf and rain.",
     // A soft serif for things that grew or fell rather than were built.
     font: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
@@ -577,9 +640,9 @@ export const AURA_FAMILIES = [
   },
   {
     id: "machine",
-    label: "Made things",
+    label: "Electric Status",
     blurb: "Circuits, plans, dials and printed colour.",
-    // A readout: the same face as the charts, lowercase and tight.
+    // A compact readout for circuits, plans and machine-made colour.
     font: '"Space Mono", monospace',
     tracking: "0.02em",
     casing: "none",
@@ -587,11 +650,20 @@ export const AURA_FAMILIES = [
   },
   {
     id: "void",
-    label: "Deep and dark",
+    label: "Deep Dark",
     blurb: "Stone, ink and the bottom of the well.",
-    // An inscription cut into stone: wide serif capitals.
     font: 'Georgia, "Times New Roman", serif',
-    tracking: "0.22em",
+    tracking: "0.04em",
+    casing: "none",
+    weight: 700,
+  },
+  {
+    // Terminal labels: the monospace face of a machine that is guessing.
+    id: "randomness",
+    label: "R4ND0MN3S5",
+    blurb: "Binary rain, static, scrambled digits and hex.",
+    font: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace',
+    tracking: "0.1em",
     casing: "uppercase",
     weight: 700,
   },
@@ -649,6 +721,8 @@ const SHELF_KINDS = {
 
 export function shelfOfProduct(item) {
   if (!item) return "";
+  // A companion set as a goal is not a catalogue product, but it has a shelf.
+  if (item.kind === "companion") return "companions";
   const shelf = SHOP_SECTIONS.find((section) =>
     (SHELF_KINDS[section.id] ?? []).includes(item.kind),
   );
@@ -728,6 +802,18 @@ export function nextUpgrade(owned, kind) {
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);
 }
 export const productById = new Map(shopProducts.map((item) => [item.id, item]));
+
+// Four R4ND0MN3S5 looks have a limited premium price while the event is live;
+// the catalogue's `price` remains the regular price used before and after it.
+export function productPrice(item, at = Date.now()) {
+  if (!item) return 0;
+  return item.family === "randomness" &&
+    Number.isSafeInteger(item.eventPrice) &&
+    at >= AURA_EVENT_START_AT &&
+    at < AURA_EVENT_END_AT
+    ? item.eventPrice
+    : item.price;
+}
 
 export function rollSettings(owned = []) {
   return owned.reduce(

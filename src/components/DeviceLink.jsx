@@ -201,10 +201,16 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     try {
       await createDeviceLink();
       setState(syncStatus());
-      notify?.("Link created. Open it on your other device.");
+      notify?.({
+        kind: "done",
+        text: "Link created. Open it on your other device.",
+      });
     } catch {
       setState(syncStatus());
-      notify?.("Could not create the link. Try again.");
+      notify?.({
+        kind: "error",
+        text: "Could not create the link. Try again.",
+      });
     } finally {
       setCreating(false);
     }
@@ -214,9 +220,12 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     try {
       await navigator.clipboard.writeText(buildDeviceLink());
       flash("link");
-      notify?.("Device link copied.");
+      notify?.({ kind: "done", text: "Device link copied." });
     } catch {
-      notify?.("Copying was blocked — select the link and copy it by hand.");
+      notify?.({
+        kind: "warning",
+        text: "Copying was blocked — select the link and copy it by hand.",
+      });
     }
   }
 
@@ -226,28 +235,41 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     setSending(false);
     notify?.(
       result.ok
-        ? "Save sent — the other device will pick it up."
+        ? {
+            kind: "done",
+            text: "Save sent — the other device will pick it up.",
+          }
         : result.reason === "offline"
-          ? "The other device is not reachable right now."
-          : "There was nothing new to send.",
+          ? {
+              kind: "warning",
+              text: "The other device is not reachable right now.",
+            }
+          : { kind: "info", text: "There was nothing new to send." },
     );
   }
 
   async function copyCode() {
     const text = buildPeerCode();
     if (!text) {
-      notify?.(
-        "Create a local profile first — a guest save is not worth carrying.",
-      );
+      notify?.({
+        kind: "warning",
+        text: "Create a local profile first — a guest save is not worth carrying.",
+      });
       return;
     }
     setCode(text);
     try {
       await navigator.clipboard.writeText(text);
       flash("code");
-      notify?.("Account code copied. Paste it on your other device.");
+      notify?.({
+        kind: "done",
+        text: "Account code copied. Paste it on your other device.",
+      });
     } catch {
-      notify?.("Code ready below — select it and copy it by hand.");
+      notify?.({
+        kind: "info",
+        text: "Code ready below — select it and copy it by hand.",
+      });
     }
   }
 
@@ -255,16 +277,21 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     const result = adoptPeerCode(code);
     if (result.ok) {
       setCode("");
-      notify?.("Account adopted from the code. Keep it somewhere safe.");
+      notify?.({
+        kind: "done",
+        text: "Account adopted from the code. Keep it somewhere safe.",
+      });
       return;
     }
-    notify?.(
-      {
-        empty: "Paste an account code first.",
-        guest: "That code carries a guest save, which is not worth adopting.",
-        unreadable: "That code could not be read. Copy it again, whole.",
-      }[result.reason] ?? "That code could not be read.",
-    );
+    notify?.({
+      kind: "error",
+      text:
+        {
+          empty: "Paste an account code first.",
+          guest: "That code carries a guest save, which is not worth adopting.",
+          unreadable: "That code could not be read. Copy it again, whole.",
+        }[result.reason] ?? "That code could not be read.",
+    });
   }
 
   function saveRelay() {
@@ -272,15 +299,21 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
     setRelay(next);
     notify?.(
       next
-        ? `Relay set to ${next}. Will be used when reachable.`
-        : "Relay cleared — using browser-to-browser P2P.",
+        ? {
+            kind: "done",
+            text: `Relay set to ${next}. Will be used when reachable.`,
+          }
+        : {
+            kind: "info",
+            text: "Relay cleared — using browser-to-browser P2P.",
+          },
     );
   }
 
   // What the live transport actually is, and where the room is kept. A relay
-  // that writes rooms to disk survives both devices being closed; one that
-  // keeps them in memory only hands the newest save to whoever is listening
-  // right now. Neither case is an error, so neither is worded like one.
+  // that writes rooms to disk survives both devices being closed and a restart;
+  // one that keeps them in memory keeps them for as long as it runs. Neither
+  // case is an error, so neither is worded like one.
   const transport = health
     ? "Relay (HTTP)"
     : "Browser-to-browser (P2P via WebRTC)";
@@ -292,14 +325,13 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
       : "In memory only"
     : "—";
   // The note has to describe the transport that actually answered, including
-  // what its store can and cannot do: a memory-only relay hands the newest
-  // save to whoever is listening, but it does not keep a room once everybody
-  // has left, and the page must not promise otherwise.
+  // what its store can and cannot do: a memory-only relay keeps a room while it
+  // runs, and loses every room when it restarts. The page says so.
   const note = !health
     ? "This deployment has no relay of its own, so saves travel browser-to-browser through WebRTC, with a free public broker handling only the initial handshake. Both devices therefore have to be open at the same time at least once. Treat the link like a password: whoever holds it plays this account."
     : health.store === "disk"
       ? "The relay above keeps rooms on its own disk, so either device may be closed and catch up later, and the newer save wins when both played apart. Treat the link like a password: whoever holds it plays this account."
-      : "The relay above keeps rooms in memory: it is the fastest path while a device is listening, and it hands over the newest save the moment the other side opens the link — but it forgets a room once nobody is listening. Run your own relay with a store to keep a room alive while both devices are closed. Treat the link like a password: whoever holds it plays this account.";
+      : "The relay above keeps rooms in memory. A room stays with it for as long as the relay runs, so a device that was closed still gets the newest save when it opens the link; a room nobody touches for a month is dropped. A restart of the relay forgets every room, so run your own relay with a store to keep rooms across restarts. Treat the link like a password: whoever holds it plays this account.";
 
   const details = [
     ["Transport", transport],
@@ -392,7 +424,10 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
               onClick={() => {
                 unlinkDevices();
                 setState(syncStatus());
-                notify?.("Devices unlinked. Each browser keeps its own save.");
+                notify?.({
+                  kind: "done",
+                  text: "Devices unlinked. Each browser keeps its own save.",
+                });
               }}
             >
               <Unplug size={14} /> Unlink
@@ -479,7 +514,10 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
             onClick={() => {
               setRelayEndpoint("");
               setRelay(relayEndpoint());
-              notify?.("Relay cleared — using browser-to-browser P2P.");
+              notify?.({
+                kind: "info",
+                text: "Relay cleared — using browser-to-browser P2P.",
+              });
             }}
           >
             Reset

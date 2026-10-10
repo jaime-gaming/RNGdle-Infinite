@@ -11,7 +11,13 @@ import {
 import SkillBar from "./SkillBar";
 import PetParade from "./PetParade";
 import React, { useState, useEffect, useMemo, useRef, memo } from "react";
-import { Clock3, Check, Share2, Infinity as InfinityIcon } from "lucide-react";
+import {
+  Clock3,
+  Check,
+  LayoutGrid,
+  Share2,
+  Infinity as InfinityIcon,
+} from "lucide-react";
 import {
   buildRevealTimeline,
   SCRAMBLE_MS,
@@ -26,7 +32,8 @@ import { rollSettings, formatDuration } from "../shop-data";
 import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { readAutoRoll, writeAutoRoll } from "../auto-roll.js";
 import NumberBox from "./NumberBox";
-import DrawStage from "./DrawStage";
+import DrawStage, { DrawDetail, claimFor, useDrawScores } from "./DrawStage";
+import PaidNumbers from "./PaidNumbers";
 import { petById, petBonusLabel } from "../pets.js";
 import { skillById, skillForPet } from "../skills.js";
 import { walletMultiplier } from "../progress.js";
@@ -242,6 +249,7 @@ export default function RollExperience({
   const activeCompanion = petById.get(session.activePet) ?? null;
   const finishedRun = useRef(null);
   const shareButton = useRef(null);
+  const rollSection = useRef(null);
   const creditCallback = useRef(onComplete);
   const copiedTimer = useRef(null);
   const activeRun = useRef(null);
@@ -249,6 +257,16 @@ export default function RollExperience({
   const generateButton = useRef(null);
   creditCallback.current = onComplete;
   const result = run?.result;
+  // More than one number is paid: each paid number is shown on its own card,
+  // and no total EP is counted up on screen for the roll.
+  // Every number a draw skill kept is listed as paid. A plain draw can win, so a
+  // single paid number is listed too when it is not the roll's own number.
+  const paidPicks = run?.picks ?? [];
+  const winnerSkill =
+    run && Object.prototype.hasOwnProperty.call(run, "winnerSkill")
+      ? run.winnerSkill
+      : (paidPicks.find((pick) => pick.number === run?.number)?.skill ?? null);
+  const stacked = paidPicks.length + (winnerSkill == null ? 1 : 0) > 1;
   const groups = useMemo(
     () => (result ? groupResultBadges(result.badges) : []),
     [result],
@@ -280,7 +298,7 @@ export default function RollExperience({
     (run.skills ?? []).includes(companionSkill.id);
   // What actually lands in the wallet: the settlement's own formula, so the
   // on-screen sum matches the credit to the EP — companion, rebirth bonuses,
-  // ultra-rebirth and every wallet skill that fired, never the score.
+  // prestige, the Rollback and every wallet skill that fired, never the score.
   const firedSkills = run?.skills ?? [];
   const bankedMultiplier = result ? walletMultiplier(session, firedSkills) : 1;
   // Every draw skill keeps its own number, and every number it keeps is a
@@ -290,9 +308,9 @@ export default function RollExperience({
   const keptNumbers = useMemo(
     () =>
       (run?.picks ?? []).filter(
-        (pick) => pick.number !== result?.number && pick.number != null,
+        (pick) => pick.skill !== winnerSkill && pick.number != null,
       ),
-    [run?.picks, result?.number],
+    [run?.picks, winnerSkill],
   );
   const [keptScores, setKeptScores] = useState({});
   useEffect(() => {
@@ -319,6 +337,47 @@ export default function RollExperience({
       cancelled = true;
     };
   }, [run?.id, keptNumbers.length]);
+  // Every paid number, the one the roll committed included, each with the EP
+  // it banks. A number whose score is still loading shows a dash for now.
+  // Every paid number is a card. When a plain draw won, the roll's own number is
+  // not a skill's pick, so its card leads the list as the Best one, by itself.
+  const paidItems = useMemo(() => {
+    const picks = run?.picks ?? [];
+    const cards = picks
+      .filter((pick) => pick.number != null)
+      .map((pick, index) => {
+        const definition = skillById.get(pick.skill);
+        const best = pick.skill === winnerSkill;
+        const scored = best ? result : (keptScores[pick.number] ?? null);
+        return {
+          key: `${index}-${pick.number}`,
+          skill: definition?.name ?? "",
+          tint: definition?.tint ?? "green",
+          number: pick.number,
+          ep: scored
+            ? `${formatEP(Math.round(scored.totalEP * bankedMultiplier))} EP`
+            : "—",
+          best,
+        };
+      });
+    if (!result || !picks.length || winnerSkill !== null) {
+      return cards;
+    }
+    return [
+      {
+        key: `ordinary-${result.number}`,
+        skill: "Ordinary draw",
+        tint: "green",
+        number: result.number,
+        ep:
+          result.totalEP !== null
+            ? `${formatEP(Math.round(result.totalEP * bankedMultiplier))} EP`
+            : "—",
+        best: true,
+      },
+      ...cards,
+    ];
+  }, [run?.picks, result, keptScores, bankedMultiplier, winnerSkill]);
   const extraPicks = useMemo(
     () =>
       keptNumbers
@@ -343,7 +402,7 @@ export default function RollExperience({
   const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0) - extraEP);
   const bonusParts = bonusEP > 0 ? walletParts(session, firedSkills) : [];
   const floatingCharges = useMemo(() => {
-    if (!result || result.totalEP === null) return [];
+    if (!result || result.totalEP === null || stacked) return [];
     if (!bonusParts.length) return [{ id: "base", ep: creditedEP, label: "" }];
     const list = [{ id: "base", ep: result.totalEP, label: "" }];
     let running = result.totalEP;
@@ -357,7 +416,7 @@ export default function RollExperience({
       if (gain > 0) list.push({ id: part.id, ep: gain, label: part.label });
     });
     return list;
-  }, [result, bonusParts, creditedEP]);
+  }, [result, bonusParts, creditedEP, stacked]);
   const cooldownDeadline = Math.max(session.cooldownUntil, localCooldownUntil);
   const cooldownWindow =
     session.cooldownWindow ?? parseCooldownWindow(null, cooldownDeadline, run);
@@ -370,10 +429,11 @@ export default function RollExperience({
     : "REVEAL IN";
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
-  // A draw skill took more than one number. The split screen owns the roll
-  // until every draw has rolled its digits and earned its badges; the best one
-  // then takes the centre of the screen, holds it, and leaves — the rest of the
-  // reveal (rank, wallet, breakdown) plays underneath once it has gone.
+  // A draw skill took more than one number. The overview shows every draw while
+  // each rolls its digits and earns its badges. Tapping a number opens it: the
+  // best one is the roll's own result, any other one shows its own stats. The
+  // view lives here, keyed by the run, so the next roll always opens on the
+  // overview again.
   const splitDraws = run && (run.draws ?? []).length > 1 ? run.draws : null;
   const splitDecision = useMemo(() => {
     if (!splitDraws) return 0;
@@ -383,16 +443,56 @@ export default function RollExperience({
       0.35 * timeline.pulseMS
     );
   }, [splitDraws, timeline]);
-  // The winner holds the centre long enough to read and to hover at any pace.
-  // It cannot hold much longer than this: the rank, the wallet and the badge
-  // breakdown all play underneath and need the screen back.
-  const scale = timeline.scale ?? 1,
-    splitHold = 1100 + 1400 * scale,
-    splitFade = 250 + 350 * scale;
-  const splitPlaying =
-    !!splitDraws && elapsed < splitDecision + splitHold + splitFade;
-  const splitLeaving = !!splitDraws && elapsed >= splitDecision + splitHold;
+  const [splitView, setSplitView] = useState({ run: null, index: null });
+  const splitOwned = !!run && splitView.run === run.id;
+  const splitIndex = splitOwned ? splitView.index : null;
+  const splitPick =
+    splitIndex != null && splitDraws ? (splitDraws[splitIndex] ?? null) : null;
+  const splitOpen = !!splitDraws && splitIndex == null;
+  const splitWinnerIndex =
+    Number.isSafeInteger(run?.winnerIndex) &&
+    run.winnerIndex >= 0 &&
+    run.winnerIndex < (splitDraws?.length ?? 0)
+      ? run.winnerIndex
+      : Math.max(0, splitDraws?.indexOf(run?.number) ?? 0);
+  const drawScores = useDrawScores(splitDraws ? run : null);
+  // A draw other than the committed draw, once its own stats are read. Compare
+  // indices, not number values: two independent draws can land on the same
+  // number and still need their own detail screen.
+  const splitDetailScored =
+    splitPick != null && splitIndex !== splitWinnerIndex
+      ? (drawScores[splitPick] ??
+        (splitPick === result?.number ? result : null))
+      : null;
+  const splitDetail = !!splitDetailScored;
+  // Any single number on screen (its own stats, or the best one's result) means
+  // the numbers are being looked at up close, so auto-roll stands still. The
+  // overview does not stop it: the rolls keep turning under it.
+  const splitClose = !!splitDraws && !splitOpen;
   const splitDecided = !!splitDraws && elapsed >= splitDecision;
+  // The overview is a takeover: nothing under it may scroll while it is up.
+  useEffect(() => {
+    if (!splitOpen) return;
+    document.documentElement.classList.add("draw-takeover");
+    return () => document.documentElement.classList.remove("draw-takeover");
+  }, [splitOpen]);
+  // A multi-number roll keeps the install prompt out of the way for as long as
+  // it is on screen: the prompt would otherwise cover the way back to the numbers.
+  const splitRun = !!splitDraws;
+  useEffect(() => {
+    if (!splitRun) return;
+    document.documentElement.classList.add("draw-split");
+    return () => document.documentElement.classList.remove("draw-split");
+  }, [splitRun]);
+  // A number opened from the overview starts at the top of the roll, so its way
+  // back to the numbers is the first thing on screen, wherever the page was.
+  useEffect(() => {
+    if (splitIndex == null || !rollSection.current) return;
+    rollSection.current.scrollIntoView({
+      block: "start",
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, [splitIndex, reducedMotion]);
   const rankKnown = !!run && elapsed >= timeline.rarity;
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
   const visibleGroups = groups.slice(-visibleCount || groups.length);
@@ -410,6 +510,7 @@ export default function RollExperience({
       busy ||
       cooldown > 0 ||
       awaitingSettlement ||
+      splitClose ||
       session.offline?.batch ||
       session.pendingRoll
     )
@@ -438,6 +539,7 @@ export default function RollExperience({
     busy,
     cooldown,
     awaitingSettlement,
+    splitClose,
     session.pendingRoll,
     session.offline?.batch,
     localCooldownUntil,
@@ -479,20 +581,13 @@ export default function RollExperience({
     // cannot fast-forward the number onto the screen.
     const start = gameNow();
     const alreadyElapsed = Math.max(0, start - run.startedAt);
-    // The reveal only wakes on its own beats. A draw skill's split screen has
-    // beats of its own — the decision and the moment it lets go of the screen —
-    // and it would otherwise hang between two badge cues and only leave when
-    // the whole reveal ended.
+    // The reveal only wakes on its own beats. A draw skill's split screen has a
+    // beat of its own, the decision, and it would otherwise hang between two
+    // badge cues until the whole reveal ended.
     const cues = [
       ...new Set([
         ...revealCueTimes(timeline),
-        ...(splitDraws
-          ? [
-              splitDecision,
-              splitDecision + splitHold,
-              splitDecision + splitHold + splitFade,
-            ]
-          : []),
+        ...(splitDraws ? [splitDecision] : []),
       ]),
     ].sort((a, b) => a - b);
     const finish = (instant = false) => {
@@ -642,27 +737,157 @@ export default function RollExperience({
     if (mounted.current && activeRun.current === run.id)
       setSettleError(outcome.ok ? "" : outcome.message);
   }
-  async function share() {
+  async function share(shared = result) {
     const sharedRun = run.id;
     try {
-      await navigator.clipboard.writeText(buildShareText(result));
+      await navigator.clipboard.writeText(buildShareText(shared));
       if (!mounted.current || activeRun.current !== sharedRun) return;
       setCopied(true);
       clearTimeout(copiedTimer.current);
       copiedTimer.current = setTimeout(() => setCopied(false), 2500);
     } catch {
-      notify(
-        "Clipboard isn’t available. Try copying from a secure browser window.",
-      );
+      notify({
+        kind: "error",
+        text: "Clipboard isn’t available. Try copying from a secure browser window.",
+      });
     }
   }
 
+  // The roll's button. It is the same control on the roll's own result and on a
+  // number's own stats, so it reads and behaves the same wherever it appears.
+  const rollAgainControl = (
+    <div
+      className={`generate-wrap ${busy ? "is-away" : ""}`}
+      aria-hidden={busy}
+      inert={busy ? true : undefined}
+    >
+      <button
+        ref={generateButton}
+        className={`generate ${cooldown || reserving || loading || drawing ? "cooling" : ""}`}
+        disabled={
+          loading ||
+          drawing ||
+          busy ||
+          reserving ||
+          awaitingSettlement ||
+          !!session.offline?.batch ||
+          !!settleError
+        }
+        onClick={generate}
+      >
+        {drawing ? (
+          "DRAWING…"
+        ) : cooldown ? (
+          <>
+            <Clock3 size={18} />
+            <span className="generate-label">
+              <span className="generate-word">{waitWord}</span>{" "}
+              <span className="generate-time">{formatDuration(cooldown)}</span>
+            </span>
+            <CooldownFill
+              window={cooldownWindow}
+              reducedMotion={reducedMotion}
+            />
+          </>
+        ) : reserving ? (
+          <>
+            <Clock3 size={18} />
+            <span className="generate-label">
+              <span className="generate-word">{waitWord}</span>{" "}
+              <span className="generate-time">
+                {formatDuration(reservedSeconds)}
+              </span>
+            </span>
+          </>
+        ) : awaitingSettlement ? (
+          "RESULT PENDING"
+        ) : error ? (
+          "RETRY & ROLL"
+        ) : (
+          "ROLL AGAIN"
+        )}
+      </button>
+    </div>
+  );
+  // The EP balance a roll's result carries: the wallet, the EP this roll is
+  // about to credit while it settles, and the goal line under it. A paid
+  // number shows the same two, since it pays into the same wallet.
+  const sessionTotal = digitsDone ? (
+    <div
+      className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
+      aria-hidden={elapsed < timeline.sessionShow}
+    >
+      <span>
+        <AnimatedCount
+          value={
+            session.balance +
+            (elapsed >= timeline.sessionCount && !runSettled ? creditedEP : 0)
+          }
+          duration={1500 * timeline.scale}
+          reducedMotion={instant}
+        />{" "}
+        EP
+        {elapsed >= timeline.sessionCount &&
+          elapsed < timeline.end &&
+          !instant &&
+          floatingCharges.map((charge, index) => (
+            <span
+              key={charge.id}
+              className={`floating-ep ${index > 0 ? "is-bonus-charge" : ""}`}
+              style={{ "--charge-index": index }}
+            >
+              +{formatEP(charge.ep)}
+              {charge.label ? ` · ${charge.label}` : ""}
+            </span>
+          ))}
+      </span>
+      <small>Your EP balance</small>
+      {/* Savings sit with the wallet they are measured against,
+          and only once the reveal has settled and the EP is
+          actually credited. */}
+      {!busy && runSettled && preferences.showGoalRecap && (
+        <GoalRecap progress={session} runId={run.id} navigate={navigate} />
+      )}
+    </div>
+  ) : null;
+  // The share line and the roll's status under it. A paid number shares its
+  // own result, not the roll's.
+  const shareRowFor = (shared) => (
+    <div className="share-row">
+      <button
+        ref={shareButton}
+        className={`share-button ${!busy ? "is-highlighted" : ""}`}
+        onClick={() => share(shared)}
+      >
+        {copied ? <Check size={15} /> : <Share2 size={15} />}{" "}
+        {copied ? "Copied result + link!" : "Share"}
+      </button>
+      <span>
+        {busy ? (
+          "REVEALING YOUR ROLL"
+        ) : cooldown || reserving ? (
+          <>
+            {waitWord} <b>{formatDuration(cooldown || reservedSeconds)}</b>
+          </>
+        ) : awaitingSettlement ? (
+          "SETTLING YOUR RESULT"
+        ) : (
+          "YOUR NEXT ROLL IS READY"
+        )}
+      </span>
+    </div>
+  );
+  // A paid number that is not the roll's own result: its stats show the
+  // balance and the share line the roll's result shows.
+  const paidDetail = splitDetail && !!claimFor(run, splitIndex);
   return (
     <div
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
       style={{ "--reveal-scale": timeline.scale }}
       data-settled={!!run && runSettled}
-      data-prestige={session.ultraRebirths > 0 || undefined}
+      data-prestige={
+        session.ultraRebirths > 0 || session.rollbacks > 0 || undefined
+      }
       data-phase={
         !run ? "idle" : !digitsDone ? "digits" : busy ? "badges" : "complete"
       }
@@ -781,23 +1006,70 @@ export default function RollExperience({
         </section>
       ) : (
         <>
-          <section className="active-roll" aria-label="Your roll">
+          <section
+            ref={rollSection}
+            className="active-roll"
+            aria-label="Your roll"
+          >
             {/* Every draw the roll took, side by side, until the best of them
                 takes the centre and becomes the number that pays. */}
-            {splitPlaying && (
+            {splitOpen && (
               <DrawStage
                 key={`draw-${run.id}`}
                 {...{ run, elapsed, timeline, reducedMotion, aura }}
                 decided={splitDecided}
-                leaving={splitLeaving}
+                scores={drawScores}
+                roll={rollAgainControl}
+                onPick={(index) => setSplitView({ run: run.id, index })}
               />
             )}
-            <NumberArtifact
-              key={run.id}
-              {...{ run, elapsed, timeline, reducedMotion, aura }}
-              behind={!!splitDraws && !splitDecided}
-              dockedPet={companionSkillFiring ? session.activePet : null}
-            />
+            {splitDraws && !splitOpen && !splitDetail && (
+              <div className="draw-back-row">
+                <button
+                  type="button"
+                  className="secondary-button draw-detail-back"
+                  onClick={() => setSplitView({ run: run.id, index: null })}
+                >
+                  <LayoutGrid size={13} aria-hidden="true" />
+                  All numbers
+                </button>
+              </div>
+            )}
+            {splitDetail ? (
+              <DrawDetail
+                key={`detail-${run.id}-${splitIndex}`}
+                number={splitPick}
+                index={splitIndex}
+                count={splitDraws.length}
+                scored={splitDetailScored}
+                claim={claimFor(run, splitIndex)}
+                aura={aura}
+                reducedMotion={reducedMotion}
+                scale={timeline.scale}
+                bankedMultiplier={bankedMultiplier}
+                stacked={stacked}
+                paidItems={paidItems}
+                rollAgain={rollAgainControl}
+                summary={
+                  paidDetail ? (
+                    <>
+                      {sessionTotal}
+                      {shareRowFor(splitDetailScored)}
+                    </>
+                  ) : null
+                }
+                openBadge={openBadge}
+                theme={theme}
+                onBack={() => setSplitView({ run: run.id, index: null })}
+              />
+            ) : (
+              <NumberArtifact
+                key={run.id}
+                {...{ run, elapsed, timeline, reducedMotion, aura }}
+                behind={splitOpen}
+                dockedPet={companionSkillFiring ? session.activePet : null}
+              />
+            )}
             <div className="roll-announcement sr-only" role="status">
               {!digitsDone
                 ? `Revealing ${splitDraws ? `${splitDraws.length} numbers` : "your number"}. ${timeline.digitTimes.filter((t) => elapsed >= t).length} of ${timeline.slots} digits settled.`
@@ -818,9 +1090,9 @@ export default function RollExperience({
                         : ""
                     }`}
             </div>
-            {result.totalEP !== null && (
+            {!splitDetail && result.totalEP !== null && (
               <div
-                className={`result-summary ${!digitsDone ? "is-spinning-summary" : ""}`}
+                className={`result-summary ${!digitsDone ? "is-spinning-summary" : ""} ${splitOpen ? "is-behind-draw" : ""}`}
               >
                 {digitsDone && (
                   <RankSummary
@@ -833,168 +1105,32 @@ export default function RollExperience({
                     }}
                   />
                 )}
-                <div
-                  className={`roll-ep ${rankKnown ? result.tier : "neutral"}`}
-                  data-testid="roll-ep"
-                >
-                  {visibleCount ? (
-                    <AnimatedCount
-                      value={shownEP}
-                      duration={500 * timeline.scale}
-                      initialValue={0}
-                      reducedMotion={instant}
-                    />
-                  ) : (
-                    "???"
-                  )}{" "}
-                  EP
-                </div>
-                {/* Every number a draw skill kept is paid, so the roll names
-                    them beside the one it committed: the reward for stacking
-                    them is visible, not a figure that silently grows. */}
-                {digitsDone && extraPicks.length > 0 && (
-                  <ul className="roll-extra-picks">
-                    <li className="roll-extra-picks-head">
-                      {extraPicks.length === 1
-                        ? "Also banked"
-                        : `Also banked (${extraPicks.length})`}
-                    </li>
-                    {extraPicks.map((pick) => (
-                      <li
-                        key={pick.number}
-                        className={`roll-extra-pick tint-${pick.tint}`}
-                      >
-                        <span className="roll-extra-pick-skill">
-                          {pick.name || "Draw skill"}
-                        </span>
-                        <span className="roll-extra-pick-number">
-                          {pick.number.toLocaleString("en-US")}
-                        </span>
-                        <span className="roll-extra-pick-ep">
-                          {formatEP(
-                            Math.round(pick.scored.totalEP * bankedMultiplier),
-                          )}{" "}
-                          EP
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {digitsDone && (
+                {!stacked && (
                   <div
-                    className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
-                    aria-hidden={elapsed < timeline.sessionShow}
+                    className={`roll-ep ${rankKnown ? result.tier : "neutral"}`}
+                    data-testid="roll-ep"
                   >
-                    <span>
+                    {visibleCount ? (
                       <AnimatedCount
-                        value={
-                          session.balance +
-                          (elapsed >= timeline.sessionCount && !runSettled
-                            ? creditedEP
-                            : 0)
-                        }
-                        duration={1500 * timeline.scale}
+                        value={shownEP}
+                        duration={500 * timeline.scale}
+                        initialValue={0}
                         reducedMotion={instant}
-                      />{" "}
-                      EP
-                      {elapsed >= timeline.sessionCount &&
-                        elapsed < timeline.end &&
-                        !instant &&
-                        floatingCharges.map((charge, index) => (
-                          <span
-                            key={charge.id}
-                            className={`floating-ep ${index > 0 ? "is-bonus-charge" : ""}`}
-                            style={{ "--charge-index": index }}
-                          >
-                            +{formatEP(charge.ep)}
-                            {charge.label ? ` · ${charge.label}` : ""}
-                          </span>
-                        ))}
-                    </span>
-                    <small>Your EP balance</small>
-                    {/* Savings sit with the wallet they are measured against,
-                        and only once the reveal has settled and the EP is
-                        actually credited. */}
-                    {!busy && runSettled && preferences.showGoalRecap && (
-                      <GoalRecap
-                        progress={session}
-                        runId={run.id}
-                        navigate={navigate}
                       />
-                    )}
+                    ) : (
+                      "???"
+                    )}{" "}
+                    EP
                   </div>
                 )}
-                {rankKnown && (
-                  <div className="share-row">
-                    <button
-                      ref={shareButton}
-                      className={`share-button ${!busy ? "is-highlighted" : ""}`}
-                      onClick={share}
-                    >
-                      {copied ? <Check size={15} /> : <Share2 size={15} />}{" "}
-                      {copied ? "Copied result + link!" : "Share"}
-                    </button>
-                    <span>
-                      {busy ? (
-                        "REVEALING YOUR ROLL"
-                      ) : cooldown || reserving ? (
-                        <>
-                          {waitWord}{" "}
-                          <b>{formatDuration(cooldown || reservedSeconds)}</b>
-                        </>
-                      ) : awaitingSettlement ? (
-                        "SETTLING YOUR RESULT"
-                      ) : (
-                        "YOUR NEXT ROLL IS READY"
-                      )}
-                    </span>
-                  </div>
-                )}
+                {/* Every number a draw skill kept is paid: each one is a card
+                    of its own, side by side, with the EP it banks. */}
+                {digitsDone && stacked && <PaidNumbers items={paidItems} />}
+                {sessionTotal}
+                {rankKnown && shareRowFor(result)}
               </div>
             )}
-            <div
-              className={`generate-wrap ${busy ? "is-away" : ""}`}
-              aria-hidden={busy}
-              inert={busy ? true : undefined}
-            >
-              <button
-                ref={generateButton}
-                className={`generate ${cooldown || reserving || loading || drawing ? "cooling" : ""}`}
-                disabled={
-                  loading ||
-                  drawing ||
-                  busy ||
-                  reserving ||
-                  awaitingSettlement ||
-                  !!session.offline?.batch ||
-                  !!settleError
-                }
-                onClick={generate}
-              >
-                {drawing ? (
-                  "DRAWING…"
-                ) : cooldown ? (
-                  <>
-                    <Clock3 size={18} /> {waitWord} {formatDuration(cooldown)}
-                    <CooldownFill
-                      window={cooldownWindow}
-                      reducedMotion={reducedMotion}
-                    />
-                  </>
-                ) : reserving ? (
-                  <>
-                    <Clock3 size={18} /> {waitWord}{" "}
-                    {formatDuration(reservedSeconds)}
-                  </>
-                ) : awaitingSettlement ? (
-                  "RESULT PENDING"
-                ) : error ? (
-                  "RETRY & ROLL"
-                ) : (
-                  "ROLL AGAIN"
-                )}
-              </button>
-            </div>
+            {!splitDetail && !splitOpen && rollAgainControl}
             {error && (
               <p className="roll-load-error" role="alert">
                 {error} No roll or EP was awarded. Use Retry &amp; Roll to try
@@ -1010,7 +1146,7 @@ export default function RollExperience({
               </div>
             )}
           </section>
-          {digitsDone && result.totalEP !== null && (
+          {digitsDone && result.totalEP !== null && !splitDetail && (
             <div className="breakdown-wrap">
               <BadgeBreakdown
                 {...{

@@ -1,59 +1,49 @@
-import { BADGE_TOTAL, cycleEarnedEp, discoveredCount } from "./rebirth.js";
+import {
+  BADGE_TOTAL,
+  cycleEarnedEp,
+  discoveredCount,
+  prestigeShown,
+} from "./rebirth.js";
 import { PETS } from "./pets.js";
 import { SKILLS, skillSlots } from "./skills.js";
 import { LATEST_VERSION } from "./changelog.js";
+import { isCycleMarker } from "./history-log.js";
+import { favoriteTier, mergeTallies, tallyEntries } from "./history-tally.js";
 
 // How far you have come, in numbers.
 //
-// Every figure here is derived from the saved game and its activity history —
-// nothing is stored twice, so the summary can never drift from the log it
-// reads. A rebirth restarts the run, not the account: the log keeps every
-// cycle, so these are the figures for the whole account.
+// Every figure here is derived from the saved game, its activity log, and the
+// totals of the entries that have since left that log (see history-tally.js).
+// Nothing is stored twice, and clearing history never lowers a figure. A
+// rebirth restarts the run, not the account: the log keeps every cycle, so
+// these are the figures for the whole account.
 export function accountStats(progress = {}) {
-  const history = Array.isArray(progress.history) ? progress.history : [];
-  const rolls = history.filter((event) => event.type === "roll");
-  const offline = rolls.filter((event) => event.source === "offline");
-  const best = rolls.reduce(
-    (top, event) => (!top || event.ep > top.ep ? event : top),
-    null,
-  );
-  const tiers = {};
-  for (const roll of rolls) tiers[roll.tier] = (tiers[roll.tier] ?? 0) + 1;
-  const favoriteTier =
-    Object.entries(tiers).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  const badges = new Set();
-  for (const event of history)
-    if (event.type === "unlock" || event.type === "roll")
-      for (const id of event.badges ?? []) badges.add(id);
-  const spent = history
-    .filter((event) => event.type === "purchase")
-    .reduce((sum, event) => sum + (event.ep ?? 0), 0);
+  const total = allTimeTally(progress);
   return {
-    rolls: rolls.length,
-    onlineRolls: rolls.length - offline.length,
-    offlineRolls: offline.length,
-    favoriteTier,
-    bestRoll: best
-      ? { number: best.number, ep: best.ep, tier: best.tier, at: best.at }
-      : null,
+    rolls: total.rolls,
+    onlineRolls: total.rolls - total.offlineRolls,
+    offlineRolls: total.offlineRolls,
+    favoriteTier: favoriteTier(total),
+    bestRoll: bestRollOf(total),
     totalEarned: progress.totalEarned ?? 0,
     balance: progress.balance ?? 0,
-    spent,
-    uniqueBadges: badges.size,
+    spent: total.spent,
+    uniqueBadges: total.badges.length,
     badgesNow: discoveredCount(progress),
     badgesTotal: BADGE_TOTAL,
     companions: (progress.pets ?? []).length,
-    companionsFound: history.filter((event) => event.type === "pet").length,
+    companionsFound: total.companions,
     companionsTotal: PETS.length,
     skills: (progress.skills ?? []).length,
     skillsTotal: SKILLS.length,
     skillSlots: skillSlots(progress.owned),
-    skillsUsed: rolls.filter((event) => (event.skills ?? []).length).length,
-    boostsUsed: rolls.filter((event) => event.flywheel === "boost").length,
+    skillsUsed: total.skills,
+    boostsUsed: total.boosts,
     rebirths: progress.rebirths ?? 0,
     ultraRebirths: progress.ultraRebirths ?? 0,
-    firstEventAt: history[0]?.at ?? null,
-    lastEventAt: history.at(-1)?.at ?? null,
+    rollbacks: progress.rollbacks ?? 0,
+    firstEventAt: total.first,
+    lastEventAt: total.last,
   };
 }
 
@@ -63,36 +53,50 @@ export function accountStats(progress = {}) {
 // this run has done.
 export function cycleStats(progress = {}) {
   const history = Array.isArray(progress.history) ? progress.history : [];
-  const start = history.findLastIndex(
-    (event) => event.type === "rebirth" || event.type === "ultra-rebirth",
-  );
+  const start = history.findLastIndex(isCycleMarker);
   const events = start >= 0 ? history.slice(start + 1) : history;
-  const rolls = events.filter((event) => event.type === "roll");
-  const best = rolls.reduce(
-    (top, event) => (!top || event.ep > top.ep ? event : top),
-    null,
-  );
-  const badges = new Set();
-  for (const event of events)
-    if (event.type === "unlock")
-      for (const id of event.badges ?? []) badges.add(id);
+  // The cycle in play comes after every marker the log holds, so that is the
+  // number its removed entries were filed under.
+  const cycle = history.filter(isCycleMarker).length;
+  const tally = cycleTally(progress, events, cycle);
   return {
     startedAt:
       start >= 0
         ? history[start].at
-        : (progress.profile?.createdAt ?? history[0]?.at ?? null),
+        : (progress.profile?.createdAt ?? tally.first ?? null),
     rebirths: progress.rebirths ?? 0,
-    rolls: rolls.length,
+    rolls: tally.rolls,
     // The gate a rebirth reads: EP this cycle scored, straight from the log.
     earned: cycleEarnedEp(progress),
-    spent: events
-      .filter((event) => event.type === "purchase")
-      .reduce((sum, event) => sum + (event.ep ?? 0), 0),
-    badges: badges.size,
-    bestRoll: best
-      ? { number: best.number, ep: best.ep, tier: best.tier, at: best.at }
-      : null,
+    spent: tally.spent,
+    badges: tally.discovered.length,
+    bestRoll: bestRollOf(tally),
   };
+}
+
+function removedTotalsOf(progress) {
+  return Array.isArray(progress.removedTotals) ? progress.removedTotals : [];
+}
+
+// Every entry the log has ever held: the ones still in it, and the totals of
+// the ones that have left it.
+function allTimeTally(progress) {
+  const history = Array.isArray(progress.history) ? progress.history : [];
+  return removedTotalsOf(progress).reduce(
+    (sum, tally) => (tally ? mergeTallies(sum, tally) : sum),
+    tallyEntries(history),
+  );
+}
+
+// One cycle's figures: its entries still in the log, and those that left it.
+function cycleTally(progress, events, cycle) {
+  const tally = tallyEntries(events);
+  const removed = removedTotalsOf(progress)[cycle];
+  return removed ? mergeTallies(tally, removed) : tally;
+}
+
+function bestRollOf(tally) {
+  return tally.best ? { ...tally.best } : null;
 }
 
 const TIER_COLORS = {
@@ -140,6 +144,7 @@ export function exportPayload(progress = {}) {
       flywheelCharge: progress.flywheelCharge ?? 0,
       rebirths: stats.rebirths,
       ultraRebirths: stats.ultraRebirths,
+      rollbacks: stats.rollbacks,
       goalId: progress.goalId ?? null,
       history: progress.history ?? [],
     },
@@ -210,7 +215,8 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   ctx.fillRect(0, 0, width, height);
 
   // Outer frame
-  ctx.strokeStyle = stats.ultraRebirths > 0 ? "#d9a441" : "#2e313d";
+  ctx.strokeStyle =
+    stats.ultraRebirths > 0 || stats.rollbacks > 0 ? "#d9a441" : "#2e313d";
   ctx.lineWidth = 3;
   drawRoundedRect(ctx, 18, 18, width - 36, height - 36, 20);
   ctx.stroke();
@@ -252,7 +258,15 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   if (stats.ultraRebirths > 0) {
     ctx.fillStyle = "#d9a441";
     ctx.font = '700 14px "Space Mono", monospace';
-    ctx.fillText(`✦ TRANSCENDENT (ULTRA ×${stats.ultraRebirths})`, 54, 154);
+    // The prestige is the player's name for the ultra-rebirth; the Rollback is
+    // the last stage, so it is named on the same line.
+    ctx.fillText(
+      stats.rollbacks > 0
+        ? `✦ ROLLBACK · PRESTIGE ×${stats.ultraRebirths}`
+        : `✦ PRESTIGE ×${stats.ultraRebirths}`,
+      54,
+      154,
+    );
   } else {
     ctx.fillStyle = "#9d9a93";
     ctx.font = '500 14px "Plus Jakarta Sans Variable", system-ui, sans-serif';
@@ -325,9 +339,11 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
       sub: `${Math.round((stats.uniqueBadges / Math.max(1, stats.badgesTotal)) * 100)}% of collection`,
     },
     {
-      label: "REBIRTHS & PRESTIGE",
+      label: prestigeShown(stats) ? "REBIRTHS & PRESTIGE" : "REBIRTHS",
       value: `${stats.rebirths} / 6`,
-      sub: `${stats.ultraRebirths} Ultra · +${progress.surplusBanked ?? 0}% surplus`,
+      sub: prestigeShown(stats)
+        ? `${stats.ultraRebirths} Prestige${stats.rollbacks > 0 ? " · Rollback" : ""} · +${progress.surplusBanked ?? 0}% surplus`
+        : `+${progress.surplusBanked ?? 0}% surplus`,
     },
     {
       label: "COMPANIONS",

@@ -5,8 +5,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Check, Dices, MousePointerClick, Trophy } from "lucide-react";
+import { Check, Dices, LayoutGrid } from "lucide-react";
 import NumberBox from "./NumberBox";
+import PaidNumbers from "./PaidNumbers";
+import RankSummary from "./RankSummary";
+import BadgeBreakdown from "./BadgeBreakdown";
 import Emoji from "./Emoji";
 import { formatEP, groupResultBadges } from "../roll-data";
 import { restoreRoll } from "../roll-client";
@@ -19,20 +22,27 @@ import "../draw-stage.css";
 // saving already commits exactly one of them — this is the part the player
 // used to have to take on trust.
 //
-// The screen is split into one panel per draw: every draw rolls its digits and
-// earns its badges in the open, on the same clock. When the last badge has
-// landed the best draw flies to the centre of the screen and covers the rest
-// with a grey filter; hovering it lifts the filter so the discarded draws can
-// still be read. Nothing here scores anything — the numbers were drawn and
-// scored before the roll was committed, and the worker re-reads them from the
-// same verified index.
+// The overview is a takeover of the roll screen: one panel per draw, every draw
+// rolling its digits and earning its badges in the open. When the last badge
+// has landed the best draw is marked green, and every number stays on screen.
+// Nothing behind the overview is visible or scrolls. Tapping a number opens its
+// own stats in the page flow: the best one is the roll's own result, any other
+// one is shown at the same size, with the roll's button in the middle.
+// Nothing here scores anything: the numbers were drawn and scored before the
+// roll was committed, and the worker re-reads them from the same verified index.
 const NO_DRAWS = [];
+const NO_SCORES = {};
 const randomDigits = (count) =>
   Array.from({ length: count }, () => String(Math.floor(Math.random() * 10)));
 
-// How many badge chips a panel lists before the rest becomes a count: eight
-// panels can be on screen at once, and no panel may swallow the number.
-const MAX_CHIPS = 6;
+// How many badge chips a panel lists before the rest becomes a count. The more
+// panels are on screen, the fewer chips each one can take, so none is cut off.
+function chipLimitFor(count) {
+  if (count <= 2) return 6;
+  if (count <= 4) return 4;
+  if (count <= 6) return 3;
+  return 2;
+}
 
 function useScramble(spinning, slots, reducedMotion) {
   const [scramble, setScramble] = useState(() => randomDigits(slots));
@@ -58,6 +68,60 @@ function laneBeats(beats, count) {
     { length: count },
     (_, index) => beats[Math.round((index * (beats.length - 1)) / (count - 1))],
   );
+}
+
+// The scored result of every draw a roll took, by number, read from the same
+// verified index the settlement uses. The committed draw is already in
+// `run.result`, so only the others are read. A run's draws never change, so each
+// one is read once per run, and the result is only ever for the run it was read
+// for.
+export function useDrawScores(run) {
+  const runId = run?.id ?? null;
+  const [held, setHeld] = useState({ run: null, scores: NO_SCORES });
+  useEffect(() => {
+    if (!run || (run.draws ?? []).length < 2) return;
+    let cancelled = false;
+    for (const number of run.draws) {
+      if (number === run.number) continue;
+      restoreRoll(number)
+        .then((scored) => {
+          if (cancelled || !scored) return;
+          setHeld((current) => {
+            const base = current.run === runId ? current.scores : NO_SCORES;
+            return base[number]
+              ? current
+              : { run: runId, scores: { ...base, [number]: scored } };
+          });
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [runId]);
+  return held.run === runId ? held.scores : NO_SCORES;
+}
+
+// The skill that kept this particular draw, if one did: its name and tint.
+// Numbers can repeat across independent draws, so the source is found within
+// each skill's own consecutive draw budget instead of by number alone.
+export function claimFor(run, drawIndex) {
+  const draws = run?.draws ?? [];
+  let start = 0;
+  for (const pick of run?.picks ?? []) {
+    const spent = Math.max(1, Math.trunc(pick.spent ?? 1));
+    const end = Math.min(start + spent, draws.length);
+    const chosen = draws.indexOf(pick.number, start);
+    if (chosen >= start && chosen < end && chosen === drawIndex) {
+      const definition = pick.skill ? skillById.get(pick.skill) : null;
+      return {
+        name: definition?.name ?? "",
+        tint: definition?.tint ?? "green",
+      };
+    }
+    start = end;
+  }
+  return null;
 }
 
 // One number, landing digit by digit exactly as the headline number does: the
@@ -93,7 +157,7 @@ function Digits({ number, slots, done, scramble, reducedMotion }) {
   );
 }
 
-function BadgeChips({ groups, shown, limit = MAX_CHIPS }) {
+function BadgeChips({ groups, shown, limit }) {
   const revealed = groups.slice(-shown || groups.length);
   const chips = revealed.slice(0, limit);
   const hidden = revealed.length - chips.length;
@@ -116,6 +180,178 @@ function BadgeChips({ groups, shown, limit = MAX_CHIPS }) {
   );
 }
 
+// What a draw was in the decision: the best one, one a draw skill kept and
+// paid, or one that was thrown away.
+function decisionTag(best, claim) {
+  if (best) return { label: "Best", className: "is-best", icon: true };
+  if (claim) return { label: "Paid", className: "is-paid", icon: false };
+  return { label: "Discarded", className: "", icon: false };
+}
+
+function DecisionTag({ best, claim }) {
+  const tag = decisionTag(best, claim);
+  return (
+    <span className={`draw-panel-tag ${tag.className}`}>
+      {tag.icon && <Check size={10} aria-hidden="true" />}
+      {tag.label}
+    </span>
+  );
+}
+
+// The roll's own number box, drawn still: the same box and the same digits the
+// reveal ends on, with nothing left to scramble.
+function StaticArtifact({ number, tier, aura }) {
+  const target = String(number);
+  const size =
+    target.length <= 3
+      ? 72
+      : target.length === 4
+        ? 60
+        : target.length === 5
+          ? 48
+          : 36;
+  return (
+    <div className={`artifact-stage aura-${aura}`} data-aura={aura}>
+      <NumberBox
+        tier={tier}
+        aura={aura}
+        role="img"
+        className={`number-artifact ${tier} is-breathing`}
+        aria-label={`Number ${target}`}
+      >
+        <span
+          className="artifact-digits"
+          style={{ fontSize: `${size}px` }}
+          aria-hidden="true"
+        >
+          {Array.from(target).map((digit, index) => (
+            <span key={index} className="artifact-digit">
+              {digit}
+            </span>
+          ))}
+        </span>
+      </NumberBox>
+    </div>
+  );
+}
+
+// One number that is not the committed one, shown the way the roll shows its
+// own: the number, its rank and EP, the roll's button in the middle, and every
+// badge it earned. It is in the page flow, so the page scrolls as it does for
+// any result.
+export function DrawDetail({
+  number,
+  index,
+  count,
+  scored,
+  claim,
+  aura,
+  reducedMotion,
+  scale,
+  bankedMultiplier,
+  stacked,
+  paidItems,
+  rollAgain,
+  summary = null,
+  openBadge,
+  theme,
+  onBack,
+}) {
+  const groups = useMemo(() => groupResultBadges(scored.badges), [scored]);
+  const banked = Math.round(scored.totalEP * bankedMultiplier);
+  return (
+    <section
+      className="draw-detail"
+      aria-label={`Draw ${index + 1} of ${count}: ${number}`}
+    >
+      <div className="draw-detail-bar">
+        <button
+          type="button"
+          className="secondary-button draw-detail-back"
+          onClick={onBack}
+        >
+          <LayoutGrid size={13} aria-hidden="true" />
+          All numbers
+        </button>
+        <span className="draw-detail-kicker">
+          <Dices size={12} aria-hidden="true" />
+          Draw {index + 1} of {count}
+          <DecisionTag best={false} claim={claim} />
+        </span>
+      </div>
+      <StaticArtifact number={number} tier={scored.tier} aura={aura} />
+      <RankSummary
+        result={scored}
+        visible
+        rankKnown
+        instant={reducedMotion}
+        scale={scale}
+      />
+      <div className={`roll-ep ${scored.tier}`} data-testid="draw-detail-ep">
+        {formatEP(scored.totalEP)} EP
+      </div>
+      {claim && (
+        <p className="draw-detail-paid">
+          Paid with <b>{claim.name || "a draw skill"}</b> · banks{" "}
+          {formatEP(banked)} EP
+        </p>
+      )}
+      {rollAgain}
+      {stacked && <PaidNumbers items={paidItems} />}
+      {summary}
+      <div className="breakdown-wrap">
+        <BadgeBreakdown
+          result={scored}
+          groups={groups}
+          visibleCount={groups.length}
+          summaryVisible
+          staged={false}
+          openBadge={openBadge}
+          reducedMotion={reducedMotion}
+          theme={theme}
+        />
+      </div>
+    </section>
+  );
+}
+
+// The roll button in the middle of the overview, where the panels meet. Its
+// radius is the button's plus a margin. It is only shown where it covers no
+// digit, label, chip, hint or icon; anywhere else it stays in the strip below.
+const HUB_RADIUS = 36;
+
+// A text leaf is measured by its words, not by its box: a hint can span a whole
+// panel while its words sit in the middle of it.
+function inkBox(el) {
+  const hasText = [...el.childNodes].some(
+    (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+  );
+  if (!hasText) return el.getBoundingClientRect();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return range.getBoundingClientRect();
+}
+
+function hubIsClear(grid, x, y) {
+  return ![...grid.querySelectorAll(".draw-panel *")].some((el) => {
+    if (el.children.length > 0) return false;
+    const style = getComputedStyle(el);
+    if (style.visibility === "hidden" || Number(style.opacity) === 0) {
+      return false;
+    }
+    const box = inkBox(el);
+    return (
+      box.width > 0 &&
+      box.height > 0 &&
+      box.left < x + HUB_RADIUS &&
+      box.right > x - HUB_RADIUS &&
+      box.top < y + HUB_RADIUS &&
+      box.bottom > y - HUB_RADIUS
+    );
+  });
+}
+
+// The overview: every draw on one screen, with nothing behind it.
 export default function DrawStage({
   run,
   elapsed,
@@ -123,70 +359,87 @@ export default function DrawStage({
   reducedMotion,
   aura,
   decided = false,
-  leaving = false,
+  scores = NO_SCORES,
+  roll = null,
+  onPick,
 }) {
   const numbers = run.draws ?? NO_DRAWS;
   const winner = run.number;
-  // Which draw skill kept which number. Stacking them does not only spend more
-  // draws: each skill keeps its own number and the roll pays for every one, so
-  // a panel that a skill kept is never a discarded draw.
-  const picks = useMemo(
-    () =>
-      (run.picks ?? []).map((pick) => {
-        const definition = pick.skill ? skillById.get(pick.skill) : null;
-        return {
-          number: pick.number,
-          name: definition?.name ?? "",
-          tint: definition?.tint ?? "green",
-        };
-      }),
-    [run.picks],
-  );
-  const claimFor = (number) =>
-    picks.find((pick) => pick.number === number) ?? null;
-  const winnerIndex = Math.max(0, numbers.indexOf(winner));
+  const winnerIndex =
+    Number.isSafeInteger(run.winnerIndex) &&
+    run.winnerIndex >= 0 &&
+    run.winnerIndex < numbers.length
+      ? run.winnerIndex
+      : Math.max(0, numbers.indexOf(winner));
   const done = timeline.digitTimes.filter((time) => elapsed >= time).length;
   const spinning = done < timeline.slots;
   const rarityKnown = elapsed >= timeline.rarity;
   const scramble = useScramble(spinning, timeline.slots, reducedMotion);
-  const [scores, setScores] = useState({});
-  const [peeking, setPeeking] = useState(false);
-  const [stageTop, setStageTop] = useState(0);
-  const panels = useRef([]);
-  const card = useRef(null);
+  const [frame, setFrame] = useState({ top: 0, bottom: 0 });
+  const stageRef = useRef(null);
+  const gridRef = useRef(null);
+  // Where the roll button sits in the middle, relative to the overview, or null
+  // when it stays in the strip under the panels.
+  const [hub, setHub] = useState(null);
+  const hasRoll = roll !== null;
 
-  // The split screen is a takeover: it starts under the header and stops above
-  // the phone tab bar, whatever those happen to measure on this device.
+  // Decided once the reveal is over, and again when the window changes: the
+  // panels are then final. The strip is hidden while this measures, so the grid
+  // is measured at the height it has when the button is in the middle.
   useLayoutEffect(() => {
-    const header = document.querySelector(".header");
-    setStageTop(
-      header
-        ? Math.max(0, Math.round(header.getBoundingClientRect().bottom))
-        : 0,
-    );
-  }, []);
-
-  // Each discarded draw is scored from the same verified index so its panel can
-  // state what it was worth and list the badges it earned. The kept one is
-  // already scored in `run.result`. One pass per committed roll: the draws of a
-  // run never change.
-  useEffect(() => {
-    let cancelled = false;
-    for (const number of numbers) {
-      if (number === winner) continue;
-      restoreRoll(number)
-        .then((scored) => {
-          if (cancelled || !scored) return;
-          setScores((current) =>
-            current[number] ? current : { ...current, [number]: scored },
-          );
-        })
-        .catch(() => {});
-    }
-    return () => {
-      cancelled = true;
+    if (!hasRoll) return undefined;
+    const probe = () => {
+      const stage = stageRef.current;
+      const grid = gridRef.current;
+      if (!stage || !grid) return;
+      // The tap hint sits in the outer bottom corner of its panel: panels on the
+      // left half of the grid keep it on the left, the others on the right. That
+      // leaves the middle of the grid to the roll button.
+      const cols = Math.max(
+        1,
+        Number.parseInt(
+          getComputedStyle(grid).getPropertyValue("--cols"),
+          10,
+        ) || 1,
+      );
+      grid.querySelectorAll(".draw-panel").forEach((panel, index) => {
+        const side = index % cols < cols / 2 ? "left" : "right";
+        panel
+          .querySelector(".draw-panel-more")
+          ?.setAttribute("data-side", side);
+      });
+      stage.classList.add("is-probing");
+      const box = grid.getBoundingClientRect();
+      const origin = stage.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const y = box.top + box.height / 2;
+      const clear = hubIsClear(grid, x, y);
+      stage.classList.remove("is-probing");
+      setHub(clear ? { x: x - origin.left, y: y - origin.top } : null);
     };
-  }, [run.id]);
+    probe();
+    window.addEventListener("resize", probe);
+    return () => window.removeEventListener("resize", probe);
+  }, [decided, numbers.length, hasRoll, frame.top, frame.bottom]);
+
+  // The overview is a takeover, not a panel: it starts under the header and
+  // stops above the phone tab bar. Both are measured, and measured again when
+  // the window changes size, so the panels never sit under either one.
+  useLayoutEffect(() => {
+    const measure = () => {
+      const header = document.querySelector(".header");
+      const bar = document.querySelector(".mobile-tabbar");
+      setFrame({
+        top: header
+          ? Math.max(0, Math.round(header.getBoundingClientRect().bottom))
+          : 0,
+        bottom: bar ? Math.round(bar.getBoundingClientRect().height) : 0,
+      });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   const draws = useMemo(
     () =>
@@ -204,74 +457,48 @@ export default function DrawStage({
     [numbers, winner, run.result, scores, timeline],
   );
 
-  // The promotion: the winning panel's own card is measured where it sits and
-  // animated from there to the centre, so the number the player watched land is
-  // the same one that ends up covering the rest.
-  useEffect(() => {
-    if (!decided) return;
-    setPeeking(false);
-    const node = card.current,
-      source = panels.current[winnerIndex];
-    if (!node || !source || reducedMotion) return;
-    const from = source.getBoundingClientRect(),
-      to = node.getBoundingClientRect();
-    if (!from.width || !to.width) return;
-    const flight = node.animate(
-      [
-        {
-          transform: `translate(${from.left + from.width / 2 - (to.left + to.width / 2)}px, ${
-            from.top + from.height / 2 - (to.top + to.height / 2)
-          }px) scale(${Math.min(1, from.width / to.width)})`,
-          opacity: 0.2,
-        },
-        { transform: "translate(0px, 0px) scale(1)", opacity: 1 },
-      ],
-      {
-        duration: 560 * (timeline.scale ?? 1),
-        easing: "cubic-bezier(0.33, 1, 0.68, 1)",
-      },
-    );
-    return () => flight.cancel();
-  }, [decided, winnerIndex, reducedMotion, timeline.scale]);
-
   if (numbers.length < 2) return null;
-  const champ = draws[winnerIndex] ?? draws[0];
-  const scoredFor = (number) =>
-    number === winner ? (run.result ?? null) : (scores[number] ?? null);
+  // More than one number is paid: each paid number is a card of its own on its
+  // stats screen, and no total EP is counted up on the overview.
+  const paid = (run.picks ?? []).length + (run.winnerSkill == null ? 1 : 0);
+  const chipLimit = chipLimitFor(numbers.length);
 
   return (
     <div
-      className={`draw-stage ${decided ? "is-decided" : ""} ${
-        peeking ? "is-peeking" : ""
-      } ${leaving ? "is-leaving" : ""}`}
-      style={{ top: `${stageTop}px` }}
+      className={`draw-stage ${decided ? "is-decided" : ""}`}
+      ref={stageRef}
+      style={{ top: `${frame.top}px`, bottom: `${frame.bottom}px` }}
       data-count={numbers.length}
-      aria-hidden="true"
+      aria-hidden={decided ? undefined : "true"}
     >
       <p className="draw-stage-label">
         <Dices size={12} aria-hidden="true" />
         {decided
-          ? picks.length > 1
-            ? `${picks.length} numbers paid`
+          ? paid > 1
+            ? `${paid} numbers paid`
             : `Best of ${numbers.length} kept`
           : spinning
             ? `${numbers.length} independent draws`
             : `${numbers.length} draws, best kept`}
+        {decided && (
+          <button
+            type="button"
+            className="draw-stage-minimize"
+            onClick={() => onPick?.(winnerIndex)}
+          >
+            Minimize
+          </button>
+        )}
       </p>
-      <ol className="draw-grid">
+      <ol className="draw-grid" ref={gridRef}>
         {draws.map((draw, index) => {
           const isWinner = index === winnerIndex;
-          const claim = claimFor(draw.number);
+          const claim = claimFor(run, index);
           const shown = draw.beats.filter((time) => elapsed >= time).length;
           const epKnown = !spinning && !!draw.scored;
-          return (
-            <li
-              key={`${run.id}-${index}`}
-              ref={(node) => {
-                panels.current[index] = node;
-              }}
-              className={`draw-panel ${decided ? (isWinner ? "is-winner" : "is-out") : ""}`}
-            >
+          const pickable = decided && !!draw.scored;
+          const body = (
+            <>
               <span className="draw-panel-head">
                 <span className="draw-panel-label">Draw {index + 1}</span>
                 {claim && (
@@ -280,21 +507,7 @@ export default function DrawStage({
                   </span>
                 )}
                 {decided && (
-                  <span
-                    className={`draw-panel-tag ${isWinner ? "is-best" : ""} ${
-                      !isWinner && claim ? "is-paid" : ""
-                    }`}
-                  >
-                    {isWinner ? (
-                      <>
-                        <Check size={10} aria-hidden="true" /> Best
-                      </>
-                    ) : claim ? (
-                      "Paid"
-                    ) : (
-                      "Discarded"
-                    )}
-                  </span>
+                  <DecisionTag best={isWinner} claim={!isWinner && claim} />
                 )}
               </span>
               <NumberBox
@@ -317,88 +530,49 @@ export default function DrawStage({
                 {epKnown ? `${formatEP(draw.scored.totalEP)} EP` : "—"}
               </span>
               <ul className="draw-badges">
-                <BadgeChips groups={draw.groups} shown={shown} />
+                <BadgeChips
+                  groups={draw.groups}
+                  shown={shown}
+                  limit={chipLimit}
+                />
               </ul>
+              {decided && (
+                <span className="draw-panel-more">Tap for stats</span>
+              )}
+            </>
+          );
+          return (
+            <li
+              key={`${run.id}-${index}`}
+              className={`draw-panel ${decided ? (isWinner ? "is-winner" : "is-out") : ""}`}
+            >
+              {pickable ? (
+                <button
+                  type="button"
+                  className="draw-pick"
+                  aria-label={`Draw ${index + 1}, ${draw.number}. Show its stats`}
+                  onClick={() => onPick?.(index)}
+                >
+                  {body}
+                </button>
+              ) : (
+                <div className="draw-pick">{body}</div>
+              )}
             </li>
           );
         })}
       </ol>
-      {decided && (
-        <div className="draw-finale">
-          <article
-            ref={card}
-            className={`draw-winner ${peeking ? "is-peeking" : ""}`}
-            // Movement, not mere presence: the button the player just clicked
-            // sits under the middle of the screen, and the grey filter has to
-            // survive a cursor that was already there. A tap counts as well,
-            // because a touch screen has no hover to give.
-            onPointerMove={() => setPeeking(true)}
-            onPointerDown={() => setPeeking(true)}
-            onPointerLeave={() => setPeeking(false)}
+      {roll &&
+        (hub ? (
+          <div
+            className="draw-hub"
+            style={{ left: `${hub.x}px`, top: `${hub.y}px` }}
           >
-            <span className="draw-winner-kicker">
-              <Trophy size={13} aria-hidden="true" /> Best of {numbers.length} ·
-              Draw {winnerIndex + 1}
-            </span>
-            <NumberBox
-              aura={aura}
-              tier={rarityKnown ? (champ.scored?.tier ?? "neutral") : "neutral"}
-              className="draw-winner-box"
-            >
-              <Digits
-                number={winner}
-                slots={timeline.slots}
-                done={timeline.slots}
-                scramble={scramble}
-                reducedMotion={reducedMotion}
-              />
-            </NumberBox>
-            <span className="draw-winner-ep">
-              {champ.scored ? `${formatEP(champ.scored.totalEP)} EP` : "—"}
-            </span>
-            <ul className="draw-winner-badges">
-              <BadgeChips
-                groups={champ.groups}
-                shown={champ.groups.length}
-                limit={12}
-              />
-            </ul>
-            {/* Stacking draw skills pays more than one number, so the card
-                names them: each skill, the number it kept and what that
-                number was worth. */}
-            {picks.length > 1 && (
-              <ul className="draw-winner-paid">
-                {picks.map((pick) => {
-                  const scored = scoredFor(pick.number);
-                  return (
-                    <li
-                      key={`${pick.number}-${pick.name}`}
-                      className={`draw-winner-paid-item tint-${pick.tint} ${
-                        pick.number === winner ? "is-headline" : ""
-                      }`}
-                    >
-                      <span className="draw-winner-paid-skill">
-                        {pick.name || "Kept"}
-                      </span>
-                      <span className="draw-winner-paid-number">
-                        {pick.number.toLocaleString("en-US")}
-                      </span>
-                      <span className="draw-winner-paid-ep">
-                        {scored ? `${formatEP(scored.totalEP)} EP` : "—"}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <span className="draw-winner-hint">
-              <MousePointerClick size={12} aria-hidden="true" /> Hover to
-              compare the {numbers.length - 1} other{" "}
-              {numbers.length === 2 ? "draw" : "draws"}
-            </span>
-          </article>
-        </div>
-      )}
+            {roll}
+          </div>
+        ) : (
+          <div className="draw-stage-roll">{roll}</div>
+        ))}
     </div>
   );
 }
