@@ -85,10 +85,17 @@ test("History offers a share action for rolls, and only for rolls", async ({
   await expect(
     page.locator('[data-event-type="purchase"] .activity-share'),
   ).toHaveCount(0);
-  await row.getByRole("button", { name: "Share roll 604827" }).click();
+  // The share control is icon-only: no words, just the icon and its name.
+  const share = row.getByRole("button", { name: "Share roll 604827" });
+  await expect(share).toHaveText("");
+  await share.click();
+  // The copied state is announced through the name, since there is no label.
   await expect(
-    row.getByRole("button", { name: "Share roll 604827" }),
-  ).toContainText("Copied");
+    row.getByRole("button", {
+      name: "Copied roll 604827 result and link",
+      exact: true,
+    }),
+  ).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     buildShareTextFromHistory(archived),
   );
@@ -97,7 +104,7 @@ test("History offers a share action for rolls, and only for rolls", async ({
 test("the archive share reuses the palette of the live share control", () => {
   const source = fs.readFileSync("src/components/ActivityFeed.jsx", "utf8");
   expect(source).toContain("buildShareTextFromHistory");
-  expect(source).toContain("aria-label={`Share roll ${event.number}`}");
+  expect(source).toContain("`Share roll ${event.number}`");
   // The live share button stays the only share control on the roll page.
   const roll = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
   expect(roll.match(/async function share\(/g)).toHaveLength(1);
@@ -146,13 +153,14 @@ test("a rebirth opens a new cycle in the log without erasing the old one", () =>
 test("the feed draws a dotted line where each rebirth began a cycle", () => {
   const feed = fs.readFileSync("src/components/ActivityFeed.jsx", "utf8");
   const css = fs.readFileSync("src/activity.css", "utf8");
-  // The line comes from the log itself: every rebirth and ultra-rebirth entry
-  // opens a cycle, and it is labelled with the one it was.
+  // The line comes from the log itself: every rebirth, prestige and Rollback
+  // entry opens a cycle, and it is labelled with the one it was.
   expect(feed).toContain('className="activity-divider"');
   expect(feed).toMatch(
     /event\.type === "rebirth"[\s\S]{0,240}activity-divider/,
   );
-  expect(feed).toContain("Ultra-rebirth ${event.count}");
+  expect(feed).toContain("Prestige ${event.count}");
+  expect(feed).toContain("Rollback");
   expect(feed).toContain("Rebirth ${event.count}");
   // Dotted, not solid: a boundary drawn in the log's own hand.
   expect(css).toContain(".activity-divider");

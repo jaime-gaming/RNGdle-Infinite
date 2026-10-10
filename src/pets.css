@@ -325,6 +325,43 @@
   font-size: 11px;
   white-space: nowrap;
 }
+/* A tracked companion wears a tag; unfound friends show a target only in the
+   shop's shared goal-picking mode. */
+.pet-goal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.pet-slide.is-pickable {
+  cursor: pointer;
+}
+.pet-slide.is-pickable .pet-cage {
+  outline: 2px dashed var(--primary);
+  outline-offset: 6px;
+}
+.pet-pick {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--bg);
+}
+.pet-rail-cage.is-goal {
+  border-style: dashed;
+}
 .pet-note {
   font-size: 10px;
   line-height: 15px;

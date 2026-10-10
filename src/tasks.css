@@ -1,0 +1,792 @@
+/* The Tasks page: four figures on top, then one group per cadence. Each group
+   shows its tasks as segments, and a card that can be claimed is the only one
+   that turns green, so the page reads at a glance. */
+.tasks-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 8px;
+}
+.tasks-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.tasks-stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.tasks-stat strong {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--text);
+}
+.tasks-stat strong > svg {
+  align-self: center;
+  color: var(--green);
+}
+.tasks-stat small {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.tasks-stat-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--secondary);
+}
+.task-group {
+  margin-top: 32px;
+}
+.task-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+.task-group-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.task-group-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.task-group-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.task-segments {
+  display: inline-flex;
+  gap: 4px;
+}
+.task-seg {
+  width: 28px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--hover);
+}
+.task-seg.is-claimed {
+  background: color-mix(in srgb, var(--green) 45%, var(--hover));
+}
+.task-seg.is-claimable {
+  background: var(--green);
+  animation: task-seg-pulse 2.2s ease-in-out infinite;
+}
+.task-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+/* The four-task weekly list keeps its balanced two-by-two layout. */
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.task-list-daily {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.task-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+.task-card.is-claimable {
+  border-color: color-mix(in srgb, var(--green) 60%, var(--border));
+  background: linear-gradient(180deg, var(--green-bg), var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 12%, transparent);
+}
+.task-card.is-claimed {
+  opacity: 0.62;
+}
+.task-card-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+.task-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--hover);
+  color: var(--secondary);
+}
+.task-card.is-claimable .task-icon {
+  background: var(--green);
+  color: var(--bg);
+}
+.task-card-title {
+  min-width: 0;
+}
+.task-card h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.task-card-title p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.task-reward {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--green) 35%, var(--border));
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.task-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.task-bar {
+  width: 100%;
+  height: 8px;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow: hidden;
+}
+.task-bar::-webkit-progress-bar {
+  background: var(--hover);
+  border-radius: 999px;
+}
+.task-bar::-webkit-progress-value {
+  background: var(--green);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.task-bar::-moz-progress-bar {
+  background: var(--green);
+  border-radius: 999px;
+}
+.task-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.task-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 38px;
+  margin-top: auto;
+}
+.task-card-foot .primary-button,
+.task-card-foot .secondary-button {
+  margin-top: 0;
+}
+.task-skip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+.task-claim {
+  min-width: 96px;
+}
+.task-confirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--secondary);
+}
+.task-claimed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+}
+.task-note {
+  margin: 36px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.task-kind {
+  display: block;
+  margin-bottom: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.task-percent {
+  color: var(--secondary);
+}
+/* The list bonus sits under its tasks: dashed while it is still to earn, solid
+   once it is ready to collect or has been paid. */
+.task-bonus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.task-bonus-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--hover);
+  color: var(--secondary);
+}
+.task-bonus-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.task-bonus-text strong {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+}
+.task-bonus-text span {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.task-bonus.is-claimed {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--green) 40%, var(--border));
+}
+.task-bonus.is-claimed .task-bonus-icon {
+  background: var(--green);
+  color: var(--bg);
+}
+.task-bonus.is-claimable {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--green) 60%, var(--border));
+  background: linear-gradient(180deg, var(--green-bg), var(--surface));
+}
+.task-bonus.is-claimable .task-bonus-icon {
+  background: var(--green);
+  color: var(--bg);
+}
+.task-bonus .task-claim {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+@keyframes task-seg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (max-width: 1100px) {
+  .task-list-daily {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .tasks-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .tasks-stat {
+    padding: 14px;
+  }
+  .task-list {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-seg.is-claimable {
+    animation: none;
+  }
+}
+
+/* The header's Tasks tab carries a dot while a reward is waiting. */
+.header nav button {
+  position: relative;
+}
+.nav-ready-dot {
+  position: absolute;
+  top: 7px;
+  right: -7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 2px var(--bg);
+  animation: tabbar-dot-pulse 2.2s ease-in-out infinite;
+}
+
+/* A single short glitch on Tasks, triggered at a random 5–20 second interval. */
+.tasks-nav-glitch-label {
+  display: inline-block;
+}
+.tasks-nav-glitch-label.is-glitching {
+  animation: tasks-nav-glitch 420ms steps(1, end) both;
+}
+@keyframes tasks-nav-glitch {
+  0%,
+  100% {
+    clip-path: inset(0);
+    transform: none;
+    letter-spacing: inherit;
+    text-shadow: none;
+  }
+  18% {
+    clip-path: inset(0 0 58%);
+    transform: translateX(-2px) skewX(-4deg);
+    text-shadow:
+      1px 0 #8c7ab8,
+      -2px 0 var(--green);
+  }
+  36% {
+    clip-path: inset(38% 0 0);
+    transform: translateX(2px) skewX(2deg);
+    text-shadow:
+      -1px 0 #8c7ab8,
+      2px 0 var(--green);
+  }
+  62% {
+    clip-path: inset(16% 8% 52% 0);
+    transform: translateX(2px);
+    letter-spacing: 0.06em;
+    text-shadow: 1px 0 var(--green);
+  }
+  82% {
+    clip-path: inset(0 0 0 34%);
+    transform: translateX(-2px) scaleX(1.04);
+    text-shadow:
+      1px 0 #8c7ab8,
+      -2px 0 var(--green);
+  }
+}
+
+/* A restrained event panel that shares the Tasks page's surfaces and type. */
+.signal-event {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 0 0 30px;
+  padding: clamp(18px, 2.4vw, 26px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(
+    112deg,
+    color-mix(in srgb, var(--green) 5%, var(--surface)),
+    var(--surface) 56%,
+    color-mix(in srgb, #8c7ab8 5%, var(--surface))
+  );
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.signal-event::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--green), #8c7ab8);
+  content: "";
+}
+.signal-event-head,
+.signal-event-meta,
+.signal-event-status,
+.signal-event-summary,
+.signal-event-link,
+.signal-event-progress-label,
+.signal-mission-line,
+.signal-mission-reward,
+.signal-mission-meter {
+  display: flex;
+  align-items: center;
+}
+.signal-event-head {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border);
+}
+.signal-event-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.signal-event-eyebrow {
+  color: var(--muted);
+  font: 700 9px/1.4 var(--font-mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.signal-event-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font: 700 clamp(20px, 2.5vw, 25px)/1.2 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.signal-event-meta {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+.signal-event-status {
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 650;
+}
+.signal-event-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.signal-event-status.is-active {
+  border-color: color-mix(in srgb, var(--green) 38%, var(--border));
+  background: var(--green-bg);
+  color: var(--green);
+}
+.signal-event-status.is-upcoming {
+  color: var(--warning);
+}
+.signal-event-summary {
+  justify-content: space-between;
+  gap: 14px 24px;
+  padding: 16px 0 20px;
+}
+.signal-event-summary p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--secondary);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.signal-event-link {
+  flex: 0 0 auto;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.signal-event-link:hover {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  color: var(--green);
+}
+.signal-event-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px 16px;
+  margin: 0 0 14px;
+}
+.signal-event-progress-label {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--secondary);
+  font-size: 11px;
+}
+.signal-event-progress-label strong {
+  color: var(--text);
+  font: 650 11px/1.4 var(--font-mono);
+}
+.signal-event-progress progress,
+.signal-mission-meter progress {
+  display: block;
+  width: 100%;
+  height: 7px;
+  border: 0;
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow: hidden;
+}
+.signal-event-progress progress {
+  min-width: 90px;
+}
+.signal-event-progress progress::-webkit-progress-bar,
+.signal-mission-meter progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: var(--hover);
+}
+.signal-event-progress progress::-webkit-progress-value,
+.signal-mission-meter progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--green);
+  transition: width 0.35s ease;
+}
+.signal-event-progress progress::-moz-progress-bar,
+.signal-mission-meter progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--green);
+}
+.signal-event-countdown {
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.signal-mission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.signal-mission {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-content: start;
+  gap: 10px 12px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+.signal-mission.is-complete {
+  border-color: color-mix(in srgb, var(--green) 50%, var(--border));
+  background: color-mix(in srgb, var(--green) 4%, var(--surface));
+}
+.signal-mission-preview {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 48px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--signal-a) 48%, var(--border));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--signal-b) 18%, var(--surface));
+}
+.signal-mission-preview .number-box {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  padding: 8px 4px;
+  border: 1px solid color-mix(in srgb, var(--signal-a) 58%, var(--border));
+  border-radius: 7px;
+  --box-font: 12px !important;
+  font-size: 12px;
+}
+.signal-mission-copy {
+  min-width: 0;
+}
+.signal-mission-line {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  color: var(--muted);
+  font: 600 9px/1.4 var(--font-mono);
+}
+.signal-mission-line > span:first-child {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.signal-mission-line > span:last-child {
+  color: var(--secondary);
+}
+.signal-mission-line > span.is-recovered {
+  color: var(--green);
+}
+.signal-mission-copy h3 {
+  margin: 5px 0 3px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.signal-mission-copy p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+.signal-mission-reward {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.signal-mission-reward strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.signal-mission-reward span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+.signal-mission-meter {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 10px;
+}
+.signal-mission-meter progress {
+  flex: 1;
+  min-width: 60px;
+}
+.signal-mission-meter > span {
+  color: var(--secondary);
+  font: 600 9px/1.4 var(--font-mono);
+  white-space: nowrap;
+}
+.signal-mission-claim {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  justify-self: start;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--green) 48%, var(--border));
+  border-radius: 8px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.signal-mission-claim:hover:not(:disabled),
+.signal-mission-claim:focus-visible {
+  border-color: var(--green);
+  filter: brightness(0.98);
+}
+.signal-mission-claim:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+@media (max-width: 760px) {
+  .signal-event-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-bottom: 16px;
+  }
+  .signal-event-progress {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+  .signal-event-progress-label {
+    grid-column: auto;
+  }
+  .signal-event-countdown {
+    white-space: normal;
+  }
+  .signal-mission-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 420px) {
+  .signal-event-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .signal-event-meta {
+    align-items: flex-start;
+  }
+  .signal-mission {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 9px;
+    padding: 11px;
+  }
+  .signal-mission-preview {
+    width: 48px;
+    height: 44px;
+  }
+  .signal-mission-reward span {
+    font-size: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-mission,
+  .signal-event-progress progress::-webkit-progress-value,
+  .signal-mission-meter progress::-webkit-progress-value {
+    transition: none;
+  }
+  .tasks-nav-glitch-label {
+    animation: none;
+  }
+}

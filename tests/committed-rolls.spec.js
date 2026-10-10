@@ -396,6 +396,11 @@ test("failed settlement is merged with later cross-tab spending rather than over
   expect((await saved(page)).flywheelCharge).toBe(3);
   expect((await saved(page)).pendingRoll).not.toBeNull();
   const other = await context.newPage();
+  // The failed writer recovers before the next cross-tab update arrives. The
+  // storage event must durably merge its credited roll into that new save.
+  await page.evaluate(() => {
+    window.failSettlement = false;
+  });
   await other.goto("/shop/auras/celestial");
   await buy(other, "starfall");
   await nav(page, "Shop");
@@ -403,9 +408,12 @@ test("failed settlement is merged with later cross-tab spending rather than over
   await expect(page.getByTestId("wallet-balance")).toHaveText(
     `${(500000 - starfallPrice + 4663).toLocaleString("en-US")} EP`,
   );
-  await page.evaluate(() => {
-    window.failSettlement = false;
-  });
+  const restored = await saved(page);
+  expect(restored.balance).toBe(500000 - starfallPrice + 4663);
+  expect(restored.pendingRoll).toBeNull();
+  expect(
+    restored.history.filter((entry) => entry.type === "roll"),
+  ).toHaveLength(1);
   await buy(page, "clockwork-1");
   const after = await saved(page);
   expect(after.balance).toBe(
@@ -420,6 +428,50 @@ test("failed settlement is merged with later cross-tab spending rather than over
   expect(after.history.filter((e) => e.type === "purchase")).toHaveLength(2);
   expect(after.pendingRoll).toBeNull();
   await other.close();
+});
+
+test("a linked save preserves a roll that this tab could not write", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    balance: 500000,
+    totalEarned: 500000,
+    owned: ["flywheel"],
+    flywheelCharge: 3,
+  });
+  await startRoll(page, 604827);
+  await page.evaluate((key) => {
+    const write = Storage.prototype.setItem;
+    window.failSettlement = true;
+    Storage.prototype.setItem = function (k, v) {
+      if (
+        window.failSettlement &&
+        k === key &&
+        JSON.parse(v).history.some((entry) => entry.type === "roll")
+      )
+        throw new DOMException("Full", "QuotaExceededError");
+      return write.call(this, k, v);
+    };
+  }, PROGRESS_KEY);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await settled(page);
+
+  // The peer sends the last durable save, which still has the committed roll
+  // pending. It must not replace this tab's only copy of the settlement.
+  const linkedHead = JSON.stringify(await saved(page));
+  await page.evaluate((raw) => {
+    window.failSettlement = false;
+    window.dispatchEvent(new CustomEvent("rng-sync-state", { detail: raw }));
+  }, linkedHead);
+  await expect
+    .poll(async () => {
+      const progress = await saved(page);
+      return progress.history.filter((entry) => entry.type === "roll").length;
+    })
+    .toBe(1);
+  expect((await saved(page)).balance).toBe(504663);
+  expect((await saved(page)).pendingRoll).toBeNull();
+  await settled(page);
 });
 
 test("registered browsers without Web Locks fail closed before exposing a new number", async ({

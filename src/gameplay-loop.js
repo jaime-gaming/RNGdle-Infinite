@@ -1,14 +1,22 @@
-import { productById, shopProducts } from "./shop-data.js";
+import { productById, productPrice, shopProducts } from "./shop-data.js";
+import { isCycleMarker } from "./history-log.js";
+import { petById } from "./pets.js";
 
 // Goals are a view over the existing economy, never another reward system.
-export function availableGoals(progress) {
-  return shopProducts.filter(
-    (item) =>
-      !progress.owned.includes(item.id) &&
-      (!item.requires || progress.owned.includes(item.requires)),
-  );
+export function availableGoals(progress, at = Date.now()) {
+  return shopProducts
+    .filter(
+      (item) =>
+        !progress.owned.includes(item.id) &&
+        (!item.requires || progress.owned.includes(item.requires)),
+    )
+    .map((item) => ({ ...item, price: productPrice(item, at) }));
 }
-export function validGoal(id, owned) {
+// A goal is a shop product still for sale, or a companion not found yet. Only
+// the player's products and companions decide it: a companion is never a
+// prerequisite for anything, so it is always reachable while unowned.
+export function validGoal(id, owned = [], pets = []) {
+  if (petById.has(id)) return !pets.includes(id);
   const item = productById.get(id);
   return (
     !!item &&
@@ -16,8 +24,25 @@ export function validGoal(id, owned) {
     (!item.requires || owned.includes(item.requires))
   );
 }
-export function recommendedGoal(progress) {
-  const available = availableGoals(progress).filter(
+// What the goal views read: a name, a price, an id, a description and an icon.
+// Companions are not catalogue products, so they are shaped to match here and
+// the banner, the recap and the spotlight need no special case.
+export function goalItem(id, at = Date.now()) {
+  const pet = petById.get(id);
+  if (pet)
+    return {
+      id: pet.id,
+      name: pet.name,
+      price: pet.price,
+      description: pet.description,
+      kind: "companion",
+      icon: "companion",
+    };
+  const item = productById.get(id);
+  return item ? { ...item, price: productPrice(item, at) } : null;
+}
+export function recommendedGoal(progress, at = Date.now()) {
+  const available = availableGoals(progress, at).filter(
     (item) => !item.requiresProfile || progress.profile,
   );
   const priority = (item) =>
@@ -32,15 +57,15 @@ export function recommendedGoal(progress) {
     )[0] ?? null
   );
 }
-export function currentGoal(progress) {
-  return validGoal(progress.goalId, progress.owned)
-    ? productById.get(progress.goalId)
-    : recommendedGoal(progress);
+export function currentGoal(progress, at = Date.now()) {
+  return validGoal(progress.goalId, progress.owned, progress.pets)
+    ? goalItem(progress.goalId, at)
+    : recommendedGoal(progress, at);
 }
 export function rollReceipt(progress, id) {
-  const cycleStart = progress.history.findLastIndex(
-    (e) => e.type === "rebirth",
-  );
+  // The cycle in play starts at its last marker: a rebirth, a prestige or the
+  // Rollback. A roll from before that marker belongs to an earlier cycle.
+  const cycleStart = progress.history.findLastIndex(isCycleMarker);
   const roll = progress.history.findLast(
     (e, i) =>
       i > cycleStart &&

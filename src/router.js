@@ -3,6 +3,7 @@
 // route is resolved against the build-time base rather than the domain root.
 export const PAGES = [
   "roll",
+  "tasks",
   "shop",
   "badges",
   "history",

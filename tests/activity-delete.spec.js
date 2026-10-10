@@ -159,6 +159,9 @@ test("legacy companion-drop history survives reload and is shown as a found pet"
 test("guest feed, filters, badge details and shop transactions stay a demo; signup starts a clean feed", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    Math.random = () => 0.5;
+  });
   await showRoll(page, 1337);
   await nav(page, "History");
   await expect(page.locator(".activity-event")).toHaveCount(2);

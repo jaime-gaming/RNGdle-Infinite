@@ -68,14 +68,19 @@ export default function Settings({ notify, progress, onAction, navigate }) {
     setPermission(result);
     if (result === "granted") {
       update({ notifyReady: true });
-      notify?.("Desktop notifications enabled for finished cooldowns.");
+      notify?.({
+        kind: "done",
+        text: "Desktop notifications enabled for finished cooldowns.",
+      });
     } else {
       update({ notifyReady: false });
-      notify?.(
-        result === "unsupported"
-          ? "This browser does not support desktop notifications."
-          : "Your browser blocked notifications. Allow them in site settings and try again.",
-      );
+      notify?.({
+        kind: "warning",
+        text:
+          result === "unsupported"
+            ? "This browser does not support desktop notifications."
+            : "Your browser blocked notifications. Allow them in site settings and try again.",
+      });
     }
   }
 
@@ -129,8 +134,8 @@ export default function Settings({ notify, progress, onAction, navigate }) {
               const played = settings.notifySound && playReadyChime();
               notify?.(
                 shown || played
-                  ? "Test alert sent."
-                  : "Enable an alert above to test it.",
+                  ? { kind: "done", text: "Test alert sent." }
+                  : { kind: "info", text: "Enable an alert above to test it." },
               );
             }}
           >
@@ -284,7 +289,10 @@ export default function Settings({ notify, progress, onAction, navigate }) {
           className="secondary-button"
           onClick={() => {
             reset();
-            notify?.("Settings restored to their defaults.");
+            notify?.({
+              kind: "done",
+              text: "Settings restored to their defaults.",
+            });
           }}
         >
           <RotateCcw size={14} /> Restore defaults

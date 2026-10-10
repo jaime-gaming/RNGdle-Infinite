@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Coins } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Coins, Target } from "lucide-react";
 import {
   PETS,
   petById,
@@ -8,6 +8,7 @@ import {
   PET_DROP_CHANCE,
 } from "../pets.js";
 import { skillForPet, skillEffectSummary } from "../skills.js";
+import { validGoal } from "../gameplay-loop.js";
 import { useFormatEP } from "../use-settings.jsx";
 import PetIcon from "./PetIcon.jsx";
 import { CompanionMark, SkillIcon } from "./game-icons.jsx";
@@ -20,7 +21,18 @@ import "../pets.css";
 //
 // Buy one, or be very lucky. Equipping is free and the bonus applies to
 // banked EP only — never to the number, its tier or its score.
-export default function PetShelf({ progress, onAction, notify }) {
+export default function PetShelf({
+  progress,
+  onAction,
+  notify,
+  // A goal link (the banner, the spotlight, a recap) names the companion it
+  // points at: the stage turns to it.
+  focus = null,
+  // Pick mode is armed from the goal banner; while it is, any unfound
+  // companion on the stage becomes the goal when tapped.
+  pickingGoal = false,
+  onPickingGoal = () => {},
+}) {
   const formatEP = useFormatEP();
   const [pending, setPending] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
@@ -28,18 +40,42 @@ export default function PetShelf({ progress, onAction, notify }) {
   const [uncaged, setUncaged] = useState(null);
   const busy = useRef(false);
   const uncageTimer = useRef(null);
+  const slideshow = useRef(null);
   const owned = progress.pets ?? [];
   const active = progress.activePet ?? "none";
+  // The tracked goal, when it is a companion still unfound. A product goal is
+  // the shop's own banner's business, so it reads as no goal here.
+  const tracked = validGoal(progress.goalId, progress.owned, owned)
+    ? progress.goalId
+    : null;
   useEffect(() => () => clearTimeout(uncageTimer.current), []);
 
+  useEffect(() => {
+    const at = PETS.findIndex((pet) => pet.id === focus);
+    if (at < 0) return;
+    // A goal can only be an unfound companion, so "Only mine" steps aside.
+    setOnlyMine(false);
+    setIndex(at);
+    const frame = requestAnimationFrame(() => {
+      slideshow.current?.scrollIntoView({
+        block: "center",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focus]);
+
+  // Resolves to whether the action landed, so a pick can end once it has.
   async function run(action, id, message) {
-    if (busy.current) return;
+    if (busy.current) return false;
     busy.current = true;
-    setPending(id);
+    setPending(id ?? action);
     try {
       const result = await onAction({ type: action, id });
       if (result.ok) {
-        notify?.(message);
+        notify?.({ kind: "done", text: message });
         // Equipping — or buying, which equips — opens the cage: the door
         // swings and the friend hops out. Putting one away cages it again,
         // so that one stays quiet.
@@ -48,11 +84,26 @@ export default function PetShelf({ progress, onAction, notify }) {
           clearTimeout(uncageTimer.current);
           uncageTimer.current = setTimeout(() => setUncaged(null), 1400);
         }
-      } else notify?.(result.message);
+      } else notify?.({ kind: "error", text: result.message });
+      return result.ok;
     } finally {
       busy.current = false;
       setPending("");
     }
+  }
+
+  // A companion goal is a choice like a product goal: no EP is spent, and the
+  // pick is done the moment the goal lands. Clearing it hands back the shop's
+  // own recommendation.
+  async function setGoal(pet) {
+    const done = await run(
+      "goal",
+      pet ? pet.id : null,
+      pet
+        ? `Goal updated: ${pet.name}. No EP spent.`
+        : "Goal cleared. The shop recommends the next step.",
+    );
+    if (done) onPickingGoal(false);
   }
 
   const oneIn = Math.round(1 / PET_DROP_CHANCE);
@@ -128,6 +179,7 @@ export default function PetShelf({ progress, onAction, notify }) {
       {visible.length ? (
         <div
           className="pet-slideshow"
+          ref={slideshow}
           onKeyDown={slideKeys}
           style={{ "--pet-count": visible.length }}
         >
@@ -151,21 +203,32 @@ export default function PetShelf({ progress, onAction, notify }) {
               {visible.map((pet, i) => {
                 const isOwned = owned.includes(pet.id);
                 const isActive = active === pet.id;
+                const isGoal = tracked === pet.id;
                 const affordable = progress.balance >= pet.price;
                 const signature = skillForPet(pet.id);
                 const current = i === at;
+                // Pick mode: an unfound companion is the goal when tapped, and
+                // tapping the tracked one again untracks it, as on the shelves.
+                const pickable = pickingGoal && !isOwned;
                 return (
                   <article
                     key={pet.id}
                     data-pet={pet.id}
+                    data-goal={isGoal || undefined}
                     className={`pet-slide ${current ? "is-current" : ""} ${
                       isActive ? "is-active" : ""
                     } ${isOwned ? "is-owned" : ""} ${
                       uncaged === pet.id ? "is-uncaging" : ""
-                    }`}
+                    } ${pickable ? "is-pickable" : ""}`}
                     style={{ "--pet-accent": pet.accent }}
                     aria-hidden={current ? undefined : "true"}
                     inert={current ? undefined : true}
+                    onClick={(event) => {
+                      if (!pickable) return;
+                      if (event.target.closest("button, a, input, select"))
+                        return;
+                      setGoal(isGoal ? null : pet);
+                    }}
                   >
                     <div className="pet-cage">
                       <span className="pet-cage-hanger" aria-hidden="true" />
@@ -183,8 +246,15 @@ export default function PetShelf({ progress, onAction, notify }) {
                           ? "walking with you"
                           : isOwned
                             ? "in your collection"
-                            : "in the wild"}
+                            : isGoal
+                              ? "your goal"
+                              : "in the wild"}
                       </span>
+                      {pickable && (
+                        <span className="pet-pick" aria-hidden="true">
+                          <Target size={15} />
+                        </span>
+                      )}
                     </div>
                     <div className="pet-body">
                       <div className="pet-title">
@@ -240,6 +310,20 @@ export default function PetShelf({ progress, onAction, notify }) {
                             <Coins size={13} /> {formatEP(pet.price)} EP
                           </button>
                         )}
+                        {!isOwned && isGoal && (
+                          <>
+                            <span className="pet-goal-tag">
+                              <Target size={13} /> Your goal
+                            </span>
+                            <button
+                              className="pet-button"
+                              disabled={!!pending}
+                              onClick={() => setGoal(null)}
+                            >
+                              Clear
+                            </button>
+                          </>
+                        )}
                         <small className="pet-note">
                           {isOwned
                             ? isActive
@@ -285,7 +369,9 @@ export default function PetShelf({ progress, onAction, notify }) {
                   data-cage={pet.id}
                   className={`pet-rail-cage ${i === at ? "is-current" : ""} ${
                     active === pet.id ? "is-active" : ""
-                  } ${owned.includes(pet.id) ? "is-owned" : ""}`}
+                  } ${owned.includes(pet.id) ? "is-owned" : ""} ${
+                    tracked === pet.id ? "is-goal" : ""
+                  }`}
                   style={{ "--pet-accent": pet.accent }}
                   aria-label={`Show ${pet.name}`}
                   aria-current={i === at ? "true" : undefined}

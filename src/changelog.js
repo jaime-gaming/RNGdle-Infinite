@@ -2,6 +2,20 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.5",
+    title: "tasks, the R4ND0MN3S5 event and a larger activity history",
+    body: [
+      "daily lists deal 3 tasks and weekly lists 4; tasks are claimed individually. Skips cost 125,000 EP: one daily, up to three in five days.",
+      "the R4ND0MN3S5 missions unlock four free auras to collect on Tasks; Shop prices are premium during the event, then drop to regular.",
+      "all owned auras, including the equipped look, stay through Rebirth; other run purchases reset as before.",
+      "shop, Tasks and Badges lead navigation; Tasks gets one short glitch at random, while Rebirth hints at more beyond the final rung.",
+      "the first six companion prices rose, the upper seven fell, making early boosts pricier and late tiers easier to reach.",
+      "history holds 6,000 entries, warns at 4,500, and removed rolls still count in your profile; bulk delete preserves bookmarks.",
+      "share and bookmark actions are icon-only; a roll cannot be credited twice after its history entry is removed.",
+      "a roll that pays several numbers keeps them all on one screen; the best turns green, tapping one shows its stats, and no total counts up.",
+    ],
+  },
+  {
     version: "v0.4.1",
     title: "tiny update",
     body: [

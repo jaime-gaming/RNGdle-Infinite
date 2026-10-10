@@ -20,6 +20,14 @@ function stamp(value) {
   return Number.isFinite(value) ? value : 0;
 }
 
+// The stamp a change that has not reached the room yet carries: one step past
+// the last save the room accepted, or the moment the change was made, whichever
+// is later. The step matters when the other device's clock runs ahead, so the
+// change still beats the save it would otherwise tie with.
+export function pendingStamp(savedAt, dirtyAt) {
+  return Math.max(stamp(savedAt) + 1, stamp(dirtyAt));
+}
+
 // A device link starts with one account and one empty browser. On the P2P
 // transport both can send at stamp zero, so the device-id tie-break alone can
 // let the guest win. A valid account must always beat a guest save; once both

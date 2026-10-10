@@ -16,12 +16,12 @@ import {
   X,
   Search,
   ChevronRight,
-  Check,
   ArrowLeft,
   SlidersHorizontal,
   ScrollText,
   UserRound,
   Sparkles,
+  ListChecks,
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
@@ -42,13 +42,21 @@ import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
+import Tasks from "./components/Tasks";
+import { taskSummary } from "./tasks.js";
+import { TASKS_GLITCH_DURATION_MS, tasksGlitchDelay } from "./tasks-glitch.js";
+import { freshRareBadges, newlyReady } from "./notice-rules.js";
+import { badgeMetadata } from "./roll-data.js";
+import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
 import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
 import { petDrop, petById } from "./pets.js";
+import { goalItem } from "./gameplay-loop.js";
 import {
   rebirthUnlocked,
   rebirthReady,
+  rollbackAvailable,
   ultraRebirthAvailable,
 } from "./rebirth.js";
 import { gameNow } from "./game-clock.js";
@@ -58,10 +66,13 @@ import Changelog from "./components/Changelog";
 import {
   BadgeMark,
   CompanionMark,
+  CreatureIcon,
   InfinityMark,
   SkillMark,
   RollMark,
 } from "./components/game-icons.jsx";
+import Toasts from "./components/Toasts";
+import { useToasts } from "./use-toasts.js";
 import RebirthNav from "./components/RebirthNav";
 import MobileTabBar from "./components/MobileTabBar";
 import InstallApp from "./components/InstallApp";
@@ -118,6 +129,15 @@ function shopSectionFromLocation(target) {
   return named(hash) || named(subpageFromLocation(target));
 }
 
+// Used by the notices: a badge's rarity as the game writes it.
+const NO_BADGES = [];
+const RARITY_NAME = {
+  epic: "Epic",
+  anomaly: "Anomaly",
+  mythic: "Mythic",
+  godly: "GODLY",
+};
+
 function App() {
   const [page, setPage] = useState(() => pageFromLocation(location));
   const [theme, setTheme] = useState(() => {
@@ -150,17 +170,46 @@ function App() {
   // Goal picking is armed from the shop's goal banner; the state lives here so
   // it survives shelf changes (the Shop remounts on every sub-page).
   const [pickingGoal, setPickingGoal] = useState(false);
+  // One short Tasks-only glitch, scheduled at a fresh random interval after the
+  // previous one has finished, so occurrences can never overlap.
+  const [tasksGlitchActive, setTasksGlitchActive] = useState(false);
+  useEffect(() => {
+    let nextTimer = null;
+    let finishTimer = null;
+    let stopped = false;
+    const schedule = () => {
+      nextTimer = setTimeout(() => {
+        if (stopped) return;
+        setTasksGlitchActive(true);
+        finishTimer = setTimeout(() => {
+          if (stopped) return;
+          setTasksGlitchActive(false);
+          schedule();
+        }, TASKS_GLITCH_DURATION_MS);
+      }, tasksGlitchDelay());
+    };
+    schedule();
+    return () => {
+      stopped = true;
+      clearTimeout(nextTimer);
+      clearTimeout(finishTimer);
+    };
+  }, []);
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
-  const [toast, setToast] = useState("");
-  // The ultra-rebirth earns a moment: a full-screen ceremony that lives in
-  // the app shell (the rebirth page navigates away the moment it succeeds),
-  // plays over whatever is on screen, then removes itself. Pointer-transparent
-  // and animation-driven — reduced motion never sees it at all.
-  const [ultraCeremony, setUltraCeremony] = useState(false);
+  // Notices: a short stack of cards, one per thing that just happened. See
+  // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
+  const { toasts, notify, dismiss: dismissToast } = useToasts();
+  // A prestige (the ultra-rebirth in the save) earns a moment, and so does the
+  // Rollback, the last stage, in its own words. The ceremony is a full-screen
+  // moment that lives in the app shell (the rebirth page navigates away the
+  // moment it succeeds), plays over whatever is on screen, then removes itself.
+  // Pointer-transparent and animation-driven — reduced motion never sees it.
+  // The state names the moment: "prestige", "rollback", or null for none.
+  const [ultraCeremony, setUltraCeremony] = useState(null);
   useEffect(() => {
     if (!ultraCeremony) return;
-    const timer = setTimeout(() => setUltraCeremony(false), 2700);
+    const timer = setTimeout(() => setUltraCeremony(null), 2700);
     return () => clearTimeout(timer);
   }, [ultraCeremony]);
   // A plain rebirth earns a smaller moment: a spinning rainbow ring over the
@@ -209,10 +258,14 @@ function App() {
     return subscribeSync((state, note) => {
       if (state === "live" && announced !== "live") {
         announced = "live";
-        notify("Devices linked — both devices now play the same account live.");
+        notify({
+          kind: "milestone",
+          title: "Devices linked",
+          text: "Both devices now play the same account, live.",
+        });
       } else if (state === "error" && announced !== "error") {
         announced = "error";
-        notify(note);
+        notify({ kind: "error", text: note || "The device link was lost." });
       } else if (state !== "error") announced = state;
     });
   }, []);
@@ -251,28 +304,108 @@ function App() {
       markSeen();
       setSeenVersion(LATEST_VERSION);
     }
+    if (outcome.ok && outcome.eventRewards?.length) {
+      const names = outcome.eventRewards
+        .map((aura) => productById.get(aura)?.name)
+        .filter(Boolean);
+      if (names.length)
+        notify({
+          kind: "milestone",
+          title:
+            names.length === 1
+              ? `${names[0]} unlocked`
+              : "R4ND0MN3S5 signal restored",
+          text: `${names.join(", ")} ${names.length === 1 ? "was" : "were"} added to your aura collection for free.`,
+          icon: <Sparkles size={18} aria-hidden="true" />,
+        });
+    }
     if (outcome.ok && drop) {
-      notify(`New companion: ${petById.get(drop).name} joined you.`);
+      notify({
+        kind: "milestone",
+        title: "New companion",
+        text: `${petById.get(drop).name} joined you and multiplies the EP you bank.`,
+        icon: <CreatureIcon pet={drop} size={18} />,
+      });
       setArrivalPet(drop);
       clearTimeout(arrivalTimer.current);
       arrivalTimer.current = setTimeout(() => setArrivalPet(null), 5600);
     }
-    if (!outcome.ok) notify(outcome.message);
+    if (!outcome.ok) notify({ kind: "error", text: outcome.message });
     return outcome;
   }
   const [search, setSearch] = useState("");
   const [rarity, setRarity] = useState("All rarities");
   const [group, setGroup] = useState("All sets");
   const [sort, setSort] = useState("Default");
-  const toastTimer = useRef(null);
   const arrivalTimer = useRef(null);
   const previousFocus = useRef(null);
   const modalRef = useRef(null);
-  const notify = (text) => {
-    setToast(text);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 3500);
-  };
+  // The log's space warnings are announced once, when a roll or a claim carries
+  // it across a level. An account that loads already past a level stays quiet:
+  // the History page shows the warning for as long as it applies.
+  const historySize = session.history?.length ?? 0;
+  const lastHistorySize = useRef(historySize);
+  useEffect(() => {
+    const before = lastHistorySize.current;
+    lastHistorySize.current = historySize;
+    const openHistory = {
+      label: "Open History",
+      onSelect: () => navigate("history"),
+    };
+    if (before < HISTORY_LIMIT && historySize >= HISTORY_LIMIT)
+      notify({
+        kind: "warning",
+        title: "Entry space is full",
+        text: "The oldest entries now make room for new rolls.",
+        action: openHistory,
+      });
+    else if (before < HISTORY_WARNING && historySize >= HISTORY_WARNING)
+      notify({
+        kind: "warning",
+        title: "Low entry space",
+        text: "Open History to bulk delete old entries.",
+        action: openHistory,
+      });
+  }, [historySize]);
+  // Two things the player waits for earn a notice when they first appear: a
+  // task that can be claimed, and a badge of Epic or better. The first load is
+  // quiet, and one roll that finishes several things is one notice. The badge
+  // notice stays off the roll page, where the result already shows the badges.
+  const readyTasks = taskSummary(session.tasks, gameNow()).ready;
+  const lastReadyTasks = useRef(readyTasks);
+  useEffect(() => {
+    const rose = newlyReady(lastReadyTasks.current, readyTasks);
+    lastReadyTasks.current = readyTasks;
+    if (rose > 0 && page !== "tasks")
+      notify({
+        kind: "milestone",
+        title:
+          readyTasks === 1
+            ? "Task ready to claim"
+            : `${readyTasks} tasks ready to claim`,
+        text: "The reward waits on the Tasks page.",
+        action: { label: "Open Tasks", onSelect: () => navigate("tasks") },
+      });
+  }, [readyTasks]);
+  const discovered = session.discovered ?? NO_BADGES;
+  const lastDiscovered = useRef(discovered);
+  useEffect(() => {
+    const fresh = freshRareBadges(lastDiscovered.current, discovered, (id) =>
+      badgeMetadata.get(id),
+    );
+    lastDiscovered.current = discovered;
+    if (page === "roll" || !fresh.length) return;
+    const names = fresh.map((badge) => badge.name);
+    notify({
+      kind: "milestone",
+      title:
+        fresh.length === 1
+          ? `${RARITY_NAME[fresh[0].rarity]} badge found`
+          : `${fresh.length} rare badges found`,
+      text: names.join(", "),
+      action: { label: "Open Badges", onSelect: () => navigate("badges") },
+    });
+  }, [discovered]);
   // Real URLs, so a page and its shelf can be linked, bookmarked and reloaded
   // directly. The address bar is the source of truth, never component state.
   const push = (target, path, section = "") => {
@@ -297,11 +430,11 @@ function App() {
     // Leaving the shop disarms goal picking: it belongs to the shop floor.
     if (target !== "shop") setPickingGoal(false);
     setSettingsSection("");
-    // Opening the shop on a product (a goal link, a recap) opens the shelf that
-    // sells it, so the card is on screen when the page renders.
+    // Opening the shop on a product or a companion (a goal link, a recap) opens
+    // the shelf that sells it, so the card is on screen when the page renders.
     const section =
-      target === "shop" && productById.has(focusProduct)
-        ? shelfOfProduct(productById.get(focusProduct))
+      target === "shop" && goalItem(focusProduct)
+        ? shelfOfProduct(goalItem(focusProduct))
         : "";
     setShopFocus(target === "shop" ? focusProduct : null);
     setShopSection(section);
@@ -314,9 +447,9 @@ function App() {
       section,
     );
   };
-  const openShelf = (id) => {
+  const openShelf = (id, focus = null) => {
     const section = SHOP_SECTIONS.some((entry) => entry.id === id) ? id : "";
-    setShopFocus(null);
+    setShopFocus(focus);
     setShopSection(section);
     setShopFamily("");
     setPage("shop");
@@ -391,7 +524,6 @@ function App() {
   }, [theme]);
   useEffect(
     () => () => {
-      clearTimeout(toastTimer.current);
       clearTimeout(arrivalTimer.current);
     },
     [],
@@ -447,12 +579,15 @@ function App() {
     blocked: !!session.pendingRoll || !!session.offline?.batch,
   });
   const rebirthVisible = rebirthUnlocked(session);
+  // A ready task shows a dot in the header and the tab bar, until it is claimed.
+  const tasksReady = taskSummary(session.tasks, gameNow()).ready > 0;
   // The mobile tab bar marks the rebirth tab ready the moment either a rung
-  // or the ultra is available.
+  // or a prestige or the Rollback is available.
   const rebirthReadyNow =
     rebirthVisible &&
     (rebirthReady(session, gameNow()) ||
-      ultraRebirthAvailable(session, gameNow()));
+      ultraRebirthAvailable(session, gameNow()) ||
+      rollbackAvailable(session, gameNow()));
   // A direct link to a page that has not been unlocked yet simply goes home:
   // no locked panel, no counter, nothing to explain the mystery early.
   useEffect(() => {
@@ -501,18 +636,34 @@ function App() {
           <nav aria-label="Main navigation">
             {[
               ["shop", "Shop", ShoppingBag],
+              ["tasks", "Tasks", ListChecks],
               ["badges", "Badges", Medal],
               ["history", "History", History],
             ].map(([destination, label, Icon]) => (
               <button
                 key={destination}
-                aria-label={label}
+                aria-label={
+                  destination === "tasks" && tasksReady
+                    ? "Tasks, ready to claim"
+                    : label
+                }
                 aria-current={page === destination ? "page" : undefined}
-                className={page === destination ? "active" : ""}
+                className={`${page === destination ? "active" : ""} ${destination === "tasks" ? "tasks-nav-glitch" : ""}`}
                 onClick={() => navigate(destination)}
               >
                 <Icon size={16} />
-                <span>{label}</span>
+                <span
+                  className={
+                    destination === "tasks"
+                      ? `tasks-nav-glitch-label${tasksGlitchActive ? " is-glitching" : ""}`
+                      : undefined
+                  }
+                >
+                  {label}
+                </span>
+                {destination === "tasks" && tasksReady && (
+                  <i className="nav-ready-dot" aria-hidden="true" />
+                )}
               </button>
             ))}
           </nav>
@@ -531,12 +682,20 @@ function App() {
           {session.ultraRebirths > 0 && (
             <span
               className="ultra-mark"
-              title={`Ultra-rebirth ${session.ultraRebirths} · +${Math.round(
-                session.ultraRebirths * 10,
-              )}% EP on every banked roll`}
+              title={
+                session.rollbacks > 0
+                  ? `Rollback taken · Prestige ×${session.ultraRebirths} · +${Math.round(
+                      session.ultraRebirths * 10 + 25,
+                    )}% EP on every banked roll`
+                  : `Prestige ×${session.ultraRebirths} · +${Math.round(
+                      session.ultraRebirths * 10,
+                    )}% EP on every banked roll`
+              }
             >
-              <InfinityIcon size={13} aria-hidden="true" /> Ultra ×
-              {session.ultraRebirths}
+              <InfinityIcon size={13} aria-hidden="true" />{" "}
+              {session.rollbacks > 0
+                ? "Rollback"
+                : `Prestige ×${session.ultraRebirths}`}
             </span>
           )}
           <RebirthNav
@@ -787,7 +946,9 @@ function App() {
               </div>
               <div>
                 <h1>Rebirth</h1>
-                <p>Start the collection over, keep everything else.</p>
+                <p>
+                  Start the run over; your account and aura collection stay.
+                </p>
               </div>
             </div>
             <Rebirth
@@ -796,10 +957,42 @@ function App() {
               onAction={dispatch}
               onDone={(message, meta) => {
                 navigate("roll");
-                notify(message ?? "Rebirth complete.");
-                if (meta?.ultra) setUltraCeremony(true);
+                notify({
+                  kind: "milestone",
+                  title: "Rebirth complete",
+                  text: message ?? "The new cycle has started.",
+                });
+                if (meta?.rollback) setUltraCeremony("rollback");
+                else if (meta?.ultra) setUltraCeremony("prestige");
                 else setRebirthRing(true);
               }}
+            />
+          </>
+        )}
+        {page === "tasks" && (
+          <>
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
+            </button>
+            <div className="page-heading">
+              <div className="page-icon">
+                <ListChecks size={25} />
+              </div>
+              <div>
+                <h1>Tasks</h1>
+                <p>
+                  Small goals that pay EP. Daily tasks reset each day, weekly
+                  ones on Monday.
+                </p>
+              </div>
+            </div>
+            <Tasks
+              key={epoch}
+              progress={session}
+              onAction={dispatch}
+              notify={notify}
+              openSignup={openAuth}
+              openAuraFamily={openFamily}
             />
           </>
         )}
@@ -1026,6 +1219,8 @@ function App() {
         page={page}
         rebirthVisible={rebirthVisible}
         rebirthReady={rebirthReadyNow}
+        tasksReady={tasksReady}
+        tasksGlitchActive={tasksGlitchActive}
         navigate={navigate}
       />
       {modal && (
@@ -1131,12 +1326,7 @@ function App() {
           </section>
         </div>
       )}
-      {toast && (
-        <div className="toast" role="status">
-          <Check size={16} />
-          {toast}
-        </div>
-      )}
+      <Toasts items={toasts} onDismiss={dismissToast} />
 
       {/* The ceremony: rays, a slam of the title and a storm of confetti for
           the ultra-rebirth itself. Pointer-transparent (never in the way of
@@ -1149,10 +1339,14 @@ function App() {
             <InfinityMark size={64} />
           </span>
           <strong className="ultra-ceremony-title">
-            ULTRA-REBIRTH {session.ultraRebirths}
+            {ultraCeremony === "rollback"
+              ? "ROLLBACK"
+              : `PRESTIGE ${session.ultraRebirths}`}
           </strong>
           <span className="ultra-ceremony-sub">
-            the run starts again — the account never does
+            {ultraCeremony === "rollback"
+              ? "the last stage — the run starts again, the account never does"
+              : "the run starts again — the account never does"}
           </span>
           <span className="ultra-ceremony-confetti">
             {Array.from({ length: 12 }, (_, index) => (

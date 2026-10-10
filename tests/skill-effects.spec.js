@@ -2,7 +2,9 @@ import { test, expect } from "@playwright/test";
 import { evaluate } from "./helpers/index.js";
 import {
   emptyProgress,
+  parseProgress,
   applyProgress,
+  recoverUnsavedRolls,
   walletMultiplier,
 } from "../src/progress.js";
 import {
@@ -201,7 +203,10 @@ test("two draw skills each keep a number, and the roll pays for both", async () 
   // A reload carries the picks with the roll, and only as this roll could have
   // made them: a forged pick — a number never drawn, or a skill that did not
   // fire — is thrown out instead of paid.
-  expect(parsePending(state.pendingRoll).picks).toEqual(picks);
+  const parsedPending = parsePending(state.pendingRoll);
+  expect(parsedPending.picks).toEqual(picks);
+  expect(parsedPending.winnerSkill).toBe("bedrock");
+  expect(parsedPending.winnerIndex).toBe(3);
   expect(() =>
     parsePending({
       ...state.pendingRoll,
@@ -220,6 +225,87 @@ test("two draw skills each keep a number, and the roll pays for both", async () 
       picks: [{ skill: "twice", number: 88125, spent: 99 }],
     }),
   ).toThrow("Invalid committed roll");
+  expect(() =>
+    parsePending({ ...state.pendingRoll, winnerSkill: "twice" }),
+  ).toThrow("Invalid committed roll");
+  expect(() => parsePending({ ...state.pendingRoll, winnerIndex: 0 })).toThrow(
+    "Invalid committed roll",
+  );
+});
+
+test("equal picks from different skills stay separate through settlement and failed-save recovery", async () => {
+  const number = 88125;
+  const [roll, score] = staged([
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ]);
+  const outcome = await runDrawPicks(
+    drawPicksFor(["bedrock", "twice"]),
+    roll,
+    score,
+    { ordinary: true },
+  );
+  expect(outcome.picks).toEqual([
+    { skill: "bedrock", number, spent: 4 },
+    { skill: "twice", number, spent: 2 },
+  ]);
+  expect(outcome.winnerSkill).toBe("bedrock");
+  expect(outcome.winnerIndex).toBe(0);
+
+  const state = {
+    ...emptyProgress(),
+    skills: ["bedrock", "twice", "surge"],
+    equippedSkills: ["bedrock", "twice", "surge"],
+    skillCharge: { bedrock: 9, twice: 9, surge: 0 },
+    pendingRoll: {
+      id: "same-number-roll",
+      number: outcome.result.number,
+      startedAt: 1000,
+      rollMS: ROLL_DURATIONS[0],
+      cooldownMS: COOLDOWN_DURATIONS[0],
+      skills: ["bedrock", "twice", "surge"],
+      draws: outcome.draws,
+      picks: outcome.picks,
+      winnerSkill: outcome.winnerSkill,
+      winnerIndex: outcome.winnerIndex,
+    },
+  };
+  const extras = await Promise.all(
+    outcome.picks
+      .filter((pick) => pick.skill !== outcome.winnerSkill)
+      .map(async (pick) => ({
+        skill: pick.skill,
+        spent: pick.spent,
+        result: await score(pick.number),
+      })),
+  );
+  const paid = applyProgress(state, {
+    type: "complete",
+    id: "same-number-roll",
+    at: 2000,
+    cooldownUntil: 106000,
+    result: outcome.result,
+    extras,
+  });
+  expect(paid.balance).toBe(4 * evaluate(number).totalEP);
+  const rolls = paid.history.filter((entry) => entry.type === "roll");
+  expect(rolls).toHaveLength(2);
+  expect(rolls.map((entry) => entry.number)).toEqual([number, number]);
+  expect(rolls[1].with).toBe(rolls[0].id);
+  const parsedExtra = parseProgress(JSON.stringify(paid)).history.find(
+    (entry) => entry.id === rolls[1].id,
+  );
+  expect(parsedExtra.with).toBe(rolls[0].id);
+
+  const unsaved = new Set([rolls[0].id]);
+  const recovered = recoverUnsavedRolls(state, paid, unsaved);
+  expect(recovered).toEqual(paid);
+  expect(recoverUnsavedRolls(recovered, paid, unsaved)).toBe(recovered);
 });
 
 test("a floor skill stops at its floor and otherwise keeps the best draw", async () => {

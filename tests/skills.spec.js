@@ -545,9 +545,14 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   expect(() => parsePending(pending({ draws: [604827, 12] }))).toThrow(
     /Invalid committed roll/,
   );
+  // Double Vision draws twice; a live roll adds one ordinary draw after them, so
+  // three draws are the most it can commit and a fourth is forged.
   expect(() =>
-    parsePending(pending({ skills: ["twice"], draws: [604827, 12, 13] })),
+    parsePending(pending({ skills: ["twice"], draws: [604827, 12, 13, 14] })),
   ).toThrow(/Invalid committed roll/);
+  expect(
+    parsePending(pending({ skills: ["twice"], draws: [604827, 12, 13] })).draws,
+  ).toEqual([604827, 12, 13]);
   expect(() =>
     parsePending(pending({ skills: ["twice"], draws: [1, 2] })),
   ).toThrow(/Invalid committed roll/);
@@ -557,7 +562,7 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   expect(honest.draws).toEqual([604827, 999, 42]);
   const plan = drawPlanFor(["twice", "bedrock"]);
   expect(honest.draws.length).toBeLessThanOrEqual(
-    Math.min(plan.attempts, SKILL_MAX_DRAWS),
+    Math.min(plan.attempts + 1, SKILL_MAX_DRAWS + 1),
   );
   // Timings still cannot outrun the upgrades the save paid for.
   expect(() =>
@@ -611,13 +616,12 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
     eventId: "ev1",
   });
   expect(reborn.rebirths).toBe(1);
-  // The run is handed back: the wallet, the shelf, the companions and the
-  // collection all start over, and the wallet restarts on the sum the rung
-  // just paid.
+  // The run resets, but the entire aura collection and its equipped look stay;
+  // ordinary purchases, companions and the badge collection start over.
   expect(reborn.balance).toBe(REBIRTH_STARTER_EP);
-  expect(reborn.owned).toEqual([]);
+  expect(reborn.owned).toEqual(["starfall"]);
   expect(reborn.pets).toEqual([]);
-  expect(reborn.equipped).toBe("none");
+  expect(reborn.equipped).toBe("starfall");
   expect(reborn.discovered).toEqual([]);
   expect(reborn.skillCharge).toEqual({});
   expect(reborn.flywheelCharge).toBe(0);
@@ -711,11 +715,12 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   });
   expect(reborn.ultraRebirths).toBe(2);
   expect(reborn.profile).toEqual(top.profile);
-  // The same fresh start a rebirth gives: wallet, collection, shelf and
-  // companions go back, and the shop skill with them.
+  // Prestige resets the run like a Rebirth but keeps every aura, including the
+  // equipped look; the ordinary upgrade, collection and companions go back.
   expect(reborn.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 2));
   expect(reborn.discovered).toEqual([]);
-  expect(reborn.owned).toEqual([]);
+  expect(reborn.owned).toEqual(["starfall"]);
+  expect(reborn.equipped).toBe("starfall");
   expect(reborn.pets).toEqual([]);
   expect(reborn.skills).toEqual(["reborn-drive"]);
   expect(reborn.equippedSkills).toEqual(["reborn-drive"]);

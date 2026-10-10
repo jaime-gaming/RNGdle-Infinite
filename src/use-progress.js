@@ -23,6 +23,7 @@ import {
 } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings, offlineSettings, productById } from "./shop-data.js";
+import { AURA_EVENT_MISSIONS } from "./tasks.js";
 import {
   offlinePlan,
   readPresence,
@@ -100,6 +101,9 @@ export function useProgress() {
     [epoch, setEpoch] = useState(0);
   const current = useRef(initial.progress),
     healthy = useRef(!initial.warning),
+    // The rolls this tab settled while saving was failing, by id. Only these
+    // are owed again when the save recovers (see recoverUnsavedRolls).
+    unsaved = useRef(new Set()),
     generation = useRef(0),
     queue = useRef(Promise.resolve());
   function reset(next = emptyProgress()) {
@@ -108,6 +112,7 @@ export function useProgress() {
     current.current = next;
     setProgress(next);
     healthy.current = true;
+    unsaved.current = new Set();
     setWarning("");
   }
   useEffect(() => {
@@ -119,17 +124,33 @@ export function useProgress() {
         if (
           next.profile?.id !== current.current.profile.id ||
           next.rebirths !== current.current.rebirths ||
-          next.ultraRebirths !== current.current.ultraRebirths
+          next.ultraRebirths !== current.current.ultraRebirths ||
+          next.rollbacks !== current.current.rollbacks
         )
           reset(next);
         else {
           const merged = healthy.current
             ? next
-            : recoverUnsavedRolls(next, current.current);
+            : recoverUnsavedRolls(next, current.current, unsaved.current);
+          let persisted = merged === next;
+          if (merged !== next) {
+            try {
+              localStorage.setItem(PROGRESS_KEY, JSON.stringify(merged));
+              persisted = true;
+            } catch {
+              setWarning(
+                "Saved progress could not be synchronized. This tab is keeping its current progress.",
+              );
+            }
+          }
           current.current = merged;
           setProgress(merged);
-          healthy.current = merged === next;
-          if (healthy.current) setWarning("");
+          healthy.current = persisted;
+          if (persisted) {
+            unsaved.current = new Set();
+            setWarning("");
+            if (merged !== next) broadcastSync(merged);
+          }
         }
       } catch {
         healthy.current = false;
@@ -150,28 +171,53 @@ export function useProgress() {
       try {
         const next = parseProgress(event.detail);
         if (!next.profile) return;
+        const previous = current.current;
+        const sameCycle =
+          previous.profile?.id === next.profile.id &&
+          previous.rebirths === next.rebirths &&
+          previous.ultraRebirths === next.ultraRebirths &&
+          previous.rollbacks === next.rollbacks;
+        // A link can arrive while this tab is holding a result that local
+        // storage could not save. Merge that receipt into the linked head before
+        // replacing this tab; otherwise a perfectly readable remote save would
+        // erase the only copy of the credited roll.
+        const merged = sameCycle
+          ? recoverUnsavedRolls(next, previous, unsaved.current)
+          : next;
+        let persisted = false;
         try {
-          localStorage.setItem(PROGRESS_KEY, event.detail);
-          healthy.current = true;
+          const raw =
+            merged === next && typeof event.detail === "string"
+              ? event.detail
+              : JSON.stringify(merged);
+          localStorage.setItem(PROGRESS_KEY, raw);
+          persisted = true;
         } catch {
           healthy.current = false;
+          setWarning(
+            "A save from the linked device could not be saved. This tab is keeping its current progress.",
+          );
         }
-        if (
-          !current.current.profile ||
-          current.current.profile.id !== next.profile.id ||
-          current.current.rebirths !== next.rebirths ||
-          current.current.ultraRebirths !== next.ultraRebirths
-        ) {
+        if (!sameCycle) {
           reset(next);
+          if (!persisted) {
+            healthy.current = false;
+            setWarning(
+              "A save from the linked device could not be saved. This tab is keeping its current progress.",
+            );
+          }
           return;
         }
-        const merged = healthy.current
-          ? next
-          : recoverUnsavedRolls(next, current.current);
         current.current = merged;
         setProgress(merged);
-        healthy.current = merged === next;
-        if (healthy.current) setWarning("");
+        healthy.current = persisted;
+        if (persisted) {
+          unsaved.current = new Set();
+          setWarning("");
+          // A recovered receipt is now durable locally, so publish the merged
+          // head back to the link instead of leaving the other device behind.
+          if (merged !== next) broadcastSync(merged);
+        }
       } catch {
         healthy.current = false;
         setWarning(
@@ -206,7 +252,8 @@ export function useProgress() {
             if (
               stored.profile?.id !== previous.profile.id ||
               stored.rebirths !== previous.rebirths ||
-              stored.ultraRebirths !== previous.ultraRebirths
+              stored.ultraRebirths !== previous.ultraRebirths ||
+              stored.rollbacks !== previous.rollbacks
             ) {
               reset(stored);
               return {
@@ -217,21 +264,23 @@ export function useProgress() {
             }
             previous = healthy.current
               ? stored
-              : recoverUnsavedRolls(stored, previous);
+              : recoverUnsavedRolls(stored, previous, unsaved.current);
           } catch {
             readable = false;
             healthy.current = false;
           }
         }
         if (
-          ["rebirth", "ultra-rebirth"].includes(action.type) &&
+          ["rebirth", "ultra-rebirth", "rollback"].includes(action.type) &&
           previous.profile &&
           (!readable || !navigator.locks?.request)
         )
           throw new Error(
-            action.type === "ultra-rebirth"
-              ? "Ultra-rebirth requires working local storage and Web Locks support."
-              : "Rebirth requires working local storage and Web Locks support.",
+            action.type === "rollback"
+              ? "The Rollback requires working local storage and Web Locks support."
+              : action.type === "ultra-rebirth"
+                ? "Prestige requires working local storage and Web Locks support."
+                : "Rebirth requires working local storage and Web Locks support.",
           );
         if (action.type === "delete") {
           if (!previous.profile || previous.profile.id !== action.profileId)
@@ -273,7 +322,10 @@ export function useProgress() {
             };
           }
         }
-        let next, committed, presence;
+        let next,
+          committed,
+          presence,
+          eventRewards = [];
         if (action.type.startsWith("offline-")) {
           if (!previous.profile || !previous.owned.includes("offline-roller"))
             throw new Error(
@@ -434,14 +486,18 @@ export function useProgress() {
           // the roll pays for every number it kept.
           let result,
             draws = null,
-            picks = null;
+            picks = null,
+            winnerSkill = null,
+            winnerIndex = null;
           if (!plan) result = await generateRoll();
           else
-            ({ draws, result, picks } = await runDrawPicks(
-              drawPicksFor(armed),
-              async () => (await generateRoll()).number,
-              restoreRoll,
-            ));
+            ({ draws, result, picks, winnerSkill, winnerIndex } =
+              await runDrawPicks(
+                drawPicksFor(armed),
+                async () => (await generateRoll()).number,
+                restoreRoll,
+                { ordinary: true },
+              ));
           // No digits reach the UI until the draw has been committed below.
           if (token !== generation.current)
             throw new Error("This game was reset. The draw was cancelled.");
@@ -460,9 +516,12 @@ export function useProgress() {
             ...timing,
             ...(armed.length ? { skills: armed } : {}),
             ...(draws ? { draws } : {}),
-            // Which draw skill kept which number. The roll pays for every one
-            // of them, so the settlement has to be able to name them again.
-            ...(picks && picks.length ? { picks } : {}),
+            // Which draw skill kept which number, and which one (or the plain
+            // draw) supplied the committed result. The roll pays for every kept
+            // number, even when two skills happen to keep the same number.
+            ...(picks && picks.length
+              ? { picks, winnerSkill, winnerIndex }
+              : {}),
             ...(flywheel ? { flywheel } : {}),
           };
           next = {
@@ -500,7 +559,7 @@ export function useProgress() {
           // banks one number per skill, not only the one it commits.
           const extras = [];
           for (const pick of pending.picks ?? []) {
-            if (pick.number === pending.number) continue;
+            if (pick.skill === pending.winnerSkill) continue;
             const scored = await restoreRoll(pick.number);
             if (scored)
               extras.push({
@@ -526,6 +585,17 @@ export function useProgress() {
             throw new Error("Offline Roller requires Web Locks support.");
           next = applyProgress(previous, action);
         }
+        if (next !== previous) {
+          const earnedBefore = new Set(previous.tasks?.event?.earned ?? []);
+          const earnedAfter = new Set(next.tasks?.event?.earned ?? []);
+          eventRewards = AURA_EVENT_MISSIONS.filter(
+            (mission) =>
+              !earnedBefore.has(mission.id) &&
+              earnedAfter.has(mission.id) &&
+              !(previous.owned ?? []).includes(mission.auraId) &&
+              (next.owned ?? []).includes(mission.auraId),
+          ).map((mission) => mission.auraId);
+        }
         if (next !== previous && next.profile) {
           try {
             if (!readable) throw new Error("Unreadable storage");
@@ -534,7 +604,8 @@ export function useProgress() {
               if (
                 latest.profile?.id !== previous.profile.id ||
                 latest.rebirths !== previous.rebirths ||
-                latest.ultraRebirths !== previous.ultraRebirths
+                latest.ultraRebirths !== previous.ultraRebirths ||
+                latest.rollbacks !== previous.rollbacks
               ) {
                 reset(latest);
                 return {
@@ -546,6 +617,7 @@ export function useProgress() {
             }
             localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
             healthy.current = true;
+            unsaved.current = new Set();
             setWarning("");
             // Live to the other device the moment this one saves.
             broadcastSync(next);
@@ -554,6 +626,18 @@ export function useProgress() {
             setWarning(
               "Local saving is unavailable or full. New draws and purchases require saving. A committed result may be temporarily credited in this tab until saving works again; no saved history has been deleted.",
             );
+            if (action.type === "complete") {
+              // The settled roll is kept in memory only, so remember exactly
+              // which rolls those are: they are the only ones owed on recovery.
+              const known = new Set(previous.history.map((e) => e.id));
+              for (const event of next.history)
+                if (
+                  event.type === "roll" &&
+                  !event.with &&
+                  !known.has(event.id)
+                )
+                  unsaved.current.add(event.id);
+            }
             if (action.type !== "complete")
               return {
                 ok: false,
@@ -561,23 +645,27 @@ export function useProgress() {
                   action.type === "rebirth"
                     ? "Rebirth could not be saved. Your progress has not been reset."
                     : action.type === "ultra-rebirth"
-                      ? "Ultra-rebirth could not be saved. Your progress has not been reset."
-                      : action.type.startsWith("offline-")
-                        ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
-                        : action.type === "register"
-                          ? "Sign-up could not be saved. Your guest progress is still available in this tab."
-                          : action.type === "draw"
-                            ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
-                            : action.type === "goal"
-                              ? "Your goal could not be saved. Your previous goal and EP are unchanged."
-                              : "Purchase or equipment change not saved. Your EP has not been spent.",
+                      ? "Prestige could not be saved. Your progress has not been reset."
+                      : action.type === "rollback"
+                        ? "The Rollback could not be saved. Your progress has not been reset."
+                        : action.type.startsWith("offline-")
+                          ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
+                          : action.type === "register"
+                            ? "Sign-up could not be saved. Your guest progress is still available in this tab."
+                            : action.type === "draw"
+                              ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
+                              : action.type === "goal"
+                                ? "Your goal could not be saved. Your previous goal and EP are unchanged."
+                                : "Purchase or equipment change not saved. Your EP has not been spent.",
               };
           }
         }
         if (
           next !== previous &&
           !next.profile &&
-          ["draw", "complete", "rebirth", "ultra-rebirth"].includes(action.type)
+          ["draw", "complete", "rebirth", "ultra-rebirth", "rollback"].includes(
+            action.type,
+          )
         ) {
           try {
             sessionStorage.setItem(
@@ -607,7 +695,11 @@ export function useProgress() {
             sessionStorage.removeItem(GUEST_ROLL_KEY);
           } catch {}
         }
-        if (action.type === "rebirth" || action.type === "ultra-rebirth") {
+        if (
+          action.type === "rebirth" ||
+          action.type === "ultra-rebirth" ||
+          action.type === "rollback"
+        ) {
           try {
             if (previous.profile && action.type === "rebirth")
               clearPresence(previous.profile.id);
@@ -632,6 +724,11 @@ export function useProgress() {
             ? next.offline.batch.numbers.length - next.offline.batch.index
             : 0,
           ...(committed ? { run: committed } : {}),
+          ...(eventRewards.length ? { eventRewards } : {}),
+          // Bulk delete reports how many entries it actually removed.
+          ...(action.type === "history-prune"
+            ? { removed: previous.history.length - next.history.length }
+            : {}),
         };
       } catch (error) {
         return { ok: false, message: error.message };

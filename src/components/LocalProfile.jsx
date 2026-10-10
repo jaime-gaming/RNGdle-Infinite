@@ -13,6 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { validUsername } from "../progress.js";
+import { prestigeShown } from "../rebirth.js";
 import { AVATAR_ACCEPT, fileToAvatar } from "../avatar.js";
 import {
   accountStats,
@@ -94,7 +95,9 @@ function ProfileHistory({ progress }) {
     ["Skills unlocked", `${stats.skills} of ${stats.skillsTotal}`],
     ["Charged effects fired", stats.skillsUsed.toLocaleString("en-US")],
     ["Flywheel boosts used", stats.boostsUsed.toLocaleString("en-US")],
-    ["Rebirths · ultra-rebirths", `${stats.rebirths} · ${stats.ultraRebirths}`],
+    prestigeShown(stats)
+      ? ["Rebirths · prestiges", `${stats.rebirths} · ${stats.ultraRebirths}`]
+      : ["Rebirths", `${stats.rebirths}`],
     [
       "First · latest entry",
       `${when(stats.firstEventAt)} · ${when(stats.lastEventAt)}`,
@@ -114,9 +117,9 @@ function ProfileHistory({ progress }) {
         ))}
       </dl>
       <p className="profile-history-note">
-        Read from your activity log and current save — these figures are not
-        stored on their own, and the log keeps every cycle, not just the current
-        one.
+        Read from your activity log, the totals of entries cleared from it, and
+        your current save. The log keeps every cycle, not just the current one,
+        and clearing history never lowers these figures.
       </p>
     </section>
   );
@@ -294,8 +297,9 @@ export default function LocalProfile({
       </h2>
       {profile && (progress?.ultraRebirths ?? 0) > 0 && (
         <p className="profile-prestige">
-          <span aria-hidden="true">✦</span> Transcendent ·{" "}
-          {progress.ultraRebirths} ultra-rebirth
+          <span aria-hidden="true">✦</span>{" "}
+          {progress.rollbacks > 0 ? "Rollback taken" : "Prestige"} ·{" "}
+          {progress.ultraRebirths} prestige
           {progress.ultraRebirths === 1 ? "" : "s"} beyond the ladder
         </p>
       )}

@@ -1,8 +1,9 @@
 .activity-summary {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 10px 16px;
   margin: 30px 0 22px;
   padding: 20px 24px;
   border: 1px solid var(--border);
@@ -104,7 +105,8 @@
   color: var(--green);
   background: var(--green-bg);
 }
-.event-ultra-rebirth {
+.event-ultra-rebirth,
+.event-rollback {
   color: #a97c1f;
   background: rgb(217 164 65 / 0.14);
 }
@@ -306,48 +308,42 @@
   color: var(--green);
 }
 
-/* A roll can be shared later, straight from the feed. */
-.activity-share {
-  display: inline-flex;
+/* Share and bookmark are icon-only chips. Their names live in aria-label and
+   title, so the row stays quiet, and a hover or a focus still says what each
+   one does. */
+.activity-actions {
+  display: flex;
   align-items: center;
   gap: 6px;
   margin-top: 8px;
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--secondary);
-  font: 500 10.5px var(--roll-font);
 }
-.activity-share:hover {
-  border-color: var(--text);
-  color: var(--text);
-}
-/* A pinned roll: same chip as Share, filled and green once saved. */
+.activity-share,
 .activity-bookmark {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin: 8px 6px 0 0;
-  padding: 5px 10px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--surface);
   color: var(--secondary);
-  font: 500 10.5px var(--roll-font);
 }
+.activity-share:hover,
 .activity-bookmark:hover {
   border-color: var(--text);
   color: var(--text);
 }
+/* A pinned roll is filled and green once saved, so the state reads without
+   any words. A copied link turns the share chip green for a moment. */
 .activity-bookmark.is-saved,
-.activity-bookmark.is-saved:hover {
+.activity-bookmark.is-saved:hover,
+.activity-share.is-copied,
+.activity-share.is-copied:hover {
   border-color: color-mix(in srgb, var(--green) 55%, var(--border));
   background: var(--green-bg);
   color: var(--green);
-}
-.activity-bookmark + .activity-share {
-  margin-top: 8px;
 }
 /* What each fired skill actually added to that roll. */
 .activity-skills {
@@ -369,4 +365,138 @@
 }
 .activity-skill strong {
   color: var(--green);
+}
+
+/* A claimed task has its own icon tone, so it reads apart from the purchases
+   beside it. */
+.event-task {
+  color: var(--green);
+  background: var(--green-bg);
+}
+
+/* The warning that the log is nearly full, and the bulk delete it offers. */
+.history-space {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  margin: 0 0 22px;
+  padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+}
+.history-space.is-full {
+  border-color: var(--danger-border);
+}
+.history-space h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--warning);
+}
+.history-space.is-full h2 {
+  color: var(--danger);
+}
+.history-space p {
+  max-width: 64ch;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--secondary);
+}
+.history-space > .secondary-button {
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.history-prune {
+  margin: 0 0 26px;
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.history-prune h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.history-prune h3 {
+  margin: 22px 0 10px;
+  font-size: 12px;
+  color: var(--secondary);
+}
+.history-prune > p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.history-prune-cycles {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.history-prune-cycles li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.history-prune-cycles strong {
+  display: block;
+  font-size: 13px;
+}
+.history-prune-cycles span {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.history-prune-cycles .danger-button {
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.history-prune > .history-prune-empty,
+.history-prune > .history-prune-current {
+  margin-top: 10px;
+}
+.history-prune-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.history-prune-steps .secondary-button {
+  margin-top: 0;
+}
+.history-prune-confirm {
+  margin-top: 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--danger-border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.history-prune-confirm > p {
+  margin: 0 0 12px;
+  color: var(--text);
+}
+.history-prune-confirm > p[role="alert"] {
+  color: var(--danger);
+}
+.history-prune-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.history-prune-actions .secondary-button,
+.history-prune-actions .danger-button {
+  margin-top: 0;
 }

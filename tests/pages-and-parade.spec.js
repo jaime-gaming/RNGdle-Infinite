@@ -251,17 +251,29 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
   await expect(
     page.getByRole("heading", { name: /What it resets/ }),
   ).toBeVisible();
-  // The ultra-rebirth bonus is explained, but its button waits for a full
-  // collection.
+  // Prestige is not shown before the sixth rebirth: no heading and no button,
+  // only the faded teaser that says there is more.
   await expect(
-    page.getByRole("heading", { name: /ultra-rebirth/i }),
+    page.getByText("Wait, but there is more...", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /Ultra-rebirth/ })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole("heading", { name: /prestige/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Prestige/ })).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Rebirth", exact: true }),
   ).toBeVisible();
+  // The sixth rebirth finishes the ladder: the teaser gives way to Prestige.
+  await page.evaluate((key) => {
+    const raw = JSON.parse(localStorage.getItem(key));
+    raw.rebirths = 6;
+    localStorage.setItem(key, JSON.stringify(raw));
+  }, PROGRESS_KEY);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "After the ladder: Prestige" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Wait, but there is more...", { exact: true }),
+  ).toHaveCount(0);
 });
 
 test("equipped skills stand alone while pet and rebirth families stack in the skill row, excluding unequipped skills", async ({
@@ -304,7 +316,7 @@ test("equipped skills stand alone while pet and rebirth families stack in the sk
   await expect(bar.locator('[data-skill="surplus"]')).toContainText("+3% EP");
 });
 
-test("a skill family is one circle: the icon in the middle, one ring per member, each in its own colour", async ({
+test("a skill family is one circle: the icon in the middle, every member a slice of that circle, each in its own colour", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -338,18 +350,47 @@ test("a skill family is one circle: the icon in the middle, one ring per member,
   await expect(
     family.locator(".skill-stack-ring .skill-stack-icon"),
   ).toBeVisible();
+  // The group is one circle the same size as a single skill, and its lines are
+  // thicker (5 against the single skill's 3), so the group reads as one thing.
+  const single = await page
+    .locator(".skill-bar .skill-ring")
+    .first()
+    .boundingBox();
+  const group = await family.locator(".skill-stack-ring").boundingBox();
+  expect(Math.round(group.width)).toBe(Math.round(single.width));
+  expect(Math.round(group.height)).toBe(Math.round(single.height));
+  expect(
+    await family
+      .locator(".skill-stack-fill")
+      .first()
+      .evaluate((node) => getComputedStyle(node).strokeWidth),
+  ).toBe("5px");
   const arcs = await family.locator(".skill-stack-arc").evaluateAll((nodes) =>
-    nodes.map((node) => ({
-      radius: Number(node.querySelector("circle").getAttribute("r")),
-      colour: getComputedStyle(node.querySelector(".skill-stack-fill")).stroke,
-      tint: [...node.classList].find((name) => name.startsWith("tint-")),
-    })),
+    nodes.map((node) => {
+      const [track] = node.querySelectorAll("circle");
+      return {
+        radius: Number(track.getAttribute("r")),
+        turn: node.getAttribute("transform"),
+        dash: track.style.strokeDasharray,
+        colour: getComputedStyle(node.querySelector(".skill-stack-fill"))
+          .stroke,
+        tint: [...node.classList].find((name) => name.startsWith("tint-")),
+      };
+    }),
   );
-  // Concentric: every ring sits strictly inside the one before it.
+  // One circumference: every member sits on the same circle, at its own angle.
   const radii = arcs.map((arc) => arc.radius);
-  expect(radii).toEqual([...radii].sort((a, b) => b - a));
-  expect(new Set(radii).size).toBe(radii.length);
-  // Each ring wears its own member's colour rather than one colour per group.
+  expect(new Set(radii).size).toBe(1);
+  expect(new Set(arcs.map((arc) => arc.turn)).size).toBe(arcs.length);
+  // Each member owns a slice of that circle: the slices fill most of it, and
+  // the gaps between them keep them from running into each other.
+  const circumference = 2 * Math.PI * radii[0];
+  // The browser writes the dash pair with a comma: "23.4, 131.9".
+  const lengths = arcs.map((arc) => Number(arc.dash.split(/[\s,]+/)[0]));
+  const used = lengths.reduce((sum, length) => sum + length, 0);
+  expect(used).toBeLessThan(circumference);
+  expect(used).toBeGreaterThan(circumference * 0.8);
+  // Each member wears its own colour rather than one colour per group.
   expect(arcs.every((arc) => arc.tint)).toBe(true);
   expect(new Set(arcs.map((arc) => arc.colour)).size).toBeGreaterThan(2);
   // …and the family still fans out into its individual chips on hover.

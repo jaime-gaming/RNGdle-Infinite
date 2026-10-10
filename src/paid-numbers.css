@@ -1,0 +1,101 @@
+/* Stacked draw skills pay several numbers. Each paid number is a card at full
+   size, side by side with the others, in the colour of the skill that kept it:
+   no compact pills, and no total added up across them. */
+.paid-numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin: 12px auto 14px;
+  padding: 0;
+  list-style: none;
+  font-family: var(--roll-font);
+}
+.paid-number {
+  --pick-tint: var(--green);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 12px 10px 10px;
+  border: 1px solid color-mix(in srgb, var(--pick-tint) 45%, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: center;
+}
+.paid-number.is-best {
+  border-width: 2px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pick-tint) 18%, transparent);
+}
+.paid-number-tag {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--surface);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.paid-number-skill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pick-tint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.paid-number-value {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.paid-number-ep {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+.paid-number.tint-gold {
+  --pick-tint: #d9a441;
+}
+.paid-number.tint-pink {
+  --pick-tint: #d97ba6;
+}
+.paid-number.tint-cyan {
+  --pick-tint: #4bb3c4;
+}
+.paid-number.tint-violet {
+  --pick-tint: #8a7ad9;
+}
+.paid-number.tint-green {
+  --pick-tint: var(--green);
+}
+.paid-number.tint-orange {
+  --pick-tint: #d98241;
+}
+.paid-number.tint-steel {
+  --pick-tint: var(--secondary);
+}
+@media (max-width: 480px) {
+  .paid-numbers {
+    gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  }
+  .paid-number-value {
+    font-size: 20px;
+  }
+}

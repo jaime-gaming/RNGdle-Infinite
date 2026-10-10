@@ -1,13 +1,24 @@
-/* The split screen a draw skill earns: one panel per draw, filling the screen
-   behind visible dividing lines, each rolling its digits and earning its
-   badges in the open. When the best draw is known it flies to the centre and
-   covers the rest — grey until the pointer is over it, so the discarded draws
-   can still be read.
+/* The overview a draw skill earns: one panel per draw, filling the screen behind
+   visible dividing lines, each rolling its digits and earning its badges in the
+   open. When the best draw is known it is filled green, and every number stays
+   on the screen. Tapping a number opens its own stats in the page flow.
 
-   The stage is a takeover of the roll screen, not of the game: it never
-   scores, it only shows what the roll already committed, and it hands the
-   screen back before the reveal ends.
-*/
+   The overview is a takeover of the roll screen, not of the game: it never
+   scores, it only shows what the roll already committed. Nothing behind it is
+   visible, and nothing under it scrolls while it is up (html.draw-takeover). */
+html.draw-takeover {
+  overflow: hidden;
+}
+/* The skill rack is not part of the overview: it sits out while the overview is
+   up, so none of its icons cover a panel. */
+html.draw-takeover .skill-bar {
+  visibility: hidden;
+}
+/* The install prompt waits while a multi-number roll is on screen, rather than
+   covering the overview's label or the way back from a number's stats. */
+html.draw-split .install-app {
+  display: none;
+}
 .draw-stage {
   --draw-box-font: 26px;
   --draw-line: 2px;
@@ -15,27 +26,21 @@
   top: 0;
   left: 0;
   right: 0;
-  bottom: var(--draw-stage-bottom, 0px);
+  bottom: 0;
   z-index: 6;
-  pointer-events: none;
-  transition: opacity calc(0.5s * var(--reveal-scale, 1)) ease;
-}
-.draw-stage.is-leaving {
-  opacity: 0;
-}
-/* Fewer, larger panels read better than eight tiny ones on a phone, where the
-   tab bar also owns the bottom of the screen. */
-@media (max-width: 760px) {
-  .draw-stage {
-    --draw-stage-bottom: calc(58px + env(safe-area-inset-bottom));
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  background: var(--bg);
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 .draw-stage-label {
-  position: absolute;
-  top: 10px;
-  left: 50%;
+  position: relative;
   z-index: 3;
-  transform: translateX(-50%);
+  align-self: center;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -53,14 +58,36 @@
 .draw-stage-label svg {
   color: var(--green);
 }
+.draw-stage-minimize {
+  margin-left: 4px;
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.draw-stage-minimize:hover {
+  border-color: var(--green);
+}
+.draw-stage-minimize:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
 
 /* The grid: the panels sit on the page background with the border colour
-   showing through the gaps, which is what draws every dividing line. */
+   showing through the gaps, which is what draws every dividing line. It takes
+   whatever height the label leaves, and it never scrolls. */
 .draw-grid {
   --cols: 2;
   --rows: 2;
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
@@ -70,20 +97,6 @@
   list-style: none;
   background: var(--border);
   overflow: hidden;
-  filter: grayscale(0) brightness(1);
-  transition: filter calc(0.5s * var(--reveal-scale, 1)) ease;
-}
-.draw-grid::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: color-mix(in srgb, var(--muted) 42%, transparent);
-  -webkit-backdrop-filter: grayscale(1) blur(1px);
-  backdrop-filter: grayscale(1) blur(1px);
-  opacity: 0;
-  transition: opacity calc(0.5s * var(--reveal-scale, 1)) ease;
 }
 .draw-stage[data-count="2"] .draw-grid {
   --cols: 2;
@@ -125,15 +138,65 @@
   flex: 1 1 calc((100% - (var(--cols) - 1) * var(--draw-line)) / var(--cols));
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
   min-width: 0;
   min-height: 0;
   height: calc((100% - (var(--rows) - 1) * var(--draw-line)) / var(--rows));
-  padding: 10px 8px;
   background: var(--bg);
   overflow: hidden;
+}
+/* The whole panel is the button once the best is known, so a tap anywhere on a
+   number opens it. Before that it is a plain box with the same layout. */
+.draw-pick {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  overflow: hidden;
+}
+button.draw-pick {
+  cursor: pointer;
+}
+button.draw-pick:hover {
+  background: var(--hover);
+}
+button.draw-pick:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: -4px;
+}
+/* A hint pinned to the foot of the panel, so the number itself stays centred. */
+.draw-panel-more {
+  position: absolute;
+  bottom: 9px;
+  left: 0;
+  right: 0;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.draw-panel-more[data-side="left"] {
+  right: auto;
+  left: 10px;
+  text-align: left;
+}
+.draw-panel-more[data-side="right"] {
+  left: auto;
+  right: 10px;
+  text-align: right;
 }
 .draw-panel-head {
   display: flex;
@@ -144,6 +207,12 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+}
+/* "Draw 6" stays on one line: a long claim name is what gives way, not the
+   number of the draw. */
+.draw-panel-label {
+  flex: none;
+  white-space: nowrap;
 }
 .draw-panel-tag {
   padding: 1px 6px;
@@ -277,8 +346,7 @@
     transform: scale(1);
   }
 }
-.draw-badges,
-.draw-winner-badges {
+.draw-badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -341,152 +409,113 @@
   }
 }
 
-/* The decision: the winning draw takes the centre of the screen on top of the
-   grid, and everything behind it turns grey until the pointer is over the card
-   — the discarded draws stay readable, just not at full colour. */
-.draw-stage.is-decided .draw-grid {
-  filter: grayscale(1) brightness(0.92);
+/* The decision: every number stays on the grid. The best one is filled with the
+   theme's green, and the text on it turns to the page colour so it reads. Every
+   panel can be tapped for that number's stats. */
+.draw-stage.is-decided .draw-grid,
+.draw-stage.is-decided .draw-stage-label {
+  pointer-events: auto;
 }
-.draw-stage.is-decided .draw-grid::after {
+.draw-panel.is-winner {
+  background: var(--green);
+  color: var(--bg);
+}
+.draw-panel.is-winner .draw-panel-head,
+.draw-panel.is-winner .draw-panel-more,
+.draw-panel.is-winner .draw-ep,
+.draw-panel.is-winner .draw-badge-more {
+  color: var(--bg);
+}
+.draw-panel.is-winner .draw-ep {
   opacity: 1;
 }
-.draw-stage.is-peeking .draw-grid {
-  filter: grayscale(0) brightness(1);
+.draw-panel.is-winner .draw-panel-tag.is-best {
+  border-color: transparent;
+  background: var(--bg);
+  color: var(--green);
 }
-.draw-stage.is-peeking .draw-grid::after {
-  opacity: 0;
+.draw-panel.is-winner .draw-panel-claim {
+  border-color: color-mix(in srgb, var(--bg) 55%, transparent);
+  background: transparent;
+  color: var(--bg);
 }
-.draw-finale {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  pointer-events: none;
+.draw-panel.is-winner .draw-pick:hover {
+  background: color-mix(in srgb, var(--bg) 10%, transparent);
 }
-.draw-winner {
-  pointer-events: auto;
+.draw-panel.is-winner .draw-badge-more {
+  border-color: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+/* The chips keep their names and EP on the green, in the page colour: their
+   rarity tints were picked for the plain page and lose contrast on the green. */
+.draw-panel.is-winner .draw-badge {
+  border-color: color-mix(in srgb, var(--bg) 55%, transparent);
+  background: color-mix(in srgb, var(--bg) 14%, transparent);
+  color: var(--bg);
+}
+
+/* One number's own stats, in the page flow, at the size of the roll's own
+   result: its number, its rank and EP, the roll's button in the middle, then
+   every badge it earned. */
+.draw-detail {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  width: min(520px, 100%);
-  max-height: 100%;
-  padding: 18px 22px 15px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--surface) 95%, transparent);
-  box-shadow: 0 26px 70px rgb(0 0 0 / 0.35);
-  cursor: pointer;
-  filter: grayscale(0.55);
-  transition:
-    transform calc(0.35s * var(--reveal-scale, 1)) var(--ease-reveal, ease-out),
-    filter calc(0.35s * var(--reveal-scale, 1)) ease,
-    box-shadow calc(0.35s * var(--reveal-scale, 1)) ease;
+  gap: 14px;
+  width: 100%;
+  max-width: 640px;
 }
-.draw-winner.is-peeking {
-  transform: scale(0.93);
-  filter: grayscale(0);
-  box-shadow: 0 16px 38px rgb(0 0 0 / 0.2);
-}
-.draw-winner-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.draw-winner-kicker svg {
-  color: var(--green);
-}
-.draw-winner .number-box {
-  max-width: 100%;
-}
-.draw-winner-box .draw-digits {
-  font-size: 34px;
-}
-.draw-winner-ep {
-  font: 700 22px var(--roll-font);
-  color: var(--text);
-}
-/* Every number a stacked rack pays, named under the one the roll committed. */
-.draw-winner-paid {
+.draw-detail-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
 }
-.draw-winner-paid-item {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 3px 9px;
-  border: 1px solid
-    color-mix(in srgb, var(--claim-tint, var(--green)) 42%, var(--border));
-  border-radius: 999px;
-  background: color-mix(
-    in srgb,
-    var(--claim-tint, var(--green)) 10%,
-    transparent
-  );
-  font-family: var(--roll-font);
-  font-size: 11px;
-  line-height: 16px;
-  white-space: nowrap;
-}
-.draw-winner-paid-item.is-headline {
-  border-width: 2px;
-}
-.draw-winner-paid-item.tint-gold {
-  --claim-tint: #d9a441;
-}
-.draw-winner-paid-item.tint-pink {
-  --claim-tint: #d97ba6;
-}
-.draw-winner-paid-item.tint-cyan {
-  --claim-tint: #4bb3c4;
-}
-.draw-winner-paid-item.tint-violet {
-  --claim-tint: #8a7ad9;
-}
-.draw-winner-paid-item.tint-green {
-  --claim-tint: var(--green);
-}
-.draw-winner-paid-item.tint-orange {
-  --claim-tint: #d98241;
-}
-.draw-winner-paid-item.tint-steel {
-  --claim-tint: var(--secondary);
-}
-.draw-winner-paid-skill {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--claim-tint, var(--green));
-}
-.draw-winner-paid-number {
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: 0.04em;
-}
-.draw-winner-paid-ep {
-  color: var(--green);
-}
-.draw-winner-hint {
+.draw-detail-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 7px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--muted);
-  font-size: 10.5px;
-  text-align: center;
+}
+.draw-detail-kicker svg {
+  color: var(--green);
+}
+.draw-detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.draw-detail-paid {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.draw-detail-paid b {
+  color: var(--text);
+  font-weight: 700;
+}
+.draw-back-row {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 640px;
+}
+/* The skill rack holds the top-left corner of every roll screen. Where the
+   column reaches the page's left edge (a phone, or a narrow window), the back
+   row starts after the rack, so "All numbers" is never under its circles. */
+@media (max-width: 800px) {
+  .draw-detail-bar,
+  .draw-back-row {
+    padding-left: 58px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -523,7 +552,7 @@
   .draw-stage[data-count="8"] {
     --draw-box-font: 16px;
   }
-  .draw-panel {
+  .draw-pick {
     gap: 5px;
     padding: 7px 5px;
   }
@@ -557,15 +586,58 @@
   .draw-stage[data-count="8"] .draw-badge {
     max-width: 46%;
   }
-  .draw-winner {
-    gap: 8px;
-    padding: 14px 14px 12px;
-    border-radius: 16px;
-  }
-  .draw-winner-box .draw-digits {
-    font-size: 26px;
-  }
-  .draw-winner-ep {
-    font-size: 18px;
-  }
+}
+
+/* The roll's own button, centred under the numbers. It has a strip of its own:
+   a button over the middle of the grid would sit on a number whenever two or
+   three of them share a row. The strip keeps its height while the roll is
+   still busy, so the numbers do not jump when the button arrives. */
+.draw-stage-roll {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 96px;
+  padding: 0 12px 10px;
+}
+
+/* The roll button in the middle of the overview, where the panels meet. It only
+   appears where the layout measured that it covers nothing; otherwise the strip
+   under the panels holds it. */
+.draw-stage.is-probing .draw-stage-roll {
+  display: none;
+}
+.draw-hub {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+}
+.roll-experience .draw-hub .generate-wrap:not(.is-away) {
+  width: auto;
+  max-height: none;
+}
+.roll-experience .draw-hub .generate {
+  width: 64px;
+  height: 64px;
+  padding: 6px;
+  gap: 4px;
+  flex-direction: column;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.roll-experience .draw-hub .generate::before,
+.roll-experience .draw-hub .generate::after {
+  border-radius: 50%;
+}
+/* While waiting, the circle shows the clock and the time only. */
+.roll-experience .draw-hub .generate-word {
+  display: none;
+}
+.roll-experience .draw-hub .generate-time {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
 }

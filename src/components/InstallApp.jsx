@@ -33,7 +33,10 @@ export default function InstallApp({ notify }) {
     const onInstalled = () => {
       setDeferred(null);
       setDismissed(true);
-      notify?.("RNGdle Infinite is on your home screen.");
+      notify?.({
+        kind: "done",
+        text: "RNGdle Infinite is on your home screen.",
+      });
     };
     const onOpen = () => {
       setDismissed(false);

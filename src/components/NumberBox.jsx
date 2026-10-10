@@ -36,6 +36,10 @@ const cosmetics = new Set([
   "downpour",
   "blueprint",
   "inkblot",
+  "static",
+  "bitstorm",
+  "scramble",
+  "hexdump",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [

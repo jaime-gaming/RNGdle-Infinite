@@ -13,10 +13,17 @@ import {
 } from "./game-icons.jsx";
 import "../skills.css";
 
+// Every circle on the rack is the same size: a plain skill, an always-on bonus
+// and a family alike. CSS shrinks them together on a phone (see skills.css).
+const CIRCLE_SIZE = 42;
+// A family draws its slices on that one circle with a heavier stroke than a
+// plain ring, so the group reads as a group without growing.
+const FAMILY_STROKE = 5;
+
 // A ring that fills with charge. No running commentary on the ring itself: the
 // contribution chip appears on hover, and the tooltip carries the whole
 // explanation for anyone who wants the sentence.
-function ChargeRing({ fraction, tint, size = 42, children }) {
+function ChargeRing({ fraction, tint, size = CIRCLE_SIZE, children }) {
   const radius = (size - 5) / 2,
     circumference = 2 * Math.PI * radius;
   return (
@@ -117,7 +124,7 @@ function SkillCircle({ skill, active }) {
   );
 }
 
-// One always-on bonus circle: pet, rebirth, ultra-rebirth or surplus.
+// One always-on bonus circle: pet, rebirth, prestige, Rollback or surplus.
 function PassiveCircle({ passive }) {
   return (
     <div
@@ -132,7 +139,7 @@ function PassiveCircle({ passive }) {
           <CreatureIcon pet={passive.petId} size={17} aria-hidden="true" />
         ) : passive.kind === "rebirth" ? (
           <LegendMark size={17} aria-hidden="true" />
-        ) : passive.kind === "ultra" ? (
+        ) : passive.kind === "ultra" || passive.kind === "rollback" ? (
           <InfinityMark size={17} aria-hidden="true" />
         ) : (
           <SparkMark size={17} aria-hidden="true" />
@@ -168,23 +175,14 @@ function MemberCircle({ member, active }) {
   );
 }
 
-// One circle for a whole family: the group's own icon in the middle and one
-// thin ring per member around it, each in that member's colour and each filled
-// as far as its charge goes. The rings are the members — counting them counts
-// the family — so a group of five takes no more room than a single skill.
+// One circumference for a whole family: the group's own icon in the middle, and
+// every member stacked on that same circle as its own slice, in its own colour,
+// filled as far as its charge goes. Nothing is drawn on a second ring, so a
+// family of five still reads as one circle, not a target.
 //
 // The fan keeps its job: hover, focus or tap opens the members as ordinary
 // circles with their own chips and tooltips.
-function groupRings(count, size) {
-  const outer = (size - 3) / 2,
-    inner = 12.5;
-  if (count < 1) return [];
-  if (count === 1) return [outer];
-  const step = Math.min(3.2, (outer - inner) / (count - 1)),
-    band = (count - 1) * step,
-    start = outer - (outer - inner - band) / 2;
-  return Array.from({ length: count }, (_, index) => start - index * step);
-}
+const SLICE_GAP = 8; // degrees of empty circle between two members
 
 function SkillStack({ stackId, label, icon, members, firingSet }) {
   const [open, setOpen] = useState(false);
@@ -199,14 +197,14 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
         : `${member.passive.name} ${member.passive.chip}, always active`,
     )
     .join(". ");
-  // A bigger family earns a slightly bigger circle: five thin rings on a
-  // 42px disc would be a smear, on 52px they stay readable rings.
-  const size = members.length <= 3 ? 42 : members.length <= 5 ? 46 : 52;
-  const radii = groupRings(members.length, size);
-  const stroke =
-    radii.length > 1
-      ? Math.max(1.2, Math.min(2.6, (radii[0] - radii[1]) * 0.85))
-      : 2.6;
+  // The family is exactly the size of one plain circle, however many members
+  // it holds: the slices share that circle, and the stroke is the same all the
+  // way round.
+  const size = CIRCLE_SIZE;
+  const stroke = FAMILY_STROKE;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const slice = 360 / members.length;
   return (
     <div
       className={`skill-stack ${armed ? "is-armed" : ""} ${firing ? "is-firing" : ""} ${open ? "is-open" : ""}`}
@@ -233,8 +231,8 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
             aria-hidden="true"
           >
             {members.map((member, index) => {
-              const radius = radii[index] ?? radii.at(-1) ?? 0,
-                circumference = 2 * Math.PI * radius,
+              const span = slice - SLICE_GAP,
+                arc = (circumference * span) / 360,
                 fraction = Math.min(1, Math.max(0, memberFraction(member))),
                 tint =
                   member.kind === "skill"
@@ -243,6 +241,7 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
               return (
                 <g
                   key={memberId(member)}
+                  transform={`rotate(${index * slice + SLICE_GAP / 2} ${size / 2} ${size / 2})`}
                   className={`skill-stack-arc tint-${tint} ${
                     member.kind === "skill" && member.skill.armed
                       ? "is-armed"
@@ -256,7 +255,10 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
                     cx={size / 2}
                     cy={size / 2}
                     r={radius}
-                    style={{ strokeWidth: stroke }}
+                    style={{
+                      strokeWidth: stroke,
+                      strokeDasharray: `${arc} ${circumference}`,
+                    }}
                   />
                   <circle
                     className="skill-stack-fill"
@@ -265,8 +267,8 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
                     r={radius}
                     style={{
                       strokeWidth: stroke,
-                      strokeDasharray: circumference,
-                      strokeDashoffset: circumference * (1 - fraction),
+                      strokeDasharray: `${arc} ${circumference}`,
+                      strokeDashoffset: arc * (1 - fraction),
                     }}
                   />
                 </g>
@@ -552,7 +554,7 @@ export default function SkillBar({
           ))}
           {!report.next.walletParts.length && (
             <span className="rack-panel-empty">
-              A companion, a wallet skill or an ultra-rebirth bonus raises this.
+              A companion or a wallet skill raises this.
             </span>
           )}
           <span className="rack-panel-label">Skills</span>

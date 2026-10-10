@@ -121,8 +121,8 @@ test("every aura belongs to a family, shows its colours and is renderable", () =
     expect(box).toContain(`"${aura.id}"`);
     expect(styles).toContain(`data-cosmetic="${aura.id}"`);
   }
-  // Four families, every one of them populated, and no aura left over.
-  expect(AURA_FAMILIES).toHaveLength(4);
+  // Five families, every one of them populated, and no aura left over.
+  expect(AURA_FAMILIES).toHaveLength(5);
   for (const family of AURA_FAMILIES)
     expect(seen.get(family.id)).toBeGreaterThan(0);
   expect([...seen.values()].reduce((a, b) => a + b, 0)).toBe(auras.length);
@@ -234,7 +234,9 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     "offline-vault-2": 11000000,
     // v0.3 skills and the two rack upgrades.
     surge: 180000,
-    trail: 320000,
+    // v0.5: the Task Skip, a repeatable utility bought once a day.
+    "task-skip": 125000,
+    trail: 160000,
     bounce: 500000,
     twice: 900000,
     bedrock: 1600000,
@@ -257,11 +259,16 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     downpour: 380000,
     blueprint: 1450000,
     inkblot: 2400000,
+    // v0.5: the R4ND0MN3S5 set, four looks that are random by nature.
+    static: 260000,
+    bitstorm: 880000,
+    scramble: 1800000,
+    hexdump: 3000000,
   };
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(56);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(61);
   // A skill product carries its effect in skills.js, never inside the product:
   // the shop only mirrors the catalogue so both read the same numbers.
   for (const product of shopProducts.filter((p) => p.kind === "skill")) {
@@ -288,7 +295,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
       expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
   // The catalogue stays within a sane multiple of the cheapest upgrade. v0.4's
   // seven late additions are priced above everything else, so the guard is kept
-  // on the catalogue they joined.
+  // on the catalogue they joined; the premium event auras are part of its new total.
   const addedInV05 = new Set([
     "halcyon",
     "downpour",
@@ -301,5 +308,5 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
   const total = shopProducts
     .filter((product) => !addedInV05.has(product.id))
     .reduce((sum, p) => sum + p.price, 0);
-  expect(total).toBeLessThanOrEqual(115000000);
+  expect(total).toBeLessThanOrEqual(126000000);
 });
