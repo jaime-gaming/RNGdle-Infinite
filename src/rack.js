@@ -228,8 +228,8 @@ export function rackReport(progress = {}) {
 
   return {
     slots,
-    // The slots only hold shop skills: rebirth rewards and companion
-    // signatures ride free, so "used" counts the shop skills alone.
+    // The slots only hold shop and companion skills: rebirth rewards
+    // ride free, so "used" counts only those two.
     used: equipped.filter((skill) => skillTakesSlot(skill.id)).length,
     equipped,
     unlocked,

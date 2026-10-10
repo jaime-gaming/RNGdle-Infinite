@@ -606,26 +606,27 @@ export function parseSkillCharge(value) {
   return next;
 }
 
-// Only shop skills take rack slots. Rebirth rewards and companion signatures
+// Only shop skills and companion signatures take rack slots. Rebirth rewards
 // ride free beside the rack: the slots are a shelf for purchases, not a tax
 // on earnings.
 export function skillTakesSlot(id) {
-  return skillById.get(id)?.source === "shop";
+  const source = skillById.get(id)?.source;
+  return source === "shop" || source === "pet";
 }
 
-// Trim an equipped list to the rack: free skills always stay, shop skills keep
+// Trim an equipped list to the rack: free skills always stay, slot-taking skills keep
 // their order until the slots run out.
 export function trimToSlots(ids, slots) {
   const kept = [];
-  let shop = 0;
+  let taken = 0;
   for (const id of ids ?? []) {
     if (!skillTakesSlot(id)) {
       kept.push(id);
       continue;
     }
-    if (shop < slots) {
+    if (taken < slots) {
       kept.push(id);
-      shop += 1;
+      taken += 1;
     }
   }
   return kept;

@@ -935,7 +935,8 @@ export default function Shop({
   });
   // Earned, not bought: the active companion's signature and the ladder's
   // rewards live on this shelf too, so they can be equipped and unequipped
-  // where the rest of the rack is managed. They ride free beside the slots.
+  // where the rest of the rack is managed. Rebirth rewards ride free beside
+  // the slots, but companion skills do take a slot.
   const freeSkills = (() => {
     const earned = [];
     const signature = skillForPet(progress.activePet);
@@ -1498,8 +1499,8 @@ export default function Shop({
                   <SparkMark size={14} /> Companion &amp; rebirth skills
                 </h3>
                 <p>
-                  Earned, not bought: they ride free beside the rack and never
-                  take a slot. Equip them here like any other skill.
+                  Earned, not bought: rebirth skills ride free and never
+                  take a slot, but companion skills do. Equip them here like any other skill.
                 </p>
                 <span className="free-skills-count">
                   {freeEquipped} of {freeSkills.length} equipped
