@@ -199,8 +199,8 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
     "triptych",
     "offline-vault-3",
   ];
-  // The Task Skip and the R4ND0MN3S5 set came after v0.5, so they are not part
-  // of the repriced set.
+  // The Task Skip and the R4ND0MN3S5 set were added after the original v0.3
+  // shop repricing, so they are not part of that repriced set.
   const addedLater = ["task-skip", "static", "bitstorm", "scramble", "hexdump"];
   const before = shopProducts.filter(
     (p) => !addedInV05.includes(p.id) && !addedLater.includes(p.id),

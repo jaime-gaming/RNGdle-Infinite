@@ -1,6 +1,7 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import {
   productById,
+  productPrice,
   offlineSettings,
   ROLL_DURATIONS,
   COOLDOWN_DURATIONS,
@@ -65,6 +66,8 @@ import {
   tallyEntries,
 } from "./history-tally.js";
 import {
+  auraEventAuraIds,
+  claimAuraEvent,
   CADENCE_NAME,
   claimListBonus,
   claimTask,
@@ -75,6 +78,7 @@ import {
   parseTasks,
   periodKey,
   RARE_OR_BETTER,
+  recordEventTaskClaim,
   recordTally,
   SKIP_HOLD_LIMIT,
   boughtSkip,
@@ -407,6 +411,12 @@ export function parseAndRepairProgress(raw) {
   const tasksRead = parseTasks(p.tasks);
   if (tasksRead.repaired)
     note("task progress was unreadable, so it was reset.");
+  // A completed transmission is the receipt for its four permanent aura
+  // unlocks, so keep them in the wardrobe even if an older save lost the
+  // corresponding owned-list entries.
+  for (const id of auraEventAuraIds(tasksRead.tasks))
+    if (productById.get(id)?.kind === "aura" && !owned.includes(id))
+      owned.push(id);
   // Lists that the rest of the save can vouch for are rebuilt from it: the
   // activity log remembers every companion found or bought, and purchases
   // plus rebirths re-unlock every skill. Nothing else can vouch for a wallet
@@ -612,18 +622,20 @@ function parseAvatar(value) {
 
 // What a new cycle hands back, shared by a rebirth, a prestige and the Rollback.
 //
-// A cycle restarts the run, not the account: the badge collection, everything
-// the wallet bought — upgrades, auras, tools and shop skills —, the companions
-// and the EP in the wallet start over. What the account *did* is never undone:
-// the activity history, the rebirth, prestige and Rollback counters with their
-// permanent bonuses, the skills the ladder already granted, the all-time EP
-// earned and the profile all stay.
+// A cycle restarts the run, not the account: the badge collection, non-aura
+// purchases, companions and wallet start over. Every owned aura is part of the
+// lasting collection, so it stays equipped or in the wardrobe. What the
+// account *did* is never undone: the activity history, rebirth, prestige and
+// Rollback counters with their permanent bonuses, ladder skills, all-time EP
+// and profile all stay.
 //
 // `granted` is the ladder skill this rebirth pays, which is earned rather than
 // bought and so joins the skills that survived, and `starter` is the EP the new
 // cycle begins with — paid by the rungs, prestiges and Rollback the account keeps.
 function startNewCycle(state, { granted = null, starter = 0 } = {}) {
-  const owned = [];
+  const owned = [...new Set(state.owned ?? [])].filter(
+    (id) => productById.get(id)?.kind === "aura",
+  );
   // Shop skills are purchases: they go back on the stall. Ladder skills were
   // paid for by the rebirths the cycle keeps, so they stay unlocked.
   const kept = (state.skills ?? []).filter(
@@ -659,7 +671,7 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
     balance: starter,
     totalEarned: state.totalEarned + starter,
     discovered: [],
-    equipped: "none",
+    equipped: owned.includes(state.equipped) ? state.equipped : "none",
     // The tracked goal is a preference, not a reward: it survives when it is
     // still reachable from an empty workshop. Companions go back in the wild
     // at a rebirth too, so a companion goal is reachable again.
@@ -687,6 +699,7 @@ function buyTaskSkip(state, item, action) {
   if (!validAmount(at) || at > 8640000000000000)
     throw new Error("Invalid purchase time");
   const status = skipStatus(state.tasks, at);
+  const price = productPrice(item, at);
   if (status.tokens >= SKIP_HOLD_LIMIT)
     throw new Error(
       `You already hold ${SKIP_HOLD_LIMIT} Task Skips. Use one first. No EP was spent.`,
@@ -695,8 +708,7 @@ function buyTaskSkip(state, item, action) {
     throw new Error(
       `The next Task Skip is available in ${waitText(status.waitMs)}. No EP was spent.`,
     );
-  if (state.balance < item.price)
-    throw new Error("Not enough EP for this item.");
+  if (state.balance < price) throw new Error("Not enough EP for this item.");
   const tasks = state.tasks ?? emptyTasks();
   return {
     ...state,
@@ -707,10 +719,10 @@ function buyTaskSkip(state, item, action) {
         at,
         productId: item.id,
         name: item.name,
-        ep: item.price,
+        ep: price,
       },
     ]),
-    balance: state.balance - item.price,
+    balance: state.balance - price,
     tasks: {
       ...tasks,
       skip: boughtSkip(state.tasks, at),
@@ -718,32 +730,63 @@ function buyTaskSkip(state, item, action) {
   };
 }
 
+// Collected event missions unlock their matching aura as an ordinary wardrobe
+// item. The mission receipt restores that owned-list entry after a save repair.
+function grantEventAuras(state, tasks) {
+  const earned = auraEventAuraIds(tasks).filter(
+    (id) => productById.get(id)?.kind === "aura",
+  );
+  const current = state.owned ?? [];
+  const additions = earned.filter((id) => !current.includes(id));
+  return {
+    ...state,
+    tasks,
+    ...(additions.length
+      ? {
+          owned: [...current, ...additions],
+          // Match a normal aura purchase: the first one is shown straight away,
+          // while later mission rewards never replace a player's choice.
+          equipped:
+            (state.equipped ?? "none") === "none"
+              ? additions[0]
+              : state.equipped,
+          goalId: additions.includes(state.goalId)
+            ? null
+            : (state.goalId ?? null),
+        }
+      : {}),
+  };
+}
+
 // Pays one finished task of a cadence into the wallet, logged as income with the
 // name it had when paid, like any other task reward. The list bonus is not paid
 // here: finishing the list only unlocks it, and collectBonus pays it.
 function payTask(state, task, at, eventId = null) {
-  const tasks = claimTask(state.tasks ?? emptyTasks(), task, at);
+  let tasks = claimTask(state.tasks ?? emptyTasks(), task, at);
+  tasks = recordEventTaskClaim(tasks, at);
   const balance = state.balance + task.reward;
   const totalEarned = state.totalEarned + task.reward;
   if (!validAmount(balance) || !validAmount(totalEarned))
     throw new Error("EP balance limit reached.");
-  return {
-    ...state,
+  return grantEventAuras(
+    {
+      ...state,
+      balance,
+      totalEarned,
+      history: appendHistory(state.history, [
+        {
+          id: eventId ?? `task:${task.id}:${periodKey(task.cadence, at)}`,
+          type: "task",
+          at,
+          taskId: task.id,
+          cadence: task.cadence,
+          name: task.title,
+          ep: task.reward,
+        },
+      ]),
+    },
     tasks,
-    balance,
-    totalEarned,
-    history: appendHistory(state.history, [
-      {
-        id: eventId ?? `task:${task.id}:${periodKey(task.cadence, at)}`,
-        type: "task",
-        at,
-        taskId: task.id,
-        cadence: task.cadence,
-        name: task.title,
-        ep: task.reward,
-      },
-    ]),
-  };
+  );
 }
 
 // Pays the list bonus of one cadence once every task on its list is claimed. It
@@ -820,10 +863,9 @@ function applyEvent(state, action) {
     // The rung's price — badges and the EP this cycle earned — is written into
     // the log entry, so the history can say what a cycle was bought with.
     const cost = gate;
-    // The run starts over — collection, everything bought, companions and the
-    // wallet — while the account keeps its history, its rebirths and every
-    // bonus it earned. Receipts stay too, so a roll from an earlier cycle can
-    // never be settled twice into the new one.
+    // The run starts over — collection, non-aura purchases, companions and the
+    // wallet — while every owned aura and account record stays. Receipts stay
+    // too, so a roll from an earlier cycle can never settle into the new one.
     return {
       ...startNewCycle(state, { granted, starter }),
       profile: state.profile,
@@ -857,8 +899,8 @@ function applyEvent(state, action) {
     if (!validAmount(count + 1)) throw new Error("Prestige limit reached.");
     // The same fresh start a rebirth gives, taken at the top of the ladder
     // with half the collection in hand. It costs the run, never the account:
-    // history, rebirths, ladder skills and every permanent bonus stay, and the
-    // prestige adds ten more points forever.
+    // history, aura collection, rebirths, ladder skills and every permanent
+    // bonus stay, and the prestige adds ten more points forever.
     // The same overshoot dividend as a rung: the ultra gate is a floor too.
     const ultraCost = ultraRebirthRequirement();
     const surplus = rebirthSurplus(cycleEarnedEp(state), ultraCost.ep);
@@ -955,6 +997,15 @@ function applyEvent(state, action) {
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid task time");
     return { ...state, tasks: skipTask(state.tasks, task, at) };
+  }
+  // Completing an event mission makes its aura collectible on Tasks. The
+  // collection stays open for missions completed before the event ended.
+  if (action.type === "claim-event-aura") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid event claim time");
+    const tasks = claimAuraEvent(state.tasks ?? emptyTasks(), action.id);
+    return grantEventAuras(state, tasks);
   }
   // A task pays its reward into the wallet once per reset. It is a reward for
   // play, not a sale, so it is logged as income and never counts towards the
@@ -1274,49 +1325,57 @@ function applyEvent(state, action) {
         productId: droppedPet,
         name: petById.get(droppedPet).name,
       });
-    return {
-      ...state,
-      history: appendHistory(state.history, events),
+    return grantEventAuras(
+      {
+        ...state,
+        history: appendHistory(state.history, events),
+        tasks,
+        pendingRoll: null,
+        // Turbo makes the settled roll count more than once towards Flywheel.
+        flywheelCharge: flywheelAfterSettlement(
+          state,
+          id,
+          action.source,
+          skillChargeFactor(fired),
+        ),
+        skillCharge: chargeAfterSettlement(state, id, action.source),
+        balance,
+        totalEarned,
+        cycleEarnedEP: cycleEP,
+        discovered: [...discovered],
+        cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
+        receipts: [...state.receipts, id].slice(-RECEIPT_LIMIT),
+        receiptFloor:
+          state.receipts.length >= RECEIPT_LIMIT && validAmount(action.at)
+            ? Math.max(receiptFloor, action.at)
+            : receiptFloor,
+        ...(droppedPet
+          ? {
+              pets: [...new Set([...(state.pets ?? []), droppedPet])].sort(
+                (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
+              ),
+              // A first pet is worn immediately; later drops never swap your choice.
+              activePet:
+                (state.activePet ?? "none") === "none"
+                  ? droppedPet
+                  : state.activePet,
+              // A companion you were saving for turns up on its own: met.
+              goalId:
+                state.goalId === droppedPet ? null : (state.goalId ?? null),
+            }
+          : {}),
+      },
       tasks,
-      pendingRoll: null,
-      // Turbo makes the settled roll count more than once towards Flywheel.
-      flywheelCharge: flywheelAfterSettlement(
-        state,
-        id,
-        action.source,
-        skillChargeFactor(fired),
-      ),
-      skillCharge: chargeAfterSettlement(state, id, action.source),
-      balance,
-      totalEarned,
-      cycleEarnedEP: cycleEP,
-      discovered: [...discovered],
-      cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
-      receipts: [...state.receipts, id].slice(-RECEIPT_LIMIT),
-      receiptFloor:
-        state.receipts.length >= RECEIPT_LIMIT && validAmount(action.at)
-          ? Math.max(receiptFloor, action.at)
-          : receiptFloor,
-      ...(droppedPet
-        ? {
-            pets: [...new Set([...(state.pets ?? []), droppedPet])].sort(
-              (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
-            ),
-            // A first pet is worn immediately; later drops never swap your choice.
-            activePet:
-              (state.activePet ?? "none") === "none"
-                ? droppedPet
-                : state.activePet,
-            // A companion you were saving for turns up on its own: met.
-            goalId: state.goalId === droppedPet ? null : (state.goalId ?? null),
-          }
-        : {}),
-    };
+    );
   }
   if (action.type === "buy") {
     const item = productById.get(action.id);
     if (!item) throw new Error("That item is not available.");
     if (item.repeatable) return buyTaskSkip(state, item, action);
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid purchase time");
+    const price = productPrice(item, at);
     if (state.owned.includes(item.id))
       throw new Error("You already own this item.");
     if (item.requires && !state.owned.includes(item.requires))
@@ -1327,7 +1386,7 @@ function applyEvent(state, action) {
       ["offline", "offline-cap"].includes(item.kind) &&
       (state.offline?.batch ||
         (state.offline &&
-          (action.at ?? Math.ceil(Date.now())) - state.offline.lastSeenAt >=
+          at - state.offline.lastSeenAt >=
             offlineSettings(state.owned).intervalMS))
     )
       throw new Error(
@@ -1338,16 +1397,12 @@ function applyEvent(state, action) {
     // buyable when the dialog opened simply sells out past the rotation.
     if (
       item.kind === "skill" &&
-      !skillStock(
-        skillStockWindow(action.at ?? Math.ceil(Date.now())),
-        state.owned,
-      ).includes(item.id)
+      !skillStock(skillStockWindow(at), state.owned).includes(item.id)
     )
       throw new Error(
         `${item.name} is out of stock. The skill shelf restocks every five minutes; no EP was spent.`,
       );
-    if (state.balance < item.price)
-      throw new Error("Not enough EP for this item.");
+    if (state.balance < price) throw new Error("Not enough EP for this item.");
     return {
       ...state,
       history: appendHistory(state.history, [
@@ -1356,13 +1411,13 @@ function applyEvent(state, action) {
             action.eventId ??
             `buy:${item.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
           type: "purchase",
-          at: action.at ?? Math.ceil(Date.now()),
+          at,
           productId: item.id,
           name: item.name,
-          ep: item.price,
+          ep: price,
         },
       ]),
-      balance: state.balance - item.price,
+      balance: state.balance - price,
       goalId: state.goalId === item.id ? null : (state.goalId ?? null),
       ...(item.kind === "pace"
         ? {

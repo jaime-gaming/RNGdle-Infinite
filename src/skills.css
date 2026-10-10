@@ -236,6 +236,14 @@
     width: 36px !important;
     height: 36px !important;
   }
+  .skill-stack,
+  .skill-stack-bubble {
+    width: 36px;
+    height: 36px;
+  }
+  .skill-stack {
+    flex-basis: 36px;
+  }
   .skill-stack-members {
     max-width: min(300px, calc(100vw - 76px));
     flex-wrap: wrap;
@@ -264,10 +272,15 @@
    own chip and tooltip once the fan is open. */
 .skill-stack {
   position: relative;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
 }
 .skill-stack-bubble {
   position: relative;
   display: block;
+  width: 42px;
+  height: 42px;
   padding: 0;
   border: 0;
   background: none;

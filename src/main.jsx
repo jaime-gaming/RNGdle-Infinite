@@ -44,6 +44,7 @@ import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
 import Tasks from "./components/Tasks";
 import { taskSummary } from "./tasks.js";
+import { TASKS_GLITCH_DURATION_MS, tasksGlitchDelay } from "./tasks-glitch.js";
 import { freshRareBadges, newlyReady } from "./notice-rules.js";
 import { badgeMetadata } from "./roll-data.js";
 import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
@@ -169,6 +170,31 @@ function App() {
   // Goal picking is armed from the shop's goal banner; the state lives here so
   // it survives shelf changes (the Shop remounts on every sub-page).
   const [pickingGoal, setPickingGoal] = useState(false);
+  // One short Tasks-only glitch, scheduled at a fresh random interval after the
+  // previous one has finished, so occurrences can never overlap.
+  const [tasksGlitchActive, setTasksGlitchActive] = useState(false);
+  useEffect(() => {
+    let nextTimer = null;
+    let finishTimer = null;
+    let stopped = false;
+    const schedule = () => {
+      nextTimer = setTimeout(() => {
+        if (stopped) return;
+        setTasksGlitchActive(true);
+        finishTimer = setTimeout(() => {
+          if (stopped) return;
+          setTasksGlitchActive(false);
+          schedule();
+        }, TASKS_GLITCH_DURATION_MS);
+      }, tasksGlitchDelay());
+    };
+    schedule();
+    return () => {
+      stopped = true;
+      clearTimeout(nextTimer);
+      clearTimeout(finishTimer);
+    };
+  }, []);
   const [modal, setModal] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   // Notices: a short stack of cards, one per thing that just happened. See
@@ -277,6 +303,21 @@ function App() {
     if (outcome.ok && showVersionFlag) {
       markSeen();
       setSeenVersion(LATEST_VERSION);
+    }
+    if (outcome.ok && outcome.eventRewards?.length) {
+      const names = outcome.eventRewards
+        .map((aura) => productById.get(aura)?.name)
+        .filter(Boolean);
+      if (names.length)
+        notify({
+          kind: "milestone",
+          title:
+            names.length === 1
+              ? `${names[0]} unlocked`
+              : "R4ND0MN3S5 signal restored",
+          text: `${names.join(", ")} ${names.length === 1 ? "was" : "were"} added to your aura collection for free.`,
+          icon: <Sparkles size={18} aria-hidden="true" />,
+        });
     }
     if (outcome.ok && drop) {
       notify({
@@ -594,8 +635,8 @@ function App() {
           <div className="nav-divider" />
           <nav aria-label="Main navigation">
             {[
-              ["tasks", "Tasks", ListChecks],
               ["shop", "Shop", ShoppingBag],
+              ["tasks", "Tasks", ListChecks],
               ["badges", "Badges", Medal],
               ["history", "History", History],
             ].map(([destination, label, Icon]) => (
@@ -607,11 +648,19 @@ function App() {
                     : label
                 }
                 aria-current={page === destination ? "page" : undefined}
-                className={page === destination ? "active" : ""}
+                className={`${page === destination ? "active" : ""} ${destination === "tasks" ? "tasks-nav-glitch" : ""}`}
                 onClick={() => navigate(destination)}
               >
                 <Icon size={16} />
-                <span>{label}</span>
+                <span
+                  className={
+                    destination === "tasks"
+                      ? `tasks-nav-glitch-label${tasksGlitchActive ? " is-glitching" : ""}`
+                      : undefined
+                  }
+                >
+                  {label}
+                </span>
                 {destination === "tasks" && tasksReady && (
                   <i className="nav-ready-dot" aria-hidden="true" />
                 )}
@@ -897,7 +946,9 @@ function App() {
               </div>
               <div>
                 <h1>Rebirth</h1>
-                <p>Start the collection over, keep everything else.</p>
+                <p>
+                  Start the run over; your account and aura collection stay.
+                </p>
               </div>
             </div>
             <Rebirth
@@ -930,8 +981,8 @@ function App() {
               <div>
                 <h1>Tasks</h1>
                 <p>
-                  Small goals that pay EP. Daily tasks reset at local midnight,
-                  weekly ones on Monday.
+                  Small goals that pay EP. Daily tasks reset each day, weekly
+                  ones on Monday.
                 </p>
               </div>
             </div>
@@ -941,6 +992,7 @@ function App() {
               onAction={dispatch}
               notify={notify}
               openSignup={openAuth}
+              openAuraFamily={openFamily}
             />
           </>
         )}
@@ -1168,6 +1220,7 @@ function App() {
         rebirthVisible={rebirthVisible}
         rebirthReady={rebirthReadyNow}
         tasksReady={tasksReady}
+        tasksGlitchActive={tasksGlitchActive}
         navigate={navigate}
       />
       {modal && (

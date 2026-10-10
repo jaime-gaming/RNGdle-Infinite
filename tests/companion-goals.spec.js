@@ -137,7 +137,7 @@ test("a companion goal survives a rebirth, since companions go back in the wild"
   expect(reborn.goalId).toBe("kit");
 });
 
-test("the goal banner sets a companion goal from its card, and the goal links back to it", async ({
+test("companions have no Set as goal button, but the shared goal banner can track one", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -148,9 +148,14 @@ test("the goal banner sets a companion goal from its card, and the goal links ba
   await page.locator(`[data-cage="kit"]`).click();
   const current = page.locator(".pet-slide.is-current");
   await expect(current).toHaveAttribute("data-pet", "kit");
-  await current
-    .getByRole("button", { name: "Set as goal", exact: true })
+  await expect(
+    current.getByRole("button", { name: "Set as goal", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .locator(".shop-goal")
+    .getByRole("button", { name: "Set goal", exact: true })
     .click();
+  await current.locator(".pet-cage").click();
   await expect(page.locator(".shop-goal")).toContainText(
     `Your goal: ${kit.name}`,
   );

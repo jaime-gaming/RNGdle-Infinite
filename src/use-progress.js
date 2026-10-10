@@ -23,6 +23,7 @@ import {
 } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings, offlineSettings, productById } from "./shop-data.js";
+import { AURA_EVENT_MISSIONS } from "./tasks.js";
 import {
   offlinePlan,
   readPresence,
@@ -290,7 +291,10 @@ export function useProgress() {
             };
           }
         }
-        let next, committed, presence;
+        let next,
+          committed,
+          presence,
+          eventRewards = [];
         if (action.type.startsWith("offline-")) {
           if (!previous.profile || !previous.owned.includes("offline-roller"))
             throw new Error(
@@ -544,6 +548,17 @@ export function useProgress() {
             throw new Error("Offline Roller requires Web Locks support.");
           next = applyProgress(previous, action);
         }
+        if (next !== previous) {
+          const earnedBefore = new Set(previous.tasks?.event?.earned ?? []);
+          const earnedAfter = new Set(next.tasks?.event?.earned ?? []);
+          eventRewards = AURA_EVENT_MISSIONS.filter(
+            (mission) =>
+              !earnedBefore.has(mission.id) &&
+              earnedAfter.has(mission.id) &&
+              !(previous.owned ?? []).includes(mission.auraId) &&
+              (next.owned ?? []).includes(mission.auraId),
+          ).map((mission) => mission.auraId);
+        }
         if (next !== previous && next.profile) {
           try {
             if (!readable) throw new Error("Unreadable storage");
@@ -668,6 +683,7 @@ export function useProgress() {
             ? next.offline.batch.numbers.length - next.offline.batch.index
             : 0,
           ...(committed ? { run: committed } : {}),
+          ...(eventRewards.length ? { eventRewards } : {}),
           // Bulk delete reports how many entries it actually removed.
           ...(action.type === "history-prune"
             ? { removed: previous.history.length - next.history.length }

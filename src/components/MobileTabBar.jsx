@@ -12,15 +12,16 @@ import {
 import "../mobile-tabbar.css";
 
 // Phones get their own layout: the logo stays in a slim top bar, and the
-// destinations live in a bottom bar of at most five buttons. Roll sits in the
-// centre, Badges and Shop take the right, and everything else sits on the left
-// behind one More menu. It renders in the DOM everywhere but only paints under
-// 761px, so a resize or a rotated tablet never loses the navigation.
+// destinations live in a bottom bar of at most five buttons. Shop and Tasks
+// sit on the left, Roll stays in the centre, and Badges and More take the right.
+// More holds everything else and opens inward from the edge. The bar renders in
+// the DOM everywhere but only paints under 761px.
 export default function MobileTabBar({
   page,
   rebirthVisible,
   rebirthReady,
   tasksReady,
+  tasksGlitchActive = false,
   navigate,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -84,7 +85,7 @@ export default function MobileTabBar({
       <button
         key={id}
         type="button"
-        className={`${page === id ? "active" : ""} ${ready ? "is-ready" : ""}`}
+        className={`${page === id ? "active" : ""} ${ready ? "is-ready" : ""} ${id === "tasks" ? "tasks-nav-glitch" : ""}`}
         aria-current={page === id ? "page" : undefined}
         aria-label={ready ? `${label}, ready` : undefined}
         onClick={go}
@@ -93,14 +94,31 @@ export default function MobileTabBar({
           <Icon size={20} />
           {ready && <i className="mobile-tabbar-dot" />}
         </span>
-        <span className="mobile-tabbar-label">{label}</span>
+        <span
+          className={`mobile-tabbar-label ${id === "tasks" ? `tasks-nav-glitch-label${tasksGlitchActive ? " is-glitching" : ""}` : ""}`}
+        >
+          {label}
+        </span>
       </button>
     );
   }
 
   return (
     <nav className="mobile-tabbar" aria-label="Mobile navigation" ref={bar}>
+      {tab("shop", "Shop", ShoppingBag, () => navigate("shop"))}
       {tab("tasks", "Tasks", ListChecks, () => navigate("tasks"), tasksReady)}
+      <button
+        type="button"
+        className={`mobile-tabbar-roll ${page === "roll" ? "active" : ""}`}
+        aria-current={page === "roll" ? "page" : undefined}
+        onClick={() => navigate("roll")}
+      >
+        <span className="mobile-tabbar-disc" aria-hidden="true">
+          <Dices size={24} />
+        </span>
+        <span className="mobile-tabbar-label">Roll</span>
+      </button>
+      {tab("badges", "Badges", Medal, () => navigate("badges"))}
       <div className="mobile-tabbar-more">
         <button
           ref={more}
@@ -147,19 +165,6 @@ export default function MobileTabBar({
           </div>
         )}
       </div>
-      <button
-        type="button"
-        className={`mobile-tabbar-roll ${page === "roll" ? "active" : ""}`}
-        aria-current={page === "roll" ? "page" : undefined}
-        onClick={() => navigate("roll")}
-      >
-        <span className="mobile-tabbar-disc" aria-hidden="true">
-          <Dices size={24} />
-        </span>
-        <span className="mobile-tabbar-label">Roll</span>
-      </button>
-      {tab("badges", "Badges", Medal, () => navigate("badges"))}
-      {tab("shop", "Shop", ShoppingBag, () => navigate("shop"))}
     </nav>
   );
 }

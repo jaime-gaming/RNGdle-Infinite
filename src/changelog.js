@@ -3,16 +3,15 @@
 export const CHANGELOG = [
   {
     version: "v0.5",
-    title:
-      "tasks pay EP, aura set R4ND0MN3S5 arrives, and history holds more entries",
+    title: "tasks, the R4ND0MN3S5 event and a larger activity history",
     body: [
-      "tasks pay EP once per reset, one claim at a time; a finished list unlocks its bonus, which its own Collect button pays.",
-      "a Task Skip costs 125,000 EP, one a day and no more than three in any five days; its tokens are spent on Tasks.",
-      "a new aura set, R4ND0MN3S5, adds four looks: binary rain, static, scrambled digits and a hex dump.",
-      "the log holds 6,000 entries and warns from 4,500; bulk delete keeps bookmarks, and removed entries still count in your profile.",
-      "the share and bookmark buttons in History are icon-only, and their names stay for screen readers.",
-      "a roll is never credited twice, even after a failed save or once its history entry and receipt have gone.",
-      "past the sixth rebirth a door opens; the Rebirth page shows what waits behind it.",
+      "daily lists deal 3 tasks and weekly lists 4; tasks are claimed individually. Skips cost 125,000 EP: one daily, up to three in five days.",
+      "the R4ND0MN3S5 missions unlock four free auras to collect on Tasks; Shop prices are premium during the event, then drop to regular.",
+      "all owned auras, including the equipped look, stay through Rebirth; other run purchases reset as before.",
+      "shop, Tasks and Badges lead navigation; Tasks gets one short glitch at random, while Rebirth hints at more beyond the final rung.",
+      "the first six companion prices rose, the upper seven fell, making early boosts pricier and late tiers easier to reach.",
+      "history holds 6,000 entries, warns at 4,500, and removed rolls still count in your profile; bulk delete preserves bookmarks.",
+      "share and bookmark actions are icon-only; a roll cannot be credited twice after its history entry is removed.",
       "a roll that pays several numbers keeps them all on one screen; the best turns green, tapping one shows its stats, and no total counts up.",
     ],
   },

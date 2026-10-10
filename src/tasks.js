@@ -2,14 +2,13 @@
 //
 // Progress is kept on the save rather than read back from the activity log, so
 // bulk deleting history never un-finishes a task and the log can be trimmed
-// freely. Each cadence remembers the period it is counting, a local calendar day
-// or a local week that starts on Monday, with the tallies made inside it, the
-// tasks already claimed and whether the list bonus was taken. The first action in
-// a new period starts from zero, so nothing has to run on a timer to reset.
+// freely. Each cadence remembers its current day or Monday-start week, along
+// with its tallies, claimed tasks and list-bonus state. The first action in a
+// new period starts from zero, so nothing has to run on a timer to reset.
 //
-// Each cadence has a pool of tasks. A period deals four of them onto the list,
-// in an order that depends only on the period's key and each task's id, so every
-// device shows the same ones without storing them. A Task Skip swaps one open
+// Each cadence has a pool of tasks. A period deals a fixed number onto the list
+// (three Daily, four Weekly), in an order that depends only on the period's key
+// and each task's id, so every device shows the same ones without storing them. A Task Skip swaps one open
 // task on the list for the next pool task that is not on it. The swap is saved
 // with the period, together with the running count its new task starts from; a
 // peak task reads the best roll of the period instead, as it always does.
@@ -43,7 +42,7 @@ export const EPIC_OR_BETTER = ["epic", "anomaly", "mythic", "godly"];
 export const MYTHIC_OR_BETTER = ["mythic", "godly"];
 
 // How many tasks a period puts on each cadence's list.
-export const ACTIVE_PER_PERIOD = 4;
+export const ACTIVE_PER_PERIOD = { daily: 3, weekly: 4 };
 // A Task Skip can be bought once a day, and no more than SKIP_WINDOW_LIMIT in
 // any SKIP_WINDOW_MS. A save holds at most SKIP_HOLD_LIMIT unused ones.
 export const SKIP_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -53,8 +52,49 @@ export const SKIP_HOLD_LIMIT = 3;
 // The bonus for claiming every task on a list in one period.
 export const LIST_BONUS = { daily: 100000, weekly: 500000 };
 
+// The limited R4ND0MN3S5 transmission keeps its mission progress in the save,
+// independent of Daily and Weekly resets. Its matching auras are claimed by the
+// player and remain part of the collection across rebirths.
+export const AURA_EVENT_ID = "randomness-signal-2026";
+export const AURA_EVENT_START_AT = new Date(2026, 9, 11, 0, 0, 0, 0).getTime();
+export const AURA_EVENT_END_AT = new Date(2026, 9, 26, 0, 0, 0, 0).getTime();
+export const AURA_EVENT_MISSIONS = [
+  {
+    id: "static",
+    auraId: "static",
+    title: "Roll 20 numbers",
+    detail: "Complete online rolls while the event is live.",
+    metric: "rolls",
+    goal: 20,
+  },
+  {
+    id: "bitstorm",
+    auraId: "bitstorm",
+    title: "Roll 5 Rare or better",
+    detail: "Rare, Epic, Anomaly, Mythic and GODLY results count.",
+    metric: "rare",
+    goal: 5,
+  },
+  {
+    id: "scramble",
+    auraId: "scramble",
+    title: "Bank 400,000 EP",
+    detail: "EP from online rolls counts toward this goal.",
+    metric: "banked",
+    goal: 400000,
+  },
+  {
+    id: "hexdump",
+    auraId: "hexdump",
+    title: "Claim 6 tasks",
+    detail: "Daily and weekly task rewards both count.",
+    metric: "taskClaims",
+    goal: 6,
+  },
+];
+
 export const TASKS = [
-  // ---- Daily: twelve tasks, four on the list each day --------------------
+  // ---- Daily: nineteen tasks, three on the list each day -----------------
   {
     id: "daily-rolls",
     cadence: "daily",
@@ -163,7 +203,70 @@ export const TASKS = [
     goal: 1,
     reward: 100000,
   },
-  // ---- Weekly: twelve tasks, four on the list each week ------------------
+  {
+    id: "daily-rolls-20",
+    cadence: "daily",
+    title: "Roll 20 numbers",
+    detail: "Online rolls count, whatever they score.",
+    metric: "rolls",
+    goal: 20,
+    reward: 40000,
+  },
+  {
+    id: "daily-rare-2",
+    cadence: "daily",
+    title: "Roll 2 Rare or better",
+    detail: "Rare, Epic, Anomaly, Mythic or GODLY.",
+    metric: "rare",
+    goal: 2,
+    reward: 50000,
+  },
+  {
+    id: "daily-epic-2",
+    cadence: "daily",
+    title: "Roll 2 Epic or better",
+    detail: "Epic, Anomaly, Mythic or GODLY.",
+    metric: "epic",
+    goal: 2,
+    reward: 100000,
+  },
+  {
+    id: "daily-discover-5",
+    cadence: "daily",
+    title: "Discover 5 new badges",
+    detail: "Badges you have not found yet in this cycle.",
+    metric: "discovered",
+    goal: 5,
+    reward: 50000,
+  },
+  {
+    id: "daily-bank-100k",
+    cadence: "daily",
+    title: "Bank 100,000 EP from rolls",
+    detail: "Everything rolls pay into your wallet, bonuses included.",
+    metric: "banked",
+    goal: 100000,
+    reward: 30000,
+  },
+  {
+    id: "daily-multi-2",
+    cadence: "daily",
+    title: "Land 2 multi-number rolls",
+    detail: "Each roll counts once, however many numbers it pays.",
+    metric: "multi",
+    goal: 2,
+    reward: 75000,
+  },
+  {
+    id: "daily-skills-3",
+    cadence: "daily",
+    title: "Fire a skill on 3 rolls",
+    detail: "Each roll counts once, however many skills fire on it.",
+    metric: "skills",
+    goal: 3,
+    reward: 40000,
+  },
+  // ---- Weekly: twenty-one tasks, four on the list each week --------------
   {
     id: "weekly-rolls",
     cadence: "weekly",
@@ -272,6 +375,87 @@ export const TASKS = [
     goal: 25,
     reward: 600000,
   },
+  {
+    id: "weekly-rolls-250",
+    cadence: "weekly",
+    title: "Roll 250 numbers",
+    detail: "Online rolls count from Monday to Monday.",
+    metric: "rolls",
+    goal: 250,
+    reward: 500000,
+  },
+  {
+    id: "weekly-rare-10",
+    cadence: "weekly",
+    title: "Roll 10 Rare or better",
+    detail: "Rare, Epic, Anomaly, Mythic or GODLY, from Monday to Monday.",
+    metric: "rare",
+    goal: 10,
+    reward: 300000,
+  },
+  {
+    id: "weekly-epic-5",
+    cadence: "weekly",
+    title: "Roll 5 Epic or better",
+    detail: "The rarer tiers only: Epic, Anomaly, Mythic or GODLY.",
+    metric: "epic",
+    goal: 5,
+    reward: 600000,
+  },
+  {
+    id: "weekly-discover-30",
+    cadence: "weekly",
+    title: "Discover 30 new badges",
+    detail: "Badges you have not found yet in this cycle.",
+    metric: "discovered",
+    goal: 30,
+    reward: 400000,
+  },
+  {
+    id: "weekly-bank-2500k",
+    cadence: "weekly",
+    title: "Bank 2,500,000 EP from rolls",
+    detail: "Everything rolls pay into your wallet, bonuses included.",
+    metric: "banked",
+    goal: 2500000,
+    reward: 350000,
+  },
+  {
+    id: "weekly-multi-5",
+    cadence: "weekly",
+    title: "Land 5 multi-number rolls",
+    detail: "Each roll counts once, however many numbers it pays.",
+    metric: "multi",
+    goal: 5,
+    reward: 400000,
+  },
+  {
+    id: "weekly-skills-25",
+    cadence: "weekly",
+    title: "Fire a skill on 25 rolls",
+    detail: "Each roll counts once, however many skills fire on it.",
+    metric: "skills",
+    goal: 25,
+    reward: 700000,
+  },
+  {
+    id: "weekly-pets-3",
+    cadence: "weekly",
+    title: "Find 3 companions",
+    detail: "Companions turn up on about one roll in 250.",
+    metric: "pets",
+    goal: 3,
+    reward: 1000000,
+  },
+  {
+    id: "weekly-mythic-20",
+    cadence: "weekly",
+    title: "Roll 20 Mythic or GODLY",
+    detail: "The top two tiers, from Monday to Monday.",
+    metric: "mythic",
+    goal: 20,
+    reward: 1200000,
+  },
 ];
 
 const TASK_BY_ID = new Map(TASKS.map((task) => [task.id, task]));
@@ -299,8 +483,8 @@ function hash(text) {
   return h >>> 0;
 }
 
-// Every task in a cadence's pool, in the order this period deals them out. The
-// first ACTIVE_PER_PERIOD are on the list; the rest are what a skip can reach.
+// Every task in a cadence's pool, in the order this period deals them out.
+// The active portion goes on the list; the rest are available to Task Skip.
 function dealt(cadence, period) {
   return TASKS.filter((task) => task.cadence === cadence)
     .map((task) => ({ id: task.id, rank: hash(`${period}|${task.id}`) }))
@@ -329,6 +513,133 @@ function emptySkip() {
   return { tokens: 0, bought: [] };
 }
 
+const AURA_EVENT_METRICS = [
+  ...new Set(AURA_EVENT_MISSIONS.map((mission) => mission.metric)),
+];
+const AURA_EVENT_LIMITS = Object.fromEntries(
+  AURA_EVENT_METRICS.map((metric) => [
+    metric,
+    Math.max(
+      ...AURA_EVENT_MISSIONS.filter((mission) => mission.metric === metric).map(
+        (mission) => mission.goal,
+      ),
+    ),
+  ]),
+);
+const AURA_EVENT_MISSION_IDS = new Set(
+  AURA_EVENT_MISSIONS.map((mission) => mission.id),
+);
+
+function emptyAuraEvent() {
+  return {
+    id: AURA_EVENT_ID,
+    counts: Object.fromEntries(AURA_EVENT_METRICS.map((metric) => [metric, 0])),
+    earned: [],
+  };
+}
+
+function auraEventSlot(tasks) {
+  const stored = tasks?.event;
+  const counts = Object.fromEntries(
+    AURA_EVENT_METRICS.map((metric) => [
+      metric,
+      validAmount(stored?.counts?.[metric])
+        ? Math.min(stored.counts[metric], AURA_EVENT_LIMITS[metric])
+        : 0,
+    ]),
+  );
+  const earned = Array.isArray(stored?.earned)
+    ? [...new Set(stored.earned.filter((id) => AURA_EVENT_MISSION_IDS.has(id)))]
+    : [];
+  return { id: AURA_EVENT_ID, counts, earned };
+}
+
+function auraEventPhase(at) {
+  if (at < AURA_EVENT_START_AT) return "upcoming";
+  return at < AURA_EVENT_END_AT ? "active" : "ended";
+}
+
+function advanceAuraEvent(tasks, tally, at) {
+  const event = auraEventSlot(tasks);
+  if (auraEventPhase(at) !== "active") return event;
+  const counts = { ...event.counts };
+  for (const metric of AURA_EVENT_METRICS) {
+    const amount = tally?.[metric] ?? 0;
+    if (validAmount(amount))
+      counts[metric] = Math.min(
+        AURA_EVENT_LIMITS[metric],
+        addCapped(counts[metric], amount),
+      );
+  }
+  return { ...event, counts };
+}
+
+// Event missions use the same verified online-roll tally as Daily and Weekly
+// tasks. Only individual task claims add to the event's task-claim objective.
+export function recordEventTaskClaim(tasks, at) {
+  return {
+    ...emptyTasks(),
+    ...tasks,
+    event: advanceAuraEvent(tasks, { taskClaims: 1 }, at),
+  };
+}
+
+// Completing a mission unlocks a free aura, but the player must collect it on
+// the Tasks page. Collected mission IDs are the receipts that let those looks
+// survive rebirth and be restored if a save ever drops an owned-list entry.
+export function claimAuraEvent(tasks, id) {
+  const mission = AURA_EVENT_MISSIONS.find((entry) => entry.id === id);
+  if (!mission) throw new Error("That event mission does not exist.");
+  const event = auraEventSlot(tasks);
+  if (event.counts[mission.metric] < mission.goal)
+    throw new Error("Complete the mission before collecting its aura.");
+  if (event.earned.includes(mission.id))
+    throw new Error("That event aura has already been collected.");
+  return {
+    ...emptyTasks(),
+    ...tasks,
+    event: { ...event, earned: [...event.earned, mission.id] },
+  };
+}
+
+// The wardrobe keeps a normal aura entry; its collected mission is the receipt
+// for restoring it after rebirth or save repair.
+export function auraEventAuraIds(tasks) {
+  const collected = new Set(auraEventSlot(tasks).earned);
+  return AURA_EVENT_MISSIONS.filter((mission) => collected.has(mission.id)).map(
+    (mission) => mission.auraId,
+  );
+}
+
+// The Tasks page reads one source of truth for the event banner, mission
+// progress and each aura's manual collection state.
+export function auraEventState(tasks, at) {
+  const event = auraEventSlot(tasks);
+  const phase = auraEventPhase(at);
+  const collected = new Set(event.earned);
+  const missions = AURA_EVENT_MISSIONS.map((mission) => {
+    const complete = event.counts[mission.metric] >= mission.goal;
+    const isCollected = collected.has(mission.id);
+    return {
+      ...mission,
+      count: Math.min(event.counts[mission.metric] ?? 0, mission.goal),
+      complete,
+      collected: isCollected,
+      claimable: complete && !isCollected,
+    };
+  });
+  return {
+    id: AURA_EVENT_ID,
+    phase,
+    startsAt: AURA_EVENT_START_AT,
+    endsAt: AURA_EVENT_END_AT,
+    missions,
+    complete: missions.filter((mission) => mission.complete).length,
+    collected: missions.filter((mission) => mission.collected).length,
+    total: missions.length,
+  };
+}
+
 // The purchase times the wait reads, sanitized. Never more than the window
 // counts, so a long-running save cannot grow this list.
 function skipPurchases(tasks) {
@@ -341,12 +652,17 @@ function skipPurchases(tasks) {
 }
 
 export function emptyTasks() {
-  return { daily: emptySlot(), weekly: emptySlot(), skip: emptySkip() };
+  return {
+    daily: emptySlot(),
+    weekly: emptySlot(),
+    skip: emptySkip(),
+    event: emptyAuraEvent(),
+  };
 }
 
-// The local calendar day a moment falls on, or for a weekly cadence the Monday
-// that starts its week. Both are local, so a reset happens at local midnight.
-function localPeriodStart(cadence, at) {
+// The day a moment falls on, or for a weekly cadence the Monday that starts
+// its week.
+function periodStart(cadence, at) {
   const date = new Date(at);
   const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   if (cadence !== "weekly") return day;
@@ -361,14 +677,14 @@ function localPeriodStart(cadence, at) {
 // A stable key for the period a moment belongs to: "2026-10-08" for a daily
 // period, the Monday of the week for a weekly one. Keys sort chronologically.
 export function periodKey(cadence, at) {
-  const start = localPeriodStart(cadence, at);
+  const start = periodStart(cadence, at);
   const pad = (n) => String(n).padStart(2, "0");
   return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
 }
 
 // When the period a moment belongs to ends, as a timestamp in milliseconds.
 export function nextReset(cadence, at) {
-  const start = localPeriodStart(cadence, at);
+  const start = periodStart(cadence, at);
   return new Date(
     start.getFullYear(),
     start.getMonth(),
@@ -394,7 +710,10 @@ function currentSlot(tasks, cadence, at) {
 // any skip of this period swapped in, in the order the swaps were made.
 export function activeTaskIds(tasks, cadence, at) {
   const slot = currentSlot(tasks, cadence, at);
-  const active = dealt(cadence, slot.period).slice(0, ACTIVE_PER_PERIOD);
+  const active = dealt(cadence, slot.period).slice(
+    0,
+    ACTIVE_PER_PERIOD[cadence],
+  );
   for (const swap of slot.swaps) {
     const index = active.indexOf(swap.out);
     if (index !== -1) active[index] = swap.in;
@@ -541,7 +860,12 @@ export function recordTally(tasks, tally, at) {
       bonus: slot.bonus,
     };
   }
-  return { ...emptyTasks(), ...tasks, ...next };
+  return {
+    ...emptyTasks(),
+    ...tasks,
+    ...next,
+    event: advanceAuraEvent(tasks, tally, at),
+  };
 }
 
 // Marks a task as claimed for the current reset. The caller credits the reward;
@@ -624,7 +948,9 @@ export function skipTask(tasks, task, at) {
 // had not been skipped before. Anything else is dropped, and reported.
 function sanitizeSwaps(cadence, period, swaps) {
   const kept = [];
-  const list = period ? dealt(cadence, period).slice(0, ACTIVE_PER_PERIOD) : [];
+  const list = period
+    ? dealt(cadence, period).slice(0, ACTIVE_PER_PERIOD[cadence])
+    : [];
   for (const swap of swaps) {
     const readable =
       !!swap &&
@@ -720,5 +1046,53 @@ export function parseTasks(value) {
     else repaired = true;
   }
   tasks.skip = skip;
+  const storedEvent = value.event;
+  if (storedEvent === undefined) {
+    // Saves from before the transmission simply start with an empty event slot.
+    tasks.event = emptyAuraEvent();
+  } else {
+    const readable =
+      !!storedEvent &&
+      typeof storedEvent === "object" &&
+      !Array.isArray(storedEvent) &&
+      storedEvent.id === AURA_EVENT_ID &&
+      !!storedEvent.counts &&
+      typeof storedEvent.counts === "object" &&
+      !Array.isArray(storedEvent.counts) &&
+      Array.isArray(storedEvent.earned);
+    if (!readable) {
+      repaired = true;
+      tasks.event = emptyAuraEvent();
+    } else {
+      const counts = {};
+      for (const metric of AURA_EVENT_METRICS) {
+        const amount = storedEvent.counts[metric];
+        if (amount === undefined) {
+          counts[metric] = 0;
+          repaired = true;
+        } else if (validAmount(amount)) {
+          counts[metric] = Math.min(amount, AURA_EVENT_LIMITS[metric]);
+          if (counts[metric] !== amount) repaired = true;
+        } else {
+          counts[metric] = 0;
+          repaired = true;
+        }
+      }
+      const earned = [];
+      for (const id of storedEvent.earned) {
+        const mission = AURA_EVENT_MISSIONS.find((entry) => entry.id === id);
+        if (
+          !mission ||
+          earned.includes(id) ||
+          counts[mission.metric] < mission.goal
+        ) {
+          repaired = true;
+          continue;
+        }
+        earned.push(id);
+      }
+      tasks.event = { id: AURA_EVENT_ID, counts, earned };
+    }
+  }
   return { tasks, repaired };
 }

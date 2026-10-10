@@ -82,6 +82,10 @@ test("companion multipliers stay ordered, and never reach the draw", () => {
   expect(PETS.map((p) => p.price).sort((a, b) => a - b)).toEqual(
     PETS.map((p) => p.price),
   );
+  expect(PETS.map((pet) => pet.price)).toEqual([
+    125000, 300000, 600000, 900000, 1250000, 1650000, 2050000, 2500000, 3100000,
+    3800000, 5000000, 7000000, 10000000,
+  ]);
   expect(petMultiplier("none")).toBe(1);
   expect(petMultiplier("not-a-pet")).toBe(1);
   expect(walletEP(5801, "none")).toBe(5801);

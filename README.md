@@ -78,10 +78,12 @@ and the run around it — and only because you decided it should.
 ## Companions
 
 There are **13 companions**, from Pebble at **+5%** to Ember Dragonet at
-**+80%**, priced from 25,000 EP to 10,000,000 EP. You can buy one in the shop,
+**+80%**, priced from 125,000 EP to 10,000,000 EP. You can buy one in the shop,
 or find one free at roughly **1 in 250 rolls** — a lucky roll drops a random
 companion you do not own yet, and it is worn automatically if you do not already
-wear one.
+wear one. Prices were rebalanced upward for the first six companions and
+downward for the upper seven, so early bonuses ask for more and the late-game
+climb is shorter.
 
 The companion shelf is a **slideshow of cages**: one companion stands in the
 middle of the stage and the arrows on either side slide to the next one, with a
@@ -215,17 +217,24 @@ pace before Flywheel — and with everything maxed, the average cycle is about
 
 ## Tasks
 
-Tasks are small goals that pay EP. **Daily** tasks reset at local midnight and
-**weekly** ones on Monday. Each cadence has a pool of twelve tasks, and every
-period four of them go on your list. The four come from the period and the task
-itself, so everyone gets the same four on the same day or week. Each pays once
-per reset, when you claim it on the **Tasks** page, one at a time. A dot on the
-Tasks tab says when one is ready, and a notice says what just became ready.
+Tasks are small goals that pay EP. They come from separate **Daily** and
+**Weekly** pools: 19 tasks in the Daily pool and 21 in the Weekly one. Each
+period lists only **3 Daily** and **4 Weekly** tasks, leaving room for variety.
+Claim each task individually on the **Tasks** page. A dot on the Tasks tab says
+when one is ready, and a notice says what just became ready.
 
 Finishing every task on a list unlocks its **list bonus**: 100,000 EP for the
 daily list and 500,000 EP for the weekly one. The bonus waits under its list
 until you press **Collect**. It pays once per reset, is logged as a task, and
 expires with the rest when the reset comes.
+
+The Tasks page also hosts a limited R4ND0MN3S5 event. Its missions ask for
+**20 online rolls**, **5 Rare or better results**, **400,000 EP banked online**,
+and **6 claimed Daily or Weekly tasks**. Finish a mission, then collect its
+matching aura manually on Tasks; it is free and stays in your collection through
+rebirths. The four looks also appear in the R4ND0MN3S5 Auras family at premium
+prices while the event is live. When it ends, they return to their lower regular
+prices and the shop notice disappears.
 
 Some tasks read your best roll rather than a running total. **Land a roll worth
 …** and **Earn N badges on one roll** count the best single roll of the period,
@@ -233,32 +242,48 @@ so a bigger roll replaces a smaller one instead of adding to it. A task swapped
 in later by a Task Skip can therefore already be met by a roll earlier that
 period.
 
-| Cadence | Task                         |     Reward |
-| ------- | ---------------------------- | ---------: |
-| Daily   | Roll 10 numbers              |  20,000 EP |
-| Daily   | Roll a Rare or better        |  25,000 EP |
-| Daily   | Roll an Epic or better       |  50,000 EP |
-| Daily   | Roll a Mythic or GODLY       | 150,000 EP |
-| Daily   | Discover 3 new badges        |  25,000 EP |
-| Daily   | Earn 22 badges on one roll   |  80,000 EP |
-| Daily   | Bank 50,000 EP from rolls    |  20,000 EP |
-| Daily   | Bank 250,000 EP from rolls   |  60,000 EP |
-| Daily   | Land a roll worth 200,000 EP | 100,000 EP |
-| Daily   | Land a multi-number roll     |  50,000 EP |
-| Daily   | Fire a skill once            |  15,000 EP |
-| Daily   | Find a companion             | 100,000 EP |
-| Weekly  | Roll 100 numbers             | 200,000 EP |
-| Weekly  | Roll 5 Rare or better        | 150,000 EP |
-| Weekly  | Roll 2 Epic or better        | 300,000 EP |
-| Weekly  | Roll 10 Mythic or GODLY      | 900,000 EP |
-| Weekly  | Discover 15 new badges       | 200,000 EP |
-| Weekly  | Bank 1,000,000 EP from rolls | 200,000 EP |
-| Weekly  | Bank 5,000,000 EP from rolls | 600,000 EP |
-| Weekly  | Land a roll worth 500,000 EP | 500,000 EP |
-| Weekly  | Land 3 multi-number rolls    | 250,000 EP |
-| Weekly  | Fire a skill on 10 rolls     | 300,000 EP |
-| Weekly  | Find 2 companions            | 500,000 EP |
-| Weekly  | Earn 25 badges on one roll   | 600,000 EP |
+| Cadence | Task                         |       Reward |
+| ------- | ---------------------------- | -----------: |
+| Daily   | Roll 10 numbers              |    20,000 EP |
+| Daily   | Roll 20 numbers              |    40,000 EP |
+| Daily   | Roll a Rare or better        |    25,000 EP |
+| Daily   | Roll 2 Rare or better        |    50,000 EP |
+| Daily   | Roll an Epic or better       |    50,000 EP |
+| Daily   | Roll 2 Epic or better        |   100,000 EP |
+| Daily   | Roll a Mythic or GODLY       |   150,000 EP |
+| Daily   | Discover 3 new badges        |    25,000 EP |
+| Daily   | Discover 5 new badges        |    50,000 EP |
+| Daily   | Earn 22 badges on one roll   |    80,000 EP |
+| Daily   | Bank 50,000 EP from rolls    |    20,000 EP |
+| Daily   | Bank 100,000 EP from rolls   |    30,000 EP |
+| Daily   | Bank 250,000 EP from rolls   |    60,000 EP |
+| Daily   | Land a roll worth 200,000 EP |   100,000 EP |
+| Daily   | Land a multi-number roll     |    50,000 EP |
+| Daily   | Land 2 multi-number rolls    |    75,000 EP |
+| Daily   | Fire a skill once            |    15,000 EP |
+| Daily   | Fire a skill on 3 rolls      |    40,000 EP |
+| Daily   | Find a companion             |   100,000 EP |
+| Weekly  | Roll 100 numbers             |   200,000 EP |
+| Weekly  | Roll 250 numbers             |   500,000 EP |
+| Weekly  | Roll 5 Rare or better        |   150,000 EP |
+| Weekly  | Roll 10 Rare or better       |   300,000 EP |
+| Weekly  | Roll 2 Epic or better        |   300,000 EP |
+| Weekly  | Roll 5 Epic or better        |   600,000 EP |
+| Weekly  | Roll 10 Mythic or GODLY      |   900,000 EP |
+| Weekly  | Discover 15 new badges       |   200,000 EP |
+| Weekly  | Discover 30 new badges       |   400,000 EP |
+| Weekly  | Bank 1,000,000 EP from rolls |   200,000 EP |
+| Weekly  | Bank 2,500,000 EP from rolls |   350,000 EP |
+| Weekly  | Bank 5,000,000 EP from rolls |   600,000 EP |
+| Weekly  | Land a roll worth 500,000 EP |   500,000 EP |
+| Weekly  | Land 3 multi-number rolls    |   250,000 EP |
+| Weekly  | Land 5 multi-number rolls    |   400,000 EP |
+| Weekly  | Fire a skill on 10 rolls     |   300,000 EP |
+| Weekly  | Fire a skill on 25 rolls     |   700,000 EP |
+| Weekly  | Find 2 companions            |   500,000 EP |
+| Weekly  | Find 3 companions            | 1,000,000 EP |
+| Weekly  | Earn 25 badges on one roll   |   600,000 EP |
+| Weekly  | Roll 20 Mythic or GODLY      | 1,200,000 EP |
 
 Only online rolls count: an offline roll is a reward for being away, not for
 play. _Discover_ counts badges you have not found yet in the current cycle, so
@@ -292,10 +317,11 @@ only a doorway to the shelf that sells it, with a meter against its price. The
 the shop recommends), how the wallet is doing against it, and the shelf that
 sells it. Setting one is a deliberate choice: press **Set goal** on the banner,
 then **tap any item on any shelf** and that item becomes your goal — no EP is
-ever spent on it. A companion you have not found yet can be your goal too: press
-**Set as goal** on its card (or tap it in pick mode), and it is the one the
-banner, the roll screen and the featured picks point at. A companion goal is
-met the moment you find it, by buying or by a lucky drop. A shelf keeps its own
+ever spent on it. A companion you have not found yet can be your goal too: arm
+pick mode from the banner and tap its card on the Companions shelf; there is no
+separate goal button on the companion. The banner, roll screen and featured
+picks then point at it. A companion goal is met the moment you find it, by
+buying or by a lucky drop. A shelf keeps its own
 **sticky bar**: a button back to all shelves and the count of what is on it.
 Every shelf shows everything it has, and a description is held to three lines
 so a shelf reads as a list, not a wall of text. Every shelf reads **from the
@@ -311,14 +337,14 @@ that shelf.
 | -------------- | --------------------------------------------------------------------------------------------------------------------- |
 | **Skills**     | Nine charged effects (three on sale at a time, restocked every 5 minutes), the two skill bays, and the Flywheel tiers |
 | **Pace**       | Quickwind (shorter reveals) and Clockwork (shorter cooldowns), one level at a time                                    |
-| **Companions** | Thirteen companions from 25,000 EP, or free if a roll drops one                                                       |
+| **Companions** | Thirteen companions from 125,000 EP, or free if a roll drops one                                                      |
 | **Auras**      | Twenty-six cosmetic looks in five families, each family its own page, equipped one at a time                          |
 | **Offline**    | The Offline Roller plus clocks and vaults: rolls earned while away                                                    |
 | **Tools**      | Auto-Roll, Persistence Core and the Archive Lens history search                                                       |
 
 The Auras shelf is the one long shelf, so it is split into **five families** —
-sky and starlight, earth and weather, made things, deep and dark, and
-**R4ND0MN3S5**, four looks that are random by nature: falling binary digits,
+**Spaaaaaace**, **Earth**, **Electric Status**, **Deep Dark**, and **R4ND0MN3S5**,
+four looks that are random by nature: falling binary digits,
 static, scrambled digits and a hex dump. `/shop/auras`
 is the index: one **banner per family**, each in that family's own gradient and
 its own typeface, wearing its three best looks as live previews. A banner is a
@@ -338,9 +364,10 @@ never skips a reveal, a cooldown or a draw, and without Persistence Core it
 starts off again after a reload.
 
 Every purchase is confirmed, costs EP once, and never changes odds or scores.
-The 56 products in the catalogue come to 151.12 M EP, and the most expensive of
-them costs 18 M. Everything you buy is yours for the rest of the cycle: a
-rebirth puts the whole catalogue back on the shelf.
+At regular prices, the 61 products in the catalogue come to 157.025 M EP, and
+the most expensive costs 18 M. The four R4ND0MN3S5 auras temporarily cost more
+while their event is live. Rebirth puts non-aura purchases back on the shelf;
+your complete aura collection stays.
 
 ## Rebirth, prestige and Rollback
 
@@ -386,11 +413,11 @@ permanent bonuses with their own explanation. Each rebirth:
   your wallet when the next one starts (250,000 after the first, 1,500,000 after
   the sixth), so a fresh run begins rolling instead of waiting on a slow first
   minute,
-- **resets the run**: the badge collection, **every purchase** (upgrades,
-  auras, tools and shop skills), the companions and the EP in your wallet, and
-- **keeps the account**: the activity history, the rebirths you have done with
-  the skills they granted, every permanent bonus, the EP you have earned
-  all-time, and your profile.
+- **resets the run**: the badge collection, non-aura purchases (upgrades, tools
+  and shop skills), companions and the EP in your wallet, while every owned aura
+  stays in your collection and the equipped look stays on,
+- **keeps the account**: activity history, rebirths and their granted skills,
+  every permanent bonus, all-time EP and your profile.
 
 ![The rebirth ladder: collection progress, the current rung, one blurred preview and the steps beyond](media/rebirth.png)
 
@@ -566,12 +593,12 @@ skip purchase confirmations, or make the Auto-Roll ability start armed. The
 device link is the one entry that opens **its own page** (the summary card in
 Settings stays a summary, with a link to the full technical view).
 
-On phones the navigation moves to a **bottom bar** of five buttons: **Tasks**
-and **More** on the left, **Roll** in the centre, **Badges** and **Shop** on the
-right. More opens a small menu with **History**, **Settings**, and **Rebirth**
-once the ladder shows, with a dot when a rebirth is ready. The top bar keeps the
-logo, the theme switch and the profile button, so the screen stays for the game
-instead of a wall of buttons. The footer never paints on phones; its links (How
+On phones the navigation moves to a **bottom bar** of five buttons: **Shop**
+and **Tasks** on the left, **Roll** in the centre, then **Badges** and **More**
+on the right. More opens a small menu inward from the edge with **History**,
+**Settings**, and **Rebirth** once the ladder shows, with a dot when a rebirth is
+ready. The top bar keeps the logo, the theme switch and the profile button, so
+the screen stays for the game instead of a wall of buttons. The footer never paints on phones; its links (How
 to play, Changelog, the real game) live in Settings → More instead.
 
 The game is also **installable as an app**: a manifest, icons and a
@@ -600,10 +627,10 @@ companion, and they use their own random sample rather than the roll's.
 **Do offline rolls count towards skills and Flywheel?** No. Offline rolls pay
 their EP and count in your history, but charging is online-only.
 
-**What happens to my purchases when I rebirth?** They go back on the shelf:
-a rebirth restarts the run — every purchase, the companions, the badge
-collection and the EP in your wallet. Your history, your rebirths, the skills
-the ladder granted and every permanent bonus stay. A prestige gives the same
+**What happens to my purchases when I rebirth?** Non-aura purchases go back on
+the shelf with your companions, badge collection and wallet. Every aura you own
+stays in your collection, and the equipped look stays equipped. Your history,
+rebirths, ladder skills and permanent bonuses stay too. A prestige gives the same
 fresh start after half the collection and 30,000,000 cycle EP, for a bigger
 bonus. The Rollback, once after three prestiges, is the last stage.
 

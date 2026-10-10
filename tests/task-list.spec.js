@@ -33,18 +33,21 @@ const zeroCounts = () =>
   Object.fromEntries(TASK_METRICS.map((metric) => [metric, 0]));
 const day = at(2026, 10, 8, 12);
 
-test("each cadence has twelve tasks, four on a list, and every reward is a real amount", () => {
-  for (const cadence of ["daily", "weekly"]) {
+test("each cadence has a varied pool, a fixed-size list, and real task rewards", () => {
+  for (const [cadence, poolSize] of [
+    ["daily", 19],
+    ["weekly", 21],
+  ]) {
     const pool = TASKS.filter((task) => task.cadence === cadence);
-    expect(pool).toHaveLength(12);
-    expect(new Set(pool.map((task) => task.id)).size).toBe(12);
+    expect(pool).toHaveLength(poolSize);
+    expect(new Set(pool.map((task) => task.id)).size).toBe(poolSize);
     for (const task of pool) {
       expect(TASK_METRICS).toContain(task.metric);
       expect(task.goal).toBeGreaterThan(0);
       expect(task.reward).toBeGreaterThan(0);
     }
   }
-  expect(ACTIVE_PER_PERIOD).toBe(4);
+  expect(ACTIVE_PER_PERIOD).toEqual({ daily: 3, weekly: 4 });
   // A weekly task pays several times a daily one on average.
   const average = (cadence) => {
     const pool = TASKS.filter((task) => task.cadence === cadence);
@@ -129,7 +132,7 @@ test("finishing the last task unlocks the list bonus; collecting it pays once, i
   tasks = recordTally(tasks, every, day);
   let state = { ...emptyProgress(), profile: testProfile, tasks };
   const list = activeTaskIds(state.tasks, "daily", day);
-  expect(list).toHaveLength(ACTIVE_PER_PERIOD);
+  expect(list).toHaveLength(ACTIVE_PER_PERIOD.daily);
   for (const id of list)
     expect(taskProgress(state.tasks, taskById(id), day).state).toBe(
       "claimable",
@@ -149,7 +152,7 @@ test("finishing the last task unlocks the list bonus; collecting it pays once, i
   }
   expect(listBonusState(state.tasks, "daily", day)).toMatchObject({
     state: "claimable",
-    done: ACTIVE_PER_PERIOD,
+    done: ACTIVE_PER_PERIOD.daily,
   });
   expect(state.history.filter((e) => e.taskId === "daily-list")).toHaveLength(
     0,
@@ -167,7 +170,7 @@ test("finishing the last task unlocks the list bonus; collecting it pays once, i
   expect(state.balance - before).toBe(LIST_BONUS.daily);
   expect(listBonusState(state.tasks, "daily", day)).toMatchObject({
     state: "claimed",
-    done: ACTIVE_PER_PERIOD,
+    done: ACTIVE_PER_PERIOD.daily,
   });
   const bonusLine = state.history.filter((e) => e.taskId === "daily-list");
   expect(bonusLine).toHaveLength(1);
@@ -189,7 +192,7 @@ test("finishing the last task unlocks the list bonus; collecting it pays once, i
   expect(taskSummary(state.tasks, day).ready).toBe(weekly);
   expect(claimableIds(state.tasks, "daily", day)).toEqual([]);
   expect(taskSummary(state.tasks, day).claimed).toBeGreaterThanOrEqual(
-    ACTIVE_PER_PERIOD,
+    ACTIVE_PER_PERIOD.daily,
   );
 });
 

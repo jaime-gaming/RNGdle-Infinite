@@ -22,7 +22,14 @@ const saved = (page) =>
 
 test("wallet rules: one credit per roll, all earned badges unlocked, no duplicate or unaffordable purchases", () => {
   const result = evaluate(1337),
-    action = { type: "complete", result, id: "test-roll", cooldownUntil: 5000 };
+    // Keep this economy-only fixture outside the October 2026 event window.
+    action = {
+      type: "complete",
+      result,
+      id: "test-roll",
+      at: 1,
+      cooldownUntil: 5000,
+    };
   const earned = applyProgress(emptyProgress(), action);
   expect(earned.balance).toBe(result.totalEP);
   expect(earned.discovered).toHaveLength(17);
@@ -70,7 +77,9 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
             expect(offset, `a stock window for ${item.id}`).not.toBeNull();
             return (window + offset) * SKILL_STOCK_WINDOW_MS + 1;
           })()
-        : undefined;
+        : item.kind === "aura"
+          ? 1
+          : undefined;
     state = applyProgress(state, { type: "buy", id: item.id, at });
     expect(state.balance).toBe(before - item.price);
     if (item.kind === "aura") expect(state.equipped).toBe(item.id);

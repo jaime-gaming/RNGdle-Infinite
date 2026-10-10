@@ -33,6 +33,7 @@ import { shopProducts } from "../src/shop-data.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 
 const ids = allBadgeMetadata.map((b) => b.id);
+const auraIds = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
 const earned = (ep, at = 150000) => [
@@ -140,7 +141,11 @@ test("the Rollback is the biggest stage: the largest bonus and starting sum, cou
 });
 
 test("taking the Rollback restarts the run once, pays its sum, and is refused twice", () => {
-  const ready = top({ ultraRebirths: 3 });
+  const ready = top({
+    ultraRebirths: 3,
+    owned: ["quickwind-1", "starfall"],
+    equipped: "starfall",
+  });
   const after = applyProgress(ready, {
     type: "rollback",
     expectedRollbacks: 0,
@@ -150,9 +155,11 @@ test("taking the Rollback restarts the run once, pays its sum, and is refused tw
   expect(after.rollbacks).toBe(1);
   expect(after.rebirths).toBe(REBIRTH_TOTAL);
   expect(after.ultraRebirths).toBe(3);
-  // The run is handed back, and the new one starts with the Rollback's sum.
+  // The run restarts and Rollback pays its starting sum; the aura and its
+  // equipped look stay while the ordinary upgrade is handed back.
   expect(after.discovered).toEqual([]);
-  expect(after.owned).toEqual([]);
+  expect(after.owned).toEqual(["starfall"]);
+  expect(after.equipped).toBe("starfall");
   expect(after.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 3, 1));
   expect(after.history.at(-1)).toMatchObject({
     id: "rb1",
@@ -297,6 +304,8 @@ test("the Rollback takes the run once, shows its ceremony and closes prestige", 
   // The ceremony plays over the page the moment the save lands.
   await expect(page.locator(".ultra-ceremony-title")).toContainText("ROLLBACK");
   await expect.poll(async () => (await saved(page)).rollbacks).toBe(1);
+  expect((await saved(page)).owned).toEqual(auraIds);
+  expect((await saved(page)).equipped).toBe("prism");
   // Afterwards the page reads as finished: no prestige, no second Rollback.
   await page.goto("/#rebirth");
   await expect(page.locator(".rebirth-hero h2")).toContainText(

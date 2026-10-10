@@ -7,7 +7,7 @@ import { allBadgeMetadata as metadata } from "../src/infinite-badges.js";
 const progress = (page) =>
   page.getByRole("progressbar", { name: "Badge collection progress" });
 
-test("new logo loads, links home, and navigation follows Tasks–Shop–Badges–History in keyboard order", async ({
+test("new logo loads, links home, and navigation follows Shop–Tasks–Badges–History in keyboard order", async ({
   page,
 }) => {
   await page.goto("/#history");
@@ -20,13 +20,13 @@ test("new logo loads, links home, and navigation follows Tasks–Shop–Badges�
     await nav
       .getByRole("button")
       .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("aria-label"))),
-  ).toEqual(["Tasks", "Shop", "Badges", "History"]);
+  ).toEqual(["Shop", "Tasks", "Badges", "History"]);
   await logo.focus();
-  for (const name of ["Tasks", "Shop", "Badges", "History"]) {
+  for (const name of ["Shop", "Tasks", "Badges", "History"]) {
     await page.keyboard.press("Tab");
     await expect(nav.getByRole("button", { name, exact: true })).toBeFocused();
   }
-  for (const name of ["Tasks", "Shop", "Badges", "History"]) {
+  for (const name of ["Shop", "Tasks", "Badges", "History"]) {
     await nav.getByRole("button", { name, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/${name.toLowerCase()}$`));
     await expect(

@@ -38,6 +38,7 @@ import { evaluate } from "./helpers/index.js";
 import { mockRandom } from "./helpers/random-roll.js";
 
 const ids = allBadgeMetadata.map((b) => b.id);
+const auraIds = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
 const nav = (p, name) =>
@@ -279,7 +280,7 @@ test("cycle EP survives history pruning and historical tiers follow the scoring 
   expect(tiers.history.map((event) => event.tier)).toEqual(["godly", "trash"]);
 });
 
-test("rebirth restarts the run — purchases, companions and wallet — and keeps the account's history, rebirths and bonuses", () => {
+test("rebirth resets non-aura purchases, companions and wallet but keeps every owned aura and the account's history", () => {
   const old = applyProgress(
     { ...state(), discovered: [] },
     {
@@ -301,7 +302,16 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
   };
   const before = {
     ...banked,
-    owned: ["quickwind-1", "starfall", "flywheel", "surge", "skill-bay-1"],
+    owned: [
+      "quickwind-1",
+      "starfall",
+      "flywheel",
+      "surge",
+      "skill-bay-1",
+      "static",
+      "bitstorm",
+    ],
+    equipped: "static",
     discovered: ids,
     pets: ["pebble"],
     activePet: "pebble",
@@ -312,20 +322,18 @@ test("rebirth restarts the run — purchases, companions and wallet — and keep
   };
   const next = applyProgress(before, action);
   expect(next).toMatchObject({
-    // Kept: the account's story, the ladder and everything it earned.
+    // Kept: the account's story, the ladder and every owned aura.
     profile: testProfile,
     rebirths: 1,
     receipts: ["old"],
-    // Reset: the run itself — the collection, the shelf, the companions and
-    // the wallet. The worn aura comes off with the shelf it came from, and the
-    // wallet restarts at the sum rung one pays plus the surplus: the cycle
-    // scored 350,000 against a 250,000 gate, and a quarter of that overshoot
-    // joins the new wallet.
+    // Reset: the collection, non-aura purchases, companions and wallet. The
+    // active aura stays equipped. The wallet restarts at the rung's starting
+    // sum plus the surplus from the roll above its 250,000 EP gate.
     balance: REBIRTH_STARTER_EP + 25000,
     totalEarned: before.totalEarned + REBIRTH_STARTER_EP + 25000,
     cycleEarnedEP: 0,
-    owned: [],
-    equipped: "none",
+    owned: ["starfall", "static", "bitstorm"],
+    equipped: "static",
     discovered: [],
     pets: [],
     activePet: "none",
@@ -412,8 +420,8 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
       count: step + 1,
       cost: requirement.ep,
     });
-    // The next rung asks for more badges and more EP, and the collection is
-    // empty again: rediscovery is the work, everything else is kept.
+    // The next rung asks for more badges and more EP. The badge collection
+    // resets; the aura collection stays while other run purchases are returned.
     const following = rebirthRequirement(next.rebirths);
     if (following) {
       // Five points more is 11 or 12 badges, depending on the rounding.
@@ -425,7 +433,8 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
     expect(discoveredCount(next)).toBe(0);
     // The shelf, the companions and the wallet go back with the collection:
     // what refills the wallet is the starting sum of the rung just climbed.
-    expect(next.owned).toEqual([]);
+    expect(next.owned).toEqual(auraIds);
+    expect(next.equipped).toBe("prism");
     expect(next.pets).toEqual([]);
     // The cycle was seeded far past every gate, so the wallet refills with
     // the rung's sum plus a quarter of the overshoot, and whole 5M blocks of
@@ -446,10 +455,10 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
   expect(granted).toHaveLength(REBIRTH_TOTAL);
   expect(new Set(granted).size).toBe(REBIRTH_TOTAL);
   for (const id of granted) expect(progress.skills).toContain(id);
-  // Every cycle hands the shop back, so the rack is back to its base two
-  // slots — and every rung's skill rides free beside them, equipped and
-  // charging, with the slots left open for shop skills.
-  expect(progress.owned).toEqual([]);
+  // Non-aura purchases go back each cycle, so the rack is at its base two
+  // slots; all looks stay, and each rung's skill rides beside them, equipped
+  // and charging, with the slots left open for shop skills.
+  expect(progress.owned).toEqual(auraIds);
   expect(skillSlots(progress.owned)).toBe(2);
   expect(progress.equippedSkills).toHaveLength(REBIRTH_TOTAL);
   for (const id of granted) expect(progress.equippedSkills).toContain(id);
@@ -546,6 +555,8 @@ test("every cycle starts with the EP its rungs and ultra-rebirths paid", () => {
   });
   expect(ultra.rebirths).toBe(REBIRTH_TOTAL);
   expect(ultra.ultraRebirths).toBe(1);
+  expect(ultra.owned).toEqual(auraIds);
+  expect(ultra.equipped).toBe("prism");
   expect(ultra.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 1) + 1250000);
   expect(ultra.balance).toBeLessThanOrEqual(ultra.totalEarned);
   expect(ultra.surplusBanked).toBe(banked + 1);
@@ -771,8 +782,8 @@ test("rebirth confirms in its dialog, applies once, and restarts the run without
   // The run starts over: the wallet and everything it bought are handed back,
   // and rung one refills the wallet with its starting sum plus the surplus.
   expect(after.balance).toBe(REBIRTH_STARTER_EP + carry);
-  expect(after.owned).toEqual([]);
-  expect(after.equipped).toBe("none");
+  expect(after.owned).toEqual(auraIds);
+  expect(after.equipped).toBe("prism");
   expect(after.discovered).toEqual([]);
   // The account keeps its history: the roll from the previous cycle is still
   // readable, with the rebirth recorded after it.
@@ -906,7 +917,7 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   // sum the new cycle started with — the rung's share plus the surplus of
   // funded()'s 20M-EP cycle over the 100k gate.
   const after = await saved(page);
-  expect(after.owned).toEqual([]);
+  expect(after.owned).toEqual(auraIds);
   expect(after.balance).toBe(REBIRTH_STARTER_EP + 8687500);
   expect(after.surplusBanked).toBe(5);
   expect(after.rebirths).toBe(1);
@@ -1021,10 +1032,10 @@ test("a committed zero-cooldown Flywheel reveal never shows a moving cooldown ba
   await expect(page.locator(".generate")).toBeEnabled();
 });
 
-test("a new cycle buys the shelf again and is credited at the catalogue price", () => {
+test("a new cycle buys the shop upgrade again and is credited at the catalogue price", () => {
   const first = applyProgress(
     { ...emptyProgress(), balance: 100000, totalEarned: 100000 },
-    { type: "buy", id: "starfall", at: 1000 },
+    { type: "buy", id: "quickwind-1", at: 1000 },
   );
   const reborn = applyProgress(
     {
@@ -1035,32 +1046,29 @@ test("a new cycle buys the shelf again and is credited at the catalogue price", 
     },
     action,
   );
-  // The aura went back on the shelf, and the wallet restarts on the sum rung
-  // one pays — but the purchase stays in the account's history, and the
-  // rebirth joins it there.
+  // The ordinary upgrade goes back on the shelf; the purchase stays in the
+  // account's history, and the rebirth joins it there.
   expect(reborn.owned).toEqual([]);
   expect(reborn.balance).toBe(REBIRTH_STARTER_EP);
   expect(reborn.totalEarned).toBe(100000 + REBIRTH_STARTER_EP);
-  // The roll that paid for the rung is part of the log, so the rebirth still
-  // lands after everything the cycle did.
   expect(reborn.history.map((e) => e.type)).toEqual([
     "purchase",
     "roll",
     "rebirth",
   ]);
-  // So buying it back in the new cycle is a real sale, at the catalogue price.
+  // Buying it in the new cycle is a real sale, at the catalogue price.
   const second = applyProgress(
     { ...reborn, balance: 5000000, totalEarned: 5000000 },
-    { type: "buy", id: "starfall", at: 300000 },
+    { type: "buy", id: "quickwind-1", at: 300000 },
   );
-  expect(second.owned).toEqual(["starfall"]);
+  expect(second.owned).toEqual(["quickwind-1"]);
   const purchases = parseProgress(JSON.stringify(second)).history.filter(
     (e) => e.type === "purchase",
   );
   expect(purchases).toHaveLength(2);
   expect(purchases.at(-1)).toMatchObject({
-    productId: "starfall",
-    ep: shopProducts.find((p) => p.id === "starfall").price,
+    productId: "quickwind-1",
+    ep: shopProducts.find((p) => p.id === "quickwind-1").price,
   });
 });
 

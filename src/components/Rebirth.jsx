@@ -196,7 +196,9 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     Math.round((cycleEp / Math.max(1, epTarget)) * 100),
   );
   const owned = progress.owned ?? [];
-  const ownedValue = owned.reduce(
+  const keptAuras = owned.filter((id) => productById.get(id)?.kind === "aura");
+  const handedBack = owned.filter((id) => productById.get(id)?.kind !== "aura");
+  const ownedValue = handedBack.reduce(
     (sum, id) => sum + (productById.get(id)?.price ?? 0),
     0,
   );
@@ -223,6 +225,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   const keeps = [
     ["Activity history", "every roll, unlock and purchase, cycle after cycle"],
     ["Rebirth ladder", "your rebirths, their skills and the +2% EP each"],
+    ["Aura collection", "every owned look, including the one you are wearing"],
     ...(ladderComplete
       ? [["Prestige bonus", "+10% EP per prestige, forever"]]
       : []),
@@ -238,7 +241,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   ];
   const resets = [
     ["Badge collection", "rediscover it in the new cycle"],
-    ["Everything you bought", "upgrades, auras, tools and shop skills"],
+    ["Other purchases", "upgrades, tools and shop skills"],
     ["Companions", "found or bought, they start over too"],
     ["Wallet EP", "the balance restarts at the ladder's starting sum"],
   ];
@@ -488,12 +491,13 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 </li>
                 <li>
                   <strong>
-                    {owned.length} purchase{owned.length === 1 ? "" : "s"}
+                    {handedBack.length} purchase
+                    {handedBack.length === 1 ? "" : "s"}
                   </strong>
                   <small>
-                    {owned.length
+                    {handedBack.length
                       ? `${formatEP(ownedValue)} EP of upgrades`
-                      : "nothing bought yet"}
+                      : "nothing to hand back"}
                   </small>
                 </li>
                 <li>
@@ -532,6 +536,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                     {keptSkills} ladder skill{keptSkills === 1 ? "" : "s"}
                   </strong>
                   <small>earned, never bought</small>
+                </li>
+                <li>
+                  <strong>
+                    {keptAuras.length} aura{keptAuras.length === 1 ? "" : "s"}
+                  </strong>
+                  <small>kept, including your equipped look</small>
                 </li>
                 <li>
                   <strong>{formatEP(progress.totalEarned ?? 0)} EP</strong>

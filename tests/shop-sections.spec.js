@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import {
   shopProducts,
+  productPrice,
   productUnlocked,
   skillStock,
   skillStockWindow,
@@ -10,6 +11,7 @@ import {
   AURA_FAMILIES,
 } from "../src/shop-data.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+import { AURA_EVENT_END_AT, AURA_EVENT_START_AT } from "../src/tasks.js";
 
 // The shop is a street of sub-pages: the hub is an index of six buttons, each
 // one opening its own URL (/shop/skills, /shop/auras …), the flywheel tiers
@@ -551,7 +553,14 @@ test("an aura family is a page of its own, reached from its banner", async ({
 }) => {
   await seedProgress(page, { ...funded, balance: 200000000 });
   await page.goto("/shop/auras");
-  // The index is four banners, each one a real link to the set it fronts.
+  // Each named family is a real link to the set it fronts.
+  expect(AURA_FAMILIES.map((family) => family.label)).toEqual([
+    "Spaaaaaace",
+    "Earth",
+    "Electric Status",
+    "Deep Dark",
+    "R4ND0MN3S5",
+  ]);
   await expect(page.locator(".aura-family-banner")).toHaveCount(
     AURA_FAMILIES.length,
   );
@@ -574,13 +583,68 @@ test("an aura family is a page of its own, reached from its banner", async ({
   await page.locator('.aura-family-banner[data-family="celestial"]').click();
   await expect(page).toHaveURL(/\/shop\/auras\/celestial$/);
   await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText(
-    "Sky and starlight",
+    "Spaaaaaace",
   );
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(
     shopProducts.filter((p) => p.family === "celestial").length,
   );
   await page.goBack();
   await expect(page).toHaveURL(/\/shop\/auras$/);
+});
+
+test("R4ND0MN3S5 links to Tasks and its aura prices return to normal after the event", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const liveAt = AURA_EVENT_START_AT + 60 * 60 * 1000;
+  await page.clock.setFixedTime(new Date(liveAt));
+  await seedProgress(page, { ...funded, balance: 20000000 });
+  await page.goto("/shop/auras/randomness");
+
+  await expect(page.locator(".aura-event-offer p")).toHaveText(
+    "Hey! You can get them for free! But, if you want to get them before, you'll have to pay more...",
+  );
+  await expect(page.locator(".shop-card[data-product]")).toHaveCount(4);
+  expect(
+    Object.fromEntries(
+      shopProducts
+        .filter((product) => product.family === "randomness")
+        .map((product) => [product.id, productPrice(product, liveAt)]),
+    ),
+  ).toEqual({
+    static: 840000,
+    bitstorm: 2640000,
+    scramble: 5400000,
+    hexdump: 9000000,
+  });
+  await expect(
+    page.locator('[data-product="static"] .shop-price'),
+  ).toContainText("840,000 EP");
+  await page.getByRole("button", { name: "Get free auras on Tasks" }).click();
+  await expect(page).toHaveURL(/\/tasks$/);
+  await expect(
+    page.getByRole("heading", { name: "Tasks", level: 1 }),
+  ).toBeVisible();
+
+  const regularAt = AURA_EVENT_END_AT + 60 * 60 * 1000;
+  await page.clock.setFixedTime(new Date(regularAt));
+  await page.goto("/shop/auras/randomness");
+  await expect(page.locator(".aura-event-offer")).toHaveCount(0);
+  expect(
+    Object.fromEntries(
+      shopProducts
+        .filter((product) => product.family === "randomness")
+        .map((product) => [product.id, productPrice(product, regularAt)]),
+    ),
+  ).toEqual({
+    static: 260000,
+    bitstorm: 880000,
+    scramble: 1800000,
+    hexdump: 3000000,
+  });
+  await expect(
+    page.locator('[data-product="static"] .shop-price'),
+  ).toContainText("260,000 EP");
 });
 
 test("nothing on a shelf waits behind a purchase you have not made", async ({

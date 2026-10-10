@@ -11,7 +11,7 @@ test.use({ viewport: { width: 390, height: 844 } });
 const bar = (page) =>
   page.getByRole("navigation", { name: "Mobile navigation" });
 
-test("the phone bar holds five buttons: Tasks and More on the left, Roll in the centre, Badges and Shop on the right", async ({
+test("the phone bar orders Shop, Tasks, Roll, Badges and More from left to right", async ({
   page,
 }) => {
   await seedProgress(page, seeded);
@@ -22,7 +22,7 @@ test("the phone bar holds five buttons: Tasks and More on the left, Roll in the 
     await buttons.evaluateAll((nodes) =>
       nodes.map((n) => n.textContent.trim()),
     ),
-  ).toEqual(["Tasks", "More", "Roll", "Badges", "Shop"]);
+  ).toEqual(["Shop", "Tasks", "Roll", "Badges", "More"]);
   const centres = await buttons.evaluateAll((nodes) =>
     nodes.map((n) => {
       const r = n.getBoundingClientRect();
@@ -47,6 +47,9 @@ test("More opens the rest of the destinations; Escape, a tap outside, or a choic
     "Rebirth",
     "Settings",
   ]);
+  const menuBox = await menu.boundingBox();
+  expect(menuBox.x).toBeGreaterThanOrEqual(0);
+  expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(390);
   // Escape closes the menu and hands focus back to the button that opened it.
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);

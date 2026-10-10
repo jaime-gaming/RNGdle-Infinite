@@ -310,29 +310,20 @@ export default function PetShelf({
                             <Coins size={13} /> {formatEP(pet.price)} EP
                           </button>
                         )}
-                        {!isOwned &&
-                          (isGoal ? (
-                            <>
-                              <span className="pet-goal-tag">
-                                <Target size={13} /> Your goal
-                              </span>
-                              <button
-                                className="pet-button"
-                                disabled={!!pending}
-                                onClick={() => setGoal(null)}
-                              >
-                                Clear
-                              </button>
-                            </>
-                          ) : (
+                        {!isOwned && isGoal && (
+                          <>
+                            <span className="pet-goal-tag">
+                              <Target size={13} /> Your goal
+                            </span>
                             <button
-                              className="pet-button is-goal"
+                              className="pet-button"
                               disabled={!!pending}
-                              onClick={() => setGoal(pet)}
+                              onClick={() => setGoal(null)}
                             >
-                              <Target size={13} /> Set as goal
+                              Clear
                             </button>
-                          ))}
+                          </>
+                        )}
                         <small className="pet-note">
                           {isOwned
                             ? isActive

@@ -1,4 +1,5 @@
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
+import { AURA_EVENT_END_AT, AURA_EVENT_START_AT } from "./tasks.js";
 
 // Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
@@ -415,6 +416,7 @@ export const shopProducts = [
     kind: "aura",
     name: "Static Veil",
     price: 260000,
+    eventPrice: 840000,
     family: "randomness",
     swatch: ["#e2e8f0", "#475569"],
     icon: "static",
@@ -426,6 +428,7 @@ export const shopProducts = [
     kind: "aura",
     name: "Bit Storm",
     price: 880000,
+    eventPrice: 2640000,
     family: "randomness",
     swatch: ["#22c55e", "#14532d"],
     icon: "bitstorm",
@@ -437,6 +440,7 @@ export const shopProducts = [
     kind: "aura",
     name: "Scramble",
     price: 1800000,
+    eventPrice: 5400000,
     family: "randomness",
     swatch: ["#fcd34d", "#78350f"],
     icon: "scramble",
@@ -448,6 +452,7 @@ export const shopProducts = [
     kind: "aura",
     name: "Hex Dump",
     price: 3000000,
+    eventPrice: 9000000,
     family: "randomness",
     swatch: ["#38bdf8", "#1e3a8a"],
     icon: "hexdump",
@@ -610,23 +615,22 @@ export const shopProducts = [
 // featured picks, a deep link and the back button can never disagree about
 // where an item is sold. Companions keep their shelf too; it is owned by the
 // companion component rather than by this catalogue.
-// Auras are grouped into families so the shelf reads as four small collections
+// Auras are grouped into families so the shelf reads as five small collections
 // instead of one long list. Cosmetic only: a family never changes a price, an
 // order of purchase or anything a roll can score.
 export const AURA_FAMILIES = [
   {
     id: "celestial",
-    label: "Sky and starlight",
+    label: "Spaaaaaace",
     blurb: "Constellations, rings and haloes.",
-    // Star-chart labels: spaced capitals in the monospace face.
     font: '"Space Mono", monospace',
-    tracking: "0.18em",
-    casing: "uppercase",
+    tracking: "0.04em",
+    casing: "none",
     weight: 700,
   },
   {
     id: "element",
-    label: "Earth and weather",
+    label: "Earth",
     blurb: "Glass, tide, leaf and rain.",
     // A soft serif for things that grew or fell rather than were built.
     font: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
@@ -636,9 +640,9 @@ export const AURA_FAMILIES = [
   },
   {
     id: "machine",
-    label: "Made things",
+    label: "Electric Status",
     blurb: "Circuits, plans, dials and printed colour.",
-    // A readout: the same face as the charts, lowercase and tight.
+    // A compact readout for circuits, plans and machine-made colour.
     font: '"Space Mono", monospace',
     tracking: "0.02em",
     casing: "none",
@@ -646,12 +650,11 @@ export const AURA_FAMILIES = [
   },
   {
     id: "void",
-    label: "Deep and dark",
+    label: "Deep Dark",
     blurb: "Stone, ink and the bottom of the well.",
-    // An inscription cut into stone: wide serif capitals.
     font: 'Georgia, "Times New Roman", serif',
-    tracking: "0.22em",
-    casing: "uppercase",
+    tracking: "0.04em",
+    casing: "none",
     weight: 700,
   },
   {
@@ -799,6 +802,18 @@ export function nextUpgrade(owned, kind) {
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);
 }
 export const productById = new Map(shopProducts.map((item) => [item.id, item]));
+
+// Four R4ND0MN3S5 looks have a limited premium price while the event is live;
+// the catalogue's `price` remains the regular price used before and after it.
+export function productPrice(item, at = Date.now()) {
+  if (!item) return 0;
+  return item.family === "randomness" &&
+    Number.isSafeInteger(item.eventPrice) &&
+    at >= AURA_EVENT_START_AT &&
+    at < AURA_EVENT_END_AT
+    ? item.eventPrice
+    : item.price;
+}
 
 export function rollSettings(owned = []) {
   return owned.reduce(
