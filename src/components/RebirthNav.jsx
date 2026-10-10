@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, Infinity as InfinityIcon } from "lucide-react";
+import { Sparkles, Infinity as InfinityIcon, RefreshCw } from "lucide-react";
 import {
   REBIRTH_TOTAL,
   rebirthProgress,
@@ -90,7 +90,7 @@ export default function RebirthNav({ progress, active, onClick }) {
         style={{ "--fill": `${percent}%` }}
         aria-hidden="true"
       >
-        {ultras > 0 ? <InfinityIcon size={13} /> : <Sparkles size={13} />}
+        {ultras > 0 ? <InfinityIcon size={13} /> : <RefreshCw size={13} />}
       </span>
       <span className="rebirth-nav-text">
         <span className="rebirth-nav-label">Rebirth</span>

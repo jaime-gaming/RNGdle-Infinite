@@ -9,7 +9,7 @@ import {
   Lock,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
+  RefreshCw,
   Target,
   Undo2,
   Unlock,
@@ -551,7 +551,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             </article>
             <article className="rebirth-preview-card is-gain">
               <h4>
-                <Sparkles size={13} /> You gain
+                <RefreshCw size={13} /> You gain
               </h4>
               <ul>
                 <li>
@@ -783,7 +783,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
         >
           <header>
             <h3 id="rebirth-ultra-title">
-              <Sparkles size={16} /> After the ladder: Prestige
+              <RefreshCw size={16} /> After the ladder: Prestige
             </h3>
             <p>
               Finish all {REBIRTH_TOTAL} steps, then find{" "}
@@ -846,7 +846,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 </span>
               </li>
               <li>
-                <Sparkles size={14} />
+                <RefreshCw size={14} />
                 <span>
                   <strong>Prestige rewards</strong>
                   <small>
@@ -966,7 +966,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
         >
           <header>
             <h3 id="rebirth-legacy-title">
-              <Sparkles size={16} /> Your prestige legacy
+              <RefreshCw size={16} /> Your prestige legacy
             </h3>
             <p>What this account carries past the top of the ladder.</p>
           </header>
