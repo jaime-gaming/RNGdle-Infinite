@@ -198,6 +198,36 @@ test("an Epic badge found on the roll page itself posts no notice, since the res
   ).toHaveCount(0);
 });
 
+test("a repeated error notice revives the card instead of inheriting its exit timer", async ({
+  page,
+}) => {
+  const message =
+    "Clipboard isn’t available. Try copying from a secure browser window.";
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error("blocked")) },
+    });
+  });
+  await showRoll(page, 1337);
+  const share = page.getByRole("button", { name: "Share", exact: true });
+  await share.evaluate((button) => button.click());
+  const notice = page.locator('.toast[data-kind="error"]');
+  await expect(notice).toContainText(message);
+  const life = toastLife({ kind: "error", text: message });
+
+  await page.clock.runFor(life);
+  await expect(notice).toHaveClass(/is-leaving/);
+  // Repeat it while the original card is fading out. Its count rises and its
+  // full reading time starts again, so the old 200 ms exit cannot eat it.
+  await share.evaluate((button) => button.click());
+  await expect(notice).not.toHaveClass(/is-leaving/);
+  await expect(notice.locator(".toast-count")).toHaveText("×2");
+  await page.clock.runFor(300);
+  await expect(notice).toBeVisible();
+  await expect(notice.locator(".toast-count")).toHaveText("×2");
+});
+
 test("a failure shows its own mark and alert role, and never the tick of a finished action", async ({
   page,
 }) => {

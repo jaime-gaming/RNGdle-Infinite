@@ -262,9 +262,11 @@ export default function RollExperience({
   // Every number a draw skill kept is listed as paid. A plain draw can win, so a
   // single paid number is listed too when it is not the roll's own number.
   const paidPicks = run?.picks ?? [];
-  const stacked =
-    paidPicks.length > 1 ||
-    (paidPicks.length === 1 && paidPicks[0].number !== run?.number);
+  const winnerSkill =
+    run && Object.prototype.hasOwnProperty.call(run, "winnerSkill")
+      ? run.winnerSkill
+      : (paidPicks.find((pick) => pick.number === run?.number)?.skill ?? null);
+  const stacked = paidPicks.length + (winnerSkill == null ? 1 : 0) > 1;
   const groups = useMemo(
     () => (result ? groupResultBadges(result.badges) : []),
     [result],
@@ -306,9 +308,9 @@ export default function RollExperience({
   const keptNumbers = useMemo(
     () =>
       (run?.picks ?? []).filter(
-        (pick) => pick.number !== result?.number && pick.number != null,
+        (pick) => pick.skill !== winnerSkill && pick.number != null,
       ),
-    [run?.picks, result?.number],
+    [run?.picks, winnerSkill],
   );
   const [keptScores, setKeptScores] = useState({});
   useEffect(() => {
@@ -345,7 +347,7 @@ export default function RollExperience({
       .filter((pick) => pick.number != null)
       .map((pick, index) => {
         const definition = skillById.get(pick.skill);
-        const best = pick.number === result?.number;
+        const best = pick.skill === winnerSkill;
         const scored = best ? result : (keptScores[pick.number] ?? null);
         return {
           key: `${index}-${pick.number}`,
@@ -358,7 +360,7 @@ export default function RollExperience({
           best,
         };
       });
-    if (!result || picks.some((pick) => pick.number === result.number)) {
+    if (!result || !picks.length || winnerSkill !== null) {
       return cards;
     }
     return [
@@ -375,7 +377,7 @@ export default function RollExperience({
       },
       ...cards,
     ];
-  }, [run?.picks, result, keptScores, bankedMultiplier]);
+  }, [run?.picks, result, keptScores, bankedMultiplier, winnerSkill]);
   const extraPicks = useMemo(
     () =>
       keptNumbers
@@ -441,16 +443,26 @@ export default function RollExperience({
       0.35 * timeline.pulseMS
     );
   }, [splitDraws, timeline]);
-  const [splitView, setSplitView] = useState({ run: null, number: null });
+  const [splitView, setSplitView] = useState({ run: null, index: null });
   const splitOwned = !!run && splitView.run === run.id;
-  const splitPick = splitOwned ? splitView.number : null;
-  const splitOpen = !!splitDraws && splitPick == null;
+  const splitIndex = splitOwned ? splitView.index : null;
+  const splitPick =
+    splitIndex != null && splitDraws ? (splitDraws[splitIndex] ?? null) : null;
+  const splitOpen = !!splitDraws && splitIndex == null;
+  const splitWinnerIndex =
+    Number.isSafeInteger(run?.winnerIndex) &&
+    run.winnerIndex >= 0 &&
+    run.winnerIndex < (splitDraws?.length ?? 0)
+      ? run.winnerIndex
+      : Math.max(0, splitDraws?.indexOf(run?.number) ?? 0);
   const drawScores = useDrawScores(splitDraws ? run : null);
-  // A number other than the committed one, once its own stats are read. The
-  // committed number is the roll's own result, so it never takes this screen.
+  // A draw other than the committed draw, once its own stats are read. Compare
+  // indices, not number values: two independent draws can land on the same
+  // number and still need their own detail screen.
   const splitDetailScored =
-    splitPick != null && splitPick !== result?.number
-      ? (drawScores[splitPick] ?? null)
+    splitPick != null && splitIndex !== splitWinnerIndex
+      ? (drawScores[splitPick] ??
+        (splitPick === result?.number ? result : null))
       : null;
   const splitDetail = !!splitDetailScored;
   // Any single number on screen (its own stats, or the best one's result) means
@@ -475,12 +487,12 @@ export default function RollExperience({
   // A number opened from the overview starts at the top of the roll, so its way
   // back to the numbers is the first thing on screen, wherever the page was.
   useEffect(() => {
-    if (splitPick == null || !rollSection.current) return;
+    if (splitIndex == null || !rollSection.current) return;
     rollSection.current.scrollIntoView({
       block: "start",
       behavior: reducedMotion ? "auto" : "smooth",
     });
-  }, [splitPick, reducedMotion]);
+  }, [splitIndex, reducedMotion]);
   const rankKnown = !!run && elapsed >= timeline.rarity;
   const visibleCount = timeline.badgeTimes.filter((t) => elapsed >= t).length;
   const visibleGroups = groups.slice(-visibleCount || groups.length);
@@ -867,7 +879,7 @@ export default function RollExperience({
   );
   // A paid number that is not the roll's own result: its stats show the
   // balance and the share line the roll's result shows.
-  const paidDetail = splitDetail && !!claimFor(run, splitPick);
+  const paidDetail = splitDetail && !!claimFor(run, splitIndex);
   return (
     <div
       className={`roll-experience ${run ? "is-result" : "is-idle"} ${instant ? "is-instant" : ""}`}
@@ -1008,7 +1020,7 @@ export default function RollExperience({
                 decided={splitDecided}
                 scores={drawScores}
                 roll={rollAgainControl}
-                onPick={(number) => setSplitView({ run: run.id, number })}
+                onPick={(index) => setSplitView({ run: run.id, index })}
               />
             )}
             {splitDraws && !splitOpen && !splitDetail && (
@@ -1016,7 +1028,7 @@ export default function RollExperience({
                 <button
                   type="button"
                   className="secondary-button draw-detail-back"
-                  onClick={() => setSplitView({ run: run.id, number: null })}
+                  onClick={() => setSplitView({ run: run.id, index: null })}
                 >
                   <LayoutGrid size={13} aria-hidden="true" />
                   All numbers
@@ -1025,12 +1037,12 @@ export default function RollExperience({
             )}
             {splitDetail ? (
               <DrawDetail
-                key={`detail-${run.id}-${splitPick}`}
+                key={`detail-${run.id}-${splitIndex}`}
                 number={splitPick}
-                index={splitDraws.indexOf(splitPick)}
+                index={splitIndex}
                 count={splitDraws.length}
                 scored={splitDetailScored}
-                claim={claimFor(run, splitPick)}
+                claim={claimFor(run, splitIndex)}
                 aura={aura}
                 reducedMotion={reducedMotion}
                 scale={timeline.scale}
@@ -1048,7 +1060,7 @@ export default function RollExperience({
                 }
                 openBadge={openBadge}
                 theme={theme}
-                onBack={() => setSplitView({ run: run.id, number: null })}
+                onBack={() => setSplitView({ run: run.id, index: null })}
               />
             ) : (
               <NumberArtifact

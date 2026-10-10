@@ -34,6 +34,10 @@ function Notice({ item, onDismiss }) {
   // A repeated notice starts its time again.
   useEffect(() => {
     remaining.current = item.life;
+    // A repeat may arrive during the short exit animation. It revives this
+    // keyed card as well as restarting its reading time, rather than letting
+    // the previous dismiss timer remove the newly repeated notice.
+    setLeaving(false);
   }, [item.stamp, item.life]);
   useEffect(() => {
     if (paused || leaving) return;

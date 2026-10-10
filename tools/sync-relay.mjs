@@ -98,6 +98,7 @@ export function createSyncRelay({
 } = {}) {
   const rooms = new Map(); // room -> { key, latest, members: Map, sweep, touchedAt }
   const loading = new Map(); // room -> Promise, so two requests load one room
+  const stateWrites = new Map(); // room -> Promise, serialize state commits
 
   // Health is answered to any browser that opens the game, so it names the
   // store without handing out the machine's directory layout: a path inside
@@ -142,6 +143,15 @@ export function createSyncRelay({
     }
   }
 
+  function serializeState(room, operation) {
+    const previous = stateWrites.get(room) ?? Promise.resolve();
+    const current = previous.catch(() => {}).then(operation);
+    stateWrites.set(room, current);
+    return current.finally(() => {
+      if (stateWrites.get(room) === current) stateWrites.delete(room);
+    });
+  }
+
   async function persistRoom(room, entry) {
     if (!storeDir || !ID_RE.test(room)) return;
     const payload = JSON.stringify({
@@ -151,13 +161,19 @@ export function createSyncRelay({
       updatedAt: Date.now(),
     });
     const file = fileFor(room);
-    const temporary = `${file}.${process.pid}.tmp`;
+    // A unique temporary file avoids colliding with another room commit in the
+    // same process. The per-room queue below still decides which complete
+    // snapshot reaches the destination last.
+    const temporary = `${file}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
     try {
       await mkdir(storeDir, { recursive: true });
       await writeFile(temporary, payload, "utf8");
       await rename(temporary, file);
-    } catch {
+    } catch (error) {
       await unlink(temporary).catch(() => {});
+      // A caller must never be told that a room was saved when the disk write
+      // failed. Let the request fail so its client can retain and retry it.
+      throw error;
     }
   }
 
@@ -350,16 +366,21 @@ export function createSyncRelay({
     )
       return send(res, 400, { error: "bad-state" });
     const incoming = { state, savedAt, device, at: Date.now() };
-    if (beats(incoming, entry.latest)) {
+    return serializeState(room, async () => {
+      if (!beats(incoming, entry.latest)) {
+        // The writer is behind: hand back what actually won so it can catch up.
+        return send(res, 200, { ok: false, conflict: entry.latest });
+      }
+      const candidate = { ...entry, latest: incoming, updatedAt: incoming.at };
+      // Keep the visible room head unchanged until the candidate is durable.
+      // A stream joining during the write gets the last committed state, then
+      // the broadcast below advances it only after persistence succeeds.
+      await persistRoom(room, candidate);
       entry.latest = incoming;
       entry.updatedAt = incoming.at;
-      // Write to the store before answering, so "sent" means "kept".
-      await persistRoom(room, entry);
       broadcast(entry, { type: "state", payload: incoming }, session);
       return send(res, 200, { ok: true, count: countMembers(entry) });
-    }
-    // The writer is behind: hand back what actually won so it can catch up.
-    return send(res, 200, { ok: false, conflict: entry.latest });
+    });
   }
 
   async function handle(req, res, next) {
@@ -393,7 +414,12 @@ export function createSyncRelay({
       rooms.set(room, entry);
       // The room is on the store before anybody is told its address: a second
       // device can therefore open the link at any later moment.
-      await persistRoom(room, entry);
+      try {
+        await persistRoom(room, entry);
+      } catch (error) {
+        if (rooms.get(room) === entry) rooms.delete(room);
+        throw error;
+      }
       return send(res, 200, { room, key });
     }
     if (url.pathname === `${basePath}/health`) {

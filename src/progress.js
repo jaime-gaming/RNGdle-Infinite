@@ -1631,6 +1631,7 @@ function applyEvent(state, action) {
 function parseHistory(value) {
   if (!Array.isArray(value)) return [];
   const seen = new Set();
+  const rolls = new Set();
   return value.flatMap((e) => {
     if (
       !e ||
@@ -1677,6 +1678,11 @@ function parseHistory(value) {
           tier:
             manifest.tiers.findLast((tier) => e.ep >= tier.minEP)?.id ?? e.tier,
           ...(e.source === "offline" ? { source: "offline" } : {}),
+          ...(typeof e.with === "string" &&
+          e.with.length <= 160 &&
+          rolls.has(e.with)
+            ? { with: e.with }
+            : {}),
           ...(["boost", "charge"].includes(e.flywheel)
             ? { flywheel: e.flywheel }
             : {}),
@@ -1782,6 +1788,7 @@ function parseHistory(value) {
       };
     } else return [];
     seen.add(e.id);
+    if (e.type === "roll") rolls.add(e.id);
     return [next];
   });
 }
@@ -1826,6 +1833,78 @@ export function parsePending(p, owned = null) {
       ))
   )
     throw new Error("Invalid committed roll");
+  const hasWinnerSkill = Object.prototype.hasOwnProperty.call(p, "winnerSkill");
+  const hasWinnerIndex = Object.prototype.hasOwnProperty.call(p, "winnerIndex");
+  let winnerSkill = null;
+  if (picks !== null) {
+    if (hasWinnerSkill) {
+      if (
+        p.winnerSkill !== null &&
+        (typeof p.winnerSkill !== "string" || !pickIds.includes(p.winnerSkill))
+      )
+        throw new Error("Invalid committed roll");
+      winnerSkill = p.winnerSkill;
+    } else {
+      // Saves written before winner tracking can still tell which skill's pick
+      // supplied the committed number: ties have always kept the first pick.
+      winnerSkill =
+        picks.find((pick) => pick.number === p.number)?.skill ?? null;
+    }
+    if (
+      (winnerSkill !== null &&
+        !picks.some(
+          (pick) => pick.skill === winnerSkill && pick.number === p.number,
+        )) ||
+      (winnerSkill === null && picks.some((pick) => pick.number === p.number))
+    )
+      throw new Error("Invalid committed roll");
+  } else if (hasWinnerSkill || hasWinnerIndex) {
+    throw new Error("Invalid committed roll");
+  }
+  let winnerIndex = null;
+  if (draws !== null && Array.isArray(draws)) {
+    let inferredIndex = draws.indexOf(p.number);
+    if (picks !== null) {
+      if (winnerSkill !== null) {
+        let start = 0;
+        inferredIndex = null;
+        for (const pick of picks) {
+          const end = Math.min(start + Math.trunc(pick.spent), draws.length);
+          if (pick.skill === winnerSkill) {
+            for (let index = start; index < end; index++)
+              if (draws[index] === pick.number) {
+                inferredIndex = index;
+                break;
+              }
+            break;
+          }
+          start = end;
+        }
+      } else if (
+        hasWinnerSkill &&
+        draws.length > 0 &&
+        draws.at(-1) === p.number
+      ) {
+        // A plain draw is always the final draw in a live multi-draw roll.
+        inferredIndex = draws.length - 1;
+      }
+    }
+    winnerIndex = hasWinnerIndex ? p.winnerIndex : inferredIndex;
+    if (
+      !Number.isSafeInteger(winnerIndex) ||
+      winnerIndex < 0 ||
+      winnerIndex >= draws.length ||
+      draws[winnerIndex] !== p.number ||
+      (winnerSkill !== null && winnerIndex !== inferredIndex) ||
+      (hasWinnerSkill &&
+        winnerSkill === null &&
+        picks !== null &&
+        winnerIndex !== draws.length - 1)
+    )
+      throw new Error("Invalid committed roll");
+  } else if (hasWinnerIndex) {
+    throw new Error("Invalid committed roll");
+  }
   if (
     typeof p.id !== "string" ||
     !p.id ||
@@ -1878,6 +1957,8 @@ export function parsePending(p, owned = null) {
             number: pick.number,
             spent: Math.trunc(pick.spent),
           })),
+          winnerSkill,
+          ...(winnerIndex !== null ? { winnerIndex } : {}),
         }
       : {}),
     ...(p.flywheel ? { flywheel: p.flywheel } : {}),
@@ -1899,25 +1980,63 @@ export function recoverUnsavedRolls(stored, temporary, unsaved = null) {
   )
     return stored;
   let merged = stored;
-  for (const event of temporary.history ?? []) {
-    if (event.type !== "roll" || (unsaved && !unsaved.has(event.id))) continue;
-    if (merged.history.some((e) => e.type === "roll" && e.id === event.id))
+  const rolls = (temporary.history ?? []).filter(
+    (event) => event.type === "roll",
+  );
+  const rollById = new Map(rolls.map((event) => [event.id, event]));
+  const roots = new Set();
+  for (const event of rolls) {
+    if (unsaved && !unsaved.has(event.id)) continue;
+    // Secondary numbers belong to their committed roll. Replaying one as a new
+    // roll would lose the original multipliers, task tally and receipt.
+    roots.add(typeof event.with === "string" ? event.with : event.id);
+  }
+  for (const id of roots) {
+    const event = rollById.get(id);
+    if (!event) continue;
+    if (
+      merged.receipts?.includes(id) ||
+      merged.history.some((entry) => entry.type === "roll" && entry.id === id)
+    )
       continue;
+    const extras = rolls
+      .filter(
+        (entry) =>
+          entry.with === id &&
+          !merged.history.some(
+            (saved) => saved.type === "roll" && saved.id === entry.id,
+          ),
+      )
+      .map((entry) => ({
+        skill: entry.skills?.find((skill) => skillById.has(skill)) ?? null,
+        spent: validAmount(entry.draws) && entry.draws >= 1 ? entry.draws : 1,
+        result: {
+          number: entry.number,
+          totalEP: entry.ep,
+          tier: entry.tier,
+          badges: entry.badges.map((badge) => ({ id: badge })),
+        },
+      }));
+    const petDrop = (temporary.history ?? []).find(
+      (entry) => entry.type === "pet" && entry.id === `${id}:pet`,
+    )?.productId;
     const pending = merged.pendingRoll;
     merged = applyProgress(merged, {
       type: "complete",
-      id: event.id,
+      id,
       source: event.source,
       at: event.at,
       result: {
         number: event.number,
         totalEP: event.ep,
         tier: event.tier,
-        badges: event.badges.map((id) => ({ id })),
+        badges: event.badges.map((badge) => ({ id: badge })),
       },
+      ...(extras.length ? { extras } : {}),
+      ...(typeof petDrop === "string" ? { petDrop } : {}),
       cooldownUntil: Math.max(merged.cooldownUntil, temporary.cooldownUntil),
     });
-    if (pending && pending.id !== event.id)
+    if (pending && pending.id !== id)
       merged = { ...merged, pendingRoll: pending };
   }
   return merged;

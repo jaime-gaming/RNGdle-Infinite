@@ -102,12 +102,26 @@ export function useDrawScores(run) {
   return held.run === runId ? held.scores : NO_SCORES;
 }
 
-// The skill that kept a number, if one did: its name and its tint.
-export function claimFor(run, number) {
-  const pick = (run.picks ?? []).find((entry) => entry.number === number);
-  if (!pick) return null;
-  const definition = pick.skill ? skillById.get(pick.skill) : null;
-  return { name: definition?.name ?? "", tint: definition?.tint ?? "green" };
+// The skill that kept this particular draw, if one did: its name and tint.
+// Numbers can repeat across independent draws, so the source is found within
+// each skill's own consecutive draw budget instead of by number alone.
+export function claimFor(run, drawIndex) {
+  const draws = run?.draws ?? [];
+  let start = 0;
+  for (const pick of run?.picks ?? []) {
+    const spent = Math.max(1, Math.trunc(pick.spent ?? 1));
+    const end = Math.min(start + spent, draws.length);
+    const chosen = draws.indexOf(pick.number, start);
+    if (chosen >= start && chosen < end && chosen === drawIndex) {
+      const definition = pick.skill ? skillById.get(pick.skill) : null;
+      return {
+        name: definition?.name ?? "",
+        tint: definition?.tint ?? "green",
+      };
+    }
+    start = end;
+  }
+  return null;
 }
 
 // One number, landing digit by digit exactly as the headline number does: the
@@ -351,7 +365,12 @@ export default function DrawStage({
 }) {
   const numbers = run.draws ?? NO_DRAWS;
   const winner = run.number;
-  const winnerIndex = Math.max(0, numbers.indexOf(winner));
+  const winnerIndex =
+    Number.isSafeInteger(run.winnerIndex) &&
+    run.winnerIndex >= 0 &&
+    run.winnerIndex < numbers.length
+      ? run.winnerIndex
+      : Math.max(0, numbers.indexOf(winner));
   const done = timeline.digitTimes.filter((time) => elapsed >= time).length;
   const spinning = done < timeline.slots;
   const rarityKnown = elapsed >= timeline.rarity;
@@ -441,7 +460,7 @@ export default function DrawStage({
   if (numbers.length < 2) return null;
   // More than one number is paid: each paid number is a card of its own on its
   // stats screen, and no total EP is counted up on the overview.
-  const paid = (run.picks ?? []).length;
+  const paid = (run.picks ?? []).length + (run.winnerSkill == null ? 1 : 0);
   const chipLimit = chipLimitFor(numbers.length);
 
   return (
@@ -465,7 +484,7 @@ export default function DrawStage({
           <button
             type="button"
             className="draw-stage-minimize"
-            onClick={() => onPick?.(winner)}
+            onClick={() => onPick?.(winnerIndex)}
           >
             Minimize
           </button>
@@ -474,7 +493,7 @@ export default function DrawStage({
       <ol className="draw-grid" ref={gridRef}>
         {draws.map((draw, index) => {
           const isWinner = index === winnerIndex;
-          const claim = claimFor(run, draw.number);
+          const claim = claimFor(run, index);
           const shown = draw.beats.filter((time) => elapsed >= time).length;
           const epKnown = !spinning && !!draw.scored;
           const pickable = decided && !!draw.scored;
@@ -532,7 +551,7 @@ export default function DrawStage({
                   type="button"
                   className="draw-pick"
                   aria-label={`Draw ${index + 1}, ${draw.number}. Show its stats`}
-                  onClick={() => onPick?.(draw.number)}
+                  onClick={() => onPick?.(index)}
                 >
                   {body}
                 </button>

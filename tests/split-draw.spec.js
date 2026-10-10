@@ -8,6 +8,7 @@ import {
   buildShareText,
 } from "../src/roll-data.js";
 import { buildRevealTimeline } from "../src/roll-timeline.js";
+import { PROGRESS_KEY } from "../src/progress.js";
 
 // A draw skill spends several ordinary draws and keeps the best. The overview
 // shows one panel per draw, filling the screen behind visible dividing lines,
@@ -450,8 +451,8 @@ test("on a phone the overview fits the screen, and a number's stats open in plac
 
 // Auto-Roll armed from the rack, on a roll whose first draw keeps four numbers.
 // The overview of that first roll is up and decided when this returns.
-async function armedAutoRoll(page) {
-  await mockRandom(page, PANELS);
+async function armedAutoRoll(page, draws = PANELS) {
+  await mockRandom(page, draws);
   await seedProgress(page, { ...seed, owned: [...seed.owned, "auto-roll"] });
   await page.goto("/");
   // The roll data loads first, as it does for any player; the clock only starts
@@ -483,13 +484,18 @@ test("auto-roll keeps turning while the overview is open", async ({ page }) => {
   ).toBe(true);
 });
 
-test("auto-roll stands still while a number is open, and turns again once the overview is back", async ({
+test("auto-roll stands still while a number matching the winner is open, and turns again once the overview is back", async ({
   page,
 }) => {
-  await armedAutoRoll(page);
+  // A non-winning draw can repeat the winning number. It is still its own
+  // draw, and opening it must pause just like any other detail screen.
+  await armedAutoRoll(page, Array(PANELS.length).fill(KEPT));
   // Looking at a number up close stops the rolls: three minutes pass and no
   // roll starts while the stats are open.
-  await page.locator(".draw-panel.is-out .draw-pick").first().click();
+  await page
+    .locator(".draw-panel.is-out .draw-pick")
+    .first()
+    .evaluate((button) => button.click());
   await expect(page.locator(".draw-detail")).toBeVisible();
   for (let step = 0; step < 180; step++) await page.clock.runFor(1000);
   await expect(page.locator(".draw-detail")).toBeVisible();
@@ -662,6 +668,74 @@ test("a paid number's stats show the EP balance and share that number's own resu
   );
 });
 
+test("identical skill picks are paid separately, and only their actual draw is marked best", async ({
+  page,
+}) => {
+  const number = 88125;
+  const draws = [number, number, number, number, number, number, number];
+  await startSplitRoll(page, {
+    draws,
+    seed: {
+      ...seed,
+      owned: [...seed.owned, "twice"],
+      skills: ["bedrock", "twice"],
+      equippedSkills: ["bedrock", "twice"],
+      skillCharge: { bedrock: 9, twice: 9 },
+    },
+  });
+  expect(await runUntil(page, decided)).toBe(true);
+  await expect(page.locator(".draw-panel")).toHaveCount(draws.length);
+  await expect(page.locator(".draw-stage-label")).toContainText(
+    "2 numbers paid",
+  );
+  await expect(page.locator(".draw-panel.is-winner")).toHaveCount(1);
+  await expect(page.locator(".draw-panel-tag.is-best")).toHaveCount(1);
+  await expect(page.locator(".draw-panel-tag.is-paid")).toHaveCount(1);
+  await expect(page.locator(".draw-panel").nth(0)).toContainText("Bedrock");
+  await expect(page.locator(".draw-panel").nth(4)).toContainText(
+    "Double Vision",
+  );
+  await expect(page.locator(".draw-panel").nth(4)).toHaveClass(/is-out/);
+
+  expect(await runUntil(page, complete)).toBe(true);
+  await expect(page.locator(".roll-experience")).toHaveAttribute(
+    "data-settled",
+    "true",
+  );
+  // The second skill's card repeats the winner's value, but is still its own
+  // paid draw with a distinct index and claim.
+  await page
+    .locator(".draw-panel")
+    .nth(4)
+    .locator(".draw-pick")
+    .evaluate((button) => button.click());
+  const duplicateDetail = page.locator(".draw-detail");
+  await expect(duplicateDetail).toHaveAttribute(
+    "aria-label",
+    `Draw 5 of 7: ${number}`,
+  );
+  await expect(duplicateDetail.locator(".draw-detail-paid")).toContainText(
+    "Paid with Double Vision",
+  );
+  await expect(duplicateDetail.locator(".paid-number")).toHaveCount(2);
+  await duplicateDetail.getByRole("button", { name: "All numbers" }).click();
+  await expect(page.locator(".draw-stage")).toBeVisible();
+
+  await page.locator(".draw-stage-minimize").click();
+  const cards = page.locator(".result-summary .paid-number");
+  await expect(cards).toHaveCount(2);
+  await expect(
+    page.locator(".result-summary .paid-number.is-best"),
+  ).toHaveCount(1);
+  const progress = await page.evaluate((key) => {
+    return JSON.parse(localStorage.getItem(key));
+  }, PROGRESS_KEY);
+  expect(progress.balance).toBe(2 * evaluate(number).totalEP);
+  const rolls = progress.history.filter((entry) => entry.type === "roll");
+  expect(rolls.map((entry) => entry.number)).toEqual([number, number]);
+  expect(rolls[1].with).toBe(rolls[0].id);
+});
+
 test("an ordinary draw can win, and the number Bedrock kept stays paid", async ({
   page,
 }) => {
@@ -673,7 +747,7 @@ test("an ordinary draw can win, and the number Bedrock kept stays paid", async (
   expect(await runUntil(page, decided)).toBe(true);
   await expect(page.locator(".draw-panel")).toHaveCount(ordinaryWins.length);
   await expect(page.locator(".draw-stage-label")).toContainText(
-    "Best of 5 kept",
+    "2 numbers paid",
   );
   await expect(page.locator(".draw-panel .is-best")).toHaveCount(1);
   await expect(page.locator(".draw-panel .is-paid")).toHaveCount(1);

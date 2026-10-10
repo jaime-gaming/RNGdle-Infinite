@@ -132,12 +132,24 @@ export function useProgress() {
           const merged = healthy.current
             ? next
             : recoverUnsavedRolls(next, current.current, unsaved.current);
+          let persisted = merged === next;
+          if (merged !== next) {
+            try {
+              localStorage.setItem(PROGRESS_KEY, JSON.stringify(merged));
+              persisted = true;
+            } catch {
+              setWarning(
+                "Saved progress could not be synchronized. This tab is keeping its current progress.",
+              );
+            }
+          }
           current.current = merged;
           setProgress(merged);
-          healthy.current = merged === next;
-          if (healthy.current) {
+          healthy.current = persisted;
+          if (persisted) {
             unsaved.current = new Set();
             setWarning("");
+            if (merged !== next) broadcastSync(merged);
           }
         }
       } catch {
@@ -159,33 +171,52 @@ export function useProgress() {
       try {
         const next = parseProgress(event.detail);
         if (!next.profile) return;
+        const previous = current.current;
+        const sameCycle =
+          previous.profile?.id === next.profile.id &&
+          previous.rebirths === next.rebirths &&
+          previous.ultraRebirths === next.ultraRebirths &&
+          previous.rollbacks === next.rollbacks;
+        // A link can arrive while this tab is holding a result that local
+        // storage could not save. Merge that receipt into the linked head before
+        // replacing this tab; otherwise a perfectly readable remote save would
+        // erase the only copy of the credited roll.
+        const merged = sameCycle
+          ? recoverUnsavedRolls(next, previous, unsaved.current)
+          : next;
+        let persisted = false;
         try {
-          localStorage.setItem(PROGRESS_KEY, event.detail);
-          healthy.current = true;
-          // The linked save replaces this tab's storage, unsaved rolls included.
-          unsaved.current = new Set();
+          const raw =
+            merged === next && typeof event.detail === "string"
+              ? event.detail
+              : JSON.stringify(merged);
+          localStorage.setItem(PROGRESS_KEY, raw);
+          persisted = true;
         } catch {
           healthy.current = false;
+          setWarning(
+            "A save from the linked device could not be saved. This tab is keeping its current progress.",
+          );
         }
-        if (
-          !current.current.profile ||
-          current.current.profile.id !== next.profile.id ||
-          current.current.rebirths !== next.rebirths ||
-          current.current.ultraRebirths !== next.ultraRebirths ||
-          current.current.rollbacks !== next.rollbacks
-        ) {
+        if (!sameCycle) {
           reset(next);
+          if (!persisted) {
+            healthy.current = false;
+            setWarning(
+              "A save from the linked device could not be saved. This tab is keeping its current progress.",
+            );
+          }
           return;
         }
-        const merged = healthy.current
-          ? next
-          : recoverUnsavedRolls(next, current.current, unsaved.current);
         current.current = merged;
         setProgress(merged);
-        healthy.current = merged === next;
-        if (healthy.current) {
+        healthy.current = persisted;
+        if (persisted) {
           unsaved.current = new Set();
           setWarning("");
+          // A recovered receipt is now durable locally, so publish the merged
+          // head back to the link instead of leaving the other device behind.
+          if (merged !== next) broadcastSync(merged);
         }
       } catch {
         healthy.current = false;
@@ -455,15 +486,18 @@ export function useProgress() {
           // the roll pays for every number it kept.
           let result,
             draws = null,
-            picks = null;
+            picks = null,
+            winnerSkill = null,
+            winnerIndex = null;
           if (!plan) result = await generateRoll();
           else
-            ({ draws, result, picks } = await runDrawPicks(
-              drawPicksFor(armed),
-              async () => (await generateRoll()).number,
-              restoreRoll,
-              { ordinary: true },
-            ));
+            ({ draws, result, picks, winnerSkill, winnerIndex } =
+              await runDrawPicks(
+                drawPicksFor(armed),
+                async () => (await generateRoll()).number,
+                restoreRoll,
+                { ordinary: true },
+              ));
           // No digits reach the UI until the draw has been committed below.
           if (token !== generation.current)
             throw new Error("This game was reset. The draw was cancelled.");
@@ -482,9 +516,12 @@ export function useProgress() {
             ...timing,
             ...(armed.length ? { skills: armed } : {}),
             ...(draws ? { draws } : {}),
-            // Which draw skill kept which number. The roll pays for every one
-            // of them, so the settlement has to be able to name them again.
-            ...(picks && picks.length ? { picks } : {}),
+            // Which draw skill kept which number, and which one (or the plain
+            // draw) supplied the committed result. The roll pays for every kept
+            // number, even when two skills happen to keep the same number.
+            ...(picks && picks.length
+              ? { picks, winnerSkill, winnerIndex }
+              : {}),
             ...(flywheel ? { flywheel } : {}),
           };
           next = {
@@ -522,7 +559,7 @@ export function useProgress() {
           // banks one number per skill, not only the one it commits.
           const extras = [];
           for (const pick of pending.picks ?? []) {
-            if (pick.number === pending.number) continue;
+            if (pick.skill === pending.winnerSkill) continue;
             const scored = await restoreRoll(pick.number);
             if (scored)
               extras.push({
@@ -594,7 +631,11 @@ export function useProgress() {
               // which rolls those are: they are the only ones owed on recovery.
               const known = new Set(previous.history.map((e) => e.id));
               for (const event of next.history)
-                if (event.type === "roll" && !known.has(event.id))
+                if (
+                  event.type === "roll" &&
+                  !event.with &&
+                  !known.has(event.id)
+                )
                   unsaved.current.add(event.id);
             }
             if (action.type !== "complete")
