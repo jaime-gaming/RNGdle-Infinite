@@ -7,7 +7,7 @@ import {
   Medal,
   ShoppingBag,
   SlidersHorizontal,
-  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import "../mobile-tabbar.css";
 
@@ -65,7 +65,7 @@ export default function MobileTabBar({
           {
             id: "rebirth",
             label: "Rebirth",
-            icon: Sparkles,
+            icon: RefreshCw,
             ready: rebirthReady,
             go: () => navigate("rebirth"),
           },

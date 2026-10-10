@@ -229,7 +229,7 @@ export function emptyProgress() {
 // Bookmarks pin a few rolls the player wants to find again. They reference
 // history entries by id, so a repaired save drops any mark whose roll did not
 // survive the repair, and the cap is part of the save's shape, not the UI's.
-export const BOOKMARK_LIMIT = 3;
+export const BOOKMARK_LIMIT = 10;
 function parseBookmarks(value, history) {
   if (!Array.isArray(value)) return [];
   const rolls = new Set(
@@ -1171,13 +1171,13 @@ function applyEvent(state, action) {
     // modified.
     const fired = firedSkills(state, id, action.source);
     const petFactor = petMultiplier(state.activePet);
-    const multiplier =
+    const baseMultiplier =
       petFactor *
       rebirthMultiplier(state.rebirths ?? 0) *
       ultraRebirthMultiplier(state.ultraRebirths ?? 0) *
       rollbackMultiplier(state.rollbacks ?? 0) *
-      surplusMultiplier(state.surplusBanked ?? 0) *
-      skillWalletMultiplier(fired);
+      surplusMultiplier(state.surplusBanked ?? 0);
+    const skillMultiplier = skillWalletMultiplier(fired);
     // The wallet pays for every number the roll kept, and every one of them
     // counts towards the cycle: a stacked rack is meant to earn more, not the
     // same reward spread over more draws.
@@ -1185,6 +1185,11 @@ function applyEvent(state, action) {
       cycleEP = cycleEarnedEp(state);
     const discovered = new Set(state.discovered);
     const paidEvents = paid.map(({ result: scored, skill, key, spent }) => {
+      const appliesSkillMultiplier =
+        key === 0 || (skill && skillById.get(skill)?.kind === "floor");
+      const multiplier = appliesSkillMultiplier
+        ? baseMultiplier * skillMultiplier
+        : baseMultiplier;
       const credit =
         multiplier === 1
           ? scored.totalEP
