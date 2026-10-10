@@ -472,18 +472,18 @@ export default function RollExperience({
   const splitDecided = !!splitDraws && elapsed >= splitDecision;
   // The overview is a takeover: nothing under it may scroll while it is up.
   useEffect(() => {
-    if (!splitOpen) return;
+    if (!splitOpen || !active) return;
     document.documentElement.classList.add("draw-takeover");
     return () => document.documentElement.classList.remove("draw-takeover");
-  }, [splitOpen]);
+  }, [splitOpen, active]);
   // A multi-number roll keeps the install prompt out of the way for as long as
   // it is on screen: the prompt would otherwise cover the way back to the numbers.
   const splitRun = !!splitDraws;
   useEffect(() => {
-    if (!splitRun) return;
+    if (!splitRun || !active) return;
     document.documentElement.classList.add("draw-split");
     return () => document.documentElement.classList.remove("draw-split");
-  }, [splitRun]);
+  }, [splitRun, active]);
   // A number opened from the overview starts at the top of the roll, so its way
   // back to the numbers is the first thing on screen, wherever the page was.
   useEffect(() => {
