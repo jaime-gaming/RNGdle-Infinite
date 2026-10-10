@@ -102,19 +102,20 @@ html.draw-split .install-app {
   --cols: 2;
   --rows: 1;
 }
-.draw-stage[data-count="3"] .draw-grid {
-  --cols: 3;
-  --rows: 1;
+.draw-stage[data-count="3"] .draw-grid,
+.draw-stage[data-count="4"] .draw-grid {
+  --cols: 2;
+  --rows: 2;
 }
 .draw-stage[data-count="5"] .draw-grid,
 .draw-stage[data-count="6"] .draw-grid {
-  --cols: 3;
-  --rows: 2;
+  --cols: 2;
+  --rows: 3;
 }
 .draw-stage[data-count="7"] .draw-grid,
 .draw-stage[data-count="8"] .draw-grid {
-  --cols: 4;
-  --rows: 2;
+  --cols: 2;
+  --rows: 4;
 }
 /* The number is the point of every panel: it is sized for the panel it gets,
    not for the screen. */
@@ -523,9 +524,10 @@ button.draw-pick:focus-visible {
     --cols: 1;
     --rows: 2;
   }
-  .draw-stage[data-count="3"] .draw-grid {
-    --cols: 1;
-    --rows: 3;
+  .draw-stage[data-count="3"] .draw-grid,
+  .draw-stage[data-count="4"] .draw-grid {
+    --cols: 2;
+    --rows: 2;
   }
   .draw-stage[data-count="5"] .draw-grid,
   .draw-stage[data-count="6"] .draw-grid {

@@ -181,11 +181,11 @@ function autoEquip(equipped, progress, id) {
     skillUnlocked(skillId, progress),
   );
   if (!id || !skillById.has(id) || list.includes(id)) return list;
-  // Only shop skills count towards the rack's slots: rebirth rewards and
-  // companion signatures ride free, so they always fit.
+  // Only shop skills and companion signatures count towards the rack's slots:
+  // rebirth rewards ride free, so they always fit.
   if (skillTakesSlot(id)) {
-    const shop = list.filter(skillTakesSlot).length;
-    if (shop >= skillSlots(progress.owned ?? [])) return list;
+    const taken = list.filter(skillTakesSlot).length;
+    if (taken >= skillSlots(progress.owned ?? [])) return list;
   }
   return [...list, id];
 }
@@ -651,7 +651,7 @@ function startNewCycle(state, { granted = null, starter = 0 } = {}) {
   };
   // The rack is rebuilt rather than repaired: the skill this rebirth pays goes
   // on first, then whatever the cycle kept. Ladder skills ride free, so the
-  // rack keeps them all; only the shop skills left behind took slots.
+  // rack keeps them all; only the shop and pet skills left behind took slots.
   let equippedSkills = autoEquip([], base, granted?.id);
   for (const id of skills) equippedSkills = autoEquip(equippedSkills, base, id);
   // Charge belongs to the skill it fills: what went back on the shelf — and
@@ -1522,8 +1522,8 @@ function applyEvent(state, action) {
     const wanted = action.equipped ?? !equipped.includes(skill.id);
     if (wanted && !equipped.includes(skill.id)) {
       const slots = skillSlots(state.owned ?? []);
-      // The slots only hold shop skills: rebirth rewards and companion
-      // signatures ride free beside the rack.
+      // The slots only hold shop and companion skills: rebirth rewards
+      // ride free beside the rack.
       if (
         skillTakesSlot(skill.id) &&
         equipped.filter(skillTakesSlot).length >= slots
