@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ShoppingBag,
@@ -73,6 +73,13 @@ import {
 } from "./components/game-icons.jsx";
 import Toasts from "./components/Toasts";
 import { useToasts } from "./use-toasts.js";
+import {
+  getAppUpdateState,
+  resumeAppUpdate,
+  startAppUpdate,
+  stopAppUpdate,
+  subscribeAppUpdate,
+} from "./app-update.js";
 import RebirthNav from "./components/RebirthNav";
 import MobileTabBar from "./components/MobileTabBar";
 import InstallApp from "./components/InstallApp";
@@ -99,7 +106,16 @@ import {
   shelfOfProduct,
   productById,
 } from "./shop-data.js";
-import { joinDeviceLink, resumeDeviceLink, subscribeSync } from "./sync.js";
+import {
+  joinDeviceLink,
+  resumeDeviceLink,
+  replySyncAction,
+  requestSyncAction,
+  subscribeSync,
+  subscribeSyncActions,
+  syncStatus,
+} from "./sync.js";
+import { profileSyncDescription, profileSyncTone } from "./sync-indicator.js";
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
@@ -200,6 +216,13 @@ function App() {
   // Notices: a short stack of cards, one per thing that just happened. See
   // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
   const { toasts, notify, dismiss: dismissToast } = useToasts();
+  const [appUpdate, setAppUpdate] = useState(getAppUpdateState);
+  const [linkStatus, setLinkStatus] = useState(syncStatus);
+  useEffect(() => {
+    const unsubscribe = subscribeAppUpdate(setAppUpdate);
+    resumeAppUpdate();
+    return unsubscribe;
+  }, []);
   // A prestige (the ultra-rebirth in the save) earns a moment, and so does the
   // Rollback, the last stage, in its own words. The ceremony is a full-screen
   // moment that lives in the app shell (the rebirth page navigates away the
@@ -233,9 +256,25 @@ function App() {
   const {
     progress: session,
     warning: progressWarning,
-    dispatch,
+    dispatch: localDispatch,
     epoch,
   } = useProgress();
+  const localDispatchRef = useRef(localDispatch);
+  localDispatchRef.current = localDispatch;
+  const dispatch = useCallback(
+    (action) => {
+      // While the account's main device is reachable, every action goes to it,
+      // so two screens can never settle competing rolls. Otherwise this device
+      // keeps playing its own save and the newer save wins on reconnect.
+      const link = syncStatus();
+      return link.connected && link.ownerDevice && !link.isWriter
+        ? requestSyncAction(action)
+        : localDispatch(action);
+    },
+    [localDispatch],
+  );
+  const profileSyncState = profileSyncTone(linkStatus);
+  const profileSyncLabel = profileSyncDescription(profileSyncState);
   // Device links: ?sync=ROOM.KEY joins this browser to another device's
   // account through the memory-only relay, then leaves the address bar. A
   // reload of a browser already in a room simply reopens the stream, and the
@@ -256,6 +295,7 @@ function App() {
     }
     let announced = "";
     return subscribeSync((state, note) => {
+      setLinkStatus(syncStatus());
       if (state === "live" && announced !== "live") {
         announced = "live";
         notify({
@@ -269,6 +309,30 @@ function App() {
       } else if (state !== "error") announced = state;
     });
   }, []);
+  useEffect(
+    () =>
+      subscribeSyncActions((request) => {
+        if (!syncStatus().isWriter) {
+          replySyncAction(request, {
+            ok: false,
+            message:
+              "The main device is unavailable. Reconnect before changing progress.",
+          });
+          return;
+        }
+        Promise.resolve(localDispatchRef.current(request.action))
+          .then((result) => replySyncAction(request, result))
+          .catch((error) =>
+            replySyncAction(request, {
+              ok: false,
+              message:
+                error?.message ||
+                "The requested action could not be completed.",
+            }),
+          );
+      }),
+    [],
+  );
   useEffect(() => {
     setModal(null);
     setShopFocus(null);
@@ -280,6 +344,11 @@ function App() {
     setPickingGoal(false);
   }, [epoch]);
   async function completeRoll(result, id, cooldownUntil) {
+    // Only the writer settles a shared roll. The other screen reveals the same
+    // committed number, then adopts the writer's receipt through the link.
+    const link = syncStatus();
+    if (link.connected && link.ownerDevice && !link.isWriter)
+      return { ok: true };
     // Companion luck is sampled here, independently of the number itself.
     let drop = null;
     try {
@@ -746,7 +815,9 @@ function App() {
               <AvatarMark
                 avatar={session.profile.avatar}
                 size={18}
-                label={`${session.profile.username} logo`}
+                label={`${session.profile.username} logo${profileSyncLabel ? `; ${profileSyncLabel}` : ""}`}
+                syncState={profileSyncState}
+                syncLabel={profileSyncLabel}
               />
             ) : (
               <LogIn size={15} />
@@ -861,6 +932,9 @@ function App() {
                 progress={session}
                 onAction={dispatch}
                 navigate={navigate}
+                appUpdate={appUpdate}
+                onStartUpdate={startAppUpdate}
+                onStopUpdate={stopAppUpdate}
               />
             )}
           </>

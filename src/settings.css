@@ -88,6 +88,13 @@
   color: var(--text);
   font-size: 12px;
 }
+.setting-row select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.setting-rank-row select {
+  min-width: 160px;
+}
 .setting-row .secondary-button {
   flex-shrink: 0;
   display: inline-flex;
@@ -123,6 +130,31 @@
   line-height: 1.7;
   color: var(--muted);
 }
+.settings-update {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 16px 0 24px;
+  border-top: 1px solid var(--border);
+}
+.settings-update .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+}
+.settings-update .is-spinning {
+  animation: sync-spin 900ms linear infinite;
+}
+.settings-update p {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
 @media (max-width: 560px) {
   .setting-row {
     flex-direction: column;
@@ -131,6 +163,9 @@
   }
   .setting-copy p {
     max-width: none;
+  }
+  .setting-rank-row select {
+    width: 100%;
   }
 }
 
@@ -286,6 +321,38 @@
   line-height: 1.7;
   color: var(--muted);
   animation: sync-note-in 260ms ease-out both;
+}
+.device-link-qr {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  animation: sync-note-in 260ms ease-out both;
+}
+.device-link-qr svg {
+  display: block;
+  flex: 0 0 auto;
+  width: 184px;
+  height: 184px;
+  border-radius: 5px;
+  background: #fff;
+}
+.device-link-qr strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+}
+.device-link-qr p {
+  max-width: 44ch;
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
 }
 @keyframes sync-note-in {
   from {
@@ -500,6 +567,12 @@
    install entry) live here instead. Desktop keeps the footer. */
 .settings-mobile-only {
   display: none;
+}
+@media (max-width: 560px) {
+  .device-link-qr {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 @media (max-width: 760px) {
   .settings-mobile-only {

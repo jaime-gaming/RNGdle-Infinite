@@ -358,10 +358,14 @@ another purchase stays off the shelf entirely until that purchase is made, so
 every card on screen is the next step of its chain.
 
 **Auto-Roll is an ability**, not a settings switch: once bought it appears in
-the corner rack as its own circle. One click arms it, another click stands it
-down, and the ring and its label state whether it is running, paused or off. It
+the skills rack as its own circle — in the desktop corner rail or the compact
+horizontal dock on phones. One click arms it, another click stands it down, and
+the ring and its label state whether it is running, paused or off. It
 never skips a reveal, a cooldown or a draw, and without Persistence Core it
-starts off again after a reload.
+starts off again after a reload. With desktop notifications enabled, choose a
+minimum rank under Settings → Alerts: when a roll reaches that rank or higher,
+Auto-Roll stops, its stats stay
+open and a desktop alert names the rank without repeating the exact number.
 
 Every purchase is confirmed, costs EP once, and never changes odds or scores.
 At regular prices, the 61 products in the catalogue come to 157.025 M EP, and
@@ -546,10 +550,22 @@ failed-write recovery.
   The link's own page in Settings — _Settings → Device link_ — holds the
   technical half: the relay in use, whether rooms are kept on disk or only in
   memory, this device's room and id, how many devices are in the room, and when
-  the last save crossed the wire. The status pill breathes while a device is
-  being waited for and rings once every time a save crosses the wire; _Send now_
-  flushes the current save without waiting for the next change. Anyone holding
-  the link plays the account, so treat it like a password.
+  the last save crossed the wire. It also displays the same link as a QR code.
+  The status pill breathes while a
+  device is being waited for and rings once every time a save crosses the wire;
+  the profile icon is green when both devices are live, yellow while a device or
+  change is waiting, and red on a link error. _Send now_ flushes the current save
+  without waiting for the next change. Anyone holding the link plays the
+  account, so treat it like a password.
+
+  **One device controls rolls while both are linked.** The device that created
+  the link is the account's main device. While both devices are connected, a roll,
+  purchase or other action started on the other device is sent to the main device,
+  which runs it once and sends the result back, so two screens cannot start or
+  settle two rolls at the same time. If the main device is closed, the other device
+  plays its own save as usual, and the newer save wins when they meet again.
+  Connections recover on their own: a dropped channel retries with a short backoff
+  instead of switching the link off.
 
   **Two transports, and the page says which one you are on.** On a static host
   there is no relay, so the link uses WebRTC: a free public broker carries the
@@ -587,11 +603,14 @@ failed-write recovery.
 ## Settings, themes and accessibility
 
 Settings are presentation only — nothing there changes odds, EP, prices or
-timings. You can turn desktop notifications and the ready chime on, force
-reduced motion, hide the skill bar, hide the goal recap, use compact EP numbers,
-skip purchase confirmations, or make the Auto-Roll ability start armed. The
-device link is the one entry that opens **its own page** (the summary card in
-Settings stays a summary, with a link to the full technical view).
+timings. You can turn desktop notifications for ready rolls and rank alerts on,
+choose a minimum rank for alerts, and enable the ready chime; force reduced
+motion, hide the skill bar or goal recap, use compact EP numbers, skip purchase
+confirmations, or make the Auto-Roll ability start armed. At the very bottom,
+_Reload until updated_ retries a cache-busted page load until this device has the
+published build; it leaves saved progress and settings alone. The device link is
+the one entry that opens **its own page** (the summary card in Settings stays a
+summary, with a link to the full technical view).
 
 On phones the navigation moves to a **bottom bar** of five buttons: **Shop**
 and **Tasks** on the left, **Roll** in the centre, then **Badges** and **More**

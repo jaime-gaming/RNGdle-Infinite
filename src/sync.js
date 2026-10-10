@@ -19,15 +19,23 @@
 
 import Peer from "peerjs";
 import { PROGRESS_KEY, parseProgress } from "./progress.js";
-import { pendingStamp, syncDecision } from "./sync-policy.js";
+import {
+  chooseSyncOwner,
+  isSyncWriter,
+  pendingStamp,
+  syncDecision,
+} from "./sync-policy.js";
 
 const LINK_KEY = "rng-infinite-sync-v1";
 const RELAY_KEY = "rng-infinite-sync-endpoint-v1";
 const PEER_CODE_PREFIX = "RNGDLE-ACCOUNT-1:";
 const PEER_CODE_LINE = 72;
 const PEER_ID_PREFIX = "rngdle";
-const HEARTBEAT_MS = 1000;
+const HEARTBEAT_MS = 3000;
+const PONG_TIMEOUT_MS = 12000;
 const RECONNECT_MS = 2500;
+const ACTION_TIMEOUT_MS = 20000;
+const ACTION_CACHE_LIMIT = 128;
 
 export const SYNC_EVENT = "rng-sync-state";
 
@@ -37,6 +45,8 @@ const listeners = new Set();
 let room = "";
 let key = "";
 let device = "";
+let ownerDevice = "";
+let remoteDevice = "";
 let savedAt = 0;
 let pending = false;
 let dirtyAt = 0;
@@ -44,6 +54,16 @@ let peers = 0;
 let lastSyncAt = 0;
 let lastDirection = "";
 let revision = 0;
+let pingSequence = 0;
+let lastPingNonce = "";
+let lastPongAt = 0;
+let connectingSince = 0;
+let reconnectAttempt = 0;
+const pendingActions = new Map();
+const actionListeners = new Set();
+const queuedActions = [];
+const actionReplies = new Map();
+const inFlightActions = new Set();
 
 // PeerJS state
 let peer = null;
@@ -84,7 +104,10 @@ export function syncStatus() {
     detail,
     room,
     linked: status !== "off" && !!room,
+    ownerDevice,
+    isWriter: !room || isSyncWriter(device, ownerDevice),
     peers,
+    connected: hasOpenTransport(),
     lastSyncAt,
     lastDirection,
     revision,
@@ -108,6 +131,74 @@ export function subscribeSync(listener) {
   listeners.add(listener);
   listener(status, detail);
   return () => listeners.delete(listener);
+}
+
+export function subscribeSyncActions(listener) {
+  actionListeners.add(listener);
+  while (queuedActions.length) listener(queuedActions.shift());
+  return () => actionListeners.delete(listener);
+}
+
+export function replySyncAction({ id, from }, result) {
+  if (!id || !from) return false;
+  const cacheKey = `${from}:${id}`;
+  actionReplies.set(cacheKey, result);
+  while (actionReplies.size > ACTION_CACHE_LIMIT)
+    actionReplies.delete(actionReplies.keys().next().value);
+  inFlightActions.delete(cacheKey);
+  void sendLinkMessage({
+    type: "action-result",
+    id,
+    from: device,
+    to: from,
+    result,
+  });
+  return true;
+}
+
+export function requestSyncAction(action) {
+  if (!room || !ownerDevice || ownerDevice === device)
+    return Promise.resolve({
+      ok: false,
+      message: "This device is not connected to the account writer yet.",
+    });
+  if (status !== "live" || !hasOpenTransport())
+    return Promise.resolve({
+      ok: false,
+      message:
+        "The account’s main device is not connected. Reconnect before changing progress.",
+    });
+  const id = randomId(12);
+  const request = {
+    type: "action",
+    id,
+    from: device,
+    to: ownerDevice,
+    action: { ...action, eventId: action?.eventId || id },
+  };
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      pendingActions.delete(id);
+      resolve({
+        ok: false,
+        message:
+          "The main device did not answer in time. No second action was started; reconnect and try again.",
+      });
+    }, ACTION_TIMEOUT_MS);
+    pendingActions.set(id, { resolve, timeout });
+    Promise.resolve(sendLinkMessage(request)).then((sent) => {
+      if (sent) return;
+      const pendingRequest = pendingActions.get(id);
+      if (!pendingRequest) return;
+      clearTimeout(pendingRequest.timeout);
+      pendingActions.delete(id);
+      resolve({
+        ok: false,
+        message:
+          "The link is reconnecting. Your change was not sent; try again when both devices are online.",
+      });
+    });
+  });
 }
 
 function baseUrl() {
@@ -174,7 +265,15 @@ function persistLink() {
     if (room)
       localStorage.setItem(
         LINK_KEY,
-        JSON.stringify({ room, key, device, savedAt, pending, dirtyAt }),
+        JSON.stringify({
+          room,
+          key,
+          device,
+          ownerDevice,
+          savedAt,
+          pending,
+          dirtyAt,
+        }),
       );
     else localStorage.removeItem(LINK_KEY);
   } catch {}
@@ -205,8 +304,26 @@ export function buildDeviceLink(currentRoom = room, currentKey = key) {
   url.search = "";
   url.hash = "";
   url.pathname = baseUrl();
-  url.searchParams.set("sync", `${currentRoom}.${currentKey}`);
+  const authority =
+    currentRoom === room && currentKey === key ? ownerDevice : "";
+  url.searchParams.set(
+    "sync",
+    [currentRoom, currentKey, authority].filter(Boolean).join("."),
+  );
   return url.toString();
+}
+
+function updateSyncOwner(devices = [], declaredOwners = []) {
+  const next = chooseSyncOwner(
+    [device, ...devices],
+    [ownerDevice, ...declaredOwners],
+  );
+  if (next && next !== ownerDevice) {
+    ownerDevice = next;
+    persistLink();
+    emit();
+  }
+  return ownerDevice;
 }
 
 // ---- Transport selection ---------------------------------------------------
@@ -228,13 +345,24 @@ async function relayAvailable() {
 
 // ---- The public entry points ----------------------------------------------
 export async function createDeviceLink() {
+  const stored = readStoredLink();
   const newRoom = randomId(12);
   const newKey = randomId(24);
   room = newRoom;
   key = newKey;
-  device = ensureDeviceId(readStoredLink()?.device);
+  device = ensureDeviceId(stored?.device);
+  ownerDevice = device;
+  remoteDevice = "";
+  savedAt = 0;
+  pending = false;
+  dirtyAt = 0;
+  stampedFor = 0;
+  peers = 0;
+  lastSyncAt = 0;
+  lastDirection = "";
   everLive = false;
   persistLink();
+  emit();
   // Start connecting but do not wait: the link is valid the moment it is
   // created, and the UI shows "Connecting…" while the transport settles.
   void openLink();
@@ -244,26 +372,32 @@ export async function createDeviceLink() {
 export function resumeDeviceLink() {
   const stored = readStoredLink();
   if (!stored?.room || !stored?.key) return false;
-  pending = stored.pending === true;
-  dirtyAt = Number(stored.dirtyAt) || 0;
-  return joinDeviceLink(`${stored.room}.${stored.key}`);
+  return joinDeviceLink(
+    [stored.room, stored.key, stored.ownerDevice].filter(Boolean).join("."),
+  );
 }
 
 export function joinDeviceLink(token) {
-  const [joinedRoom = "", joinedKey = ""] = String(token).split(".");
+  const [joinedRoom = "", joinedKey = "", linkedOwner = ""] =
+    String(token).split(".");
   if (!joinedRoom || !joinedKey) {
     setStatus("error", "That device link is not valid.");
     return false;
   }
+  const stored = readStoredLink();
+  const sameLink = stored?.room === joinedRoom && stored?.key === joinedKey;
   room = joinedRoom;
   key = joinedKey;
-  const stored = readStoredLink();
-  device = ensureDeviceId(stored?.room === room ? stored.device : "");
-  savedAt = stored?.savedAt && stored.device === device ? stored.savedAt : 0;
-  if (stored?.room !== room) {
-    pending = false;
-    dirtyAt = 0;
-  }
+  device = ensureDeviceId(sameLink ? stored.device : "");
+  ownerDevice =
+    linkedOwner || (sameLink ? String(stored?.ownerDevice ?? "") : "");
+  savedAt =
+    sameLink && stored.device === device ? Number(stored.savedAt) || 0 : 0;
+  pending = sameLink && stored.pending === true;
+  dirtyAt = pending ? Number(stored.dirtyAt) || 0 : 0;
+  stampedFor = 0;
+  remoteDevice = "";
+  peers = 0;
   everLive = false;
   persistLink();
   void openLink();
@@ -276,9 +410,13 @@ export function unlinkDevices() {
   dirtyAt = 0;
   room = "";
   key = "";
+  device = "";
+  ownerDevice = "";
+  remoteDevice = "";
   peerSlot = "";
   savedAt = 0;
   everLive = false;
+  peers = 0;
   persistLink();
   setStatus("off", "");
 }
@@ -301,12 +439,26 @@ async function openLink() {
   else openPeer();
 }
 
+function failPendingActions(message) {
+  for (const [id, request] of pendingActions) {
+    clearTimeout(request.timeout);
+    request.resolve({ ok: false, message });
+    pendingActions.delete(id);
+  }
+}
+
 function teardown() {
   linkEpoch += 1;
+  failPendingActions(
+    "The device link changed before the other device answered. Please try again.",
+  );
   clearInterval(heartbeatTimer);
   heartbeatTimer = 0;
   clearTimeout(reconnectTimer);
   reconnectTimer = 0;
+  lastPongAt = 0;
+  lastPingNonce = "";
+  pingSequence = 0;
   clearTimeout(relaySendTimer);
   relaySendTimer = 0;
   clearTimeout(relayHelloTimer);
@@ -338,17 +490,56 @@ function otherSlot() {
 }
 
 function openPeer() {
-  // The creator prefers slot "a", the opener prefers "b". If the preferred
-  // slot is taken (the other device got there first), flip — both sides still
-  // end up on different ids and can find each other.
-  openPeerSlot("a");
+  // One role always dials and one always listens. The account's main device
+  // is "a" (it dials); the other device is "b" (it listens). A link without a
+  // known main device falls back to claiming "a" and flipping on a clash.
+  const role = ownerDevice && ownerDevice !== device ? "b" : "a";
+  openPeerSlot(role);
+}
+
+function waitingCopy() {
+  return everLive
+    ? "Waiting for the other device…"
+    : "Waiting for another device to open the link…";
+}
+
+function schedulePeerReconnect(epoch = linkEpoch) {
+  if (!room || !key || reconnectTimer) return;
+  const delay = Math.min(
+    RECONNECT_MS * 2 ** Math.min(reconnectAttempt, 4),
+    30000,
+  );
+  reconnectAttempt += 1;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = 0;
+    if (
+      epoch !== linkEpoch ||
+      !room ||
+      !key ||
+      (typeof navigator !== "undefined" && navigator.onLine === false)
+    )
+      return;
+    if (!peer || peer.destroyed) {
+      openPeer();
+      return;
+    }
+    if (peer.disconnected) {
+      try {
+        peer.reconnect();
+      } catch {}
+    }
+    if (peerSlot === "a") connectToPeer();
+  }, delay);
 }
 
 function openPeerSlot(slot) {
   peerSlot = slot;
   const id = peerIdFor(slot);
+  const epoch = linkEpoch;
+  let candidate;
   try {
-    peer = new Peer(id, { debug: 0 });
+    candidate = new Peer(id, { debug: 0 });
+    peer = candidate;
   } catch {
     setStatus(
       "error",
@@ -356,116 +547,146 @@ function openPeerSlot(slot) {
     );
     return;
   }
-  peer.on("open", () => {
-    setStatus(
-      "waiting",
-      everLive
-        ? "Waiting for the other device…"
-        : "Waiting for another device to open the link…",
-    );
-    startHeartbeat();
-    // We just came online: try reaching the other side right away.
-    connectToPeer();
+  candidate.on("open", () => {
+    if (peer !== candidate || epoch !== linkEpoch) return;
+    reconnectAttempt = 0;
+    clearTimeout(reconnectTimer);
+    reconnectTimer = 0;
+    peers = 1;
+    setStatus("waiting", waitingCopy());
+    startHeartbeat(epoch);
+    if (slot === "a") connectToPeer();
   });
-  peer.on("connection", (connection) => {
-    // The other device connected to us.
-    attachConnection(connection);
+  candidate.on("connection", (connection) => {
+    if (peer !== candidate || epoch !== linkEpoch) {
+      try {
+        connection.close();
+      } catch {}
+      return;
+    }
+    attachConnection(connection, epoch);
   });
-  peer.on("error", (err) => {
-    if (!peer || peer.destroyed) return;
+  candidate.on("error", (err) => {
+    if (peer !== candidate || candidate.destroyed || epoch !== linkEpoch)
+      return;
     const type = err?.type ?? "";
     if (type === "unavailable-id") {
-      // Our preferred slot is taken — take the other one.
+      // A registration with this ID still exists (an old tab, or a clash on a
+      // link with no known main device). Release it and try again shortly; the
+      // roll is decided by the main device, so the role never flips silently.
       try {
-        peer.destroy();
+        candidate.destroy();
       } catch {}
       peer = null;
-      openPeerSlot(slot === "a" ? "b" : "a");
+      setTimeout(() => {
+        if (epoch !== linkEpoch || !room || !key) return;
+        if (ownerDevice) openPeerSlot(slot);
+        else openPeerSlot(slot === "a" ? "b" : "a");
+      }, 1500);
       return;
     }
     if (type === "peer-unavailable") {
-      // The other side is offline — the heartbeat will retry.
-      if (status === "connecting")
-        setStatus(
-          "waiting",
-          everLive
-            ? "Waiting for the other device…"
-            : "Waiting for another device to open the link…",
-        );
+      setStatus("waiting", waitingCopy());
       return;
     }
     if (
       type === "network" ||
       type === "server-error" ||
-      type === "socket-closed"
+      type === "socket-error" ||
+      type === "socket-closed" ||
+      type === "disconnected"
     ) {
-      // The public signaling broker could not be reached. Retrying happens on
-      // its own (the heartbeat reconnects), and the hand-link code below needs
-      // no broker at all — so say what to do instead of only what failed.
       setStatus(
-        "error",
-        "The public peer broker is unreachable. Retrying… you can transfer the account by hand now.",
+        "connecting",
+        "Connection interrupted. Retrying automatically…",
       );
+      if (candidate.disconnected) {
+        try {
+          candidate.reconnect();
+        } catch {}
+      }
+      schedulePeerReconnect(epoch);
       return;
     }
-    // Browser-incompatible or fatal: surface it.
-    setStatus("error", err?.message || "Peer connection error.");
+    setStatus(
+      "error",
+      err?.message || "Peer connection error. Retrying automatically…",
+    );
+    schedulePeerReconnect(epoch);
   });
-  peer.on("disconnected", () => {
-    if (!peer || peer.destroyed) return;
+  candidate.on("disconnected", () => {
+    if (peer !== candidate || candidate.destroyed || epoch !== linkEpoch)
+      return;
+    setStatus("connecting", "Connection interrupted. Reconnecting…");
     try {
-      peer.reconnect();
+      candidate.reconnect();
     } catch {}
+    schedulePeerReconnect(epoch);
   });
 }
 
 function connectToPeer() {
-  if (!peer || peer.destroyed || conn?.open) return;
-  const target = peerIdFor(otherSlot());
+  if (!peer || peer.destroyed || peer.disconnected || peerSlot !== "a" || conn)
+    return;
   try {
-    const next = peer.connect(target, { reliable: true });
-    attachConnection(next);
-  } catch {}
+    attachConnection(
+      peer.connect(peerIdFor("b"), { reliable: true }),
+      linkEpoch,
+    );
+  } catch {
+    schedulePeerReconnect(linkEpoch);
+  }
 }
 
-function attachConnection(connection) {
+function attachConnection(connection, epoch = linkEpoch) {
   if (!connection) return;
-  // If we already have a live connection, keep it — a second one from the
-  // other side racing against ours is redundant and would only waste a slot.
-  if (conn?.open) {
+  // Keep the first attempt, even while it is opening. That way simultaneous
+  // open/close events can never replace the channel carrying the live save.
+  if (conn && conn !== connection) {
     try {
       connection.close();
     } catch {}
     return;
   }
   conn = connection;
+  connectingSince = Date.now();
   connection.on("open", () => {
+    if (conn !== connection || epoch !== linkEpoch) {
+      try {
+        connection.close();
+      } catch {}
+      return;
+    }
     everLive = true;
     peers = 2;
+    lastPongAt = Date.now();
+    reconnectAttempt = 0;
     setStatus("live", "2 devices live");
-    // Hand over whatever we hold; the other side will adopt it if newer.
-    sendPeerMessage({
-      type: "state",
-      state: currentSave(),
-      savedAt: queuedStamp(),
-      device,
-    });
+    sendPeerMessage({ type: "hello", from: device, ownerDevice });
+    sendPeerState();
   });
   connection.on("data", (data) => {
-    handlePeerMessage(data);
+    if (conn === connection && epoch === linkEpoch)
+      handlePeerMessage(data, "peer");
   });
   connection.on("close", () => {
-    if (conn === connection) conn = null;
+    if (conn !== connection || epoch !== linkEpoch) return;
+    conn = null;
+    lastPongAt = 0;
     peers = peer && !peer.destroyed ? 1 : 0;
-    setStatus(
-      "waiting",
-      everLive
-        ? "Waiting for the other device…"
-        : "Waiting for another device to open the link…",
-    );
+    setStatus("waiting", waitingCopy());
+    schedulePeerReconnect(epoch);
   });
   connection.on("error", () => {
-    if (conn === connection) conn = null;
+    if (conn !== connection || epoch !== linkEpoch) return;
+    conn = null;
+    lastPongAt = 0;
+    peers = peer && !peer.destroyed ? 1 : 0;
+    setStatus("connecting", "Connection interrupted. Retrying automatically…");
+    schedulePeerReconnect(epoch);
+    try {
+      connection.close();
+    } catch {}
   });
 }
 
@@ -479,27 +700,173 @@ function sendPeerMessage(message) {
   }
 }
 
-function handlePeerMessage(message) {
+// True only when the other device is actually reachable: a live data channel,
+// or a relay stream that currently lists a second device in the room.
+function hasOpenTransport() {
+  if (conn?.open) return true;
+  return !!relaySource && relaySource.readyState === 1 && peers >= 2;
+}
+
+function sendLinkMessage(message) {
+  if (conn?.open) return Promise.resolve(sendPeerMessage(message));
+  if (!relaySource || relaySource.readyState !== 1)
+    return Promise.resolve(false);
+  return fetch(syncUrl("message", { room, key, session: relaySession }), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message }),
+  })
+    .then((response) => response.ok)
+    .catch(() => false);
+}
+
+function stateMessageId(stamp) {
+  return `${device}:${stamp}`;
+}
+
+function sendPeerState() {
+  const state = currentSave();
+  if (!state) return false;
+  const stamp = queuedStamp();
+  return sendPeerMessage({
+    type: "state",
+    id: stateMessageId(stamp),
+    state,
+    savedAt: stamp,
+    device,
+    ownerDevice,
+  });
+}
+
+function acceptRemoteIdentity(remoteDeviceId, remoteOwner = "", devices = []) {
+  if (typeof remoteDeviceId === "string" && remoteDeviceId)
+    remoteDevice = remoteDeviceId;
+  updateSyncOwner([remoteDevice, ...devices], [ownerDevice, remoteOwner]);
+}
+
+function handlePeerMessage(message, transport = "peer") {
   if (!message || typeof message !== "object") return;
+  if (message.type === "hello") {
+    const beforeRemote = remoteDevice;
+    const beforeOwner = ownerDevice;
+    acceptRemoteIdentity(message.from ?? message.device, message.ownerDevice);
+    if (
+      transport === "peer" &&
+      (beforeRemote !== remoteDevice || beforeOwner !== ownerDevice)
+    )
+      sendPeerMessage({ type: "hello", from: device, ownerDevice });
+    return;
+  }
   if (message.type === "ping") {
-    // Answer with a pong that carries our save if theirs might be stale.
-    sendPeerMessage({
-      type: "pong",
-      at: Date.now(),
-      state: currentSave(),
-      savedAt: queuedStamp(),
-      device,
-    });
+    if (transport === "peer")
+      sendPeerMessage({
+        type: "pong",
+        nonce: message.nonce,
+        from: device,
+        to: message.from,
+      });
     return;
   }
   if (message.type === "pong") {
-    reconcile(message);
+    if (!message.nonce || message.nonce === lastPingNonce)
+      lastPongAt = Date.now();
+    if (message.state) handleRemoteState(message, transport);
     return;
   }
   if (message.type === "state") {
-    reconcile(message);
+    handleRemoteState(message, transport);
     return;
   }
+  if (message.type === "state-ack") {
+    if (
+      (!message.to || message.to === device) &&
+      message.id === stateMessageId(savedAt) &&
+      pending
+    ) {
+      pending = false;
+      dirtyAt = 0;
+      stampedFor = 0;
+      persistLink();
+      markSynced("sent");
+    }
+    return;
+  }
+  if (message.type === "action") {
+    handleActionRequest(message, transport);
+    return;
+  }
+  if (message.type === "action-result") {
+    if (message.to && message.to !== device) return;
+    if (message.from && ownerDevice && message.from !== ownerDevice) return;
+    const request = pendingActions.get(message.id);
+    if (!request) return;
+    clearTimeout(request.timeout);
+    pendingActions.delete(message.id);
+    request.resolve(
+      message.result && typeof message.result === "object"
+        ? message.result
+        : {
+            ok: false,
+            message: "The main device returned an unreadable reply.",
+          },
+    );
+  }
+}
+
+function handleActionRequest(message, transport) {
+  if (!message.id || !message.from || !message.action?.type) return;
+  if (message.to && message.to !== device) return;
+  if (transport === "peer" && remoteDevice && message.from !== remoteDevice)
+    return;
+  const request = {
+    id: message.id,
+    from: message.from,
+    action: message.action,
+  };
+  const cacheKey = `${request.from}:${request.id}`;
+  if (actionReplies.has(cacheKey)) {
+    void sendLinkMessage({
+      type: "action-result",
+      id: request.id,
+      from: device,
+      to: request.from,
+      result: actionReplies.get(cacheKey),
+    });
+    return;
+  }
+  if (inFlightActions.has(cacheKey)) return;
+  if (Number.isFinite(message.expiresAt) && message.expiresAt < Date.now()) {
+    replySyncAction(request, {
+      ok: false,
+      message:
+        "That action expired while the devices were reconnecting. Try again.",
+    });
+    return;
+  }
+  if (!isSyncWriter(device, ownerDevice)) {
+    replySyncAction(request, {
+      ok: false,
+      message:
+        "This device is not the account writer. Reconnect to the main device.",
+    });
+    return;
+  }
+  inFlightActions.add(cacheKey);
+  if (actionListeners.size)
+    for (const listener of actionListeners) listener(request);
+  else queuedActions.push(request);
+}
+
+function handleRemoteState(remote, transport = "peer") {
+  if (remote?.device) acceptRemoteIdentity(remote.device, remote.ownerDevice);
+  reconcile(remote);
+  if (remote?.id)
+    void sendLinkMessage({
+      type: "state-ack",
+      id: remote.id,
+      from: device,
+      to: remote.device,
+    });
 }
 
 // Apply the shared profile-first, then timestamp/device reconciliation policy.
@@ -518,13 +885,18 @@ function reconcile(remote) {
       savedAt = decision.savedAt;
       persistLink();
     }
-    sendPeerMessage({
-      type: "state",
-      state: currentSave(),
-      savedAt,
-      device,
-    });
+    sendCurrentState();
   }
+}
+
+function sendCurrentState() {
+  if (conn?.open) return sendPeerState();
+  const state = currentSave();
+  if (relaySource?.readyState === 1 && state) {
+    void relayPushState(state);
+    return true;
+  }
+  return false;
 }
 
 function receiveRemote(remote) {
@@ -538,39 +910,53 @@ function receiveRemote(remote) {
   savedAt = remote.savedAt;
   pending = false;
   dirtyAt = 0;
+  stampedFor = 0;
   persistLink();
   markSynced("received");
   window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: raw }));
 }
 
-// The heartbeat: one ping every second. A live connection exchanges saves on
-// every beat so a device that just came back is caught up within a second.
-// A missing connection is retried on the same beat, so reconnect is instant.
-function startHeartbeat() {
+// A quiet liveness check keeps stale WebRTC channels from looking connected;
+// state frames are retransmitted only while they remain unacknowledged.
+function startHeartbeat(epoch = linkEpoch) {
   clearInterval(heartbeatTimer);
   heartbeatTimer = setInterval(() => {
-    if (!peer || peer.destroyed) return;
-    // The peer must be registered with the broker before it can connect.
+    if (epoch !== linkEpoch || !peer || peer.destroyed) return;
     if (peer.disconnected) {
+      setStatus("connecting", "Connection interrupted. Reconnecting…");
       try {
         peer.reconnect();
       } catch {}
+      schedulePeerReconnect(epoch);
       return;
     }
     if (!conn?.open) {
-      connectToPeer();
+      // A channel that never opened is dropped, so the dialer can try again
+      // instead of waiting on a dead attempt forever.
+      if (conn && Date.now() - connectingSince > PONG_TIMEOUT_MS) {
+        const stalled = conn;
+        conn = null;
+        try {
+          stalled.close();
+        } catch {}
+      }
+      if (!conn && peerSlot === "a") connectToPeer();
       return;
     }
-    sendPeerMessage({ type: "ping", at: Date.now() });
-    // A pending change that the data channel has not yet carried: flush it.
-    if (pending && currentProfile()) {
-      sendPeerMessage({
-        type: "state",
-        state: currentSave(),
-        savedAt: Math.max(savedAt + 1, dirtyAt || Date.now()),
-        device,
-      });
+    if (lastPongAt && Date.now() - lastPongAt > PONG_TIMEOUT_MS) {
+      const stale = conn;
+      conn = null;
+      peers = 1;
+      setStatus("connecting", "The connection went quiet. Reconnecting…");
+      try {
+        stale.close();
+      } catch {}
+      schedulePeerReconnect(epoch);
+      return;
     }
+    lastPingNonce = `${device}:${++pingSequence}:${Date.now()}`;
+    sendPeerMessage({ type: "ping", nonce: lastPingNonce, from: device });
+    if (pending && currentProfile()) sendPeerState();
   }, HEARTBEAT_MS);
 }
 
@@ -582,7 +968,7 @@ function openRelay() {
   let stream;
   try {
     stream = new EventSource(
-      syncUrl("stream", { room, key, session: relaySession }),
+      syncUrl("stream", { room, key, session: relaySession, device }),
     );
   } catch {
     // Relay failed to open — fall back to PeerJS.
@@ -597,6 +983,10 @@ function openRelay() {
       openPeer();
     }
   }, 4000);
+  stream.onopen = () => {
+    if (relaySource === stream && everLive)
+      setStatus("connecting", "Reconnecting to the relay…");
+  };
   stream.onmessage = (event) => {
     let message;
     try {
@@ -606,7 +996,7 @@ function openRelay() {
     }
     if (message.type === "hello") {
       clearTimeout(relayHelloTimer);
-      updateRelayCount(message.count);
+      updateRelayCount(message.count, message.devices, message.latest?.device);
       if (pending && currentProfile()) {
         void relayPushState(currentSave(), dirtyAt);
         return;
@@ -615,32 +1005,45 @@ function openRelay() {
         if (!message.latest && currentProfile())
           void relayPushState(currentSave());
       });
-    } else if (message.type === "state") relayApplyLatest(message.payload);
-    else if (message.type === "count") updateRelayCount(message.count);
+    } else if (message.type === "state") {
+      updateRelayCount(peers, [], message.payload?.device);
+      relayApplyLatest(message.payload);
+    } else if (message.type === "count")
+      updateRelayCount(message.count, message.devices);
+    else if (message.type === "message")
+      handlePeerMessage(message.message, "relay");
   };
   stream.onerror = () => {
     if (relaySource !== stream) return;
     if (stream.readyState === EventSource.CLOSED) {
-      // Relay died — try PeerJS instead.
+      // Relay died — try PeerJS instead of permanently dropping the link.
       relaySource = null;
+      setStatus(
+        "connecting",
+        "Relay unavailable. Switching to browser-to-browser…",
+      );
       openPeer();
-    } else if (status !== "live" && status !== "waiting")
-      setStatus("connecting", "Reconnecting…");
+    } else
+      setStatus(
+        "connecting",
+        "The relay connection dropped. Retrying automatically…",
+      );
   };
 }
 
-function updateRelayCount(count) {
+function updateRelayCount(count, devices = [], latestDevice = "") {
   if (typeof count === "number") peers = count;
-  if (count >= 2) {
+  const knownDevices = [
+    ...(Array.isArray(devices) ? devices : []),
+    latestDevice,
+  ].filter((candidate) => typeof candidate === "string" && candidate);
+  remoteDevice =
+    knownDevices.find((candidate) => candidate !== device) ?? remoteDevice;
+  updateSyncOwner(knownDevices, []);
+  if (typeof count === "number" && count >= 2) {
     everLive = true;
     setStatus("live", `${count} devices live`);
-  } else if (room)
-    setStatus(
-      "waiting",
-      everLive
-        ? "Waiting for the other device…"
-        : "Waiting for another device to open the link…",
-    );
+  } else if (room) setStatus("waiting", waitingCopy());
 }
 
 function relayApplyLatest(latest, onEmpty) {
@@ -670,60 +1073,75 @@ export function broadcastSync(progress) {
   } catch {
     return;
   }
-  // PeerJS path: send immediately over the data channel.
+  // Keep one acknowledged outbox for both transports. A successful local
+  // send is not proof the remote device received it; the pending mark clears
+  // only after the peer/relay confirms the state.
+  pending = true;
+  dirtyAt = Math.max(Date.now(), dirtyAt + 1);
+  persistLink();
+  emit();
   if (conn?.open) {
-    savedAt = Math.max(savedAt + 1, Date.now());
-    persistLink();
-    sendPeerMessage({ type: "state", state: raw, savedAt, device });
-    pending = false;
-    dirtyAt = 0;
-    persistLink();
-    markSynced("sent");
+    sendPeerState();
     return;
   }
-  // Relay path (or offline): queue and debounce.
-  pending = true;
-  dirtyAt = Date.now();
-  persistLink();
   if (relaySource) {
     relayPendingState = raw;
-    clearTimeout(relaySendTimer);
-    relaySendTimer = setTimeout(() => {
-      const state = relayPendingState;
-      relayPendingState = "";
-      if (state) relayPushState(state);
-    }, 120);
+    if (relaySource.readyState === 1) {
+      clearTimeout(relaySendTimer);
+      relaySendTimer = setTimeout(() => {
+        const state = relayPendingState;
+        relayPendingState = "";
+        if (state) void relayPushState(state, dirtyAt);
+      }, 120);
+    }
   }
-  // PeerJS offline: the heartbeat will flush on the next beat.
+  // Offline peer saves stay in the durable outbox and are retried on reconnect.
+}
+
+function waitForPendingDelivery(timeoutMS = 6000) {
+  if (!pending) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      if (!pending) {
+        clearInterval(timer);
+        resolve(true);
+      } else if (Date.now() - startedAt >= timeoutMS) {
+        clearInterval(timer);
+        resolve(false);
+      }
+    }, 100);
+  });
 }
 
 export async function pushNow() {
   if (!room) return { ok: false, reason: "offline" };
   if (conn?.open) {
-    const state = currentSave();
-    if (!state) return { ok: false, reason: "empty" };
-    savedAt = Math.max(savedAt + 1, dirtyAt || Date.now());
+    if (!currentSave()) return { ok: false, reason: "empty" };
+    pending = true;
+    dirtyAt = Math.max(Date.now(), dirtyAt + 1);
     persistLink();
-    const sent = sendPeerMessage({ type: "state", state, savedAt, device });
-    if (sent) {
-      pending = false;
-      dirtyAt = 0;
-      persistLink();
-      markSynced("sent");
-      return { ok: true };
-    }
+    emit();
+    if (!sendPeerState()) return { ok: false, reason: "offline" };
+    return (await waitForPendingDelivery())
+      ? { ok: true }
+      : { ok: false, reason: "offline" };
   }
   const state = relayPendingState || currentSave();
   const stamp = pending ? dirtyAt : 0;
   relayPendingState = "";
   clearTimeout(relaySendTimer);
   if (!state) return { ok: false, reason: "empty" };
+  if (!relaySource || relaySource.readyState !== 1)
+    return { ok: false, reason: "offline" };
   return relayPushState(state, stamp);
 }
 
 async function relayPushState(state, stamp = 0) {
   if (!room || !state) return { ok: false, reason: "offline" };
-  savedAt = Math.max(savedAt + 1, Number(stamp) || Date.now());
+  savedAt = pending
+    ? queuedStamp()
+    : Math.max(savedAt + 1, Number(stamp) || Date.now());
   persistLink();
   const body = JSON.stringify({ state, savedAt, device });
   try {

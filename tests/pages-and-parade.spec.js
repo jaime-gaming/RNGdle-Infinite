@@ -399,7 +399,7 @@ test("a skill family is one circle: the icon in the middle, every member a slice
   await expect(family.locator('[data-skill="reborn-depth"]')).toBeVisible();
 });
 
-test("the phone rack keeps the desktop corner and simply shrinks", async ({
+test("the phone rack becomes a compact horizontal dock below the header", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -417,25 +417,23 @@ test("the phone rack keeps the desktop corner and simply shrinks", async ({
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await expect(bar).toBeVisible();
-  const deskBar = await bar.boundingBox();
   const deskRing = await ring.boundingBox();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(200);
   const phoneBar = await bar.boundingBox();
   const phoneRing = await ring.boundingBox();
-  // Same corner as the desktop rack — top left, clear of the centred logo —
-  // just a little tighter against the edge.
-  expect(phoneBar.x).toBeLessThanOrEqual(deskBar.x);
-  expect(phoneBar.y).toBeLessThan(deskBar.y);
-  expect(phoneBar.x).toBeLessThan(30);
-  expect(phoneBar.y).toBeLessThan(120);
-  // …and the circles are the part that gives ground.
+  const header = await page.locator(".header").boundingBox();
+  expect(phoneBar.x).toBeGreaterThanOrEqual(0);
+  expect(phoneBar.x + phoneBar.width).toBeLessThanOrEqual(390);
+  expect(phoneBar.y).toBeGreaterThanOrEqual(header.y + header.height);
+  // One row of touch-sized circles plus the dock's own padding.
+  expect(phoneBar.height).toBeLessThanOrEqual(56);
+  // Rings keep one readable touch size, scaled down from desktop together.
   expect(phoneRing.width).toBeLessThan(deskRing.width);
   expect(phoneRing.width).toBeGreaterThan(24);
-  // Nothing the rack sits beside ends up underneath it, and the page keeps its
-  // width on a phone.
+  // The horizontal dock sits above the roll instead of beside and over it.
   const numberBox = await page.locator(".number-box").boundingBox();
-  expect(phoneBar.x + phoneBar.width).toBeLessThanOrEqual(numberBox.x);
+  expect(phoneBar.y + phoneBar.height).toBeLessThan(numberBox.y);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

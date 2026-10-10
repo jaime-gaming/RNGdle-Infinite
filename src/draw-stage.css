@@ -509,9 +509,9 @@ button.draw-pick:focus-visible {
   width: 100%;
   max-width: 640px;
 }
-/* The skill rack holds the top-left corner of every roll screen. Where the
-   column reaches the page's left edge (a phone, or a narrow window), the back
-   row starts after the rack, so "All numbers" is never under its circles. */
+/* The desktop skill rack holds the top-left corner. Narrow pages reserve a
+   strip above the detail controls so the phone's horizontal dock never covers
+   the way back to the draw overview. */
 @media (max-width: 800px) {
   .draw-detail-bar,
   .draw-back-row {
@@ -520,6 +520,11 @@ button.draw-pick:focus-visible {
 }
 
 @media (max-width: 760px) {
+  .draw-detail-bar,
+  .draw-back-row {
+    padding-left: 0;
+    padding-top: 54px;
+  }
   .draw-stage[data-count="2"] .draw-grid {
     --cols: 1;
     --rows: 2;

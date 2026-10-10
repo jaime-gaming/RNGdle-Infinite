@@ -18,8 +18,9 @@
 // Endpoints (same origin in dev, thanks to the Vite plugin; CORS-open when
 // stood up alone so a static site can point at it):
 //   POST /__sync/create          -> { room, key }
-//   GET  /__sync/stream?room&key&session   (Server-Sent Events, duplex)
-//   POST /__sync/state?room&key&session    body: { state, savedAt, device }
+//   GET  /__sync/stream?room&key&session&device (Server-Sent Events, duplex)
+//   POST /__sync/state?room&key&session        body: { state, savedAt, device }
+//   POST /__sync/message?room&key&session     body: { message }
 //
 // Ordering: every broadcast carries the writer's `savedAt` stamp and a stable
 // `device` id. Later stamps win; a tie goes to the lexicographically smaller
@@ -220,12 +221,22 @@ export function createSyncRelay({
     return entry.members.size;
   }
 
+  function memberDevices(entry) {
+    return [
+      ...new Set(
+        [...entry.members.values()]
+          .map((member) => member.device)
+          .filter(Boolean),
+      ),
+    ].sort();
+  }
+
   function broadcast(entry, message, exceptSession = "") {
     const frame = `data: ${JSON.stringify(message)}\n\n`;
-    for (const [session, res] of entry.members)
+    for (const [session, member] of entry.members)
       if (session !== exceptSession) {
         try {
-          res.write(frame);
+          member.response.write(frame);
         } catch {
           entry.members.delete(session);
         }
@@ -233,7 +244,11 @@ export function createSyncRelay({
   }
 
   function countAll(entry) {
-    broadcast(entry, { type: "count", count: countMembers(entry) });
+    broadcast(entry, {
+      type: "count",
+      count: countMembers(entry),
+      devices: memberDevices(entry),
+    });
   }
 
   function sweepRoom(room, entry) {
@@ -287,7 +302,13 @@ export function createSyncRelay({
     const room = url.searchParams.get("room") ?? "";
     const key = url.searchParams.get("key") ?? "";
     const session = url.searchParams.get("session") ?? "";
-    if (!ID_RE.test(room) || !ID_RE.test(session) || key.length < 8)
+    const device = url.searchParams.get("device") ?? "";
+    if (
+      !ID_RE.test(room) ||
+      !ID_RE.test(session) ||
+      key.length < 8 ||
+      (device && !ID_RE.test(device))
+    )
       return send(res, 400, { error: "bad-request" });
     const entry = await openRoom(room, key);
     if (entry.wrongKey) return send(res, 403, { error: "wrong-key" });
@@ -305,8 +326,14 @@ export function createSyncRelay({
 
     // A previous tab on this device may still be registered: replace it, and
     // let the room know the headcount changed.
-    const replacing = entry.members.has(session);
-    entry.members.set(session, res);
+    const previous = entry.members.get(session);
+    const replacing = !!previous;
+    entry.members.set(session, { response: res, device });
+    if (previous && previous.response !== res) {
+      try {
+        previous.response.end();
+      } catch {}
+    }
     if (!replacing) countAll(entry);
 
     // The handshake: what the room holds right now, and who is in it. A
@@ -317,11 +344,12 @@ export function createSyncRelay({
         type: "hello",
         latest: entry.latest,
         count: countMembers(entry),
+        devices: memberDevices(entry),
       })}\n\n`,
     );
 
     const drop = () => {
-      if (entry.members.get(session) === res) {
+      if (entry.members.get(session)?.response === res) {
         entry.members.delete(session);
         countAll(entry);
         sweepRoom(room, entry);
@@ -383,6 +411,35 @@ export function createSyncRelay({
     });
   }
 
+  async function forwardMessage(req, res, url) {
+    const room = url.searchParams.get("room") ?? "";
+    const key = url.searchParams.get("key") ?? "";
+    const session = url.searchParams.get("session") ?? "";
+    if (!ID_RE.test(room) || key.length < 8 || !ID_RE.test(session))
+      return send(res, 400, { error: "bad-request" });
+    const entry = await openRoom(room, key);
+    if (entry.wrongKey) return send(res, 403, { error: "wrong-key" });
+    if (!entry.members.has(session))
+      return send(res, 409, { error: "session-not-connected" });
+    let body;
+    try {
+      body = await readBody(req);
+    } catch (error) {
+      return send(res, error.message === "State too large" ? 413 : 400, {
+        error: error.message,
+      });
+    }
+    const message = body?.message;
+    if (
+      !message ||
+      typeof message !== "object" ||
+      !["action", "action-result", "state-ack"].includes(message.type)
+    )
+      return send(res, 400, { error: "bad-message" });
+    broadcast(entry, { type: "message", message, session }, session);
+    return send(res, 200, { ok: true });
+  }
+
   async function handle(req, res, next) {
     try {
       return await route(req, res, next);
@@ -439,6 +496,8 @@ export function createSyncRelay({
     }
     if (url.pathname === `${basePath}/state` && req.method === "POST")
       return acceptState(req, res, url);
+    if (url.pathname === `${basePath}/message` && req.method === "POST")
+      return forwardMessage(req, res, url);
     return send(res, 404, { error: "not-found" });
   }
 

@@ -53,12 +53,21 @@ function when(at) {
 // The account's face: the logo it uploaded, or the neutral icon every new
 // account starts with. Used by the profile page, the header button and the
 // sign-up preview, so all three can never disagree.
-export function AvatarMark({ avatar, size = 40, label = "" }) {
+export function AvatarMark({
+  avatar,
+  size = 40,
+  label = "",
+  syncState = "",
+  syncLabel = "",
+}) {
   return (
     <span
       className={`avatar-mark ${avatar ? "has-logo" : ""}`}
       style={{ "--avatar-size": `${size}px` }}
       data-avatar={avatar ? "logo" : "icon"}
+      data-sync-status={syncState || undefined}
+      data-testid={syncState ? "profile-sync-indicator" : undefined}
+      title={syncLabel || undefined}
       aria-label={label || undefined}
       role={label ? "img" : undefined}
     >

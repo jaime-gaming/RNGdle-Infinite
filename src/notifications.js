@@ -1,6 +1,9 @@
-// Desktop notifications are a convenience only. They never roll, never credit EP,
-// and never change a cooldown deadline: they only announce one that has passed.
+// Desktop notifications are a convenience only. They never roll, credit EP,
+// or change a cooldown deadline; they announce a ready roll or a chosen rank.
+import { NOTIFICATION_RANKS } from "./settings.js";
+
 export const NOTIFICATION_TAG = "rngdle-infinite-ready";
+export const RANK_NOTIFICATION_TAG = "rngdle-infinite-rank";
 
 export function notificationsSupported() {
   return typeof Notification !== "undefined";
@@ -26,14 +29,19 @@ export async function requestNotificationPermission() {
   }
 }
 
-export function showReadyNotification({ title, body, onClick } = {}) {
+export function showReadyNotification({
+  title,
+  body,
+  onClick,
+  tag = NOTIFICATION_TAG,
+} = {}) {
   if (!notificationsSupported() || Notification.permission !== "granted")
     return null;
   try {
-    // A shared tag replaces any earlier alert instead of stacking one per tab.
+    // A shared tag replaces an earlier alert of this kind instead of stacking.
     const notification = new Notification(title ?? "Your next roll is ready", {
       body: body ?? "RNGdle Infinite · the cooldown has finished.",
-      tag: NOTIFICATION_TAG,
+      tag,
       renotify: true,
       silent: true,
     });
@@ -48,6 +56,17 @@ export function showReadyNotification({ title, body, onClick } = {}) {
   } catch {
     return null;
   }
+}
+
+export function showRankNotification(rank, { onClick } = {}) {
+  if (!NOTIFICATION_RANKS.includes(rank)) return null;
+  const label = rank[0].toUpperCase() + rank.slice(1);
+  return showReadyNotification({
+    title: `${label} rank reached`,
+    body: "Auto-Roll stopped. Return to RNGdle Infinite to review this roll.",
+    onClick,
+    tag: RANK_NOTIFICATION_TAG,
+  });
 }
 
 // A short, quiet two-tone chime. No asset download, and no audio unless the
