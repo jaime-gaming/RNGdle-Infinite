@@ -307,8 +307,10 @@ export default function LocalProfile({
       {profile && (progress?.ultraRebirths ?? 0) > 0 && (
         <p className="profile-prestige">
           <span aria-hidden="true">✦</span>{" "}
-          {progress.rollbacks > 0 ? "Rollback taken" : "Prestige"} ·{" "}
-          {progress.ultraRebirths} prestige
+          {progress.rollbacks > 0
+            ? `Rollback ×${progress.rollbacks}`
+            : "Prestige"}{" "}
+          · {progress.ultraRebirths} prestige
           {progress.ultraRebirths === 1 ? "" : "s"} beyond the ladder
         </p>
       )}

@@ -753,8 +753,8 @@ function App() {
               className="ultra-mark"
               title={
                 session.rollbacks > 0
-                  ? `Rollback taken · Prestige ×${session.ultraRebirths} · +${Math.round(
-                      session.ultraRebirths * 10 + 25,
+                  ? `Rollback ×${session.rollbacks} · Prestige ×${session.ultraRebirths} · +${Math.round(
+                      session.ultraRebirths * 10 + session.rollbacks * 25,
                     )}% EP on every banked roll`
                   : `Prestige ×${session.ultraRebirths} · +${Math.round(
                       session.ultraRebirths * 10,
@@ -763,7 +763,7 @@ function App() {
             >
               <InfinityIcon size={13} aria-hidden="true" />{" "}
               {session.rollbacks > 0
-                ? "Rollback"
+                ? `Rollback ×${session.rollbacks}`
                 : `Prestige ×${session.ultraRebirths}`}
             </span>
           )}
