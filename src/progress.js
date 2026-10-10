@@ -229,7 +229,7 @@ export function emptyProgress() {
 // Bookmarks pin a few rolls the player wants to find again. They reference
 // history entries by id, so a repaired save drops any mark whose roll did not
 // survive the repair, and the cap is part of the save's shape, not the UI's.
-export const BOOKMARK_LIMIT = 10;
+export const BOOKMARK_LIMIT = 3;
 function parseBookmarks(value, history) {
   if (!Array.isArray(value)) return [];
   const rolls = new Set(
@@ -1184,11 +1184,9 @@ function applyEvent(state, action) {
       cycleEP = cycleEarnedEp(state);
     const discovered = new Set(state.discovered);
     const paidEvents = paid.map(({ result: scored, skill, key, spent }) => {
-      const appliesSkillMultiplier =
-        key === 0 || (skill && skillById.get(skill)?.kind === "floor");
-      const multiplier = appliesSkillMultiplier
-        ? baseMultiplier * skillMultiplier
-        : baseMultiplier;
+      // Every number the roll keeps is a banked roll of its own, so every one
+      // of them pays the same multipliers, wallet skills included.
+      const multiplier = baseMultiplier * skillMultiplier;
       const credit =
         multiplier === 1
           ? scored.totalEP

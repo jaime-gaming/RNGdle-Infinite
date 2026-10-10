@@ -190,9 +190,9 @@ best number is the one ranked and shown as the roll; the others are banked besid
 it, because the draws behind them were really rolled. The activity feed keeps the
 receipt — _best of 3 draws_ — next to each number that was kept.
 
-The rack starts with **two slots**, for **shop skills only**. Rebirth rewards
-and companion signatures **ride free** beside the rack: equip every one you
-have earned and the slots stay open. Skill Bay I (**1,000,000 EP**) widens it
+The rack starts with **two slots**, for **shop skills and companion
+signatures**. Rebirth rewards **ride free** beside the rack: equip every one you
+have earned and they never take a slot. Skill Bay I (**1,000,000 EP**) widens it
 to three, Skill Bay II (**4,000,000 EP**) to four. Equipping, unequipping and
 swapping skills is **free** — the bays are the purchase, the loadout is not.
 The Skills shelf also keeps **four saved racks**: save the set you have equipped
