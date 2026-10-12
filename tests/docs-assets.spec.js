@@ -62,14 +62,12 @@ test("the README is a short player guide whose images really exist", () => {
     "## Your progress",
     "## FAQ",
     "## Credits",
-    "## Run it locally",
   ])
     expect(readme).toContain(section);
   expect(readme).toContain("https://jaime-gaming.github.io/RNGdle-Infinite/");
   expect(readme).not.toMatch(/^## (Main files|Tests)$/m);
   // Anything that looks like a source path belongs in the agent notes only.
-  const body = readme.slice(0, readme.indexOf("## Run it locally"));
-  expect(body).not.toMatch(/src\/[\w-]+\.jsx?/);
+  expect(readme).not.toMatch(/src\/[\w-]+\.jsx?/);
 });
 
 test("the shop hub links match the shelf pages it renders", () => {
