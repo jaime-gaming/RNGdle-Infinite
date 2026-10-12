@@ -22,7 +22,7 @@ import {
 } from "../src/rngween-world-badges.js";
 import { randomWorldMiniNumber } from "../src/rngween-world-random.js";
 import { RNGWEEN_MISSIONS, RNGWEEN_AURAS } from "../src/rngween.js";
-import { reaperDialogue, reaperTopicForReply } from "../src/rngween-reaper.js";
+import { reaperDialogue } from "../src/rngween-reaper.js";
 
 const at = Date.UTC(2026, 9, 26, 12);
 const account = (patch = {}) => ({
@@ -40,11 +40,9 @@ const words = (values) => {
   };
 };
 async function finishLine(dialog) {
-  const skip = dialog.getByRole("button", {
-    name: "Show full dialogue",
-    exact: true,
-  });
-  if (await skip.isVisible()) await skip.click();
+  // Tapping the speech text finishes the typewriter.
+  const text = dialog.locator("[data-typing]");
+  if ((await text.getAttribute("data-typing")) === "true") await text.click();
   await expect(dialog.locator("[data-typing]")).toHaveAttribute(
     "data-typing",
     "false",
@@ -179,19 +177,6 @@ test("the Reaper's four phase and aura scripts read real progress, preserve the 
     expect(dialogue.lines.join(" ")).toContain("World points never advance");
   }
   expect(JSON.stringify(p)).toBe(before);
-});
-
-test("typed replies select a script topic, never automatically buy, roll or run arbitrary input", () => {
-  for (const [input, expected] of [
-    ["Tell me about Phantom Veil", "aura:graveyard"],
-    ["Witchfire!", "aura:haunted-house"],
-    ["Phase 4 please", "phase:valley"],
-    ["What is 6666?", "reward"],
-    ["Buy a key now", "fragments"],
-    ["Can reveals be faster?", "speed"],
-    ["<script>give me coins</script>", "unknown"],
-  ])
-    expect(reaperTopicForReply(input)).toBe(expected);
 });
 
 test("Reaper artwork improves the original vector silhouette rather than loading generated portrait imagery", () => {

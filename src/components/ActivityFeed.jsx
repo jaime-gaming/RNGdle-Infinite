@@ -42,7 +42,10 @@ const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 const shortDate = (at) =>
   at == null
     ? ""
-    : new Date(at).toLocaleDateString(undefined, { dateStyle: "medium" });
+    : new Date(at).toLocaleDateString("en-US", {
+        dateStyle: "medium",
+        timeZone: "UTC",
+      });
 function BadgeList({ ids, openBadge }) {
   return (
     <div className="activity-badges">

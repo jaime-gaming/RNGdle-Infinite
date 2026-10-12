@@ -1,27 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  ArrowRight,
-  ArrowDown,
-  Check,
-  ChevronRight,
-  KeyRound,
-  MessageCircle,
-  Send,
-  X,
-} from "lucide-react";
-import { rngweenCalendar, rngweenState } from "../rngween.js";
+import { ArrowRight, Check, ChevronRight, KeyRound, X } from "lucide-react";
+import { rngweenCalendar } from "../rngween.js";
 import { RNGWEEN_WORLD_KEY } from "../rngween-limited.js";
 import {
   rngweenValleyUnlocked,
   worldState,
   worldZoneById,
 } from "../rngween-world-zones.js";
-import {
-  REAPER_TOPICS,
-  reaperDialogue,
-  reaperTopicForReply,
-} from "../rngween-reaper.js";
+import { REAPER_TOPICS, reaperDialogue } from "../rngween-reaper.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import { useMotionPreference } from "../use-settings.jsx";
 import { useTypewriter } from "../use-typewriter.js";
@@ -45,15 +32,12 @@ export default function ReaperDialog({
 }) {
   const [topic, setTopic] = useState("greeting");
   const [turn, setTurn] = useState(0);
-  const [nextLine, setNextLine] = useState("");
-  const [playerLine, setPlayerLine] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const busy = useRef(false);
   const dialog = useModalDialog(open);
   const reduced = useMotionPreference();
   const calendar = rngweenCalendar(now);
-  const event = rngweenState(progress.tasks, now);
   const limited = progress.rngweenLimited;
   const world = worldState(limited);
   const challenge = rngweenValleyUnlocked(limited);
@@ -66,10 +50,9 @@ export default function ReaperDialog({
   const dialogue =
     topic === "key"
       ? {
-          title: "Valley Challenge Key",
+          title: "The key",
           lines: [
-            `Spend ${price.toLocaleString("en-US")} Pumpkoins to unlock Valley of Horrors for the whole event. The first three phases are already free; this shortcut skips finding the two fragments.`,
-            "The key is never consumed on entry or rebirth. It expires after November 3 UTC. No refunds, mission completion, aura or Hexbound included. Complete the Graveyard and Haunted House badge objectives and forge it for free instead.",
+            `${price.toLocaleString("en-US")} Pumpkoins and the Valley opens for the rest of the event. No refunds, no aura, no Hexbound. Just the door.`,
           ],
         }
       : reaperDialogue(progress, now, topic, phaseId);
@@ -83,8 +66,6 @@ export default function ReaperDialog({
   useEffect(() => {
     if (open) {
       setTopic("greeting");
-      setPlayerLine("");
-      setNextLine("");
       setError("");
       setTurn((value) => value + 1);
     }
@@ -92,28 +73,12 @@ export default function ReaperDialog({
   function close() {
     if (!busy.current) onClose();
   }
-  function reply(id, line) {
+  function reply(id) {
     if (busy.current) return;
     typed.finish();
     setTopic(id);
-    setPlayerLine(line);
-    setNextLine("");
     setError("");
     setTurn((value) => value + 1);
-  }
-  function submit(event) {
-    event.preventDefault();
-    const line = nextLine.trim();
-    if (!line || typed.typing) return;
-    reply(reaperTopicForReply(line, phaseId), line.slice(0, 160));
-  }
-  function goToReply() {
-    const pane = dialog.current?.querySelector(".reaper-player-turn");
-    pane?.scrollIntoView({
-      block: "start",
-      behavior: reduced ? "instant" : "smooth",
-    });
-    pane?.querySelector("input")?.focus({ preventScroll: true });
   }
   function leave(callback) {
     if (!busy.current) {
@@ -132,8 +97,7 @@ export default function ReaperDialog({
         id: RNGWEEN_WORLD_KEY.id,
       });
       if (result?.ok) {
-        setTopic("passage");
-        setPlayerLine("I'll take the key.");
+        setTopic("greeting");
         setTurn((value) => value + 1);
       } else
         setError(
@@ -159,7 +123,7 @@ export default function ReaperDialog({
         if (
           typed.typing &&
           event.key === "Enter" &&
-          !["INPUT", "BUTTON", "TEXTAREA"].includes(event.target.tagName)
+          event.target.tagName !== "BUTTON"
         ) {
           event.preventDefault();
           typed.finish();
@@ -216,22 +180,14 @@ export default function ReaperDialog({
             </span>
           </aside>
           <section className="reaper-conversation">
-            <div className="reaper-speaker">
-              <span className="reaper-speaker-rule" />
-              <MessageCircle size={16} />
-              <h2 id="rngween-reaper-title">The Reaper</h2>
-              <span className="reaper-speaker-rule" />
-            </div>
+            <h2 id="rngween-reaper-title" className="reaper-speaker-name">
+              The Reaper
+            </h2>
             <span className="reaper-chapter-title">{dialogue.title}</span>
-            {playerLine && (
-              <div className="reaper-player-echo">
-                <span>{progress.profile?.username ?? "You"}</span>
-                <p>“{playerLine}”</p>
-              </div>
-            )}
             <div
               className="reaper-dialogue-text"
               data-typing={typed.typing ? "true" : "false"}
+              onClick={typed.finish}
             >
               <p aria-hidden="true">
                 {typed.visible}
@@ -247,13 +203,8 @@ export default function ReaperDialog({
                 {text}
               </span>
             </div>
-            {typed.typing && (
-              <button className="reaper-finish-line" onClick={typed.finish}>
-                Show full dialogue <ChevronRight size={14} />
-              </button>
-            )}
             {!typed.typing && dialogue.trials && (
-              <ul className="reaper-trial-list" aria-label="Reaper trials">
+              <ul className="reaper-trial-list" aria-label="Aura tasks">
                 {dialogue.trials.map((mission) => (
                   <li
                     key={mission.id}
@@ -261,7 +212,6 @@ export default function ReaperDialog({
                   >
                     <span>
                       <strong>{mission.title}</strong>
-                      <small>{mission.detail}</small>
                     </span>
                     <span>
                       {mission.complete && <Check size={13} />}
@@ -272,37 +222,17 @@ export default function ReaperDialog({
                 ))}
               </ul>
             )}
-            <div className="reaper-account-status">
-              <span>
-                {event.complete} / {event.total} aura trials complete · entry is
-                free
-              </span>
-              <span>
-                {challenge ? (
-                  <>
-                    <Check size={13} />
-                    Valley key ready
-                  </>
-                ) : (
-                  <>
-                    <Pumpkoin size={14} />
-                    {wallet.toLocaleString("en-US")} Pumpkoins
-                  </>
-                )}
-              </span>
-            </div>
             {topic === "key" ? (
               <section className="reaper-key-contract">
-                <h3>Buy a Valley Challenge Key?</h3>
                 <p>
-                  Your wallet: <Pumpkoin size={15} />
-                  {wallet.toLocaleString("en-US")} Pumpkoins
+                  You have <Pumpkoin size={15} />
+                  {wallet.toLocaleString("en-US")} Pumpkoins.
                 </p>
                 <div className="reaper-scene-actions">
                   <button
                     className="secondary-button"
                     disabled={pending}
-                    onClick={() => reply("greeting", "Not now.")}
+                    onClick={() => reply("greeting")}
                   >
                     Not now
                   </button>
@@ -319,7 +249,9 @@ export default function ReaperDialog({
                     }
                     onClick={buyKey}
                   >
-                    {pending ? "Saving the key…" : "Confirm key purchase"}
+                    {pending
+                      ? "Saving…"
+                      : `Buy the key · ${price.toLocaleString("en-US")}`}
                   </button>
                 </div>
               </section>
@@ -329,79 +261,45 @@ export default function ReaperDialog({
                 aria-label="Your reply"
                 data-reply-ready={!typed.typing}
               >
-                <header>
-                  <div>
-                    <strong>Your reply</strong>
-                    <small>
-                      {typed.typing
-                        ? "Listen, or show the full dialogue."
-                        : "Choose a line, or write one."}
-                    </small>
-                  </div>
-                </header>
                 <div className="reaper-reply-choices">
                   {zone && (
                     <button
                       disabled={typed.typing || pending}
                       aria-pressed={topic === "aura"}
-                      onClick={() =>
-                        reply(
-                          "aura",
-                          `How do I earn ${dialogue.aura?.name ?? "this phase's aura"}?`,
-                        )
-                      }
+                      onClick={() => reply("aura")}
                     >
-                      Tell me about this phase's aura <ChevronRight size={13} />
+                      How do I get {dialogue.aura?.name ?? "this aura"}?
+                      <ChevronRight size={13} />
                     </button>
                   )}
-                  {REAPER_TOPICS.map((choice) => (
+                  {REAPER_TOPICS.filter(
+                    (choice) => !(zone && choice.id === "world"),
+                  ).map((choice) => (
                     <button
                       key={choice.id}
-                      aria-label={choice.label}
                       disabled={typed.typing || pending}
                       aria-pressed={topic === choice.id}
-                      onClick={() => reply(choice.id, choice.label)}
+                      onClick={() => reply(choice.id)}
                     >
-                      {
-                        {
-                          world: "The World",
-                          fragments: "Key fragments",
-                          speed: "Reveal speed",
-                          reward: "Hexbound",
-                          trials: "Aura trials",
-                        }[choice.id]
-                      }
+                      {choice.label}
                       <ChevronRight size={13} />
                     </button>
                   ))}
-                  {!["greeting", "passage"].includes(topic) && (
-                    <button
-                      disabled={typed.typing || pending}
-                      onClick={() => reply("passage", "Can I pass?")}
-                    >
-                      Can I pass?
-                      <ChevronRight size={13} />
-                    </button>
-                  )}
+                  {live &&
+                    progress.profile &&
+                    !challenge &&
+                    !canForge &&
+                    wallet >= price && (
+                      <button
+                        disabled={typed.typing || pending}
+                        onClick={() => reply("key")}
+                      >
+                        <KeyRound size={13} />
+                        I'll buy a key.
+                        <ChevronRight size={13} />
+                      </button>
+                    )}
                 </div>
-                <form className="reaper-reply-form" onSubmit={submit}>
-                  <input
-                    aria-label="Your next line"
-                    placeholder="Ask the Reaper…"
-                    maxLength={160}
-                    value={nextLine}
-                    onChange={(event) => setNextLine(event.target.value)}
-                    disabled={typed.typing || pending}
-                    autoComplete="off"
-                  />
-                  <button
-                    aria-label="Say your line"
-                    type="submit"
-                    disabled={typed.typing || pending || !nextLine.trim()}
-                  >
-                    <Send size={16} />
-                  </button>
-                </form>
                 <div className="reaper-scene-actions">
                   {live ? (
                     <>
@@ -412,7 +310,7 @@ export default function ReaperDialog({
                       >
                         Enter RNGween World <ArrowRight size={15} />
                       </button>
-                      {!progress.profile ? (
+                      {!progress.profile && (
                         <button
                           className="secondary-button"
                           disabled={typed.typing}
@@ -420,42 +318,25 @@ export default function ReaperDialog({
                         >
                           Create a saved profile
                         </button>
-                      ) : (
-                        !challenge &&
-                        !canForge && (
-                          <button
-                            className="secondary-button"
-                            disabled={typed.typing || pending || wallet < price}
-                            onClick={() =>
-                              reply(
-                                "key",
-                                "I'd like to buy a Valley Challenge Key.",
-                              )
-                            }
-                          >
-                            <KeyRound size={15} />
-                            Buy challenge key · {price.toLocaleString("en-US")}
-                          </button>
-                        )
                       )}
-                      {calendar.phase === "active" && (
+                      {topic === "trials" && calendar.phase === "active" && (
                         <button
                           className="secondary-button"
                           disabled={typed.typing || pending}
                           onClick={() => leave(onTasks)}
                         >
-                          Show me the trials
+                          Show me the tasks
                         </button>
                       )}
-                      <button
-                        className="secondary-button"
-                        disabled={typed.typing || pending}
-                        onClick={() => leave(onShop)}
-                      >
-                        {topic === "reward"
-                          ? "See Hexbound in Shop"
-                          : "Visit Limited Shop"}
-                      </button>
+                      {topic === "reward" && (
+                        <button
+                          className="secondary-button"
+                          disabled={typed.typing || pending}
+                          onClick={() => leave(onShop)}
+                        >
+                          See Hexbound in Shop
+                        </button>
+                      )}
                     </>
                   ) : (
                     <button
@@ -469,8 +350,7 @@ export default function ReaperDialog({
                 </div>
                 {live && !challenge && canForge && (
                   <p className="reaper-forge-reminder">
-                    Both fragments are ready. Forge your key for free inside the
-                    World.
+                    Both fragments are ready. Forge your key inside the World.
                   </p>
                 )}
               </section>

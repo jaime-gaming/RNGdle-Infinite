@@ -107,9 +107,10 @@ function formatMoment(at) {
   if (minutes < 60) return `${minutes} min ago`;
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours} h ago`;
-  return new Date(at).toLocaleDateString(undefined, {
+  return new Date(at).toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
+    timeZone: "UTC",
   });
 }
 

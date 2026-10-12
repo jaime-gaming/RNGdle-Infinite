@@ -205,6 +205,8 @@ export default function Tasks({
         now={eventNow}
         openWorld={openWorld}
         openSignup={openSignup}
+        onAction={onAction}
+        notify={notify}
       />
       {/* Remove the event import/mount after Oct 31, 2026 ends (Nov 1 UTC).
           The owned-only aura collection and permanent effects must stay. */}
@@ -280,9 +282,9 @@ export default function Tasks({
                     />
                   ))}
                 </span>
-                <span className="task-reset">
+                <span className="task-reset" title="Lists reset at 00:00 UTC">
                   <Timer size={13} aria-hidden="true" />
-                  Resets in {resetCountdown(list.reset)}
+                  Resets in {resetCountdown(list.reset)} · UTC
                 </span>
               </div>
             </header>

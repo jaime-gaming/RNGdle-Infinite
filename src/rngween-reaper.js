@@ -17,12 +17,13 @@ import {
 // CLEANUP Nov 4, 2026: remove seasonal dialogue, not Hexbound/owned auras.
 // Dialogue reads receipts and verified UTC; it cannot grant a reward.
 export const REAPER_TOPICS = [
-  { id: "world", label: "What is RNGween World?" },
-  { id: "fragments", label: "How do I get the key?" },
-  { id: "speed", label: "Can I speed up reveals?" },
+  { id: "world", label: "What is this place?" },
+  { id: "fragments", label: "How do I get into the Valley?" },
   { id: "reward", label: "What is Hexbound?" },
-  { id: "trials", label: "What are the trials?" },
+  { id: "trials", label: "What about the auras?" },
 ];
+
+// Short lines with a voice. The Reaper is dry, a little amused, never a manual.
 export function reaperDialogue(
   progress,
   now,
@@ -37,30 +38,31 @@ export function reaperDialogue(
     limited?.skinEarned || progress.owned?.includes(RNGWEEN_WORLD_SKIN.id);
   const key = rngweenValleyUnlocked(limited);
   const seen = limited?.drawn?.length ?? 0;
+  const fragments =
+    Number(world.fragments.graveyard) +
+    Number(world.fragments["haunted-house"]);
+  const price = RNGWEEN_WORLD_KEY.pumpkoinPrice.toLocaleString("en-US");
   if (calendar.limitedPhase === "unavailable")
     return {
-      title: "Connection required",
+      title: "No signal",
       lines: [
-        "The website's UTC date is unavailable. Reconnect before starting a roll or spending Pumpkoins.",
-        "Your saved progress has not changed.",
+        "I can't tell what day it is, and I don't trust your clock. Reconnect and we'll talk.",
       ],
     };
   if (calendar.limitedPhase === "upcoming")
     return {
-      title: "Opens October 21",
+      title: "Not yet",
       lines: [
-        "RNGween World opens October 21, 2026 UTC, and closes at the end of November 3.",
-        "Pumpkin Patch, Graveyard and Haunted House are free to enter. Their collections are separate; the two key fragments unlock the Valley.",
+        "Patience. The gate opens on October 21. Come back then and bring something to roll.",
       ],
     };
   if (calendar.limitedPhase === "ended" || limited?.retired)
     return {
-      title: "RNGween has ended",
+      title: "Closed",
       lines: [
-        "The event closed after November 3 UTC. Pumpkoins, fragments, keys and speed upgrades have expired.",
         won
-          ? "You unlocked Hexbound. It and your other collected Halloween auras stay in your collection."
-          : "Your collected Halloween auras remain owned. Hexbound was only available by rolling 6666 in the Valley; it will not return or go on sale.",
+          ? "It's over. You left with Hexbound, which is more than most. Keep it."
+          : "It's over. The auras you collected are yours. Hexbound stays buried; it was never for sale.",
       ],
     };
   const selectedPhase = topic.startsWith("phase:")
@@ -78,66 +80,50 @@ export function reaperDialogue(
     const aura = RNGWEEN_AURAS.find((item) => item.id === zone.auraId);
     const mission = event.missions.find((item) => item.auraId === zone.auraId);
     const stats = world.mini?.[zone.id];
-    const summary = worldMiniSummary(zone.id, stats);
     const arrivals = {
       "pumpkin-patch":
-        "Start here: one digit, 1–9. Find a few patterns, then head to the Graveyard.",
+        "The patch. One digit, nothing scary. Find a few patterns and move on to the graves.",
       graveyard:
-        "Two digits here. Twins, steps, sixes, thirteen. Finish the three objectives for the Graveyard fragment.",
+        "Two digits among the stones. Twins, steps, sixes, thirteens. Clear my three objectives and a fragment is yours.",
       "haunted-house":
-        "Three digits in this house. Look for palindromes and triples. The three objectives earn its key fragment.",
+        "Three digits and a house that creaks. Palindromes, triples. Three objectives, one fragment.",
       valley: key
-        ? "Your key fits. Numbers do not repeat here. Watch for 6666 — that one earns Hexbound."
-        : "You need a key for this arch. Forge one from both fragments, or buy the shortcut.",
+        ? "Your key fits. Nothing repeats in the Valley. If you see 6666, don't blink."
+        : "Not without a key. Forge it from both fragments, or pay me and skip the work.",
     };
-    const goals = worldPhaseGoals(zone.id, stats);
     return {
-      title: `Phase ${zone.phase} · ${zone.name}`,
+      title: `${zone.name}`,
       phaseId: zone.id,
       lines: topic.startsWith("aura")
         ? [
-            `${aura.name}? ${mission.title}: ${mission.detail}`,
-            `Claim it in Tasks, October 25–31 UTC, for the aura and ${mission.pumpkoins} Pumpkoins. World points never advance that mission.`,
+            `${aura.name}? That isn't earned in here. ${mission.detail} Then claim it in Tasks, October 25–31.`,
           ]
-        : [
-            arrivals[zone.id],
-            `${aura.name} comes from its original aura trial in Tasks, not these rolls.`,
-          ],
-      objectives: goals,
+        : [arrivals[zone.id]],
+      objectives: worldPhaseGoals(zone.id, stats),
       aura,
     };
   }
-  if (topic === "unknown")
-    return {
-      title: "Your question",
-      lines: [
-        "Try the phases, aura trials, the key, or Hexbound. What do you want to know?",
-      ],
-    };
   if (topic === "world")
     return {
-      title: "The four phases",
+      title: "The World",
       lines: [
-        "Four places: Pumpkin Patch, Graveyard, Haunted House and Valley of Horrors. The ranges grow from 1–9 to 1–9999.",
-        "Both fragments forge your Valley key. It is never consumed. Find 6666 there for Hexbound.",
-        "Collect the 39 event badges here. Aura trials stay in Tasks.",
+        "Four haunted places, each bigger than the last: the Patch, the Graveyard, the Haunted House and the Valley. Thirty-nine badges to find. They mean nothing out there, and everything in here.",
       ],
     };
   if (topic === "fragments")
     return {
-      title: "Collecting the fragments",
+      title: "The key",
       lines: [
-        "Graveyard asks for 5 different badges, 150 event points and Six Mark 3 times. Haunted House asks for 7 different badges, 1,000 event points and 10 Rare-or-better rolls.",
-        "Common numbers take nothing away. Your objectives and fragments are saved.",
-        `With one fragment from each, forge the key for free inside the World. Or buy a Valley Challenge Key for ${RNGWEEN_WORLD_KEY.pumpkoinPrice.toLocaleString("en-US")} Pumpkoins. Buying the key does not award an aura or complete a mission.`,
+        fragments === 2
+          ? "You have both fragments. Forge the key inside and the Valley is yours."
+          : `Two fragments make a key: one from the Graveyard, one from the Haunted House. You hold ${fragments}. In a hurry? ${price} Pumpkoins and I'll hand you one.`,
       ],
     };
   if (topic === "speed")
     return {
-      title: "Reveal upgrades",
+      title: "Reveal speed",
       lines: [
-        `Your World reveal takes ${worldRevealMS(limited) / 1000} seconds. The shop upgrades bring it down to 8, 5, then 2 seconds.`,
-        "Buy them in order from the World shop. They apply from the next roll, not to a result already revealing. The odds and ordinary Roll timers stay the same. Upgrades expire after November 3 UTC.",
+        `A reveal here takes ${worldRevealMS(limited) / 1000} seconds. My shop sells patience in three sizes: 8, 5 and 2 seconds. It changes the wait, never the number.`,
       ],
     };
   if (topic === "reward")
@@ -145,69 +131,35 @@ export function reaperDialogue(
       title: "Hexbound",
       lines: won
         ? [
-            "You already unlocked Hexbound. Preview or equip it in Shop.",
-            "It is a permanent aura and survives resets and the end of the event. It has no effect on odds or EP.",
+            "You already wear it. Six sigils and a ghost. Permanent, and it suits you.",
           ]
         : [
-            "Roll 6666 in Valley of Horrors to unlock Hexbound. It is a permanent aura and cannot be bought.",
-            "You can preview it in Shop. A key unlocks the Valley, not Hexbound; you still have to roll 6666.",
+            "Roll 6666 in the Valley and Hexbound is yours forever. It can't be bought, and it won't come back. Everyone asks. Few manage.",
           ],
     };
   if (topic === "trials")
     return {
-      title: "Aura tasks",
+      title: "The auras",
       lines: [
         calendar.phase === "active"
-          ? `You have completed ${event.complete} of ${event.total} aura trials. They run October 25–31 UTC. Online rolls and regular Daily/Weekly claims count.`
+          ? `Four tasks in Tasks, four auras. You've finished ${event.complete} of ${event.total}. One week only; after October 31 I stop counting.`
           : calendar.phase === "ended"
-            ? "The aura trials ended after October 31 UTC. Missing event auras can be bought in Limited Shop November 1–3; a purchase does not complete a trial."
-            : "Aura trials run October 25–31 UTC. Hourly commissions are available before and after that week. Neither is required to enter the World.",
-        "Claim each completed trial for an aura and Pumpkoins: 600 coins across the four tasks. These tasks are separate from the World key fragments.",
+            ? "The tasks are done. If you missed an aura, the Limited Shop sells them until November 3. Then never again."
+            : "Four tasks, four auras, October 25 to 31. Until then my hourly commissions pay Pumpkoins. Nothing in there is needed to pass.",
       ],
       trials: event.missions,
     };
   return {
-    title: seen ? "Welcome back" : "RNGween World",
+    title: seen ? "Back again" : "The gate",
     lines: [
-      "Come in. The first three phases are open to everyone. Only the Valley needs a key.",
-      key
-        ? `Your Valley key is ready. You have revealed ${seen.toLocaleString("en-US")} ${seen === 1 ? "number" : "numbers"} without repeats.`
-        : `You have ${Number(world.fragments.graveyard) + Number(world.fragments["haunted-house"])}/2 key fragments. Finish the Graveyard and House objectives to forge the key for free.`,
+      seen
+        ? key
+          ? `Back again. ${seen.toLocaleString("en-US")} numbers so far and none repeated. The Valley is waiting.`
+          : `Back again. ${fragments} of 2 fragments. The Valley will keep.`
+        : "Evening. The first three doors are open to anyone. The fourth needs a key, and I don't give those away.",
       !progress.profile
-        ? "Create a profile to save your numbers, badges, fragments and rewards."
-        : won
-          ? "Hexbound is in your collection. You can still finish your event badge collections."
-          : "Ask if you need a hand. Otherwise, pick a phase.",
+        ? "Make yourself a profile first, or I'll forget everything you do in here."
+        : "Ask, if you must. Or just go in.",
     ],
   };
-}
-
-// Typed replies select a written topic; they never execute a purchase or roll.
-export function reaperTopicForReply(text, phaseId = null) {
-  const normalize = (value) =>
-    String(value)
-      .normalize("NFKC")
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}]+/gu, " ")
-      .trim();
-  const line = normalize(text);
-  const aura = RNGWEEN_AURAS.find(
-    (item) =>
-      line.includes(normalize(item.name)) || line.includes(normalize(item.id)),
-  );
-  if (aura)
-    return `aura:${WORLD_ZONES.find((zone) => zone.auraId === aura.id).id}`;
-  const phase = WORLD_ZONES.find(
-    (zone) =>
-      line.includes(normalize(zone.name)) ||
-      line.includes(normalize(zone.id)) ||
-      line.includes(`phase ${zone.phase}`),
-  );
-  if (phase) return `phase:${phase.id}`;
-  if (/6666|hexbound|skin|prize/.test(line)) return "reward";
-  if (/aura|mission|trial|task/.test(line)) return phaseId ? "aura" : "trials";
-  if (/fragment|key|forge/.test(line)) return "fragments";
-  if (/speed|reveal|faster|slow|quick|time/.test(line)) return "speed";
-  if (/world|phase|zone|enter|pass/.test(line)) return "world";
-  return "unknown";
 }

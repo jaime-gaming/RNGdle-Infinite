@@ -474,7 +474,7 @@ test("the Reaper's trial and reward conversations fit a phone and report real pr
   expect(box.x + box.width).toBeLessThanOrEqual(340);
   expect(box.y).toBeGreaterThanOrEqual(0);
   expect(box.y + box.height).toBeLessThanOrEqual(740);
-  await dialog.getByRole("button", { name: "Can I pass?" }).click();
+  await dialog.getByRole("button", { name: "What is this place?" }).click();
   await expect(dialog).toContainText("1 / 4 aura trials complete");
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();

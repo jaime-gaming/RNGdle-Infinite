@@ -98,8 +98,9 @@ export default function RngweenIntro({ now, paused = false, onOpenChange }) {
               <li>
                 <strong>Hourly tasks · Oct 21–24 & Nov 1–3</strong>
                 <span>
-                  Four small goals at a time, one hour each. Finish one and it
-                  pays Pumpkoins and deals the next. You cannot skip them.
+                  Four small goals at a time, one hour each. Finish one, claim
+                  it before the hour is up, and the next one takes its place. No
+                  skips.
                 </span>
               </li>
               <li>

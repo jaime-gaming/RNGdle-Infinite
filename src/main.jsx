@@ -726,6 +726,7 @@ function App() {
         onShop={() => openShelf("limited")}
         onTasks={() => navigate("tasks")}
         openSignup={openAuth}
+        notify={notify}
         warning={[progressWarning, worldRollWarning].filter(Boolean).join(" ")}
       />
     );

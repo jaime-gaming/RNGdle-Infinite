@@ -494,36 +494,33 @@ export function emptyTasks() {
   };
 }
 
-// The day a moment falls on, or for a weekly cadence the Monday that starts
-// its week.
+// The UTC day a moment falls on, or for a weekly cadence the UTC Monday that
+// starts its week. Every player shares the same reset, whatever their timezone.
 function periodStart(cadence, at) {
   const date = new Date(at);
-  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  if (cadence !== "weekly") return day;
-  const sinceMonday = (day.getDay() + 6) % 7;
-  return new Date(
-    day.getFullYear(),
-    day.getMonth(),
-    day.getDate() - sinceMonday,
+  let day = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
   );
+  if (cadence === "weekly") {
+    const sinceMonday = (new Date(day).getUTCDay() + 6) % 7;
+    day -= sinceMonday * DAY_MS;
+  }
+  return day;
 }
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // A stable key for the period a moment belongs to: "2026-10-08" for a daily
 // period, the Monday of the week for a weekly one. Keys sort chronologically.
 export function periodKey(cadence, at) {
-  const start = periodStart(cadence, at);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+  return new Date(periodStart(cadence, at)).toISOString().slice(0, 10);
 }
 
-// When the period a moment belongs to ends, as a timestamp in milliseconds.
+// When the period a moment belongs to ends, as a timestamp in milliseconds
+// (00:00 UTC of the next day or the next Monday).
 export function nextReset(cadence, at) {
-  const start = periodStart(cadence, at);
-  return new Date(
-    start.getFullYear(),
-    start.getMonth(),
-    start.getDate() + (cadence === "weekly" ? 7 : 1),
-  ).getTime();
+  return periodStart(cadence, at) + (cadence === "weekly" ? 7 : 1) * DAY_MS;
 }
 
 // The slot a cadence counts in at a given moment. A slot from an earlier period

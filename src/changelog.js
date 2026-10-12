@@ -5,13 +5,9 @@ export const CHANGELOG = [
     version: "v0.5.1",
     title: "RNGween update",
     body: [
-      "RNGween runs October 21–November 3, 2026 (UTC): webs, lanterns, a seasonal favicon and a Halloween switch in the Appearance menu.",
-      "the Limited Shop opens for those two weeks: trade EP for Pumpkoins and buy a pumpkin companion, a seasonal skill or the event auras.",
-      "four Halloween tasks run October 25–31, 2026 and unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon for free.",
-      "before and after that week, hourly tasks pay Pumpkoins: four at a time, one hour each, no skips.",
-      "the Reaper at the foot of the Roll page opens RNGween World: four zones, 39 event badges and Hexbound for whoever rolls 6666.",
-      "owned Halloween auras stay forever; everything else retires on November 4 and the auras never return.",
-      "a roll shows at most six numbers, each keeps its aura in its own panel, and the mobile skill rack can be folded away.",
+      "RNGween runs October 21–November 3, 2026 (UTC): Halloween decorations, a Limited Shop with Pumpkoins and the Reaper's World.",
+      "four Halloween tasks on October 25–31, 2026 unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon. They never return.",
+      "a roll shows at most six numbers, each with its own aura, and the mobile skill rack can be folded away.",
     ],
   },
   {

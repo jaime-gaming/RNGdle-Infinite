@@ -267,6 +267,7 @@ export function useProgress() {
           "exchange-pumpkoins",
           "buy-rngween-limited",
           "claim-rngween-coins",
+          "claim-rngween-hourly",
           "refresh-rngween-hourly",
           "rngween-world-roll",
           "rngween-world-reveal",

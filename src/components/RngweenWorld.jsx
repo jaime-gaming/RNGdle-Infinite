@@ -80,6 +80,7 @@ export default function RngweenWorld({
   onTasks,
   openSignup,
   warning,
+  notify,
 }) {
   const world = worldState(progress.rngweenLimited);
   const limited = progress.rngweenLimited;
@@ -647,6 +648,8 @@ export default function RngweenWorld({
           now={now}
           inWorld
           openSignup={openSignup}
+          onAction={onAction}
+          notify={notify}
         />
       )}
       <footer className="world-footer">

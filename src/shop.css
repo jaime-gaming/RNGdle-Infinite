@@ -1584,6 +1584,55 @@
   }
 }
 
+/* The Limited & Special hub is a celestial card: ivory and gold, a soft halo,
+   no family gradient. It only exists while the player owns an event aura. */
+.aura-family-banner[data-family="special"] {
+  border-color: #e9d79a;
+  background:
+    radial-gradient(
+      120% 140% at 0% 0%,
+      rgb(255 255 255 / 0.9),
+      rgb(255 247 214 / 0.85) 45%,
+      rgb(250 229 160 / 0.8)
+    ),
+    #fff8e1;
+  color: #4a3a0c;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.7),
+    0 0 0 4px rgb(250 229 160 / 0.25);
+}
+.aura-family-banner[data-family="special"] .aura-family-gradient {
+  background:
+    radial-gradient(circle at 82% 22%, rgb(255 236 170 / 0.9), transparent 32%),
+    radial-gradient(circle at 18% 88%, rgb(255 255 255 / 0.9), transparent 36%);
+}
+.aura-family-banner[data-family="special"] .aura-family-copy strong {
+  color: #5b4300;
+  text-shadow: 0 1px 0 #fff;
+}
+.aura-family-banner[data-family="special"] .aura-family-copy small,
+.aura-family-banner[data-family="special"] .aura-family-count {
+  color: #7a6420;
+}
+.aura-family-banner[data-family="special"]:hover {
+  border-color: #d9b94a;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.7),
+    0 0 0 4px rgb(250 229 160 / 0.35),
+    0 10px 26px rgb(217 164 65 / 0.25);
+}
+[data-theme="dark"] .aura-family-banner[data-family="special"] {
+  border-color: #c9a94a;
+  background:
+    radial-gradient(
+      120% 140% at 0% 0%,
+      rgb(255 250 230 / 0.96),
+      rgb(255 240 190 / 0.92) 45%,
+      rgb(243 216 128 / 0.9)
+    ),
+    #f7ecc4;
+}
+
 /* ---- Purchase celebrations ------------------------------------------------
    Buying something is a moment: the card pops and rims in the shop's gold,
    the wallet answers with a pulse of its own, and the return banner drops

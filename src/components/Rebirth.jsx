@@ -102,10 +102,11 @@ function Reward({ step, earned, current }) {
 
 function when(at) {
   if (!at) return "—";
-  return new Date(at).toLocaleDateString(undefined, {
+  return new Date(at).toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 

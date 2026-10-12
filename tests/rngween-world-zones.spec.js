@@ -381,7 +381,7 @@ test("guests can browse and enter through the Reaper but saved rolls require cre
   await page.getByRole("button", { name: "Speak to The Reaper" }).click();
   const reaper = page.getByRole("dialog", { name: "The Reaper", exact: true });
   await expect(reaper).toContainText("open to everyone");
-  await reaper.getByRole("button", { name: "Show full dialogue" }).click();
+  await reaper.locator("[data-typing]").click();
   await reaper.getByRole("button", { name: "Enter RNGween World" }).click();
   await selectZone(page, "graveyard");
   await expect(

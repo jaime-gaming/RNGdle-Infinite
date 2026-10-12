@@ -57,8 +57,10 @@ so changing your phone's date does nothing.
   Unspent coins vanish when the shop closes.
 - **Halloween tasks (Oct 25–31).** Four goals — 200 rolls, 40 Rare+, 5,000,000
   EP and 18 task claims, all online — unlock **Jack-o'-Glow, Phantom Veil,
-  Witchfire** and **Blood Moon** for free. On the other days, hourly tasks pay
-  Pumpkoins instead: four at a time, one hour each, no skips.
+  Witchfire** and **Blood Moon** for free. On the other days, the Reaper's
+  Commissions pay Pumpkoins instead: four small tasks at a time, each with an
+  hour on the clock. Finish one, claim it before the hour ends, and a new one
+  takes its place.
 - **RNGween World.** Talk to the Reaper at the foot of the Roll page. Four
   haunted zones with their own badges, fragments that forge a key to the Valley
   of Horrors, and a hidden **Hexbound** aura for rolling 6666.

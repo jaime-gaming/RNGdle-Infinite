@@ -122,6 +122,7 @@ import {
   hourlyTaskById,
   mainHourlyTally,
   worldHourlyTally,
+  claimRngweenHourly,
   recordRngweenHourly,
   refreshRngweenHourly,
 } from "./rngween-hourly.js";
@@ -1092,6 +1093,16 @@ function applyEvent(state, action) {
     const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
     requireRngweenLimited(state, at);
     return grantRngweenMissionPumpkoins(state, at);
+  }
+  if (action.type === "claim-rngween-hourly") {
+    const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
+    requireRngweenLimited(state, at);
+    return claimRngweenHourly(
+      state,
+      action.serial,
+      at,
+      rngweenWorldUnlocked(state.tasks, state.rngweenLimited),
+    );
   }
   if (
     ["buy-rngween-world", "forge-rngween-key", "rngween-world-reveal"].includes(

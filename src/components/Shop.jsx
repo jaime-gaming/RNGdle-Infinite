@@ -1685,7 +1685,8 @@ export default function Shop({
           {!auraFamily && (
             <div className="aura-family-banners">
               {regularFamilies.map((entry) => familyBanner(entry))}
-              {familyBanner(SPECIAL_AURA_COLLECTION)}
+              {specialFamilies.length > 0 &&
+                familyBanner(SPECIAL_AURA_COLLECTION)}
             </div>
           )}
           {/* Inside a family: its banner opens the page, its cards follow. */}

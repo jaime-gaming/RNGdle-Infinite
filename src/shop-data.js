@@ -823,7 +823,7 @@ export const SPECIAL_AURA_COLLECTION = {
   id: "special",
   label: "Limited & Special",
   specialHub: true,
-  blurb: "Collected event auras and one-off rewards.",
+  blurb: "Your event collections. Each one is a chapter that will not reopen.",
   font: "Georgia, serif",
   tracking: "0.02em",
   casing: "none",

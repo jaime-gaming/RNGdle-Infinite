@@ -467,7 +467,12 @@ export function parseRngweenHourly(value) {
       slot.expiresAt !== slot.startedAt + RNGWEEN_HOURLY_MS ||
       rngweenCalendar(slot.startedAt).hourlyWindow !== value.window ||
       !amount(slot.count) ||
-      slot.count >= task.goal
+      slot.count > task.goal ||
+      (slot.completedAt !== undefined &&
+        (!timestamp(slot.completedAt) ||
+          slot.completedAt < slot.startedAt ||
+          slot.completedAt >= slot.expiresAt)) ||
+      slot.count >= task.goal !== (slot.completedAt !== undefined)
     )
       return invalid();
     ids.add(task.id);
@@ -478,6 +483,9 @@ export function parseRngweenHourly(value) {
       startedAt: slot.startedAt,
       expiresAt: slot.expiresAt,
       count: slot.count,
+      ...(slot.completedAt !== undefined
+        ? { completedAt: slot.completedAt }
+        : {}),
     });
   }
   return {
@@ -541,7 +549,7 @@ function hash(text) {
   for (const char of text) h = Math.imul(h ^ char.charCodeAt(0), 16777619);
   return h >>> 0;
 }
-function deal(board, state, at, worldUnlocked, avoid = null) {
+function deal(board, state, at, worldUnlocked, avoid = null, expiresAt = null) {
   const active = new Set([
     ...board.slots.map((slot) => slot.taskId),
     ...(avoid ? [avoid] : []),
@@ -588,7 +596,7 @@ function deal(board, state, at, worldUnlocked, avoid = null) {
     taskId: task.id,
     serial: board.nextSerial++,
     startedAt: at,
-    expiresAt: at + RNGWEEN_HOURLY_MS,
+    expiresAt: expiresAt ?? at + RNGWEEN_HOURLY_MS,
     count: 0,
   };
 }
@@ -685,6 +693,10 @@ export function hourlyView(state, at) {
             ...slot,
             task: hourlyTaskById.get(slot.taskId),
             key: `${RNGWEEN_ID}:${board.window}:${slot.serial}`,
+            complete: slot.completedAt !== undefined,
+            claimable:
+              slot.completedAt !== undefined &&
+              at < Math.min(slot.expiresAt, calendar.hourlyEndsAt),
             remaining: Math.max(
               0,
               Math.min(slot.expiresAt, calendar.hourlyEndsAt) - at,
@@ -808,7 +820,6 @@ export function recordRngweenHourly(
     dealt: [...board.dealt],
     slots: board.slots.map((slot) => ({ ...slot })),
   };
-  const rewards = [];
   for (let index = 0; index < next.slots.length; index++) {
     const slot = next.slots[index];
     const task = hourlyTaskById.get(slot.taskId);
@@ -833,37 +844,73 @@ export function recordRngweenHourly(
       next.slots[index] = { ...slot, count };
       continue;
     }
-    next.completed++;
-    next.earned += task.pumpkoins;
-    rewards.push({
-      id: `rngween-hourly:${calendar.hourlyWindow}:${slot.serial}`,
-      type: "rngween-hourly",
-      at,
-      taskId: task.id,
-      name: task.title,
-      pumpkoins: task.pumpkoins,
-    });
-    next.slots.splice(index, 1);
-    next.slots.splice(
-      index,
-      0,
-      deal(next, current, at, worldUnlocked, slot.taskId),
-    );
+    // Done. The reward waits for the player's claim until this slot's hour
+    // ends; nothing is paid or replaced on its own.
+    next.slots[index] = { ...slot, count: task.goal, completedAt: at };
   }
-  if (!rewards.length && JSON.stringify(next) === JSON.stringify(board))
-    return current;
-  const coins =
-    current.rngweenLimited.pumpkoins +
-    rewards.reduce((sum, reward) => sum + reward.pumpkoins, 0);
+  if (JSON.stringify(next) === JSON.stringify(board)) return current;
+  return {
+    ...current,
+    rngweenLimited: { ...current.rngweenLimited, hourly: next },
+  };
+}
+
+// The player collects a finished commission. It pays its Pumpkoins, is written
+// to history once, and its slot immediately receives a new task that runs
+// until the same hour mark the old one had.
+export function claimRngweenHourly(
+  state,
+  serial,
+  at,
+  worldUnlocked = !state.rngweenLimited?.retired,
+) {
+  const calendar = rngweenCalendar(at);
+  if (!state.profile) throw new Error("Create a saved profile first.");
+  if (state.rngweenLimited?.retired || calendar.hourlyPhase !== "active")
+    throw new Error("Commissions are not running right now.");
+  const board = state.rngweenLimited?.hourly;
+  if (!board || board.window !== calendar.hourlyWindow)
+    throw new Error("That commission is no longer on the board.");
+  const index = board.slots.findIndex((slot) => slot.serial === serial);
+  const slot = board.slots[index];
+  if (!slot) throw new Error("That commission is no longer on the board.");
+  if (slot.completedAt === undefined)
+    throw new Error("Finish the commission before claiming it.");
+  if (at >= Math.min(slot.expiresAt, calendar.hourlyEndsAt))
+    throw new Error("That commission's hour is over; its reward has expired.");
+  const id = `rngween-hourly:${calendar.hourlyWindow}:${slot.serial}`;
+  if (state.history.some((row) => row.id === id))
+    throw new Error("That commission was already claimed.");
+  const task = hourlyTaskById.get(slot.taskId);
+  const next = {
+    ...board,
+    dealt: [...board.dealt],
+    slots: board.slots.map((entry) => ({ ...entry })),
+    completed: board.completed + 1,
+    earned: board.earned + task.pumpkoins,
+  };
+  next.slots.splice(index, 1);
+  next.slots.splice(
+    index,
+    0,
+    deal(next, state, at, worldUnlocked, slot.taskId, slot.expiresAt),
+  );
+  const coins = state.rngweenLimited.pumpkoins + task.pumpkoins;
   if (![coins, next.completed, next.earned].every(amount))
     throw new Error("Pumpkoin balance limit reached.");
   return {
-    ...current,
-    rngweenLimited: {
-      ...current.rngweenLimited,
-      pumpkoins: coins,
-      hourly: next,
-    },
-    history: [...current.history, ...rewards],
+    ...state,
+    rngweenLimited: { ...state.rngweenLimited, pumpkoins: coins, hourly: next },
+    history: [
+      ...state.history,
+      {
+        id,
+        type: "rngween-hourly",
+        at,
+        taskId: task.id,
+        name: task.title,
+        pumpkoins: task.pumpkoins,
+      },
+    ],
   };
 }

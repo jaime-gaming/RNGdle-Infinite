@@ -35,11 +35,12 @@ export function useSeasonClock() {
   }, []);
   useEffect(() => {
     const date = new Date(clock.now);
-    const midnight = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate() + 1,
-    ).getTime();
+    // Tasks reset at 00:00 UTC, the same moment for every player.
+    const midnight = Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + 1,
+    );
     const calendar = rngweenCalendar(clock.seasonalNow);
     const delays = [midnight - clock.now];
     if (Number.isFinite(clock.seasonalNow))

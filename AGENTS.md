@@ -42,6 +42,10 @@ on).
   source of truth for restoring ownership. When you add a field to the save,
   add it to `emptyProgress()`, parse it defensively, and write a spec that
   feeds it garbage.
+- **Everything is UTC.** Daily and weekly task periods, event boundaries and
+  every date shown in the UI use UTC (`Date.UTC`, `getUTC*`, `timeZone: "UTC"`).
+  Never use local-date getters for anything a player can see or that gates a
+  reward.
 - **Time has three clocks.** `gameNow()` (`src/game-clock.js`) paces reveals,
   cooldowns and tasks and can be driven by Playwright's fake clock.
   `seasonNow()` (`src/season-clock.js`) is the verified website date used only
@@ -155,6 +159,14 @@ guessing.
   seasonal reads the device clock: `src/season-clock.js` verifies the date with
   a same-origin `HEAD` request and `seasonNow()` returns `null` until it has.
   `null` means "unavailable", never "active".
+- Hourly commissions (`src/rngween-hourly.js`): a finished slot is marked
+  `completedAt` and waits for `claim-rngween-hourly`. Claiming pays Pumpkoins,
+  writes one history row and deals a replacement that keeps the old slot's
+  `expiresAt`. An unclaimed slot expires with its hour; nothing is paid
+  automatically.
+- The Reaper (`src/rngween-reaper.js`, `components/ReaperDialog.jsx`) is a
+  short scripted dialogue with button choices only. There is no free-text
+  input; keep his lines to one or two sentences with a bit of dry humour.
 - Event state lives in two save slots: `tasks.rngween` (the four aura missions)
   and `rngweenLimited` (Pumpkoins, purchases, hourly board, World). Both are
   parsed defensively; foreign IDs and over-cap counts are repaired to zero.

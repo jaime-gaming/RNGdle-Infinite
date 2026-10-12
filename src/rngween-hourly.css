@@ -219,3 +219,15 @@
     margin: 8px 0 0;
   }
 }
+
+/* A finished commission shows its claim button in place of the reward line. */
+.rngween-hourly-claim {
+  min-height: 36px;
+  padding: 6px 14px;
+  gap: 8px;
+  font-size: 13px;
+}
+.rngween-hourly-card:has(.rngween-hourly-claim) {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 3px rgb(251 146 60 / 0.18);
+}

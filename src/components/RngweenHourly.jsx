@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   ArrowRight,
   Clock3,
@@ -17,17 +17,40 @@ export function hourlyCountdown(ms) {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
-// One shared board, not four tasks per mode. Rewards and replacements are
-// automatic saved transactions; this component has no claim, reroll or skip.
+// One shared board, not four tasks per mode. A finished commission waits for
+// the player's claim until its hour ends; there is no reroll or skip.
 export default function RngweenHourly({
   progress,
   now,
   openWorld,
   openSignup,
+  onAction,
+  notify,
   inWorld = false,
 }) {
   const clock = useHourlyDisplayClock(now);
   const view = hourlyView(progress, clock);
+  const [claiming, setClaiming] = useState(0);
+  async function claim(slot) {
+    if (claiming) return;
+    setClaiming(slot.serial);
+    try {
+      const outcome = await onAction?.({
+        type: "claim-rngween-hourly",
+        serial: slot.serial,
+      });
+      if (outcome && !outcome.ok)
+        notify?.({ kind: "error", text: outcome.message });
+      else if (outcome?.ok)
+        notify?.({
+          kind: "reward",
+          title: `${slot.task.title} claimed`,
+          text: `+${slot.task.pumpkoins} Pumpkoins. A new commission took its place.`,
+        });
+    } finally {
+      setClaiming(0);
+    }
+  }
   const unlocked =
     !!progress.profile &&
     rngweenWorldUnlocked(progress.tasks, progress.rngweenLimited);
@@ -62,7 +85,7 @@ export default function RngweenHourly({
           <Clock3 size={14} /> One hour per task
         </span>
         <span>No skips</span>
-        <span>Paid & replaced automatically</span>
+        <span>Claim before the hour ends</span>
       </div>
       {!progress.profile ? (
         <div className="rngween-hourly-empty">
@@ -125,16 +148,31 @@ export default function RngweenHourly({
                     />
                   </div>
                   <div className="rngween-hourly-reward">
-                    <PumpkinMark size={17} /> +{slot.task.pumpkoins} Pumpkoins
-                    {slot.task.source === "world" && !inWorld && (
+                    {slot.claimable ? (
                       <button
-                        className="rngween-hourly-world-link"
-                        onClick={openWorld}
-                        aria-label={`Visit the World for ${slot.task.title}`}
+                        className="primary-button rngween-hourly-claim"
+                        onClick={() => claim(slot)}
+                        disabled={claiming === slot.serial}
                       >
-                        <ArrowRight size={16} />
+                        <PumpkinMark size={17} /> Claim +{slot.task.pumpkoins}
                       </button>
+                    ) : (
+                      <>
+                        <PumpkinMark size={17} /> +{slot.task.pumpkoins}{" "}
+                        Pumpkoins
+                      </>
                     )}
+                    {slot.task.source === "world" &&
+                      !inWorld &&
+                      !slot.claimable && (
+                        <button
+                          className="rngween-hourly-world-link"
+                          onClick={openWorld}
+                          aria-label={`Visit the World for ${slot.task.title}`}
+                        >
+                          <ArrowRight size={16} />
+                        </button>
+                      )}
                   </div>
                 </li>
               ))
