@@ -475,8 +475,7 @@ test("Halloween ownership, equipped look and task progress survive Rebirth, Pres
 test("0.5.1 release notes describe RNGween and package versions agree", () => {
   expect(LATEST_VERSION).toBe("v0.5.1");
   expect(CHANGELOG[0].title).toBe("RNGween update");
-  expect(CHANGELOG[0].body).toHaveLength(3);
-  expect(CHANGELOG[0].body.join(" ").length).toBeLessThan(350);
+  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(8);
   expect(CHANGELOG[0].body.join(" ")).not.toMatch(/local|timezone/i);
   expect(CHANGELOG[0].body.join(" ")).toContain("October 25–31, 2026");
   expect(CHANGELOG[0].body.join(" ")).toContain("never return");

@@ -151,7 +151,6 @@ export const RNGWEEN_MISSIONS = [
     detail: "Complete 200 online rolls during RNGween.",
     metric: "rolls",
     goal: 200,
-    legacyGoal: 20,
   },
   {
     id: "phantom-veil",
@@ -161,7 +160,6 @@ export const RNGWEEN_MISSIONS = [
     detail: "Roll 40 Rare or better during RNGween. Higher tiers count too.",
     metric: "rare",
     goal: 40,
-    legacyGoal: 5,
   },
   {
     id: "witchfire",
@@ -171,7 +169,6 @@ export const RNGWEEN_MISSIONS = [
     detail: "Bank 5,000,000 EP from online rolls during RNGween.",
     metric: "banked",
     goal: 5000000,
-    legacyGoal: 400000,
   },
   {
     id: "blood-moon",
@@ -182,7 +179,6 @@ export const RNGWEEN_MISSIONS = [
       "Claim 18 Daily or Weekly tasks during RNGween. List bonuses do not count.",
     metric: "taskClaims",
     goal: 18,
-    legacyGoal: 6,
   },
 ];
 
@@ -229,15 +225,13 @@ export function parseRngween(value) {
       return [metric, count];
     }),
   );
-  // Preserve awards collected under the earlier 0.5.1 goals. These are
-  // receipt-validation floors only; every new claim requires the harder goal.
   const earned = [];
   for (const id of value.earned) {
     const mission = RNGWEEN_MISSIONS.find((entry) => entry.id === id);
     if (
       !mission ||
       earned.includes(id) ||
-      counts[mission.metric] < (mission.legacyGoal ?? mission.goal)
+      counts[mission.metric] < mission.goal
     ) {
       repaired = true;
       continue;

@@ -289,7 +289,6 @@ export function parseRngweenLimited(value, receipts) {
       ...(adventureRead.adventure
         ? { adventure: adventureRead.adventure }
         : {}),
-      // Missing on earlier 0.5.1 saves: verified reconciliation pays it once.
       rewardedMissions: ids(
         value.rewardedMissions === undefined ? [] : value.rewardedMissions,
         auraIds,

@@ -24,6 +24,7 @@ There is no backend. The game runs in the browser and saves to `localStorage`.
 | `src/rack.js`, `src/draw-plan.js`         | Skill rack and how draw skills plan their draws.                                |
 | `src/rebirth.js`                          | Rebirth ladder, prestige, Rollback.                                             |
 | `src/progress.js`                         | Save format, migrations, and the `PROGRESS_KEY` storage key.                    |
+| `src/rngween*.js`, `src/season-clock.js`  | RNGween 2026: calendar, tasks, limited shop, World. See the event section.      |
 | `src/sync.js`                             | Device linking (relay or PeerJS/WebRTC), heartbeat, reconnects.                 |
 | `src/components/`                         | Shared UI components and game icons.                                            |
 | `src/data/`                               | Prepared game data (`README.md` there has provenance and the pinned source).    |
@@ -38,6 +39,9 @@ There is no backend. The game runs in the browser and saves to `localStorage`.
 ```sh
 npm install
 npm run dev              # dev server on 0.0.0.0:5173, relay included
+npm run dev:rngween      # same, with the season clock pinned to 2026-10-26 (event live)
+npm run dev:rngween:unlocked -- --port 5176   # plus a seeded save with every event reward
+RNGDLE_SANDBOX_DATE=2026-10-22T12:00:00Z npm run dev:rngween   # any other date (hourly tasks here)
 npm test                 # full Playwright suite (starts `npm run dev` itself)
 npx playwright test tests/roll.spec.js   # one spec
 npm run build            # production build into dist/
@@ -83,6 +87,27 @@ effect of other work.
 If a request seems to conflict with one of these, stop and ask instead of
 guessing.
 
+## RNGween 2026 (seasonal, October 21 – November 4 UTC)
+
+- Every boundary is a fixed `Date.UTC(...)` in `src/rngween.js`. Nothing
+  seasonal reads the device clock: `src/season-clock.js` verifies the date with
+  a same-origin `HEAD` request and `seasonNow()` returns `null` until it has.
+  `null` means "unavailable", never "active".
+- Event state lives in two save slots: `tasks.rngween` (the four aura missions)
+  and `rngweenLimited` (Pumpkoins, purchases, hourly board, World). Both are
+  parsed defensively; foreign IDs and over-cap counts are repaired to zero.
+- Event auras are `eventOnly`: never in the EP catalogue, never a random drop,
+  and only owned ones appear in the wardrobe. They survive Rebirth, Prestige and
+  Rollback like every other owned aura.
+- World rolls pay no ordinary EP, charges, drops or task credit. Pending World
+  outcomes are committed to the save before the animation starts.
+- The dev previews (`dev:rngween*`, `tools/sandbox-*.mjs`) are `apply: "serve"`
+  Vite plugins. Nothing from them reaches a production build; keep it so.
+- **Cleanup.** The code is marked with `CLEANUP Nov 1/Nov 4, 2026` comments.
+  After November 4 remove the seasonal UI, shop, World and the season clock, but
+  keep the aura registry, art, receipts and the save parsing so collected
+  cosmetics still restore.
+
 ## Device linking (`src/sync.js`)
 
 - Two transports. In development (and anywhere a relay is configured) the link
@@ -104,7 +129,11 @@ guessing.
 ## Tests: notes that save time
 
 - `tests/helpers/progress.js` seeds the save. Use it instead of hand-writing
-  `localStorage` for `PROGRESS_KEY`.
+  `localStorage` for `PROGRESS_KEY`. `tests/helpers/season-clock.js` pins the
+  verified season date for event specs.
+- The changelog has a house style enforced by `tests/pets-changelog.spec.js`:
+  one finished sentence per line, lowercase opening unless it starts with a name
+  or a figure, at most 140 characters and 8 lines per release.
 - A page that reads `?sync=` does so in an effect after mount. Wait for the
   stored link before navigating away, or the join races the navigation.
 - `tests/device-link-webrtc.spec.js` needs the `peer` dev dependency. Keep that
