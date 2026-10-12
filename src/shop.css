@@ -1323,11 +1323,6 @@
     gap: 6px;
     padding-inline: 10px;
   }
-  /* The theme switch stays reachable on the smallest phone; it just takes
-     less room. */
-  .header .theme-switch button {
-    padding: 5px;
-  }
   .header .nav-divider {
     display: none;
   }

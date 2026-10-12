@@ -57,7 +57,7 @@ test("the README is a short player guide whose images really exist", () => {
   // Friendly, not exhaustive: the player guide stays short and skimmable.
   expect(readme.split("\n").length).toBeLessThanOrEqual(150);
   for (const section of [
-    "## The basics",
+    "## How to play",
     "## Ways to grow",
     "## Your progress",
     "## FAQ",

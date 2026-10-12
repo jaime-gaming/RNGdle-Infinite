@@ -204,11 +204,10 @@ export function reaperTopicForReply(text, phaseId = null) {
       line.includes(`phase ${zone.phase}`),
   );
   if (phase) return `phase:${phase.id}`;
-  if (/6666|hexbound|skin|prize|premio/.test(line)) return "reward";
-  if (/aura|mission|trial|misio|tarea/.test(line))
-    return phaseId ? "aura" : "trials";
-  if (/fragment|key|llave|forge/.test(line)) return "fragments";
-  if (/speed|reveal|faster|slow|rápid|tiempo/.test(line)) return "speed";
-  if (/world|phase|mundo|fase|enter|pass|entrar/.test(line)) return "world";
+  if (/6666|hexbound|skin|prize/.test(line)) return "reward";
+  if (/aura|mission|trial|task/.test(line)) return phaseId ? "aura" : "trials";
+  if (/fragment|key|forge/.test(line)) return "fragments";
+  if (/speed|reveal|faster|slow|quick|time/.test(line)) return "speed";
+  if (/world|phase|zone|enter|pass/.test(line)) return "world";
   return "unknown";
 }

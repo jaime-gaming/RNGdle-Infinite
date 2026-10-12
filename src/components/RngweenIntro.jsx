@@ -80,59 +80,55 @@ export default function RngweenIntro({ now, paused = false, onOpenChange }) {
             </span>
             <h1 id="rngween-welcome-title">Welcome to RNGween</h1>
             <p>
-              Roll for Halloween badges, earn Pumpkoins and collect event auras.
+              Halloween has come to RNGdle. Until November 3 you can earn
+              Pumpkoins, collect event auras and explore a haunted side of the
+              game.
             </p>
             <ul>
               <li>
                 <strong>Halloween tasks · Oct 25–31</strong>
                 <span>
                   {calendar.phase === "active"
-                    ? `Complete four tasks for four auras and ${coins} Pumpkoins in total.`
+                    ? `Four tasks, four auras. Finish them all and you also take home ${coins} Pumpkoins.`
                     : calendar.phase === "upcoming"
-                      ? "The four aura trials begin October 25. Earn Pumpkoins from hourly commissions while you wait."
-                      : "The trials have ended. Hourly commissions return; collected auras stay yours, and the shop and world are still open."}
+                      ? "Four tasks that each unlock an aura. They open on October 25; until then, hourly tasks pay Pumpkoins."
+                      : "The aura tasks are over. The auras you collected are yours to keep; the shop and the World stay open until November 3."}
                 </span>
               </li>
               <li>
-                <strong>Hourly commissions · Oct 21–24 & Nov 1–3</strong>
+                <strong>Hourly tasks · Oct 21–24 & Nov 1–3</strong>
                 <span>
-                  Four at a time from a pool of 50. One hour, no skips: finish
-                  for automatic Pumpkoins and a new task. World badge tasks are
-                  available to everyone; no key is required.
+                  Four small goals at a time, one hour each. Finish one and it
+                  pays Pumpkoins and deals the next. You cannot skip them.
                 </span>
               </li>
               <li>
-                <strong>Limited Shop & Halloween · Oct 21–Nov 3</strong>
+                <strong>Limited Shop · Oct 21–Nov 3</strong>
                 <span>
-                  Exchange EP for Pumpkoins, or earn them from missions. Meet
-                  the exclusive familiar and its skills; missing auras go on
-                  sale November 1.
+                  Trade EP for Pumpkoins and spend them on a pumpkin companion,
+                  a seasonal skill and a key to the Valley. Any aura you missed
+                  goes on sale November 1.
                 </span>
               </li>
               <li>
-                <strong>The Reaper's Gate · at the foot of Roll</strong>
+                <strong>RNGween World · the Reaper at the foot of Roll</strong>
                 <span>
-                  Explore four phases: Pumpkin Patch (1–9), Graveyard (1–99),
-                  Haunted House (1–999) and Valley of Horrors (1–9999). Collect
-                  event badges; Graveyard and Haunted House objectives award key
-                  fragments. Forge a free Valley key, or buy the{" "}
+                  Four haunted zones with their own badges. Clear the Graveyard
+                  and the Haunted House to forge a key to the Valley of Horrors,
+                  or buy one for{" "}
                   {RNGWEEN_WORLD_KEY.pumpkoinPrice.toLocaleString("en-US")}{" "}
-                  Pumpkoin shortcut. Valley of Horrors rolls 1–9999 without
-                  repeats; 6666 earns permanent Hexbound. The internal World
-                  shop speeds up result reveals.
+                  Pumpkoins. Roll 6666 in the Valley and Hexbound is yours.
                 </span>
               </li>
             </ul>
             <p className="rngween-story-note">
-              All dates are UTC. Event badges, points, coins, fragments, key,
-              speed upgrades, familiar, skills and World retire after November
-              3. Collected cosmetics stay. Halloween appearance is optional and
-              dark-only.
+              All dates are UTC. When the event ends, the auras you collected
+              stay. Everything else goes.
             </p>
             <button className="primary-button" onClick={close}>
               Let's play
             </button>
-            <small>This introduction appears once in this browser.</small>
+            <small>You will only see this once.</small>
           </div>
         </>
       )}

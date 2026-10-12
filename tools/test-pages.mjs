@@ -319,7 +319,7 @@ try {
         new URL(`${base}favicon-halloween.svg`, url).href,
       );
       assert.equal(icon.status(), 200);
-      assert.ok((await icon.text()).includes("RNG ∞"));
+      assert.ok((await icon.text()).includes("RNGdle Halloween"));
       await page.goto(`${url}shop`);
       await expect(
         page.locator(".shop-jump [data-shelf]").first(),

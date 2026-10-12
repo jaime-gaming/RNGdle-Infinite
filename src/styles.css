@@ -74,6 +74,8 @@ a,
 input,
 select {
   -webkit-tap-highlight-color: transparent;
+  /* No double-tap zoom and no 300 ms tap delay on touch screens. */
+  touch-action: manipulation;
 }
 button {
   cursor: pointer;
@@ -1643,6 +1645,24 @@ footer button:hover,
   #root {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
+  /* A pull-to-refresh in the middle of a 45-second reveal throws it away. */
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
+  /* iOS zooms into any field smaller than 16px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  /* Finger-sized hit areas for every small control, without changing the art. */
+  .icon-button,
+  .header-right button,
+  .sign-in {
+    min-width: 40px;
+    min-height: 40px;
+  }
   /* The bar becomes three columns — an empty one on the left, the logo, and
      the account controls — so the game logo sits in the middle of the screen
      instead of hugging the left edge. Both side columns take the same share,
@@ -1652,8 +1672,8 @@ footer button:hover,
     position: sticky;
     top: 0;
     z-index: 50;
-    height: 58px;
-    padding: 0 14px;
+    height: calc(58px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 14px 0;
     gap: 8px;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -1777,13 +1797,6 @@ footer button:hover,
   }
   .header-right {
     gap: 5px;
-  }
-  .theme-switch {
-    padding: 2px;
-  }
-  .theme-switch button {
-    width: 21px;
-    height: 23px;
   }
   .sign-in {
     padding: 8px;

@@ -11,6 +11,45 @@ companions, skills, tasks, rebirths and prestige. It is an independent
 recreation of RNGdle; the scoring and rank data come from RNGdle Tools.
 
 There is no backend. The game runs in the browser and saves to `localStorage`.
+GitHub Pages serves the prebuilt `docs/` folder; there is no server code in
+production, which shapes most decisions below (device linking is peer-to-peer,
+calendar events verify the date against the website's own HTTP headers, and so
+on).
+
+## How the game is put together
+
+- **One reducer owns the save.** `applyProgress(state, action)` in
+  `src/progress.js` is the only way the save changes. Every button in the UI
+  dispatches an action (`buy`, `equip-pet`, `claim-task`, `rebirth`,
+  `rngween-world-reveal`…); the reducer validates it, throws a readable
+  `Error` for the toast when it is not allowed, and returns the next state.
+  `src/use-progress.js` wraps that in a React hook, writes to `localStorage`
+  and broadcasts the new save to a linked device. New features add actions
+  there rather than mutating state in a component.
+- **A roll is a two-step commitment.** The UI asks the worker for a number, the
+  reducer stores it as `pendingRoll` with its reveal time _before_ anything is
+  animated, and `complete` settles it afterwards. A reload during the reveal
+  therefore resumes the same number; nothing can be re-rolled by refreshing.
+  World rolls follow the same pattern with `rngweenLimited.world.pending`.
+- **Scoring is data, not code.** Badge values and ranks come from the prepared
+  tables in `public/data/` (built by `tools/prepare-game-data.mjs` from RNGdle
+  Tools). `src/roll.worker.js` loads them and scores off the UI thread. Do not
+  hand-edit numbers in those tables.
+- **Save repair instead of save loss.** `parseAndRepairProgress` accepts any
+  JSON, fixes what it can, keeps a pre-repair backup under
+  `PRE_REPAIR_BACKUP_KEY` and lists the repairs it made so the UI can tell the
+  player. Receipts (`receipts`, task claims, mission `earned` lists) are the
+  source of truth for restoring ownership. When you add a field to the save,
+  add it to `emptyProgress()`, parse it defensively, and write a spec that
+  feeds it garbage.
+- **Time has three clocks.** `gameNow()` (`src/game-clock.js`) paces reveals,
+  cooldowns and tasks and can be driven by Playwright's fake clock.
+  `seasonNow()` (`src/season-clock.js`) is the verified website date used only
+  by calendar events and is `null` until verified. `Date.now()` is for
+  timestamps that nothing is gated on. Never gate a reward on the device date.
+- **Pages are client routes.** `src/router.js` maps `/shop/auras/...`,
+  `/tasks`, `/rngween-world/`… to pages. The build copies `index.html` to
+  `404.html` (and to `rngween-world/index.html`) so deep links work on Pages.
 
 ## Map of the repo
 
@@ -26,7 +65,13 @@ There is no backend. The game runs in the browser and saves to `localStorage`.
 | `src/progress.js`                         | Save format, migrations, and the `PROGRESS_KEY` storage key.                    |
 | `src/rngween*.js`, `src/season-clock.js`  | RNGween 2026: calendar, tasks, limited shop, World. See the event section.      |
 | `src/sync.js`                             | Device linking (relay or PeerJS/WebRTC), heartbeat, reconnects.                 |
-| `src/components/`                         | Shared UI components and game icons.                                            |
+| `src/tasks.js`, `src/history-tally.js`    | Daily/weekly tasks and the per-roll tally that feeds them.                      |
+| `src/offline.js`                          | Offline roll batches and their replay protection.                               |
+| `src/shop-data.js`                        | Every product, shelf and aura family. The shop UI reads this; it owns nothing.  |
+| `src/settings.js`                         | Presentation and convenience settings (never odds, prices or timings).          |
+| `src/changelog.js`                        | Release notes shown in-game; also the "unseen version" marker.                  |
+| `src/components/`                         | Shared UI components and game icons (`game-icons.jsx` is the hand-drawn set).   |
+| `src/*.css`                               | One stylesheet per area. Mobile rules live at the bottom of each file.          |
 | `src/data/`                               | Prepared game data (`README.md` there has provenance and the pinned source).    |
 | `tests/`                                  | Playwright specs. `tests/helpers/` has the shared seeding and clock helpers.    |
 | `tools/`                                  | Node scripts: relay, Pages publishing, data preparation, screenshots, audits.   |
@@ -76,8 +121,9 @@ effect of other work.
   tests all state that cap.
 - **Companion signatures** ("firmas") take a slot on the rack, like any other
   circle.
-- **Logos.** The new RNG-over-∞ mark is for the favicon and the mobile app icon
-  only. The game's own logo is the original one from before RNGdle Infinite.
+- **Logos.** The favicon and the mobile app icon are a flat wordmark derived
+  from the original RNGdle look. The in-game logo is the original header
+  wordmark; do not invent a new brand mark.
 - **Stored numbers.** Every number saved from one roll pays the wallet skill
   multipliers, not only the last one.
 - **Presentation settings** never change odds, EP, prices or timings.
@@ -86,6 +132,22 @@ effect of other work.
 
 If a request seems to conflict with one of these, stop and ask instead of
 guessing.
+
+## Economy and content: where the numbers live
+
+- Companion prices and multipliers: `src/pets.js`. Skill definitions and the
+  stall rotation: `src/skills.js` and `src/rack.js`. Rebirth rungs, prestige and
+  rollback thresholds: `src/rebirth.js`. Shop products and timing upgrades:
+  `src/shop-data.js`. Task goals and payouts: `src/tasks.js`.
+- `npm run audit:economy` prints price ladders and a roll-distribution sample.
+  Run it after touching any of the files above and sanity-check that nothing is
+  free, nothing is unreachable, and the ladder still climbs.
+- Badge names, families and EP come from `src/badges.js` and
+  `src/infinite-badges.js`; artwork is Twemoji vendored by
+  `tools/vendor-emoji.mjs`. Adding a badge means adding its glyph there too.
+- Player-facing numbers are formatted with `formatEP` (`src/roll-data.js`) and
+  `toLocaleString("en-US")`; the game is English-only, so never let a browser
+  locale leak into copy.
 
 ## RNGween 2026 (seasonal, October 21 – November 4 UTC)
 
@@ -122,9 +184,24 @@ guessing.
   this to run a local `peer` server on port 9000. Port 9123 is blocked by
   Chromium (`ERR_UNSAFE_PORT`), so do not use it. Dev-only relay URLs can be
   overridden with `rng-infinite-sync-endpoint-v1`.
-- Timers: heartbeat 3 s, pong timeout 12 s, reconnect backoff starting at 2.5 s
-  and capped at 30 s. A regained network or a visible tab retries at once.
+- Timers: heartbeat 3 s, pong timeout 12 s, reconnect backoff starting at 1 s
+  and capped at 30 s. A regained network, a focused window or a visible tab
+  retries at once (`retryPeerNow`) and, if the channel is still open, sends one
+  immediate probe ping with a fresh grace period (`probeConnection`).
+- Phones freeze timers in the background. The heartbeat notices a tick that
+  arrives more than 9 s late and resets the pong deadline before judging the
+  link, so a healthy channel is never dropped for a silence the browser caused.
+- Outbox semantics: `broadcastSync` marks the save `pending` and keeps
+  re-sending it on every heartbeat until the other side answers with a
+  `state-ack` whose id matches. A `state` message without an `id` is never
+  acknowledged; always send through `sendPeerState()`.
+- Receiving a save is vetoable: `use-progress.js` must set
+  `event.progressSaved = true` on the `SYNC_EVENT` or the sender retries later
+  instead of acknowledging. That protects a device whose storage is full or
+  whose save is mid-repair.
 - The save never has to pass through the broker. Keep it that way.
+- `tests/device-link.spec.js` covers the relay path; `device-link-webrtc.spec.js`
+  needs a local `peer` server and is the one to run after touching reconnects.
 
 ## Tests: notes that save time
 
@@ -140,6 +217,14 @@ guessing.
   dependency in `devDependencies`.
 - Timing-sensitive specs (`roll`, `auto-originals`) can be flaky under heavy
   parallel load. Re-run them alone before you assume a regression.
+- Many specs assert copy verbatim (button names, headings, README section
+  titles, changelog style). When you reword something, grep `tests/` for the
+  old string before you run the suite.
+- Pure modules (`rngween*.js`, `tasks.js`, `progress.js`, `sync-policy.js`)
+  import cleanly in Node. `node --input-type=module -e "import ..."` is a fast
+  way to check data tables and calendar math without a browser.
+- Mobile specs use a 390×844 viewport (`tests/mobile-bar.spec.js`). The phone
+  breakpoint is 760px; 480px and 420px tighten the header further.
 
 ## Publishing
 
@@ -160,3 +245,14 @@ guessing.
 - Prettier is the formatter. Run `npm run format` on the files you touched.
 - Keep code comments short and about why, not what.
 - Player-facing copy should be plain and friendly. Avoid jargon in the UI.
+- All copy is English. No Spanish in strings, regexes or comments, even for
+  matching player input (the Reaper's free-text replies are English-only).
+- Write release notes and dialogs the way a person would explain the game to a
+  friend: short sentences, one idea each, no feature-list dumps.
+- CSS: keep the phone rules next to the desktop rules for the same component,
+  use `env(safe-area-inset-*)` for anything pinned to an edge, keep tap targets
+  at 40px or more, and prefer `dvh` over `vh` for anything full-height.
+- Icons come from `game-icons.jsx` or Lucide. The favicon and app icons are a
+  flat "RNG / DLE" wordmark on the dark background (`public/favicon.svg`,
+  `public/icon-*.png`, `public/apple-touch-icon.png`); regenerate the PNGs when
+  the SVG changes.

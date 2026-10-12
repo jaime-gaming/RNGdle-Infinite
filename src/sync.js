@@ -33,7 +33,10 @@ const PEER_CODE_LINE = 72;
 const PEER_ID_PREFIX = "rngdle";
 const HEARTBEAT_MS = 3000;
 const PONG_TIMEOUT_MS = 12000;
-const RECONNECT_MS = 2500;
+// A tick that arrives this late means the browser throttled or froze the tab
+// (phone screen off, background tab). The silence was ours, not the link's.
+const FROZEN_GAP_MS = HEARTBEAT_MS * 3;
+const RECONNECT_MS = 1000;
 const ACTION_TIMEOUT_MS = 20000;
 const ACTION_CACHE_LIMIT = 128;
 
@@ -59,6 +62,7 @@ let lastPingNonce = "";
 let lastPongAt = 0;
 let connectingSince = 0;
 let reconnectAttempt = 0;
+let lastHeartbeatTick = 0;
 const pendingActions = new Map();
 const actionListeners = new Set();
 const queuedActions = [];
@@ -539,11 +543,15 @@ function schedulePeerReconnect(epoch = linkEpoch) {
 
 // Skip the backoff: used when the network or the tab comes back.
 function retryPeerNow() {
-  if (!room || !key || !peer || peer.destroyed) return;
+  if (!room || !key) return;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   reconnectAttempt = 0;
   clearTimeout(reconnectTimer);
   reconnectTimer = 0;
+  if (!peer || peer.destroyed) {
+    openPeer();
+    return;
+  }
   if (peer.disconnected) {
     try {
       peer.reconnect();
@@ -737,6 +745,17 @@ function sendPeerMessage(message) {
   } catch {
     return false;
   }
+}
+
+// One immediate ping with a fresh grace period: used when the tab wakes up or
+// the network returns, so a dead channel is noticed within one timeout and a
+// healthy one is never dropped for a silence the browser caused.
+function probeConnection() {
+  if (!conn?.open) return;
+  lastPongAt = Date.now();
+  lastHeartbeatTick = lastPongAt;
+  lastPingNonce = `${device}:${++pingSequence}:${lastPongAt}`;
+  sendPeerMessage({ type: "ping", nonce: lastPingNonce, from: device });
 }
 
 // True only when the other device is actually reachable: a live data channel,
@@ -995,8 +1014,16 @@ function receiveRemote(remote, retry = true) {
 // state frames are retransmitted only while they remain unacknowledged.
 function startHeartbeat(epoch = linkEpoch) {
   clearInterval(heartbeatTimer);
+  lastHeartbeatTick = Date.now();
   heartbeatTimer = setInterval(() => {
     if (epoch !== linkEpoch || !peer || peer.destroyed) return;
+    const tickAt = Date.now();
+    const frozen = tickAt - lastHeartbeatTick > FROZEN_GAP_MS;
+    lastHeartbeatTick = tickAt;
+    if (frozen && conn?.open) {
+      // Give the channel one fresh round-trip before judging it dead.
+      lastPongAt = tickAt;
+    }
     if (peer.disconnected) {
       setStatus("connecting", "Connection interrupted. Reconnecting…");
       try {
@@ -1344,21 +1371,28 @@ if (typeof window !== "undefined") {
   window.addEventListener("online", () => {
     if (!room) return;
     if (status === "offline" || status === "error") openLink();
-    else if (conn?.open && pending) {
-      sendPeerMessage({
-        type: "state",
-        state: currentSave(),
-        savedAt: Math.max(savedAt + 1, dirtyAt || Date.now()),
-        device,
-      });
-    } else if (peer && !peer.destroyed && !conn?.open) retryPeerNow();
+    else if (conn?.open) {
+      probeConnection();
+      if (pending) sendPeerState();
+    } else if (peer && !peer.destroyed) retryPeerNow();
   });
   // A phone that wakes up or a tab that comes back to the front should not
   // wait out a long backoff before the link is retried.
+  const wake = () => {
+    if (!room || !peer || peer.destroyed) return;
+    if (conn?.open) {
+      // The channel may have died silently while the tab slept. Ask now and
+      // flush anything that was waiting, instead of waiting for the next tick.
+      probeConnection();
+      if (pending && currentProfile()) sendPeerState();
+    } else retryPeerNow();
+  };
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") return;
-    if (room && peer && !peer.destroyed && !conn?.open) retryPeerNow();
+    if (document.visibilityState === "visible") wake();
   });
+  window.addEventListener("focus", wake);
+  window.addEventListener("pageshow", wake);
+  document.addEventListener("resume", wake);
   window.addEventListener("offline", () => {
     if (room)
       setStatus(

@@ -2,76 +2,79 @@
 
 **Roll a number from 0 to 1,000,000. Find out what makes it special.**
 
-RNGdle Infinite is a browser game about rolling numbers, earning EP, collecting
-badges and buying upgrades. No energy meter, no daily limit, no account.
+A free browser game about rolling numbers, earning EP, collecting badges and
+buying upgrades. No energy meter, no daily limit, no account needed.
 
-**[▶ Play it](https://jaime-gaming.github.io/RNGdle-Infinite/)** — works on
-desktop and mobile.
+<p align="center">
+  <a href="https://jaime-gaming.github.io/RNGdle-Infinite/"><strong>▶ Play now</strong></a>
+  · works on desktop and mobile · saves in your browser
+</p>
 
 ![The roll screen](media/roll.png)
 
-## The basics
+---
 
-1. **Roll.** Press **GENERATE**. You get a random whole number from 0 to
+**Contents:** [How to play](#how-to-play) · [Ways to grow](#ways-to-grow) ·
+[RNGween](#rngween-october-21--november-3-2026) · [Your progress](#your-progress) ·
+[FAQ](#faq) · [Credits](#credits) · [Run it locally](#run-it-locally)
+
+## How to play
+
+1. **Roll.** Press **GENERATE** and get a random whole number from 0 to
    1,000,000.
-2. **Score.** The number earns EP from its patterns (pairs, runs, lucky sevens
-   and more). Each pattern it has is a **badge**.
+2. **Score.** The number earns EP from its patterns: pairs, runs, lucky sevens
+   and many more. Each pattern is a **badge** for your collection.
 3. **Wait.** A short reveal and a cooldown keep things paced. Upgrades make
    both shorter.
-
-Your EP is your wallet. Spend it on upgrades, companions and skills to roll
-faster and earn more.
+4. **Spend.** EP is your wallet. Buy upgrades, companions and skills to roll
+   faster and earn more.
 
 ![A finished roll with its badges](media/result.png)
 
 ## Ways to grow
 
-- **Companions.** Thirteen friends that multiply the EP you earn. Wear one at a
-  time; you can find some for free while you roll.
-- **Skills.** Charged effects that fire on your next roll: double EP, extra
-  draws, no cooldown and more. Skills never change how a number is scored.
-- **Tasks and badges.** Goals to chase and a collection to fill.
-- **Rebirth.** Start over with a permanent bonus.
-- **Prestige.** A bigger fresh start, once you have half your collection and
-  30 million EP earned in the cycle.
-- **Rollback.** Appears after three prestiges, and you can repeat it.
+|                | What it does                                                                                                                           |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Companions** | Thirteen friends that multiply the EP you earn. Wear one at a time; some can be found for free while you roll.                         |
+| **Skills**     | Charged effects that fire on your next roll: double EP, extra draws, no cooldown and more. Skills never change how a number is scored. |
+| **Tasks**      | Daily and weekly goals that pay EP.                                                                                                    |
+| **Badges**     | A collection to fill, with rarities from Common to GODLY.                                                                              |
+| **Rebirth**    | Start over with a permanent bonus.                                                                                                     |
+| **Prestige**   | A bigger fresh start, once you own half the collection and have earned 30 million EP in the cycle.                                     |
+| **Rollback**   | A secret that appears after three prestiges. It can be repeated.                                                                       |
 
 ![The skill rack](media/skills.png)
 
 ## RNGween (October 21 – November 3, 2026)
 
-A one-off Halloween event. Dates are UTC and come from the website's clock,
-not your device, so changing the phone's date does nothing.
+A one-off Halloween event. All dates are UTC and come from the website's clock,
+so changing your phone's date does nothing.
 
 - **The look.** Webs, lanterns and a dark palette, with a Halloween switch in
   the Appearance menu. It only shows on the dark theme.
 - **Limited Shop.** Trade 10,000 EP for 1 Pumpkoin (no refunds) and spend them
-  on a pumpkin companion, a seasonal skill, a World key and the four event
-  auras. Unspent coins vanish when the shop closes.
+  on a pumpkin companion, a seasonal skill, a World key or the event auras.
+  Unspent coins vanish when the shop closes.
 - **Halloween tasks (Oct 25–31).** Four goals — 200 rolls, 40 Rare+, 5,000,000
   EP and 18 task claims, all online — unlock **Jack-o'-Glow, Phantom Veil,
-  Witchfire** and **Blood Moon** for free. The other days, hourly tasks pay
+  Witchfire** and **Blood Moon** for free. On the other days, hourly tasks pay
   Pumpkoins instead: four at a time, one hour each, no skips.
-- **RNGween World.** Talk to the Reaper at the foot of the Roll page. Four zones
-  with their own badges and points, fragments that forge a key to the Valley
-  of Horrors, and a hidden **Hexbound** aura for rolling 6666. World rolls give
-  no ordinary EP, charges or task credit.
-- **What stays.** Auras you collected are yours forever, through Rebirth,
-  Prestige and Rollback. Everything else retires on November 4 and the auras
+- **RNGween World.** Talk to the Reaper at the foot of the Roll page. Four
+  haunted zones with their own badges, fragments that forge a key to the Valley
+  of Horrors, and a hidden **Hexbound** aura for rolling 6666.
+- **What stays.** The auras you collected are yours forever, through Rebirth,
+  Prestige and Rollback. Everything else retires on November 4, and the auras
   never return.
-
-Also new: a roll shows at most six numbers, each with its own aura, and the
-mobile skill rack can be folded away.
 
 ## Your progress
 
-Your save lives in your browser. To play on another device, open
-**Settings → Device link** on one device and open the link (or scan the QR code)
-on the other. Anyone with the link can play your account, so keep it private.
+Your save lives in your browser, so there is nothing to sign up for.
 
-Once two devices are linked and both are open, they stay in sync. The device
-that created the link is the main one: it runs rolls and purchases, so the two
-screens never fight over the same roll.
+**Playing on two devices.** Open **Settings → Device link** on one device and
+open the link (or scan the QR code) on the other. While both are open they stay
+in sync. The device that created the link is the main one: it runs rolls and
+purchases, so the two screens never fight over the same roll. Anyone with the
+link can play your account, so keep it private.
 
 ![The device link page](media/devices.png)
 
@@ -85,10 +88,13 @@ cooldown finish.
 **Does a companion make my rolls luckier?** No. Companions multiply the EP you
 earn. Your number and its badges stay the same.
 
-**Do offline rolls count?** They pay their EP and show in your history, but skills
-charge only while you are online.
+**Do offline rolls count?** Yes: they pay EP and show up in your history. Skills
+only charge while you are online, though.
 
-**Is this the official RNGdle?** No. It is an independent recreation. See the
+**What happens if I clear my browser data?** The save goes with it. Link a
+second device first if you want a copy.
+
+**Is this the official RNGdle?** No. It is an independent recreation; see the
 credits below.
 
 ## Credits
@@ -102,7 +108,7 @@ credits below.
 
 ## Run it locally
 
-You need Node.js and npm.
+You need Node.js 20 or newer and npm.
 
 ```sh
 npm install
@@ -115,5 +121,5 @@ To try the Halloween event outside its dates, `npm run dev:rngween` starts the
 dev server with the clock set to October 26, 2026. These previews never reach
 production.
 
-Want to know more? [`AGENTS.md`](AGENTS.md) has the project map and the
-conventions for contributors and coding agents.
+Contributing or pointing a coding agent at the repo? [`AGENTS.md`](AGENTS.md)
+has the project map, the rules of the game and the testing notes.
