@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Shirt, Check, ArrowRight } from "lucide-react";
-import { shopProducts, productById } from "../shop-data.js";
+import { auraProducts, productById } from "../shop-data.js";
 import NumberBox from "./NumberBox";
 import "../wardrobe.css";
 
@@ -18,12 +18,18 @@ const tiers = [
 // to the shop. Equipping is free and cosmetic: it spends no EP and buys nothing.
 export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
   const [previewTier, setPreviewTier] = useState("rare");
+  const [collection, setCollection] = useState("all");
   const [pending, setPending] = useState(false);
-  const auras = shopProducts.filter(
-    (item) => item.kind === "aura" && progress.owned.includes(item.id),
+  const auras = auraProducts.filter((item) => progress.owned.includes(item.id));
+  const shownAuras = auras.filter(
+    (item) =>
+      collection === "all" ||
+      (collection === "special" ? item.eventOnly : !item.eventOnly),
   );
   const equipped = progress.equipped ?? "none";
-  const total = shopProducts.filter((item) => item.kind === "aura").length;
+  const total = auraProducts.filter(
+    (item) => !item.eventOnly || progress.owned.includes(item.id),
+  ).length;
 
   async function equip(id) {
     if (pending || equipped === id) return;
@@ -72,6 +78,30 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
       </div>
       {auras.length ? (
         <>
+          <div
+            className="wardrobe-collections"
+            role="group"
+            aria-label="Aura collections"
+          >
+            {[
+              ["all", "All"],
+              ["regular", "Regular"],
+              ["special", "Limited & Special"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                aria-pressed={collection === id}
+                onClick={() => setCollection(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {collection === "special" && (
+            <h3 className="wardrobe-collection-title">
+              {shownAuras.length ? "RNGween" : "No special auras collected yet"}
+            </h3>
+          )}
           <ul className="wardrobe-grid">
             <li>
               <button
@@ -90,7 +120,7 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
                 </span>
               </button>
             </li>
-            {auras.map((item) => (
+            {shownAuras.map((item) => (
               <li key={item.id}>
                 <button
                   type="button"

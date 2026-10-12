@@ -1,5 +1,5 @@
 import { allBadgeMetadata } from "./infinite-badges.js";
-import { shopProducts } from "./shop-data.js";
+import { shopProducts, auraProducts } from "./shop-data.js";
 import { rebirthSkills } from "./skills.js";
 import { formatEP } from "./roll-data.js";
 
@@ -10,9 +10,14 @@ const badgeIds = new Set(allBadgeMetadata.map((b) => b.id));
 // optional tools are deliberately excluded from the requirement, and no
 // purchase unlocks or blocks a step.
 export const REBIRTH_OPTIONAL_KINDS = ["aura", "utility", "offline-cap"];
-export const rebirthOptionalProducts = shopProducts
-  .filter((product) => REBIRTH_OPTIONAL_KINDS.includes(product.kind))
-  .map((product) => product.id);
+export const rebirthOptionalProducts = [
+  ...new Set([
+    ...shopProducts
+      .filter((product) => REBIRTH_OPTIONAL_KINDS.includes(product.kind))
+      .map((product) => product.id),
+    ...auraProducts.map((aura) => aura.id),
+  ]),
+];
 const optional = new Set(rebirthOptionalProducts);
 
 export function rebirthRelevantPurchases(owned = []) {
@@ -77,13 +82,8 @@ export function cycleStarterEp(rebirths = 0, ultraRebirths = 0) {
   );
 }
 
-// The Rollback is the last stage of the game, and it can be taken again and
-// again. It opens after three prestiges. Each one restarts the run from zero:
-// it adds no starting sum of its own, so the new run starts with what the
-// ladder already pays, and it adds a permanent +25% that stacks with every
-// Rollback before it.
-// Prestige can be repeated three times. The third closes it for good, and the
-// Rollback — which needs those three — becomes the only way out of the ladder.
+// The final stage opens after three prestiges and is repeatable. Each
+// Rollback starts from 0 EP and adds a permanent wallet-only bonus.
 export const PRESTIGE_LIMIT = 3;
 export const ROLLBACK_AFTER_PRESTIGES = PRESTIGE_LIMIT;
 export const ROLLBACK_BONUS = 0.25;
@@ -93,6 +93,74 @@ export const ROLLBACK_STEP = { badges: 0.75, ep: 60000000 };
 
 export function rollbackMultiplier(rollbacks = 0) {
   return 1 + ROLLBACK_BONUS * Math.max(0, rollbacks);
+}
+
+// Benefits are shown where they are earned. The final stage's name remains
+// hidden until the third prestige; no purchase or score table changes here.
+export function prestigeBenefits(progress = {}) {
+  const count = Math.min(
+    PRESTIGE_LIMIT,
+    Math.max(0, progress.ultraRebirths ?? 0),
+  );
+  const next = Math.min(PRESTIGE_LIMIT, count + 1);
+  const rows = [
+    {
+      id: "wallet",
+      title: `+${Math.round(ULTRA_BONUS_PER_REBIRTH * 100)}% banked EP per Prestige`,
+      detail: `Permanent. ${count ? `Current bonus: +${Math.round(count * ULTRA_BONUS_PER_REBIRTH * 100)}%.` : "Applies to online and offline income."}`,
+    },
+    {
+      id: "starter",
+      title: "A stronger new cycle",
+      detail: `${formatEP(cycleStarterEp(progress.rebirths ?? REBIRTH_TOTAL, next))} EP to start the next Prestige cycle, before surplus.`,
+    },
+    {
+      id: "legacy",
+      title: "Prestige appearance and title",
+      detail:
+        "Gold halo and a profile title from the first Prestige. Owned auras and ladder skills stay.",
+    },
+  ];
+  if (count >= PRESTIGE_LIMIT)
+    rows.push({
+      id: "next-stage",
+      title: "Rollback unlocked",
+      detail: "The third Prestige opens the repeatable final stage.",
+    });
+  else
+    rows.push({
+      id: "next-stage",
+      title: "A further stage",
+      detail: `${PRESTIGE_LIMIT - count} Prestige${PRESTIGE_LIMIT - count === 1 ? "" : "s"} left to complete this stage.`,
+    });
+  return rows;
+}
+export function rollbackBenefits(progress = {}) {
+  const count = Math.max(0, progress.rollbacks ?? 0);
+  return [
+    {
+      id: "wallet",
+      title: `+${Math.round(ROLLBACK_BONUS * 100)}% banked EP per Rollback`,
+      detail: `Stacks without a limit. After the next one: +${Math.round((count + 1) * ROLLBACK_BONUS * 100)}%.`,
+    },
+    {
+      id: "repeat",
+      title: "Repeatable",
+      detail: "Meet the gate again each cycle. There is no final-use limit.",
+    },
+    {
+      id: "keeps",
+      title: "Keeps permanent progress",
+      detail:
+        "Rebirth/Prestige bonuses, ladder skills, owned auras and account history stay.",
+    },
+    {
+      id: "reset",
+      title: "Starts at 0 EP",
+      detail:
+        "No starting grant or surplus EP transfer. Surplus can still add a permanent banked-EP bonus.",
+    },
+  ];
 }
 
 // The gate is a floor, not a ceiling. Badges set the pace of the ladder

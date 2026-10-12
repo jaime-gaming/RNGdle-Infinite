@@ -120,8 +120,17 @@ export default function ActivityFeed({
               e.type === "roll" &&
               bookmarks.includes(e.id)) ||
             (filter === "Badge unlocks" && e.type === "unlock") ||
-            (filter === "Shop" && ["purchase", "equip"].includes(e.type)) ||
-            (filter === "Tasks" && e.type === "task"),
+            (filter === "Shop" &&
+              [
+                "purchase",
+                "equip",
+                "rngween-exchange",
+                "rngween-purchase",
+                "rngween-world-purchase",
+                "rngween-forged-key",
+              ].includes(e.type)) ||
+            (filter === "Tasks" &&
+              ["task", "rngween-mission", "rngween-hourly"].includes(e.type)),
         )
         .filter(
           (e) =>
@@ -498,7 +507,12 @@ export default function ActivityFeed({
                     <Coins size={19} />
                   ) : event.type === "unlock" ? (
                     <Medal size={19} />
-                  ) : event.type === "purchase" ? (
+                  ) : [
+                      "purchase",
+                      "rngween-exchange",
+                      "rngween-purchase",
+                      "rngween-world-purchase",
+                    ].includes(event.type) ? (
                     <ShoppingBag size={19} />
                   ) : event.type === "pet" ? (
                     <PawPrint size={19} />
@@ -507,7 +521,9 @@ export default function ActivityFeed({
                   ) : event.type === "ultra-rebirth" ||
                     event.type === "rollback" ? (
                     <InfinityIcon size={19} />
-                  ) : event.type === "task" ? (
+                  ) : ["task", "rngween-mission", "rngween-hourly"].includes(
+                      event.type,
+                    ) ? (
                     <ListChecks size={19} />
                   ) : (
                     <Check size={19} />
@@ -524,19 +540,31 @@ export default function ActivityFeed({
                             : "Roll completed"
                         : event.type === "unlock"
                           ? `${event.badges.length} new badge${event.badges.length === 1 ? "" : "s"} unlocked`
-                          : event.type === "purchase"
+                          : [
+                                "purchase",
+                                "rngween-purchase",
+                                "rngween-world-purchase",
+                              ].includes(event.type)
                             ? `Purchased ${event.name}`
-                            : event.type === "pet"
-                              ? `Found ${event.name} on a roll`
-                              : event.type === "rebirth"
-                                ? `Rebirth ${event.count}`
-                                : event.type === "ultra-rebirth"
-                                  ? `Prestige ${event.count}`
-                                  : event.type === "rollback"
-                                    ? "Rollback"
-                                    : event.type === "task"
-                                      ? `Task claimed · ${event.name}`
-                                      : `Equipped ${event.name}`}
+                            : event.type === "rngween-forged-key"
+                              ? "Forged Valley Challenge Key"
+                              : event.type === "rngween-exchange"
+                                ? `Exchanged EP for ${count(event.pumpkoins)} Pumpkoins`
+                                : event.type === "pet"
+                                  ? `Found ${event.name} on a roll`
+                                  : event.type === "rebirth"
+                                    ? `Rebirth ${event.count}`
+                                    : event.type === "ultra-rebirth"
+                                      ? `Prestige ${event.count}`
+                                      : event.type === "rollback"
+                                        ? "Rollback"
+                                        : [
+                                              "task",
+                                              "rngween-mission",
+                                              "rngween-hourly",
+                                            ].includes(event.type)
+                                          ? `Task claimed · ${event.name}`
+                                          : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString(undefined, {
@@ -695,6 +723,38 @@ export default function ActivityFeed({
                         <>
                           <strong>−{formatEP(event.ep)} EP</strong> · Kept until
                           your next rebirth
+                        </>
+                      ) : event.type === "rngween-exchange" ? (
+                        <>
+                          <strong>−{formatEP(event.ep)} EP</strong> · +
+                          {count(event.pumpkoins)} Pumpkoins · one-way exchange
+                        </>
+                      ) : event.type === "rngween-hourly" ? (
+                        <div className="activity-summary">
+                          {event.name} · +{event.pumpkoins} Pumpkoins · hourly
+                          commission
+                        </div>
+                      ) : event.type === "rngween-mission" ? (
+                        <>
+                          <strong>+{count(event.pumpkoins)} Pumpkoins</strong> ·
+                          Halloween mission reward · aura kept forever
+                        </>
+                      ) : event.type === "rngween-forged-key" ? (
+                        <>
+                          Two distinct World fragments · Free · never consumed
+                          on entry
+                        </>
+                      ) : [
+                          "rngween-purchase",
+                          "rngween-world-purchase",
+                        ].includes(event.type) ? (
+                        <>
+                          <strong>−{count(event.pumpkoins)} Pumpkoins</strong> ·{" "}
+                          {event.productId === "pumpkin-familiar" ||
+                          event.productId === "midnight-harvest" ||
+                          event.productId === "rngween-world-key"
+                            ? "Expires after November 3 (UTC)"
+                            : "Permanent aura"}
                         </>
                       ) : (
                         <>Free equipment change · No EP spent</>

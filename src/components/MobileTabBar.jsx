@@ -21,7 +21,6 @@ export default function MobileTabBar({
   rebirthVisible,
   rebirthReady,
   tasksReady,
-  tasksGlitchActive = false,
   navigate,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -85,7 +84,7 @@ export default function MobileTabBar({
       <button
         key={id}
         type="button"
-        className={`${page === id ? "active" : ""} ${ready ? "is-ready" : ""} ${id === "tasks" ? "tasks-nav-glitch" : ""}`}
+        className={`${page === id ? "active" : ""} ${ready ? "is-ready" : ""}`}
         aria-current={page === id ? "page" : undefined}
         aria-label={ready ? `${label}, ready` : undefined}
         onClick={go}
@@ -94,11 +93,7 @@ export default function MobileTabBar({
           <Icon size={20} />
           {ready && <i className="mobile-tabbar-dot" />}
         </span>
-        <span
-          className={`mobile-tabbar-label ${id === "tasks" ? `tasks-nav-glitch-label${tasksGlitchActive ? " is-glitching" : ""}` : ""}`}
-        >
-          {label}
-        </span>
+        <span className="mobile-tabbar-label">{label}</span>
       </button>
     );
   }

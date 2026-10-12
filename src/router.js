@@ -3,6 +3,7 @@
 // route is resolved against the build-time base rather than the domain root.
 export const PAGES = [
   "roll",
+  "rngween-world",
   "tasks",
   "shop",
   "badges",
@@ -71,8 +72,11 @@ export function familyFromLocation(location, base, shelf = "auras") {
   let path = String(location.pathname || "/");
   if (prefix && path.toLowerCase().startsWith(prefix.toLowerCase()))
     path = path.slice(prefix.length);
-  const [page = "", sub = "", family = ""] = path.split("/").filter(Boolean);
+  const [page = "", sub = "", group = "", nested = ""] = path
+    .split("/")
+    .filter(Boolean);
   if (page !== validPage("shop") || sub.toLowerCase() !== shelf) return "";
+  const family = group === "special" && nested ? nested : group;
   return family.toLowerCase().replace(/[^a-z0-9-]/g, "");
 }
 
@@ -83,7 +87,13 @@ export function pathForShelfFamily(page, shelf, family, base) {
     String(value || "")
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "");
-  const parts = [clean(shelf), clean(family)].filter(Boolean);
+  const familyId = clean(family);
+  const parts = [
+    clean(shelf),
+    ...(clean(shelf) === "auras" && familyId === "rngween"
+      ? ["special", familyId]
+      : [familyId]),
+  ].filter(Boolean);
   return `${prefix}/${name}${parts.length ? `/${parts.join("/")}` : ""}`.replace(
     /\/{2,}/g,
     "/",
@@ -94,7 +104,10 @@ export function pathForPage(page, base) {
   const prefix = basePath(base);
   const name = validPage(page);
   // basePath("/") is "", so the home route must not collapse into "//".
-  return `${prefix}/${name === HOME ? "" : name}`.replace(/\/{2,}/g, "/");
+  return `${prefix}/${name === HOME ? "" : name}${name === "rngween-world" ? "/" : ""}`.replace(
+    /\/{2,}/g,
+    "/",
+  );
 }
 
 // True when the address bar already points at this page, so history is not

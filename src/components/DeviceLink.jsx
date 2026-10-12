@@ -294,6 +294,8 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
           empty: "Paste an account code first.",
           guest: "That code carries a guest save, which is not worth adopting.",
           unreadable: "That code could not be read. Copy it again, whole.",
+          storage:
+            "This browser could not save the linked profile. Free some browser storage and try again.",
         }[result.reason] ?? "That code could not be read.",
     });
   }

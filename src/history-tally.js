@@ -137,6 +137,8 @@ export function tallyEntries(entries = []) {
           badges.add(id);
           discovered.add(id);
         }
+    } else if (entry.type === "rngween-exchange") {
+      tally.spent += entry.ep ?? 0;
     } else if (entry.type === "purchase") {
       tally.spent += entry.ep ?? 0;
       if (petById.has(entry.productId)) pets.add(entry.productId);

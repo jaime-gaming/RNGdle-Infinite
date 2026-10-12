@@ -232,6 +232,7 @@ test("the changelog lists every release and flags an unseen version", () => {
   // v0.3 was the shop wave, and v0.4 carries the rebirth rework together with
   // the shelves it regrouped afterwards.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.5.1",
     "v0.5",
     "v0.4.1",
     "v0.4",
@@ -239,7 +240,7 @@ test("the changelog lists every release and flags an unseen version", () => {
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.5");
+  expect(LATEST_VERSION).toBe("v0.5.1");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
@@ -304,7 +305,7 @@ test("the changelog reads like release notes, not like a chat log", () => {
       expect(line.length).toBeLessThanOrEqual(140);
       // House style: a line opens lowercase unless it opens with a name or a
       // figure ("13 companions…", "RNGdle Infinite is live…").
-      expect(line).toMatch(/^([a-z0-9]|RNGdle |Auto-Roll )/);
+      expect(line).toMatch(/^([a-z0-9]|RNGdle |RNGween |Auto-Roll )/);
       expect(line.trim().endsWith(".")).toBe(true);
       // No placeholder chat register anywhere in the notes.
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);

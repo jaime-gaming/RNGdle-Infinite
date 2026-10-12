@@ -26,12 +26,6 @@ import {
 import { cycleEarnedEp, rebirthRequirement } from "../src/rebirth.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
-import {
-  TASKS_GLITCH_MAX_INTERVAL_MS,
-  TASKS_GLITCH_MIN_INTERVAL_MS,
-  tasksGlitchDelay,
-} from "../src/tasks-glitch.js";
-
 const DAY = 24 * 60 * 60 * 1000;
 const at = (y, m, d, h = 12, min = 0) =>
   new Date(y, m - 1, d, h, min).getTime();
@@ -302,9 +296,9 @@ test("the header marks a ready task until it is claimed", async ({ page }) => {
     tasks: readyOneTask("daily", time, id),
   });
   await page.goto("/");
-  const tasksButton = page.locator(
-    'nav[aria-label="Main navigation"] button.tasks-nav-glitch',
-  );
+  const tasksButton = page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Tasks" });
   await expect(tasksButton).toHaveAccessibleName("Tasks, ready to claim");
   await tasksButton.click();
   const task = taskById(id);
@@ -544,62 +538,28 @@ test("the Tasks page fits a narrow phone without sideways scrolling", async ({
   ).toBe(true);
 });
 
-test("the Tasks glitch happens once every random 5–20 seconds and never overlaps", async ({
+test("Tasks labels stay stable on desktop and mobile without the retired glitch", async ({
   page,
 }) => {
   await page.clock.pauseAt(new Date(Date.now() + 1000));
-  await page.addInitScript(() => {
-    Math.random = () => 0;
-  });
   await page.goto("/");
-  const desktopNav = page.locator('nav[aria-label="Main navigation"]');
-  const desktopLabel = desktopNav.locator(
-    "button.tasks-nav-glitch .tasks-nav-glitch-label",
-  );
-  await expect(desktopLabel).toHaveText("Tasks");
-  await expect(desktopLabel).not.toHaveClass(/is-glitching/);
+  const desktop = page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Tasks", exact: true });
+  await expect(desktop.locator("span")).toHaveText("Tasks");
+  await page.clock.runFor(60000);
+  await expect(desktop.locator("span")).toHaveCSS("animation-name", "none");
   await expect(
-    desktopNav.locator("button:not(.tasks-nav-glitch) .tasks-nav-glitch-label"),
+    page.locator(".tasks-nav-glitch, .tasks-nav-glitch-label, .is-glitching"),
   ).toHaveCount(0);
-
-  await page.clock.runFor(TASKS_GLITCH_MIN_INTERVAL_MS - 1);
-  await expect(desktopLabel).not.toHaveClass(/is-glitching/);
-  await page.clock.runFor(1);
-  await expect(desktopLabel).toHaveClass(/is-glitching/);
-  await expect(desktopLabel).toHaveCSS("animation-duration", "0.42s");
-  await page.clock.runFor(419);
-  await expect(desktopLabel).toHaveClass(/is-glitching/);
-  await page.clock.runFor(1);
-  await expect(desktopLabel).not.toHaveClass(/is-glitching/);
-
-  // The next wait starts after that burst finishes, so there is no overlap.
-  await page.clock.runFor(TASKS_GLITCH_MIN_INTERVAL_MS - 1);
-  await expect(desktopLabel).not.toHaveClass(/is-glitching/);
-  await page.clock.runFor(1);
-  await expect(desktopLabel).toHaveClass(/is-glitching/);
-
   await page.setViewportSize({ width: 360, height: 800 });
-  const mobileNav = page.locator("nav.mobile-tabbar");
-  await expect(mobileNav).toBeVisible();
-  await expect(
-    mobileNav.locator("button.tasks-nav-glitch .tasks-nav-glitch-label"),
-  ).toHaveClass(/is-glitching/);
-  await expect(
-    mobileNav.locator("button:not(.tasks-nav-glitch) .tasks-nav-glitch-label"),
-  ).toHaveCount(0);
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(mobileNav.locator(".tasks-nav-glitch-label")).toHaveCSS(
+  const mobile = page
+    .getByRole("navigation", { name: "Mobile navigation" })
+    .getByRole("button", { name: "Tasks", exact: true });
+  await expect(mobile).toBeVisible();
+  await expect(mobile.locator(".mobile-tabbar-label")).toHaveText("Tasks");
+  await expect(mobile.locator(".mobile-tabbar-label")).toHaveCSS(
     "animation-name",
     "none",
   );
-});
-
-test("Tasks glitch intervals are inclusive and always stay between five and twenty seconds", () => {
-  expect(tasksGlitchDelay(0)).toBe(TASKS_GLITCH_MIN_INTERVAL_MS);
-  expect(tasksGlitchDelay(1)).toBe(TASKS_GLITCH_MAX_INTERVAL_MS);
-  for (const sample of [0, 0.1, 0.5, 0.9, 0.999999]) {
-    const delay = tasksGlitchDelay(sample);
-    expect(delay).toBeGreaterThanOrEqual(TASKS_GLITCH_MIN_INTERVAL_MS);
-    expect(delay).toBeLessThanOrEqual(TASKS_GLITCH_MAX_INTERVAL_MS);
-  }
 });

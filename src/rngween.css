@@ -1,0 +1,686 @@
+/* CLEANUP after Nov 3, 2026 ends (Nov 4 00:00 UTC): remove the seasonal
+   tokens/decorations. Keep mission/owned-collection CSS until their own cleanup.
+   Seasonal tokens are an overlay: removing data-season restores the player's
+   theme. Rarity palettes and game mechanics are deliberately untouched. */
+:root[data-season="rngween"] {
+  --rngween-orange: #a14616;
+  --rngween-purple: #7851a0;
+}
+/* Keep the negative decoration layer above the page canvas in every browser. */
+:root[data-season="rngween"] #root {
+  isolation: isolate;
+}
+:root[data-season="rngween"][data-theme="dark"] {
+  --bg: #17121e;
+  --surface: #211a2a;
+  --text: #f7eee5;
+  --muted: #b3a0b5;
+  --secondary: #c7b6cc;
+  --border: #3c2e42;
+  --hover: #302438;
+  --green: #ffb477;
+  --green-bg: #382619;
+  --button: #f7eee5;
+  --rngween-orange: #ffb477;
+  --rngween-purple: #c4a2ef;
+  --shadow: 0 4px 24px #0002;
+}
+
+/* Winning draw panels keep their semantic green, not the seasonal accent. */
+:root[data-season="rngween"] .draw-panel.is-winner {
+  --green: #2f6b57;
+}
+:root[data-season="rngween"][data-theme="dark"] .draw-panel.is-winner {
+  --green: #89c4a8;
+}
+
+.rngween-decor {
+  position: fixed;
+  inset: 79px 0 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--rngween-purple);
+  z-index: -1;
+}
+.rngween-web {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: clamp(60px, 8vw, 110px);
+  opacity: 0.4;
+  stroke-width: 0.75;
+}
+.rngween-pumpkin {
+  position: absolute;
+  top: 76px;
+  left: 2%;
+  opacity: 0.5;
+  color: var(--rngween-orange);
+}
+.rngween-bat {
+  position: absolute;
+  top: 88px;
+  right: 5%;
+  opacity: 0.4;
+  transform: rotate(-14deg);
+  animation: rngween-drift 8s ease-in-out infinite alternate;
+}
+.rngween-ghost {
+  position: absolute;
+  top: 167px;
+  right: 1%;
+  opacity: 0.35;
+  animation: rngween-drift 6s ease-in-out infinite alternate-reverse;
+}
+.rngween-eyebrow {
+  display: block;
+  color: var(--secondary);
+  font: 600 9px/1.6 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rngween-event {
+  margin-bottom: 30px;
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--rngween-purple, #7851a0) 5%, var(--surface)),
+    var(--surface) 45%,
+    color-mix(in srgb, var(--rngween-orange, #a14616) 4%, var(--surface))
+  );
+  box-shadow: var(--shadow);
+}
+.rngween-event-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.rngween-event-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--green-bg);
+  color: var(--green);
+}
+.rngween-event-head h2 {
+  margin: 4px 0;
+  font:
+    700 32px/1.15 Georgia,
+    serif;
+  letter-spacing: -0.02em;
+}
+.rngween-event-head p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 12px;
+}
+.rngween-live {
+  margin-left: auto;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--green) 30%, var(--border));
+  border-radius: 999px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 650;
+}
+.rngween-event-intro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 17px 0;
+}
+.rngween-event-intro p {
+  flex: 1 1 400px;
+  margin: 0;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.rngween-event-intro button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.rngween-event-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 14px;
+  margin-bottom: 20px;
+  font-size: 11px;
+  color: var(--secondary);
+}
+.rngween-event-progress strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+.rngween-event-progress > span:last-of-type {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+}
+.rngween-event progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--hover);
+  accent-color: var(--green);
+}
+.rngween-event-progress progress {
+  grid-column: 1 / -1;
+}
+.rngween-event progress::-webkit-progress-bar {
+  background: var(--hover);
+}
+.rngween-event progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--green);
+}
+.rngween-event progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--green);
+}
+.rngween-missions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rngween-mission {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+}
+.rngween-mission[data-state="claimable"],
+.rngween-mission[data-state="collected"] {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+}
+.rngween-mission-top {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px;
+  font: 500 9px/1.5 var(--font-mono);
+  color: var(--muted);
+}
+.rngween-mission[data-state="claimable"] .rngween-mission-top > span:last-child,
+.rngween-mission[data-state="collected"]
+  .rngween-mission-top
+  > span:last-child {
+  color: var(--green);
+}
+.rngween-mission-preview {
+  display: grid;
+  place-items: center;
+  min-height: 156px;
+  margin: 16px 0;
+  overflow: hidden;
+  border-radius: 8px;
+  background:
+    radial-gradient(
+      ellipse at 50% 85%,
+      color-mix(in srgb, var(--treat-a) 17%, transparent),
+      transparent 75%
+    ),
+    color-mix(in srgb, var(--treat-b) 5%, var(--surface));
+}
+.rngween-mission-preview .number-box {
+  padding: 12px 16px;
+  --box-font: 20px !important;
+}
+.rngween-mission h3 {
+  margin: 0 0 5px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+}
+.rngween-mission > p {
+  flex: 1;
+  margin: 0 0 14px;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.rngween-mission-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--secondary);
+  font: 500 10px/1.5 var(--font-mono);
+}
+.rngween-mission-reward {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--green);
+  font-size: 11px;
+}
+.rngween-mission-reward strong {
+  color: var(--text);
+}
+.rngween-mission-reward > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+.rngween-mission > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  font-size: 11px;
+}
+.rngween-mission > button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+.rngween-event-note {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+.shop-card.is-event-aura .shop-source {
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.aura-family-banner[data-family="rngween"] .aura-family-count {
+  color: var(--green);
+}
+@keyframes rngween-drift {
+  to {
+    transform: translateY(-8px) rotate(4deg);
+  }
+}
+@media (max-width: 760px) {
+  .rngween-decor {
+    top: 58px;
+  }
+  .rngween-event-head {
+    gap: 10px;
+  }
+  .rngween-event-head .rngween-eyebrow {
+    max-width: 220px;
+  }
+  .rngween-live {
+    margin-left: 0;
+  }
+}
+@media (max-width: 540px) {
+  .rngween-missions {
+    grid-template-columns: 1fr;
+  }
+  .rngween-event-progress {
+    gap: 8px;
+  }
+  .rngween-event-head .rngween-eyebrow {
+    font-size: 8px;
+    max-width: 175px;
+  }
+  .rngween-event-head h2 {
+    font-size: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rngween-bat,
+  .rngween-ghost {
+    animation: none;
+  }
+}
+.rngween-decor.is-reduced-motion .rngween-bat,
+.rngween-decor.is-reduced-motion .rngween-ghost {
+  animation: none;
+}
+
+/* Temporary atmosphere and harmless secrets. CLEANUP Nov 4, 2026. */
+.rngween-web-right {
+  right: 0;
+  left: auto;
+  transform: scaleX(-1);
+}
+.rngween-spider {
+  position: absolute;
+  top: 0;
+  left: 5%;
+  width: 24px;
+  height: 110px;
+  opacity: 0.55;
+  stroke-width: 1;
+  transform-origin: top;
+  animation: rngween-spider-sway 9s ease-in-out infinite alternate;
+}
+.rngween-pumpkin-small {
+  top: 105px;
+  left: 5.4%;
+  transform: rotate(12deg);
+  opacity: 0.4;
+}
+.rngween-pumpkin-low {
+  top: auto;
+  bottom: 23px;
+  right: 9%;
+  left: auto;
+  opacity: 0.45;
+}
+.rngween-moon {
+  position: absolute;
+  top: 14px;
+  right: 4.3%;
+  opacity: 0.5;
+  color: var(--rngween-orange);
+  filter: drop-shadow(0 0 15px #ff994422);
+}
+.rngween-bat-second {
+  top: 122px;
+  right: 2%;
+  animation-delay: -3s;
+  opacity: 0.45;
+}
+.rngween-bat-third {
+  top: 79px;
+  right: 9.5%;
+  animation-delay: -5s;
+  opacity: 0.35;
+}
+.rngween-ghost-low {
+  top: auto;
+  right: auto;
+  left: 1.5%;
+  bottom: 160px;
+  opacity: 0.3;
+}
+.rngween-mist {
+  position: absolute;
+  inset: auto -15% 0;
+  height: 150px;
+  background:
+    radial-gradient(ellipse at 12% 110%, #ad87ca1c, transparent 45%),
+    radial-gradient(ellipse at 87% 120%, #dd8c4819, transparent 45%);
+}
+.rngween-candle {
+  position: absolute;
+  bottom: 27px;
+  width: 14px;
+  height: 54px;
+  color: var(--rngween-orange);
+  opacity: 0.6;
+}
+.rngween-candle-left {
+  left: 3%;
+}
+.rngween-candle-right {
+  right: 2%;
+  height: 39px;
+}
+.rngween-wax {
+  position: absolute;
+  inset: 16px 0 0;
+  border: 1px solid currentColor;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(90deg, #d8904030, #f9d8ab22);
+}
+.rngween-wax::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: -1px;
+  width: 4px;
+  height: 12px;
+  border-radius: 0 0 6px 6px;
+  background: var(--rngween-orange);
+  opacity: 0.4;
+}
+.rngween-flame {
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 9px;
+  height: 15px;
+  border-radius: 60% 40% 55% 45%;
+  background: linear-gradient(#f6bb67, #db732c);
+  box-shadow: 0 0 14px 4px #ef994b25;
+  transform: rotate(8deg);
+  animation: rngween-candle-glow 5s ease-in-out infinite alternate;
+}
+.rngween-candy {
+  position: absolute;
+  width: 15px;
+  height: 19px;
+  border-radius: 3px;
+  background: linear-gradient(#eedfbd 26%, #f2a858 26% 65%, #ad6834 65%);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  opacity: 0.5;
+}
+.rngween-candy-left {
+  left: 8%;
+  bottom: 98px;
+  transform: rotate(-17deg);
+}
+.rngween-candy-right {
+  right: 4%;
+  bottom: 139px;
+  transform: rotate(16deg);
+}
+.rngween-spark {
+  position: absolute;
+  width: 5px;
+  height: 9px;
+  background: var(--rngween-orange);
+  clip-path: polygon(
+    50% 0,
+    65% 40%,
+    100% 50%,
+    65% 60%,
+    50% 100%,
+    35% 60%,
+    0 50%,
+    35% 40%
+  );
+  opacity: 0.35;
+}
+.rngween-spark-0 {
+  left: 8%;
+  top: 26%;
+}
+.rngween-spark-1 {
+  right: 8%;
+  top: 35%;
+}
+.rngween-spark-2 {
+  left: 3%;
+  bottom: 23%;
+}
+.rngween-spark-3 {
+  right: 3%;
+  bottom: 35%;
+}
+.rngween-spark-4 {
+  left: 9%;
+  bottom: 9%;
+}
+.rngween-spark-5 {
+  right: 11%;
+  top: 8%;
+}
+.rngween-curios {
+  position: fixed;
+  inset: auto 0 118px;
+  height: 42px;
+  pointer-events: none;
+  z-index: -1;
+}
+.rngween-curio {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: var(--rngween-orange);
+  opacity: 0.6;
+  pointer-events: auto;
+  transition:
+    opacity 0.2s,
+    background 0.2s;
+}
+.rngween-curio:hover,
+.rngween-curio:focus-visible,
+.rngween-curio[aria-pressed="true"] {
+  opacity: 1;
+  background: color-mix(in srgb, var(--rngween-orange) 9%, transparent);
+}
+.rngween-curio-lantern {
+  left: 1.5%;
+}
+.rngween-curio-moon {
+  right: 1.5%;
+}
+.rngween-curio[aria-pressed="true"] {
+  filter: drop-shadow(0 0 8px #ff99444d);
+}
+.rngween-secret-reveal {
+  position: fixed;
+  inset: 100px 0 auto;
+  height: 180px;
+  pointer-events: none;
+  z-index: -1;
+  color: var(--rngween-purple);
+}
+.rngween-secret-reveal[data-secret="lantern"] {
+  color: var(--rngween-orange);
+}
+.rngween-secret-sprite {
+  position: absolute;
+  top: calc(12px + var(--sprite) * 16px);
+  left: calc(6% + var(--sprite) * 20%);
+  opacity: 0.6;
+  animation: rngween-secret-arrival 4.8s ease-in-out both;
+  animation-delay: calc(var(--sprite) * 70ms);
+}
+@keyframes rngween-secret-arrival {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.8);
+  }
+  15%,
+  75% {
+    opacity: 0.7;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes rngween-spider-sway {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+@keyframes rngween-candle-glow {
+  from {
+    opacity: 0.65;
+    transform: rotate(8deg) scaleY(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-6deg) scaleY(1);
+  }
+}
+@media (max-width: 760px) {
+  .rngween-decor {
+    bottom: 68px;
+  }
+  .rngween-curios {
+    bottom: 110px;
+  }
+  .rngween-web {
+    width: 66px;
+  }
+  .rngween-moon {
+    width: 39px;
+    height: 39px;
+  }
+  .rngween-spider {
+    left: 2%;
+    width: 16px;
+    height: 85px;
+  }
+  .rngween-pumpkin-small {
+    left: 8%;
+  }
+  .rngween-candle {
+    bottom: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rngween-decor *,
+  .rngween-secret-reveal * {
+    animation: none !important;
+  }
+}
+.rngween-decor.is-reduced-motion *,
+.rngween-secret-reveal.is-reduced-motion * {
+  animation: none !important;
+}
+
+/* All seasonal artwork sits in the root's background stacking layer, even
+   harmless secret reveals. Content cards and the footer always paint above it. */
+:root[data-season="rngween"] #root > main,
+:root[data-season="rngween"] #root > footer {
+  position: relative;
+  z-index: 0;
+}
+:root[data-season="rngween"] #root > footer {
+  background: var(--bg);
+}
+.rngween-secret-sprite {
+  left: auto;
+  right: calc(8px + (var(--sprite) * 12px));
+}
+.rngween-secret-sprite:nth-child(odd) {
+  left: calc(8px + (var(--sprite) * 12px));
+  right: auto;
+}
+
+/* Transparent layout wrappers must not intercept a click in an empty gutter.
+   Actual roll panels, rack controls and links retain their normal hit targets. */
+:root[data-season="rngween"] .home-main,
+:root[data-season="rngween"] .home-main .roll-view,
+:root[data-season="rngween"] .home-main .roll-experience {
+  pointer-events: none;
+}
+:root[data-season="rngween"] .home-main > :not(.roll-view),
+:root[data-season="rngween"]
+  .roll-experience
+  > :not([aria-hidden="true"]):not(.pet-parade):not(.pet-arrival) {
+  pointer-events: auto;
+}

@@ -2,13 +2,22 @@
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [
   {
+    version: "v0.5.1",
+    title: "RNGween update",
+    body: [
+      "RNGween & Limited Shop, Oct 21–Nov 3 UTC; clearer multi-roll auras and a foldable mobile rack.",
+      "aura trials, October 25–31, 2026; 50 hourly Pumpkoin tasks before/after, four at once, no skips. Auras never return.",
+      "four World phases, 39 event badges and Reaper conversations. Auras keep their original missions; Valley 6666 earns Hexbound.",
+    ],
+  },
+  {
     version: "v0.5",
-    title: "tasks, the R4ND0MN3S5 event and a larger activity history",
+    title: "tasks and a larger activity history",
     body: [
       "daily lists deal 3 tasks and weekly lists 4; tasks are claimed individually. Skips cost 125,000 EP: one daily, up to three in five days.",
-      "the R4ND0MN3S5 missions unlock four free auras to collect on Tasks; Shop prices are premium during the event, then drop to regular.",
+      "four random-by-nature cosmetics join the permanent aura catalogue: static, binary rain, scrambled digits and hex fragments.",
       "all owned auras, including the equipped look, stay through Rebirth; other run purchases reset as before.",
-      "shop, Tasks and Badges lead navigation; Tasks gets one short glitch at random, while Rebirth hints at more beyond the final rung.",
+      "shop, Tasks and Badges lead navigation, while Rebirth hints at more beyond the final rung.",
       "the first six companion prices rose, the upper seven fell, making early boosts pricier and late tiers easier to reach.",
       "history holds 6,000 entries, warns at 4,500, and removed rolls still count in your profile; bulk delete preserves bookmarks.",
       "share and bookmark actions are icon-only; a roll cannot be credited twice after its history entry is removed.",

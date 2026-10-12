@@ -41,7 +41,9 @@ export default function PetShelf({
   const busy = useRef(false);
   const uncageTimer = useRef(null);
   const slideshow = useRef(null);
-  const owned = progress.pets ?? [];
+  const owned = (progress.pets ?? []).filter((id) =>
+    PETS.some((pet) => pet.id === id),
+  );
   const active = progress.activePet ?? "none";
   // The tracked goal, when it is a companion still unfound. A product goal is
   // the shop's own banner's business, so it reads as no goal here.

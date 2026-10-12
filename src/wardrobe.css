@@ -131,3 +131,29 @@
     grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   }
 }
+.wardrobe-collections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 15px;
+}
+.wardrobe-collections button {
+  padding: 7px 11px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.wardrobe-collections button[aria-pressed="true"] {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-bg);
+}
+.wardrobe-collection-title {
+  font-size: 12px;
+  margin: 0 0 12px;
+  color: var(--secondary);
+}

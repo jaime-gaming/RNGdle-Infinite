@@ -87,6 +87,9 @@ button.number-box.number-box:hover {
 }
 .number-box .box-cosmetic {
   position: absolute;
+  /* A local layer keeps crests/particles below the ink, even when they have
+     their own z-index. Without it a crest could climb above the number. */
+  z-index: 0;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
@@ -1660,4 +1663,27 @@ button.number-box.number-box:hover {
   50% {
     opacity: 0.15;
   }
+}
+
+/* Multi-roll panels have no spare ornament margin. Give each draw its own
+   clipped scene, not a full-size aura that can cross labels or neighbouring
+   numbers. The main result/detail and shop previews keep the full artwork. */
+.number-box[data-aura-layout="contained"] .box-cosmetic,
+.number-box[data-aura-layout="contained"] .godly-particles {
+  overflow: hidden;
+  contain: paint;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.number-box[data-aura-layout="contained"]
+  :is(.box-halo, .box-ribbon, .box-ornament, .aura-trace) {
+  inset: 0;
+}
+.number-box[data-aura-layout="contained"] .box-particles i {
+  width: 4px !important;
+  height: 4px !important;
+  opacity: 0.45;
+}
+.number-box[data-aura-layout="contained"] .box-ornament {
+  opacity: 0.5;
 }

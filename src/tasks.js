@@ -1,3 +1,5 @@
+import { emptyRngween, parseRngween, recordRngweenTally } from "./rngween.js";
+
 // Tasks: small daily and weekly goals that pay EP once per reset.
 //
 // Progress is kept on the save rather than read back from the activity log, so
@@ -51,47 +53,6 @@ export const SKIP_WINDOW_LIMIT = 3;
 export const SKIP_HOLD_LIMIT = 3;
 // The bonus for claiming every task on a list in one period.
 export const LIST_BONUS = { daily: 100000, weekly: 500000 };
-
-// The limited R4ND0MN3S5 transmission keeps its mission progress in the save,
-// independent of Daily and Weekly resets. Its matching auras are claimed by the
-// player and remain part of the collection across rebirths.
-export const AURA_EVENT_ID = "randomness-signal-2026";
-export const AURA_EVENT_START_AT = new Date(2026, 9, 11, 0, 0, 0, 0).getTime();
-export const AURA_EVENT_END_AT = new Date(2026, 9, 26, 0, 0, 0, 0).getTime();
-export const AURA_EVENT_MISSIONS = [
-  {
-    id: "static",
-    auraId: "static",
-    title: "Roll 20 numbers",
-    detail: "Complete online rolls while the event is live.",
-    metric: "rolls",
-    goal: 20,
-  },
-  {
-    id: "bitstorm",
-    auraId: "bitstorm",
-    title: "Roll 5 Rare or better",
-    detail: "Rare, Epic, Anomaly, Mythic and GODLY results count.",
-    metric: "rare",
-    goal: 5,
-  },
-  {
-    id: "scramble",
-    auraId: "scramble",
-    title: "Bank 400,000 EP",
-    detail: "EP from online rolls counts toward this goal.",
-    metric: "banked",
-    goal: 400000,
-  },
-  {
-    id: "hexdump",
-    auraId: "hexdump",
-    title: "Claim 6 tasks",
-    detail: "Daily and weekly task rewards both count.",
-    metric: "taskClaims",
-    goal: 6,
-  },
-];
 
 export const TASKS = [
   // ---- Daily: nineteen tasks, three on the list each day -----------------
@@ -513,133 +474,6 @@ function emptySkip() {
   return { tokens: 0, bought: [] };
 }
 
-const AURA_EVENT_METRICS = [
-  ...new Set(AURA_EVENT_MISSIONS.map((mission) => mission.metric)),
-];
-const AURA_EVENT_LIMITS = Object.fromEntries(
-  AURA_EVENT_METRICS.map((metric) => [
-    metric,
-    Math.max(
-      ...AURA_EVENT_MISSIONS.filter((mission) => mission.metric === metric).map(
-        (mission) => mission.goal,
-      ),
-    ),
-  ]),
-);
-const AURA_EVENT_MISSION_IDS = new Set(
-  AURA_EVENT_MISSIONS.map((mission) => mission.id),
-);
-
-function emptyAuraEvent() {
-  return {
-    id: AURA_EVENT_ID,
-    counts: Object.fromEntries(AURA_EVENT_METRICS.map((metric) => [metric, 0])),
-    earned: [],
-  };
-}
-
-function auraEventSlot(tasks) {
-  const stored = tasks?.event;
-  const counts = Object.fromEntries(
-    AURA_EVENT_METRICS.map((metric) => [
-      metric,
-      validAmount(stored?.counts?.[metric])
-        ? Math.min(stored.counts[metric], AURA_EVENT_LIMITS[metric])
-        : 0,
-    ]),
-  );
-  const earned = Array.isArray(stored?.earned)
-    ? [...new Set(stored.earned.filter((id) => AURA_EVENT_MISSION_IDS.has(id)))]
-    : [];
-  return { id: AURA_EVENT_ID, counts, earned };
-}
-
-function auraEventPhase(at) {
-  if (at < AURA_EVENT_START_AT) return "upcoming";
-  return at < AURA_EVENT_END_AT ? "active" : "ended";
-}
-
-function advanceAuraEvent(tasks, tally, at) {
-  const event = auraEventSlot(tasks);
-  if (auraEventPhase(at) !== "active") return event;
-  const counts = { ...event.counts };
-  for (const metric of AURA_EVENT_METRICS) {
-    const amount = tally?.[metric] ?? 0;
-    if (validAmount(amount))
-      counts[metric] = Math.min(
-        AURA_EVENT_LIMITS[metric],
-        addCapped(counts[metric], amount),
-      );
-  }
-  return { ...event, counts };
-}
-
-// Event missions use the same verified online-roll tally as Daily and Weekly
-// tasks. Only individual task claims add to the event's task-claim objective.
-export function recordEventTaskClaim(tasks, at) {
-  return {
-    ...emptyTasks(),
-    ...tasks,
-    event: advanceAuraEvent(tasks, { taskClaims: 1 }, at),
-  };
-}
-
-// Completing a mission unlocks a free aura, but the player must collect it on
-// the Tasks page. Collected mission IDs are the receipts that let those looks
-// survive rebirth and be restored if a save ever drops an owned-list entry.
-export function claimAuraEvent(tasks, id) {
-  const mission = AURA_EVENT_MISSIONS.find((entry) => entry.id === id);
-  if (!mission) throw new Error("That event mission does not exist.");
-  const event = auraEventSlot(tasks);
-  if (event.counts[mission.metric] < mission.goal)
-    throw new Error("Complete the mission before collecting its aura.");
-  if (event.earned.includes(mission.id))
-    throw new Error("That event aura has already been collected.");
-  return {
-    ...emptyTasks(),
-    ...tasks,
-    event: { ...event, earned: [...event.earned, mission.id] },
-  };
-}
-
-// The wardrobe keeps a normal aura entry; its collected mission is the receipt
-// for restoring it after rebirth or save repair.
-export function auraEventAuraIds(tasks) {
-  const collected = new Set(auraEventSlot(tasks).earned);
-  return AURA_EVENT_MISSIONS.filter((mission) => collected.has(mission.id)).map(
-    (mission) => mission.auraId,
-  );
-}
-
-// The Tasks page reads one source of truth for the event banner, mission
-// progress and each aura's manual collection state.
-export function auraEventState(tasks, at) {
-  const event = auraEventSlot(tasks);
-  const phase = auraEventPhase(at);
-  const collected = new Set(event.earned);
-  const missions = AURA_EVENT_MISSIONS.map((mission) => {
-    const complete = event.counts[mission.metric] >= mission.goal;
-    const isCollected = collected.has(mission.id);
-    return {
-      ...mission,
-      count: Math.min(event.counts[mission.metric] ?? 0, mission.goal),
-      complete,
-      collected: isCollected,
-      claimable: complete && !isCollected,
-    };
-  });
-  return {
-    id: AURA_EVENT_ID,
-    phase,
-    startsAt: AURA_EVENT_START_AT,
-    endsAt: AURA_EVENT_END_AT,
-    missions,
-    complete: missions.filter((mission) => mission.complete).length,
-    collected: missions.filter((mission) => mission.collected).length,
-    total: missions.length,
-  };
-}
-
 // The purchase times the wait reads, sanitized. Never more than the window
 // counts, so a long-running save cannot grow this list.
 function skipPurchases(tasks) {
@@ -656,7 +490,7 @@ export function emptyTasks() {
     daily: emptySlot(),
     weekly: emptySlot(),
     skip: emptySkip(),
-    event: emptyAuraEvent(),
+    rngween: emptyRngween(),
   };
 }
 
@@ -835,7 +669,7 @@ export function waitText(ms) {
 // What one settled online roll adds to each cadence. A settlement from an
 // earlier period (a roll replayed after a failed save) never reopens that
 // period, because the stored one is already further along.
-export function recordTally(tasks, tally, at) {
+export function recordTally(tasks, tally, at, rngweenAt = at) {
   const next = {};
   for (const cadence of TASK_CADENCES) {
     const stored = tasks?.[cadence];
@@ -864,7 +698,7 @@ export function recordTally(tasks, tally, at) {
     ...emptyTasks(),
     ...tasks,
     ...next,
-    event: advanceAuraEvent(tasks, tally, at),
+    rngween: recordRngweenTally(tasks, tally, rngweenAt),
   };
 }
 
@@ -1046,53 +880,8 @@ export function parseTasks(value) {
     else repaired = true;
   }
   tasks.skip = skip;
-  const storedEvent = value.event;
-  if (storedEvent === undefined) {
-    // Saves from before the transmission simply start with an empty event slot.
-    tasks.event = emptyAuraEvent();
-  } else {
-    const readable =
-      !!storedEvent &&
-      typeof storedEvent === "object" &&
-      !Array.isArray(storedEvent) &&
-      storedEvent.id === AURA_EVENT_ID &&
-      !!storedEvent.counts &&
-      typeof storedEvent.counts === "object" &&
-      !Array.isArray(storedEvent.counts) &&
-      Array.isArray(storedEvent.earned);
-    if (!readable) {
-      repaired = true;
-      tasks.event = emptyAuraEvent();
-    } else {
-      const counts = {};
-      for (const metric of AURA_EVENT_METRICS) {
-        const amount = storedEvent.counts[metric];
-        if (amount === undefined) {
-          counts[metric] = 0;
-          repaired = true;
-        } else if (validAmount(amount)) {
-          counts[metric] = Math.min(amount, AURA_EVENT_LIMITS[metric]);
-          if (counts[metric] !== amount) repaired = true;
-        } else {
-          counts[metric] = 0;
-          repaired = true;
-        }
-      }
-      const earned = [];
-      for (const id of storedEvent.earned) {
-        const mission = AURA_EVENT_MISSIONS.find((entry) => entry.id === id);
-        if (
-          !mission ||
-          earned.includes(id) ||
-          counts[mission.metric] < mission.goal
-        ) {
-          repaired = true;
-          continue;
-        }
-        earned.push(id);
-      }
-      tasks.event = { id: AURA_EVENT_ID, counts, earned };
-    }
-  }
+  const seasonal = parseRngween(value.rngween);
+  tasks.rngween = seasonal.rngween;
+  repaired ||= seasonal.repaired;
   return { tasks, repaired };
 }

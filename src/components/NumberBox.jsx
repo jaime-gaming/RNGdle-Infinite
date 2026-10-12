@@ -1,6 +1,9 @@
 import React from "react";
+import { useSettings } from "../use-settings.jsx";
 import "../number-box.css";
 import "../number-box-palettes.css";
+import "../rngween-auras.css";
+import RngweenAura from "./RngweenAura.jsx";
 
 const tiers = new Set([
   "neutral",
@@ -40,6 +43,11 @@ const cosmetics = new Set([
   "bitstorm",
   "scramble",
   "hexdump",
+  "jack-o-glow",
+  "phantom-veil",
+  "witchfire",
+  "blood-moon",
+  "hexbound",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [
@@ -70,10 +78,12 @@ export default function NumberBox({
   tier = "neutral",
   aura = "none",
   compact = false,
+  auraLayout = "full",
   className = "",
   style,
   ...props
 }) {
+  const { settings } = useSettings();
   const rarity = tiers.has(tier) ? tier : "neutral";
   const cosmetic = cosmetics.has(aura) ? aura : "none";
   const shimmer = !["neutral", "trash", "common"].includes(rarity);
@@ -93,12 +103,15 @@ export default function NumberBox({
       className={`number-box ${rarity === "godly" ? "tier-godly" : ""} ${compact ? "number-box-compact" : ""} ${className}`}
       data-tier={rarity}
       data-cosmetic={cosmetic}
+      data-aura-layout={auraLayout === "contained" ? "contained" : undefined}
+      data-motion={settings.reduceMotion === "on" ? "reduced" : undefined}
       style={{ "--box-font": `${fontSize}px`, ...style }}
     >
       <span className="box-gloss" aria-hidden="true" />
       {shimmer && <span className="box-shimmer" aria-hidden="true" />}
       {cosmetic !== "none" && (
         <span className="box-cosmetic" aria-hidden="true">
+          <RngweenAura aura={cosmetic} />
           <span className="box-halo" />
           <span className="box-ornament">
             <span className="aura-trace" />

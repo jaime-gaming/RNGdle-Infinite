@@ -234,30 +234,6 @@ svg .cut-line {
   color: var(--text);
   box-shadow: 0 2px var(--green);
 }
-.theme-switch {
-  display: flex;
-  padding: 3px;
-  gap: 1px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-}
-.theme-switch button {
-  width: 27px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 3px;
-  color: var(--muted);
-}
-.theme-switch button:hover {
-  background: var(--hover);
-}
-.theme-switch button.selected {
-  background: var(--text);
-  color: var(--surface);
-}
 .sign-in {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -1717,13 +1693,6 @@ footer button:hover,
     font-size: 9px;
   }
   .ultra-mark {
-    display: none;
-  }
-  .theme-switch button {
-    width: 23px;
-    height: 24px;
-  }
-  .theme-switch button:nth-child(2) {
     display: none;
   }
   /* Phones keep a compact icon-only profile button; only the text label is

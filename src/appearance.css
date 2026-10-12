@@ -1,0 +1,128 @@
+.appearance-control {
+  position: relative;
+}
+.appearance-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 46px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+}
+.appearance-trigger:hover,
+.appearance-trigger[aria-expanded="true"] {
+  background: var(--hover);
+}
+.appearance-season-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #dd7835;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.appearance-menu {
+  position: absolute;
+  z-index: 65;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 242px;
+  max-width: calc(100vw - 28px);
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: 0 10px 40px #0002;
+  color: var(--text);
+}
+.appearance-heading {
+  margin: 5px 9px 8px;
+  color: var(--muted);
+  font:
+    500 10px/1.5 "Space Mono",
+    monospace;
+  letter-spacing: 0.04em;
+}
+.appearance-option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 39px;
+  padding: 9px;
+  border-radius: 7px;
+  color: var(--secondary);
+  text-align: left;
+  font-size: 12px;
+}
+.appearance-option > span:first-of-type {
+  flex: 1;
+}
+.appearance-option:hover,
+.appearance-option:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+.appearance-option[aria-checked="true"] {
+  color: var(--text);
+  background: var(--green-bg);
+}
+.appearance-option:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.appearance-season {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+.appearance-season p {
+  margin: 7px 9px 5px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.appearance-mini-switch {
+  position: relative;
+  width: 26px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.appearance-mini-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: transform 0.18s;
+}
+.appearance-halloween[aria-checked="true"] .appearance-mini-switch {
+  background: #ae531f;
+}
+.appearance-halloween[aria-checked="true"] .appearance-mini-switch::after {
+  transform: translateX(11px);
+  background: #fff7eb;
+}
+@media (max-width: 760px) {
+  .appearance-trigger {
+    width: 37px;
+    height: 33px;
+    gap: 2px;
+  }
+}
+/* On phones the sticky header is its own stack. Its open menu must also sit
+   above the installation tip, not merely above siblings inside the header. */
+.header:has(.appearance-trigger[aria-expanded="true"]) {
+  z-index: 80;
+}

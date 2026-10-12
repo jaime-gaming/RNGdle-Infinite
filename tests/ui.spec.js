@@ -1,3 +1,4 @@
+import { chooseTheme } from "./helpers/appearance.js";
 import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { allBadgeMetadata as metadata } from "../src/infinite-badges.js";
@@ -62,7 +63,7 @@ test("badge catalogue filters and details", async ({ page }) => {
 
 test("navigation, themes, help and local signup", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "dark theme", exact: true }).click();
+  await chooseTheme(page, "dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

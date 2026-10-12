@@ -11,7 +11,6 @@ import {
   AURA_FAMILIES,
 } from "../src/shop-data.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
-import { AURA_EVENT_END_AT, AURA_EVENT_START_AT } from "../src/tasks.js";
 
 // The shop is a street of sub-pages: the hub is an index of six buttons, each
 // one opening its own URL (/shop/skills, /shop/auras …), the flywheel tiers
@@ -592,59 +591,36 @@ test("an aura family is a page of its own, reached from its banner", async ({
   await expect(page).toHaveURL(/\/shop\/auras$/);
 });
 
-test("R4ND0MN3S5 links to Tasks and its aura prices return to normal after the event", async ({
+test("the retired aura offer is gone and permanent auras keep regular prices throughout October", async ({
   page,
 }) => {
   await page.clock.install();
-  const liveAt = AURA_EVENT_START_AT + 60 * 60 * 1000;
-  await page.clock.setFixedTime(new Date(liveAt));
   await seedProgress(page, { ...funded, balance: 20000000 });
-  await page.goto("/shop/auras/randomness");
-
-  await expect(page.locator(".aura-event-offer p")).toHaveText(
-    "Hey! You can get them for free! But, if you want to get them before, you'll have to pay more...",
-  );
-  await expect(page.locator(".shop-card[data-product]")).toHaveCount(4);
-  expect(
-    Object.fromEntries(
-      shopProducts
-        .filter((product) => product.family === "randomness")
-        .map((product) => [product.id, productPrice(product, liveAt)]),
-    ),
-  ).toEqual({
-    static: 840000,
-    bitstorm: 2640000,
-    scramble: 5400000,
-    hexdump: 9000000,
-  });
-  await expect(
-    page.locator('[data-product="static"] .shop-price'),
-  ).toContainText("840,000 EP");
-  await page.getByRole("button", { name: "Get free auras on Tasks" }).click();
-  await expect(page).toHaveURL(/\/tasks$/);
-  await expect(
-    page.getByRole("heading", { name: "Tasks", level: 1 }),
-  ).toBeVisible();
-
-  const regularAt = AURA_EVENT_END_AT + 60 * 60 * 1000;
-  await page.clock.setFixedTime(new Date(regularAt));
-  await page.goto("/shop/auras/randomness");
-  await expect(page.locator(".aura-event-offer")).toHaveCount(0);
-  expect(
-    Object.fromEntries(
-      shopProducts
-        .filter((product) => product.family === "randomness")
-        .map((product) => [product.id, productPrice(product, regularAt)]),
-    ),
-  ).toEqual({
-    static: 260000,
-    bitstorm: 880000,
-    scramble: 1800000,
-    hexdump: 3000000,
-  });
-  await expect(
-    page.locator('[data-product="static"] .shop-price'),
-  ).toContainText("260,000 EP");
+  for (const day of [10, 15, 25, 31]) {
+    const at = new Date(2026, 9, day, 12).getTime();
+    await page.clock.setFixedTime(new Date(at));
+    await page.goto("/shop/auras/randomness");
+    await expect(page.locator(".aura-event-offer")).toHaveCount(0);
+    await expect(page.locator(".shop-card[data-product]")).toHaveCount(4);
+    expect(
+      Object.fromEntries(
+        shopProducts
+          .filter((product) => product.family === "randomness")
+          .map((product) => [product.id, productPrice(product, at)]),
+      ),
+    ).toEqual({
+      static: 260000,
+      bitstorm: 880000,
+      scramble: 1800000,
+      hexdump: 3000000,
+    });
+    await expect(
+      page.locator('[data-product="static"] .shop-price'),
+    ).toContainText("260,000 EP");
+    await expect(
+      page.getByRole("button", { name: "Get free auras on Tasks" }),
+    ).toHaveCount(0);
+  }
 });
 
 test("nothing on a shelf waits behind a purchase you have not made", async ({

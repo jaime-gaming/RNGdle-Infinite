@@ -1,16 +1,13 @@
-/* The home-screen install card: a phone-only sheet that floats above the
-   tab bar until dismissed. Desktop installs use the browser's own UI. */
+/* The install card stays in the phone page flow, below the Roll/footer seam.
+   It must never sit on top of the rack or the Reaper gate. */
 .install-app {
   display: none;
 }
 @media (max-width: 760px) {
   .install-app {
-    position: fixed;
-    left: 10px;
-    right: 10px;
-    /* Under the sticky top bar, out of the tab bar's and rack's way. */
-    top: calc(64px + env(safe-area-inset-top));
-    z-index: 65;
+    position: relative;
+    margin: 12px 10px 0;
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: 10px;

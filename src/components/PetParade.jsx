@@ -14,7 +14,8 @@ const MAX_VISIBLE = 8;
 function Walker({ pet, active, reducedMotion, phase, docked = false }) {
   const definition = petById.get(pet);
   if (!definition) return null;
-  const seed = PETS.findIndex((entry) => entry.id === pet);
+  const normalIndex = PETS.findIndex((entry) => entry.id === pet);
+  const seed = normalIndex < 0 ? PETS.length : normalIndex;
   const row = 34 + (seed % 5) * 9;
   return (
     <span

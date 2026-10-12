@@ -42,6 +42,8 @@ import {
   rollbackAvailable,
   rollbackBlocker,
   rollbackRequirement,
+  prestigeBenefits,
+  rollbackBenefits,
   ultraRebirthAvailable,
   ultraRebirthBlocker,
   ultraRebirthRequirement,
@@ -210,23 +212,29 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   // shows what the surplus would pay right now — in the preview, in the
   // dialog, and again in the result message after the rebirth lands.
   const previewGate = epTarget;
-  const previewSurplus = rebirthSurplus(cycleEp, previewGate);
+  const rawPreviewSurplus = rebirthSurplus(cycleEp, previewGate);
+  const previewSurplus = lastStage
+    ? { ...rawPreviewSurplus, starterBonus: 0 }
+    : rawPreviewSurplus;
   const dialogGate =
     open === "rollback"
       ? rollbackRequirement().ep
       : open === "ultra"
         ? ultraRebirthRequirement().ep
         : epTarget;
-  const dialogSurplus = rebirthSurplus(cycleEp, dialogGate);
+  const rawDialogSurplus = rebirthSurplus(cycleEp, dialogGate);
+  const dialogSurplus =
+    open === "rollback"
+      ? { ...rawDialogSurplus, starterBonus: 0 }
+      : rawDialogSurplus;
   const pets = (progress.pets ?? []).length;
   const keptSkills = (progress.skills ?? []).filter(
     (id) => skillById.get(id)?.source !== "shop",
   ).length;
   const starter = cycleStarterEp(rebirths + 1, ultras);
   const ultraStarter = cycleStarterEp(rebirths, ultras + 1);
-  // A Rollback adds no starting sum of its own: the new run begins with what
-  // the ladder already pays.
-  const rollbackStarter = cycleStarterEp(rebirths, ultras);
+  // Rollback has no starting grant; the other stage bonuses remain active.
+  const rollbackStarter = 0;
   const starterGain = ladderComplete ? ultraStarter - starter : starter;
   const keeps = [
     ["Activity history", "every roll, unlock and purchase, cycle after cycle"],
@@ -244,7 +252,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     ["Badge collection", "rediscover it in the new cycle"],
     ["Other purchases", "upgrades, tools and shop skills"],
     ["Companions", "found or bought, they start over too"],
-    ["Wallet EP", "the balance restarts at the ladder's starting sum"],
+    [
+      "Wallet EP",
+      lastStage
+        ? "starts at 0 EP"
+        : "the balance restarts at the ladder's starting sum",
+    ],
   ];
   async function submit(event) {
     event.preventDefault();
@@ -276,9 +289,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             : "";
         const message =
           mode === "rollback"
-            ? `Rollback ${rollbacks + 1} complete. The run starts again from zero, with +${Math.round(
-                ROLLBACK_BONUS * 100 * (rollbacks + 1),
-              )}% permanent EP and ${formatEP(rollbackStarter + dialogSurplus.starterBonus)} EP to start.${surplusNote}`
+            ? `Rollback ${rollbacks + 1} complete. The wallet starts at 0 EP. You keep +${Math.round(ROLLBACK_BONUS * 100 * (rollbacks + 1))}% permanent banked EP${dialogSurplus.bankedBonus ? ` and gain +${Math.round(dialogSurplus.bankedBonus * 100)}% from surplus` : ""}.`
             : mode === "ultra"
               ? `Prestige ${ultras + 1}. Your permanent bonus is now +${Math.round(
                   REBIRTH_BONUS_PER_REBIRTH * 100 * rebirths +
@@ -566,14 +577,24 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 </small>
               </li>
               <li>
-                <strong>+2% EP forever</strong>
+                <strong>
+                  +
+                  {Math.round(
+                    (lastStage
+                      ? ROLLBACK_BONUS
+                      : ladderComplete
+                        ? ULTRA_BONUS_PER_REBIRTH
+                        : REBIRTH_BONUS_PER_REBIRTH) * 100,
+                  )}
+                  % banked EP
+                </strong>
                 <small>
                   {bonusNow > 0
-                    ? `from +${bonusNow}% to +${bonusNow + 2}%`
+                    ? `from +${bonusNow}% to +${bonusNow + Math.round((lastStage ? ROLLBACK_BONUS : ladderComplete ? ULTRA_BONUS_PER_REBIRTH : REBIRTH_BONUS_PER_REBIRTH) * 100)}%`
                     : "on every roll you bank"}
                 </small>
               </li>
-              {previewSurplus.surplus > 0 && (
+              {previewSurplus.surplus > 0 && !lastStage && (
                 <li>
                   <strong>
                     +{formatEP(previewSurplus.starterBonus)} EP surplus
@@ -591,15 +612,17 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <li>
                 <strong>
                   {formatEP(
-                    (ladderComplete ? ultraStarter : starter) +
+                    (lastStage ? 0 : ladderComplete ? ultraStarter : starter) +
                       previewSurplus.starterBonus,
                   )}{" "}
                   EP
                 </strong>
                 <small>
-                  {ladderComplete
-                    ? `to start the next run (+${formatEP(starterGain)} more than a rung)`
-                    : "waiting in your wallet when the cycle begins"}
+                  {lastStage
+                    ? "the wallet starts at zero"
+                    : ladderComplete
+                      ? `to start the next run (+${formatEP(starterGain)} more than a rung)`
+                      : "waiting in your wallet when the cycle begins"}
                 </small>
               </li>
               <li>
@@ -801,61 +824,19 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <strong>+{ULTRA_BONUS_PER_REBIRTH * 100}% EP</strong>
               <span>per prestige, forever</span>
             </div>
-            <ul className="rebirth-list">
-              <li>
-                <Check size={14} />
-                <span>
-                  <strong>Stacks without limit</strong>
-                  <small>
-                    {ultras > 0
-                      ? `You are at +${Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * ultras)}% right now. The next one makes it +${ultraPercent}%.`
-                      : `The first one is +${ULTRA_BONUS_PER_REBIRTH * 100}%, and every later one adds the same again.`}
-                  </small>
-                </span>
-              </li>
-              <li>
-                <Check size={14} />
-                <span>
-                  <strong>Wallet only</strong>
-                  <small>
-                    Like a companion: it multiplies banked EP, never the number
-                    or its rank.
-                  </small>
-                </span>
-              </li>
-              <li>
-                <Wallet size={14} />
-                <span>
-                  <strong>
-                    {formatEPCompact(ULTRA_STARTER_EP)} EP more to start
-                  </strong>
-                  <small>
-                    A prestige pays its own starting sum on top of the ladder's:{" "}
-                    {formatEP(ultraStarter)} EP waiting in the new run.
-                  </small>
-                </span>
-              </li>
-              <li>
-                <Unlock size={14} />
-                <span>
-                  <strong>Optional</strong>
-                  <small>
-                    A completed ladder is a fine place to stop. The button waits
-                    until the badges and the EP are both there.
-                  </small>
-                </span>
-              </li>
-              <li>
-                <RefreshCw size={14} />
-                <span>
-                  <strong>Prestige rewards</strong>
-                  <small>
-                    From the first one: a gold halo behind every roll, the
-                    Prestige title on your profile and a note from the developer
-                    — nowhere else in the game.
-                  </small>
-                </span>
-              </li>
+            <ul
+              className="rebirth-list rebirth-benefits"
+              aria-label="Prestige benefits"
+            >
+              {prestigeBenefits(progress).map((benefit) => (
+                <li key={benefit.id}>
+                  <Check size={14} />
+                  <span>
+                    <strong>{benefit.title}</strong>
+                    <small>{benefit.detail}</small>
+                  </span>
+                </li>
+              ))}
             </ul>
             {ladderComplete && (
               <p className="rebirth-ultra-state" role="status">
@@ -891,50 +872,19 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <strong>+{Math.round(ROLLBACK_BONUS * 100)}% EP</strong>
               <span>per Rollback, forever</span>
             </div>
-            <ul className="rebirth-list">
-              <li>
-                <Check size={14} />
-                <span>
-                  <strong>Stacks without limit</strong>
-                  <small>
-                    {rollbacks > 0
-                      ? `You are at +${rollbackPercent}% right now. The next one makes it +${Math.round(ROLLBACK_BONUS * 100 * (rollbacks + 1))}%.`
-                      : `The first one is +${Math.round(ROLLBACK_BONUS * 100)}%, and every later one adds the same again.`}
-                  </small>
-                </span>
-              </li>
-              <li>
-                <RotateCcw size={14} />
-                <span>
-                  <strong>Starts the run over</strong>
-                  <small>
-                    It adds no starting sum of its own: the new run begins with
-                    the ladder's {formatEP(rollbackStarter)} EP and nothing
-                    more.
-                  </small>
-                </span>
-              </li>
-              <li>
-                <Undo2 size={14} />
-                <span>
-                  <strong>Taken again and again</strong>
-                  <small>
-                    Nothing closes after it. The Rollback stays open for the
-                    next run, once the cycle meets its gate.
-                  </small>
-                </span>
-              </li>
-              <li>
-                <Unlock size={14} />
-                <span>
-                  <strong>Higher than a prestige</strong>
-                  <small>
-                    {rollbackRequirement().badges} badges and{" "}
-                    {formatEPCompact(rollbackRequirement().ep)} EP earned in one
-                    cycle.
-                  </small>
-                </span>
-              </li>
+            <ul
+              className="rebirth-list rebirth-benefits"
+              aria-label="Rollback benefits"
+            >
+              {rollbackBenefits(progress).map((benefit) => (
+                <li key={benefit.id}>
+                  <Check size={14} />
+                  <span>
+                    <strong>{benefit.title}</strong>
+                    <small>{benefit.detail}</small>
+                  </span>
+                </li>
+              ))}
             </ul>
             <p className="rebirth-ultra-state" role="status">
               {rollbacks > 0
@@ -984,9 +934,18 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 <dd>{surplusBanked > 0 ? `+${surplusBanked}%` : "—"}</dd>
               </div>
               <div>
-                <dt>Next prestige starts with</dt>
+                <dt>
+                  {ultras >= PRESTIGE_LIMIT
+                    ? "Next Rollback starts with"
+                    : "Next prestige starts with"}
+                </dt>
                 <dd>
-                  {formatEPCompact(cycleStarterEp(rebirths, ultras + 1))} EP
+                  {formatEPCompact(
+                    ultras >= PRESTIGE_LIMIT
+                      ? 0
+                      : cycleStarterEp(rebirths, ultras + 1),
+                  )}{" "}
+                  EP
                 </dd>
               </div>
             </dl>
@@ -1094,11 +1053,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <ul>
                 <li>
                   <strong>Reset:</strong> your EP, your badges, every upgrade,
-                  aura, tool, shop skill and companion.
+                  tool, shop skill and companion. Owned auras stay.
                 </li>
                 <li>
                   <strong>Keep:</strong> your profile, your activity history,
-                  your {REBIRTH_TOTAL} rebirths, your {ultras} prestige
+                  your owned auras, your {REBIRTH_TOTAL} rebirths, your {ultras}{" "}
+                  prestige
                   {ultras === 1 ? "" : "s"} and your {rollbacks} Rollback
                   {rollbacks === 1 ? "" : "s"}, with every permanent bonus.
                 </li>
@@ -1113,23 +1073,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                   <strong>Stays open:</strong> nothing closes. The next Rollback
                   is ready once the cycle meets the same gate.
                 </li>
-                {dialogSurplus.surplus > 0 && (
+                {dialogSurplus.bankedBonus > 0 && (
                   <li>
-                    <strong>Surplus:</strong> the cycle scored{" "}
-                    {formatEP(dialogSurplus.surplus)} EP over the gate, so{" "}
-                    <strong>{formatEP(dialogSurplus.starterBonus)} EP</strong>{" "}
-                    joins the new wallet
-                    {dialogSurplus.bankedBonus > 0 && (
-                      <>
-                        {" "}
-                        and{" "}
-                        <strong>
-                          +{Math.round(dialogSurplus.bankedBonus * 100)}% EP
-                        </strong>{" "}
-                        lands forever
-                      </>
-                    )}
-                    .
+                    <strong>Surplus:</strong> +
+                    {Math.round(dialogSurplus.bankedBonus * 100)}% permanent
+                    banked EP. No EP is transferred to the new wallet.
                   </li>
                 )}
               </ul>
@@ -1146,7 +1094,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <ul>
                 <li>
                   <strong>Reset:</strong> your EP, your badges, every upgrade,
-                  aura, tool, shop skill and companion.
+                  tool, shop skill and companion. Owned auras stay.
                 </li>
                 <li>
                   <strong>Keep:</strong> your profile, your activity history,

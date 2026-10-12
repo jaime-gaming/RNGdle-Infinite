@@ -4,6 +4,7 @@ import {
   discoveredCount,
   prestigeShown,
 } from "./rebirth.js";
+import { RNGWEEN_PET } from "./rngween-limited.js";
 import { PETS } from "./pets.js";
 import { SKILLS, skillSlots } from "./skills.js";
 import { LATEST_VERSION } from "./changelog.js";
@@ -33,7 +34,8 @@ export function accountStats(progress = {}) {
     badgesTotal: BADGE_TOTAL,
     companions: (progress.pets ?? []).length,
     companionsFound: total.companions,
-    companionsTotal: PETS.length,
+    companionsTotal:
+      PETS.length + ((progress.pets ?? []).includes(RNGWEEN_PET.id) ? 1 : 0),
     skills: (progress.skills ?? []).length,
     skillsTotal: SKILLS.length,
     skillSlots: skillSlots(progress.owned),

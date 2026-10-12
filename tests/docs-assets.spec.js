@@ -76,7 +76,8 @@ test("the shop hub links match the shelf pages it renders", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
   const data = fs.readFileSync("src/shop-data.js", "utf8");
   const companion = fs.readFileSync("src/components/PetShelf.jsx", "utf8");
-  const source = `${shop}\n${companion}`;
+  const limited = fs.readFileSync("src/components/RngweenShop.jsx", "utf8");
+  const source = `${shop}\n${companion}\n${limited}`;
   // The sections are catalogue data: routing, the hub and the featured picks
   // all read the one list.
   // A shelf section carries an icon; the aura families that group a shelf's
@@ -100,6 +101,14 @@ test("the shop hub links match the shelf pages it renders", () => {
     expect(shop).toContain('id="shop-hub"');
   }
   expect(seen).toEqual(
-    new Set(["skills", "pace", "companions", "auras", "offline", "tools"]),
+    new Set([
+      "limited",
+      "skills",
+      "pace",
+      "companions",
+      "auras",
+      "offline",
+      "tools",
+    ]),
   );
 });

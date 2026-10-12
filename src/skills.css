@@ -10,6 +10,13 @@
   flex-direction: column;
   gap: 10px;
 }
+.skill-bar-items {
+  display: contents;
+}
+.skill-rack-toggle {
+  display: none;
+}
+
 .skill-slot {
   position: relative;
   display: block;
@@ -217,84 +224,6 @@
 }
 .skill-slot:not(.is-armed) .skill-tooltip-state {
   color: var(--muted);
-}
-@media (max-width: 760px) {
-  /* On phones the rack becomes a compact, full-width dock below the header.
-     Keeping every circle in one short row gives the roll room and keeps the
-     summary, Auto-Roll and skill families reachable without a tall side rail. */
-  .skill-bar {
-    top: 64px;
-    left: 8px;
-    right: 8px;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 5px 6px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--surface) 94%, transparent);
-    box-shadow: 0 8px 24px rgb(0 0 0 / 10%);
-  }
-  /* A single size for plain circles, families, abilities and the summary keeps
-     the whole dock balanced, even on the narrowest supported phone. */
-  .skill-slot > .skill-ring,
-  .skill-stack-ring {
-    width: 31px !important;
-    height: 31px !important;
-  }
-  .skill-stack,
-  .skill-stack-bubble {
-    width: 31px;
-    height: 31px;
-  }
-  .skill-stack {
-    flex-basis: 31px;
-  }
-  .skill-stack-count {
-    right: -1px;
-    bottom: -1px;
-    min-width: 14px;
-    height: 14px;
-    padding: 0 3px;
-    font-size: 8px;
-    line-height: 12px;
-  }
-  .skill-slot.is-armed::after,
-  .skill-stack.is-armed > .skill-stack-bubble::after {
-    inset: -2px;
-  }
-  /* Touch popovers open as a panel beneath the dock instead of spilling off
-     the right edge of whichever tiny circle was tapped. */
-  .skill-stack-members {
-    position: fixed;
-    top: 116px;
-    left: 8px;
-    right: 8px;
-    transform: none;
-    max-width: none;
-    justify-content: center;
-    flex-wrap: wrap;
-    z-index: 1;
-  }
-  .skill-stack-members::before {
-    top: -8px;
-    bottom: auto;
-    left: 0;
-    right: 0;
-    width: auto;
-    height: 8px;
-  }
-  .skill-tooltip {
-    position: fixed;
-    top: 116px;
-    left: 8px;
-    right: 8px;
-    width: auto;
-    max-width: none;
-    z-index: 1;
-  }
 }
 /* Motion is decoration here: the state is still readable from the ring. */
 @media (prefers-reduced-motion: reduce) {
@@ -619,20 +548,189 @@
   color: var(--green);
   font-size: 10px;
 }
+/* The old full-width Auto-Roll card must not style its newer rack circle. */
+.skill-bar .auto-roll-control {
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+
+/* Mobile overrides belong after desktop families: otherwise their absolute
+   fan/dimensions override the phone dock and push popovers off-screen. */
 @media (max-width: 760px) {
-  .skill-contribution {
+  .home-main .roll-experience {
+    padding-top: var(--skill-dock-height, 0px);
+  }
+  .skill-bar {
+    top: var(--skill-dock-top, 64px);
+    left: 8px;
+    right: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 6px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 10%);
+  }
+  .skill-rack-toggle {
+    display: inline-flex;
+    flex: 0 0 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-width: 42px;
+    min-height: 42px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--secondary);
+    cursor: pointer;
+  }
+  .skill-rack-toggle:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+  }
+  .skill-rack-collapsed-copy {
     display: none;
   }
-  .skill-summary {
-    width: 30px;
-    height: 20px;
+  .skill-bar.is-collapsed {
+    left: auto;
+    width: auto;
+    padding: 3px 6px;
   }
-  .rack-panel {
+  .skill-bar.is-collapsed .skill-bar-items {
+    display: none;
+  }
+  .skill-bar.is-collapsed .skill-rack-toggle {
+    flex-basis: auto;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+  }
+  .skill-bar.is-collapsed .skill-rack-collapsed-copy {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    font: 600 11px var(--roll-font);
+  }
+  .skill-rack-collapsed-copy > span {
+    color: var(--green);
+    font-size: 9px;
+  }
+  .skill-bar .skill-slot,
+  .skill-bar .skill-stack,
+  .skill-bar .skill-stack-bubble {
+    width: 42px;
+    min-height: 42px;
+    flex: 0 0 42px;
+    display: grid;
+    place-items: center;
+  }
+  .skill-slot > .skill-ring,
+  .skill-stack-ring {
+    width: 31px !important;
+    height: 31px !important;
+  }
+  .skill-stack-count {
+    right: 2px;
+    bottom: 2px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    font-size: 8px;
+    line-height: 12px;
+  }
+  .skill-slot.is-armed::after,
+  .skill-stack.is-armed > .skill-stack-bubble::after {
+    inset: 2px;
+  }
+  .skill-bar .skill-stack-members {
     position: fixed;
-    top: 116px;
+    top: var(--rack-panel-top, 124px);
+    left: 8px;
+    right: 8px;
+    transform: none;
+    width: auto;
+    max-width: none;
+    min-height: 60px;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-x;
+    z-index: 35;
+  }
+  .skill-stack-members::before {
+    display: none;
+  }
+  .skill-bar .skill-tooltip,
+  .skill-bar .rack-panel {
+    position: fixed;
+    top: var(--rack-panel-top, 124px);
     left: 8px;
     right: 8px;
     width: auto;
     max-width: none;
+    transform: none;
+    z-index: 36;
+    max-height: calc(100dvh - var(--rack-panel-top, 124px) - 84px);
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    overscroll-behavior: contain;
   }
+  .skill-bar .skill-stack-members .skill-tooltip {
+    top: calc(var(--rack-panel-top, 124px) + 70px);
+    max-height: calc(100dvh - var(--rack-panel-top, 124px) - 154px);
+  }
+  .skill-contribution {
+    display: none;
+  }
+  .skill-summary {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+  }
+  .skill-bar .skill-summary:not(.is-open) .rack-panel,
+  .skill-bar .skill-stack:not(.is-open) .skill-stack-members {
+    display: none;
+  }
+  .skill-bar .rack-panel {
+    pointer-events: auto;
+    touch-action: pan-y;
+  }
+  .rack-panel-row > span {
+    min-width: 0;
+  }
+  .rack-panel-row > span:last-child {
+    text-align: right;
+  }
+}
+
+/* Limited skills keep their own visual seal even with Halloween mode off. */
+.is-rngween-skill .skill-ring,
+.is-rngween-stack .skill-stack-ring {
+  background: radial-gradient(circle, #ad69db23, transparent 72%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px #ac76c648,
+    0 0 15px #be86311a;
+}
+.is-rngween-skill .skill-ring-icon,
+.is-rngween-stack .skill-stack-icon {
+  color: #b78958;
+}
+:root[data-theme="dark"] .is-rngween-skill .skill-ring-icon,
+:root[data-theme="dark"] .is-rngween-stack .skill-stack-icon {
+  color: #fbc48b;
 }

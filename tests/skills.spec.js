@@ -17,6 +17,7 @@ import {
   drawPlanFor,
   parseEquippedSkills,
   petSkills,
+  eventSkills,
   rebirthSkill,
   skillArmed,
   skillById,
@@ -72,13 +73,15 @@ const roll = (id, skills = [], extra = {}) => ({
 });
 
 test("every skill states one effect, one charge cost and where it comes from", () => {
-  expect(SKILLS.length).toBe(shopSkills.length + petSkills.length + 6);
+  expect(SKILLS.length).toBe(
+    shopSkills.length + petSkills.length + eventSkills.length + 6,
+  );
   expect(new Set(SKILL_IDS).size).toBe(SKILLS.length);
   for (const skill of SKILLS) {
     expect(skill.charges).toBeGreaterThan(0);
     expect(typeof skill.name).toBe("string");
     expect(skill.description.length).toBeGreaterThan(20);
-    expect(["shop", "pet", "rebirth"]).toContain(skill.source);
+    expect(["shop", "pet", "rebirth", "event"]).toContain(skill.source);
     if (skill.source === "shop")
       expect(productById.get(skill.id)?.price).toBe(skill.price);
     if (skill.source === "pet") expect(petById.has(skill.petId)).toBe(true);
@@ -376,14 +379,14 @@ test("draw skills keep their own budgets and never invent EP", () => {
     keeps: 2,
   });
   expect(drawPlanFor(["griffin-dive", "quarry"])).toEqual({
-    attempts: 8,
-    floor: 100000,
-    keeps: 2,
+    attempts: 3,
+    floor: 0,
+    keeps: 1,
   });
   // Two draw skills pay two numbers, because each keeps its own.
   expect(drawPlanFor(["twice", "bedrock"]).keeps).toBe(2);
-  // Stacking never invents draws past the cap: three draw skills would ask for
-  // eleven, and the plan stops at the eight a roll is allowed to spend.
+  // Six draws fill this roll. Big Game keeps its whole budget and waits;
+  // the runner never silently trims it or consumes its charge.
   expect(drawPlanFor(["twice", "bedrock", "quarry"]).attempts).toBe(
     SKILL_MAX_DRAWS,
   );
@@ -420,12 +423,12 @@ test("the two late shop skills reuse effects that are already proven", () => {
     keeps: 1,
   });
   expect(triptych.attempts).toBeLessThanOrEqual(SKILL_MAX_DRAWS);
-  // Together they stack into eight draws and keep the floor, and still only
-  // pick between numbers that were really drawn.
+  // Triptych fires first; Big Game cannot fit and waits for the following
+  // roll, keeping its whole five-draw promise.
   expect(drawPlanFor(["triptych", "quarry"])).toEqual({
-    attempts: 8,
-    floor: 100000,
-    keeps: 2,
+    attempts: 3,
+    floor: 0,
+    keeps: 1,
   });
 });
 

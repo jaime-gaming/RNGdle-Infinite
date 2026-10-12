@@ -78,6 +78,8 @@ let relaySource = null;
 let relaySession = "";
 let relaySendTimer = 0;
 let relayPendingState = "";
+let blockedRemote = null;
+let receiveRetryTimer = 0;
 let relayHelloTimer = 0;
 
 function emit() {
@@ -464,6 +466,9 @@ function teardown() {
   clearTimeout(relayHelloTimer);
   relayHelloTimer = 0;
   relayPendingState = "";
+  clearTimeout(receiveRetryTimer);
+  receiveRetryTimer = 0;
+  blockedRemote = null;
   try {
     conn?.close();
   } catch {}
@@ -893,8 +898,8 @@ function handleActionRequest(message, transport) {
 
 function handleRemoteState(remote, transport = "peer") {
   if (remote?.device) acceptRemoteIdentity(remote.device, remote.ownerDevice);
-  reconcile(remote);
-  if (remote?.id)
+  const accepted = reconcile(remote);
+  if (accepted !== false && remote?.id)
     void sendLinkMessage({
       type: "state-ack",
       id: remote.id,
@@ -905,13 +910,14 @@ function handleRemoteState(remote, transport = "peer") {
 
 // Apply the shared profile-first, then timestamp/device reconciliation policy.
 function reconcile(remote) {
-  if (!remote || !Number.isFinite(remote.savedAt) || !remote.state) return;
+  if (!remote || !Number.isFinite(remote.savedAt) || !remote.state)
+    return false;
   const decision = syncDecision(
     { state: currentSave(), savedAt: queuedStamp(), device },
     remote,
   );
   if (decision.direction === "receive") {
-    receiveRemote(remote);
+    return receiveRemote(remote);
   } else if (decision.direction === "send") {
     // A profile always outranks a guest save. Give that correction a newer
     // stamp so the guest accepts it even if its local clock ran ahead.
@@ -933,21 +939,56 @@ function sendCurrentState() {
   return false;
 }
 
-function receiveRemote(remote) {
+// A live incoming head may be durable on the main device but temporarily
+// unwritable here. Retain only the newest head and retry without acknowledging
+// it, rerolling, or leaving a secondary browser permanently behind the relay.
+function retryRemoteSave(remote) {
+  if (!room) return;
+  if (
+    blockedRemote?.epoch === linkEpoch &&
+    (blockedRemote.remote.savedAt > remote.savedAt ||
+      (blockedRemote.remote.savedAt === remote.savedAt &&
+        blockedRemote.remote.device < remote.device))
+  )
+    return;
+  blockedRemote = { remote, epoch: linkEpoch };
+  clearTimeout(receiveRetryTimer);
+  receiveRetryTimer = setTimeout(() => {
+    const queued = blockedRemote;
+    blockedRemote = null;
+    receiveRetryTimer = 0;
+    if (queued && room && queued.epoch === linkEpoch) reconcile(queued.remote);
+  }, 3000);
+}
+
+function receiveRemote(remote, retry = true) {
   const raw = remote.state;
   try {
-    const parsed = parseProgress(raw);
-    if (!parsed.profile) return;
+    if (!parseProgress(raw).profile) return false;
   } catch {
-    return;
+    return false;
   }
+  const before = { savedAt, pending, dirtyAt, stampedFor };
   savedAt = remote.savedAt;
   pending = false;
   dirtyAt = 0;
   stampedFor = 0;
+  // The save listener can veto an unreadable/unwritable head synchronously.
+  // Never acknowledge it or advance the link stamp before durable adoption.
+  const event = new CustomEvent(SYNC_EVENT, { detail: raw, cancelable: true });
+  if (!window.dispatchEvent(event) || event.progressSaved !== true) {
+    ({ savedAt, pending, dirtyAt, stampedFor } = before);
+    if (retry) retryRemoteSave(remote);
+    return false;
+  }
+  if (blockedRemote && blockedRemote.remote.savedAt <= remote.savedAt) {
+    clearTimeout(receiveRetryTimer);
+    receiveRetryTimer = 0;
+    blockedRemote = null;
+  }
   persistLink();
   markSynced("received");
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: raw }));
+  return true;
 }
 
 // A quiet liveness check keeps stale WebRTC channels from looking connected;
@@ -1285,12 +1326,16 @@ export function adoptPeerCode(code) {
     return { ok: false, reason: "unreadable" };
   }
   if (!parsed?.profile) return { ok: false, reason: "guest" };
-  savedAt = Math.max(savedAt, Number(payload?.at) || 0);
-  pending = false;
-  dirtyAt = 0;
-  persistLink();
-  markSynced("received");
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: payload.save }));
+  if (
+    !receiveRemote(
+      {
+        state: payload.save,
+        savedAt: Math.max(savedAt, Number(payload?.at) || 0),
+      },
+      false,
+    )
+  )
+    return { ok: false, reason: "storage" };
   return { ok: true };
 }
 

@@ -148,16 +148,15 @@ test("taking the Rollback restarts the run, and it can be taken again", () => {
   expect(after.rebirths).toBe(REBIRTH_TOTAL);
   expect(after.ultraRebirths).toBe(3);
   // The run restarts from zero; the aura and its equipped look stay while the
-  // ordinary upgrade is handed back. The wallet gets only the ladder's sum.
+  // ordinary upgrade is handed back. The new wallet starts at zero.
   expect(after.discovered).toEqual([]);
   expect(after.owned).toEqual(["starfall"]);
   expect(after.equipped).toBe("starfall");
-  expect(after.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 3));
+  expect(after.balance).toBe(0);
   expect(after.history.at(-1)).toMatchObject({
     id: "rb1",
     type: "rollback",
     count: 1,
-    grant: cycleStarterEp(REBIRTH_TOTAL, 3),
     cost: gate.ep,
   });
   // The bonus is permanent: it multiplies banked EP like every stage.
@@ -211,16 +210,15 @@ test("taking the Rollback restarts the run, and it can be taken again", () => {
   ).toThrow(/Reach 3 prestiges/);
 });
 
-test("the Rollback's surplus pays the same dividend as a prestige's", () => {
+test("the Rollback keeps the permanent surplus dividend but transfers no EP", () => {
   const extra = 5000000;
   const surplus = rebirthSurplus(gate.ep + extra, gate.ep);
   const after = applyProgress(
     top({ ultraRebirths: 3, history: earned(gate.ep + extra) }),
     { type: "rollback", expectedRollbacks: 0, at: 300000 },
   );
-  expect(after.balance).toBe(
-    cycleStarterEp(REBIRTH_TOTAL, 3) + surplus.starterBonus,
-  );
+  expect(after.balance).toBe(0);
+  expect(after.history.at(-1)).not.toHaveProperty("grant");
   expect(after.surplusBanked).toBe(Math.round(surplus.bankedBonus * 100));
 });
 
