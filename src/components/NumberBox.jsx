@@ -4,6 +4,7 @@ import "../number-box.css";
 import "../number-box-palettes.css";
 import "../rngween-auras.css";
 import RngweenAura from "./RngweenAura.jsx";
+import { productById } from "../shop-data.js";
 
 const tiers = new Set([
   "neutral",
@@ -97,6 +98,7 @@ export default function NumberBox({
         : length === 5
           ? 48
           : 36;
+  const swatch = cosmetic !== "none" ? productById.get(cosmetic)?.swatch : null;
   return (
     <Tag
       {...props}
@@ -105,12 +107,18 @@ export default function NumberBox({
       data-cosmetic={cosmetic}
       data-aura-layout={auraLayout === "contained" ? "contained" : undefined}
       data-motion={settings.reduceMotion === "on" ? "reduced" : undefined}
-      style={{ "--box-font": `${fontSize}px`, ...style }}
+      style={{
+        "--box-font": `${fontSize}px`,
+        // Every aura's own two swatch colours drive the shared finish layer.
+        ...(swatch && { "--aura-a": swatch[0], "--aura-b": swatch[1] }),
+        ...style,
+      }}
     >
       <span className="box-gloss" aria-hidden="true" />
       {shimmer && <span className="box-shimmer" aria-hidden="true" />}
       {cosmetic !== "none" && (
         <span className="box-cosmetic" aria-hidden="true">
+          <span className="box-finish" />
           <RngweenAura aura={cosmetic} />
           <span className="box-halo" />
           <span className="box-ornament">

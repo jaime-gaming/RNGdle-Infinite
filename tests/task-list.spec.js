@@ -35,8 +35,8 @@ const day = at(2026, 10, 8, 12);
 
 test("each cadence has a varied pool, a fixed-size list, and real task rewards", () => {
   for (const [cadence, poolSize] of [
-    ["daily", 19],
-    ["weekly", 21],
+    ["daily", 25],
+    ["weekly", 27],
   ]) {
     const pool = TASKS.filter((task) => task.cadence === cadence);
     expect(pool).toHaveLength(poolSize);

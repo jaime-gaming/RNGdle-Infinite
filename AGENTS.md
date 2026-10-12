@@ -91,6 +91,7 @@ npm run dev              # dev server on 0.0.0.0:5173, relay included
 npm run dev:rngween      # same, with the season clock pinned to 2026-10-26 (event live)
 npm run dev:rngween:unlocked -- --port 5176   # plus a seeded save with every event reward
 RNGDLE_SANDBOX_DATE=2026-10-22T12:00:00Z npm run dev:rngween   # any other date (hourly tasks here)
+RNGDLE_SANDBOX_PRESTIGES=3 npm run dev:rngween:unlocked   # seeded save with 3 prestiges (fresh-start offer)
 npm test                 # full Playwright suite (starts `npm run dev` itself)
 npx playwright test tests/roll.spec.js   # one spec
 npm run build            # production build into dist/
@@ -127,8 +128,20 @@ effect of other work.
   It keeps the profile and every aura, and resets everything else, including
   rebirths, prestiges and Rollbacks; a `fresh-start` history row keeps the old
   figures and counts as a cycle marker.
-- **RNGween World** is laid out in four tabs (Play, Key & prize, Commissions,
-  Rules). Tests that need the key forge switch to its tab first.
+- **RNGween World** layout: compact heading, a four-step phase strip, the
+  stage (scene, number, roll button) always on screen, then four tabs under it:
+  Objectives (collection, aura trial, default), Key & prize, Commissions,
+  Rules. Tests that need the key forge switch to its tab first.
+- **Aura finish**: every aura gets a shared layer (`.box-finish` in
+  `src/number-box.css`): a turning two-tone rim and a breathing glow in the
+  aura's `swatch` colours, which `NumberBox` passes as `--aura-a`/`--aura-b`.
+  Bespoke aura layers stay untouched; new auras only need a `swatch`.
+- **Task metrics**: besides the original eleven, rolls also count `anomaly`,
+  `trash`, `high` (≥ 900,000), `low` (≤ 10,000), `low1k` (≤ 1,000) and
+  `badges` (every badge on every paid number). Missing metrics in old saves
+  parse as 0. The Tasks page never states the size of a pool; tests pin the
+  pool sizes (`tests/task-list.spec.js`, `tests/tasks.spec.js`), so update
+  both when adding tasks.
 - **Bookmarks** are capped at 3. The README, the "Bookmarks (n/3)" chip and the
   tests all state that cap.
 - **Companion signatures** ("firmas") take a slot on the rack, like any other

@@ -35,7 +35,17 @@ export const TASK_METRICS = [
   "pets",
   "peakEP",
   "peakBadges",
+  // Second wave: luck in both directions, plus badge volume.
+  "anomaly",
+  "trash",
+  "high",
+  "low",
+  "low1k",
+  "badges",
 ];
+// A roll of HIGH_ROLL_MIN or more is a "high" roll; LOW_ROLL_MAX or less, "low".
+export const HIGH_ROLL_MIN = 900000;
+export const LOW_ROLL_MAX = 10000;
 export const PEAK_METRICS = ["peakEP", "peakBadges"];
 
 // The tiers at or above Rare, Epic, and Mythic, in the scoring table.
@@ -55,7 +65,7 @@ export const SKIP_HOLD_LIMIT = 3;
 export const LIST_BONUS = { daily: 100000, weekly: 500000 };
 
 export const TASKS = [
-  // ---- Daily: nineteen tasks, three on the list each day -----------------
+  // ---- Daily: three on the list each day ----------------------------------
   {
     id: "daily-rolls",
     cadence: "daily",
@@ -226,6 +236,60 @@ export const TASKS = [
     metric: "skills",
     goal: 3,
     reward: 40000,
+  },
+  {
+    id: "daily-anomaly",
+    cadence: "daily",
+    title: "Roll an Anomaly",
+    detail: "The orange tier, between Epic and Mythic.",
+    metric: "anomaly",
+    goal: 1,
+    reward: 60000,
+  },
+  {
+    id: "daily-trash-5",
+    cadence: "daily",
+    title: "Roll 5 Trash numbers",
+    detail: "Bad luck pays too. Only the lowest tier counts.",
+    metric: "trash",
+    goal: 5,
+    reward: 15000,
+  },
+  {
+    id: "daily-high-3",
+    cadence: "daily",
+    title: "Roll 3 numbers of 900,000 or more",
+    detail: "About one roll in ten lands this high.",
+    metric: "high",
+    goal: 3,
+    reward: 35000,
+  },
+  {
+    id: "daily-low",
+    cadence: "daily",
+    title: "Roll a number of 10,000 or less",
+    detail: "About one roll in a hundred lands this low.",
+    metric: "low",
+    goal: 1,
+    reward: 40000,
+  },
+  {
+    id: "daily-badges-60",
+    cadence: "daily",
+    title: "Collect 60 badges across rolls",
+    detail: "Every badge on every roll adds up, found before or not.",
+    metric: "badges",
+    goal: 60,
+    reward: 30000,
+  },
+  {
+    id: "daily-high-10",
+    cadence: "daily",
+    title: "Roll 10 numbers of 900,000 or more",
+    detail: "Volume at the top of the range.",
+    metric: "high",
+    goal: 10,
+    reward: 80000,
   },
   // ---- Weekly: twenty-one tasks, four on the list each week --------------
   {
@@ -416,6 +480,60 @@ export const TASKS = [
     metric: "mythic",
     goal: 20,
     reward: 1200000,
+  },
+  {
+    id: "weekly-anomaly-5",
+    cadence: "weekly",
+    title: "Roll 5 Anomalies",
+    detail: "The orange tier only, from Monday to Monday.",
+    metric: "anomaly",
+    goal: 5,
+    reward: 450000,
+  },
+  {
+    id: "weekly-trash-40",
+    cadence: "weekly",
+    title: "Roll 40 Trash numbers",
+    detail: "A week of bad luck, rewarded.",
+    metric: "trash",
+    goal: 40,
+    reward: 250000,
+  },
+  {
+    id: "weekly-high-40",
+    cadence: "weekly",
+    title: "Roll 40 numbers of 900,000 or more",
+    detail: "About one roll in ten lands this high.",
+    metric: "high",
+    goal: 40,
+    reward: 400000,
+  },
+  {
+    id: "weekly-low-5",
+    cadence: "weekly",
+    title: "Roll 5 numbers of 10,000 or less",
+    detail: "About one roll in a hundred lands this low.",
+    metric: "low",
+    goal: 5,
+    reward: 550000,
+  },
+  {
+    id: "weekly-badges-600",
+    cadence: "weekly",
+    title: "Collect 600 badges across rolls",
+    detail: "Every badge on every roll adds up, found before or not.",
+    metric: "badges",
+    goal: 600,
+    reward: 450000,
+  },
+  {
+    id: "weekly-low-1000",
+    cadence: "weekly",
+    title: "Roll a number of 1,000 or less",
+    detail: "About one roll in a thousand. Lucky in reverse.",
+    metric: "low1k",
+    goal: 1,
+    reward: 800000,
   },
 ];
 

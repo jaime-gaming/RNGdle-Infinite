@@ -62,7 +62,7 @@
 }
 .world-heading {
   text-align: center;
-  padding: 45px 12px 30px;
+  padding: 26px 12px 18px;
   color: #cdbedc;
 }
 .world-eyebrow {
@@ -76,8 +76,8 @@
   color: #b69bb8;
 }
 .world-heading h1 {
-  margin: 12px 0 10px;
-  font-size: clamp(30px, 5vw, 49px);
+  margin: 0 0 8px;
+  font-size: clamp(28px, 4.2vw, 40px);
   line-height: 1.14;
   letter-spacing: -0.045em;
   color: #947580;
@@ -90,7 +90,7 @@
 .world-tabs {
   display: flex;
   gap: 6px;
-  margin: 0 0 18px;
+  margin: 14px 0;
   padding: 5px;
   border: 1px solid #3a2b45;
   border-radius: 999px;
@@ -147,6 +147,9 @@
 .world-panel {
   animation: world-panel-in 360ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
+.world-panel > .world-collection {
+  margin: 0;
+}
 @keyframes world-panel-in {
   from {
     opacity: 0;
@@ -187,19 +190,33 @@
 .world-rules li:nth-child(5) {
   animation-delay: 200ms;
 }
+/* The four phases read as one path: numbered steps joined by a line, with
+   only a name and a status each. */
 .world-zones {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.world-zones::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #4a3a57, transparent);
+  pointer-events: none;
 }
 .world-zone {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 7px;
-  padding: 19px 20px;
+  align-items: center;
+  text-align: center;
+  gap: 5px;
+  padding: 14px 12px 12px;
   min-width: 0;
   border: 1px solid #42334f;
   background: linear-gradient(145deg, #20172e, #16121f);
@@ -239,20 +256,41 @@
     0 0 20px color-mix(in srgb, var(--zone-accent) 7%, transparent);
 }
 .world-zone-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--zone-accent) 40%, #3a2b45);
+  background: color-mix(in srgb, var(--zone-accent) 10%, #16121f);
   color: var(--zone-accent);
-  margin-bottom: 9px;
+  margin-bottom: 4px;
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+}
+.world-zone.is-selected .world-zone-glyph {
+  transform: scale(1.08);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--zone-accent) 35%, transparent);
 }
 .world-zone-number {
   position: absolute;
-  top: 19px;
-  right: 20px;
-  font-size: 10px;
-  color: #7b6c8c;
-  letter-spacing: 0.13em;
+  top: 8px;
+  left: 10px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #2a1f38;
+  font-size: 9px;
+  color: #9d8cae;
 }
 .world-zone > strong {
-  font-size: 16px;
-  letter-spacing: -0.025em;
+  font-size: 13px;
+  letter-spacing: -0.01em;
 }
 .world-zone.is-selected > strong {
   color: #f1e9fa;
@@ -1055,8 +1093,10 @@
     height: 20px;
   }
   .world-zone-number {
-    top: 13px;
-    right: 10px;
+    top: 6px;
+    left: 6px;
+    width: 15px;
+    height: 15px;
     font-size: 8px;
   }
   .world-zone > strong {
@@ -2085,16 +2125,6 @@
   top: 12px;
   right: 13px;
 }
-.world-workbench {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(310px, 1fr);
-  gap: 13px;
-  align-items: start;
-}
-.world-workbench .world-playground {
-  min-height: 395px;
-  border-radius: 13px;
-}
 .world-zone-heading {
   padding: 19px 20px 10px;
 }
@@ -2149,88 +2179,6 @@
   gap: 8px;
   font-size: 8px;
 }
-.world-workbench > .world-collection {
-  margin: 0;
-  border-radius: 13px;
-}
-.world-workbench .world-mini-stats {
-  padding: 16px 6px;
-}
-.world-workbench .world-mini-stats strong {
-  font-size: 22px;
-}
-.world-workbench .world-mini-stats span {
-  font-size: 8px;
-}
-.world-workbench .world-objectives {
-  padding: 15px;
-}
-.world-workbench .world-collection-heading h3 {
-  font-size: 14px;
-}
-.world-workbench .world-objectives > p {
-  font-size: 9px;
-  line-height: 1.6;
-  margin: 9px 0 12px;
-}
-.world-workbench .world-objective-grid {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 7px;
-}
-.world-workbench .world-objective-grid article {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 7px;
-  padding: 10px 11px;
-}
-.world-workbench .world-objective-grid article > span {
-  min-height: 0;
-  font-size: 9px;
-  align-items: center;
-}
-.world-workbench .world-objective-grid strong {
-  font-size: 15px;
-  margin: 0;
-}
-.world-workbench .world-objective-grid small {
-  font-size: 9px;
-}
-.world-workbench .world-objective-grid progress {
-  grid-column: 1 / -1;
-}
-.world-workbench .world-badge-book {
-  padding: 0 15px 15px;
-}
-.world-workbench .world-badge-book > summary {
-  padding-top: 15px;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.world-workbench .world-badge-book > summary > span {
-  font-size: 11px;
-}
-.world-workbench .world-badge-book > summary > small {
-  font-size: 8px;
-}
-.world-workbench .world-badge-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-.world-workbench .world-badge-card {
-  grid-template-columns: 25px minmax(0, 1fr);
-  padding: 10px;
-  gap: 8px;
-}
-.world-workbench .world-badge-icon {
-  width: 25px;
-  height: 29px;
-}
-.world-workbench .world-badge-card h4 {
-  font-size: 10px;
-}
-.world-workbench .world-badge-card p {
-  font-size: 9px;
-}
 .world-phase-aura {
   margin-top: 13px;
   padding: 15px;
@@ -2283,24 +2231,6 @@
   padding: 13px 16px;
 }
 @media (max-width: 850px) {
-  .world-workbench {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .world-workbench .world-playground {
-    min-height: 370px;
-  }
-  .world-workbench .world-objective-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .world-workbench .world-objective-grid article {
-    display: block;
-  }
-  .world-workbench .world-objective-grid article > span {
-    min-height: 28px;
-  }
-  .world-workbench .world-objective-grid strong {
-    margin: 9px 0;
-  }
 }
 @media (max-width: 600px) {
   .rngween-world {
@@ -2323,21 +2253,6 @@
   }
   .world-zone > small {
     font-size: 7px;
-  }
-  .world-workbench .world-objective-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .world-workbench .world-objective-grid article {
-    display: grid;
-  }
-  .world-workbench .world-objective-grid article > span {
-    min-height: 0;
-  }
-  .world-workbench .world-objective-grid strong {
-    margin: 0;
-  }
-  .world-workbench .world-badge-book > summary > small {
-    flex-basis: 100%;
   }
   .world-phase-aura {
     padding: 13px;

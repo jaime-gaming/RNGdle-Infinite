@@ -51,7 +51,7 @@ import "../rngween-limited.css";
 import "../rngween-world.css";
 
 const WORLD_TABS = [
-  ["play", "Play", Dices],
+  ["objectives", "Objectives", Medal],
   ["key", "Key & prize", KeyRound],
   ["commissions", "Commissions", Hourglass],
   ["rules", "Rules", ScrollText],
@@ -100,9 +100,9 @@ export default function RngweenWorld({
   );
   const [shopOpen, setShopOpen] = useState(false);
   const [reaperOpen, setReaperOpen] = useState(false);
-  // Four short tabs instead of one long column: play, key and prize,
-  // commissions, rules. Entering the Valley from the key tab jumps back to play.
-  const [tab, setTab] = useState("play");
+  // The stage is always on screen; everything else sits in four short tabs
+  // under it: objectives, key and prize, commissions, rules.
+  const [tab, setTab] = useState("objectives");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -239,10 +239,6 @@ export default function RngweenWorld({
         </button>
       </header>
       <div className="world-heading">
-        <span className="world-eyebrow">
-          <PumpkinMark size={17} />
-          The Halloween mini-RNGdle
-        </span>
         <h1>RNGween World</h1>
         <p>
           {key
@@ -250,6 +246,281 @@ export default function RngweenWorld({
             : "Clear two zones, forge the key, enter the Valley."}
         </p>
       </div>
+      {warning && (
+        <p className="world-alert" role="alert">
+          {warning}
+        </p>
+      )}
+      {!progress.profile && (
+        <div className="world-guest">
+          <Ghost size={22} />
+          <p>
+            The World is open to everyone. Create a profile to save rolls, key
+            fragments, badge collections and your permanent prize.
+          </p>
+          <button className="primary-button" onClick={openSignup}>
+            Create profile
+          </button>
+        </div>
+      )}
+      <nav className="world-zones" aria-label="World phases">
+        {WORLD_ZONES.map((item) => {
+          const Icon = ZONE_ICONS[item.id];
+          const active = zone.id === item.id;
+          const complete = worldPhaseComplete(item.id, world.mini?.[item.id]);
+          const ready = item.fragment
+            ? world.fragments[item.fragment]
+            : item.id === "valley"
+              ? key
+              : complete;
+          return (
+            <button
+              key={item.id}
+              className={`world-zone${active ? " is-selected" : ""}`}
+              style={{ "--zone-accent": item.accent }}
+              aria-pressed={active}
+              disabled={!!pending || busy}
+              onClick={() => {
+                setSelected(item.id);
+                setError("");
+                setNotice("");
+              }}
+              data-world-zone={item.id}
+            >
+              <span className="world-zone-glyph">
+                <Icon size={24} />
+              </span>
+              <span className="world-zone-number">{item.phase}</span>
+              <strong>{item.name}</strong>
+              <small>
+                {item.id === "pumpkin-patch" ? (
+                  complete ? (
+                    <>
+                      <Check size={12} />
+                      Objectives cleared
+                    </>
+                  ) : (
+                    "Free entry"
+                  )
+                ) : item.fragment ? (
+                  ready ? (
+                    <>
+                      <Check size={12} />
+                      Fragment found
+                    </>
+                  ) : (
+                    "Key fragment"
+                  )
+                ) : ready ? (
+                  <>
+                    <KeyRound size={12} />
+                    Challenge unlocked
+                  </>
+                ) : (
+                  <>
+                    <LockKeyhole size={12} />
+                    Challenge key needed
+                  </>
+                )}
+              </small>
+            </button>
+          );
+        })}
+      </nav>
+      <section
+        className={`world-playground${pending ? " is-revealing" : ""}${jackpot ? " is-jackpot" : ""}`}
+        data-zone={zone.id}
+        aria-labelledby="world-zone-title"
+      >
+        <div className="world-scene">
+          <WorldScenery zone={zone.id} />
+          <span className="world-fog world-fog-back" />
+          <span className="world-fog world-fog-front" />
+          <span className="world-wisps" aria-hidden="true">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <i key={i} style={{ "--wisp": i }} />
+            ))}
+          </span>
+        </div>
+        <div className="world-zone-heading">
+          <span className="world-eyebrow">
+            <ZoneIcon size={15} />
+            Phase 0{zone.phase} · {zone.subtitle}
+          </span>
+          <h2 id="world-zone-title">{zone.name}</h2>
+        </div>
+        {pending && pending.rules !== WORLD_MINI_RULES && (
+          <p className="world-legacy-note">
+            Finishing a saved roll under its original rules. Your next roll
+            starts the badge hunt.
+          </p>
+        )}
+        <div className="world-result-stage">
+          <div
+            className={`world-summoning-circle${pending ? " is-spinning" : ""}`}
+            aria-hidden="true"
+          >
+            <span>✦</span>
+            <span>✧</span>
+            <span>✦</span>
+            <span>✧</span>
+            <span>✦</span>
+            <span>✧</span>
+          </div>
+          <NumberBox
+            value={"?".repeat(zone.digits)}
+            aura={aura}
+            auraLayout="contained"
+            tier={
+              !pending && result
+                ? result.tier === "legendary"
+                  ? "mythic"
+                  : result.tier
+                : "neutral"
+            }
+            className={`world-number-box${pending ? " is-revealing" : ""}`}
+            aria-label={
+              pending || !last
+                ? "Waiting for a World result"
+                : `World number ${last.number}`
+            }
+            data-world-result={
+              pending ? "pending" : last ? "revealed" : "empty"
+            }
+          >
+            <span className="world-result-digits" aria-hidden="true">
+              {Array.from(digits).map((digit, i) => {
+                const shown = (!pending || i < visibleCount) && !!outcome;
+                return (
+                  <span
+                    key={`${outcome?.serial ?? "empty"}:${i}:${shown}`}
+                    className={`world-digit${!shown ? " is-masked" : " is-revealed"}${shown && zone.id === "valley" && digit === "6" ? " world-six" : ""}`}
+                  >
+                    {shown ? digit : "?"}
+                  </span>
+                );
+              })}
+            </span>
+          </NumberBox>
+        </div>
+        <div
+          className="world-result-copy"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {pending ? (
+            <p>Revealing the {zone.name} number…</p>
+          ) : (
+            <p
+              className={
+                jackpot || (result && result.tier !== "common")
+                  ? "world-win-copy"
+                  : ""
+              }
+            >
+              {resultText}
+            </p>
+          )}
+        </div>
+        {!pending && result && <WorldResultBadges result={result} />}
+        {pending ? (
+          <div className="world-reveal-timer">
+            <div>
+              <Clock3 size={14} />
+              <span>{remaining > 0 ? "Revealing…" : "Saving the result…"}</span>
+              <strong aria-hidden="true">
+                {(remaining / 1000).toFixed(1)}s
+              </strong>
+            </div>
+            <progress
+              value={elapsed}
+              max={duration}
+              aria-label="World reveal progress"
+            />
+          </div>
+        ) : (
+          <div className="world-roll-controls">
+            {zone.id === "valley" && !key ? (
+              <div className="world-challenge-lock">
+                <LockKeyhole size={19} />
+                <p>
+                  Clear Graveyard and Haunted House, then forge the key in the
+                  Key & prize tab. Or buy one in the Limited Shop.
+                </p>
+                <button className="secondary-button" onClick={onShop}>
+                  View key <ArrowRight size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                className="world-roll-button"
+                disabled={
+                  busy ||
+                  !live ||
+                  !progress.profile ||
+                  (zone.id === "valley" && exhausted)
+                }
+                onClick={() =>
+                  run({
+                    type: "rngween-world-roll",
+                    zone: zone.id,
+                  })
+                }
+              >
+                <ZoneIcon size={20} />
+                {busy
+                  ? "Saving the roll…"
+                  : exhausted && zone.id === "valley"
+                    ? "Valley completed"
+                    : zone.id === "valley"
+                      ? "Roll in the Valley"
+                      : `Roll in ${zone.name}`}
+                <span>{duration / 1000}s reveal</span>
+              </button>
+            )}
+            <small>
+              {zone.id !== "valley"
+                ? `1–${zone.max} · repeats allowed · free rolls`
+                : `${(RNGWEEN_WORLD_MAX - drawn.length).toLocaleString("en-US")} unseen numbers remain · 6666 alone earns Hexbound`}
+            </small>
+          </div>
+        )}
+        {!!commissionPaid && (
+          <p className="world-commission-paid" role="status">
+            <Pumpkoin size={15} />
+            Commission complete: +{commissionPaid} Pumpkoins.
+          </p>
+        )}
+        {!shopOpen && error && (
+          <p className="world-alert" role="alert">
+            {error}
+          </p>
+        )}
+        {!shopOpen && notice && (
+          <p className="world-notice" role="status">
+            {notice}
+          </p>
+        )}
+        <div className="world-zone-footer">
+          <span>
+            {world.rounds[zone.id].toLocaleString("en-US")} rounds completed
+          </span>
+          <span>
+            <Clock3 size={13} />
+            {worldRevealMS(limited) / 1000}s on future rolls
+          </span>
+          <button
+            onClick={() => {
+              setShopOpen(true);
+              setError("");
+              setNotice("");
+            }}
+          >
+            Upgrade reveal speed <ArrowRight size={12} />
+          </button>
+        </div>
+      </section>
       <div className="world-tabs" role="tablist" aria-label="World sections">
         {WORLD_TABS.map(([id, label, Icon]) => (
           <button
@@ -275,23 +546,6 @@ export default function RngweenWorld({
           </button>
         ))}
       </div>
-      {warning && (
-        <p className="world-alert" role="alert">
-          {warning}
-        </p>
-      )}
-      {!progress.profile && (
-        <div className="world-guest">
-          <Ghost size={22} />
-          <p>
-            The World is open to everyone. Create a profile to save rolls, key
-            fragments, badge collections and your permanent prize.
-          </p>
-          <button className="primary-button" onClick={openSignup}>
-            Create profile
-          </button>
-        </div>
-      )}
       <div
         key={tab}
         className="world-panel"
@@ -299,288 +553,16 @@ export default function RngweenWorld({
         id={`world-panel-${tab}`}
         aria-labelledby={`world-tab-${tab}`}
       >
-        {tab === "play" && (
+        {tab === "objectives" && (
           <>
-            <nav className="world-zones" aria-label="World phases">
-              {WORLD_ZONES.map((item) => {
-                const Icon = ZONE_ICONS[item.id];
-                const active = zone.id === item.id;
-                const complete = worldPhaseComplete(
-                  item.id,
-                  world.mini?.[item.id],
-                );
-                const ready = item.fragment
-                  ? world.fragments[item.fragment]
-                  : item.id === "valley"
-                    ? key
-                    : complete;
-                return (
-                  <button
-                    key={item.id}
-                    className={`world-zone${active ? " is-selected" : ""}`}
-                    style={{ "--zone-accent": item.accent }}
-                    aria-pressed={active}
-                    disabled={!!pending || busy}
-                    onClick={() => {
-                      setSelected(item.id);
-                      setError("");
-                      setNotice("");
-                    }}
-                    data-world-zone={item.id}
-                  >
-                    <span className="world-zone-glyph">
-                      <Icon size={24} />
-                    </span>
-                    <span className="world-zone-number">
-                      Phase 0{item.phase}
-                    </span>
-                    <strong>{item.name}</strong>
-                    <span>{item.subtitle}</span>
-                    <small>
-                      {item.id === "pumpkin-patch" ? (
-                        complete ? (
-                          <>
-                            <Check size={12} />
-                            Objectives cleared
-                          </>
-                        ) : (
-                          "Free entry"
-                        )
-                      ) : item.fragment ? (
-                        ready ? (
-                          <>
-                            <Check size={12} />
-                            Fragment found
-                          </>
-                        ) : (
-                          "Key fragment"
-                        )
-                      ) : ready ? (
-                        <>
-                          <KeyRound size={12} />
-                          Challenge unlocked
-                        </>
-                      ) : (
-                        <>
-                          <LockKeyhole size={12} />
-                          Challenge key needed
-                        </>
-                      )}
-                    </small>
-                  </button>
-                );
-              })}
-            </nav>
-            <div className="world-workbench">
-              <section
-                className={`world-playground${pending ? " is-revealing" : ""}${jackpot ? " is-jackpot" : ""}`}
-                data-zone={zone.id}
-                aria-labelledby="world-zone-title"
-              >
-                <div className="world-scene">
-                  <WorldScenery zone={zone.id} />
-                  <span className="world-fog world-fog-back" />
-                  <span className="world-fog world-fog-front" />
-                  <span className="world-wisps" aria-hidden="true">
-                    {[0, 1, 2, 3, 4, 5].map((i) => (
-                      <i key={i} style={{ "--wisp": i }} />
-                    ))}
-                  </span>
-                </div>
-                <div className="world-zone-heading">
-                  <span className="world-eyebrow">
-                    <ZoneIcon size={15} />
-                    Phase 0{zone.phase} · {zone.subtitle}
-                  </span>
-                  <h2 id="world-zone-title">{zone.name}</h2>
-                  <p>{zone.detail}</p>
-                </div>
-                {pending && pending.rules !== WORLD_MINI_RULES && (
-                  <p className="world-legacy-note">
-                    Finishing a saved roll under its original rules. Your next
-                    roll starts the badge hunt.
-                  </p>
-                )}
-                <div className="world-result-stage">
-                  <div
-                    className={`world-summoning-circle${pending ? " is-spinning" : ""}`}
-                    aria-hidden="true"
-                  >
-                    <span>✦</span>
-                    <span>✧</span>
-                    <span>✦</span>
-                    <span>✧</span>
-                    <span>✦</span>
-                    <span>✧</span>
-                  </div>
-                  <NumberBox
-                    value={"?".repeat(zone.digits)}
-                    aura={aura}
-                    auraLayout="contained"
-                    tier={
-                      !pending && result
-                        ? result.tier === "legendary"
-                          ? "mythic"
-                          : result.tier
-                        : "neutral"
-                    }
-                    className={`world-number-box${pending ? " is-revealing" : ""}`}
-                    aria-label={
-                      pending || !last
-                        ? "Waiting for a World result"
-                        : `World number ${last.number}`
-                    }
-                    data-world-result={
-                      pending ? "pending" : last ? "revealed" : "empty"
-                    }
-                  >
-                    <span className="world-result-digits" aria-hidden="true">
-                      {Array.from(digits).map((digit, i) => {
-                        const shown =
-                          (!pending || i < visibleCount) && !!outcome;
-                        return (
-                          <span
-                            key={`${outcome?.serial ?? "empty"}:${i}:${shown}`}
-                            className={`world-digit${!shown ? " is-masked" : " is-revealed"}${shown && zone.id === "valley" && digit === "6" ? " world-six" : ""}`}
-                          >
-                            {shown ? digit : "?"}
-                          </span>
-                        );
-                      })}
-                    </span>
-                  </NumberBox>
-                </div>
-                <div
-                  className="world-result-copy"
-                  role="status"
-                  aria-live="polite"
-                  aria-atomic="true"
-                >
-                  {pending ? (
-                    <p>Revealing the {zone.name} number…</p>
-                  ) : (
-                    <p
-                      className={
-                        jackpot || (result && result.tier !== "common")
-                          ? "world-win-copy"
-                          : ""
-                      }
-                    >
-                      {resultText}
-                    </p>
-                  )}
-                </div>
-                {!pending && result && <WorldResultBadges result={result} />}
-                {pending ? (
-                  <div className="world-reveal-timer">
-                    <div>
-                      <Clock3 size={14} />
-                      <span>
-                        {remaining > 0 ? "Revealing…" : "Saving the result…"}
-                      </span>
-                      <strong aria-hidden="true">
-                        {(remaining / 1000).toFixed(1)}s
-                      </strong>
-                    </div>
-                    <progress
-                      value={elapsed}
-                      max={duration}
-                      aria-label="World reveal progress"
-                    />
-                  </div>
-                ) : (
-                  <div className="world-roll-controls">
-                    {zone.id === "valley" && !key ? (
-                      <div className="world-challenge-lock">
-                        <LockKeyhole size={19} />
-                        <p>
-                          Complete the Graveyard and Haunted House badge
-                          objectives, then forge your key below. Or buy the
-                          complete key in Limited Shop.
-                        </p>
-                        <button className="secondary-button" onClick={onShop}>
-                          View key <ArrowRight size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        className="world-roll-button"
-                        disabled={
-                          busy ||
-                          !live ||
-                          !progress.profile ||
-                          (zone.id === "valley" && exhausted)
-                        }
-                        onClick={() =>
-                          run({
-                            type: "rngween-world-roll",
-                            zone: zone.id,
-                          })
-                        }
-                      >
-                        <ZoneIcon size={20} />
-                        {busy
-                          ? "Saving the roll…"
-                          : exhausted && zone.id === "valley"
-                            ? "Valley completed"
-                            : zone.id === "valley"
-                              ? "Roll in the Valley"
-                              : `Roll in ${zone.name}`}
-                        <span>{duration / 1000}s reveal</span>
-                      </button>
-                    )}
-                    <small>
-                      {zone.id !== "valley"
-                        ? `1–${zone.max} · repeats allowed · free rolls`
-                        : `${(RNGWEEN_WORLD_MAX - drawn.length).toLocaleString("en-US")} unseen numbers remain · 6666 alone earns Hexbound`}
-                    </small>
-                  </div>
-                )}
-                {!!commissionPaid && (
-                  <p className="world-commission-paid" role="status">
-                    <Pumpkoin size={15} />
-                    Commission complete: +{commissionPaid} Pumpkoins.
-                  </p>
-                )}
-                {!shopOpen && error && (
-                  <p className="world-alert" role="alert">
-                    {error}
-                  </p>
-                )}
-                {!shopOpen && notice && (
-                  <p className="world-notice" role="status">
-                    {notice}
-                  </p>
-                )}
-                <div className="world-zone-footer">
-                  <span>
-                    {world.rounds[zone.id].toLocaleString("en-US")} rounds
-                    completed
-                  </span>
-                  <span>
-                    <Clock3 size={13} />
-                    {worldRevealMS(limited) / 1000}s on future rolls
-                  </span>
-                  <button
-                    onClick={() => {
-                      setShopOpen(true);
-                      setError("");
-                      setNotice("");
-                    }}
-                  >
-                    Upgrade reveal speed <ArrowRight size={12} />
-                  </button>
-                </div>
-              </section>
-              <WorldCollection
-                zone={zone}
-                stats={stats}
-                fragmentOwned={
-                  zone.fragment ? world.fragments[zone.fragment] : false
-                }
-                drawn={drawn}
-              />
-            </div>
+            <WorldCollection
+              zone={zone}
+              stats={stats}
+              fragmentOwned={
+                zone.fragment ? world.fragments[zone.fragment] : false
+              }
+              drawn={drawn}
+            />
             <WorldAuraTrial
               phase={zone}
               progress={progress}
@@ -664,7 +646,7 @@ export default function RngweenWorld({
                   disabled={!!pending || busy}
                   onClick={() => {
                     setSelected("valley");
-                    setTab("play");
+                    setTab("objectives");
                   }}
                 >
                   Enter Valley <ArrowRight size={14} />

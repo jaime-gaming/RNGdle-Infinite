@@ -336,7 +336,7 @@ test("a claimed task is written to History as wallet income", async ({
 
 test("each period deals the configured number of unique tasks from its expanded pool", () => {
   const time = at(2026, 9, 1);
-  const poolSizes = { daily: 19, weekly: 21 };
+  const poolSizes = { daily: 25, weekly: 27 };
   for (const cadence of TASK_CADENCES) {
     const pool = TASKS.filter((task) => task.cadence === cadence);
     const ids = activeTaskIds(emptyTasks(), cadence, time);

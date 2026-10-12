@@ -439,6 +439,95 @@ button.number-box.number-box:hover {
   }
 }
 
+/* Shared finish for every aura: a slowly turning two-tone rim light and a soft
+   breathing glow in the aura's own swatch colours, plus a brighter ink glow.
+   It sits under each aura's bespoke layers so none of them need changes. */
+@property --aura-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.box-finish {
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  pointer-events: none;
+}
+.box-finish::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--aura-turn),
+    var(--aura-a, #fff),
+    var(--aura-b, #fff) 35%,
+    transparent 50%,
+    var(--aura-a, #fff) 70%,
+    var(--aura-b, #fff) 90%,
+    var(--aura-a, #fff)
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.55;
+  animation: box-finish-turn 9s linear infinite;
+}
+.box-finish::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 20px;
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    color-mix(in srgb, var(--aura-a, #fff) 28%, transparent),
+    transparent 70%
+  );
+  filter: blur(6px);
+  z-index: -1;
+  animation: box-finish-breathe 5.2s ease-in-out infinite;
+}
+.number-box[data-cosmetic]:not([data-cosmetic="none"]) .number-box-content {
+  text-shadow:
+    0 1px 2px #ffffff80,
+    0 0 14px color-mix(in srgb, var(--aura-a, #fff) 45%, transparent);
+}
+:root[data-theme="dark"]
+  .number-box[data-cosmetic]:not([data-cosmetic="none"])
+  .number-box-content {
+  text-shadow:
+    0 1px 2px #ffffff33,
+    0 0 16px color-mix(in srgb, var(--aura-a, #fff) 55%, transparent);
+}
+:root[data-theme="dark"] .box-finish::before {
+  opacity: 0.7;
+}
+.number-box.number-box-compact .box-finish::after {
+  inset: -6px;
+}
+@keyframes box-finish-turn {
+  to {
+    --aura-turn: 360deg;
+  }
+}
+@keyframes box-finish-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+.number-box[data-motion="reduced"] .box-finish::before,
+.number-box[data-motion="reduced"] .box-finish::after {
+  animation: none;
+}
+
 /* Second-generation aura details. All layers stay behind the number's ink. */
 .box-ornament,
 .aura-trace {
@@ -1686,4 +1775,12 @@ button.number-box.number-box:hover {
 }
 .number-box[data-aura-layout="contained"] .box-ornament {
   opacity: 0.5;
+}
+.number-box[data-aura-layout="contained"] .box-finish {
+  inset: 0;
+  border-radius: inherit;
+}
+.number-box[data-aura-layout="contained"] .box-finish::after {
+  inset: 0;
+  border-radius: inherit;
 }

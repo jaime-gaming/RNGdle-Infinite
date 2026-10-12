@@ -1009,12 +1009,12 @@ test("a keyless profile rolls for badges and three objectives per zone, earns di
   await expect(page.locator(".world-choices, .world-run")).toHaveCount(0);
   await expect(page.locator("[data-world-objective]")).toHaveCount(3);
   await expect(page.locator("[data-world-badge]")).toHaveCount(9);
-  // The key lives on its own tab; the play tab stays open for rolling.
+  // The key lives on its own tab; the stage stays on screen whichever is open.
   await page.getByRole("tab", { name: "Key & prize" }).click();
   await expect(
     page.getByRole("button", { name: "Forge key · free" }),
   ).toBeDisabled();
-  await page.getByRole("tab", { name: "Play" }).click();
+  await page.getByRole("tab", { name: "Objectives" }).click();
   for (let index = 0; index < 5; index++) {
     await page.getByRole("button", { name: /Roll in Graveyard/ }).click();
     await expect

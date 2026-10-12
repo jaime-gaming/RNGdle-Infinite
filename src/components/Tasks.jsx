@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import {
+  ArrowDownToLine,
   ArrowRightLeft,
+  ArrowUpToLine,
+  Trash2,
   BadgeCheck,
   CalendarDays,
   Check,
@@ -19,12 +22,10 @@ import {
   Zap,
 } from "lucide-react";
 import {
-  ACTIVE_PER_PERIOD,
   CADENCE_NAME,
   LIST_BONUS,
   SKIP_WINDOW_LIMIT,
   SKIP_WINDOW_MS,
-  TASKS,
   TASK_CADENCES,
   activeTasks,
   listBonusState,
@@ -59,11 +60,15 @@ const KIND = {
   peakEP: { name: "Big roll", icon: TrendingUp },
   skills: { name: "Skills", icon: Zap },
   pets: { name: "Companion", icon: PawPrint },
+  anomaly: { name: "Rarity", icon: Sparkles },
+  trash: { name: "Bad luck", icon: Trash2 },
+  high: { name: "High roll", icon: ArrowUpToLine },
+  low: { name: "Low roll", icon: ArrowDownToLine },
+  low1k: { name: "Low roll", icon: ArrowDownToLine },
+  badges: { name: "Badges", icon: Medal },
 };
 
 const count = (n) => n.toLocaleString("en-US");
-const POOL_SIZE = (cadence) =>
-  TASKS.filter((task) => task.cadence === cadence).length;
 
 export default function Tasks({
   progress,
@@ -269,8 +274,9 @@ export default function Tasks({
               <div>
                 <h2 id={`task-group-${cadence}`}>{CADENCE_NAME[cadence]}</h2>
                 <p className="task-group-sub">
-                  {ACTIVE_PER_PERIOD[cadence]} of {POOL_SIZE(cadence)} tasks on
-                  your list
+                  {cadence === "daily"
+                    ? "Three tasks a day, new ones at reset"
+                    : "Four tasks a week, new ones on Monday"}
                 </p>
               </div>
               <div className="task-group-meta">
