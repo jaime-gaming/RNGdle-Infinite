@@ -16,7 +16,7 @@ buying upgrades. No energy meter, no daily limit, no account needed.
 
 **Contents:** [How to play](#how-to-play) · [Ways to grow](#ways-to-grow) ·
 [RNGween](#rngween-october-21--november-3-2026) · [Your progress](#your-progress) ·
-[FAQ](#faq) · [Credits](#credits) · [Run it locally](#run-it-locally)
+[FAQ](#faq) · [Credits](#credits)
 
 ## How to play
 
@@ -105,21 +105,3 @@ credits below.
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji),
   [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono (SIL Open Font License). Icons: [Lucide](https://lucide.dev/).
-
-## Run it locally
-
-You need Node.js 20 or newer and npm.
-
-```sh
-npm install
-npm run dev     # http://localhost:5173
-npm test        # the Playwright suite (needs a Chromium binary)
-npm run build   # production build
-```
-
-To try the Halloween event outside its dates, `npm run dev:rngween` starts the
-dev server with the clock set to October 26, 2026. These previews never reach
-production.
-
-Contributing or pointing a coding agent at the repo? [`AGENTS.md`](AGENTS.md)
-has the project map, the rules of the game and the testing notes.
