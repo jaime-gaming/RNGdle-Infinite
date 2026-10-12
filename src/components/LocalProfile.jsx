@@ -315,6 +315,12 @@ export default function LocalProfile({
           {progress.ultraRebirths === 1 ? "" : "s"} beyond the ladder
         </p>
       )}
+      {profile && (progress?.freshStarts ?? 0) > 0 && (
+        <p className="profile-prestige">
+          <span aria-hidden="true">↺</span> Fresh start ×{progress.freshStarts}{" "}
+          · this run began from zero by choice
+        </p>
+      )}
       {profile ? (
         <>
           <p>

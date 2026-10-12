@@ -18,7 +18,8 @@ export function isCycleMarker(entry) {
   return (
     entry?.type === "rebirth" ||
     entry?.type === "ultra-rebirth" ||
-    entry?.type === "rollback"
+    entry?.type === "rollback" ||
+    entry?.type === "fresh-start"
   );
 }
 
@@ -71,6 +72,7 @@ export function removableCount(history = [], bookmarks = []) {
 // The save keeps the prestige as "ultra-rebirth"; the player sees its name.
 function markerName(entry) {
   if (entry.type === "rollback") return "Rollback";
+  if (entry.type === "fresh-start") return "Fresh start";
   return entry.type === "ultra-rebirth"
     ? `Prestige ${entry.count}`
     : `Rebirth ${entry.count}`;

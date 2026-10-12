@@ -121,6 +121,14 @@ effect of other work.
   sample.
 - **Rollback** stays hidden until the player has three prestiges. It is hidden,
   not disabled. It starts from 0 EP (no starting bonus) and can be repeated.
+- **Fresh start** (`fresh-start` action, `src/components/FreshStart.jsx`) is
+  offered once an account has three prestiges. The dialog opens by itself once
+  per profile (a localStorage flag), then lives behind the "!" in the header.
+  It keeps the profile and every aura, and resets everything else, including
+  rebirths, prestiges and Rollbacks; a `fresh-start` history row keeps the old
+  figures and counts as a cycle marker.
+- **RNGween World** is laid out in four tabs (Play, Key & prize, Commissions,
+  Rules). Tests that need the key forge switch to its tab first.
 - **Bookmarks** are capped at 3. The README, the "Bookmarks (n/3)" chip and the
   tests all state that cap.
 - **Companion signatures** ("firmas") take a slot on the rack, like any other

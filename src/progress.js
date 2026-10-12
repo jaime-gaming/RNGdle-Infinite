@@ -1,3 +1,4 @@
+import { allTimeTally } from "./profile-stats.js";
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import {
   productById,
@@ -261,6 +262,7 @@ export function emptyProgress() {
     rebirths: 0,
     ultraRebirths: 0,
     rollbacks: 0,
+    freshStarts: 0,
     surplusBanked: 0,
     cooldownWindow: null,
     pets: [],
@@ -279,6 +281,14 @@ export function emptyProgress() {
 // history entries by id, so a repaired save drops any mark whose roll did not
 // survive the repair, and the cap is part of the save's shape, not the UI's.
 export const BOOKMARK_LIMIT = 3;
+
+// The fresh-start offer and action share one rule: three prestiges or more.
+export const FRESH_START_PRESTIGES = 3;
+export function freshStartEligible(progress = {}) {
+  return (
+    !!progress.profile && (progress.ultraRebirths ?? 0) >= FRESH_START_PRESTIGES
+  );
+}
 function parseBookmarks(value, history) {
   if (!Array.isArray(value)) return [];
   const rolls = new Set(
@@ -412,6 +422,11 @@ export function parseAndRepairProgress(raw) {
   if ((p.rollbacks ?? 0) !== rollbacks)
     note(
       `Rollback count was ${describeStored(p.rollbacks)}, so it was set to ${rollbacks}.`,
+    );
+  const freshStarts = repairAmount(p.freshStarts ?? 0);
+  if ((p.freshStarts ?? 0) !== freshStarts)
+    note(
+      `fresh start count was ${describeStored(p.freshStarts)}, so it was set to ${freshStarts}.`,
     );
   const surplusBanked = Math.min(repairAmount(p.surplusBanked ?? 0), 100);
   if ((p.surplusBanked ?? 0) !== surplusBanked)
@@ -686,6 +701,7 @@ export function parseAndRepairProgress(raw) {
     rebirths,
     ultraRebirths,
     rollbacks,
+    freshStarts,
     surplusBanked,
     offline,
     flywheelCharge,
@@ -1509,6 +1525,50 @@ function applyEvent(state, action) {
         },
       ]),
     };
+  }
+  // A fresh start is for accounts that have seen everything: three prestiges
+  // or more. It wipes the run, the ladder and the history, and keeps only the
+  // profile, event cosmetics, event entitlements and one keepsake row.
+  if (action.type === "fresh-start") {
+    if (!freshStartEligible(state))
+      throw new Error("A fresh start opens after three prestiges.");
+    if (state.pendingRoll)
+      throw new Error("Finish the roll in progress first.");
+    const now = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(now) || now > 8640000000000000)
+      throw new Error("Invalid fresh start time");
+    const count = (state.freshStarts ?? 0) + 1;
+    if (!validAmount(count)) throw new Error("Fresh start limit reached.");
+    const keepsake = {
+      id: action.eventId ?? `fresh-start:${count}`,
+      type: "fresh-start",
+      at: now,
+      count,
+      before: {
+        rebirths: state.rebirths ?? 0,
+        ultraRebirths: state.ultraRebirths ?? 0,
+        rollbacks: state.rollbacks ?? 0,
+        totalEarned: state.totalEarned ?? 0,
+        rolls: allTimeTally(state).rolls,
+      },
+    };
+    // Cosmetics are the one thing a fresh start keeps: every aura, bought or
+    // earned, plus event-only items that never return to the shop.
+    const cosmetics = [...new Set(state.owned ?? [])].filter((id) => {
+      const product = productById.get(id);
+      return product?.eventOnly || product?.kind === "aura";
+    });
+    const next = {
+      ...emptyProgress(),
+      profile: state.profile,
+      owned: cosmetics,
+      equipped: cosmetics.includes(state.equipped) ? state.equipped : "none",
+      freshStarts: count,
+      tasks: { ...emptyTasks(), rngween: state.tasks?.rngween },
+      rngweenLimited: state.rngweenLimited,
+      history: [keepsake],
+    };
+    return preservePermanentCosmetics(state, next);
   }
   if (action.type === "goal") {
     if (action.id !== null && !validGoal(action.id, state.owned, state.pets))
@@ -2373,6 +2433,19 @@ function parseHistory(value) {
         count: e.count,
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
         ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
+      };
+    } else if (e.type === "fresh-start") {
+      // What the account had before it chose to start over, kept as a keepsake.
+      if (!validAmount(e.count) || e.count < 1) return [];
+      const before = e.before && typeof e.before === "object" ? e.before : {};
+      next = {
+        ...base,
+        count: e.count,
+        before: Object.fromEntries(
+          ["rebirths", "ultraRebirths", "rollbacks", "totalEarned", "rolls"]
+            .filter((key) => validAmount(before[key]))
+            .map((key) => [key, before[key]]),
+        ),
       };
     } else if (e.type === "pet") {
       if (

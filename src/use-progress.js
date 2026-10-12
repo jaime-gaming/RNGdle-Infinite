@@ -346,16 +346,20 @@ export function useProgress() {
         const actionHead = previous;
         previous = retireRngweenLimited(previous, action.rngweenAt);
         if (
-          ["rebirth", "ultra-rebirth", "rollback"].includes(action.type) &&
+          ["rebirth", "ultra-rebirth", "rollback", "fresh-start"].includes(
+            action.type,
+          ) &&
           previous.profile &&
           (!readable || !navigator.locks?.request)
         )
           throw new Error(
-            action.type === "rollback"
-              ? "The Rollback requires working local storage and Web Locks support."
-              : action.type === "ultra-rebirth"
-                ? "Prestige requires working local storage and Web Locks support."
-                : "Rebirth requires working local storage and Web Locks support.",
+            action.type === "fresh-start"
+              ? "A fresh start requires working local storage and Web Locks support."
+              : action.type === "rollback"
+                ? "The Rollback requires working local storage and Web Locks support."
+                : action.type === "ultra-rebirth"
+                  ? "Prestige requires working local storage and Web Locks support."
+                  : "Rebirth requires working local storage and Web Locks support.",
           );
         if (action.type === "delete") {
           if (!previous.profile || previous.profile.id !== action.profileId)
@@ -705,7 +709,7 @@ export function useProgress() {
               return {
                 ok: false,
                 message:
-                  action.type === "rebirth"
+                  action.type === "rebirth" || action.type === "fresh-start"
                     ? "Rebirth could not be saved. Your progress has not been reset."
                     : action.type === "ultra-rebirth"
                       ? "Prestige could not be saved. Your progress has not been reset."
@@ -731,9 +735,14 @@ export function useProgress() {
         if (
           next !== previous &&
           !next.profile &&
-          ["draw", "complete", "rebirth", "ultra-rebirth", "rollback"].includes(
-            action.type,
-          )
+          [
+            "draw",
+            "complete",
+            "rebirth",
+            "ultra-rebirth",
+            "rollback",
+            "fresh-start",
+          ].includes(action.type)
         ) {
           try {
             sessionStorage.setItem(
@@ -766,7 +775,8 @@ export function useProgress() {
         if (
           action.type === "rebirth" ||
           action.type === "ultra-rebirth" ||
-          action.type === "rollback"
+          action.type === "rollback" ||
+          action.type === "fresh-start"
         ) {
           try {
             if (previous.profile && action.type === "rebirth")

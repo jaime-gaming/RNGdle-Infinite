@@ -118,7 +118,9 @@ export default function ActivityFeed({
             (filter === "Rolls" && e.type === "roll") ||
             (filter === "Offline" && e.source === "offline") ||
             (filter === "Rebirths" &&
-              ["rebirth", "ultra-rebirth", "rollback"].includes(e.type)) ||
+              ["rebirth", "ultra-rebirth", "rollback", "fresh-start"].includes(
+                e.type,
+              )) ||
             (filter === "Bookmarks" &&
               e.type === "roll" &&
               bookmarks.includes(e.id)) ||
@@ -493,14 +495,17 @@ export default function ActivityFeed({
                   entry and draws a dotted line where the new one begins. */}
               {(event.type === "rebirth" ||
                 event.type === "ultra-rebirth" ||
-                event.type === "rollback") && (
+                event.type === "rollback" ||
+                event.type === "fresh-start") && (
                 <li className="activity-divider">
                   <span className="activity-divider-label">
                     {event.type === "rollback"
                       ? "Rollback"
-                      : event.type === "ultra-rebirth"
-                        ? `Prestige ${event.count}`
-                        : `Rebirth ${event.count}`}
+                      : event.type === "fresh-start"
+                        ? "Fresh start"
+                        : event.type === "ultra-rebirth"
+                          ? `Prestige ${event.count}`
+                          : `Rebirth ${event.count}`}
                   </span>
                 </li>
               )}
@@ -519,7 +524,8 @@ export default function ActivityFeed({
                     <ShoppingBag size={19} />
                   ) : event.type === "pet" ? (
                     <PawPrint size={19} />
-                  ) : event.type === "rebirth" ? (
+                  ) : event.type === "rebirth" ||
+                    event.type === "fresh-start" ? (
                     <RotateCcw size={19} />
                   ) : event.type === "ultra-rebirth" ||
                     event.type === "rollback" ? (
@@ -714,6 +720,15 @@ export default function ActivityFeed({
                       the cycle began with {formatEP(event.grant ?? 0)} EP, and
                       the permanent wallet bonus grew by 25%. The Rollback can
                       be taken again.
+                    </p>
+                  ) : event.type === "fresh-start" ? (
+                    <p>
+                      A fresh start, by choice. The old run reached{" "}
+                      {event.before?.ultraRebirths ?? 0} prestiges,{" "}
+                      {event.before?.rebirths ?? 0} rebirths and{" "}
+                      {formatEP(event.before?.totalEarned ?? 0)} EP earned over{" "}
+                      {formatEP(event.before?.rolls ?? 0)} rolls. Everything but
+                      the profile and the auras went back to zero.
                     </p>
                   ) : event.type === "task" ? (
                     <p className="activity-transaction">

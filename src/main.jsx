@@ -48,6 +48,7 @@ import { rngweenWorldUnlocked } from "./rngween-limited.js";
 import RngweenWorld from "./components/RngweenWorld.jsx";
 import RngweenGate from "./components/RngweenGate.jsx";
 import RngweenIntro from "./components/RngweenIntro.jsx";
+import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
 import RngweenSeason from "./components/RngweenSeason.jsx";
 import AppearanceMenu from "./components/AppearanceMenu.jsx";
 import { freshRareBadges, newlyReady } from "./notice-rules.js";
@@ -190,6 +191,9 @@ function App() {
   const [modal, setModal] = useState(null);
   const [reaperOpen, setReaperOpen] = useState(false);
   const [eventIntroOpen, setEventIntroOpen] = useState(false);
+  const [freshStartOpen, setFreshStartOpen] = useState(false);
+  const openFreshStart = useCallback(() => setFreshStartOpen(true), []);
+  const closeFreshStart = useCallback(() => setFreshStartOpen(false), []);
   const [selectedBadge, setSelectedBadge] = useState(null);
   // Notices: a short stack of cards, one per thing that just happened. See
   // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
@@ -781,6 +785,7 @@ function App() {
           </nav>
         </div>
         <div className="header-right">
+          <FreshStartFlag progress={session} onOpen={openFreshStart} />
           {showVersionFlag && (
             <button
               className="version-flag"
@@ -1355,6 +1360,15 @@ function App() {
         now={seasonalNow}
         paused={reaperOpen || !!modal}
         onOpenChange={setEventIntroOpen}
+      />
+      <FreshStartDialog
+        progress={session}
+        open={freshStartOpen}
+        onClose={closeFreshStart}
+        onAutoOpen={openFreshStart}
+        onAction={dispatch}
+        notify={notify}
+        paused={reaperOpen || eventIntroOpen || !!modal}
       />
       {modal && (
         <div

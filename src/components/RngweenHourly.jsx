@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Clock3,
@@ -31,23 +31,47 @@ export default function RngweenHourly({
   const clock = useHourlyDisplayClock(now);
   const view = hourlyView(progress, clock);
   const [claiming, setClaiming] = useState(0);
+  const [leaving, setLeaving] = useState(0);
+  const [bumped, setBumped] = useState(false);
+  // Serials seen on a previous render: a card for a new serial is a swap, so
+  // it is dealt in without waiting on the opening stagger.
+  const seen = useRef(new Set());
+  const fresh = new Set(
+    view.slots
+      .map((slot) => slot.serial)
+      .filter((serial) => seen.current.size && !seen.current.has(serial)),
+  );
+  useEffect(() => {
+    for (const slot of view.slots) seen.current.add(slot.serial);
+  });
   async function claim(slot) {
     if (claiming) return;
     setClaiming(slot.serial);
     try {
+      // Let the card fold away before the save swaps it out from under it.
+      const reduce = matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      if (!reduce) {
+        setLeaving(slot.serial);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
       const outcome = await onAction?.({
         type: "claim-rngween-hourly",
         serial: slot.serial,
       });
+      setLeaving(0);
       if (outcome && !outcome.ok)
         notify?.({ kind: "error", text: outcome.message });
-      else if (outcome?.ok)
+      else if (outcome?.ok) {
+        setBumped(true);
+        setTimeout(() => setBumped(false), 600);
         notify?.({
           kind: "reward",
           title: `${slot.task.title} claimed`,
           text: `+${slot.task.pumpkoins} Pumpkoins. A new commission took its place.`,
         });
+      }
     } finally {
+      setLeaving(0);
       setClaiming(0);
     }
   }
@@ -72,7 +96,7 @@ export default function RngweenHourly({
           </h2>
           <p>Complete commissions within one hour to earn Pumpkoins.</p>
         </div>
-        <span className="rngween-hourly-wallet">
+        <span className={`rngween-hourly-wallet${bumped ? " is-bumped" : ""}`}>
           <PumpkinMark size={20} />
           <strong>
             {(progress.rngweenLimited?.pumpkoins ?? 0).toLocaleString("en-US")}
@@ -105,7 +129,9 @@ export default function RngweenHourly({
           {view.slots.length
             ? view.slots.map((slot) => (
                 <li
-                  className="rngween-hourly-card"
+                  className={`rngween-hourly-card${
+                    leaving === slot.serial ? " is-leaving" : ""
+                  }${fresh.has(slot.serial) ? " is-fresh" : ""}`}
                   key={slot.key}
                   data-hourly-task={slot.taskId}
                   data-hourly-serial={slot.serial}
@@ -123,7 +149,9 @@ export default function RngweenHourly({
                         : "Main game"}
                     </span>
                     <span
-                      className="rngween-hourly-countdown"
+                      className={`rngween-hourly-countdown${
+                        slot.remaining < 5 * 60_000 ? " is-urgent" : ""
+                      }`}
                       aria-label={`${slot.task.title} time remaining`}
                     >
                       <Clock3 size={12} />

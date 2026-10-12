@@ -44,6 +44,7 @@ export function accountStats(progress = {}) {
     rebirths: progress.rebirths ?? 0,
     ultraRebirths: progress.ultraRebirths ?? 0,
     rollbacks: progress.rollbacks ?? 0,
+    freshStarts: progress.freshStarts ?? 0,
     firstEventAt: total.first,
     lastEventAt: total.last,
   };
@@ -82,7 +83,7 @@ function removedTotalsOf(progress) {
 
 // Every entry the log has ever held: the ones still in it, and the totals of
 // the ones that have left it.
-function allTimeTally(progress) {
+export function allTimeTally(progress) {
   const history = Array.isArray(progress.history) ? progress.history : [];
   return removedTotalsOf(progress).reduce(
     (sum, tally) => (tally ? mergeTallies(sum, tally) : sum),
@@ -147,6 +148,7 @@ export function exportPayload(progress = {}) {
       rebirths: stats.rebirths,
       ultraRebirths: stats.ultraRebirths,
       rollbacks: stats.rollbacks,
+      freshStarts: stats.freshStarts,
       goalId: progress.goalId ?? null,
       history: progress.history ?? [],
     },

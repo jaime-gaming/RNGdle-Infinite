@@ -65,6 +65,9 @@ export function unlockedRngweenPreview() {
         equippedSkills.map((id) => [id, skillById.get(id).charges]),
       ),
       flywheelCharge: flywheelRequired(owned),
+      // RNGDLE_SANDBOX_PRESTIGES=3 previews the fresh-start offer.
+      ultraRebirths: Number(process.env.RNGDLE_SANDBOX_PRESTIGES ?? 0) || 0,
+      rebirths: Number(process.env.RNGDLE_SANDBOX_PRESTIGES ?? 0) ? 7 : 0,
       tasks: {
         ...base.tasks,
         rngween: {

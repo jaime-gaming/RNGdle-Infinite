@@ -315,7 +315,8 @@ export function cycleEarnedEp(progress) {
     (event) =>
       event.type === "rebirth" ||
       event.type === "ultra-rebirth" ||
-      event.type === "rollback",
+      event.type === "rollback" ||
+      event.type === "fresh-start",
   );
   const events = start >= 0 ? history.slice(start + 1) : history;
   let total = 0;
