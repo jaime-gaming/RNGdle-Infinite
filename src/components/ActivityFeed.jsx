@@ -25,6 +25,7 @@ import {
   removableCount,
 } from "../history-log.js";
 import { CADENCE_NAME } from "../tasks.js";
+import { dejaVuIds } from "../deja-vu.js";
 import "../activity.css";
 const byId = new Map(badges.map((b) => [b.canonicalId, b]));
 const filters = [
@@ -88,6 +89,7 @@ export default function ActivityFeed({
     [pruneError, setPruneError] = useState("");
   const lens = progress.owned.includes("archive-lens");
   const history = progress.history ?? [];
+  const repeats = useMemo(() => dejaVuIds(history), [history]);
   // A few rolls can be pinned for later: the bookmarks live on the save, so
   // they survive reloads, rebirths and other tabs.
   const bookmarks = progress.bookmarks ?? [];
@@ -433,6 +435,7 @@ export default function ActivityFeed({
                 "trash",
                 "common",
                 "uncommon",
+                "good",
                 "rare",
                 "epic",
                 "anomaly",
@@ -589,6 +592,7 @@ export default function ActivityFeed({
                           compact
                           value={event.number}
                           tier={event.tier}
+                          dejaVu={repeats.has(event.id)}
                           aria-label={`Historical roll ${event.number}`}
                         />
                         <div>

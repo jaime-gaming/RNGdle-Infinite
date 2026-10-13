@@ -60,6 +60,17 @@ const top = (extra = {}) => ({
   ...extra,
 });
 
+// After three prestiges the one-time fresh-start suggestion opens over the
+// page; these tests are about the Rollback itself, so they close it first.
+async function dismissFreshStart(page) {
+  const close = page
+    .locator("dialog.fresh-start-dialog[open]")
+    .getByRole("button", { name: "Close", exact: true });
+  await expect(close).toBeVisible();
+  await close.click();
+  await expect(page.locator("dialog.fresh-start-dialog[open]")).toHaveCount(0);
+}
+
 test("the Rollback stays shut until three prestiges, then asks for more than a prestige", () => {
   expect(ROLLBACK_AFTER_PRESTIGES).toBe(3);
   // Higher than a prestige on both counts: more of the collection, more EP.
@@ -296,6 +307,7 @@ test("the Rollback appears after the third prestige and takes the run", async ({
     uiState({ ultraRebirths: 3, history: earned(gate.ep) }),
   );
   await page.goto("/#rebirth");
+  await dismissFreshStart(page);
   const rollback = page
     .locator(".rebirth-page")
     .getByRole("button", { name: "Rollback", exact: true });
@@ -340,6 +352,7 @@ test("the Rollback can be taken again and again, each one stacking", async ({
     }),
   );
   await page.goto("/#rebirth");
+  await dismissFreshStart(page);
   const rollback = page
     .locator(".rebirth-page")
     .getByRole("button", { name: "Rollback", exact: true });

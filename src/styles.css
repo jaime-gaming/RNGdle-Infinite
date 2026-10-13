@@ -566,6 +566,11 @@ svg .cut-line {
   --rarity-bg: #eef9f1;
   --rarity-border: #cfe7d7;
 }
+.good {
+  --rarity: #20779b;
+  --rarity-bg: #eef8fb;
+  --rarity-border: #c9e4ee;
+}
 .rare {
   --rarity: #5786b3;
   --rarity-bg: #eff6fc;
@@ -587,7 +592,7 @@ svg .cut-line {
   --rarity-border: #efcfdb;
 }
 :root[data-theme="dark"]
-  :is(.common, .uncommon, .rare, .epic, .anomaly, .mythic) {
+  :is(.common, .uncommon, .good, .rare, .epic, .anomaly, .mythic) {
   --rarity-bg: color-mix(in srgb, var(--rarity) 13%, var(--surface));
   --rarity-border: color-mix(in srgb, var(--rarity) 28%, var(--surface));
 }
@@ -596,6 +601,9 @@ svg .cut-line {
 }
 :root[data-theme="dark"] .uncommon {
   --rarity: #7bb899;
+}
+:root[data-theme="dark"] .good {
+  --rarity: #38cdff;
 }
 :root[data-theme="dark"] .rare {
   --rarity: #84aed4;

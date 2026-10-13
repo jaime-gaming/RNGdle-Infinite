@@ -1784,3 +1784,120 @@ button.number-box.number-box:hover {
   inset: 0;
   border-radius: inherit;
 }
+
+/* Déjà vu: an exact number rolled again. Box Lab community recipe "Exactnium"
+   (by Numbas), worn as a look on top of whatever tier the number has. It
+   never changes EP, badges or rank; only the box. */
+@property --deja-vu-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.number-box[data-tier][data-deja-vu="true"] {
+  --box-background: linear-gradient(to bottom right, #64e1e1, #e16ee1, #e1e16e);
+  --box-border: #ffa0ff;
+  --box-shadow:
+    0 0 25px rgba(255, 190, 255, 1), inset 0 2px 4px 0 rgba(100, 225, 225, 0.5);
+  --box-ink: #a0ffff;
+  animation: deja-vu-pulse 4s ease-in-out infinite;
+}
+.number-box[data-deja-vu="true"] .number-box-content,
+.number-box[data-deja-vu="true"] .artifact-digits {
+  background: linear-gradient(180deg, #e0ffff, #a0ffff 55%, #ffc8ff);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+.number-box[data-deja-vu="true"] .artifact-digit {
+  text-shadow: none;
+}
+/* Spinning border: a conic ring just outside the box edge. */
+.number-box[data-deja-vu="true"]::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: -1;
+  border-radius: 14px;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--deja-vu-turn),
+    #ffa0ff,
+    #64e1e1,
+    #e1e16e,
+    #e16ee1,
+    #ffa0ff
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: deja-vu-turn 6s linear infinite;
+}
+/* Holographic sheen over the gradient. */
+.number-box[data-deja-vu="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 1;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    #ffffff55 38%,
+    #ffffff10 45%,
+    #ffffff55 52%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  animation: box-sweep 5s ease-in-out infinite;
+}
+.deja-vu-particles {
+  position: absolute;
+  inset: -6px;
+  pointer-events: none;
+  z-index: 1;
+}
+.deja-vu-particles i {
+  position: absolute;
+  background: #ffc8ff;
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0% 50%,
+    39% 39%
+  );
+  filter: drop-shadow(0 0 3px #e16ee1);
+  animation: box-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes deja-vu-turn {
+  to {
+    --deja-vu-turn: 360deg;
+  }
+}
+@keyframes deja-vu-pulse {
+  50% {
+    box-shadow:
+      0 0 38px rgba(255, 190, 255, 1),
+      inset 0 2px 4px 0 rgba(100, 225, 225, 0.5);
+    transform: scale(1.012);
+  }
+}
+.number-box[data-motion="reduced"][data-deja-vu="true"],
+.number-box[data-motion="reduced"][data-deja-vu="true"]::before,
+.number-box[data-motion="reduced"][data-deja-vu="true"]::after,
+.number-box[data-motion="reduced"] .deja-vu-particles i {
+  animation: none;
+}
+.number-box[data-deja-vu="true"][data-cosmetic] .number-box-content,
+:root[data-theme="dark"]
+  .number-box[data-deja-vu="true"][data-cosmetic]
+  .number-box-content {
+  text-shadow: none;
+}

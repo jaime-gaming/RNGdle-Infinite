@@ -49,6 +49,7 @@ const TIER_SQUARES = {
   trash: "\u{1F7EB}",
   common: "\u2B1C",
   uncommon: "\u{1F7E9}",
+  good: "\u{1F537}",
   rare: "\u{1F7E6}",
   epic: "\u{1F7EA}",
   anomaly: "\u{1F7E7}",

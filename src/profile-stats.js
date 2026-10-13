@@ -106,6 +106,7 @@ const TIER_COLORS = {
   trash: "#8a8680",
   common: "#5a9a78",
   uncommon: "#4f9d69",
+  good: "#20779b",
   rare: "#3b82f6",
   epic: "#a855f7",
   anomaly: "#ec4899",

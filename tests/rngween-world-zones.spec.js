@@ -380,7 +380,7 @@ test("guests can browse and enter through the Reaper but saved rolls require cre
   await page.goto("/");
   await page.getByRole("button", { name: "Speak to The Reaper" }).click();
   const reaper = page.getByRole("dialog", { name: "The Reaper", exact: true });
-  await expect(reaper).toContainText("open to everyone");
+  await expect(reaper).toContainText("open to anyone");
   await reaper.locator("[data-typing]").click();
   await reaper.getByRole("button", { name: "Enter RNGween World" }).click();
   await selectZone(page, "graveyard");
@@ -976,6 +976,17 @@ test("all twelve hourly World varieties are achievable through badges in the two
           opening + 1000 + index * 11000,
         ),
       );
+      // Finished commissions pay when the player claims them.
+      const done = p.rngweenLimited.hourly.slots.find(
+        (slot) => slot.taskId === task.id && slot.completedAt !== undefined,
+      );
+      if (done)
+        p = applyProgress(p, {
+          type: "claim-rngween-hourly",
+          serial: done.serial,
+          at: opening + 2000 + index * 11000,
+          rngweenAt: opening + 2000 + index * 11000,
+        });
       if (p.history.some((entry) => entry.taskId === task.id)) break;
     }
     expect(
@@ -1240,15 +1251,20 @@ test("badge objectives and keyboard-operated collections fit narrow phones in li
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
+      // The badge book starts folded; Enter on its summary opens and closes it.
       const summary = page.locator(".world-badge-book summary");
       await summary.focus();
+      await page.keyboard.press("Enter");
+      await expect(page.locator(".world-badge-book")).toHaveAttribute(
+        "open",
+        "",
+      );
+      await expect(page.locator("[data-world-badge=infernal]")).toBeVisible();
       await page.keyboard.press("Enter");
       await expect(page.locator(".world-badge-book")).not.toHaveAttribute(
         "open",
         "",
       );
-      await page.keyboard.press("Enter");
-      await expect(page.locator("[data-world-badge=infernal]")).toBeVisible();
     }
   }
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -1283,9 +1299,12 @@ test("Reaper, introduction and World copy explain badge objectives without choic
       /no ai|ai.generated|generator|fortune favours|the veil is thin/i,
     );
   }
+  // The Reaper reads the objectives from the badge module instead of
+  // repeating them in prose, so the names live in one place.
+  const badges = fs.readFileSync("src/rngween-world-badges.js", "utf8");
+  expect(badges).toContain("Six Mark 3 times");
   const reaper = fs.readFileSync("src/rngween-reaper.js", "utf8");
-  expect(reaper).toContain("Six Mark 3 times");
-  expect(reaper).toContain("10 Rare-or-better rolls");
+  expect(reaper).toContain("worldPhaseGoals");
 });
 
 test("legacy unseen-pool receipts restore Valley badges and last/best numbers without invented timestamps or payments", () => {

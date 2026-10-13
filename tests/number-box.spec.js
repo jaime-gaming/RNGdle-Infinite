@@ -56,11 +56,12 @@ test("shared number boxes cover the idle generator and cosmetic previews without
 test("every roll tier uses the observed light/dark Box Lab palettes and shimmer gates", async ({
   page,
 }) => {
-  const numbers = [103463, 103381, 103006, 103002, 103001, 103000, 109];
+  const numbers = [103463, 103381, 103026, 103006, 103002, 103001, 103000, 109];
   const palette = {
     trash: ["#ffd230", "#973c00", "#973c00", "#ffd230"],
     common: ["#99a1af", "#52525c", "#364153", "#d1d5dc"],
     uncommon: ["#5ee9b5", "#006045", "#006045", "#00d492"],
+    good: ["#20779b", "#20779b", "#0e5f80", "#38cdff"],
     rare: ["#8ec5ff", "#193cb8", "#193cb8", "#51a2ff"],
     epic: ["#dab2ff", "#6e11b0", "#6e11b0", "#c27aff"],
     anomaly: ["#ffb86a", "#9f2d00", "#9f2d00", "#ff8904"],
@@ -99,7 +100,7 @@ test("every roll tier uses the observed light/dark Box Lab palettes and shimmer 
     );
     await page.clock.fastForward(105100);
   }
-  expect(seen.size).toBe(7);
+  expect(seen.size).toBe(8);
 });
 
 test("every aura belongs to a family, shows its colours and is renderable", () => {

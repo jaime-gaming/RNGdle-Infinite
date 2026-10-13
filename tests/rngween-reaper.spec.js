@@ -350,8 +350,15 @@ test("the Reaper entrance sits at the Roll/footer seam on desktop and mobile, ne
       page.locator(".header nav button").filter({ hasText: "RNGween World" }),
     ).toHaveCount(0);
     const dialog = await openGate(page);
-    await expect(dialog).toContainText("open to everyone");
-    await expect(dialog).toContainText("0 / 4 aura trials complete");
+    await expect(dialog).toContainText("open to anyone");
+    // A few short reply buttons, no text box.
+    await expect(dialog.locator("input, textarea")).toHaveCount(0);
+    expect(
+      await dialog
+        .getByLabel("Your reply", { exact: true })
+        .getByRole("button")
+        .count(),
+    ).toBeGreaterThanOrEqual(4);
     await page.keyboard.press("Escape");
     await expect(dialog).not.toBeVisible();
     await expect(
@@ -367,25 +374,21 @@ test("the Reaper explains public zones, confirms a paid challenge key and rememb
   await seedProgress(page, wallet());
   await page.goto("/");
   const dialog = await openGate(page);
-  await dialog.getByRole("button", { name: "What is RNGween World?" }).click();
+  await dialog.getByRole("button", { name: "What is this place?" }).click();
   await expect(dialog).toContainText("Graveyard");
   await expect(dialog).toContainText("Haunted House");
-  await expect(dialog).toContainText(
-    "Valley rolls use numbers from 1 to 9999 without repeats",
-  );
-  await dialog.getByRole("button", { name: "Can I pass?" }).click();
-  await expect(dialog).toContainText("open to everyone");
+  await expect(dialog).toContainText("Thirty-nine badges");
   await dialog
-    .getByRole("button", { name: "Buy challenge key · 2,000" })
+    .getByRole("button", { name: "How do I get into the Valley?" })
     .click();
-  await expect(dialog).toContainText("No refunds, mission completion");
+  await expect(dialog).toContainText("Two fragments make a key");
+  await dialog.getByRole("button", { name: "I'll buy a key." }).click();
+  await expect(dialog).toContainText("No refunds, no aura, no Hexbound");
   await dialog.getByRole("button", { name: "Not now" }).click();
   expect((await saved(page)).rngweenLimited.pumpkoins).toBe(2000);
-  await dialog
-    .getByRole("button", { name: "Buy challenge key · 2,000" })
-    .click();
-  await dialog.getByRole("button", { name: "Confirm key purchase" }).click();
-  await expect(dialog).toContainText("Your Valley key is ready");
+  await dialog.getByRole("button", { name: "I'll buy a key." }).click();
+  await dialog.getByRole("button", { name: "Buy the key · 2,000" }).click();
+  await expect(dialog).toContainText("Your Valley key is good");
   const before = await saved(page);
   expect(before.rngweenLimited.pumpkoins).toBe(0);
   expect(before.tasks.rngween.earned).toEqual([]);
@@ -419,12 +422,12 @@ test("completed aura trials do not gate public entry; Nov 3 still permits a paid
   await seedProgress(page, wallet(2000, { tasks: finished }));
   await page.goto("/");
   let dialog = await openGate(page);
-  await expect(dialog).toContainText("open to everyone");
+  await expect(dialog).toContainText("open to anyone");
   await expect(
     dialog.getByRole("button", { name: "Enter RNGween World" }),
   ).toBeEnabled();
   await expect(
-    dialog.getByRole("button", { name: "Buy challenge key · 2,000" }),
+    dialog.getByRole("button", { name: "I'll buy a key." }),
   ).toBeVisible();
   await dialog.getByRole("button", { name: "Close Reaper dialogue" }).click();
   await page.evaluate((key) => {
@@ -435,16 +438,14 @@ test("completed aura trials do not gate public entry; Nov 3 still permits a paid
   clock.set(expired - 3600000);
   await page.reload();
   dialog = await openGate(page);
-  await dialog.getByRole("button", { name: "What are the trials?" }).click();
-  await expect(dialog).toContainText("aura trials ended");
+  await dialog.getByRole("button", { name: "What about the auras?" }).click();
+  await expect(dialog).toContainText("The tasks are done");
   await expect(
-    dialog.getByRole("button", { name: "Show me the trials" }),
+    dialog.getByRole("button", { name: "Show me the tasks" }),
   ).toHaveCount(0);
-  await dialog
-    .getByRole("button", { name: "Buy challenge key · 2,000" })
-    .click();
-  await dialog.getByRole("button", { name: "Confirm key purchase" }).click();
-  await expect(dialog).toContainText("Your Valley key is ready");
+  await dialog.getByRole("button", { name: "I'll buy a key." }).click();
+  await dialog.getByRole("button", { name: "Buy the key · 2,000" }).click();
+  await expect(dialog).toContainText("Your Valley key is good");
   expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
 });
 
@@ -502,7 +503,7 @@ test("the once-only event welcome is calendar-gated, works in light/off mode and
   const welcome = page.getByRole("dialog", { name: "Welcome to RNGween" });
   await expect(welcome).toBeVisible();
   await expect(welcome).toContainText("600 Pumpkoins");
-  await expect(welcome).toContainText("2,000 Pumpkoin shortcut");
+  await expect(welcome).toContainText("buy one for 2,000 Pumpkoins");
   await expect(welcome).toContainText("November 1");
   await expect(page.locator("html")).not.toHaveAttribute(
     "data-season",
@@ -705,11 +706,9 @@ test("a key needs fresh website verification even after its purchase was confirm
   await seedProgress(page, wallet());
   await page.goto("/");
   const dialog = await openGate(page);
-  await dialog
-    .getByRole("button", { name: "Buy challenge key · 2,000" })
-    .click();
+  await dialog.getByRole("button", { name: "I'll buy a key." }).click();
   clock.set(null);
-  await dialog.getByRole("button", { name: "Confirm key purchase" }).click();
+  await dialog.getByRole("button", { name: "Buy the key · 2,000" }).click();
   await expect(dialog.getByRole("alert")).toContainText(
     "Connect to the website to verify",
   );
@@ -733,12 +732,8 @@ test("two same-account key confirmations spend only once under the writer lock",
     await mockSeasonClock(other, active);
     await other.goto("/");
     const [left, right] = await Promise.all([openGate(page), openGate(other)]);
-    await left
-      .getByRole("button", { name: "Buy challenge key · 2,000" })
-      .click();
-    await right
-      .getByRole("button", { name: "Buy challenge key · 2,000" })
-      .click();
+    await left.getByRole("button", { name: "I'll buy a key." }).click();
+    await right.getByRole("button", { name: "I'll buy a key." }).click();
     // Hold the first fresh proof until both real clicks start. The writer
     // serializes proofs too, so waiting for two network requests would deadlock.
     // Without a barrier the first save can disable the other button before its
@@ -758,7 +753,7 @@ test("two same-account key confirmations spend only once under the writer lock",
     ]) {
       await p.exposeBinding("rngweenConfirmationStarted", started);
       await dialogue
-        .getByRole("button", { name: "Confirm key purchase" })
+        .getByRole("button", { name: "Buy the key · 2,000" })
         .evaluate((button) => {
           button.addEventListener(
             "click",
@@ -776,8 +771,8 @@ test("two same-account key confirmations spend only once under the writer lock",
       });
     }
     await Promise.all([
-      left.getByRole("button", { name: "Confirm key purchase" }).click(),
-      right.getByRole("button", { name: "Confirm key purchase" }).click(),
+      left.getByRole("button", { name: "Buy the key · 2,000" }).click(),
+      right.getByRole("button", { name: "Buy the key · 2,000" }).click(),
     ]);
     await expect
       .poll(async () =>

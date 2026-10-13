@@ -563,7 +563,7 @@ test("collect a task aura, see only that reward in the shop, equip it free and r
   await panel
     .getByRole("button", { name: "Your Halloween collection" })
     .click();
-  await expect(page).toHaveURL(/\/shop\/auras\/rngween$/);
+  await expect(page).toHaveURL(/\/shop\/auras\/special\/rngween$/);
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(1);
   await expect(page.locator('[data-product="jack-o-glow"]')).toBeVisible();
   await expect(page.locator(".shop-family")).not.toContainText(
@@ -629,13 +629,16 @@ test("collected Halloween auras remain visible and equipable after the event, un
     equipped: "none",
   });
   await page.goto("/shop/auras");
+  // Event sets live under the Limited & Special hub, not among the families.
+  await page.locator('[data-family="special"]').click();
+  await expect(page).toHaveURL(/\/shop\/auras\/special$/);
   const banner = page.locator('[data-family="rngween"]');
   await expect(banner).toBeVisible();
   await expect(banner).toContainText("2 collected · yours forever");
   await expect(banner.locator(".number-box")).toHaveCount(2);
   await expect(banner).not.toContainText(/Jack-o'-Glow|Witchfire|2 \/ 4/);
   await banner.click();
-  await expect(page).toHaveURL(/\/shop\/auras\/rngween$/);
+  await expect(page).toHaveURL(/\/shop\/auras\/special\/rngween$/);
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(2);
   await expect(page.locator(".is-event-aura .shop-price")).toHaveCount(0);
   await page
@@ -931,7 +934,7 @@ test("Halloween decorations are actually painted only in dark mode on desktop an
   }
 });
 
-test("the new challenges are harder, without revoking auras collected under the earlier goals", () => {
+test("the challenges are the only goals: an aura receipt without the finished count is dropped", () => {
   expect(RNGWEEN_MISSIONS.map(({ goal }) => goal)).toEqual([
     200, 40, 5000000, 18,
   ]);
@@ -945,20 +948,23 @@ test("the new challenges are harder, without revoking auras collected under the 
     expect(() => claimRngweenAura(tasks, aura, startsAt)).toThrow(
       "Complete the mission",
     );
-  const grandfathered = parseProgress(
+  // The event has not run under any other goals, so there is nothing to
+  // grandfather: a receipt the counts cannot justify is a bad save.
+  const read = parseAndRepairProgress(
     JSON.stringify({
       ...emptyProgress(),
       equipped: "blood-moon",
       tasks: { ...tasks, rngween: { ...previous, earned: auraIds } },
     }),
   );
-  expect(grandfathered.owned).toEqual(auraIds);
-  expect(grandfathered.equipped).toBe("blood-moon");
-  expect(grandfathered.tasks.rngween.counts).toEqual(previous.counts);
-  expect(rngweenState(grandfathered.tasks, startsAt)).toMatchObject({
-    collected: 4,
-    complete: 4,
+  expect(read.repairs.length).toBeGreaterThan(0);
+  expect(read.progress.owned).toEqual([]);
+  expect(read.progress.equipped).toBe("none");
+  expect(read.progress.tasks.rngween.counts).toEqual(previous.counts);
+  expect(read.progress.tasks.rngween.earned).toEqual([]);
+  expect(rngweenState(read.progress.tasks, startsAt)).toMatchObject({
+    collected: 0,
+    complete: 0,
     ready: 0,
   });
-  expect(parseProgress(JSON.stringify(grandfathered))).toEqual(grandfathered);
 });

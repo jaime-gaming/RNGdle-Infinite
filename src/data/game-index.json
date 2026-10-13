@@ -270,7 +270,12 @@
     {
       "id": "uncommon",
       "minEP": 5802,
-      "count": 250028
+      "count": 129907
+    },
+    {
+      "id": "good",
+      "minEP": 7200,
+      "count": 120121
     },
     {
       "id": "rare",

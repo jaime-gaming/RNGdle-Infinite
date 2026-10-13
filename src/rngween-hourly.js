@@ -464,7 +464,10 @@ export function parseRngweenHourly(value) {
       serials.has(slot.serial) ||
       !timestamp(slot.startedAt) ||
       !timestamp(slot.expiresAt) ||
-      slot.expiresAt !== slot.startedAt + RNGWEEN_HOURLY_MS ||
+      // A replacement dealt after a claim keeps the claimed slot's deadline,
+      // so it can start later than one hour before it expires; never earlier.
+      slot.expiresAt > slot.startedAt + RNGWEEN_HOURLY_MS ||
+      slot.expiresAt <= slot.startedAt ||
       rngweenCalendar(slot.startedAt).hourlyWindow !== value.window ||
       !amount(slot.count) ||
       slot.count > task.goal ||

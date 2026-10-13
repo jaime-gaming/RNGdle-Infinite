@@ -77,8 +77,8 @@ test("tier chances are derived from all effective scores even when cached manife
   const ep = inflate("ep"),
     badges = inflate("badge"),
     view = new DataView(ep);
-  const counts = Array(8).fill(0),
-    examples = Array(8).fill(null);
+  const counts = Array(9).fill(0),
+    examples = Array(9).fill(null);
   for (let n = 0; n < POPULATION; n++) {
     const score =
       view.getUint32(n * 4, true) +
@@ -88,13 +88,13 @@ test("tier chances are derived from all effective scores even when cached manife
     examples[tier] ??= n;
   }
   expect(counts).toEqual([
-    10114, 489889, 250019, 149965, 50003, 40011, 7925, 2075,
+    10114, 489889, 129904, 120115, 149965, 50003, 40011, 7925, 2075,
   ]);
   const original = manifest.tiers.map((t) => t.count);
   try {
     manifest.tiers.forEach((t) => (t.count = 0));
     const game = createGameIndex(ep, badges);
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 9; i++) {
       const result = game.evaluate(examples[i]);
       expect(result.tierCount).toBe(counts[i]);
       expect(result.tierProbability).toBe((100 * counts[i]) / POPULATION);

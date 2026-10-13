@@ -11,6 +11,7 @@ const tiers = new Set([
   "trash",
   "common",
   "uncommon",
+  "good",
   "rare",
   "epic",
   "anomaly",
@@ -80,6 +81,7 @@ export default function NumberBox({
   aura = "none",
   compact = false,
   auraLayout = "full",
+  dejaVu = false,
   className = "",
   style,
   ...props
@@ -105,6 +107,7 @@ export default function NumberBox({
       className={`number-box ${rarity === "godly" ? "tier-godly" : ""} ${compact ? "number-box-compact" : ""} ${className}`}
       data-tier={rarity}
       data-cosmetic={cosmetic}
+      data-deja-vu={dejaVu || undefined}
       data-aura-layout={auraLayout === "contained" ? "contained" : undefined}
       data-motion={settings.reduceMotion === "on" ? "reduced" : undefined}
       style={{
@@ -140,6 +143,22 @@ export default function NumberBox({
               />
             ))}
           </span>
+        </span>
+      )}
+      {dejaVu && (
+        <span className="deja-vu-particles" aria-hidden="true">
+          {godlyStars.map(([x, y, size], i) => (
+            <i
+              key={i}
+              style={{
+                left: `${(x * 7 + 11) % 92}%`,
+                top: `${(y * 5 + 7) % 88}%`,
+                width: size,
+                height: size,
+                animationDelay: `-${i * 0.37}s`,
+              }}
+            />
+          ))}
         </span>
       )}
       {rarity === "godly" && (

@@ -156,7 +156,9 @@ export function reaperDialogue(
         ? key
           ? `Back again. ${seen.toLocaleString("en-US")} numbers so far and none repeated. The Valley is waiting.`
           : `Back again. ${fragments} of 2 fragments. The Valley will keep.`
-        : "Evening. The first three doors are open to anyone. The fourth needs a key, and I don't give those away.",
+        : key
+          ? "Your Valley key is good. All four doors are open to you now, and nothing repeats in the Valley."
+          : "Evening. The first three doors are open to anyone. The fourth needs a key, and I don't give those away.",
       !progress.profile
         ? "Make yourself a profile first, or I'll forget everything you do in here."
         : "Ask, if you must. Or just go in.",

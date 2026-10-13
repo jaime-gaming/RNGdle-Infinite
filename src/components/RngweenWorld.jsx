@@ -12,6 +12,7 @@ import {
   ScrollText,
   KeyRound,
   LockKeyhole,
+  Medal,
   Moon,
   ShoppingBag,
   Skull,

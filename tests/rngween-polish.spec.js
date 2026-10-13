@@ -205,6 +205,9 @@ test("every owned aura can be equipped during a six-number roll without changing
         .getByRole("button", { name: "Shop", exact: true })
         .click();
       await page.locator('.shop-jump [data-shelf="auras"]').click();
+      // Event sets sit one level deeper, under Limited & Special.
+      if (aura.eventOnly)
+        await page.locator('[data-family="special"]').first().click();
       await page.locator(`[data-family="${aura.family}"]`).first().click();
       await page
         .locator(`[data-product="${aura.id}"]`)
@@ -282,7 +285,7 @@ test("Shop confirms the same saved key, spends once and opens the Reaper with pa
   await key.getByRole("button", { name: "View World" }).click();
   const reaper = page.getByRole("dialog", { name: "The Reaper", exact: true });
   await expect(reaper).toBeVisible();
-  await expect(reaper).toContainText("Your Valley key is ready");
+  await expect(reaper).toContainText("Your Valley key is good");
   expect(
     (await saved(page)).history.filter(
       (entry) => entry.productId === RNGWEEN_WORLD_KEY.id,
@@ -315,7 +318,7 @@ test("Shop does not sell an unnecessary challenge key when both distinct fragmen
   await key.getByRole("button", { name: "View World" }).click();
   await expect(
     page.getByRole("dialog", { name: "The Reaper", exact: true }),
-  ).toContainText("Forge your key for free inside the World");
+  ).toContainText("Both fragments are ready. Forge your key inside the World.");
 });
 
 test("a Shop key purchase still needs a fresh verified calendar and never charges on failure", async ({
@@ -354,7 +357,7 @@ test("unowned Hexbound has a Shop preview and a route to the Reaper, but no buy 
   await prize.getByRole("button", { name: "Explore RNGween World" }).click();
   const reaper = page.getByRole("dialog", { name: "The Reaper", exact: true });
   await reaper.getByRole("button", { name: "What is Hexbound?" }).click();
-  await expect(reaper).toContainText("cannot be bought");
+  await expect(reaper).toContainText("can't be bought");
   await expect(reaper).toContainText("6666");
   await reaper.getByRole("button", { name: "See Hexbound in Shop" }).click();
   await expect(page).toHaveURL(/\/shop\/limited$/);
@@ -397,12 +400,12 @@ test("earned Hexbound is equipped from its Shop reward card for free and remains
     .click();
   const reaper = page.getByRole("dialog", { name: "The Reaper", exact: true });
   await reaper.getByRole("button", { name: "What is Hexbound?" }).click();
-  await expect(reaper).toContainText("already unlocked Hexbound");
+  await expect(reaper).toContainText("You already wear it");
   await reaper.getByRole("button", { name: "See Hexbound in Shop" }).click();
   await expect(
     prize.getByRole("button", { name: "Hexbound equipped", exact: true }),
   ).toBeDisabled();
-  await page.goto("/shop/auras/rngween");
+  await page.goto("/shop/auras/special/rngween");
   await expect(page.locator('[data-product="hexbound"]')).toBeVisible();
 });
 
@@ -410,30 +413,26 @@ test("the Reaper's dialogue distinguishes calendar, progress, paid/free passage 
   const p = wallet();
   const before = JSON.stringify(p);
   expect(reaperDialogue(p, null).lines.join(" ")).toContain(
-    "website's UTC date is unavailable",
+    "I can't tell what day it is",
   );
   expect(reaperDialogue(p, active - 86400000 * 6).lines.join(" ")).toContain(
-    "opens October 21",
+    "opens on October 21",
   );
-  expect(reaperDialogue(p, expired).lines.join(" ")).toContain(
-    "The event closed",
-  );
-  expect(reaperDialogue(p, active).lines.join(" ")).toContain(
-    "open to everyone",
-  );
+  expect(reaperDialogue(p, expired).lines.join(" ")).toContain("It's over");
+  expect(reaperDialogue(p, active).lines.join(" ")).toContain("open to anyone");
   expect(
     reaperDialogue(p, Date.UTC(2026, 10, 2), "trials").lines.join(" "),
-  ).toContain("aura trials ended");
+  ).toContain("The tasks are done");
   expect(reaperDialogue(p, active, "reward").lines.join(" ")).toContain(
-    "cannot be bought",
+    "can't be bought",
   );
   expect(reaperDialogue(p, active, "trials").trials).toHaveLength(4);
   const won = unlockedRngweenPreview().progress;
   expect(reaperDialogue(won, active).lines.join(" ")).toContain(
-    `revealed ${won.rngweenLimited.drawn.length} numbers`,
+    `${won.rngweenLimited.drawn.length.toLocaleString("en-US")} numbers so far`,
   );
   expect(reaperDialogue(won, active, "reward").lines.join(" ")).toContain(
-    "already unlocked Hexbound",
+    "You already wear it",
   );
   expect(JSON.stringify(p)).toBe(before);
 });
@@ -462,20 +461,20 @@ test("the Reaper's trial and reward conversations fit a phone and report real pr
     .getByRole("button", { name: "Find The Reaper", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "The Reaper", exact: true });
-  await expect(dialog).toContainText("1 / 4 aura trials complete");
-  await dialog.getByRole("button", { name: "What are the trials?" }).click();
-  const trials = dialog.getByRole("list", { name: "Reaper trials" });
+  await dialog.getByRole("button", { name: "What about the auras?" }).click();
+  await expect(dialog).toContainText("finished 1 of 4");
+  const trials = dialog.getByRole("list", { name: "Aura tasks" });
   await expect(trials.locator("li")).toHaveCount(4);
   await expect(trials).toContainText("12 / 40");
   await dialog.getByRole("button", { name: "What is Hexbound?" }).click();
-  await expect(dialog).toContainText("cannot be bought");
+  await expect(dialog).toContainText("can't be bought");
   const box = await dialog.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(340);
   expect(box.y).toBeGreaterThanOrEqual(0);
   expect(box.y + box.height).toBeLessThanOrEqual(740);
   await dialog.getByRole("button", { name: "What is this place?" }).click();
-  await expect(dialog).toContainText("1 / 4 aura trials complete");
+  await expect(dialog).toContainText("Four haunted places");
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
 });

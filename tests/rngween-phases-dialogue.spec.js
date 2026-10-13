@@ -174,7 +174,9 @@ test("the Reaper's four phase and aura scripts read real progress, preserve the 
     expect(dialogue.phaseId).toBe(phase.id);
     expect(dialogue.aura.id).toBe(phase.auraId);
     expect(dialogue.lines.join(" ")).toContain("October 25–31");
-    expect(dialogue.lines.join(" ")).toContain("World points never advance");
+    // The aura is earned in Tasks, never in the World.
+    expect(dialogue.lines.join(" ")).toContain("isn't earned in here");
+    expect(dialogue.lines.join(" ")).toContain("claim it in Tasks");
   }
   expect(JSON.stringify(p)).toBe(before);
 });
@@ -212,7 +214,7 @@ test("the four phases show distinct aura previews while the real result uses onl
   expect((await savedWorld(page)).owned).toEqual(["starfall"]);
 });
 
-test("the sketch scene types its dialogue before enabling a typed or selected player reply, and never mutates gameplay", async ({
+test("the sketch scene types its dialogue before enabling the reply buttons, and never mutates gameplay", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -228,9 +230,11 @@ test("the sketch scene types its dialogue before enabling a typed or selected pl
     "data-typing",
     "true",
   );
-  await expect(
-    dialog.getByLabel("Your next line", { exact: true }),
-  ).toBeDisabled();
+  const replies = dialog.getByLabel("Your reply", { exact: true });
+  await expect(replies).toHaveAttribute("data-reply-ready", "false");
+  await expect(replies.getByRole("button").first()).toBeDisabled();
+  // No free-text input: the player picks from a few short buttons.
+  await expect(dialog.locator("input, textarea")).toHaveCount(0);
   const count = () =>
     dialog
       .locator(".reaper-dialogue-text > p")
@@ -239,18 +243,16 @@ test("the sketch scene types its dialogue before enabling a typed or selected pl
   await page.clock.runFor(260);
   expect(await count()).toBeGreaterThan(first);
   await finishLine(dialog);
-  await expect(
-    dialog.getByLabel("Your next line", { exact: true }),
-  ).toBeEnabled();
+  await expect(replies).toHaveAttribute("data-reply-ready", "true");
+  await expect(replies.getByRole("button").first()).toBeEnabled();
+  const buttons = await replies.getByRole("button").count();
+  expect(buttons).toBeGreaterThanOrEqual(4);
+  expect(buttons).toBeLessThanOrEqual(6);
   await dialog
-    .getByLabel("Your next line", { exact: true })
-    .fill("Tell me about Phantom Veil");
-  await dialog.getByRole("button", { name: "Say your line" }).click();
+    .getByRole("button", { name: "What about the auras?", exact: true })
+    .click();
   await finishLine(dialog);
-  await expect(dialog.locator(".reaper-player-echo")).toContainText(
-    "Tell me about Phantom Veil",
-  );
-  await expect(dialog).toContainText("40 Rare or better");
+  await expect(dialog).toContainText("four auras");
   await dialog
     .getByRole("button", { name: "What is Hexbound?", exact: true })
     .click();
@@ -353,10 +355,12 @@ for (const width of [340, 390, 768, 1440])
           await dialog.evaluate((node) => node.scrollWidth <= node.clientWidth),
         ).toBe(true);
         await dialog
-          .getByLabel("Your next line", { exact: true })
-          .fill("How do I get the key?");
-        await dialog.getByRole("button", { name: "Say your line" }).click();
-        await expect(dialog).toContainText("forge the key for free");
+          .getByRole("button", {
+            name: "How do I get into the Valley?",
+            exact: true,
+          })
+          .click();
+        await expect(dialog).toContainText("Two fragments make a key");
         await page.keyboard.press("Escape");
       }
     }

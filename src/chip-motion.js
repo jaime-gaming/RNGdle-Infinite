@@ -4,6 +4,7 @@ export const CHIP_PALETTES = {
   trash: { primary: "#C8A87C", secondary: "#F0E6D8", border: "#7C5A2E" },
   common: { primary: "#D1D5DB", secondary: "#F3F4F6", border: "#6B7280" },
   uncommon: { primary: "#6EE7B7", secondary: "#D1FAE5", border: "#059669" },
+  good: { primary: "#67D8FF", secondary: "#D5F3FF", border: "#20779B" },
   rare: { primary: "#93C5FD", secondary: "#DBEAFE", border: "#2563EB" },
   epic: { primary: "#C4B5FD", secondary: "#EDE9FE", border: "#7C3AED" },
   anomaly: { primary: "#FDBA74", secondary: "#FFEDD5", border: "#EA580C" },

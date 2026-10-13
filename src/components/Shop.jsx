@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   ChevronRight,
   Coins,
@@ -1667,6 +1668,7 @@ export default function Shop({
                 {[
                   "common",
                   "uncommon",
+                  "good",
                   "rare",
                   "epic",
                   "anomaly",
