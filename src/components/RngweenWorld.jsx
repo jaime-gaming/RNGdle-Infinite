@@ -8,7 +8,6 @@ import {
   Flame,
   Ghost,
   Lock,
-  Dices,
   Hourglass,
   ScrollText,
   KeyRound,

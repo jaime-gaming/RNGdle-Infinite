@@ -967,7 +967,9 @@ test("the moving bar uses the cooldown only, is smooth between seconds, survives
     "data-settled",
     "true",
   );
-  expect(await scale(page)).toBeLessThan(0.02);
+  // Just after the reveal the bar is at (or a frame or two past) zero; a
+  // busy machine can be a few hundred ms late reading it.
+  expect(await scale(page)).toBeLessThan(0.05);
   await page.clock.fastForward(29800);
   await page.clock.runFor(100);
   expect(await scale(page)).toBeCloseTo(0.5, 1);

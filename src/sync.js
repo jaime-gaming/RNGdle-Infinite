@@ -494,10 +494,6 @@ function peerIdFor(slot) {
   return `${PEER_ID_PREFIX}-${room}-${slot}`;
 }
 
-function otherSlot() {
-  return peerSlot === "a" ? "b" : "a";
-}
-
 function openPeer() {
   // One role always dials and one always listens. The account's main device
   // is "a" (it dials); the other device is "b" (it listens). A link without a

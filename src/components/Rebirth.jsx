@@ -12,7 +12,6 @@ import {
   RefreshCw,
   Target,
   Undo2,
-  Unlock,
   Wallet,
 } from "lucide-react";
 import {
@@ -21,13 +20,11 @@ import {
   REBIRTH_STARTER_EP,
   REBIRTH_STEPS,
   REBIRTH_TOTAL,
-  REBIRTH_VISIBLE_AT,
   ROLLBACK_AFTER_PRESTIGES,
   ROLLBACK_BONUS,
   SURPLUS_BANKED_EP_STEP,
   SURPLUS_START_SHARE,
   ULTRA_BONUS_PER_REBIRTH,
-  ULTRA_STARTER_EP,
   cycleStarterEp,
   discoveredCount,
   nextRebirthSkill,
@@ -185,7 +182,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   const percent = blend.percent;
   const reward = nextRebirthSkill(rebirths);
   const surplusBanked = progress.surplusBanked ?? 0;
-  const ultraPercent = Math.round(ULTRA_BONUS_PER_REBIRTH * 100 * (ultras + 1));
   const rollbackPercent = Math.round(ROLLBACK_BONUS * 100 * rollbacks);
   const bonusNow = Math.round(
     REBIRTH_BONUS_PER_REBIRTH * 100 * rebirths +

@@ -507,12 +507,10 @@ export default function Shop({
       </>
     );
   }
-  const owned = (item) => progress.owned.includes(item.id);
   function card(item, index = 0) {
     const state = stateOf(item);
     const aura = item.kind === "aura",
       skill = item.kind === "skill",
-      bay = item.kind === "skill-slot",
       equipped = aura
         ? progress.equipped === item.id
         : skill

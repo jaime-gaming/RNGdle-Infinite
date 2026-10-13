@@ -1,4 +1,4 @@
-import { SKILL_MAX_DRAWS, drawPicksFor } from "./skills.js";
+import { SKILL_MAX_DRAWS } from "./skills.js";
 
 // The one rule every draw-modifying skill collapses into: take this many
 // ordinary, independent draws and keep the best of them. Two draw skills do

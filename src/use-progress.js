@@ -46,7 +46,6 @@ import {
   readPresence,
   writePresence,
   clearPresence,
-  OFFLINE_INTERVAL,
 } from "./offline.js";
 import { broadcastSync, SYNC_EVENT } from "./sync.js";
 // Re-exported for the modules that grew up reading it from here.

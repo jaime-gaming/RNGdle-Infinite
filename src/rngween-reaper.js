@@ -4,13 +4,12 @@ import {
   RNGWEEN_WORLD_SKIN,
   RNGWEEN_AURAS,
 } from "./rngween.js";
-import { worldMiniSummary, worldPhaseGoals } from "./rngween-world-badges.js";
+import { worldPhaseGoals } from "./rngween-world-badges.js";
 import { RNGWEEN_WORLD_KEY } from "./rngween-limited.js";
 import {
   rngweenValleyUnlocked,
   worldState,
   worldRevealMS,
-  WORLD_ZONES,
   worldZoneById,
 } from "./rngween-world-zones.js";
 

@@ -11,7 +11,6 @@ import { chromium } from "@playwright/test";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { AUTO_ROLL_KEY } from "../src/auto-roll.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
-import { shopProducts } from "../src/shop-data.js";
 import { PETS } from "../src/pets.js";
 
 const BASE = process.env.SCREENSHOT_BASE ?? "http://127.0.0.1:5173";
