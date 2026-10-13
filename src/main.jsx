@@ -43,7 +43,7 @@ import ActivityFeed from "./components/ActivityFeed";
 import Tasks from "./components/Tasks";
 import { taskSummary } from "./tasks.js";
 import { useSeasonClock } from "./use-season-clock.js";
-import { rngweenState, rngweenCalendar } from "./rngween.js";
+import { RNGWEEN_ID, rngweenState, rngweenCalendar } from "./rngween.js";
 import { useRngweenHourlyMaintenance } from "./use-rngween-hourly.js";
 import { useRngweenWorldMaintenance } from "./use-rngween-world.js";
 import { rngweenWorldUnlocked } from "./rngween-limited.js";
@@ -617,17 +617,15 @@ function App() {
       previousFocus.current?.focus();
     };
   }, [modal]);
-  function openBadge(badge, { fromRoll = true } = {}) {
+  function openBadge(badge) {
     const catalogueBadge = badges.find((b) => b.name === badge.name);
-    setSelectedBadge({
-      ...(catalogueBadge || {
+    setSelectedBadge(
+      catalogueBadge || {
         ...badge,
         rarity: badge.rarity[0].toUpperCase() + badge.rarity.slice(1),
         groups: ["No Set"],
-      }),
-      // Opened from the changelog, an unrolled badge is simply undiscovered.
-      fromRoll,
-    });
+      },
+    );
     setModal("badge");
   }
   // Profile is a page (/profile), not a window: every "sign up" prompt in the
@@ -656,6 +654,22 @@ function App() {
   const pendingMissionCoins = (session.tasks.rngween?.earned ?? []).some(
     (id) => !(session.rngweenLimited?.rewardedMissions ?? []).includes(id),
   );
+  // Being here during RNGween is remembered on the account, once, using the
+  // website clock. Nothing is shown for it yet; it is a record for later.
+  useEffect(() => {
+    if (
+      session.profile &&
+      rngweenCalendarNow.limitedPhase === "active" &&
+      !session.events?.[RNGWEEN_ID]
+    )
+      dispatch({
+        type: "attend-event",
+        id: RNGWEEN_ID,
+        // The website clock carries fractions of a millisecond; the save keeps
+        // whole ones.
+        at: Math.round(seasonalNow),
+      });
+  }, [session.profile, rngweenCalendarNow.limitedPhase, session.events]);
   useEffect(() => {
     if (session.profile && gateAvailable && pendingMissionCoins)
       dispatch({ type: "claim-rngween-coins" });
@@ -1033,13 +1047,7 @@ function App() {
                 <p>What changed, and when.</p>
               </div>
             </div>
-            <Changelog
-              onSeen={() => setSeenVersion(LATEST_VERSION)}
-              // Open the badge window right here: the collection hides
-              // badges you have not rolled yet, so a new player would land
-              // on an empty page instead of the badge.
-              onBadge={(badge) => openBadge(badge, { fromRoll: false })}
-            />
+            <Changelog onSeen={() => setSeenVersion(LATEST_VERSION)} />
           </>
         )}
         {page === "profile" && (
@@ -1495,11 +1503,9 @@ function App() {
                     <strong>
                       {session.discovered.includes(selectedBadge.canonicalId)
                         ? "Discovered"
-                        : !selectedBadge.fromRoll
-                          ? "Not discovered yet"
-                          : session.rebirths
-                            ? "Not yet rediscovered"
-                            : "Earned in this roll"}
+                        : session.rebirths
+                          ? "Not yet rediscovered"
+                          : "Earned in this roll"}
                     </strong>
                   </div>
                 </div>

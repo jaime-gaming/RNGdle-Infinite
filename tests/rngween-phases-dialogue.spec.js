@@ -221,6 +221,11 @@ test("the sketch scene types its dialogue before enabling the reply buttons, and
   await mockSeasonClock(page, at);
   await seedProgress(page);
   await page.goto("/rngween-world");
+  // The first visit during the event stamps the account once; wait for it
+  // so the comparison below is about this test's actions only.
+  await expect
+    .poll(async () => (await savedWorld(page))?.events?.["rngween-2026"]?.at)
+    .toBeGreaterThan(0);
   const before = await savedWorld(page);
   const dialog = await scene(page);
   await expect(

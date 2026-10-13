@@ -466,6 +466,11 @@ test("Halloween mode is dark-only and resumes the saved preference without chang
   await mockSeasonClock(page, active);
   await seedProgress(page);
   await page.goto("/tasks");
+  // The first visit during the event stamps the account once; wait for it
+  // so the comparison below is about this test's actions only.
+  await expect
+    .poll(async () => (await saved(page))?.events?.["rngween-2026"]?.at)
+    .toBeGreaterThan(0);
   const before = await saved(page);
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
   await expect(

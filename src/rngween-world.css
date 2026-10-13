@@ -2392,38 +2392,8 @@
 .world-record-auras strong {
   color: #c4b5fd;
 }
-.world-record-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-.world-record-note {
-  font-size: 10.5px;
-  color: #a893b5;
-}
 @media (max-width: 640px) {
   .world-record-columns {
     grid-template-columns: 1fr;
   }
-}
-.world-record-actions > button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid #fb923c66;
-  border-radius: 999px;
-  background: #fb923c22;
-  color: #ffd7b5;
-  font-size: 12px;
-  font-weight: 650;
-  cursor: pointer;
-}
-.world-record-actions > button:hover:not(:disabled) {
-  background: #fb923c33;
-}
-.world-record-actions > button:disabled {
-  opacity: 0.6;
-  cursor: wait;
 }

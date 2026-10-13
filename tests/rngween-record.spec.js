@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { emptyProgress } from "../src/progress.js";
 import { emptyRngweenLimited } from "../src/rngween-limited.js";
-import { rngweenRecord, rngweenRecordFileName } from "../src/rngween-record.js";
+import { rngweenRecord } from "../src/rngween-record.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 
@@ -66,9 +66,6 @@ test("the event record adds up what the log and the save say", () => {
   expect(record.aurasTotal).toBe(4);
   expect(record.key).toBe(false);
   expect(record.hexbound).toBe(false);
-  expect(rngweenRecordFileName(record)).toBe(
-    "rngween-2026-luckytester-2026-10-26.png",
-  );
   // An untouched account has a record too: all zeros, nothing throws.
   const fresh = rngweenRecord(emptyProgress(), new Date(at));
   expect(fresh).toMatchObject({
@@ -79,9 +76,7 @@ test("the event record adds up what the log and the save say", () => {
   });
 });
 
-test("the World has a Record tab with the figures and a PNG card to save", async ({
-  page,
-}) => {
+test("the World has a Record tab with the event figures", async ({ page }) => {
   await mockSeasonClock(page, at);
   await seedProgress(page, played());
   await page.goto("/rngween-world");
@@ -103,23 +98,4 @@ test("the World has a Record tab with the figures and a PNG card to save", async
   await expect(
     panel.getByLabel("The Valley key").locator('[data-done="true"]'),
   ).toHaveCount(0);
-  const download = page.waitForEvent("download");
-  await page.getByTestId("world-record-save").click();
-  const file = await download;
-  expect(file.suggestedFilename()).toBe(
-    "rngween-2026-luckytester-2026-10-26.png",
-  );
-  const stream = await file.createReadStream();
-  const head = await new Promise((resolve) => {
-    const chunks = [];
-    stream.on("data", (chunk) => chunks.push(chunk));
-    stream.on("end", () => resolve(Buffer.concat(chunks)));
-  });
-  // A real PNG at the social size (1200×630 at 2×), not a placeholder.
-  expect(head.subarray(0, 8)).toEqual(
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-  );
-  expect(head.readUInt32BE(16)).toBe(2400);
-  expect(head.readUInt32BE(20)).toBe(1260);
-  await expect(panel.getByRole("status")).toContainText("Card saved");
 });

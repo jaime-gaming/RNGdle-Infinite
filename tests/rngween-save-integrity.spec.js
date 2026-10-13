@@ -451,6 +451,11 @@ test("a failed linked save never replaces the current account or acknowledges it
   await mockSeasonClock(page, at);
   await seedProgress(page, existing);
   await page.goto("/rngween-world");
+  // Let the account's one-time event stamp save first, so the blocked
+  // storage below only sees the linked-save attempt.
+  await expect
+    .poll(async () => (await savedWorld(page))?.events?.["rngween-2026"]?.at)
+    .toBeGreaterThan(0);
   const attempt = await page.evaluate(
     async ({ key, peer }) => {
       const sync = await import("/src/sync.js");

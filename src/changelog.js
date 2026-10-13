@@ -9,9 +9,6 @@ export const CHANGELOG = [
       "four Halloween tasks on October 25–31, 2026 unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon. They never return.",
       "repeat numbers get a déjà vu look, nothing extra paid. Profile has up to ten bookmarks, a PNG card and a link anyone can open.",
     ],
-    // Badges that joined the collection with this release; the page shows
-    // them as chips that open the badge itself.
-    badges: ["INFINITE_PENDULUM", "INFINITE_LAST_SECOND"],
   },
   {
     version: "v0.5",
@@ -71,6 +68,7 @@ export const CHANGELOG = [
       "pages have real URLs, so a shelf or a page can be bookmarked.",
       "sharing a result copies the link as well as the text.",
       "guest play is not saved, and the interface now says so plainly.",
+      "new badges: ↕️ Pendulum (anomaly) and ⏳ Last Second (mythic).",
     ],
   },
   {

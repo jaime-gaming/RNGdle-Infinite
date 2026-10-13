@@ -277,7 +277,26 @@ export function emptyProgress() {
     bookmarks: [],
     tasks: emptyTasks(),
     rngweenLimited: emptyRngweenLimited(),
+    // Events this account has been to: { [eventId]: { at } }, stamped the
+    // first time the account opens the game while the event is on. It
+    // belongs to the account, not the run: rebirths, prestiges, rollbacks and
+    // fresh starts all keep it. Only deleting the account removes it.
+    events: {},
   };
+}
+
+export const KNOWN_EVENTS = new Set([RNGWEEN_ID]);
+// Only known events, each with one valid first-visit time.
+function parseEvents(value) {
+  const events = {};
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    return events;
+  for (const id of KNOWN_EVENTS) {
+    const at = value[id]?.at;
+    if (validAmount(at) && at > 0 && at <= 8640000000000000)
+      events[id] = { at };
+  }
+  return events;
 }
 
 // Bookmarks pin a few rolls the player wants to find again. They reference
@@ -725,6 +744,7 @@ export function parseAndRepairProgress(raw) {
     equippedSkills,
     loadouts: parseLoadouts(p.loadouts),
     bookmarks: parseBookmarks(p.bookmarks, history),
+    events: parseEvents(p.events),
     tasks: tasksRead.tasks,
     rngweenLimited,
     skillCharge,
@@ -1570,9 +1590,24 @@ function applyEvent(state, action) {
       freshStarts: count,
       tasks: { ...emptyTasks(), rngween: state.tasks?.rngween },
       rngweenLimited: state.rngweenLimited,
+      events: state.events ?? {},
       history: [keepsake],
     };
     return preservePermanentCosmetics(state, next);
+  }
+  // The account was here for an event. Stamped once, on the first visit
+  // while the event is on; later visits and every reset leave it alone.
+  if (action.type === "attend-event") {
+    if (!state.profile) throw new Error("Only accounts attend events.");
+    if (!KNOWN_EVENTS.has(action.id)) throw new Error("Unknown event.");
+    const at = action.at;
+    if (!validAmount(at) || at <= 0 || at > 8640000000000000)
+      throw new Error("Invalid event time");
+    if (state.events?.[action.id]) return state;
+    return {
+      ...state,
+      events: { ...(state.events ?? {}), [action.id]: { at } },
+    };
   }
   if (action.type === "goal") {
     if (action.id !== null && !validGoal(action.id, state.owned, state.pets))
