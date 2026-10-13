@@ -1,4 +1,10 @@
 import { allTimeTally } from "./profile-stats.js";
+import {
+  cleanTagline,
+  DEFAULT_ACCENT,
+  parseProfileStyle,
+  validAccent,
+} from "./profile-style.js";
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import {
   productById,
@@ -59,6 +65,7 @@ import {
   OFFLINE_INTERVAL,
 } from "./offline.js";
 import {
+  BOOKMARK_LIMIT,
   capHistory,
   HISTORY_LIMIT,
   HISTORY_WARNING,
@@ -281,8 +288,9 @@ export function emptyProgress() {
 
 // Bookmarks pin a few rolls the player wants to find again. They reference
 // history entries by id, so a repaired save drops any mark whose roll did not
-// survive the repair, and the cap is part of the save's shape, not the UI's.
-export const BOOKMARK_LIMIT = 3;
+// survive the repair. The cap lives in history-log.js (next to the pruning
+// rules that honour it) and is re-exported here as part of the save's shape.
+export { BOOKMARK_LIMIT };
 
 // The fresh-start offer and action share one rule: three prestiges or more.
 export const FRESH_START_PRESTIGES = 3;
@@ -651,8 +659,10 @@ export function parseAndRepairProgress(raw) {
       username,
       createdAt,
       // A profile only carries a logo once one was uploaded: a save with no
-      // picture keeps exactly the shape it had before logos existed.
+      // picture keeps exactly the shape it had before logos existed. The same
+      // goes for the tagline and the accent colour.
       ...(avatar ? { avatar } : {}),
+      ...parseProfileStyle(stored),
     };
   }
   // A committed roll already states when it ends. Trusting a separately stored
@@ -1691,6 +1701,27 @@ function applyEvent(state, action) {
     // one again rather than carrying an empty picture around.
     const { avatar: _removed, ...profile } = state.profile;
     return { ...state, profile };
+  }
+  if (action.type === "profile-style") {
+    if (!state.profile) throw new Error("Create a local profile first.");
+    const profile = { ...state.profile };
+    if ("tagline" in action) {
+      if (typeof action.tagline !== "string")
+        throw new Error("The tagline must be text.");
+      const tagline = cleanTagline(action.tagline);
+      if (tagline) profile.tagline = tagline;
+      else delete profile.tagline;
+    }
+    if ("accent" in action) {
+      if (!validAccent(action.accent))
+        throw new Error("Pick one of the listed accent colours.");
+      if (action.accent === DEFAULT_ACCENT) delete profile.accent;
+      else profile.accent = action.accent;
+    }
+    const same =
+      (profile.tagline ?? "") === (state.profile.tagline ?? "") &&
+      (profile.accent ?? "") === (state.profile.accent ?? "");
+    return same ? state : { ...state, profile };
   }
   if (action.type === "register") {
     if (state.profile)

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Check,
   ArrowRight,
@@ -14,9 +14,14 @@ import {
   Link2,
   UserRound,
 } from "lucide-react";
-import { validUsername } from "../progress.js";
+import { BOOKMARK_LIMIT, validUsername } from "../progress.js";
 import { prestigeShown } from "../rebirth.js";
 import { AVATAR_ACCEPT, fileToAvatar } from "../avatar.js";
+import {
+  accentById,
+  PROFILE_ACCENTS,
+  TAGLINE_LIMIT,
+} from "../profile-style.js";
 import {
   accountStats,
   exportFileName,
@@ -153,7 +158,7 @@ function ProfileHistory({ progress }) {
           </ul>
         ) : (
           <small className="profile-pins-empty">
-            Bookmark up to three rolls in History and they show here.
+            Bookmark up to {BOOKMARK_LIMIT} rolls in History and they show here.
           </small>
         )}
       </div>
@@ -214,6 +219,30 @@ export default function LocalProfile({
   const [logoNote, setLogoNote] = useState("");
   const [choosing, setChoosing] = useState(false);
   const avatar = profile?.avatar ?? "";
+  // The look: a one-line tagline and an accent colour, both saved on the
+  // profile. The tagline is edited locally and saved on submit; the accent
+  // saves on click because there is nothing to type.
+  const savedTagline = profile?.tagline ?? "";
+  const [tagline, setTagline] = useState(savedTagline);
+  const [lookNote, setLookNote] = useState("");
+  useEffect(() => setTagline(savedTagline), [savedTagline]);
+  const accent = accentById(profile?.accent);
+  async function saveTagline(event) {
+    event.preventDefault();
+    const outcome = await onAction({ type: "profile-style", tagline });
+    setLookNote(
+      outcome.ok
+        ? tagline.trim()
+          ? "Tagline saved. It shows under your name and on your card."
+          : "Tagline cleared."
+        : outcome.message,
+    );
+  }
+  async function pickAccent(id) {
+    if (id === accent.id) return;
+    const outcome = await onAction({ type: "profile-style", accent: id });
+    setLookNote(outcome.ok ? `${accentById(id).name} it is.` : outcome.message);
+  }
   async function chooseLogo(event) {
     const file = event.target.files?.[0];
     // Reset first: choosing the same file twice must work.
@@ -355,6 +384,11 @@ export default function LocalProfile({
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
       </h2>
+      {profile?.tagline && (
+        <p className="profile-tagline" data-testid="profile-tagline">
+          {profile.tagline}
+        </p>
+      )}
       {profile && (progress?.ultraRebirths ?? 0) > 0 && (
         <p className="profile-prestige">
           <span aria-hidden="true">✦</span>{" "}
@@ -443,6 +477,65 @@ export default function LocalProfile({
               {logoNote && (
                 <p className="profile-logo-note" role="status">
                   {logoNote}
+                </p>
+              )}
+            </div>
+          </section>
+          <section className="profile-look" aria-label="Your look">
+            <div className="profile-logo-copy">
+              <strong>Your look</strong>
+              <p>
+                A line under your name and a colour for your profile and card.
+                Both are saved with the account, like the logo.
+              </p>
+              <form className="profile-tagline-form" onSubmit={saveTagline}>
+                <label className="profile-field">
+                  <span>Tagline</span>
+                  <input
+                    type="text"
+                    value={tagline}
+                    maxLength={TAGLINE_LIMIT}
+                    placeholder="Chasing a GODLY"
+                    autoComplete="off"
+                    data-testid="tagline-input"
+                    onChange={(event) => setTagline(event.target.value)}
+                  />
+                </label>
+                <span className="profile-field-count" aria-hidden="true">
+                  {tagline.length}/{TAGLINE_LIMIT}
+                </span>
+                <button
+                  type="submit"
+                  className="secondary-button"
+                  data-testid="tagline-save"
+                  disabled={tagline.trim() === savedTagline}
+                >
+                  Save
+                </button>
+              </form>
+              <div
+                className="profile-accents"
+                role="radiogroup"
+                aria-label="Accent colour"
+              >
+                {PROFILE_ACCENTS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={option.id === accent.id}
+                    aria-label={option.name}
+                    title={option.name}
+                    className="profile-accent-swatch"
+                    style={{ "--swatch": option.ink }}
+                    onClick={() => pickAccent(option.id)}
+                  />
+                ))}
+                <span className="profile-accent-name">{accent.name}</span>
+              </div>
+              {lookNote && (
+                <p className="profile-logo-note" role="status">
+                  {lookNote}
                 </p>
               )}
             </div>

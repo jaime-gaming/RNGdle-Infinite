@@ -33,17 +33,17 @@ buying upgrades. No energy meter, no daily limit, no account needed.
 
 ## Ways to grow
 
-|                 | What it does                                                                                                                           |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Companions**  | Thirteen friends that multiply the EP you earn. Wear one at a time; some can be found for free while you roll.                         |
-| **Skills**      | Charged effects that fire on your next roll: double EP, extra draws, no cooldown and more. Skills never change how a number is scored. |
-| **Tasks**       | Daily and weekly goals that pay EP.                                                                                                    |
-| **Badges**      | A collection to fill, with rarities from Common to GODLY. Roll an exact number twice and the box wears a déjà vu look.                 |
-| **Rebirth**     | Start over with a permanent bonus.                                                                                                     |
-| **Prestige**    | A bigger fresh start, once you own half the collection and have earned 30 million EP in the cycle.                                     |
-| **Rollback**    | A secret that appears after three prestiges. It can be repeated.                                                                       |
-| **Fresh start** | Offered once you have three prestiges: wipe the run and the ladder, keep your profile and every aura.                                  |
-| **Profile**     | Your record: best roll, pinned rolls, four key figures and what you wear, plus a sharp PNG card you can share.                         |
+|                 | What it does                                                                                                                              |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Companions**  | Thirteen friends that multiply the EP you earn. Wear one at a time; some can be found for free while you roll.                            |
+| **Skills**      | Charged effects that fire on your next roll: double EP, extra draws, no cooldown and more. Skills never change how a number is scored.    |
+| **Tasks**       | Daily and weekly goals that pay EP.                                                                                                       |
+| **Badges**      | A collection to fill, with rarities from Common to GODLY. Roll an exact number twice and the box wears a déjà vu look.                    |
+| **Rebirth**     | Start over with a permanent bonus.                                                                                                        |
+| **Prestige**    | A bigger fresh start, once you own half the collection and have earned 30 million EP in the cycle.                                        |
+| **Rollback**    | A secret that appears after three prestiges. It can be repeated.                                                                          |
+| **Fresh start** | Offered once you have three prestiges: wipe the run and the ladder, keep your profile and every aura.                                     |
+| **Profile**     | Your record: best roll, up to ten pinned rolls, four key figures and what you wear. Add a tagline and an accent colour; share a PNG card. |
 
 ![The skill rack](media/skills.png)
 

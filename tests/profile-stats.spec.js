@@ -300,7 +300,7 @@ test("the PNG card paints the logo, the name, the biggest roll and the key stats
   const progress = played();
   const card = paint(progress, { width: 128, height: 128 });
   // Painted at 2× so the PNG stays sharp.
-  expect([card.canvas.width, card.canvas.height]).toEqual([2400, 1360]);
+  expect([card.canvas.width, card.canvas.height]).toEqual([2400, 1520]);
   // Identity: the account name, with its logo drawn beside it.
   expect(card.images).toBe(1);
   expect(card.texts).toContain("LuckyOtter41");
@@ -329,6 +329,38 @@ test("the PNG card paints the logo, the name, the biggest roll and the key stats
   expect(plain.images).toBe(0);
   expect(plain.texts).toContain("LuckyOtter41");
   expect(plain.texts).toContain("999999");
+  // The look travels onto the card: the tagline under the name, and the
+  // frame takes the chosen accent.
+  const strokes = [];
+  const styled = {
+    ...progress,
+    profile: { ...progress.profile, tagline: "Chasing a GODLY", accent: "sky" },
+  };
+  const ctx = {
+    fillText: () => {},
+    drawImage: () => {},
+    createLinearGradient: () => ({ addColorStop: () => {} }),
+    createRadialGradient: () => ({ addColorStop: () => {} }),
+    scale: () => {},
+    arc: () => {},
+    arcTo: () => {},
+    beginPath: () => {},
+    clip: () => {},
+    closePath: () => {},
+    fill: () => {},
+    fillRect: () => {},
+    moveTo: () => {},
+    restore: () => {},
+    save: () => {},
+    stroke() {
+      strokes.push(this.strokeStyle);
+    },
+  };
+  const texts = [];
+  ctx.fillText = (text) => texts.push(String(text));
+  drawExportCardToCanvas({ getContext: () => ctx }, styled, null);
+  expect(texts).toContain("Chasing a GODLY");
+  expect(strokes[0]).toBe("#4aa8e8"); // the outer frame is stroked first
 });
 
 test("the account logo is part of the save, and only a small image data URL is one", async () => {
@@ -412,8 +444,8 @@ test("the PNG card carries the account's own logo", async ({ page }) => {
   );
   const plain = decodePng(Buffer.from(plainPng));
   const card = decodePng(Buffer.from(logoPng));
-  expect([plain.width, plain.height]).toEqual([2400, 1360]);
-  expect([card.width, card.height]).toEqual([2400, 1360]);
+  expect([plain.width, plain.height]).toEqual([2400, 1520]);
+  expect([card.width, card.height]).toEqual([2400, 1520]);
   // Different pictures: the card with a logo is not the card without one.
   expect(logoPng.length).not.toBe(plainPng.length);
   // The logo sits in a circle just left of the account name: the blue lands

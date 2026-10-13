@@ -34,6 +34,7 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
+import { accentById } from "./profile-style.js";
 import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
@@ -1036,7 +1037,14 @@ function App() {
                 <p>Your local save and how far you have come.</p>
               </div>
             </div>
-            <div className="profile-page">
+            <div
+              className="profile-page"
+              style={{
+                "--profile-accent": accentById(session.profile?.accent).ink,
+                "--profile-accent-soft": accentById(session.profile?.accent)
+                  .soft,
+              }}
+            >
               <LocalProfile
                 key={epoch}
                 profile={session.profile}

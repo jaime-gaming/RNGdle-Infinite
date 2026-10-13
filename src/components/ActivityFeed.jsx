@@ -25,6 +25,7 @@ import {
   removableCount,
 } from "../history-log.js";
 import { CADENCE_NAME } from "../tasks.js";
+import { BOOKMARK_LIMIT } from "../progress.js";
 import { dejaVuIds } from "../deja-vu.js";
 import "../activity.css";
 const byId = new Map(badges.map((b) => [b.canonicalId, b]));
@@ -400,7 +401,7 @@ export default function ActivityFeed({
             }}
           >
             {name === "Bookmarks" && bookmarks.length
-              ? `Bookmarks (${bookmarks.length}/3)`
+              ? `Bookmarks (${bookmarks.length}/${BOOKMARK_LIMIT})`
               : name}
           </button>
         ))}

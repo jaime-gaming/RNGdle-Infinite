@@ -58,7 +58,6 @@ function seededSave(logo) {
       number,
       tier,
       ep,
-      tier,
       badges: ids.slice(index * 8, index * 8 + 4),
       ...(index === 4 ? { flywheel: "boost" } : {}),
       ...(index === 6 ? { skills: ["surge"] } : {}),
