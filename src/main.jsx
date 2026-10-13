@@ -34,6 +34,8 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
+import SharedProfile from "./components/SharedProfile.jsx";
+import { shareCardFromLocation } from "./profile-card.js";
 import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
@@ -196,6 +198,11 @@ function App() {
   const openFreshStart = useCallback(() => setFreshStartOpen(true), []);
   const closeFreshStart = useCallback(() => setFreshStartOpen(false), []);
   const [selectedBadge, setSelectedBadge] = useState(null);
+  // A profile link with ?card= shows that card, read-only, instead of the
+  // account in this browser. Read from the address on load and on back/forward.
+  const [sharedCard, setSharedCard] = useState(() =>
+    shareCardFromLocation(location),
+  );
   // Notices: a short stack of cards, one per thing that just happened. See
   // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
   const { toasts, notify, dismiss: dismissToast } = useToasts();
@@ -468,6 +475,8 @@ function App() {
     }
     // Leaving the shop disarms goal picking: it belongs to the shop floor.
     if (target !== "shop") setPickingGoal(false);
+    // Any in-app move leaves a shared card behind; only the address brings one.
+    setSharedCard(null);
     setSettingsSection("");
     // Opening the shop on a product or a companion (a goal link, a recap) opens
     // the shelf that sells it, so the card is on screen when the page renders.
@@ -513,6 +522,7 @@ function App() {
     // 404.html fallback landing must be normalised to its real path once.
     const update = () => {
       setPage(pageFromLocation(location));
+      setSharedCard(shareCardFromLocation(location));
       setShopSection(shopSectionFromLocation(location));
       setShopFamily(shopFamilyFromLocation(location));
       setSettingsSection(settingsSectionFromLocation(location));
@@ -552,11 +562,11 @@ function App() {
   // Whatever name a link carried, signing up, deleting or loading another
   // save rewrites it to the one that is actually here, without a new entry.
   useEffect(() => {
-    if (page !== "profile") return;
+    if (page !== "profile" || sharedCard) return;
     const canonical = pathForProfile(session.profile?.username);
     if (location.pathname !== canonical)
       history.replaceState(history.state, "", canonical);
-  }, [page, session.profile?.username]);
+  }, [page, sharedCard, session.profile?.username]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const update = () => {
@@ -1039,9 +1049,9 @@ function App() {
             </button>
             <div className="page-heading">
               <div
-                className={`page-icon ${session.profile?.avatar ? "has-logo" : ""}`}
+                className={`page-icon ${session.profile?.avatar && !sharedCard ? "has-logo" : ""}`}
               >
-                {session.profile?.avatar ? (
+                {session.profile?.avatar && !sharedCard ? (
                   <AvatarMark
                     avatar={session.profile.avatar}
                     size={46}
@@ -1053,18 +1063,32 @@ function App() {
               </div>
               <div>
                 <h1>Profile</h1>
-                <p>Your local save and how far you have come.</p>
+                <p>
+                  {sharedCard
+                    ? "A record someone shared with you."
+                    : "Your local save and how far you have come."}
+                </p>
               </div>
             </div>
             <div className="profile-page">
-              <LocalProfile
-                key={epoch}
-                profile={session.profile}
-                progress={session}
-                onAction={dispatch}
-                onContinue={() => navigate("roll")}
-                navigate={navigate}
-              />
+              {sharedCard ? (
+                <SharedProfile
+                  card={sharedCard}
+                  onContinue={() => navigate("roll")}
+                  onOwnProfile={
+                    session.profile ? () => navigate("profile") : null
+                  }
+                />
+              ) : (
+                <LocalProfile
+                  key={epoch}
+                  profile={session.profile}
+                  progress={session}
+                  onAction={dispatch}
+                  onContinue={() => navigate("roll")}
+                  navigate={navigate}
+                />
+              )}
             </div>
           </>
         )}

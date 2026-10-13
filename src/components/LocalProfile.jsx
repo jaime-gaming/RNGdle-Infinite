@@ -7,23 +7,16 @@ import {
   X,
   Dices,
   Download,
-  History,
   ImagePlus,
-  Bookmark,
-  Sparkles,
   Link2,
+  Share2,
   UserRound,
 } from "lucide-react";
-import { BOOKMARK_LIMIT, validUsername } from "../progress.js";
-import { prestigeShown } from "../rebirth.js";
+import { validUsername } from "../progress.js";
 import { AVATAR_ACCEPT, fileToAvatar } from "../avatar.js";
-import {
-  accountStats,
-  exportFileName,
-  profileHighlights,
-  renderExportPngBlob,
-} from "../profile-stats.js";
-import NumberBox from "./NumberBox.jsx";
+import { exportFileName, renderExportPngBlob } from "../profile-stats.js";
+import { shareCardData, shareCardUrl } from "../profile-card.js";
+import ProfileRecord from "./ProfileRecord.jsx";
 import "../profile.css";
 
 // A one-way export: the browser saves a PNG card with the account name,
@@ -39,20 +32,6 @@ async function downloadExport(progress) {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function formatStatEP(value) {
-  return `${Math.round(value).toLocaleString("en-US")} EP`;
-}
-
-function when(at) {
-  if (!at) return "—";
-  return new Date(at).toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }
 
 // The account's face: the logo it uploaded, or the neutral icon every new
@@ -85,106 +64,6 @@ export function AvatarMark({
   );
 }
 
-// The record: the best roll, the pinned rolls, four figures, and what the
-// account is wearing. Short on purpose; the activity log has the rest.
-function ProfileHistory({ progress }) {
-  const stats = accountStats(progress);
-  const highlights = profileHighlights(progress);
-  const best = highlights.bestRoll;
-  const items = [
-    ["Rolls completed", stats.rolls.toLocaleString("en-US")],
-    ["EP earned all-time", formatStatEP(stats.totalEarned)],
-    ["Badges discovered", `${stats.uniqueBadges} of ${stats.badgesTotal}`],
-    prestigeShown(stats)
-      ? ["Rebirths · prestiges", `${stats.rebirths} · ${stats.ultraRebirths}`]
-      : ["Rebirths", `${stats.rebirths}`],
-  ];
-  return (
-    <section className="profile-history" aria-label="Your record">
-      <h3>
-        <History size={15} aria-hidden="true" /> Your record
-      </h3>
-      <div className="profile-best" data-best-roll={best?.number ?? ""}>
-        <NumberBox
-          compact
-          value={best?.number ?? "??????"}
-          tier={best?.tier ?? "neutral"}
-          aria-label={best ? `Best roll ${best.number}` : "No best roll yet"}
-        />
-        <div className="profile-best-copy">
-          <span className="profile-kicker">Best roll</span>
-          {best ? (
-            <>
-              <strong>+{formatStatEP(best.ep)}</strong>
-              <small>
-                {best.tier.toUpperCase()} · {when(best.at)}
-              </small>
-            </>
-          ) : (
-            <small>Your biggest roll will sit here.</small>
-          )}
-        </div>
-      </div>
-      <dl>
-        {items.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="profile-pins">
-        <span className="profile-kicker">
-          <Bookmark size={12} aria-hidden="true" /> Pinned rolls
-        </span>
-        {highlights.pinned.length ? (
-          <ul aria-label="Pinned rolls">
-            {highlights.pinned.map((roll) => (
-              <li key={roll.id}>
-                <NumberBox
-                  compact
-                  value={roll.number}
-                  tier={roll.tier}
-                  aria-label={`Pinned roll ${roll.number}`}
-                />
-                <small>+{formatStatEP(roll.ep)}</small>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <small className="profile-pins-empty">
-            Bookmark up to {BOOKMARK_LIMIT} rolls in History and they show here.
-          </small>
-        )}
-      </div>
-      <p className="profile-wearing">
-        <Sparkles size={12} aria-hidden="true" />
-        <span>
-          Wearing{" "}
-          <strong>{highlights.aura?.name ?? "the original look"}</strong>
-          {highlights.companion ? (
-            <>
-              {" "}
-              with <strong>{highlights.companion.name}</strong>
-            </>
-          ) : null}
-          {stats.favoriteTier ? (
-            <>
-              {" "}
-              · most rolls land <strong>{stats.favoriteTier}</strong>
-            </>
-          ) : null}
-          .
-        </span>
-      </p>
-      <p className="profile-history-note">
-        Read from your activity log and your save. The log keeps every cycle,
-        and clearing history never lowers these figures.
-      </p>
-    </section>
-  );
-}
-
 // Suggestions are cosmetic only: a starting point for the name field.
 const NAME_PARTS = [
   ["Lucky", "Golden", "Cosmic", "Quiet", "Feral", "Velvet", "Neon", "Humble"],
@@ -212,6 +91,22 @@ export default function LocalProfile({
   const busy = useRef(false);
   const fileInput = useRef(null);
   const [logoNote, setLogoNote] = useState("");
+  const [shareNote, setShareNote] = useState("");
+  // The link is the profile address with the card in it. Copying is the
+  // happy path; when the clipboard is off limits the link is shown to copy
+  // by hand instead of failing quietly.
+  const [shareLink, setShareLink] = useState("");
+  async function copyProfileLink() {
+    const url = shareCardUrl(progress, location.origin);
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareLink("");
+      setShareNote("Link copied. Anyone who opens it sees this record.");
+    } catch {
+      setShareLink(url);
+      setShareNote("Copy the link below.");
+    }
+  }
   const [choosing, setChoosing] = useState(false);
   const avatar = profile?.avatar ?? "";
   async function chooseLogo(event) {
@@ -440,14 +335,36 @@ export default function LocalProfile({
             >
               <Download size={15} aria-hidden="true" /> Export my data
             </button>
+            <button
+              type="button"
+              className="secondary-button"
+              data-testid="profile-share"
+              onClick={copyProfileLink}
+            >
+              <Share2 size={15} aria-hidden="true" /> Copy profile link
+            </button>
           </div>
+          {shareNote && (
+            <p className="profile-share-note" role="status">
+              {shareNote}
+              {shareLink && (
+                <input
+                  readOnly
+                  value={shareLink}
+                  aria-label="Profile link"
+                  onFocus={(event) => event.target.select()}
+                />
+              )}
+            </p>
+          )}
           <p className="profile-export-note">
             One-way export: a sharp PNG card with your name, your biggest roll,
-            your pinned rolls and your key figures. Nothing in the game reads a
-            card back, so a downloaded file can never overwrite the game in this
-            browser.
+            your pinned rolls and your key figures. The profile link carries the
+            same record inside the address, so it opens anywhere without an
+            account. Nothing in the game reads a card or a link back, so neither
+            can overwrite the game in this browser.
           </p>
-          {progress && <ProfileHistory progress={progress} />}
+          {progress && <ProfileRecord record={shareCardData(progress)} />}
           <div className="account-danger">
             <button
               className="danger-button"
