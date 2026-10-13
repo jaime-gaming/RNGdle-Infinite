@@ -9,6 +9,9 @@ export const CHANGELOG = [
       "four Halloween tasks on October 25–31, 2026 unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon. They never return.",
       "repeat numbers get a déjà vu look, nothing extra paid. Profile shows your record with up to ten bookmarks and a sharper PNG card.",
     ],
+    // Badges that joined the collection with this release; the page shows
+    // them as chips that open the badge itself.
+    badges: ["INFINITE_PENDULUM", "INFINITE_LAST_SECOND"],
   },
   {
     version: "v0.5",
@@ -27,10 +30,7 @@ export const CHANGELOG = [
   {
     version: "v0.4.1",
     title: "tiny update",
-    body: [
-      "QoL, like basic UI changes :D",
-      "GitHub Pages now publishes the same build as the repository, including the latest assets and offline app files.",
-    ],
+    body: ["QoL, like basic UI changes :D"],
   },
   {
     version: "v0.4",

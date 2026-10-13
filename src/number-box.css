@@ -1785,6 +1785,22 @@ button.number-box.number-box:hover {
   border-radius: inherit;
 }
 
+/* Compact boxes (shop set banners, wardrobe, pinned rolls, profile) sit
+   shoulder to shoulder, so an aura drawn for the big result box — halos
+   20px out, 150px seals — spills over its neighbours and the card edge.
+   Every ornament keeps its shape; it is simply clipped to a snug rounded
+   frame 8px outside the box. The big boxes keep the full artwork, and the
+   RNGween looks are composed for the small box already (crest on the lip,
+   guardians at the sides), so they are left alone. */
+.number-box.number-box-compact .box-cosmetic:not(:has(.rngween-aura)),
+.number-box.number-box-compact .godly-particles {
+  clip-path: inset(-8px round 20px);
+}
+.number-box.number-box-compact .box-particles i {
+  width: 4px !important;
+  height: 4px !important;
+}
+
 /* Déjà vu: an exact number rolled again. Box Lab community recipe "Exactnium"
    (by Numbas), worn as a look on top of whatever tier the number has. It
    never changes EP, badges or rank; only the box. */

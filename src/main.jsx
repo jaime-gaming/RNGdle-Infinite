@@ -607,15 +607,17 @@ function App() {
       previousFocus.current?.focus();
     };
   }, [modal]);
-  function openBadge(badge) {
+  function openBadge(badge, { fromRoll = true } = {}) {
     const catalogueBadge = badges.find((b) => b.name === badge.name);
-    setSelectedBadge(
-      catalogueBadge || {
+    setSelectedBadge({
+      ...(catalogueBadge || {
         ...badge,
         rarity: badge.rarity[0].toUpperCase() + badge.rarity.slice(1),
         groups: ["No Set"],
-      },
-    );
+      }),
+      // Opened from the changelog, an unrolled badge is simply undiscovered.
+      fromRoll,
+    });
     setModal("badge");
   }
   // Profile is a page (/profile), not a window: every "sign up" prompt in the
@@ -1021,7 +1023,13 @@ function App() {
                 <p>What changed, and when.</p>
               </div>
             </div>
-            <Changelog onSeen={() => setSeenVersion(LATEST_VERSION)} />
+            <Changelog
+              onSeen={() => setSeenVersion(LATEST_VERSION)}
+              // Open the badge window right here: the collection hides
+              // badges you have not rolled yet, so a new player would land
+              // on an empty page instead of the badge.
+              onBadge={(badge) => openBadge(badge, { fromRoll: false })}
+            />
           </>
         )}
         {page === "profile" && (
@@ -1463,9 +1471,11 @@ function App() {
                     <strong>
                       {session.discovered.includes(selectedBadge.canonicalId)
                         ? "Discovered"
-                        : session.rebirths
-                          ? "Not yet rediscovered"
-                          : "Earned in this roll"}
+                        : !selectedBadge.fromRoll
+                          ? "Not discovered yet"
+                          : session.rebirths
+                            ? "Not yet rediscovered"
+                            : "Earned in this roll"}
                     </strong>
                   </div>
                 </div>

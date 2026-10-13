@@ -345,16 +345,62 @@ export default function LocalProfile({
     <>
       <h2 className="profile-title">
         {profile && (
-          <AvatarMark
-            avatar={avatar}
-            size={46}
-            label={`${profile.username}'s logo`}
-          />
+          // The logo is its own control: click it to add or replace the
+          // picture. No separate upload section.
+          <button
+            type="button"
+            className="profile-logo-button"
+            data-testid="avatar-upload"
+            data-state={choosing ? "busy" : avatar ? "logo" : "empty"}
+            disabled={choosing}
+            aria-label={
+              choosing
+                ? "Shrinking the logo"
+                : avatar
+                  ? "Replace logo"
+                  : "Upload logo"
+            }
+            title={
+              avatar ? "Click to replace your logo" : "Click to add a logo"
+            }
+            onClick={() => fileInput.current?.click()}
+          >
+            <AvatarMark avatar={avatar} size={52} label="" />
+            <span className="profile-logo-overlay" aria-hidden="true">
+              <ImagePlus size={16} />
+            </span>
+          </button>
         )}
         {profile
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
       </h2>
+      {profile && (
+        <input
+          ref={fileInput}
+          className="profile-logo-input"
+          type="file"
+          accept={AVATAR_ACCEPT}
+          data-testid="avatar-input"
+          onChange={chooseLogo}
+          aria-label="Upload a logo"
+        />
+      )}
+      {profile && (avatar || logoNote) && (
+        <p className="profile-logo-line">
+          {logoNote && <span role="status">{logoNote}</span>}
+          {avatar && (
+            <button
+              type="button"
+              className="profile-logo-remove"
+              data-testid="avatar-remove"
+              onClick={removeLogo}
+            >
+              <Trash2 size={12} aria-hidden="true" /> Remove logo
+            </button>
+          )}
+        </p>
+      )}
       {profile && (progress?.ultraRebirths ?? 0) > 0 && (
         <p className="profile-prestige">
           <span aria-hidden="true">✦</span>{" "}
@@ -395,68 +441,6 @@ export default function LocalProfile({
               <Download size={15} aria-hidden="true" /> Export my data
             </button>
           </div>
-          <section className="profile-logo" aria-label="Account logo">
-            {/* The picture is the control: click it to pick a file. */}
-            <button
-              type="button"
-              className="profile-logo-button"
-              data-testid="avatar-upload"
-              data-state={choosing ? "busy" : avatar ? "logo" : "empty"}
-              disabled={choosing}
-              aria-label={
-                choosing
-                  ? "Shrinking the logo"
-                  : avatar
-                    ? "Replace logo"
-                    : "Upload logo"
-              }
-              title={avatar ? "Replace logo" : "Upload logo"}
-              onClick={() => fileInput.current?.click()}
-            >
-              <AvatarMark avatar={avatar} size={64} label="" />
-              <span className="profile-logo-overlay" aria-hidden="true">
-                <ImagePlus size={18} />
-                <small>
-                  {choosing ? "Shrinking…" : avatar ? "Replace" : "Upload"}
-                </small>
-              </span>
-            </button>
-            <input
-              ref={fileInput}
-              className="profile-logo-input"
-              type="file"
-              accept={AVATAR_ACCEPT}
-              data-testid="avatar-input"
-              onChange={chooseLogo}
-              aria-label="Upload a logo"
-            />
-            <div className="profile-logo-copy">
-              <strong>Your logo</strong>
-              <p>
-                Click the picture to {avatar ? "replace" : "add"} it. It shows
-                in the header and on your profile, is saved inside the account
-                on this browser and rides along in a device link. Nothing is
-                uploaded anywhere.
-              </p>
-              {avatar && (
-                <div className="profile-logo-actions">
-                  <button
-                    type="button"
-                    className="profile-logo-remove"
-                    data-testid="avatar-remove"
-                    onClick={removeLogo}
-                  >
-                    <Trash2 size={13} aria-hidden="true" /> Remove logo
-                  </button>
-                </div>
-              )}
-              {logoNote && (
-                <p className="profile-logo-note" role="status">
-                  {logoNote}
-                </p>
-              )}
-            </div>
-          </section>
           <p className="profile-export-note">
             One-way export: a sharp PNG card with your name, your biggest roll,
             your pinned rolls and your key figures. Nothing in the game reads a

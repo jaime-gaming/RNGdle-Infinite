@@ -527,11 +527,17 @@
     transform: translateY(-6px);
   }
 }
-/* Compact previews keep every ornament inside its padded scene. */
+/* Compact previews keep every ornament inside its padded scene: the seal
+   shrinks to the box's own height instead of ringing the neighbours. */
 .number-box-compact .aura-seal {
-  width: 132px;
-  height: 132px;
-  margin: -66px 0 0 -66px;
+  width: 84px;
+  height: 84px;
+  margin: -42px 0 0 -42px;
+}
+.number-box-compact .aura-hexbound .aura-seal {
+  width: 108px;
+  height: 108px;
+  margin: -54px 0 0 -54px;
 }
 @media (prefers-reduced-motion: reduce) {
   .rngween-aura *,

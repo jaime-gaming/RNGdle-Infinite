@@ -47,7 +47,7 @@ test("a guest has no logo, and sign-up is the way to get one", async ({
   // The first profile a browser creates starts with the neutral icon.
   await seedProgress(page, { balance: 0, totalEarned: 0 });
   await page.goto("/profile");
-  await expect(page.locator(".profile-logo .avatar-mark")).toHaveAttribute(
+  await expect(page.locator(".profile-title .avatar-mark")).toHaveAttribute(
     "data-avatar",
     "icon",
   );
@@ -71,7 +71,7 @@ test("an uploaded logo lands in the save, the header and the profile", async ({
   await expect(page.getByTestId("avatar-upload")).toHaveAccessibleName(
     "Replace logo",
   );
-  await expect(page.locator(".profile-logo-note")).toContainText(
+  await expect(page.locator(".profile-logo-line [role=status]")).toContainText(
     /travels with your account/,
   );
 
@@ -134,7 +134,7 @@ test("a huge picture is shrunk instead of refused, and rubbish is refused", asyn
     mimeType: "text/plain",
     buffer: Buffer.from("just some text"),
   });
-  await expect(page.locator(".profile-logo-note")).toContainText(
+  await expect(page.locator(".profile-logo-line [role=status]")).toContainText(
     /PNG, JPEG, WebP or GIF/,
   );
   expect(await avatar(page)).toBe(stored);

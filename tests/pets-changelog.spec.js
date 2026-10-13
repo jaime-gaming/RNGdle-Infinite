@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
+import { allBadgeMetadata } from "../src/infinite-badges.js";
 import {
   PETS,
   petById,
@@ -291,14 +292,10 @@ test("the changelog reads like release notes, not like a chat log", () => {
     expect(entry.version).toMatch(/^v\d+\.\d+(\.\d+)?$/);
     expect(entry.title.length).toBeGreaterThan(5);
     for (const line of entry.body) {
-      // v0.4.1 is the author's own note plus the publishing fix that shipped
-      // with it, not a release-notes sentence: both pinned verbatim instead
-      // of styled.
+      // v0.4.1 is the author's own note, not a release-notes sentence:
+      // pinned verbatim instead of styled.
       if (entry.version === "v0.4.1") {
-        expect([
-          "QoL, like basic UI changes :D",
-          "GitHub Pages now publishes the same build as the repository, including the latest assets and offline app files.",
-        ]).toContain(line);
+        expect(line).toBe("QoL, like basic UI changes :D");
         continue;
       }
       // One short line per change, always a finished sentence.
@@ -315,6 +312,34 @@ test("the changelog reads like release notes, not like a chat log", () => {
   // the same compact budget: eight lines at most.
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);
+  // Badges named by a release are real badges: the chips must resolve.
+  const known = new Set(allBadgeMetadata.map((badge) => badge.id));
+  for (const entry of CHANGELOG)
+    for (const id of entry.badges ?? []) expect(known.has(id)).toBe(true);
+  expect(CHANGELOG[0].badges).toEqual([
+    "INFINITE_PENDULUM",
+    "INFINITE_LAST_SECOND",
+  ]);
+});
+
+test("changelog badge chips open the badge window, even before it is rolled", async ({
+  page,
+}) => {
+  await page.goto("/changelog");
+  const chips = page.locator(".changelog-badge");
+  await expect(chips).toHaveCount(2);
+  await expect(chips.first()).toContainText("Pendulum");
+  await expect(chips.first()).toContainText(/anomaly/i);
+  await chips.nth(1).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator("#modal-title")).toHaveText("Last Second");
+  // The collection hides unrolled badges, so the window says so plainly
+  // instead of pretending the badge came from a roll.
+  await expect(dialog).toContainText("Not discovered yet");
+  await expect(dialog).not.toContainText("Earned in this roll");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(/\/changelog/);
 });
 
 test("every companion wears its own colour and has its own face", async () => {
