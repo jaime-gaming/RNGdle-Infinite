@@ -17,6 +17,7 @@ import {
   Moon,
   ShoppingBag,
   Skull,
+  Trophy,
   X,
 } from "lucide-react";
 import { RNGWEEN_WORLD_SKIN, rngweenCalendar } from "../rngween.js";
@@ -46,6 +47,7 @@ import ReaperFigure from "./ReaperFigure.jsx";
 import ReaperDialog from "./ReaperDialog.jsx";
 import RngweenHourly from "./RngweenHourly.jsx";
 import WorldAuraTrial from "./WorldAuraTrial.jsx";
+import WorldRecord from "./WorldRecord.jsx";
 import WorldCollection, { WorldResultBadges } from "./WorldCollection.jsx";
 import { Pumpkoin } from "./RngweenShop.jsx";
 import { HexboundMark, PumpkinMark } from "./game-icons.jsx";
@@ -56,6 +58,7 @@ const WORLD_TABS = [
   ["objectives", "Objectives", Medal],
   ["key", "Key & prize", KeyRound],
   ["commissions", "Commissions", Hourglass],
+  ["record", "Record", Trophy],
 ];
 // When the Reaper deals again, for the locked Commissions tab. The dates are
 // the calendar's: Oct 21–24 and Nov 1–3 UTC.
@@ -110,8 +113,8 @@ export default function RngweenWorld({
   );
   const [shopOpen, setShopOpen] = useState(false);
   const [reaperOpen, setReaperOpen] = useState(false);
-  // The stage is always on screen; everything else sits in three short tabs
-  // under it: objectives, key and prize, commissions. The fine print lives
+  // The stage is always on screen; everything else sits in four short tabs
+  // under it: objectives, key and prize, commissions, record. The fine print lives
   // in one line under the panel instead of a tab of its own.
   const [tab, setTab] = useState("objectives");
   const [busy, setBusy] = useState(false);
@@ -719,6 +722,7 @@ export default function RngweenWorld({
             </div>
           </>
         )}
+        {tab === "record" && <WorldRecord progress={progress} now={now} />}
         {tab === "commissions" && hourly.active && (
           <RngweenHourly
             progress={progress}

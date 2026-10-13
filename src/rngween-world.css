@@ -2275,3 +2275,155 @@
     font-size: 7px;
   }
 }
+
+/* Record tab: the event in numbers, plus the PNG card. Same dark card
+   language as the prize note, laid out as a small dashboard. */
+.world-record {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #48304e;
+  border-radius: 12px;
+  background: #1b1428;
+  color: #bfa0c5;
+}
+.world-record-head h3 {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: #f3eaf9;
+}
+.world-record-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.world-record-figures > div {
+  padding: 12px 14px;
+  border: 1px solid #3a2b45;
+  border-radius: 10px;
+  background: #170f22;
+}
+.world-record-figures dt {
+  font: 700 9px var(--roll-font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a893b5;
+}
+.world-record-figures dd {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0;
+}
+.world-record-figures strong {
+  font: 700 20px var(--roll-font);
+  color: #f3eaf9;
+}
+.world-record-figures > div:first-child strong {
+  color: #fb923c;
+}
+.world-record-figures small {
+  font-size: 10px;
+  color: #a893b5;
+}
+.world-record-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.world-record-zones,
+.world-record-pieces {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.world-record-zones li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3a2b45;
+  font-size: 12px;
+  color: #f3eaf9;
+}
+.world-record-zones i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--zone-accent, #a78bfa);
+  box-shadow: 0 0 10px var(--zone-accent, #a78bfa);
+}
+.world-record-zones small {
+  grid-column: 2;
+  font-size: 10px;
+  color: #a893b5;
+}
+.world-record-pieces li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #a893b5;
+}
+.world-record-pieces li[data-done="true"] {
+  color: #f3eaf9;
+}
+.world-record-check {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #48304e;
+  border-radius: 5px;
+  color: #fb923c;
+}
+.world-record-pieces li[data-done="true"] .world-record-check {
+  border-color: #fb923c;
+  background: #fb923c30;
+}
+.world-record-auras {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.world-record-auras strong {
+  color: #c4b5fd;
+}
+.world-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.world-record-note {
+  font-size: 10.5px;
+  color: #a893b5;
+}
+@media (max-width: 640px) {
+  .world-record-columns {
+    grid-template-columns: 1fr;
+  }
+}
+.world-record-actions > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #fb923c66;
+  border-radius: 999px;
+  background: #fb923c22;
+  color: #ffd7b5;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.world-record-actions > button:hover:not(:disabled) {
+  background: #fb923c33;
+}
+.world-record-actions > button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
