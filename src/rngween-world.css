@@ -122,6 +122,19 @@
 .world-tabs > button:hover {
   color: #e6d9f0;
 }
+/* Phones: the fourth tab used to sit off-screen behind a hidden scrollbar. */
+@media (max-width: 520px) {
+  .world-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-radius: 22px;
+    overflow-x: visible;
+  }
+  .world-tabs > button {
+    padding-inline: 8px;
+    gap: 5px;
+  }
+}
 .world-tabs > button.is-selected {
   background: color-mix(in srgb, var(--world-accent, #a78bfa) 22%, #241a33);
   color: #f3eaf9;
@@ -180,6 +193,7 @@
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 /* The fine print: one quiet line in place of the old Rules tab. */
 .world-fine-print {

@@ -522,7 +522,8 @@ export default function RngweenWorld({
         )}
         <div className="world-zone-footer">
           <span>
-            {world.rounds[zone.id].toLocaleString("en-US")} rounds completed
+            {world.rounds[zone.id].toLocaleString("en-US")}{" "}
+            {world.rounds[zone.id] === 1 ? "round" : "rounds"} completed
           </span>
           <span>
             <Clock3 size={13} />
