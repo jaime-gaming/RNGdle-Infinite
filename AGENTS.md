@@ -235,6 +235,20 @@ guessing.
   outcomes are committed to the save before the animation starts.
 - The dev previews (`dev:rngween*`, `tools/sandbox-*.mjs`) are `apply: "serve"`
   Vite plugins. Nothing from them reaches a production build; keep it so.
+- **Event attendance (`progress.events`).** An account that opens the game
+  while an event is on is stamped once: `events[eventId] = { at }`, where
+  `eventId` is in `KNOWN_EVENTS` (`src/progress.js`, currently `rngween-2026`)
+  and `at` is the verified website time (`Math.round(seasonalNow)`). The
+  reducer action is `attend-event`; `src/main.jsx` dispatches it when
+  `limitedPhase === "active"`, the account has a profile and the stamp is
+  missing. It is an account record, not run state: Rebirth, Prestige, Rollback
+  and Fresh start keep it (Fresh start copies it explicitly), `parseEvents`
+  drops unknown ids and bad times, guests never get one, and only deleting the
+  account removes it. Nothing in the UI shows it yet. **Planned:** rewards for
+  having attended events will read this field, so never reset or rewrite it,
+  and add new events to `KNOWN_EVENTS` rather than inventing another slot.
+  Tests: `tests/event-attendance.spec.js`; tests that compare a whole save
+  before/after during the event must wait for the stamp first.
 - **Cleanup.** The code is marked with `CLEANUP Nov 1/Nov 4, 2026` comments.
   After November 4 remove the seasonal UI, shop, World and the season clock, but
   keep the aura registry, art, receipts and the save parsing so collected

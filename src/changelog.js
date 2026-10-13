@@ -70,6 +70,8 @@ export const CHANGELOG = [
       "guest play is not saved, and the interface now says so plainly.",
       "new badges: ↕️ Pendulum (anomaly) and ⏳ Last Second (mythic).",
     ],
+    // Named badges become links in the line above (see Changelog.jsx).
+    badges: ["INFINITE_PENDULUM", "INFINITE_LAST_SECOND"],
   },
   {
     version: "v0.1",

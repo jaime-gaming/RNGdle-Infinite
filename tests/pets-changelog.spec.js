@@ -321,6 +321,30 @@ test("the changelog reads like release notes, not like a chat log", () => {
     expect(named).toContain(badge.name);
 });
 
+test("the badge names in the v0.2 note are links that open the badge window", async ({
+  page,
+}) => {
+  await page.goto("/changelog");
+  const links = page.locator(".changelog-badge-link");
+  await expect(links).toHaveCount(2);
+  await expect(links.nth(0)).toHaveText("Pendulum");
+  await expect(links.nth(1)).toHaveText("Last Second");
+  // Still one plain line of the note, not a block of its own; the icons are
+  // drawn by the game's emoji renderer, like on the Badges page.
+  const line = links.first().locator("xpath=..");
+  await expect(line).toContainText(
+    "new badges: Pendulum (anomaly) and Last Second (mythic).",
+  );
+  await expect(line.locator(".emoji img")).toHaveCount(2);
+  await links.nth(1).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator("#modal-title")).toHaveText("Last Second");
+  await expect(dialog).toContainText("Mythic");
+  await expect(dialog).toContainText("Not discovered yet");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
 test("every companion wears its own colour and has its own face", async () => {
   const icons = await import("node:fs").then((fs) =>
     fs.readFileSync("src/components/game-icons.jsx", "utf8"),
