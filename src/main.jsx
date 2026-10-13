@@ -120,6 +120,8 @@ import {
   syncStatus,
 } from "./sync.js";
 import { profileSyncDescription, profileSyncTone } from "./sync-indicator.js";
+// Last on purpose: the phone sheet must come after every component sheet.
+import "./mobile.css";
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
