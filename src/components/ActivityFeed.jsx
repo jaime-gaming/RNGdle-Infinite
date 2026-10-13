@@ -435,7 +435,6 @@ export default function ActivityFeed({
                 "trash",
                 "common",
                 "uncommon",
-                "good",
                 "rare",
                 "epic",
                 "anomaly",

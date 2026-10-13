@@ -19,7 +19,6 @@ export const TIERS = [
   "trash",
   "common",
   "uncommon",
-  "good",
   "rare",
   "epic",
   "anomaly",

@@ -7,7 +7,7 @@ export const CHANGELOG = [
     body: [
       "RNGween runs October 21–November 3, 2026 (UTC): Halloween decorations, a Limited Shop with Pumpkoins and the Reaper's World.",
       "four Halloween tasks on October 25–31, 2026 unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon. They never return.",
-      "a new Good tier sits between Uncommon and Rare, and rolling an exact number you already had gives the box a déjà vu look.",
+      "rolling an exact number you already had gives the box a déjà vu look. A look only; nothing extra is paid.",
     ],
   },
   {

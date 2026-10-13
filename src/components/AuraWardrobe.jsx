@@ -7,7 +7,6 @@ import "../wardrobe.css";
 const tiers = [
   "common",
   "uncommon",
-  "good",
   "rare",
   "epic",
   "anomaly",

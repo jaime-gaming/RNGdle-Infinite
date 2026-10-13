@@ -65,23 +65,6 @@
     0 0 14px rgba(16, 185, 129, 0.35), inset 0 2px 4px 0 rgba(0, 79, 59, 0.3);
   --box-ink: #00d492;
 }
-/* GOOD — Box Lab community recipe (Lucas2763): teal glass between Uncommon and
-   Rare. The dark theme is the recipe as published; light is derived from it. */
-.number-box[data-tier="good"] {
-  --box-background: linear-gradient(to bottom right, #cdeef9, #f0fbff, #cdeef9);
-  --box-border: #20779b;
-  --box-shadow:
-    0 0 18px rgba(32, 119, 155, 0.25),
-    inset 0 2px 4px 0 rgba(21, 112, 148, 0.25);
-  --box-ink: #0e5f80;
-}
-:root[data-theme="dark"] .number-box[data-tier="good"] {
-  --box-background: linear-gradient(to bottom right, #157094, #071f2b, #157094);
-  --box-border: #20779b;
-  --box-shadow:
-    0 0 18px rgba(32, 119, 155, 0.35), inset 0 2px 4px 0 rgba(21, 112, 148, 0.5);
-  --box-ink: #38cdff;
-}
 .number-box[data-tier="rare"] {
   --box-background: linear-gradient(to bottom right, #dbeafe, #f0f9ff, #dbeafe);
   --box-border: #8ec5ff;

@@ -1668,7 +1668,6 @@ export default function Shop({
                 {[
                   "common",
                   "uncommon",
-                  "good",
                   "rare",
                   "epic",
                   "anomaly",

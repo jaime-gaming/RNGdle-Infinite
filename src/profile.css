@@ -95,7 +95,8 @@
 }
 .profile-history dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  /* Four figures: a 2×2 block on phones, one row where there is room. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 16px;
   margin: 0;
 }
@@ -278,5 +279,89 @@
 @media (max-width: 560px) {
   .profile-logo {
     flex-direction: column;
+  }
+}
+
+/* The record: best roll on top, pinned rolls below the figures. */
+.profile-best {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.profile-best .number-box {
+  flex: 0 0 auto;
+  min-width: 132px;
+}
+.profile-best-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.profile-best-copy strong {
+  font: 700 18px var(--roll-font);
+  color: var(--text);
+}
+.profile-best-copy small,
+.profile-pins small,
+.profile-pins-empty {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.profile-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 500 10px var(--roll-font);
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.profile-pins {
+  margin-top: 14px;
+}
+.profile-pins ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.profile-pins li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.profile-pins li .number-box {
+  min-width: 108px;
+}
+.profile-pins-empty {
+  display: block;
+  margin-top: 6px;
+}
+.profile-wearing {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.profile-wearing svg {
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+.profile-wearing strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (min-width: 600px) {
+  .profile-history dl {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

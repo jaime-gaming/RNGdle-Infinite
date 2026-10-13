@@ -598,9 +598,6 @@ nav button.active {
 .result-badge.uncommon {
   --badge-glow: 0 0 10px #10b98140;
 }
-.result-badge.good {
-  --badge-glow: 0 0 11px #20779b4d;
-}
 .result-badge.rare {
   --badge-glow: 0 0 12px #3b82f64d;
 }
@@ -783,11 +780,6 @@ nav button.active {
   --rarity-bg: #f0fdf4;
   --rarity-border: #86efac;
 }
-.roll-experience .good {
-  --rarity: #0e5f80;
-  --rarity-bg: #ecf8fd;
-  --rarity-border: #7fd0ef;
-}
 .roll-experience .rare {
   --rarity: #1d4ed8;
   --rarity-bg: #eff6ff;
@@ -822,11 +814,6 @@ nav button.active {
   --rarity: #34d399;
   --rarity-bg: #022c2266;
   --rarity-border: #065f4699;
-}
-:root[data-theme="dark"] .roll-experience .good {
-  --rarity: #38cdff;
-  --rarity-bg: #071f2b66;
-  --rarity-border: #20779b99;
 }
 :root[data-theme="dark"] .roll-experience .rare {
   --rarity: #60a5fa;

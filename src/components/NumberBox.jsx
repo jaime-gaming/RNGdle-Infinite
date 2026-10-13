@@ -11,7 +11,6 @@ const tiers = new Set([
   "trash",
   "common",
   "uncommon",
-  "good",
   "rare",
   "epic",
   "anomaly",

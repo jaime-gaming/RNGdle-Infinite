@@ -43,6 +43,7 @@ buying upgrades. No energy meter, no daily limit, no account needed.
 | **Prestige**    | A bigger fresh start, once you own half the collection and have earned 30 million EP in the cycle.                                     |
 | **Rollback**    | A secret that appears after three prestiges. It can be repeated.                                                                       |
 | **Fresh start** | Offered once you have three prestiges: wipe the run and the ladder, keep your profile and every aura.                                  |
+| **Profile**     | Your record: best roll, pinned rolls, four key figures and what you wear, plus a sharp PNG card you can share.                         |
 
 ![The skill rack](media/skills.png)
 

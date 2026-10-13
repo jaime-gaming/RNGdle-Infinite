@@ -46,9 +46,6 @@ const tiers = [
   ["trash", 0],
   ["common", 2087],
   ["uncommon", 5802],
-  // Good: a player-submitted Box Lab rarity (by Lucas2763), slotted between
-  // Uncommon and Rare at its published 7,200 EP floor.
-  ["good", 7200],
   ["rare", 10074],
   ["epic", 22293],
   ["anomaly", 35469],

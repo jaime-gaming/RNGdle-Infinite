@@ -9,6 +9,8 @@ import {
   Download,
   History,
   ImagePlus,
+  Bookmark,
+  Sparkles,
   Link2,
   UserRound,
 } from "lucide-react";
@@ -18,8 +20,10 @@ import { AVATAR_ACCEPT, fileToAvatar } from "../avatar.js";
 import {
   accountStats,
   exportFileName,
+  profileHighlights,
   renderExportPngBlob,
 } from "../profile-stats.js";
+import NumberBox from "./NumberBox.jsx";
 import "../profile.css";
 
 // A one-way export: the browser saves a PNG card with the account name,
@@ -81,43 +85,46 @@ export function AvatarMark({
   );
 }
 
+// The record: the best roll, the pinned rolls, four figures, and what the
+// account is wearing. Short on purpose; the activity log has the rest.
 function ProfileHistory({ progress }) {
   const stats = accountStats(progress);
+  const highlights = profileHighlights(progress);
+  const best = highlights.bestRoll;
   const items = [
     ["Rolls completed", stats.rolls.toLocaleString("en-US")],
-    [
-      "Online · offline",
-      `${stats.onlineRolls.toLocaleString("en-US")} · ${stats.offlineRolls.toLocaleString("en-US")}`,
-    ],
     ["EP earned all-time", formatStatEP(stats.totalEarned)],
-    ["EP spent", formatStatEP(stats.spent)],
-    [
-      "Best roll",
-      stats.bestRoll
-        ? `${stats.bestRoll.number.toLocaleString("en-US")} · ${formatStatEP(stats.bestRoll.ep)}`
-        : "—",
-    ],
     ["Badges discovered", `${stats.uniqueBadges} of ${stats.badgesTotal}`],
-    [
-      "Companions",
-      `${stats.companions} of ${stats.companionsTotal} · ${stats.companionsFound} found free`,
-    ],
-    ["Skills unlocked", `${stats.skills} of ${stats.skillsTotal}`],
-    ["Charged effects fired", stats.skillsUsed.toLocaleString("en-US")],
-    ["Flywheel boosts used", stats.boostsUsed.toLocaleString("en-US")],
     prestigeShown(stats)
       ? ["Rebirths · prestiges", `${stats.rebirths} · ${stats.ultraRebirths}`]
       : ["Rebirths", `${stats.rebirths}`],
-    [
-      "First · latest entry",
-      `${when(stats.firstEventAt)} · ${when(stats.lastEventAt)}`,
-    ],
   ];
   return (
-    <section className="profile-history" aria-label="How far you have come">
+    <section className="profile-history" aria-label="Your record">
       <h3>
-        <History size={15} aria-hidden="true" /> How far you have come
+        <History size={15} aria-hidden="true" /> Your record
       </h3>
+      <div className="profile-best" data-best-roll={best?.number ?? ""}>
+        <NumberBox
+          compact
+          value={best?.number ?? "??????"}
+          tier={best?.tier ?? "neutral"}
+          aria-label={best ? `Best roll ${best.number}` : "No best roll yet"}
+        />
+        <div className="profile-best-copy">
+          <span className="profile-kicker">Best roll</span>
+          {best ? (
+            <>
+              <strong>+{formatStatEP(best.ep)}</strong>
+              <small>
+                {best.tier.toUpperCase()} · {when(best.at)}
+              </small>
+            </>
+          ) : (
+            <small>Your biggest roll will sit here.</small>
+          )}
+        </div>
+      </div>
       <dl>
         {items.map(([label, value]) => (
           <div key={label}>
@@ -126,9 +133,52 @@ function ProfileHistory({ progress }) {
           </div>
         ))}
       </dl>
+      <div className="profile-pins">
+        <span className="profile-kicker">
+          <Bookmark size={12} aria-hidden="true" /> Pinned rolls
+        </span>
+        {highlights.pinned.length ? (
+          <ul aria-label="Pinned rolls">
+            {highlights.pinned.map((roll) => (
+              <li key={roll.id}>
+                <NumberBox
+                  compact
+                  value={roll.number}
+                  tier={roll.tier}
+                  aria-label={`Pinned roll ${roll.number}`}
+                />
+                <small>+{formatStatEP(roll.ep)}</small>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <small className="profile-pins-empty">
+            Bookmark up to three rolls in History and they show here.
+          </small>
+        )}
+      </div>
+      <p className="profile-wearing">
+        <Sparkles size={12} aria-hidden="true" />
+        <span>
+          Wearing{" "}
+          <strong>{highlights.aura?.name ?? "the original look"}</strong>
+          {highlights.companion ? (
+            <>
+              {" "}
+              with <strong>{highlights.companion.name}</strong>
+            </>
+          ) : null}
+          {stats.favoriteTier ? (
+            <>
+              {" "}
+              · most rolls land <strong>{stats.favoriteTier}</strong>
+            </>
+          ) : null}
+          .
+        </span>
+      </p>
       <p className="profile-history-note">
-        Read from your activity log, the totals of entries cleared from it, and
-        your current save. The log keeps every cycle, not just the current one,
+        Read from your activity log and your save. The log keeps every cycle,
         and clearing history never lowers these figures.
       </p>
     </section>
@@ -398,9 +448,10 @@ export default function LocalProfile({
             </div>
           </section>
           <p className="profile-export-note">
-            One-way export: a PNG card with your name, your biggest roll and
-            your account’s key stats. Nothing in the game reads a card back, so
-            a downloaded file can never overwrite the game in this browser.
+            One-way export: a sharp PNG card with your name, your biggest roll,
+            your pinned rolls and your key figures. Nothing in the game reads a
+            card back, so a downloaded file can never overwrite the game in this
+            browser.
           </p>
           {progress && <ProfileHistory progress={progress} />}
           <div className="account-danger">

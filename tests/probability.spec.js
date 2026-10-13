@@ -78,15 +78,7 @@ test("pinned base index matches all fifty observed scores, tiers, earned and sup
   for (const sample of sampleResults) {
     const result = reference.evaluate(sample.number);
     expect(result.totalEP).toBe(sample.totalEP);
-    // The samples were observed before GODLY and Good existed; both are
-    // carved out of older tiers by EP floor alone.
-    const expectedTier =
-      sample.totalEP >= 500000
-        ? "godly"
-        : sample.tier === "uncommon" && sample.totalEP >= 7200
-          ? "good"
-          : sample.tier;
-    expect(result.tier).toBe(expectedTier);
+    expect(result.tier).toBe(sample.totalEP >= 500000 ? "godly" : sample.tier);
     expect(result.badges.map((b) => [b.id, b.isScoring])).toEqual(
       sample.badges.map((b) => [b.id, b.isScoring]),
     );

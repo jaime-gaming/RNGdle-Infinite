@@ -6,7 +6,6 @@ import { emptyProgress, applyProgress } from "../src/progress.js";
 import { priorRollsOf, dejaVuIds } from "../src/deja-vu.js";
 
 // Déjà vu is a look for a number rolled before: the box changes, nothing else.
-// Good is a real tier between Uncommon and Rare, from 7,200 EP.
 
 const roll = (id, number, at) => {
   const scored = evaluate(number);
@@ -23,20 +22,6 @@ const roll = (id, number, at) => {
     },
   };
 };
-
-test("Good sits between Uncommon and Rare at 7,200 EP and old saves re-rank their rows", () => {
-  expect(evaluate(103026).tier).toBe("uncommon");
-  expect(evaluate(103006).tier).toBe("good");
-  expect(evaluate(103006).totalEP).toBeGreaterThanOrEqual(7200);
-  expect(evaluate(103002).tier).toBe("rare");
-  // A save written before the tier existed carries "uncommon" for 8,958 EP;
-  // the parser re-reads the tier from the EP, so the row becomes Good.
-  const state = applyProgress(
-    { ...emptyProgress(), profile: { id: "p", username: "p", createdAt: 1 } },
-    roll("r1", 103006, 1000),
-  );
-  expect(state.history.find((e) => e.type === "roll").tier).toBe("good");
-});
 
 test("a repeated exact number is counted from the history and pays nothing extra", () => {
   let state = {
