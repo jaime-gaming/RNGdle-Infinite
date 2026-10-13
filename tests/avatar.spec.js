@@ -68,7 +68,9 @@ test("an uploaded logo lands in the save, the header and the profile", async ({
     buffer: await draw(page, 320, "#3b5bff"),
   });
   await expect(page.getByTestId("avatar-remove")).toBeVisible();
-  await expect(page.getByTestId("avatar-upload")).toHaveText(/Replace logo/);
+  await expect(page.getByTestId("avatar-upload")).toHaveAccessibleName(
+    "Replace logo",
+  );
   await expect(page.locator(".profile-logo-note")).toContainText(
     /travels with your account/,
   );

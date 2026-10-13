@@ -160,35 +160,41 @@
     transform: none;
   }
 }
-.world-rules {
-  margin: 0;
-  padding: 18px 18px 18px 36px;
-  display: grid;
-  gap: 9px;
-  background: #1b1428;
-  border: 1px solid #3a2b45;
-  border-radius: 12px;
-  color: #cdbedc;
-  font-size: 12px;
-  line-height: 1.6;
+/* A locked tab keeps its place and says when it opens again. */
+.world-tabs > button.is-locked {
+  color: #6f5f7c;
+  cursor: not-allowed;
 }
-.world-rules li::marker {
+.world-tabs > button.is-locked:hover {
+  color: #6f5f7c;
+}
+.world-tabs > button.is-locked:active {
+  transform: none;
+}
+.world-tab-when {
+  margin-left: 2px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #241a33;
+  color: #a893b5;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+/* The fine print: one quiet line in place of the old Rules tab. */
+.world-fine-print {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 4px 0;
+  color: #8f7f9c;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.world-fine-print > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
   color: var(--world-accent, #a78bfa);
-}
-.world-rules li {
-  animation: world-panel-in 360ms ease both;
-}
-.world-rules li:nth-child(2) {
-  animation-delay: 50ms;
-}
-.world-rules li:nth-child(3) {
-  animation-delay: 100ms;
-}
-.world-rules li:nth-child(4) {
-  animation-delay: 150ms;
-}
-.world-rules li:nth-child(5) {
-  animation-delay: 200ms;
 }
 /* The four phases read as one path: numbered steps joined by a line, with
    only a name and a status each. */

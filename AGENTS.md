@@ -145,12 +145,16 @@ effect of other work.
   `AuraWardrobe`, `Shop`, `chip-motion.js`, `profile-stats.js`,
   `roll-data.js`, and the pinned lists in `tests/number-box.spec.js`,
   `tests/settings-notifications.spec.js` and `tests/pace-economy.spec.js`.
-- **Profile look** (`src/profile-style.js`): a tagline (≤40 chars, one
-  line, cleaned by `cleanTagline`) and an accent from the fixed
-  `PROFILE_ACCENTS` palette, both saved on `profile` by the `profile-style`
-  action and left out of the save when untouched. The accent drives
-  `--profile-accent` on the profile page and the card frame; never accept a
-  free hex colour. Bookmarks cap at `BOOKMARK_LIMIT` (history-log.js).
+- **Profile address**: `/profile/<username>` (`pathForProfile`,
+  `profileNameFromLocation` in `src/router.js`). Any `/profile/<name>` opens
+  the profile page and `main.jsx` rewrites the address to the signed-in
+  account's name (bare `/profile` for guests). Bookmarks cap at
+  `BOOKMARK_LIMIT` (history-log.js). The logo is uploaded by clicking the
+  picture itself; there is no separate upload button.
+- **RNGween World tabs**: Objectives, Key & prize, Commissions. The Rules tab
+  is gone; the fine print is one line under the panel. Commissions is a
+  locked, disabled tab outside the Reaper's dealing windows and says when it
+  reopens.
 - **Profile record** (`src/profile-stats.js`): `accountStats` is the full
   figure set (kept for tests and other pages); the profile page and the PNG
   card show a short cut of it plus `profileHighlights` (best roll, pinned

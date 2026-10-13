@@ -11,6 +11,8 @@ import {
   subpageFromLocation,
   familyFromLocation,
   pathForShelfFamily,
+  pathForProfile,
+  profileNameFromLocation,
   isCurrentPath,
 } from "../src/router.js";
 import {
@@ -109,6 +111,31 @@ test("a shelf is a real sub-page of the shop, on every host", () => {
   ).toBe("shop");
   // Slugs use the same alphabet pages do, so a crafted segment cannot break out.
   expect(pathForSubpage("shop", "  Auras!../")).toBe("/shop/auras");
+});
+
+test("the profile address names the account: /profile/<username>", () => {
+  expect(pathForProfile("LuckyOtter41")).toBe("/profile/LuckyOtter41");
+  // Guests have no name yet, so they land on the bare page.
+  expect(pathForProfile("")).toBe("/profile");
+  expect(pathForProfile(undefined)).toBe("/profile");
+  // Names keep their case and are only URL-escaped; the base is honoured.
+  expect(pathForProfile("Ñandú_7", "/RNGdle-Infinite/")).toBe(
+    "/RNGdle-Infinite/profile/%C3%91and%C3%BA_7",
+  );
+  expect(
+    profileNameFromLocation({ pathname: "/profile/%C3%91and%C3%BA_7" }),
+  ).toBe("Ñandú_7");
+  expect(profileNameFromLocation({ pathname: "/profile" })).toBe("");
+  expect(profileNameFromLocation({ pathname: "/shop/auras" })).toBe("");
+  // Any /profile/<name> is the profile page, so a direct load is not bounced
+  // to the roll page, and the page is "current" for history purposes.
+  expect(pageFromLocation({ pathname: "/profile/Someone", hash: "" })).toBe(
+    "profile",
+  );
+  expect(
+    isCurrentPath("profile", { pathname: "/profile/Someone", hash: "" }),
+  ).toBe(true);
+  expect(isCurrentPath("shop", { pathname: "/shop/x", hash: "" })).toBe(false);
 });
 
 test("static hosting ships a 404 fallback so real URLs survive a direct load", () => {

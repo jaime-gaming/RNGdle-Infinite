@@ -110,13 +110,42 @@ export function pathForPage(page, base) {
   );
 }
 
+// The profile lives at /profile/<username>: the name is part of the address
+// so a profile can be linked to, and so anything social added later already
+// has a place to point at. Guests (no profile yet) land on the bare /profile.
+// The name is kept as typed — case and all — and only URL-escaped.
+export function pathForProfile(username, base) {
+  const prefix = basePath(base);
+  const name = typeof username === "string" ? username.trim() : "";
+  return `${prefix}/profile${name ? `/${encodeURIComponent(name)}` : ""}`.replace(
+    /\/{2,}/g,
+    "/",
+  );
+}
+
+// The username named in a /profile/<username> address, or "".
+export function profileNameFromLocation(location, base) {
+  const prefix = basePath(base);
+  let path = String(location.pathname || "/");
+  if (prefix && path.toLowerCase().startsWith(prefix.toLowerCase()))
+    path = path.slice(prefix.length);
+  const [page = "", second = ""] = path.split("/").filter(Boolean);
+  if (page !== "profile" || !second) return "";
+  try {
+    return decodeURIComponent(second);
+  } catch {
+    return "";
+  }
+}
+
 // True when the address bar already points at this page, so history is not
 // filled with duplicate entries when a component re-navigates to itself.
+// /profile/<anyone> counts as the profile page; the name is checked by the
+// page itself, which rewrites the address to the account that is signed in.
 export function isCurrentPath(page, location, base) {
   const target = pathForPage(page, base);
   const current = String(location.pathname || "/");
-  return (
-    (current === target || current === target.replace(/\/$/, "")) &&
-    !location.hash
-  );
+  if (location.hash) return false;
+  if (page === "profile" && current.startsWith(`${target}/`)) return true;
+  return current === target || current === target.replace(/\/$/, "");
 }

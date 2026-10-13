@@ -11,7 +11,6 @@ import { LATEST_VERSION } from "./changelog.js";
 import { BOOKMARK_LIMIT, isCycleMarker } from "./history-log.js";
 import { favoriteTier, mergeTallies, tallyEntries } from "./history-tally.js";
 import { productById } from "./shop-data.js";
-import { accentById, cleanTagline } from "./profile-style.js";
 
 // How far you have come, in numbers.
 //
@@ -376,15 +375,9 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     ctx.fillRect(0, 0, width, height);
   }
 
-  // Frame: the chosen accent; without one, gold once the account has
-  // prestiged and quiet grey before that, as the card always was.
-  const accent = progress.profile?.accent
-    ? accentById(progress.profile.accent).ink
-    : null;
-  const tagline = cleanTagline(progress.profile?.tagline);
+  // Frame: gold once the account has prestiged.
   ctx.strokeStyle =
-    accent ??
-    (stats.ultraRebirths > 0 || stats.rollbacks > 0 ? "#d9a441" : "#2e313d");
+    stats.ultraRebirths > 0 || stats.rollbacks > 0 ? "#d9a441" : "#2e313d";
   ctx.lineWidth = 3;
   drawRoundedRect(ctx, 18, 18, width - 36, height - 36, 22);
   ctx.stroke();
@@ -425,14 +418,6 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   ctx.fillStyle = "#eeece8";
   ctx.font = `700 46px ${SANS}`;
   ctx.fillText(accountName, nameX, 134 + 12);
-  // The tagline sits right under the name and pushes the standing line down;
-  // everything on the left column follows through `shift`.
-  const shift = tagline ? 26 : 0;
-  if (tagline) {
-    ctx.fillStyle = accent ?? "#d9d6cf";
-    ctx.font = `italic 500 17px ${SANS}`;
-    ctx.fillText(tagline, nameX, 178);
-  }
   if (stats.ultraRebirths > 0) {
     ctx.fillStyle = "#d9a441";
     ctx.font = `700 14px ${MONO}`;
@@ -441,7 +426,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
         ? `✦ ROLLBACK · PRESTIGE ×${stats.ultraRebirths}`
         : `✦ PRESTIGE ×${stats.ultraRebirths}`,
       nameX,
-      176 + shift,
+      176,
     );
   } else {
     ctx.fillStyle = "#9d9a93";
@@ -451,7 +436,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
         ? `Rebirth Rung #${stats.rebirths} · +${stats.rebirths * 2}% permanent EP`
         : "Original Cycle · Local Account Record",
       nameX,
-      176 + shift,
+      176,
     );
   }
 
@@ -491,7 +476,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     const col = index % 2;
     const row = Math.floor(index / 2);
     const tx = left + col * (tileW + tileGap);
-    const ty = 212 + shift + row * (tileH + tileGap);
+    const ty = 212 + row * (tileH + tileGap);
     ctx.fillStyle = "#181a22";
     drawRoundedRect(ctx, tx, ty, tileW, tileH, 12);
     ctx.fill();
@@ -537,7 +522,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   }
 
   // Pinned rolls: the bookmarks, as small boxes.
-  const pinY = 452 + shift;
+  const pinY = 452;
   ctx.fillStyle = "#89c4a8";
   ctx.font = `700 13px ${MONO}`;
   ctx.fillText("PINNED ROLLS", left, pinY);

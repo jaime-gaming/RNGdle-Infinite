@@ -257,7 +257,91 @@
   gap: 7px;
   min-height: 38px;
 }
-/* The picker is driven by the button beside it, so the raw input never shows. */
+/* The picture is the upload control: hover or focus reveals what a click
+   does, and the hidden input underneath does the actual picking. */
+.profile-logo-button {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+.profile-logo-button:hover,
+.profile-logo-button:focus-visible {
+  transform: scale(1.04);
+}
+.profile-logo-button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+.profile-logo-button:disabled {
+  cursor: progress;
+}
+.profile-logo-button .avatar-mark {
+  border-style: dashed;
+}
+.profile-logo-button[data-state="logo"] .avatar-mark {
+  border-style: solid;
+}
+.profile-logo-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 72%, transparent);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.profile-logo-overlay small {
+  font-size: 9px;
+}
+.profile-logo-button:hover .profile-logo-overlay,
+.profile-logo-button:focus-visible .profile-logo-overlay,
+.profile-logo-button[data-state="busy"] .profile-logo-overlay {
+  opacity: 1;
+}
+/* An empty mark is the invitation itself: a dashed ring with "upload" in it,
+   no placeholder icon fighting underneath. */
+.profile-logo-button[data-state="empty"] .avatar-mark > svg {
+  opacity: 0;
+}
+.profile-logo-button[data-state="empty"] .profile-logo-overlay {
+  opacity: 1;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+}
+.profile-logo-button[data-state="empty"]:hover .profile-logo-overlay,
+.profile-logo-button[data-state="empty"]:focus-visible .profile-logo-overlay {
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+.profile-logo-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--secondary);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.profile-logo-remove:hover {
+  color: var(--text);
+}
+/* The picker is driven by the picture beside it, so the raw input never shows. */
 .profile-logo-input {
   position: absolute;
   width: 1px;
@@ -363,112 +447,5 @@
 @media (min-width: 600px) {
   .profile-history dl {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-/* ---- The look: tagline and accent ---------------------------------------- */
-/* `--profile-accent` is set on .profile-page from the save; amber when the
-   player never picked one, so an untouched profile looks as it always did. */
-.profile-page {
-  --profile-accent: #e8b64a;
-  --profile-accent-soft: rgba(232, 182, 74, 0.18);
-}
-.profile-title .avatar-mark {
-  box-shadow: 0 0 0 3px var(--profile-accent-soft);
-  border-color: color-mix(in srgb, var(--profile-accent) 55%, var(--border));
-}
-.profile-tagline {
-  margin: -6px 0 14px;
-  color: var(--text);
-  font-size: 15px;
-  font-style: italic;
-  line-height: 1.5;
-  border-left: 3px solid var(--profile-accent);
-  padding-left: 10px;
-}
-.profile-kicker,
-.profile-pins > span:first-child {
-  color: color-mix(in srgb, var(--profile-accent) 70%, var(--text));
-}
-.profile-look {
-  margin: 10px 0 8px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  text-align: left;
-}
-.profile-tagline-form {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  margin: 10px 0 12px;
-}
-.profile-field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--secondary);
-}
-.profile-field input {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 14px;
-}
-.profile-field input:focus-visible {
-  outline: 2px solid var(--profile-accent);
-  outline-offset: 1px;
-}
-.profile-field-count {
-  align-self: center;
-  color: var(--secondary);
-  font: 500 11px var(--roll-font);
-}
-.profile-accents {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.profile-accent-swatch {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  background: var(--swatch);
-  cursor: pointer;
-  transition:
-    transform 120ms ease,
-    box-shadow 120ms ease;
-}
-.profile-accent-swatch:hover {
-  transform: scale(1.08);
-}
-.profile-accent-swatch[aria-checked="true"] {
-  border-color: var(--bg);
-  box-shadow: 0 0 0 2px var(--swatch);
-}
-.profile-accent-swatch:focus-visible {
-  outline: 2px solid var(--text);
-  outline-offset: 2px;
-}
-.profile-accent-name {
-  margin-left: 4px;
-  color: var(--secondary);
-  font-size: 12px;
-}
-@media (max-width: 520px) {
-  .profile-tagline-form {
-    flex-wrap: wrap;
-  }
-  .profile-field {
-    flex-basis: 100%;
   }
 }

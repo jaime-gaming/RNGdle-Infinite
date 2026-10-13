@@ -7,6 +7,7 @@ import {
   DoorClosed,
   Flame,
   Ghost,
+  Lock,
   Dices,
   Hourglass,
   ScrollText,
@@ -55,8 +56,16 @@ const WORLD_TABS = [
   ["objectives", "Objectives", Medal],
   ["key", "Key & prize", KeyRound],
   ["commissions", "Commissions", Hourglass],
-  ["rules", "Rules", ScrollText],
 ];
+// When the Reaper deals again, for the locked Commissions tab. The dates are
+// the calendar's: Oct 21–24 and Nov 1–3 UTC.
+function commissionsReopen(now) {
+  const calendar = rngweenCalendar(now);
+  if (!Number.isFinite(now)) return "";
+  if (now < calendar.limitedStartsAt) return "Opens Oct 21";
+  if (now < calendar.endsAt) return "Back Nov 1";
+  return "Closed";
+}
 const ZONE_ICONS = {
   "pumpkin-patch": PumpkinMark,
   graveyard: Skull,
@@ -101,8 +110,9 @@ export default function RngweenWorld({
   );
   const [shopOpen, setShopOpen] = useState(false);
   const [reaperOpen, setReaperOpen] = useState(false);
-  // The stage is always on screen; everything else sits in four short tabs
-  // under it: objectives, key and prize, commissions, rules.
+  // The stage is always on screen; everything else sits in three short tabs
+  // under it: objectives, key and prize, commissions. The fine print lives
+  // in one line under the panel instead of a tab of its own.
   const [tab, setTab] = useState("objectives");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -163,6 +173,11 @@ export default function RngweenWorld({
   const jackpot =
     !pending && last?.zone === "valley" && last.number === WORLD_VALLEY_TARGET;
   const hourly = hourlyView(progress, now);
+  // The board can close while the tab is open (midnight UTC); fall back
+  // rather than leave an empty panel under a locked tab.
+  useEffect(() => {
+    if (tab === "commissions" && !hourly.active) setTab("objectives");
+  }, [tab, hourly.active]);
   const commissionPaid =
     !pending && last && world.last?.serial === last.serial
       ? progress.history
@@ -523,29 +538,47 @@ export default function RngweenWorld({
         </div>
       </section>
       <div className="world-tabs" role="tablist" aria-label="World sections">
-        {WORLD_TABS.map(([id, label, Icon]) => (
-          <button
-            key={id}
-            role="tab"
-            id={`world-tab-${id}`}
-            aria-selected={tab === id}
-            aria-controls={`world-panel-${id}`}
-            className={tab === id ? "is-selected" : ""}
-            onClick={() => setTab(id)}
-            data-world-tab={id}
-          >
-            <Icon size={15} />
-            <span>{label}</span>
-            {id === "key" && !key && fragments === 2 && (
-              <i className="world-tab-dot" aria-hidden="true" />
-            )}
-            {id === "commissions" &&
-              hourly.active &&
-              hourly.slots.some((slot) => slot.claimable) && (
+        {WORLD_TABS.map(([id, label, Icon]) => {
+          // Commissions stay visible but locked while the Reaper is not
+          // dealing, so the tab says when to come back instead of opening
+          // on an empty room.
+          const locked = id === "commissions" && !hourly.active;
+          return (
+            <button
+              key={id}
+              role="tab"
+              id={`world-tab-${id}`}
+              aria-selected={tab === id}
+              aria-controls={`world-panel-${id}`}
+              aria-disabled={locked || undefined}
+              disabled={locked}
+              title={
+                locked
+                  ? "The Reaper deals commissions on Oct 21–24 and Nov 1–3 (UTC)."
+                  : undefined
+              }
+              className={`${tab === id ? "is-selected" : ""} ${locked ? "is-locked" : ""}`}
+              onClick={() => setTab(id)}
+              data-world-tab={id}
+            >
+              {locked ? <Lock size={15} /> : <Icon size={15} />}
+              <span>{label}</span>
+              {locked && (
+                <small className="world-tab-when">
+                  {commissionsReopen(now)}
+                </small>
+              )}
+              {id === "key" && !key && fragments === 2 && (
                 <i className="world-tab-dot" aria-hidden="true" />
               )}
-          </button>
-        ))}
+              {id === "commissions" &&
+                hourly.active &&
+                hourly.slots.some((slot) => slot.claimable) && (
+                  <i className="world-tab-dot" aria-hidden="true" />
+                )}
+            </button>
+          );
+        })}
       </div>
       <div
         key={tab}
@@ -686,40 +719,23 @@ export default function RngweenWorld({
             </div>
           </>
         )}
-        {tab === "commissions" &&
-          (hourly.active ? (
-            <RngweenHourly
-              progress={progress}
-              now={now}
-              inWorld
-              openSignup={openSignup}
-              onAction={onAction}
-              notify={notify}
-            />
-          ) : (
-            <div className="world-guest">
-              <Ghost size={22} />
-              <p>
-                The Reaper deals commissions on Oct 21–24 and Nov 1–3 (UTC).
-                None are open right now.
-              </p>
-            </div>
-          ))}
-        {tab === "rules" && (
-          <ul className="world-rules">
-            <li>
-              World rolls give event points and badges, never EP, charges or
-              companions.
-            </li>
-            <li>Only active commissions pay Pumpkoins.</li>
-            <li>Reveal upgrades change the wait, never the odds.</li>
-            <li>
-              Collections, fragments, key and upgrades retire after Nov 3 UTC.
-            </li>
-            <li>Hexbound and owned auras stay forever.</li>
-          </ul>
+        {tab === "commissions" && hourly.active && (
+          <RngweenHourly
+            progress={progress}
+            now={now}
+            inWorld
+            openSignup={openSignup}
+            onAction={onAction}
+            notify={notify}
+          />
         )}
       </div>
+      <p className="world-fine-print">
+        <ScrollText size={13} aria-hidden="true" />
+        World rolls pay event points and badges, never EP. Reveal upgrades
+        change the wait, not the odds. Everything here retires after Nov 3 UTC;
+        Hexbound and owned auras stay forever.
+      </p>
       <ReaperDialog
         open={reaperOpen}
         onClose={() => setReaperOpen(false)}

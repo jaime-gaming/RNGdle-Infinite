@@ -34,7 +34,6 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
-import { accentById } from "./profile-style.js";
 import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
@@ -100,6 +99,7 @@ import {
 import {
   pageFromLocation,
   pathForPage,
+  pathForProfile,
   pathForSubpage,
   pathForShelfFamily,
   subpageFromLocation,
@@ -482,7 +482,9 @@ function App() {
       target,
       target === "shop" && section
         ? pathForSubpage("shop", section)
-        : pathForPage(target),
+        : target === "profile"
+          ? pathForProfile(session.profile?.username)
+          : pathForPage(target),
       section,
     );
   };
@@ -546,6 +548,15 @@ function App() {
       window.removeEventListener("hashchange", update);
     };
   }, []);
+  // The profile address names the signed-in account: /profile/<username>.
+  // Whatever name a link carried, signing up, deleting or loading another
+  // save rewrites it to the one that is actually here, without a new entry.
+  useEffect(() => {
+    if (page !== "profile") return;
+    const canonical = pathForProfile(session.profile?.username);
+    if (location.pathname !== canonical)
+      history.replaceState(history.state, "", canonical);
+  }, [page, session.profile?.username]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const update = () => {
@@ -1037,14 +1048,7 @@ function App() {
                 <p>Your local save and how far you have come.</p>
               </div>
             </div>
-            <div
-              className="profile-page"
-              style={{
-                "--profile-accent": accentById(session.profile?.accent).ink,
-                "--profile-accent-soft": accentById(session.profile?.accent)
-                  .soft,
-              }}
-            >
+            <div className="profile-page">
               <LocalProfile
                 key={epoch}
                 profile={session.profile}
