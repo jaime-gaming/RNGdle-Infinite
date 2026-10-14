@@ -1,5 +1,5 @@
-import React from "react";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowRight, Check, ChevronDown, Sparkles } from "lucide-react";
 import { RNGWEEN_AURAS, rngweenState } from "../rngween.js";
 import NumberBox from "./NumberBox.jsx";
 
@@ -19,6 +19,9 @@ export default function WorldAuraTrial({
   );
   const owned = progress.owned.includes(aura.id);
   const equipped = progress.equipped === aura.id;
+  // Phones fold the long copy behind one tap; desktop always shows it (CSS).
+  const [more, setMore] = useState(false);
+  const foldId = `world-aura-fold-${aura.id}`;
   return (
     <section
       className="world-phase-aura"
@@ -49,7 +52,6 @@ export default function WorldAuraTrial({
             </span>
           )}
         </h3>
-        <p>{aura.description}</p>
         <div className="world-aura-mission">
           <strong>{trial.title}</strong>
           <span>{trial.detail}</span>
@@ -58,10 +60,23 @@ export default function WorldAuraTrial({
             {trial.goal.toLocaleString("en-US")} · Oct 25–31 UTC
           </small>
         </div>
-        <p className="world-aura-source-note">
-          Earn this aura from its original mission in Tasks. World rolls do not
-          count towards aura missions.
-        </p>
+        <div className={`world-fold ${more ? "is-open" : ""}`} id={foldId}>
+          <p>{aura.description}</p>
+          <p className="world-aura-source-note">
+            Earn this aura from its original mission in Tasks. World rolls do
+            not count towards aura missions.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="world-fold-toggle"
+          aria-expanded={more}
+          aria-controls={foldId}
+          onClick={() => setMore((value) => !value)}
+        >
+          {more ? "Show less" : "Show more"}
+          <ChevronDown size={14} aria-hidden="true" />
+        </button>
         <div className="world-aura-actions">
           {owned && (
             <button

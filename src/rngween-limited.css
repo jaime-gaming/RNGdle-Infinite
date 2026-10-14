@@ -465,8 +465,11 @@
   }
 }
 
-/* A destination at the Roll/footer seam, never a permanent top event banner. */
-.rngween-gate-line {
+/* A destination at the Roll/footer seam, never a permanent top event banner.
+   The pre-launch countdown borrows the seam, not the gate's class: tests and
+   cleanup treat the gate as event-only. */
+.rngween-gate-line,
+.rngween-countdown-line {
   position: relative;
   z-index: 1;
   border-top: 1px solid var(--border);
@@ -507,6 +510,29 @@
   justify-content: center;
   gap: 8px;
   min-height: 42px;
+}
+/* Pre-launch countdown shares the gate's seam. CLEANUP with the gate. */
+.rngween-countdown-line {
+  --limited-accent: #a85217;
+}
+:root[data-theme="dark"] .rngween-countdown-line {
+  --limited-accent: #ffc27e;
+}
+.rngween-countdown-mark {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--limited-accent);
+}
+.rngween-countdown-time {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--limited-accent);
 }
 .rngween-aura-sale-note {
   display: flex;

@@ -2411,3 +2411,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Foldable copy on phones ---------------------------------------------
+   Desktop reads everything; a phone keeps the mission progress and gets one
+   "Show more" tap for the description and the fine print. */
+.world-fold-toggle {
+  display: none;
+}
+@media (max-width: 760px) {
+  .world-fold:not(.is-open) {
+    display: none;
+  }
+  .world-fold-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 36px;
+    margin: 0 0 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #c9b3d6;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .world-fold-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+}

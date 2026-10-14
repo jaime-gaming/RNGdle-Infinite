@@ -49,6 +49,7 @@ import { useRngweenWorldMaintenance } from "./use-rngween-world.js";
 import { rngweenWorldUnlocked } from "./rngween-limited.js";
 import RngweenWorld from "./components/RngweenWorld.jsx";
 import RngweenGate from "./components/RngweenGate.jsx";
+import RngweenCountdown from "./components/RngweenCountdown.jsx";
 import RngweenIntro from "./components/RngweenIntro.jsx";
 import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
 import RngweenSeason from "./components/RngweenSeason.jsx";
@@ -1373,6 +1374,12 @@ function App() {
           </>
         )}
       </main>
+      {page === "roll" && !gateAvailable && (
+        <RngweenCountdown
+          now={seasonalNow}
+          onChangelog={() => navigate("changelog")}
+        />
+      )}
       {page === "roll" && gateAvailable && (
         <RngweenGate
           progress={session}
