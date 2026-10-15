@@ -57,10 +57,11 @@ export function ultraRebirthMultiplier(ultraRebirths = 0) {
   return 1 + ULTRA_BONUS_PER_REBIRTH * Math.max(0, ultraRebirths);
 }
 
-// Every finished rung also pays a permanent wallet bonus: +2% per rebirth,
-// stacking to +12% when the ladder is complete. It is earned forever, so no
-// cycle ever removes it — a rebirth restarts the run, not the account, and a
-// prestige adds its own larger bonus on top of the rungs it keeps.
+// Every finished rung also pays a wallet bonus: +2% per rebirth, stacking to
+// +12% when the ladder is complete. A rebirth restarts the run, not the
+// account, so the rungs keep paying through the ladder — but a prestige or a
+// Rollback sends the ladder back to its first rung, so the +12% is earned
+// again on the way up while the prestige's own +10% stays forever.
 export const REBIRTH_BONUS_PER_REBIRTH = 0.02;
 
 export function rebirthMultiplier(rebirths = 0) {
@@ -112,13 +113,19 @@ export function prestigeBenefits(progress = {}) {
     {
       id: "starter",
       title: "A stronger new cycle",
-      detail: `${formatEP(cycleStarterEp(progress.rebirths ?? REBIRTH_TOTAL, next))} EP to start the next Prestige cycle, before surplus.`,
+      detail: `${formatEP(cycleStarterEp(0, next))} EP to start the next Prestige cycle, before surplus.`,
+    },
+    {
+      id: "ladder",
+      title: "The ladder starts over",
+      detail:
+        "All six rebirths, their skills and their +2% each go back to zero. Climb it again before the next Prestige.",
     },
     {
       id: "legacy",
       title: "Prestige appearance and title",
       detail:
-        "Gold halo and a profile title from the first Prestige. Owned auras and ladder skills stay.",
+        "Gold halo and a profile title from the first Prestige. Owned auras and Prestige bonuses stay.",
     },
   ];
   if (count >= PRESTIGE_LIMIT)
@@ -152,7 +159,7 @@ export function rollbackBenefits(progress = {}) {
       id: "keeps",
       title: "Keeps permanent progress",
       detail:
-        "Rebirth/Prestige bonuses, ladder skills, owned auras and account history stay.",
+        "Prestige and Rollback bonuses, owned auras and account history stay. The rebirth ladder starts over.",
     },
     {
       id: "reset",
@@ -379,7 +386,8 @@ export function rebirthReady(progress, now) {
 // and a complete collection. It is optional: a completed ladder is a legitimate
 // resting place, and the button only ever appears once the requirement is met.
 // It gives the same fresh run a rebirth does — collection, purchases,
-// companions and wallet — and keeps the account's history, rebirths and bonuses.
+// companions and wallet — keeps the account's history and permanent bonuses,
+// and sends the rebirth ladder back to its first rung.
 // Once three prestiges are done, prestige closes for good; the Rollback is the
 // only way out from there, and it can be taken again and again.
 export function ultraRebirthBlocker(progress, now) {

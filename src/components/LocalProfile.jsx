@@ -76,6 +76,12 @@ function suggestName() {
   )}`;
 }
 
+// Every prestige and every Rollback means the six rungs were climbed once more.
+function ladderClimbs(progress) {
+  const n = (progress.ultraRebirths ?? 0) + (progress.rollbacks ?? 0);
+  return n === 1 ? "once" : n === 2 ? "twice" : `${n} times`;
+}
+
 export default function LocalProfile({
   profile,
   progress,
@@ -299,11 +305,9 @@ export default function LocalProfile({
       {profile && (progress?.ultraRebirths ?? 0) > 0 && (
         <p className="profile-prestige">
           <span aria-hidden="true">✦</span>{" "}
-          {progress.rollbacks > 0
-            ? `Rollback ×${progress.rollbacks}`
-            : "Prestige"}{" "}
-          · {progress.ultraRebirths} prestige
-          {progress.ultraRebirths === 1 ? "" : "s"} beyond the ladder
+          {progress.rollbacks > 0 ? `Rollback ×${progress.rollbacks} · ` : ""}
+          Prestige ×{progress.ultraRebirths} · ladder climbed{" "}
+          {ladderClimbs(progress)}
         </p>
       )}
       {profile && (progress?.freshStarts ?? 0) > 0 && (

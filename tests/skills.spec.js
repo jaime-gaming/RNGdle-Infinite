@@ -732,17 +732,18 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   expect(reborn.profile).toEqual(top.profile);
   // Prestige resets the run like a Rebirth but keeps every aura, including the
   // equipped look; the ordinary upgrade, collection and companions go back.
-  expect(reborn.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 2));
+  // The rebirth ladder starts over too, so only prestiges fund the wallet.
+  expect(reborn.balance).toBe(cycleStarterEp(0, 2));
   expect(reborn.discovered).toEqual([]);
   expect(reborn.owned).toEqual(["starfall"]);
   expect(reborn.equipped).toBe("starfall");
   expect(reborn.pets).toEqual([]);
-  expect(reborn.skills).toEqual(["reborn-drive"]);
-  expect(reborn.equippedSkills).toEqual(["reborn-drive"]);
+  expect(reborn.skills).toEqual([]);
+  expect(reborn.equippedSkills).toEqual([]);
   expect(reborn.skillCharge).toEqual({});
-  // It costs the run, never the account: the ladder and its bonuses stay.
-  expect(reborn.rebirths).toBe(REBIRTH_TOTAL);
-  expect(reborn.totalEarned).toBe(9000000 + cycleStarterEp(REBIRTH_TOTAL, 2));
+  // The ladder and its skills are climbed again; the prestige bonus stays.
+  expect(reborn.rebirths).toBe(0);
+  expect(reborn.totalEarned).toBe(9000000 + cycleStarterEp(0, 2));
   // The roll that paid for it stays in the log, and the ultra-rebirth is
   // recorded after it: the history is the account's, never the cycle's.
   expect(reborn.history).toHaveLength(2);
@@ -770,11 +771,9 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
     },
     { type: "complete", result, id: "u", cooldownUntil: 2, at: 3 },
   );
-  // The bonus is permanent and multiplies banked EP only: +10% per ultra,
-  // stacked on the +2% every rung of the ladder paid.
-  expect(credited.balance).toBe(
-    Math.round(result.totalEP * 1.2 * (1 + 0.02 * REBIRTH_TOTAL)),
-  );
+  // The bonus is permanent and multiplies banked EP only: +10% per ultra.
+  // The ladder's +2% per rung is gone until the rungs are climbed again.
+  expect(credited.balance).toBe(Math.round(result.totalEP * 1.2));
   // The roll this settlement wrote, not the one that paid for the ultra.
   expect(credited.history.findLast((e) => e.type === "roll").ep).toBe(
     result.totalEP,

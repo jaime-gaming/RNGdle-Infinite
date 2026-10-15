@@ -8,6 +8,7 @@ export const CHANGELOG = [
       "RNGween runs October 21–November 3, 2026 (UTC): Halloween decorations, a Limited Shop with Pumpkoins and the Reaper's World.",
       "four Halloween tasks on October 25–31, 2026 unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon. They never return.",
       "repeat numbers get a déjà vu look, nothing extra paid. Profile has up to ten bookmarks, a PNG card and a link anyone can open.",
+      "prestige and Rollback now send the rebirth ladder back to rung one: its six skills and their +2% each are earned again on the way up.",
       "and a lot under the hood: how rolls settle, the animations, the shop, the tasks and a few more things. You will notice.",
     ],
   },

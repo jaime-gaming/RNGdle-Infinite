@@ -545,24 +545,41 @@ test("every cycle starts with the EP its rungs and ultra-rebirths paid", () => {
       history: [...next.history, ...earned(35000000, 160000 + step)],
     };
   }
-  // An ultra at the top pays the ladder's sum and its own — plus the surplus
-  // of the 35M cycle arriving five million over the ultra's 30M gate.
+  // An ultra at the top sends the ladder back to zero, so it pays its own sum
+  // only — plus the surplus of the 35M cycle arriving five million over the
+  // ultra's 30M gate. The rungs' skills and their +2% each go with the ladder;
+  // the prestige bonus and the banked surplus stay.
+  expect(progress.skills.length).toBe(REBIRTH_TOTAL);
   const ultra = applyProgress(progress, {
     type: "ultra-rebirth",
     expectedUltraRebirths: 0,
     at: 300000,
     eventId: "u1",
   });
-  expect(ultra.rebirths).toBe(REBIRTH_TOTAL);
+  expect(ultra.rebirths).toBe(0);
   expect(ultra.ultraRebirths).toBe(1);
+  expect(ultra.skills).toEqual([]);
+  expect(ultra.equippedSkills).toEqual([]);
   expect(ultra.owned).toEqual(auraIds);
   expect(ultra.equipped).toBe("prism");
-  expect(ultra.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 1) + 1250000);
+  expect(ultra.balance).toBe(cycleStarterEp(0, 1) + 1250000);
   expect(ultra.balance).toBeLessThanOrEqual(ultra.totalEarned);
   expect(ultra.surplusBanked).toBe(banked + 1);
-  expect(parseProgress(JSON.stringify(ultra)).history.at(-1).grant).toBe(
-    cycleStarterEp(REBIRTH_TOTAL, 1) + 1250000,
+  expect(walletMultiplier(ultra, [])).toBeCloseTo(
+    1.1 * (1 + (banked + 1) / 100),
+    6,
   );
+  expect(ultra.history.at(-1)).toMatchObject({
+    type: "ultra-rebirth",
+    count: 1,
+    ladder: REBIRTH_TOTAL,
+  });
+  const reloaded = parseProgress(JSON.stringify(ultra));
+  expect(reloaded.history.at(-1).grant).toBe(cycleStarterEp(0, 1) + 1250000);
+  expect(reloaded.history.at(-1).ladder).toBe(REBIRTH_TOTAL);
+  expect(reloaded.rebirths).toBe(0);
+  // The next prestige asks for the whole ladder again.
+  expect(ultraRebirthBlocker(ultra, 300001)).toContain("rebirth ladder");
 });
 
 test("overshooting the gate pays a surplus: starting EP now, a banked dividend forever", () => {

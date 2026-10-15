@@ -16,8 +16,8 @@ export default function SharedProfile({ card, onContinue, onOwnProfile }) {
       </h2>
       {card.prestiges > 0 && (
         <p className="profile-prestige">
-          <span aria-hidden="true">✦</span> {card.prestiges} prestige
-          {card.prestiges === 1 ? "" : "s"} beyond the ladder
+          <span aria-hidden="true">✦</span> Prestige ×{card.prestiges} · the
+          ladder climbed {card.prestiges === 1 ? "once" : "more than once"}
         </p>
       )}
       <div className="profile-shared-banner" role="note">

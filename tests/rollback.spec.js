@@ -156,8 +156,10 @@ test("taking the Rollback restarts the run, and it can be taken again", () => {
     eventId: "rb1",
   });
   expect(after.rollbacks).toBe(1);
-  expect(after.rebirths).toBe(REBIRTH_TOTAL);
+  // The ladder goes back to its first rung; the prestiges stay.
+  expect(after.rebirths).toBe(0);
   expect(after.ultraRebirths).toBe(3);
+  expect(after.skills.filter((id) => id !== "quickwind-1")).toEqual([]);
   // The run restarts from zero; the aura and its equipped look stay while the
   // ordinary upgrade is handed back. The new wallet starts at zero.
   expect(after.discovered).toEqual([]);
@@ -169,14 +171,16 @@ test("taking the Rollback restarts the run, and it can be taken again", () => {
     type: "rollback",
     count: 1,
     cost: gate.ep,
+    ladder: REBIRTH_TOTAL,
   });
-  // The bonus is permanent: it multiplies banked EP like every stage.
+  // The bonus is permanent: it multiplies banked EP like every stage. The
+  // rungs' +2% each left with the ladder.
   expect(walletMultiplier(after)).toBeCloseTo(
-    rebirthMultiplier(REBIRTH_TOTAL) *
-      ultraRebirthMultiplier(3) *
-      rollbackMultiplier(1),
+    rebirthMultiplier(0) * ultraRebirthMultiplier(3) * rollbackMultiplier(1),
     6,
   );
+  // The next Rollback needs the whole ladder again.
+  expect(rollbackBlocker(after, 300001)).toContain("rebirth ladder");
   // A stale tab is refused.
   expect(() =>
     applyProgress(ready, {
@@ -198,9 +202,7 @@ test("taking the Rollback restarts the run, and it can be taken again", () => {
     count: 2,
   });
   expect(walletMultiplier(again)).toBeCloseTo(
-    rebirthMultiplier(REBIRTH_TOTAL) *
-      ultraRebirthMultiplier(3) *
-      rollbackMultiplier(2),
+    rebirthMultiplier(0) * ultraRebirthMultiplier(3) * rollbackMultiplier(2),
     6,
   );
   // Prestige stays closed after a Rollback.
@@ -320,12 +322,15 @@ test("the Rollback appears after the third prestige and takes the run", async ({
   await expect.poll(async () => (await saved(page)).rollbacks).toBe(1);
   expect((await saved(page)).owned).toEqual(auraIds);
   expect((await saved(page)).equipped).toBe("prism");
-  // Afterwards the page shows the count, and the Rollback is still there for
-  // the next run. Prestige stays closed.
+  // Afterwards the ladder starts over: the page is back on rung one, the
+  // legacy panel keeps the count, and neither Prestige nor the Rollback is
+  // offered until the six rungs are climbed again.
+  expect((await saved(page)).rebirths).toBe(0);
   await page.goto("/#rebirth");
-  await expect(page.locator(".rebirth-hero h2")).toContainText(
-    "1 Rollback taken",
+  await expect(page.locator(".rebirth-hero .eyebrow")).toContainText(
+    "STEP 1 OF 6 · AFTER ROLLBACK 1",
   );
+  await expect(page.locator(".rebirth-hero h2")).toContainText("Rebirth 1");
   await expect(page.locator(".rebirth-legacy")).toContainText("1 taken");
   await expect(
     page
@@ -336,7 +341,7 @@ test("the Rollback appears after the third prestige and takes the run", async ({
     page
       .locator(".rebirth-page")
       .getByRole("button", { name: "Rollback", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(page.locator(".ultra-mark")).toContainText("Rollback");
 });
 
@@ -360,14 +365,14 @@ test("the Rollback can be taken again and again, each one stacking", async ({
   await rollback.click();
   await page.getByRole("button", { name: "Confirm Rollback" }).click();
   await expect.poll(async () => (await saved(page)).rollbacks).toBe(2);
-  // The take ends on the activity page, so the rebirth page is read again.
+  // The take ends on the activity page, so the rebirth page is read again:
+  // the ladder is back at rung one and the legacy panel counts two.
   await page.goto("/#rebirth");
-  await expect(page.locator(".rebirth-hero h2")).toContainText(
-    "2 Rollbacks taken",
-  );
+  await expect(page.locator(".rebirth-hero h2")).toContainText("Rebirth 1");
+  await expect(page.locator(".rebirth-legacy")).toContainText("2 taken");
   await expect(
     page
       .locator(".rebirth-page")
       .getByRole("button", { name: "Rollback", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 });

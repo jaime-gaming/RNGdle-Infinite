@@ -897,16 +897,24 @@ function parseAvatar(value) {
 // `granted` is the ladder skill this rebirth pays, which is earned rather than
 // bought and so joins the skills that survived, and `starter` is the EP the new
 // cycle begins with — paid by the rungs, prestiges and Rollback the account keeps.
-function startNewCycle(state, { granted = null, starter = 0 } = {}) {
+// `resetLadder` is what a prestige or a Rollback does on top: the six rungs are
+// climbed again from zero, so the ladder skills and their +2% go back too.
+function startNewCycle(
+  state,
+  { granted = null, starter = 0, resetLadder = false } = {},
+) {
   const owned = [...new Set(state.owned ?? [])].filter(
     (id) =>
       productById.get(id)?.kind === "aura" ||
       (id === RNGWEEN_SKILL.id && state.rngweenLimited?.bought?.includes(id)),
   );
   // Shop skills are purchases: they go back on the stall. Ladder skills were
-  // paid for by the rebirths the cycle keeps, so they stay unlocked.
+  // paid for by the rebirths the cycle keeps, so they stay unlocked — unless
+  // the ladder itself is being reset, when they return rung by rung.
   const kept = (state.skills ?? []).filter(
-    (id) => skillById.get(id)?.source !== "shop",
+    (id) =>
+      skillById.get(id)?.source !== "shop" &&
+      (!resetLadder || skillById.get(id)?.source !== "rebirth"),
   );
   const skills = granted ? [...new Set([...kept, granted.id])] : kept;
   const base = {
@@ -1487,18 +1495,21 @@ function applyEvent(state, action) {
     if (blocked) throw new Error(blocked);
     if (!validAmount(count + 1)) throw new Error("Prestige limit reached.");
     // The same fresh start a rebirth gives, taken at the top of the ladder
-    // with half the collection in hand. It costs the run, never the account:
-    // history, aura collection, rebirths, ladder skills and every permanent
-    // bonus stay, and the prestige adds ten more points forever.
+    // with half the collection in hand. It costs the run and the ladder, never
+    // the account: history, aura collection, prestiges and every permanent
+    // bonus stay, and the prestige adds ten more points forever. The six
+    // rungs — their skills and their +2% each — are climbed again from zero,
+    // so the next prestige is earned the long way too.
     // The same overshoot dividend as a rung: the ultra gate is a floor too.
     const ultraCost = ultraRebirthRequirement();
     const surplus = rebirthSurplus(cycleEarnedEp(state), ultraCost.ep);
-    const starter =
-      cycleStarterEp(state.rebirths ?? 0, count + 1) + surplus.starterBonus;
+    const ladder = state.rebirths ?? 0;
+    const starter = cycleStarterEp(0, count + 1) + surplus.starterBonus;
     const cost = ultraCost;
     return {
-      ...startNewCycle(state, { starter }),
+      ...startNewCycle(state, { starter, resetLadder: true }),
       profile: state.profile,
+      rebirths: 0,
       ultraRebirths: count + 1,
       surplusBanked:
         (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
@@ -1508,6 +1519,7 @@ function applyEvent(state, action) {
           type: "ultra-rebirth",
           at: now,
           count: count + 1,
+          ...(ladder ? { ladder } : {}),
           ...(starter ? { grant: starter } : {}),
           ...(cost ? { cost: cost.ep } : {}),
         },
@@ -1528,13 +1540,16 @@ function applyEvent(state, action) {
     if (!validAmount(rollbacks + 1))
       throw new Error("Rollback count limit reached.");
     // Repeated Rollbacks keep permanent bonuses but always reset the wallet
-    // to zero. Existing saved balances are not revalued retroactively.
+    // to zero, and — like a prestige — send the rebirth ladder back to its
+    // first rung. Existing saved balances are not revalued retroactively.
     const rollbackCost = rollbackRequirement();
     const surplus = rebirthSurplus(cycleEarnedEp(state), rollbackCost.ep);
+    const ladder = state.rebirths ?? 0;
     const starter = 0;
     return {
-      ...startNewCycle(state, { starter }),
+      ...startNewCycle(state, { starter, resetLadder: true }),
       profile: state.profile,
+      rebirths: 0,
       rollbacks: rollbacks + 1,
       surplusBanked:
         (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
@@ -1544,6 +1559,7 @@ function applyEvent(state, action) {
           type: "rollback",
           at: now,
           count: rollbacks + 1,
+          ...(ladder ? { ladder } : {}),
           ...(starter ? { grant: starter } : {}),
           ...(rollbackCost ? { cost: rollbackCost.ep } : {}),
         },
@@ -2473,6 +2489,8 @@ function parseHistory(value) {
         count: e.count,
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
         ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
+        // The rungs this reset sent back, so the log can say what it cost.
+        ...(validAmount(e.ladder) && e.ladder ? { ladder: e.ladder } : {}),
       };
     } else if (e.type === "rollback") {
       if (!validAmount(e.count) || e.count < 1) return [];
@@ -2481,6 +2499,8 @@ function parseHistory(value) {
         count: e.count,
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
         ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
+        // The rungs this reset sent back, so the log can say what it cost.
+        ...(validAmount(e.ladder) && e.ladder ? { ladder: e.ladder } : {}),
       };
     } else if (e.type === "fresh-start") {
       // What the account had before it chose to start over, kept as a keepsake.

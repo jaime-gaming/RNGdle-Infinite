@@ -712,18 +712,26 @@ export default function ActivityFeed({
                     <p>
                       The run started over from the top of the ladder: the
                       collection, every purchase, the companions and the wallet
-                      reset. History, rebirths and bonuses stayed, the cycle
-                      began with {formatEP(event.grant ?? 0)} EP, and the
-                      permanent wallet bonus grew by 10 points.
+                      reset
+                      {event.ladder
+                        ? `, and the ${event.ladder}-rung rebirth ladder went back to its first rung`
+                        : ""}
+                      . History and permanent bonuses stayed, the cycle began
+                      with {formatEP(event.grant ?? 0)} EP, and the permanent
+                      wallet bonus grew by 10 points.
                     </p>
                   ) : event.type === "rollback" ? (
                     <p>
                       The Rollback started the run over from zero: the
                       collection, every purchase, the companions and the wallet
-                      reset. History, rebirths, prestiges and bonuses stayed,
-                      the cycle began with {formatEP(event.grant ?? 0)} EP, and
-                      the permanent wallet bonus grew by 25%. The Rollback can
-                      be taken again.
+                      reset
+                      {event.ladder
+                        ? `, and the ${event.ladder}-rung rebirth ladder went back to its first rung`
+                        : ""}
+                      . History, prestiges and permanent bonuses stayed, the
+                      cycle began with {formatEP(event.grant ?? 0)} EP, and the
+                      permanent wallet bonus grew by 25%. The Rollback can be
+                      taken again.
                     </p>
                   ) : event.type === "fresh-start" ? (
                     <p>
