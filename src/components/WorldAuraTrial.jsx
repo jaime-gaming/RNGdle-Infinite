@@ -41,7 +41,7 @@ export default function WorldAuraTrial({
       <div className="world-aura-trial-copy">
         <span className="world-eyebrow">
           <Sparkles size={13} />
-          Phase 0{phase.phase} aura
+          This zone's aura · earned in Tasks
         </span>
         <h3>
           {aura.name}
@@ -60,12 +60,13 @@ export default function WorldAuraTrial({
             {trial.goal.toLocaleString("en-US")} · Oct 25–31 UTC
           </small>
         </div>
+        <p className="world-aura-source-note">
+          {owned
+            ? "Yours already. It matches this zone's colours, nothing more."
+            : "Not won here: it comes from ordinary rolls on the Roll page, tracked in Tasks. World rolls do not count."}
+        </p>
         <div className={`world-fold ${more ? "is-open" : ""}`} id={foldId}>
           <p>{aura.description}</p>
-          <p className="world-aura-source-note">
-            Earn this aura from its original mission in Tasks. World rolls do
-            not count towards aura missions.
-          </p>
         </div>
         <button
           type="button"

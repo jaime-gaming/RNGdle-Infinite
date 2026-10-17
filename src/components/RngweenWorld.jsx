@@ -35,6 +35,7 @@ import {
   emptyWorldMini,
   scoreWorldNumber,
   worldPhaseComplete,
+  worldPhaseGoals,
 } from "../rngween-world-badges.js";
 import { seasonNow } from "../season-clock.js";
 import { hourlyView, hourlyTaskById } from "../rngween-hourly.js";
@@ -175,6 +176,60 @@ export default function RngweenWorld({
   const jackpot =
     !pending && last?.zone === "valley" && last.number === WORLD_VALLEY_TARGET;
   const hourly = hourlyView(progress, now);
+  // One plain sentence that says what to do next, so the page never has to
+  // be decoded from its parts. It follows the path: fragments, key, 6666.
+  const hexbound =
+    limited.skinEarned || progress.owned.includes(RNGWEEN_WORLD_SKIN.id);
+  const goalsDone = (id) =>
+    worldPhaseGoals(id, world.mini?.[id]).filter((goal) => goal.complete)
+      .length;
+  const nextStep = !progress.profile
+    ? {
+        text: "Create a profile first: World progress only saves to an account.",
+        zone: null,
+      }
+    : hexbound
+      ? {
+          text: "Hexbound is yours. Keep rolling for badges and the Record.",
+          zone: "valley",
+        }
+      : key
+        ? {
+            text: "The key is forged. Roll in the Valley until 6666 turns up.",
+            zone: "valley",
+          }
+        : fragments === 2
+          ? {
+              text: "Both fragments found. Forge the key in Key & prize.",
+              zone: null,
+              tab: "key",
+            }
+          : !world.fragments.graveyard
+            ? {
+                text: `Clear the three Graveyard objectives (${goalsDone("graveyard")}/3) to earn the first key fragment.`,
+                zone: "graveyard",
+              }
+            : {
+                text: `Clear the three Haunted House objectives (${goalsDone("haunted-house")}/3) to earn the second key fragment.`,
+                zone: "haunted-house",
+              };
+  // A fragment lands at the end of a reveal, with no click to answer; say
+  // it out loud once so the player knows the zone is done and where to go.
+  const seenFragments = useRef(fragments);
+  useEffect(() => {
+    if (fragments > seenFragments.current) {
+      notify({
+        kind: "milestone",
+        title:
+          fragments >= 2 ? "Both key fragments earned" : "Key fragment earned",
+        text:
+          fragments >= 2
+            ? "Open Key & prize to forge the Challenge key and unlock the Valley."
+            : "One more fragment to go. Clear the other zone's objectives.",
+      });
+    }
+    seenFragments.current = fragments;
+  }, [fragments]);
   // The board can close while the tab is open (midnight UTC); fall back
   // rather than leave an empty panel under a locked tab.
   useEffect(() => {
@@ -218,7 +273,7 @@ export default function RngweenWorld({
     : jackpot
       ? "6666 — Hexbound unlocked."
       : result
-        ? `${result.tier[0].toUpperCase() + result.tier.slice(1)} · +${result.points.toLocaleString("en-US")} event points`
+        ? `${result.tier[0].toUpperCase() + result.tier.slice(1)} · +${result.points.toLocaleString("en-US")} ${zone.name} points`
         : "Saved legacy result settled. Existing rewards are kept.";
 
   return (
@@ -261,8 +316,33 @@ export default function RngweenWorld({
         <p>
           {key
             ? "Valley unlocked. Find 6666 to earn Hexbound."
-            : "Clear two zones, forge the key, enter the Valley."}
+            : "Two fragments make the key. The key opens the Valley. 6666 in the Valley earns Hexbound."}
         </p>
+        <div className="world-next-step" data-world-next-step>
+          <span className="world-eyebrow">Next step</span>
+          <p>{nextStep.text}</p>
+          {nextStep.zone && nextStep.zone !== zone.id && (
+            <button
+              className="secondary-button"
+              disabled={!!pending || busy}
+              onClick={() => {
+                setSelected(nextStep.zone);
+                setTab("objectives");
+              }}
+            >
+              Go to {worldZoneById.get(nextStep.zone).name}
+              <ArrowRight size={13} />
+            </button>
+          )}
+          {nextStep.tab && tab !== nextStep.tab && (
+            <button
+              className="secondary-button"
+              onClick={() => setTab(nextStep.tab)}
+            >
+              Open Key & prize <ArrowRight size={13} />
+            </button>
+          )}
+        </div>
       </div>
       {warning && (
         <p className="world-alert" role="alert">
@@ -315,10 +395,10 @@ export default function RngweenWorld({
                   complete ? (
                     <>
                       <Check size={12} />
-                      Objectives cleared
+                      Warm-up done
                     </>
                   ) : (
-                    "Free entry"
+                    "Warm-up · optional"
                   )
                 ) : item.fragment ? (
                   ready ? (
@@ -327,7 +407,7 @@ export default function RngweenWorld({
                       Fragment found
                     </>
                   ) : (
-                    "Key fragment"
+                    `Fragment ${item.phase - 1} · ${goalsDone(item.id)}/3 done`
                   )
                 ) : ready ? (
                   <>
@@ -441,7 +521,14 @@ export default function RngweenWorld({
             </p>
           )}
         </div>
-        {!pending && result && <WorldResultBadges result={result} />}
+        {!pending && result && (
+          <WorldResultBadges
+            result={result}
+            counts={
+              last && world.last?.serial === last.serial ? stats.counts : null
+            }
+          />
+        )}
         {pending ? (
           <div className="world-reveal-timer">
             <div>
@@ -736,8 +823,8 @@ export default function RngweenWorld({
       </div>
       <p className="world-fine-print">
         <ScrollText size={13} aria-hidden="true" />
-        World rolls pay event points and badges, never EP. Reveal upgrades
-        change the wait, not the odds. Everything here retires after Nov 3 UTC;
+        World rolls pay zone points and badges, never EP. Reveal upgrades change
+        the wait, not the odds. Everything here retires after Nov 3 UTC;
         Hexbound and owned auras stay forever.
       </p>
       <ReaperDialog

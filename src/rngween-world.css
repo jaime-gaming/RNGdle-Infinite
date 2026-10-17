@@ -2440,3 +2440,76 @@
     transform: rotate(180deg);
   }
 }
+
+/* ---- Next step: one sentence under the title that says what to do ------- */
+.world-next-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 12px;
+  margin: 14px auto 0;
+  max-width: 560px;
+  padding: 11px 16px;
+  border: 1px solid #4a3458;
+  border-radius: 12px;
+  background: #1c1328;
+  text-align: left;
+}
+.world-next-step .world-eyebrow {
+  color: #e2b06a;
+}
+.world-next-step > p {
+  flex: 1 1 220px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e6dbee;
+}
+.world-next-step > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  padding: 7px 11px;
+  background: #2a1d38;
+  border-color: #5b4470;
+  color: #e9d9f3;
+}
+/* A first-time badge on the result gets a small mark: that is the collection
+   moment, so it is the one thing on the chip allowed to pop. */
+.world-badge-chip.is-new {
+  border-color: color-mix(in srgb, var(--badge-color) 70%, #fff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--badge-color) 35%, transparent);
+}
+.world-badge-chip > em {
+  font-style: normal;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 6px;
+  background: var(--badge-color);
+  color: #150f1c;
+  animation: world-new-pop 0.5s ease-out;
+}
+@keyframes world-new-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.world-motion-reduced .world-badge-chip > em {
+  animation: none;
+}
+.world-aura-trial-copy > .world-aura-source-note {
+  margin: 8px 0 0;
+}

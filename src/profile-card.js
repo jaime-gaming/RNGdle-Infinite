@@ -10,7 +10,8 @@ import { TIERS } from "./history-tally.js";
 import { accountStats, profileHighlights } from "./profile-stats.js";
 import { pathForProfile } from "./router.js";
 
-export const CARD_VERSION = 1;
+export const CARD_VERSION = 2;
+const KNOWN_VERSIONS = new Set([1, CARD_VERSION]);
 const NAME_MAX = 20;
 const NUMBER = /^\d{1,6}$/;
 
@@ -45,9 +46,73 @@ export function shareCardData(progress = {}, now = new Date()) {
   };
 }
 
-// URL-safe base64 of the JSON, UTF-8 first so any name survives the trip.
+// The card travels as one compact line, then URL-safe base64. Version 1 was
+// the JSON itself (about 1,000 characters for a full card); version 2 keeps
+// the same fields in a fixed order, numbers in base 36, tiers as an index and
+// dates in seconds, which makes the link about a quarter of the length. Old
+// version-1 links still open.
+const FIELD = "|";
+const ITEM = ",";
+const PART = ":";
+const b36 = (value) => (count(value) ? count(value).toString(36) : "");
+const fromB36 = (text) => (/^[0-9a-z]+$/.test(text) ? parseInt(text, 36) : 0);
+const seconds = (value) => {
+  const iso = isoDate(value);
+  return iso ? Math.floor(Date.parse(iso) / 1000).toString(36) : "";
+};
+const fromSeconds = (text) => (text ? fromB36(text) * 1000 : null);
+const plain = (value) =>
+  typeof value === "string" ? value.replace(/[|,:]/g, "").trim() : "";
+const tierIndex = (tier) => {
+  const index = TIERS.indexOf(tier);
+  return index < 0 ? "" : String(index);
+};
+const tierAt = (text) => (text === "" ? null : (TIERS[Number(text)] ?? null));
+const packRoll = (roll, withDate) =>
+  roll && typeof roll === "object"
+    ? [
+        plain(String(roll.number ?? "")),
+        b36(roll.ep),
+        tierIndex(roll.tier),
+        ...(withDate ? [seconds(roll.at)] : []),
+      ].join(PART)
+    : "";
+const unpackRoll = (text, withDate) => {
+  if (!text) return null;
+  const [number, ep, tier, at] = text.split(PART);
+  return {
+    number,
+    ep: fromB36(ep ?? ""),
+    tier: tierAt(tier ?? ""),
+    ...(withDate ? { at: fromSeconds(at ?? "") } : {}),
+  };
+};
+
 export function encodeShareCard(card) {
-  const bytes = new TextEncoder().encode(JSON.stringify(card));
+  const line = [
+    String(card?.v ?? CARD_VERSION),
+    plain(card?.name),
+    seconds(card?.at),
+    seconds(card?.since),
+    packRoll(card?.best, true),
+    b36(card?.rolls),
+    b36(card?.earned),
+    b36(card?.badges),
+    b36(card?.badgesTotal),
+    b36(card?.rebirths),
+    b36(card?.prestiges),
+    (Array.isArray(card?.pins) ? card.pins : [])
+      .map((pin) => packRoll(pin, false))
+      .join(ITEM),
+    tierIndex(card?.favoriteTier),
+    plain(card?.aura),
+    plain(card?.companion),
+  ].join(FIELD);
+  return toBase64Url(line);
+}
+
+function toBase64Url(text) {
+  const bytes = new TextEncoder().encode(text);
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary)
@@ -56,24 +121,58 @@ export function encodeShareCard(card) {
     .replace(/=+$/, "");
 }
 
+function fromBase64Url(token) {
+  const padded = token.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 // The card named by a link, cleaned field by field, or null when the data
 // is missing, damaged or not a card at all. A bad link is simply ignored.
 export function decodeShareCard(token) {
   if (typeof token !== "string" || !token) return null;
-  let raw;
+  let text;
   try {
-    const padded = token.replace(/-/g, "+").replace(/_/g, "/");
-    const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    raw = JSON.parse(new TextDecoder().decode(bytes));
+    text = fromBase64Url(token);
   } catch {
     return null;
+  }
+  let raw;
+  if (text.startsWith("{")) {
+    // A version-1 link: the JSON itself.
+    try {
+      raw = JSON.parse(text);
+    } catch {
+      return null;
+    }
+  } else {
+    const f = text.split(FIELD);
+    if (f.length !== 15) return null;
+    raw = {
+      v: Number(f[0]),
+      name: f[1],
+      at: fromSeconds(f[2]),
+      since: fromSeconds(f[3]),
+      best: unpackRoll(f[4], true),
+      rolls: fromB36(f[5]),
+      earned: fromB36(f[6]),
+      badges: fromB36(f[7]),
+      badgesTotal: fromB36(f[8]),
+      rebirths: fromB36(f[9]),
+      prestiges: fromB36(f[10]),
+      pins: f[11] ? f[11].split(ITEM).map((pin) => unpackRoll(pin, false)) : [],
+      favoriteTier: tierAt(f[12]),
+      aura: f[13],
+      companion: f[14],
+    };
   }
   return cleanCard(raw);
 }
 
 function cleanCard(raw) {
-  if (!raw || typeof raw !== "object" || raw.v !== CARD_VERSION) return null;
+  if (!raw || typeof raw !== "object" || !KNOWN_VERSIONS.has(raw.v))
+    return null;
   const name = typeof raw.name === "string" ? raw.name.trim() : "";
   if (!name || name.length > NAME_MAX) return null;
   const at = isoDate(raw.at);

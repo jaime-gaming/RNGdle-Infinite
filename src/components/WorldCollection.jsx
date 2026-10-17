@@ -42,20 +42,26 @@ export function WorldBadgeGlyph({ badge, size = 19 }) {
   const Icon = ICONS[badge.icon] ?? Ghost;
   return <Icon size={size} aria-hidden="true" />;
 }
-export function WorldResultBadges({ result }) {
+// `counts` are the zone's tallies after this roll, so a badge seen once is
+// a first: it gets a "new" mark, which is most of the fun of a collection.
+export function WorldResultBadges({ result, counts = null }) {
   return (
     <div className="world-result-badges" aria-label="Badges on this roll">
-      {result.badges.map((badge) => (
-        <span
-          key={badge.id}
-          className={`world-badge-chip world-tier-${badge.tier}`}
-          data-result-badge={badge.id}
-        >
-          <WorldBadgeGlyph badge={badge} size={14} />
-          {badge.name}
-          <strong>+{badge.points}</strong>
-        </span>
-      ))}
+      {result.badges.map((badge) => {
+        const first = counts ? (counts[badge.id] ?? 0) === 1 : false;
+        return (
+          <span
+            key={badge.id}
+            className={`world-badge-chip world-tier-${badge.tier}${first ? " is-new" : ""}`}
+            data-result-badge={badge.id}
+          >
+            <WorldBadgeGlyph badge={badge} size={14} />
+            {badge.name}
+            <strong>+{badge.points}</strong>
+            {first && <em>New</em>}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -90,7 +96,7 @@ export default function WorldCollection({ zone, stats, fragmentOwned, drawn }) {
     >
       <div className="world-mini-stats">
         <div>
-          <span>Event points</span>
+          <span>{zone.name} points</span>
           <strong data-world-points>
             {summary.score.toLocaleString("en-US")}
           </strong>
@@ -118,8 +124,10 @@ export default function WorldCollection({ zone, stats, fragmentOwned, drawn }) {
             <div>
               <span className="world-eyebrow">
                 {zone.fragment
-                  ? "Key fragment"
-                  : `Phase 0${zone.phase} milestones`}
+                  ? `Earns key fragment ${zone.phase - 1} of 2`
+                  : zone.id === "valley"
+                    ? "Valley milestones"
+                    : "Warm-up · optional"}
               </span>
               <h3>{zone.name} objectives</h3>
             </div>
@@ -135,11 +143,15 @@ export default function WorldCollection({ zone, stats, fragmentOwned, drawn }) {
           <p>
             {zone.fragment
               ? fragmentOwned
-                ? "Your fragment is saved. You can keep collecting badges."
-                : "Complete all three. The fragment is awarded automatically and progress never resets."
-              : complete
-                ? "Your phase progress is saved. Keep collecting or explore another phase."
-                : "All three milestones accumulate across visits. They do not award an aura; the original aura missions stay in Tasks."}
+                ? "Your fragment is saved. You can keep collecting badges for points and the Record."
+                : "Finish all three and the fragment is yours, automatically. Progress here never resets."
+              : zone.id === "valley"
+                ? complete
+                  ? "All Valley milestones done. Only 6666 is left to find."
+                  : "Milestones for the Record. Hexbound still needs the number 6666 itself."
+                : complete
+                  ? "Warm-up done. The key fragments wait in the Graveyard and the Haunted House."
+                  : "A warm-up to learn the rolls: badges add points, points and badges fill these bars. Nothing here is needed for the key."}
           </p>
           <div className="world-objective-grid">
             {goals.map((goal) => (
@@ -177,8 +189,9 @@ export default function WorldCollection({ zone, stats, fragmentOwned, drawn }) {
           </small>
         </summary>
         <p>
-          Every matching badge adds points, including repeats. Numbers use{" "}
-          {range.digits} {range.digits === 1 ? "digit" : "digits"}
+          Every badge the number matches adds its points, repeats included;
+          points count toward the objectives above. Numbers use {range.digits}{" "}
+          {range.digits === 1 ? "digit" : "digits"}
           {range.digits === 1
             ? " (1–9)"
             : range.digits === 2

@@ -138,7 +138,14 @@ effect of other work.
 - **RNGween World** layout: compact heading, a four-step phase strip, the
   stage (scene, number, roll button) always on screen, then four tabs under it:
   Objectives (collection, aura trial, default), Key & prize, Commissions,
-  Rules. Tests that need the key forge switch to its tab first.
+  Record. Tests that need the key forge switch to its tab first. Under the
+  title a `.world-next-step` box (`data-world-next-step`) names the single
+  thing to do next (profile → fragments → forge → Valley → keep rolling); keep
+  it to one sentence and one button.
+- **Profile share links** (`src/profile-card.js`): the `?card=` token is a
+  compact base36 line (format v2, ~300 chars). v1 JSON tokens still decode;
+  bump `CARD_VERSION` and add to `KNOWN_VERSIONS` when the shape changes, never
+  reuse a field position.
 - **Aura finish**: every aura gets a shared layer (`.box-finish` in
   `src/number-box.css`): a turning two-tone rim and a breathing glow in the
   aura's `swatch` colours, which `NumberBox` passes as `--aura-a`/`--aura-b`.
