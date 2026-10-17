@@ -308,8 +308,11 @@ export { BOOKMARK_LIMIT };
 // The fresh-start offer and action share one rule: three prestiges or more.
 export const FRESH_START_PRESTIGES = 3;
 export function freshStartEligible(progress = {}) {
+  // A Rollback hands the prestiges back, but whoever took one has seen it all.
   return (
-    !!progress.profile && (progress.ultraRebirths ?? 0) >= FRESH_START_PRESTIGES
+    !!progress.profile &&
+    ((progress.ultraRebirths ?? 0) >= FRESH_START_PRESTIGES ||
+      (progress.rollbacks ?? 0) > 0)
   );
 }
 function parseBookmarks(value, history) {
@@ -1539,17 +1542,20 @@ function applyEvent(state, action) {
     if (blocked) throw new Error(blocked);
     if (!validAmount(rollbacks + 1))
       throw new Error("Rollback count limit reached.");
-    // Repeated Rollbacks keep permanent bonuses but always reset the wallet
-    // to zero, and — like a prestige — send the rebirth ladder back to its
-    // first rung. Existing saved balances are not revalued retroactively.
+    // A Rollback keeps only its own bonus and the surplus bank. The wallet
+    // goes to zero, the rebirth ladder back to its first rung and the three
+    // prestiges — with their +10% each — have to be earned again before the
+    // next Rollback. Existing saved balances are not revalued retroactively.
     const rollbackCost = rollbackRequirement();
     const surplus = rebirthSurplus(cycleEarnedEp(state), rollbackCost.ep);
     const ladder = state.rebirths ?? 0;
+    const prestiges = state.ultraRebirths ?? 0;
     const starter = 0;
     return {
       ...startNewCycle(state, { starter, resetLadder: true }),
       profile: state.profile,
       rebirths: 0,
+      ultraRebirths: 0,
       rollbacks: rollbacks + 1,
       surplusBanked:
         (state.surplusBanked ?? 0) + Math.round(surplus.bankedBonus * 100),
@@ -1560,6 +1566,7 @@ function applyEvent(state, action) {
           at: now,
           count: rollbacks + 1,
           ...(ladder ? { ladder } : {}),
+          ...(prestiges ? { prestiges } : {}),
           ...(starter ? { grant: starter } : {}),
           ...(rollbackCost ? { cost: rollbackCost.ep } : {}),
         },
@@ -2514,8 +2521,12 @@ function parseHistory(value) {
         count: e.count,
         ...(validAmount(e.grant) && e.grant ? { grant: e.grant } : {}),
         ...(validAmount(e.cost) && e.cost ? { cost: e.cost } : {}),
-        // The rungs this reset sent back, so the log can say what it cost.
+        // The rungs and prestiges this reset sent back, so the log can say
+        // what it cost.
         ...(validAmount(e.ladder) && e.ladder ? { ladder: e.ladder } : {}),
+        ...(validAmount(e.prestiges) && e.prestiges
+          ? { prestiges: e.prestiges }
+          : {}),
       };
     } else if (e.type === "fresh-start") {
       // What the account had before it chose to start over, kept as a keepsake.

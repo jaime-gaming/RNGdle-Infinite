@@ -418,12 +418,12 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   ctx.fillStyle = "#eeece8";
   ctx.font = `700 46px ${SANS}`;
   ctx.fillText(accountName, nameX, 134 + 12);
-  if (stats.ultraRebirths > 0) {
+  if (stats.ultraRebirths > 0 || stats.rollbacks > 0) {
     ctx.fillStyle = "#d9a441";
     ctx.font = `700 14px ${MONO}`;
     ctx.fillText(
       stats.rollbacks > 0
-        ? `✦ ROLLBACK · PRESTIGE ×${stats.ultraRebirths}`
+        ? `✦ ROLLBACK ×${stats.rollbacks}${stats.ultraRebirths > 0 ? ` · PRESTIGE ×${stats.ultraRebirths}` : ""}`
         : `✦ PRESTIGE ×${stats.ultraRebirths}`,
       nameX,
       176,

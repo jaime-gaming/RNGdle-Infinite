@@ -110,9 +110,12 @@ export default function FreshStartDialog({
           </span>
           <h2 id="fresh-start-title">You have seen it all.</h2>
           <p>
-            {prestiges} prestiges, {formatEP(progress.totalEarned ?? 0)} EP
-            earned. The ladder has no rung left to climb, and at this point the
-            numbers only get bigger, not more interesting.
+            {(progress.rollbacks ?? 0) > 0
+              ? `${progress.rollbacks} Rollback${progress.rollbacks === 1 ? "" : "s"}`
+              : `${prestiges} prestiges`}
+            , {formatEP(progress.totalEarned ?? 0)} EP earned. The ladder has no
+            rung left to climb, and at this point the numbers only get bigger,
+            not more interesting.
           </p>
           <p>
             Honestly? The fun part is the beginning. Start over and the first

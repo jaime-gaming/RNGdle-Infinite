@@ -839,12 +839,12 @@ function App() {
               <span>New Version</span>
             </button>
           )}
-          {session.ultraRebirths > 0 && (
+          {(session.ultraRebirths > 0 || session.rollbacks > 0) && (
             <span
               className="ultra-mark"
               title={
                 session.rollbacks > 0
-                  ? `Rollback ×${session.rollbacks} · Prestige ×${session.ultraRebirths} · +${Math.round(
+                  ? `Rollback ×${session.rollbacks}${session.ultraRebirths > 0 ? ` · Prestige ×${session.ultraRebirths}` : ""} · +${Math.round(
                       session.ultraRebirths * 10 + session.rollbacks * 25,
                     )}% EP on every banked roll`
                   : `Prestige ×${session.ultraRebirths} · +${Math.round(

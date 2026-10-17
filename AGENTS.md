@@ -123,10 +123,12 @@ effect of other work.
 - **Rollback** stays hidden until the player has three prestiges. It is hidden,
   not disabled. It starts from 0 EP (no starting bonus) and can be repeated.
   Prestige and Rollback both send the rebirth ladder back to 0 (its skills and
-  +2% per rung are climbed again); the prestige count itself is never reset by
-  a Rollback. Badge gates must stay reachable: about 70 of the 235 badges are
-  exact numbers, so a cycle tops out near 70% of the collection. Rollback asks
-  for 60%, prestige for 50%.
+  +2% per rung are climbed again), and a Rollback also sends the prestiges
+  back to 0 with their +10% each: the next Rollback needs the ladder and three
+  prestiges again. Only Rollback bonuses and the surplus bank survive every
+  reset. Badge gates must stay reachable: about 70 of the 235 badges are exact
+  numbers, so a cycle tops out near 70% of the collection. Rollback asks for
+  65%, prestige for 50%.
 - **Fresh start** (`fresh-start` action, `src/components/FreshStart.jsx`) is
   offered once an account has three prestiges. The dialog opens by itself once
   per profile (a localStorage flag), then lives behind the "!" in the header.

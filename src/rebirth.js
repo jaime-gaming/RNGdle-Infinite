@@ -61,7 +61,8 @@ export function ultraRebirthMultiplier(ultraRebirths = 0) {
 // +12% when the ladder is complete. A rebirth restarts the run, not the
 // account, so the rungs keep paying through the ladder — but a prestige or a
 // Rollback sends the ladder back to its first rung, so the +12% is earned
-// again on the way up while the prestige's own +10% stays forever.
+// again on the way up. A Rollback also hands back the three prestiges and
+// their +10% each; only Rollback bonuses and the surplus bank are forever.
 export const REBIRTH_BONUS_PER_REBIRTH = 0.02;
 
 export function rebirthMultiplier(rebirths = 0) {
@@ -88,11 +89,11 @@ export function cycleStarterEp(rebirths = 0, ultraRebirths = 0) {
 export const PRESTIGE_LIMIT = 3;
 export const ROLLBACK_AFTER_PRESTIGES = PRESTIGE_LIMIT;
 export const ROLLBACK_BONUS = 0.25;
-// The Rollback asks for more than a prestige does: 60% of the collection
+// The Rollback asks for more than a prestige does: 65% of the collection
 // and a cycle that has earned twice a prestige's EP. Not more: about 70 of
 // the 235 badges are exact numbers nobody rolls on purpose, so a cycle tops
 // out near 70% — 75% was a gate no one could ever pass.
-export const ROLLBACK_STEP = { badges: 0.6, ep: 60000000 };
+export const ROLLBACK_STEP = { badges: 0.65, ep: 60000000 };
 
 export function rollbackMultiplier(rollbacks = 0) {
   return 1 + ROLLBACK_BONUS * Math.max(0, rollbacks);
@@ -159,9 +160,9 @@ export function rollbackBenefits(progress = {}) {
     },
     {
       id: "keeps",
-      title: "Keeps permanent progress",
+      title: "Keeps the Rollback bonus and the account",
       detail:
-        "Prestige and Rollback bonuses, owned auras and account history stay. The rebirth ladder starts over.",
+        "Rollback bonuses, the surplus bank, owned auras and account history stay. The rebirth ladder and the three prestiges start over.",
     },
     {
       id: "reset",

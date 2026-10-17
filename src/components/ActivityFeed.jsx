@@ -726,12 +726,15 @@ export default function ActivityFeed({
                       collection, every purchase, the companions and the wallet
                       reset
                       {event.ladder
-                        ? `, and the ${event.ladder}-rung rebirth ladder went back to its first rung`
+                        ? `, the ${event.ladder}-rung rebirth ladder went back to its first rung`
                         : ""}
-                      . History, prestiges and permanent bonuses stayed, the
-                      cycle began with {formatEP(event.grant ?? 0)} EP, and the
+                      {event.prestiges
+                        ? ` and the ${event.prestiges} prestige${event.prestiges === 1 ? "" : "s"} with their +10% each were handed back`
+                        : ""}
+                      . History, auras and Rollback bonuses stayed, the cycle
+                      began with {formatEP(event.grant ?? 0)} EP, and the
                       permanent wallet bonus grew by 25%. The Rollback can be
-                      taken again.
+                      taken again once three prestiges are done.
                     </p>
                   ) : event.type === "fresh-start" ? (
                     <p>

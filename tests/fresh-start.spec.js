@@ -30,11 +30,19 @@ const seen = (page) =>
   page.evaluate((key) => localStorage.getItem(key), SEEN_KEY);
 
 test("a fresh start needs a profile and three prestiges, wipes the run and keeps only auras and a keepsake", () => {
-  expect(freshStartEligible(veteran({ ultraRebirths: 2 }))).toBe(false);
+  expect(freshStartEligible(veteran({ ultraRebirths: 2, rollbacks: 0 }))).toBe(
+    false,
+  );
+  // A Rollback hands the prestiges back, but it still counts as seen it all.
+  expect(freshStartEligible(veteran({ ultraRebirths: 0, rollbacks: 1 }))).toBe(
+    true,
+  );
   expect(freshStartEligible(veteran({ profile: null }))).toBe(false);
   expect(freshStartEligible(veteran())).toBe(true);
   expect(() =>
-    applyProgress(veteran({ ultraRebirths: 2 }), { type: "fresh-start" }),
+    applyProgress(veteran({ ultraRebirths: 2, rollbacks: 0 }), {
+      type: "fresh-start",
+    }),
   ).toThrow("three prestiges");
   const after = applyProgress(veteran(), { type: "fresh-start", at: 1000 });
   expect(after.profile).toEqual(testProfile);
