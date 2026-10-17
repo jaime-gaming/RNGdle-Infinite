@@ -2078,6 +2078,16 @@ function applyEvent(state, action) {
                 (state.activePet ?? "none") === "none"
                   ? droppedPet
                   : state.activePet,
+              // The worn companion's signature docks when a slot is free,
+              // the same as when it is equipped by hand.
+              equippedSkills:
+                (state.activePet ?? "none") === "none"
+                  ? autoEquip(
+                      state.equippedSkills ?? [],
+                      state,
+                      skillForPet(droppedPet)?.id,
+                    )
+                  : state.equippedSkills,
               // A companion you were saving for turns up on its own: met.
               goalId:
                 state.goalId === droppedPet ? null : (state.goalId ?? null),
@@ -2196,14 +2206,19 @@ function applyEvent(state, action) {
       throw new Error("You already have this companion.");
     if (state.balance < pet.price)
       throw new Error("Not enough EP for this companion.");
+    const pets = [...new Set([...(state.pets ?? []), pet.id])].sort(
+      (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
+    );
+    // Buying a companion equips it, matching how auras behave. The swap goes
+    // through equip-pet so the old signature leaves the rack and the new one
+    // docks, exactly as a manual swap would.
+    const worn = applyEvent(
+      { ...state, pets },
+      { type: "equip-pet", id: pet.id, at: action.at },
+    );
     return {
-      ...state,
+      ...worn,
       balance: state.balance - pet.price,
-      pets: [...new Set([...(state.pets ?? []), pet.id])].sort(
-        (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
-      ),
-      // Buying a companion equips it, matching how auras behave.
-      activePet: pet.id,
       goalId: state.goalId === pet.id ? null : (state.goalId ?? null),
       history: appendHistory(state.history, [
         {
