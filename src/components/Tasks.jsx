@@ -216,7 +216,7 @@ export default function Tasks({
       {/* Remove the event import/mount after Oct 31, 2026 ends (Nov 1 UTC).
           The owned-only aura collection and permanent effects must stay. */}
       <RngweenTasks
-        {...{ progress, onAction, notify, openAuraFamily }}
+        {...{ progress, onAction, notify, openAuraFamily, openWorld }}
         now={eventNow}
       />
       {!progress.rngweenLimited?.retired &&
@@ -225,7 +225,7 @@ export default function Tasks({
             className="secondary-button rngween-world-launch"
             onClick={openWorld}
           >
-            <Sparkles size={17} /> The Reaper awaits at the foot of Roll
+            <Sparkles size={17} /> Enter RNGween World
           </button>
         )}
       <section className="tasks-summary" aria-label="Task summary">

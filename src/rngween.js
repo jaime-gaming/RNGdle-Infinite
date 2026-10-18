@@ -142,6 +142,8 @@ export const RNGWEEN_FAMILY = {
   eventOnly: true,
 };
 
+// Every aura mission has two halves: a Roll-page count and a World step, the
+// key fragment of the zone that matches the aura. Both must be done to collect.
 export const RNGWEEN_MISSIONS = [
   {
     id: "jack-o-glow",
@@ -151,6 +153,8 @@ export const RNGWEEN_MISSIONS = [
     detail: "Complete 300 online rolls during RNGween.",
     metric: "rolls",
     goal: 300,
+    zone: "pumpkin-patch",
+    zoneName: "Pumpkin Patch",
   },
   {
     id: "phantom-veil",
@@ -160,6 +164,8 @@ export const RNGWEEN_MISSIONS = [
     detail: "Roll 60 Rare or better during RNGween. Higher tiers count too.",
     metric: "rare",
     goal: 60,
+    zone: "graveyard",
+    zoneName: "Graveyard",
   },
   {
     id: "witchfire",
@@ -169,6 +175,8 @@ export const RNGWEEN_MISSIONS = [
     detail: "Bank 8,000,000 EP from online rolls during RNGween.",
     metric: "banked",
     goal: 8000000,
+    zone: "haunted-house",
+    zoneName: "Haunted House",
   },
   {
     id: "blood-moon",
@@ -179,8 +187,18 @@ export const RNGWEEN_MISSIONS = [
       "Claim 21 Daily or Weekly tasks during RNGween. List bonuses do not count.",
     metric: "taskClaims",
     goal: 21,
+    zone: "blood-moon-ridge",
+    zoneName: "Blood Moon Ridge",
   },
 ];
+export function missionWorldDetail(mission) {
+  return `Then earn the ${mission.zoneName} key fragment in RNGween World.`;
+}
+// The World half of a mission, read from the save's World slot. Already
+// collected auras never need it again, so older saves keep everything.
+export function missionWorldDone(mission, limited) {
+  return limited?.world?.fragments?.[mission.zone] === true;
+}
 
 const METRICS = [...new Set(RNGWEEN_MISSIONS.map((mission) => mission.metric))];
 const LIMITS = Object.fromEntries(
@@ -261,7 +279,7 @@ export function recordRngweenTally(tasks, tally, at) {
 
 // Both finishing and collecting are limited to Oct 25–31, inclusive. Already
 // collected auras remain owned forever; incomplete or uncollected ones expire.
-export function claimRngweenAura(tasks, id, at) {
+export function claimRngweenAura(tasks, id, at, limited) {
   if (rngweenCalendar(at).phase !== "active")
     throw new Error(
       "RNGween auras can only be collected October 25–31, 2026 (UTC).",
@@ -271,6 +289,10 @@ export function claimRngweenAura(tasks, id, at) {
   const rngween = slot(tasks);
   if (rngween.counts[mission.metric] < mission.goal)
     throw new Error("Complete the mission before collecting its aura.");
+  if (!missionWorldDone(mission, limited))
+    throw new Error(
+      `Earn the ${mission.zoneName} key fragment in RNGween World before collecting this aura.`,
+    );
   if (rngween.earned.includes(mission.id))
     throw new Error("That Halloween aura has already been collected.");
   return {
@@ -287,17 +309,20 @@ export function rngweenAuraIds(tasks) {
   );
 }
 
-export function rngweenState(tasks, at) {
+export function rngweenState(tasks, at, limited) {
   const calendar = rngweenCalendar(at);
   const rngween = slot(tasks);
   const collected = new Set(rngween.earned);
   const missions = RNGWEEN_MISSIONS.map((mission) => {
     const isCollected = collected.has(mission.id);
-    const complete =
-      isCollected || rngween.counts[mission.metric] >= mission.goal;
+    const countDone = rngween.counts[mission.metric] >= mission.goal;
+    const worldDone = isCollected || missionWorldDone(mission, limited);
+    const complete = isCollected || (countDone && worldDone);
     return {
       ...mission,
       count: Math.min(rngween.counts[mission.metric], mission.goal),
+      countDone: isCollected || countDone,
+      worldDone,
       complete,
       collected: isCollected,
       claimable: calendar.phase === "active" && complete && !isCollected,

@@ -23,6 +23,7 @@ const EARNING = new Set([
   "rngween-hourly",
   "rngween-mission",
   "rngween-exchange",
+  "rngween-world-exchange",
 ]);
 const SPENDING = new Set(["rngween-purchase", "rngween-forged-key"]);
 

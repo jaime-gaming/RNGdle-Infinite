@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   Clock3,
+  Coins,
   DoorClosed,
   Flame,
   Ghost,
@@ -25,11 +26,14 @@ import { RNGWEEN_WORLD_MAX } from "../rngween-limited.js";
 import {
   WORLD_ZONES,
   WORLD_SPEED_ITEMS,
+  WORLD_POINT_EXCHANGE,
   WORLD_VALLEY_TARGET,
   worldZoneById,
   worldState,
   worldRevealMS,
   rngweenValleyUnlocked,
+  worldZoneOpen,
+  worldZoneBefore,
   WORLD_FRAGMENT_ZONES,
   worldFragmentCount,
   worldPointsAvailable,
@@ -47,7 +51,12 @@ import { useMotionPreference } from "../use-settings.jsx";
 import { useModalDialog } from "../use-modal-dialog.js";
 import NumberBox from "./NumberBox.jsx";
 import WorldScenery from "./WorldScenery.jsx";
-import { markRngweenWorldEntered } from "../rngween-intro.js";
+import {
+  hasSeenRngweenWorldIntro,
+  markRngweenWorldEntered,
+  markRngweenWorldIntroSeen,
+} from "../rngween-intro.js";
+import WorldIntro from "./WorldIntro.jsx";
 import ReaperFigure from "./ReaperFigure.jsx";
 import ReaperDialog from "./ReaperDialog.jsx";
 import RngweenHourly from "./RngweenHourly.jsx";
@@ -84,9 +93,13 @@ const ZONE_ICONS = {
 const SPEED_ICONS = [Moon, Clock3, Hourglass];
 // Scenery never consumes gameplay randomness.
 
-// The spinning strip behind a hidden digit. "?" comes first so a still frame
-// (reduced motion, screenshots) reads as unknown; the rest is a plain 0–9 loop.
-const REEL = ["?", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+// The strip behind a hidden digit: "?" first so a still frame (reduced
+// motion, screenshots) reads as unknown, then three 0–9 loops. The reel is
+// scrolled by a CSS animation that ends on the real digit in the last loop,
+// so each slot slows down and lands exactly where the reveal will show it.
+// The number was decided when the roll started; the reel only displays it.
+const REEL = ["?", ...Array.from({ length: 30 }, (_, i) => String(i % 10))];
+const reelLanding = (digit) => 21 + Number(digit);
 
 function useRevealClock(now, pending, reduced) {
   const [clock, setClock] = useState(() => seasonNow() ?? now);
@@ -133,6 +146,19 @@ export default function RngweenWorld({
   useEffect(() => {
     markRngweenWorldEntered();
   }, []);
+  // The opening plays once, on the first visit; it can be watched again.
+  // A save that already has World rounds (another device, a linked account)
+  // skips it too: the opening is for players who have never been inside.
+  const [intro, setIntro] = useState(
+    () =>
+      !hasSeenRngweenWorldIntro() &&
+      world.visited.length === 0 &&
+      !world.pending,
+  );
+  const closeIntro = () => {
+    markRngweenWorldIntroSeen();
+    setIntro(false);
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -185,6 +211,12 @@ export default function RngweenWorld({
     ? Math.min(zone.digits - 1, Math.floor(fraction * zone.digits))
     : zone.digits;
   const outcome = pending ?? last;
+  // How far into the reveal the reels were when this pending roll first
+  // rendered. Fixed per roll so the CSS animation is not restarted each tick.
+  const reelStartRef = useRef({ id: null, at: 0 });
+  if (pending && reelStartRef.current.id !== pending.id)
+    reelStartRef.current = { id: pending.id, at: elapsed };
+  const reelStart = reelStartRef.current.at;
   const digits = outcome
     ? String(outcome.number).padStart(zone.digits, "0")
     : "?".repeat(zone.digits);
@@ -391,11 +423,14 @@ export default function RngweenWorld({
             : item.id === "valley"
               ? key
               : complete;
+          const open = worldZoneOpen(limited, item.id);
+          const before = worldZoneBefore(item.id);
           return (
             <button
               key={item.id}
-              className={`world-zone${active ? " is-selected" : ""}`}
+              className={`world-zone${active ? " is-selected" : ""}${open ? "" : " is-locked"}`}
               style={{ "--zone-accent": item.accent }}
+              data-open={open ? "true" : "false"}
               aria-pressed={active}
               disabled={!!pending || busy}
               onClick={() => {
@@ -416,6 +451,11 @@ export default function RngweenWorld({
                     <>
                       <Check size={12} />
                       Fragment found
+                    </>
+                  ) : !open ? (
+                    <>
+                      <LockKeyhole size={12} />
+                      Needs {before.name} fragment
                     </>
                   ) : (
                     `Fragment ${item.phase} · ${goalsDone(item.id)}/3 done`
@@ -442,7 +482,7 @@ export default function RngweenWorld({
         aria-labelledby="world-zone-title"
         style={{ "--reveal": pending ? fraction.toFixed(2) : 0 }}
       >
-        <div className="world-scene">
+        <div className="world-scene" key={zone.id}>
           <WorldScenery zone={zone.id} />
           <span className="world-fog world-fog-back" />
           <span className="world-fog world-fog-front" />
@@ -452,7 +492,7 @@ export default function RngweenWorld({
             ))}
           </span>
         </div>
-        <div className="world-zone-heading">
+        <div className="world-zone-heading" key={`heading:${zone.id}`}>
           <span className="world-eyebrow">
             <ZoneIcon size={15} />
             Phase 0{zone.phase} · {zone.subtitle}
@@ -512,7 +552,21 @@ export default function RngweenWorld({
                     ) : !pending ? (
                       "?"
                     ) : (
-                      <span className="world-reel">
+                      <span
+                        className="world-reel"
+                        style={{
+                          "--land": reelLanding(digit),
+                          // Slot i lands when its reveal moment arrives; the
+                          // last slot runs to the deadline. A negative delay
+                          // resumes mid-spin after a reload.
+                          "--spin": `${
+                            i === zone.digits - 1
+                              ? duration
+                              : Math.round((duration * (i + 1)) / zone.digits)
+                          }ms`,
+                          "--since": `-${reelStart}ms`,
+                        }}
+                      >
                         {REEL.map((glyph, r) => (
                           <i key={r}>{glyph}</i>
                         ))}
@@ -569,7 +623,26 @@ export default function RngweenWorld({
           </div>
         ) : (
           <div className="world-roll-controls">
-            {zone.id === "valley" && !key ? (
+            {zone.id !== "valley" && !worldZoneOpen(limited, zone.id) ? (
+              <div className="world-challenge-lock" data-zone-lock={zone.id}>
+                <LockKeyhole size={19} />
+                <p>
+                  The path goes in order. Earn the{" "}
+                  {worldZoneBefore(zone.id).name} key fragment to open{" "}
+                  {zone.name}.
+                </p>
+                <button
+                  className="secondary-button"
+                  onClick={() => {
+                    setSelected(worldZoneBefore(zone.id).id);
+                    setError("");
+                    setNotice("");
+                  }}
+                >
+                  Go to {worldZoneBefore(zone.id).name} <ArrowRight size={14} />
+                </button>
+              </div>
+            ) : zone.id === "valley" && !key ? (
               <div className="world-challenge-lock">
                 <LockKeyhole size={19} />
                 <p>
@@ -648,8 +721,12 @@ export default function RngweenWorld({
           >
             Upgrade reveal speed <ArrowRight size={12} />
           </button>
+          <button onClick={() => setIntro(true)}>
+            Watch the opening again
+          </button>
         </div>
       </section>
+      {intro && <WorldIntro onDone={closeIntro} />}
       <div className="world-tabs" role="tablist" aria-label="World sections">
         {WORLD_TABS.map(([id, label, Icon]) => {
           // Commissions stay visible but locked while the Reaper is not
@@ -970,6 +1047,59 @@ export default function RngweenWorld({
                 );
               })}
             </div>
+            {/* Spare points can leave the World in small fixed blocks. The
+                trade comes out of the same spent pool as the upgrades, so
+                records and badges stay whole. */}
+            <section
+              className="world-exchange"
+              aria-labelledby="world-exchange-title"
+            >
+              <h3 id="world-exchange-title">Trade spare points</h3>
+              <p>
+                {WORLD_POINT_EXCHANGE.points} World points at a time. Your zone
+                records and badges keep every point you earned.
+              </p>
+              <div className="world-exchange-options">
+                {[
+                  {
+                    to: "pumpkoins",
+                    label: `${WORLD_POINT_EXCHANGE.pumpkoins} Pumpkoins`,
+                    Icon: Pumpkoin,
+                    note: "Pumpkoins expire after Nov 3 UTC",
+                  },
+                  {
+                    to: "ep",
+                    label: `${WORLD_POINT_EXCHANGE.ep.toLocaleString("en-US")} EP`,
+                    Icon: Coins,
+                    note: "Added to your EP balance",
+                  },
+                ].map(({ to, label, Icon, note }) => (
+                  <button
+                    key={to}
+                    className="secondary-button world-exchange-option"
+                    data-world-exchange={to}
+                    disabled={
+                      busy ||
+                      !live ||
+                      !progress.profile ||
+                      wallet < WORLD_POINT_EXCHANGE.points
+                    }
+                    onClick={() =>
+                      run(
+                        { type: "exchange-world-points", to, blocks: 1 },
+                        `Traded ${WORLD_POINT_EXCHANGE.points} World points for ${label}.`,
+                      )
+                    }
+                  >
+                    <Icon size={16} />
+                    <strong>
+                      {WORLD_POINT_EXCHANGE.points} pts → {label}
+                    </strong>
+                    <small>{note}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
             {pending && (
               <p className="world-shop-pending-note">
                 <Clock3 size={14} />

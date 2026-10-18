@@ -270,6 +270,32 @@
   color: var(--secondary);
   font: 500 10px/1.5 var(--font-mono);
 }
+.rngween-mission-world {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+  font: 500 10px/1.5 var(--font-mono);
+  color: var(--secondary);
+}
+.rngween-mission-world[data-done="true"] {
+  color: var(--treat-a);
+}
+.rngween-mission-world button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
 .rngween-mission-reward {
   display: flex;
   align-items: center;

@@ -3,7 +3,11 @@ import { test, expect } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { mockWorldNumbers } from "./helpers/world-random.js";
-import { completedWorldRoll, savedWorld } from "./helpers/world-roll.js";
+import {
+  completedWorldRoll,
+  savedWorld,
+  withWorldPath,
+} from "./helpers/world-roll.js";
 import {
   emptyProgress,
   applyProgress,
@@ -142,10 +146,14 @@ test("all Pumpkin Patch milestones are persistent collection goals that earn the
 
 for (const zone of ["graveyard", "haunted-house", "valley"])
   test(`a three-phase save gains an empty Pumpkin Patch without changing its committed ${zone} result or known ownership`, () => {
-    let p = account({
-      owned: ["starfall", "phantom-veil"],
-      equipped: "starfall",
-    });
+    // An older save that already walked the path up to the Haunted House.
+    let p = withWorldPath(
+      account({
+        owned: ["starfall", "phantom-veil"],
+        equipped: "starfall",
+      }),
+      "haunted-house",
+    );
     p.rngweenLimited.bought = ["rngween-world-key"];
     p = completedWorldRoll(p, { zone: "graveyard", number: 66, at });
     p = applyProgress(p, {
@@ -326,7 +334,9 @@ test("reduced motion presents the whole dialogue and a still portrait without ch
 test("the original aura mission remains claimable from Tasks, not from clearing a themed World phase", async ({
   page,
 }) => {
-  const p = account();
+  // Rolls done and the Patch fragment already found: only the Tasks page
+  // hands out the aura; finishing the themed World phase never does.
+  const p = withWorldPath(account(), "graveyard");
   p.tasks.rngween.counts.rolls = 300;
   await mockSeasonClock(page, at);
   await seedProgress(page, p);

@@ -1,5 +1,6 @@
 import { applyProgress } from "../../src/progress.js";
 import { worldState } from "../../src/rngween-world-zones.js";
+import { emptyRngweenLimited } from "../../src/rngween-limited.js";
 
 // Pure tests settle the real saved deadline explicitly; never shorten the game.
 export function completedWorldRoll(progress, action) {
@@ -101,4 +102,60 @@ export function withWorldPoints(progress, points) {
       },
     },
   };
+}
+
+// Zones open in path order (each needs the previous zone's fragment). Seed the
+// fragments of every zone before `zone` so a test can start there without
+// scripting the earlier collections. Fragment flags only; no points, no key.
+export function worldPathTo(limited, zone) {
+  const order = [
+    "pumpkin-patch",
+    "graveyard",
+    "blood-moon-ridge",
+    "haunted-house",
+  ];
+  const index = order.indexOf(zone);
+  const before = zone === "valley" ? order : order.slice(0, Math.max(0, index));
+  const base = limited ?? emptyRngweenLimited();
+  const world = worldState(base);
+  return {
+    ...base,
+    world: {
+      ...world,
+      fragments: {
+        ...world.fragments,
+        ...Object.fromEntries(before.map((id) => [id, true])),
+      },
+    },
+  };
+}
+export function withWorldPath(progress, zone) {
+  return {
+    ...progress,
+    rngweenLimited: worldPathTo(progress.rngweenLimited, zone),
+  };
+}
+// Page version of worldPathTo: patch the seeded save before the page loads so
+// the zone under test is already open. Must run after seedProgress.
+export async function openWorldPath(page, zone) {
+  const fragments = worldPathTo(undefined, zone).world.fragments;
+  await page.addInitScript(
+    ({ key, fragments }) => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      const world = data?.rngweenLimited?.world;
+      if (!world) return;
+      world.fragments = { ...world.fragments };
+      for (const [id, found] of Object.entries(fragments))
+        if (found) world.fragments[id] = true;
+      localStorage.setItem(key, JSON.stringify(data));
+    },
+    { key: "rng-infinite-progress-v1", fragments },
+  );
+}
+// Every aura mission also needs its zone's key fragment. Mark all four found so
+// a test about the Roll-page half can collect without scripting the World.
+export function withAllFragments(progress) {
+  return withWorldPath(progress, "valley");
 }

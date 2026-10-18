@@ -10,6 +10,8 @@ import {
   completedWorldObjectives,
   completedWorldRoll,
   withWorldPoints,
+  withWorldPath,
+  openWorldPath,
 } from "./helpers/world-roll.js";
 import {
   applyProgress,
@@ -48,6 +50,8 @@ import {
   rngweenValleyUnlocked,
   requireWorldZone,
   worldPointsAvailable,
+  worldPointsTotal,
+  WORLD_POINT_EXCHANGE,
 } from "../src/rngween-world-zones.js";
 import { rngweenRecord } from "../src/rngween-record.js";
 import {
@@ -65,15 +69,21 @@ import {
 const at = Date.UTC(2026, 9, 26, 12);
 const opening = Date.UTC(2026, 9, 22, 12);
 const end = Date.UTC(2026, 10, 4);
-const account = (patch = {}) => ({
-  ...emptyProgress(),
-  profile: testProfile,
-  ...patch,
-});
+// Zones open in path order; these accounts start with the Patch fragment so
+// the Graveyard (the default zone here) is open. Path tests reset it.
+const account = (patch = {}) => {
+  const p = { ...emptyProgress(), profile: testProfile, ...patch };
+  return withWorldPath(p, "graveyard");
+};
+// Every zone before the Valley already open (path fragments only).
+const houseAccount = (patch = {}) =>
+  withWorldPath(account(patch), "haunted-house");
 // `coins` is World points here: the speed shop takes points, never Pumpkoins.
 const funded = (points = 5000) =>
   withWorldPoints(
-    account({ rngweenLimited: { ...emptyRngweenLimited(), pumpkoins: 5000 } }),
+    houseAccount({
+      rngweenLimited: { ...emptyRngweenLimited(), pumpkoins: 5000 },
+    }),
     points,
   );
 const keyAccount = () =>
@@ -115,6 +125,7 @@ async function selectZone(page, id) {
   await page.locator(`[data-world-zone="${id}"]`).click();
 }
 async function openGraveyardWorld(page) {
+  await openWorldPath(page, "graveyard");
   await page.goto("/rngween-world");
   if (!(await savedWorld(page))?.rngweenLimited.world.pending)
     await selectZone(page, "graveyard");
@@ -394,12 +405,17 @@ test("guests can browse and enter through the Reaper but saved rolls require cre
   await expect(reaper).toContainText("open to anyone");
   await reaper.locator("[data-typing]").click();
   await reaper.getByRole("button", { name: "Enter RNGween World" }).click();
-  await selectZone(page, "graveyard");
+  // A first visit opens with the World's short story; it can be skipped.
+  const opening = page.getByRole("dialog", { name: "RNGween World opening" });
+  await expect(opening).toContainText("RNGween World");
+  await opening.getByRole("button", { name: "Skip the opening" }).click();
+  await expect(opening).toHaveCount(0);
+  await selectZone(page, "pumpkin-patch");
   await expect(
     page.getByRole("heading", { name: "RNGween World", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /Roll in Graveyard/ }),
+    page.getByRole("button", { name: /Roll in Pumpkin Patch/ }),
   ).toBeDisabled();
   await page
     .getByRole("button", { name: "Create profile", exact: true })
@@ -790,18 +806,32 @@ test("new rolls commit versioned numbers, not picks; reload is exact and settlem
   expect(parseAndRepairProgress(JSON.stringify(settled)).repairs).toEqual([]);
 });
 
-test("objectives accumulate across Common rolls and repeat badges, award one fragment per zone and forge a nonconsumed free key", () => {
-  let p = finish(start(account(), "graveyard", 66));
+test("objectives accumulate across Common rolls and repeat badges, award one fragment per zone in path order and forge a nonconsumed free key", () => {
+  // A fresh account: only the Pumpkin Patch is open until its fragment is won.
+  const fresh = { ...emptyProgress(), profile: testProfile };
+  expect(() => start(fresh, "graveyard", 66)).toThrow(
+    "Earn the Pumpkin Patch key fragment first.",
+  );
+  expect(() => start(fresh, "haunted-house", 666)).toThrow(
+    "Earn the Blood Moon Ridge key fragment first.",
+  );
+  let p = completedWorldObjectives(fresh, "pumpkin-patch", at);
+  expect(p.rngweenLimited.world.fragments["pumpkin-patch"]).toBe(true);
+  p = finish(start(p, "graveyard", 66, 1, at + 20000));
   const before = p.rngweenLimited.world.mini.graveyard;
-  p = finish(start(p, "graveyard", 38));
+  p = finish(start(p, "graveyard", 38, 1, at + 25000));
   expect(p.rngweenLimited.world.mini.graveyard.counts["double-hex"]).toBe(1);
   expect(
     worldMiniSummary("graveyard", p.rngweenLimited.world.mini.graveyard).score,
   ).toBe(worldMiniSummary("graveyard", before).score + 1);
   expect(p.rngweenLimited.world.fragments.graveyard).toBe(false);
+  // The Ridge stays shut until the Graveyard fragment exists.
+  expect(() => start(p, "blood-moon-ridge", 7, 1, at + 30000)).toThrow(
+    "Earn the Graveyard key fragment first.",
+  );
   p = completedWorldObjectives(p, "graveyard", at + 30000);
   expect(p.rngweenLimited.world.fragments).toEqual({
-    "pumpkin-patch": false,
+    "pumpkin-patch": true,
     graveyard: true,
     "haunted-house": false,
     "blood-moon-ridge": false,
@@ -815,14 +845,13 @@ test("objectives accumulate across Common rolls and repeat badges, award one fra
   expect(() => applyProgress(p, { type: "forge-rngween-key", at })).toThrow(
     "all four fragment zones",
   );
-  p = completedWorldObjectives(p, "haunted-house", at + 120000);
+  p = completedWorldObjectives(p, "blood-moon-ridge", at + 120000);
   expect(p.owned).not.toContain("hexbound");
   // Three of four is still no key.
-  p = completedWorldObjectives(p, "pumpkin-patch", at + 200000);
   expect(() => applyProgress(p, { type: "forge-rngween-key", at })).toThrow(
     "all four fragment zones",
   );
-  p = completedWorldObjectives(p, "blood-moon-ridge", at + 250000);
+  p = completedWorldObjectives(p, "haunted-house", at + 250000);
   expect(p.rngweenLimited.world.fragments).toEqual({
     "pumpkin-patch": true,
     graveyard: true,
@@ -850,10 +879,17 @@ test("objectives accumulate across Common rolls and repeat badges, award one fra
       p.rngweenLimited.world.mini["haunted-house"],
     ).score,
   ).toBe(score);
+  // A save that already played a zone keeps it open even without the
+  // previous fragment (saves from before the path rule).
+  const legacy = { ...emptyProgress(), profile: testProfile };
+  legacy.rngweenLimited.world.rounds.graveyard = 1;
+  expect(start(legacy, "graveyard", 66).rngweenLimited.world.pending.zone).toBe(
+    "graveyard",
+  );
 });
 
 test("Rare+ rolls count once despite stacked Rare badges; Infernal 666 never awards the Valley skin", () => {
-  let p = finish(start(account(), "haunted-house", 666));
+  let p = finish(start(houseAccount(), "haunted-house", 666));
   expect(p.rngweenLimited.world.mini["haunted-house"].rareRolls).toBe(1);
   expect(p.rngweenLimited.skinEarned).toBe(false);
   expect(p.owned).not.toContain("hexbound");
@@ -866,7 +902,7 @@ test("Rare+ rolls count once despite stacked Rare badges; Infernal 666 never awa
 });
 
 test("per-zone last/best and badge counts survive JSON, changing zones and other zone results", () => {
-  let p = finish(start(account(), "graveyard", 66));
+  let p = finish(start(houseAccount(), "graveyard", 66));
   p = finish(start(p, "haunted-house", 123));
   p = finish(start(p, "graveyard", 38));
   const mini = p.rngweenLimited.world.mini;
@@ -900,12 +936,10 @@ test("repair derives points from known badge counts, keeps valid zones and never
   expect(
     read.progress.rngweenLimited.world.mini["haunted-house"].rareRolls,
   ).toBe(0);
-  expect(read.progress.rngweenLimited.world.fragments).toEqual({
-    "pumpkin-patch": false,
-    graveyard: false,
-    "haunted-house": false,
-    "blood-moon-ridge": false,
-  });
+  // The seeded path fragments stay; nothing new is invented.
+  expect(read.progress.rngweenLimited.world.fragments).toEqual(
+    account().rngweenLimited.world.fragments,
+  );
   expect(read.progress.balance).toBe(0);
   expect(read.progress.owned).toEqual([]);
   expect(parseAndRepairProgress(JSON.stringify(read.progress)).repairs).toEqual(
@@ -927,7 +961,7 @@ test("completed collection receipts repair a missing fragment without paying coi
 test("legacy single-step and staged pending results finish under their committed rules; owned keys/fragments remain valid", () => {
   for (const zone of ["graveyard", "haunted-house"]) {
     for (const staged of [false, true]) {
-      const p = start(account(), zone, 1);
+      const p = start(houseAccount(), zone, 1);
       const world = p.rngweenLimited.world;
       const stage = staged ? WORLD_LEGACY_STAGES[zone].length - 1 : 0;
       const number = WORLD_LEGACY_STAGES[zone][stage];
@@ -1001,7 +1035,7 @@ test("all twelve hourly World varieties are achievable through badges in the two
   for (const task of RNGWEEN_HOURLY_TASKS.filter(
     (task) => task.source === "world",
   )) {
-    let p = refreshRngweenHourly(account(), opening, true);
+    let p = refreshRngweenHourly(houseAccount(), opening, true);
     const ids = [task.id, ...main];
     p.rngweenLimited.hourly.dealt = [...ids];
     p.rngweenLimited.hourly.slots = ids.map((taskId, index) => ({
@@ -1066,26 +1100,53 @@ test("a keyless profile rolls for badges and three objectives per zone, earns di
     "blood-moon-ridge": [666, 606, 616, 626],
   });
   await seedProgress(page);
-  await openGraveyardWorld(page);
+  await page.goto("/rngween-world");
   await expect(page.locator("[data-world-zone]")).toHaveCount(5);
   await expect(page.locator(".world-choices, .world-run")).toHaveCount(0);
   await expect(page.locator("[data-world-objective]")).toHaveCount(3);
-  await expect(page.locator("[data-world-badge]")).toHaveCount(12);
+  // Only the Patch is open on a fresh save; the others say what they need.
+  await expect(page.locator('[data-world-zone="graveyard"]')).toHaveAttribute(
+    "data-open",
+    "false",
+  );
+  await selectZone(page, "graveyard");
+  await expect(page.locator("[data-zone-lock=graveyard]")).toContainText(
+    "Earn the Pumpkin Patch key fragment",
+  );
+  await expect(
+    page.getByRole("button", { name: /Roll in Graveyard/ }),
+  ).toHaveCount(0);
+  await page
+    .locator("[data-zone-lock=graveyard]")
+    .getByRole("button", { name: "Go to Pumpkin Patch" })
+    .click();
   // The key lives on its own tab; the stage stays on screen whichever is open.
   await page.getByRole("tab", { name: "Key & prize" }).click();
   await expect(
     page.getByRole("button", { name: "Forge key · free" }),
   ).toBeDisabled();
   await page.getByRole("tab", { name: "Objectives" }).click();
-  for (let index = 0; index < 5; index++) {
-    await page.getByRole("button", { name: /Roll in Graveyard/ }).click();
-    await expect
-      .poll(
-        async () => (await savedWorld(page)).rngweenLimited.world.pending?.id,
-      )
-      .toBeTruthy();
-    await settle(page);
-  }
+  const rollZone = async (name, times) => {
+    for (let index = 0; index < times; index++) {
+      await page
+        .getByRole("button", { name: new RegExp(`Roll in ${name}`) })
+        .click();
+      await expect
+        .poll(
+          async () => (await savedWorld(page)).rngweenLimited.world.pending?.id,
+        )
+        .toBeTruthy();
+      await settle(page);
+    }
+  };
+  await rollZone("Pumpkin Patch", 9);
+  await expect(page.locator('[data-world-zone="graveyard"]')).toHaveAttribute(
+    "data-open",
+    "true",
+  );
+  await selectZone(page, "graveyard");
+  await expect(page.locator("[data-world-badge]")).toHaveCount(12);
+  await rollZone("Graveyard", 5);
   await expect(page.locator(".world-fragment-owned")).toContainText(
     "Fragment owned",
   );
@@ -1093,49 +1154,21 @@ test("a keyless profile rolls for badges and three objectives per zone, earns di
   expect(
     (await savedWorld(page)).rngweenLimited.world.fragments["haunted-house"],
   ).toBe(false);
-  await selectZone(page, "haunted-house");
-  await expect(page.locator("[data-world-badge]")).toHaveCount(12);
-  for (let index = 0; index < 12; index++) {
-    await page.getByRole("button", { name: /Roll in Haunted House/ }).click();
-    await expect
-      .poll(
-        async () => (await savedWorld(page)).rngweenLimited.world.pending?.id,
-      )
-      .toBeTruthy();
-    await settle(page);
-  }
-  expect((await savedWorld(page)).owned).not.toContain("hexbound");
   // Two of four: the forge stays closed and the page points at the next zone.
   await expect(page.getByRole("button", { name: "Forge the key" })).toHaveCount(
     0,
   );
   await expect(page.locator("[data-world-next-step]")).toContainText(
-    "Pumpkin Patch",
+    "Blood Moon Ridge",
   );
-  await selectZone(page, "pumpkin-patch");
-  for (let index = 0; index < 9; index++) {
-    await page.getByRole("button", { name: /Roll in Pumpkin Patch/ }).click();
-    await expect
-      .poll(
-        async () => (await savedWorld(page)).rngweenLimited.world.pending?.id,
-      )
-      .toBeTruthy();
-    await settle(page);
-  }
   await selectZone(page, "blood-moon-ridge");
   await expect(page.locator("[data-world-badge]")).toHaveCount(12);
-  for (let index = 0; index < 4; index++) {
-    await page
-      .getByRole("button", { name: /Roll in Blood Moon Ridge/ })
-      .click();
-    await expect
-      .poll(
-        async () => (await savedWorld(page)).rngweenLimited.world.pending?.id,
-      )
-      .toBeTruthy();
-    await settle(page);
-  }
+  await rollZone("Blood Moon Ridge", 4);
   await expect(page.locator("[data-result-badge=red-six]")).toBeVisible();
+  expect((await savedWorld(page)).owned).not.toContain("hexbound");
+  await selectZone(page, "haunted-house");
+  await expect(page.locator("[data-world-badge]")).toHaveCount(12);
+  await rollZone("Haunted House", 12);
   expect((await savedWorld(page)).owned).not.toContain("hexbound");
   expect(
     Object.values((await savedWorld(page)).rngweenLimited.world.fragments),
@@ -1157,7 +1190,7 @@ test("last/best results and event collection remain visible after another zone r
   page,
 }) => {
   const p = finish(
-    start(finish(start(account(), "graveyard", 66)), "haunted-house", 123),
+    start(finish(start(houseAccount(), "graveyard", 66)), "haunted-house", 123),
   );
   await mockSeasonClock(page, at + 30000);
   await mockWorldNumbers(page, { "haunted-house": [38] });
@@ -1324,6 +1357,7 @@ test("badge objectives and keyboard-operated collections fit narrow phones in li
   await mockSeasonClock(page, at);
   await mockWorldNumbers(page, { "haunted-house": [666] });
   await seedProgress(page);
+  await openWorldPath(page, "haunted-house");
   await openGraveyardWorld(page);
   for (const theme of ["light", "dark"]) {
     await page.goto("/");
@@ -1465,13 +1499,14 @@ test("malformed pre-World pools never brick save migration or manufacture a numb
 
 test("filled event badge collections never receive impossible new-badge commissions while repeatable World errands stay available", () => {
   let p = account();
+  // Path order: each zone's fragment opens the next one.
   for (const [zone, numbers] of Object.entries({
     "pumpkin-patch": [1, 2, 3, 4, 5, 6, 7, 8, 9],
     graveyard: [66, 13, 49, 66, 6, 12, 97, 99],
+    "blood-moon-ridge": [666, 606, 616, 626, 7, 123, 67],
     "haunted-house": [
       666, 13, 123, 313, 111, 229, 343, 246, 123, 666, 111, 121,
     ],
-    "blood-moon-ridge": [666, 606, 616, 626, 7, 123, 67],
   }))
     for (const number of numbers) p = finish(start(p, zone, number));
   for (const zone of [
@@ -1520,7 +1555,7 @@ test("filled event badge collections never receive impossible new-badge commissi
 });
 
 test("a pre-assignment pending result reserves its finite badges and zone visit instead of making the next commission inaccessible", () => {
-  let initial = account();
+  let initial = houseAccount();
   for (let number = 1; number <= 9; number++)
     initial = finish(
       start(
@@ -1626,6 +1661,116 @@ test("World points are the sum of every zone's badge points; the shop spends the
   const legacy = parseAndRepairProgress(JSON.stringify(tampered));
   expect(legacy.repairs).toEqual([]);
   expect(legacy.progress.rngweenLimited.world.spent).toBe(0);
+});
+
+test("spare World points trade for small fixed blocks of Pumpkoins or EP out of the spent pool, never out of records or badges", () => {
+  expect(WORLD_POINT_EXCHANGE).toEqual({
+    points: 100,
+    pumpkoins: 10,
+    ep: 100000,
+  });
+  let p = funded(1000);
+  const patchScore = worldPointsTotal(p.rngweenLimited.world);
+  const balance = p.balance;
+  const coins = p.rngweenLimited.pumpkoins;
+  const coinsOut = applyProgress(p, {
+    type: "exchange-world-points",
+    to: "pumpkoins",
+    blocks: 2,
+    at,
+  });
+  expect(coinsOut.rngweenLimited.pumpkoins).toBe(coins + 20);
+  expect(coinsOut.balance).toBe(balance);
+  expect(coinsOut.rngweenLimited.world.spent).toBe(200);
+  expect(worldPointsAvailable(coinsOut.rngweenLimited)).toBe(
+    worldPointsAvailable(p.rngweenLimited) - 200,
+  );
+  // Totals, records and the Pumpkoin ledger of the Record page are unchanged
+  // by the trade itself; the Record counts the coins as event income.
+  expect(worldPointsTotal(coinsOut.rngweenLimited.world)).toBe(patchScore);
+  expect(rngweenRecord(coinsOut, new Date(at)).earned).toBe(20);
+  expect(coinsOut.history.at(-1)).toMatchObject({
+    type: "rngween-world-exchange",
+    points: 200,
+    pumpkoins: 20,
+  });
+  const epOut = applyProgress(coinsOut, {
+    type: "exchange-world-points",
+    to: "ep",
+    at,
+  });
+  expect(epOut.balance).toBe(balance + 100000);
+  expect(epOut.rngweenLimited.pumpkoins).toBe(coins + 20);
+  expect(epOut.rngweenLimited.world.spent).toBe(300);
+  expect(epOut.history.at(-1)).toMatchObject({
+    type: "rngween-world-exchange",
+    points: 100,
+    ep: 100000,
+  });
+  // The ledger survives a reload intact and nothing is repaired.
+  const again = parseAndRepairProgress(JSON.stringify(epOut));
+  expect(again.repairs).toEqual([]);
+  expect(again.progress.history.slice(-2)).toEqual(epOut.history.slice(-2));
+  // Not enough points, a bad block count and a zero account all refuse.
+  expect(() =>
+    applyProgress(epOut, {
+      type: "exchange-world-points",
+      to: "ep",
+      blocks: 100,
+      at,
+    }),
+  ).toThrow("Not enough World points");
+  expect(() =>
+    applyProgress(epOut, {
+      type: "exchange-world-points",
+      to: "ep",
+      blocks: 0,
+      at,
+    }),
+  ).toThrow("blocks");
+  expect(() =>
+    applyProgress(account(), { type: "exchange-world-points", to: "ep", at }),
+  ).toThrow("Not enough World points");
+  // Same upgrades still buyable afterwards from what is left (1000 − 300).
+  const upgraded = applyProgress(epOut, {
+    type: "buy-rngween-world",
+    id: "wisp-lantern",
+    at,
+  });
+  expect(worldPointsAvailable(upgraded.rngweenLimited)).toBe(
+    worldPointsAvailable(p.rngweenLimited) - 500,
+  );
+});
+
+test("the World shop trades 100 points for 10 Pumpkoins or 100,000 EP from the page", async ({
+  page,
+}) => {
+  await mockSeasonClock(page, at);
+  await seedProgress(page, {
+    rngweenLimited: funded(300).rngweenLimited,
+    balance: 5000,
+    totalEarned: 5000,
+  });
+  await openGraveyardWorld(page);
+  await page.getByRole("button", { name: /World shop/ }).click();
+  const shop = page.getByRole("dialog", { name: "World shop" });
+  await shop.locator("[data-world-exchange=pumpkoins]").click();
+  await expect
+    .poll(async () => (await savedWorld(page)).rngweenLimited.pumpkoins)
+    .toBe(5010);
+  await shop.locator("[data-world-exchange=ep]").click();
+  await expect.poll(async () => (await savedWorld(page)).balance).toBe(105000);
+  // funded() rounds up to 500 points (one Infernal); spend the rest.
+  for (const balance of [205000, 305000, 405000]) {
+    await shop.locator("[data-world-exchange=ep]").click();
+    await expect
+      .poll(async () => (await savedWorld(page)).balance)
+      .toBe(balance);
+  }
+  // Nothing left to trade: both buttons close.
+  await expect(shop.locator("[data-world-exchange=ep]")).toBeDisabled();
+  await expect(shop.locator("[data-world-exchange=pumpkoins]")).toBeDisabled();
+  expect((await savedWorld(page)).rngweenLimited.world.spent).toBe(500);
 });
 
 test("the World renders on the dark theme whatever the setting and hands the saved theme back on the way out", async ({

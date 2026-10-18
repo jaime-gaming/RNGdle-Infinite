@@ -1,8 +1,8 @@
 // CLEANUP Nov 4, 2026: delete this file. Aura missions are not claimable after
 // the event and owned auras are shown by the wardrobe, not by this panel.
 import React, { useRef, useState } from "react";
-import { ArrowUpRight, Check, Gift, Timer } from "lucide-react";
-import { rngweenState } from "../rngween.js";
+import { ArrowUpRight, Check, Gift, KeyRound, Timer } from "lucide-react";
+import { missionWorldDetail, rngweenState } from "../rngween.js";
 import { productById } from "../shop-data.js";
 import { waitText } from "../tasks.js";
 import { formatEP } from "../roll-data.js";
@@ -28,8 +28,9 @@ export default function RngweenTasks({
   onAction,
   notify,
   openAuraFamily,
+  openWorld,
 }) {
-  const event = rngweenState(progress.tasks, now);
+  const event = rngweenState(progress.tasks, now, progress.rngweenLimited);
   const [pending, setPending] = useState("");
   const busy = useRef(false);
   if (event.phase !== "active") return null;
@@ -152,7 +153,9 @@ export default function RngweenTasks({
                 <NumberBox value="131031" tier="rare" aura={aura.id} compact />
               </div>
               <h3>{mission.title}</h3>
-              <p>{mission.detail}</p>
+              <p>
+                {mission.detail} {missionWorldDetail(mission)}
+              </p>
               <div className="rngween-mission-meter">
                 <span>
                   {mission.collected
@@ -164,6 +167,26 @@ export default function RngweenTasks({
                   value={mission.collected ? mission.goal : mission.count}
                   aria-label={`${mission.title} progress`}
                 />
+              </div>
+              {/* The World half: the matching zone's key fragment. */}
+              <div
+                className="rngween-mission-world"
+                data-done={mission.worldDone ? "true" : "false"}
+              >
+                {mission.worldDone ? (
+                  <Check size={13} aria-hidden="true" />
+                ) : (
+                  <KeyRound size={13} aria-hidden="true" />
+                )}
+                <span>
+                  {mission.zoneName} fragment
+                  {mission.worldDone ? " · found" : " · not yet"}
+                </span>
+                {!mission.worldDone && openWorld && (
+                  <button type="button" onClick={openWorld}>
+                    Open the World <ArrowUpRight size={12} aria-hidden="true" />
+                  </button>
+                )}
               </div>
               <div className="rngween-mission-reward">
                 <Gift size={14} aria-hidden="true" />

@@ -219,6 +219,43 @@ export function rngweenValleyUnlocked(limited) {
       world.legacyPass)
   );
 }
+// Zones open in path order: each one needs the previous zone's key fragment,
+// and the Valley needs the forged or bought key as before. A zone with rounds
+// already played stays open, so saves from before this rule lose nothing.
+export function worldZoneOpen(limited, zoneId) {
+  const index = WORLD_ZONES.findIndex((zone) => zone.id === zoneId);
+  if (index <= 0) return index === 0;
+  if (zoneId === "valley") return rngweenValleyUnlocked(limited);
+  const world = worldState(limited);
+  if ((world.rounds?.[zoneId] ?? 0) > 0 || world.pending?.zone === zoneId)
+    return true;
+  return world.fragments?.[WORLD_ZONES[index - 1].fragment] === true;
+}
+// The zone whose fragment opens this one (null for the Patch and the Valley).
+export function worldZoneBefore(zoneId) {
+  const index = WORLD_ZONES.findIndex((zone) => zone.id === zoneId);
+  return index > 0 && zoneId !== "valley" ? WORLD_ZONES[index - 1] : null;
+}
+export function requireOpenWorldZone(limited, zoneId) {
+  if (worldZoneOpen(limited, zoneId)) return;
+  const before = worldZoneBefore(zoneId);
+  throw new Error(
+    before
+      ? `Earn the ${before.name} key fragment first.`
+      : "This zone is not open yet.",
+  );
+}
+
+// World points can be traded for Pumpkoins or EP in fixed 100-point blocks.
+// Kept deliberately small: the World is about badges, not farming. Trades are
+// taken from `world.spent`, the same place the speed shelf draws from, so zone
+// records, collections and the Record page never change.
+export const WORLD_POINT_EXCHANGE = {
+  points: 100,
+  pumpkoins: 10,
+  ep: 100000,
+};
+
 export function requireWorldZone(zoneId) {
   const zone = worldZoneById.get(zoneId);
   if (!zone)

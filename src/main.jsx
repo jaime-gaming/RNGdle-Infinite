@@ -425,7 +425,7 @@ function App() {
   // notice stays off the roll page, where the result already shows the badges.
   const readyTasks =
     taskSummary(session.tasks, taskNow).ready +
-    rngweenState(session.tasks, seasonalNow).ready;
+    rngweenState(session.tasks, seasonalNow, session.rngweenLimited).ready;
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
     const rose = newlyReady(lastReadyTasks.current, readyTasks);
@@ -1183,7 +1183,7 @@ function App() {
               notify={notify}
               openSignup={openAuth}
               openAuraFamily={openFamily}
-              openWorld={() => navigate("roll")}
+              openWorld={() => navigate("rngween-world")}
             />
           </>
         )}

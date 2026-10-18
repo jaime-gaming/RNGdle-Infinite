@@ -2,6 +2,7 @@ import { test, expect } from "./helpers/clock.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
+import { withAllFragments } from "./helpers/world-roll.js";
 import { applyProgress, emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { emptyTasks } from "../src/tasks.js";
 import { emptyRngween } from "../src/rngween.js";
@@ -133,7 +134,7 @@ test("a claim waiting for website time cannot grant an aura to a replacement acc
     },
   };
   await mockSeasonClock(page, active);
-  await seedProgress(page, { tasks });
+  await seedProgress(page, withAllFragments({ tasks }));
   await page.goto("/tasks");
   const claim = page.getByRole("button", {
     name: "Collect Jack-o'-Glow",

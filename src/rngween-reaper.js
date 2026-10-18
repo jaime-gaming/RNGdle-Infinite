@@ -32,7 +32,7 @@ export function reaperDialogue(
   phaseId = null,
 ) {
   const calendar = rngweenCalendar(now);
-  const event = rngweenState(progress.tasks, now);
+  const event = rngweenState(progress.tasks, now, progress.rngweenLimited);
   const limited = progress.rngweenLimited;
   const world = worldState(limited);
   const won =

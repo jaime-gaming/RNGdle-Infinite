@@ -214,12 +214,12 @@ test("World entry is public but aura missions, ownership and currency never repl
   ).toThrow("needs a key");
   const mini = applyProgress(p, {
     type: "rngween-world-roll",
-    zone: "graveyard",
+    zone: "pumpkin-patch",
     choice: 1,
     number: 1,
     at: active,
   });
-  expect(mini.rngweenLimited.world.pending.zone).toBe("graveyard");
+  expect(mini.rngweenLimited.world.pending.zone).toBe("pumpkin-patch");
 });
 
 test("world RNG is rejection-sampled uniformly among unseen numbers, never main-game randomness", () => {
@@ -677,9 +677,9 @@ test("the last unseen Valley target awards permanent Hexbound, exhausts only the
   const p = await saved(page);
   expect(p.owned).toContain("hexbound");
   expect(p.rngweenLimited.drawn).toHaveLength(RNGWEEN_WORLD_MAX);
-  await page.locator('[data-world-zone="graveyard"]').click();
+  await page.locator('[data-world-zone="pumpkin-patch"]').click();
   await expect(
-    page.getByRole("button", { name: /Roll in Graveyard/ }),
+    page.getByRole("button", { name: /Roll in Pumpkin Patch/ }),
   ).toBeEnabled();
   await page.getByRole("button", { name: "Back to Roll" }).click();
   await page.goto("/shop/auras/rngween");

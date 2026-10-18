@@ -4,6 +4,7 @@ import { emptyRngween } from "../src/rngween.js";
 import { emptyTasks } from "../src/tasks.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { seedProgress } from "./helpers/progress.js";
+import { withAllFragments } from "./helpers/world-roll.js";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("rng-theme", "dark"));
@@ -132,15 +133,18 @@ test("a review date that cannot be verified still cannot grant an aura", async (
   page,
 }) => {
   const clock = await reviewClock(page);
-  await seedProgress(page, {
-    tasks: {
-      ...emptyTasks(),
-      rngween: {
-        ...emptyRngween(),
-        counts: { ...emptyRngween().counts, rolls: 300 },
+  await seedProgress(
+    page,
+    withAllFragments({
+      tasks: {
+        ...emptyTasks(),
+        rngween: {
+          ...emptyRngween(),
+          counts: { ...emptyRngween().counts, rolls: 300 },
+        },
       },
-    },
-  });
+    }),
+  );
   await page.goto("/tasks");
   const reward = page.getByRole("button", {
     name: "Collect Jack-o'-Glow",

@@ -18,6 +18,7 @@ import {
 import {
   emptyRngweenWorld,
   WORLD_SPEED_ITEMS,
+  WORLD_FRAGMENT_ZONES,
 } from "../src/rngween-world-zones.js";
 import { flywheelRequired } from "../src/flywheel.js";
 import { skillById } from "../src/skills.js";
@@ -87,6 +88,11 @@ export function unlockedRngweenPreview() {
         auras: RNGWEEN_AURAS.map((aura) => aura.id),
         world: {
           ...emptyRngweenWorld(),
+          // Zones open in path order, so the preview starts with every
+          // fragment found and all five zones available.
+          fragments: Object.fromEntries(
+            WORLD_FRAGMENT_ZONES.map((id) => [id, true]),
+          ),
           upgrades: WORLD_SPEED_ITEMS.map((item) => item.id),
         },
         rewardedMissions: RNGWEEN_MISSIONS.map((mission) => mission.id),

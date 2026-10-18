@@ -3,10 +3,15 @@ import {
   emptyRngweenWorld,
   worldState,
 } from "../src/rngween-world-zones.js";
-import { completedWorldRoll, revealWorld } from "./helpers/world-roll.js";
+import {
+  completedWorldRoll,
+  revealWorld,
+  withWorldPath,
+} from "./helpers/world-roll.js";
 import { test, expect } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
+import { RNGWEEN_WORLD_INTRO_KEY } from "../src/rngween-intro.js";
 import { mockWorldNumbers } from "./helpers/world-random.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { evaluate } from "./helpers/index.js";
@@ -56,11 +61,13 @@ const opening = Date.UTC(2026, 9, 22, 12);
 const trials = Date.UTC(2026, 9, 26, 12);
 const farewell = Date.UTC(2026, 10, 2, 12);
 const expired = Date.UTC(2026, 10, 4);
-const account = (patch = {}) => ({
-  ...emptyProgress(),
-  profile: testProfile,
-  ...patch,
-});
+// Commission tests roll in any public zone, so the path is already walked
+// (fragments only) and every zone before the Valley is open.
+const account = (patch = {}) =>
+  withWorldPath(
+    { ...emptyProgress(), profile: testProfile, ...patch },
+    "haunted-house",
+  );
 const keyAccount = (patch = {}) =>
   account({
     rngweenLimited: {
@@ -1472,6 +1479,11 @@ test("linked browsers share commission payouts and use the main account writer's
     await mockSeasonClock(pageB, opening);
     await mockWorldNumbers(pageB, [9999]);
     await pageB.clock.setFixedTime(new Date(Date.UTC(2099, 0, 1)));
+    // A fresh device would get the World opening; this test is about sync.
+    await pageB.addInitScript(
+      ([key, id]) => localStorage.setItem(key, id),
+      [RNGWEEN_WORLD_INTRO_KEY, "rngween-2026"],
+    );
     await pageB.goto(link);
     await expect(pageA.getByTestId("sync-status")).toContainText(/live/, {
       timeout: 15000,

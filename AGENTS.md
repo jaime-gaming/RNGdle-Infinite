@@ -256,6 +256,35 @@ guessing.
   load. Purchase rows carry `points`, not `pumpkoins`, and `rngweenRecord`
   leaves them out of the Pumpkoin ledger. Tests grant points with
   `withWorldPoints()` (`tests/helpers/world-roll.js`).
+- **Zones open in path order** (`worldZoneOpen`): each of the first four needs
+  the previous zone's fragment, the Valley needs the key as before. A zone with
+  rounds already played (or a pending roll) stays open, so older saves lose
+  nothing. The reducer refuses rolls in a shut zone ("Earn the … key fragment
+  first."); the page shows a lock panel with a "Go to …" button. Hourly
+  "new places" only count open zones. Tests start further along the path with
+  `withWorldPath(progress, zone)` / `openWorldPath(page, zone)`
+  (`tests/helpers/world-roll.js`); `withAllFragments` marks all four.
+- **World points → Pumpkoins / EP** (`WORLD_POINT_EXCHANGE`, action
+  `exchange-world-points`): 100 points buy 10 Pumpkoins or 100,000 EP, one
+  block per click in the World shop, deliberately small. The trade is taken
+  from `world.spent` like the upgrades, so zone records, badges and the Record
+  never change; EP also raises `totalEarned` so the wallet survives the load
+  check. History row `rngween-world-exchange` (`points` + `pumpkoins` or `ep`)
+  counts as Pumpkoin income in `rngweenRecord`.
+- **Aura missions have a World half**: each mission carries `zone`/`zoneName`
+  (Jack-o'-Glow ↔ Pumpkin Patch, Phantom Veil ↔ Graveyard, Blood Moon ↔ Blood
+  Moon Ridge, Witchfire ↔ Haunted House) and is only complete / claimable when
+  the Roll-page count is met **and** that zone's key fragment exists
+  (`missionWorldDone`). `rngweenState` and `claimRngweenAura` take the
+  `rngweenLimited` slot as their last argument. Already collected auras never
+  need the fragment again, so nothing already claimed is revoked.
+- The World opening (`WorldIntro.jsx`, ~15 s, four scenes, skippable, static
+  under reduced motion) plays on the first World visit per device
+  (`RNGWEEN_WORLD_INTRO_KEY`) and can be replayed from the stage footer. The
+  home gate goes straight into the World once the device has been inside
+  (`RNGWEEN_WORLD_ENTERED_KEY`) or the save has World rounds; the Reaper stays a
+  secondary button. `seedProgress` marks both openings seen unless
+  `introSeen: false`.
 - The World always renders on the dark theme (`main.jsx` theme effect checks
   `page === "rngween-world"`); the saved `rng-theme` is never touched.
 - Economy knobs: `EP_PER_PUMPKOIN` is 10,000; Pumpkoins come only from hourly

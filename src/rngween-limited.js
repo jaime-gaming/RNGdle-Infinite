@@ -338,7 +338,11 @@ export function grantRngweenMissionPumpkoins(state, at) {
   if (rngweenCalendar(at).limitedPhase !== "active" || limited.retired)
     return state;
   const paid = limited.rewardedMissions ?? [];
-  const rewards = rngweenState(state.tasks, at).missions.filter(
+  const rewards = rngweenState(
+    state.tasks,
+    at,
+    state.rngweenLimited,
+  ).missions.filter(
     (mission) => mission.collected && !paid.includes(mission.id),
   );
   if (!rewards.length) return state;

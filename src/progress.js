@@ -144,6 +144,8 @@ import {
   worldSpeedLevel,
   worldSpeedById,
   requireWorldZone,
+  requireOpenWorldZone,
+  WORLD_POINT_EXCHANGE,
   recordWorldOutcome,
   rngweenValleyUnlocked,
   worldFragmentsComplete,
@@ -1289,6 +1291,7 @@ function applyEvent(state, action) {
   if (
     [
       "exchange-pumpkoins",
+      "exchange-world-points",
       "buy-rngween-limited",
       "rngween-world-roll",
     ].includes(action.type)
@@ -1325,6 +1328,63 @@ function applyEvent(state, action) {
           },
         ]),
       };
+    }
+    if (action.type === "exchange-world-points") {
+      // World points → Pumpkoins or EP, one fixed block per action. Spending
+      // goes through `world.spent`, so no zone record or badge is touched.
+      requireRngweenWorld(state, at);
+      const to = action.to === "ep" ? "ep" : "pumpkoins";
+      const blocks = action.blocks ?? 1;
+      if (!validAmount(blocks) || blocks < 1)
+        throw new Error("Choose how many blocks of World points to trade.");
+      const points = blocks * WORLD_POINT_EXCHANGE.points;
+      const amount = blocks * WORLD_POINT_EXCHANGE[to];
+      if (!validAmount(points) || !validAmount(amount))
+        throw new Error("That trade is too large.");
+      if (worldPointsAvailable(limited) < points)
+        throw new Error("Not enough World points for this trade.");
+      const world = worldState(limited);
+      if (
+        action.eventId &&
+        state.history.some((entry) => entry.id === action.eventId)
+      )
+        return state;
+      const next = {
+        ...state,
+        rngweenLimited: {
+          ...limited,
+          world: { ...world, spent: worldPointsSpent(world) + points },
+        },
+        history: appendHistory(state.history, [
+          {
+            id: action.eventId ?? `world-exchange:${at}:${to}:${blocks}`,
+            type: "rngween-world-exchange",
+            at,
+            name:
+              to === "ep"
+                ? "World points for EP"
+                : "World points for Pumpkoins",
+            points,
+            [to]: amount,
+          },
+        ]),
+      };
+      if (to === "ep") {
+        // Counts as earned EP, like a task reward, so the wallet survives
+        // the load-time balance check against the all-time total.
+        if (
+          !validAmount(state.balance + amount) ||
+          !validAmount(state.totalEarned + amount)
+        )
+          throw new Error("EP balance limit reached.");
+        next.balance = state.balance + amount;
+        next.totalEarned = state.totalEarned + amount;
+      } else {
+        if (!validAmount(limited.pumpkoins + amount))
+          throw new Error("Pumpkoin balance limit reached.");
+        next.rngweenLimited.pumpkoins = limited.pumpkoins + amount;
+      }
+      return next;
     }
     if (action.type === "buy-rngween-limited") {
       const item = limitedItemById.get(action.id);
@@ -1407,6 +1467,7 @@ function applyEvent(state, action) {
     const zone = requireWorldZone(action.zone ?? "valley");
     const max = zone.max;
     if (zone.id === "valley") requireRngweenValley(state, at);
+    else requireOpenWorldZone(limited, zone.id);
     const duration = worldRevealMS(limited);
     if (at + duration >= rngweenCalendar(at).limitedEndsAt)
       throw new Error(
@@ -1690,7 +1751,12 @@ function applyEvent(state, action) {
         : action.rngweenAt;
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid event claim time");
-    const tasks = claimRngweenAura(state.tasks ?? emptyTasks(), action.id, at);
+    const tasks = claimRngweenAura(
+      state.tasks ?? emptyTasks(),
+      action.id,
+      at,
+      state.rngweenLimited,
+    );
     return grantRngweenMissionPumpkoins(grantRngweenAuras(state, tasks), at);
   }
   // A task pays its reward into the wallet once per reset. It is a reward for
@@ -2629,6 +2695,23 @@ function parseHistory(value) {
         name: item.name,
         points: item.pointPrice,
       };
+    } else if (e.type === "rngween-world-exchange") {
+      // A World points trade: the points given and exactly one thing received.
+      const gotEp = e.ep !== undefined;
+      const got = gotEp ? e.ep : e.pumpkoins;
+      if (
+        typeof e.name !== "string" ||
+        e.name.length > 100 ||
+        !validAmount(e.points) ||
+        e.points < 1 ||
+        !validAmount(got) ||
+        got < 1 ||
+        (gotEp && e.pumpkoins !== undefined)
+      )
+        return [];
+      next = { ...base, name: e.name, points: e.points };
+      if (gotEp) next.ep = got;
+      else next.pumpkoins = got;
     } else if (e.type === "rngween-forged-key") {
       if (e.id !== `rngween-forged-key:${RNGWEEN_ID}`) return [];
       next = { ...base, name: "Valley Challenge Key" };

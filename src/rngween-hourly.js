@@ -11,6 +11,7 @@ import {
   WORLD_LEGACY_STAGES,
   worldZoneById,
   rngweenValleyUnlocked,
+  worldZoneOpen,
 } from "./rngween-world-zones.js";
 
 // CLEANUP Nov 4, 2026: remove dealing, tallies and commissions/UI/action
@@ -509,11 +510,12 @@ export function eligibleHourlyTasks(
   worldUnlocked = !state.rngweenLimited?.retired,
 ) {
   const world = worldState(state.rngweenLimited);
-  const availableZones = WORLD_ZONES.filter(
-    (zone) =>
-      zone.id !== "valley" ||
-      (rngweenValleyUnlocked(state.rngweenLimited) &&
-        (state.rngweenLimited?.drawn?.length ?? 0) < 9999),
+  // Only zones the player can actually enter count towards "new places".
+  const availableZones = WORLD_ZONES.filter((zone) =>
+    zone.id !== "valley"
+      ? worldZoneOpen(state.rngweenLimited, zone.id)
+      : rngweenValleyUnlocked(state.rngweenLimited) &&
+        (state.rngweenLimited?.drawn?.length ?? 0) < 9999,
   );
   const undiscovered = availableZones.filter(
     (zone) =>

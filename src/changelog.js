@@ -10,6 +10,7 @@ export const CHANGELOG = [
       "four Halloween tasks on October 25–31, 2026 unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon. They never return.",
       "repeat numbers get a déjà vu look, nothing extra paid. Profile has up to ten bookmarks, a PNG card and a link anyone can open.",
       "prestige sends the rebirth ladder back to rung one, and a Rollback sends the three prestiges back too: every climb is earned again.",
+      "RNGween World opens zone by zone, each aura task also wants its zone's key fragment, and spare World points trade for a few Pumpkoins or EP.",
       "and a lot under the hood: how rolls settle, the animations, the shop, the tasks and a few more things. You will notice.",
     ],
   },

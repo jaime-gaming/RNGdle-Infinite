@@ -1,0 +1,300 @@
+/* CLEANUP Nov 4, 2026: delete with WorldIntro.jsx. */
+.world-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  color: #efe6fb;
+  background:
+    radial-gradient(ellipse at 50% 30%, #2a1b3a 0, transparent 55%), #07050c;
+  overflow: hidden;
+  animation: world-intro-in 0.8s ease-out both;
+}
+.world-intro-skip {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border: 1px solid #ffffff2a;
+  border-radius: 999px;
+  background: #ffffff10;
+  color: #d9ccea;
+  font: 600 11px/1 var(--font-mono);
+  cursor: pointer;
+}
+.world-intro-skip:hover {
+  background: #ffffff1f;
+}
+.world-intro-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 42vh;
+}
+.world-intro-moon {
+  position: absolute;
+  top: 10%;
+  right: 16%;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #e6ddf7, #a893c7);
+  box-shadow: 0 0 60px #b79ae080;
+  animation: world-intro-moon 4s ease-out both;
+}
+.world-intro-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 22%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 28% 60%, #fff 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 45% 18%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 63% 48%, #fff 50%, transparent 51%),
+    radial-gradient(1.3px 1.3px at 78% 70%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 90% 30%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 35% 82%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 55% 74%, #fff 50%, transparent 51%);
+  opacity: 0.6;
+  animation: world-intro-twinkle 3s ease-in-out infinite alternate;
+}
+/* Scene 1: the gate bars slide apart and the Reaper steps through. */
+.world-intro-gate {
+  position: relative;
+  width: 240px;
+  height: 230px;
+  display: grid;
+  place-items: end center;
+}
+.world-intro-gate-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 46%;
+  border: 2px solid #5b4a6e;
+  border-bottom: 0;
+  border-radius: 120px 120px 0 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 14px,
+    #5b4a6e 14px 16px
+  );
+  animation: world-intro-gate 2.2s 0.6s ease-in-out both;
+}
+.world-intro-gate-bar:first-child {
+  left: 2%;
+  transform-origin: left bottom;
+}
+.world-intro-gate-bar:nth-child(2) {
+  right: 2%;
+  transform-origin: right bottom;
+  --dir: -1;
+}
+.world-intro-reaper {
+  width: 150px;
+  height: auto;
+  animation: world-intro-rise 2.4s 1s ease-out both;
+}
+/* Scene 2: five markers light up in turn along the path. */
+.world-intro-path {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 560px;
+}
+.world-intro-path li {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  width: 92px;
+  text-align: center;
+  opacity: 0;
+  animation: world-intro-light 0.7s calc(var(--i) * 0.75s + 0.3s) ease-out both;
+}
+.world-intro-path li span {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.world-intro-path li small {
+  font: 600 10px/1.3 var(--font-mono);
+  color: #cdbfdd;
+}
+/* Scene 3: four fragments drift in and settle as one key. */
+.world-intro-key {
+  position: relative;
+  width: 160px;
+  height: 120px;
+}
+.world-intro-key span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #f2c76b;
+  filter: drop-shadow(0 0 10px #f2c76b88);
+  clip-path: polygon(
+    calc(var(--i) * 25%) 0,
+    calc(var(--i) * 25% + 25%) 0,
+    calc(var(--i) * 25% + 25%) 100%,
+    calc(var(--i) * 25%) 100%
+  );
+  animation: world-intro-fragment 2.4s calc(var(--i) * 0.2s) ease-in-out both;
+}
+/* Scene 4: the Valley number. */
+.world-intro-valley {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  color: #f05b87;
+}
+.world-intro-number {
+  font: 800 72px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  color: #ff7a9a;
+  text-shadow:
+    0 0 18px #ff405f99,
+    0 0 48px #d6174066;
+  animation: world-intro-pulse 2.4s ease-in-out infinite;
+}
+.world-intro-copy {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 14px 22px 34px;
+  text-align: center;
+  animation: world-intro-copy 0.6s ease-out both;
+}
+.world-intro-copy h2 {
+  margin: 0;
+  font-size: clamp(20px, 3.4vw, 28px);
+  letter-spacing: -0.01em;
+}
+.world-intro-copy p {
+  max-width: 520px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #c9bbd9;
+}
+.world-intro-recap {
+  max-width: 520px;
+  margin: 0;
+  padding-left: 18px;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #c9bbd9;
+}
+.world-intro-dots {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0;
+}
+.world-intro-dots i {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: #ffffff22;
+}
+.world-intro-dots i.is-on {
+  background: #d9c6f2;
+}
+.world-intro.is-still *,
+.world-motion-reduced .world-intro * {
+  animation: none !important;
+}
+@keyframes world-intro-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes world-intro-copy {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes world-intro-moon {
+  from {
+    opacity: 0;
+    transform: translateY(60px) scale(0.8);
+  }
+}
+@keyframes world-intro-twinkle {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes world-intro-gate {
+  to {
+    transform: perspective(500px) rotateY(calc(var(--dir, 1) * 70deg));
+    opacity: 0.4;
+  }
+}
+@keyframes world-intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.9);
+  }
+}
+@keyframes world-intro-light {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.8);
+  }
+  60% {
+    transform: translateY(0) scale(1.08);
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes world-intro-fragment {
+  from {
+    opacity: 0;
+    transform: translate(
+        calc((var(--i) - 1.5) * 80px),
+        calc((var(--i) - 1.5) * -30px)
+      )
+      rotate(calc((var(--i) - 1.5) * 40deg));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes world-intro-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+@media (max-width: 600px) {
+  .world-intro-number {
+    font-size: 54px;
+  }
+  .world-intro-path {
+    gap: 10px;
+  }
+  .world-intro-path li {
+    width: 78px;
+  }
+}

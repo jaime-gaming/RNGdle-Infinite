@@ -2,6 +2,7 @@ import { emptyRngweenWorld } from "../src/rngween-world-zones.js";
 import { test, expect } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
+import { withAllFragments } from "./helpers/world-roll.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { evaluate } from "./helpers/index.js";
 import {
@@ -452,16 +453,18 @@ test("the Reaper's trial and reward conversations fit a phone and report real pr
   await mockSeasonClock(page, active);
   await seedProgress(
     page,
-    wallet(2000, {
-      tasks: {
-        ...emptyProgress().tasks,
-        rngween: {
-          ...fullTasks.rngween,
-          earned: [],
-          counts: { rolls: 300, rare: 12, banked: 1000000, taskClaims: 0 },
+    withAllFragments(
+      wallet(2000, {
+        tasks: {
+          ...emptyProgress().tasks,
+          rngween: {
+            ...fullTasks.rngween,
+            earned: [],
+            counts: { rolls: 300, rare: 12, banked: 1000000, taskClaims: 0 },
+          },
         },
-      },
-    }),
+      }),
+    ),
   );
   await page.goto("/shop/limited");
   await page

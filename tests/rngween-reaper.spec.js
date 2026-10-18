@@ -1,4 +1,8 @@
-import { completedWorldRoll, revealWorld } from "./helpers/world-roll.js";
+import {
+  completedWorldRoll,
+  revealWorld,
+  withAllFragments,
+} from "./helpers/world-roll.js";
 import { test, expect } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
@@ -123,12 +127,15 @@ test("aura purchases require verified November 1–3 UTC, not the mission window
 });
 
 test("Halloween missions pay aura and Pumpkoins together exactly once, never EP or ordinary task progress", () => {
-  let p = account({
-    tasks: finished,
-    balance: 123,
-    totalEarned: 456,
-    cycleEarnedEP: 123,
-  });
+  // Counts done and every zone fragment found: the missions are collectable.
+  let p = withAllFragments(
+    account({
+      tasks: finished,
+      balance: 123,
+      totalEarned: 456,
+      cycleEarnedEP: 123,
+    }),
+  );
   for (const mission of RNGWEEN_MISSIONS) {
     const before = p;
     p = applyProgress(p, {
@@ -458,6 +465,7 @@ test("new and previously collected tasks visibly pay Pumpkoins once and their hi
       ...finished,
       rngween: { ...finished.rngween, earned: ["witchfire"] },
     },
+    rngweenLimited: withAllFragments(account()).rngweenLimited,
   });
   await page.goto("/tasks");
   await expect
@@ -670,7 +678,7 @@ test("a wrapped mobile rack reserves its real height and keeps family/tooltips/s
 });
 
 test("a missing paid-coin flag is repaired from history instead of paying a claimed mission again", () => {
-  const p = account({ tasks: finished });
+  const p = withAllFragments(account({ tasks: finished }));
   const q = applyProgress(p, {
     type: "claim-rngween-aura",
     id: "witchfire",
@@ -802,15 +810,20 @@ test("a keyless direct World route stays open while only the Valley challenge re
   await expect(
     page.getByRole("heading", { name: "RNGween World", exact: true }),
   ).toBeVisible();
-  for (const [id, name] of [
-    ["pumpkin-patch", "Pumpkin Patch"],
-    ["graveyard", "Graveyard"],
-    ["haunted-house", "Haunted House"],
+  // No key needed for the path, but the path goes in order: the Patch is open
+  // on a fresh save and the next zones wait for the previous fragment.
+  await page.locator('[data-world-zone="pumpkin-patch"]').click();
+  await expect(
+    page.getByRole("button", { name: /Roll in Pumpkin Patch/ }),
+  ).toBeEnabled();
+  for (const [id, before] of [
+    ["graveyard", "Pumpkin Patch"],
+    ["haunted-house", "Blood Moon Ridge"],
   ]) {
     await page.locator(`[data-world-zone="${id}"]`).click();
-    await expect(
-      page.getByRole("button", { name: new RegExp(`Roll in ${name}`) }),
-    ).toBeEnabled();
+    await expect(page.locator(`[data-zone-lock="${id}"]`)).toContainText(
+      `Earn the ${before} key fragment`,
+    );
   }
   await page.locator('[data-world-zone="valley"]').click();
   await expect(page.getByText("Challenge key needed")).toBeVisible();

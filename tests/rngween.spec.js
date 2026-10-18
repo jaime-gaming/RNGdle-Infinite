@@ -41,6 +41,7 @@ import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { rebirthRelevantPurchases } from "../src/rebirth.js";
 import { CHANGELOG, LATEST_VERSION } from "../src/changelog.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+import { withAllFragments, worldPathTo } from "./helpers/world-roll.js";
 import { evaluate } from "./helpers/index.js";
 
 const at = (month, day, hour = 0, minute = 0, second = 0, year = 2026) =>
@@ -144,12 +145,29 @@ test("missions use online progress, require manual collection and never spend EP
   expect(state.tasks.rngween.earned).toEqual([]);
   expect(state.owned).toEqual([]);
   expect(state.equipped).toBe("none");
-  expect(rngweenState(state.tasks, startsAt)).toMatchObject({
-    complete: 3,
-    collected: 0,
-    ready: 3,
-    total: 4,
-  });
+  // The Roll-page half is done, but every mission also needs its zone's key
+  // fragment from RNGween World before the aura can be collected.
+  expect(
+    rngweenState(state.tasks, startsAt, state.rngweenLimited),
+  ).toMatchObject({ complete: 0, collected: 0, ready: 0, total: 4 });
+  expect(() =>
+    applyProgress(state, {
+      type: "claim-rngween-aura",
+      id: "jack-o-glow",
+      at: startsAt,
+    }),
+  ).toThrow("Pumpkin Patch key fragment");
+  state = {
+    ...state,
+    rngweenLimited: worldPathTo(state.rngweenLimited, "graveyard"),
+  };
+  expect(
+    rngweenState(state.tasks, startsAt, state.rngweenLimited),
+  ).toMatchObject({ complete: 1, ready: 1 });
+  state = withAllFragments(state);
+  expect(
+    rngweenState(state.tasks, startsAt, state.rngweenLimited),
+  ).toMatchObject({ complete: 3, collected: 0, ready: 3, total: 4 });
   const balance = state.balance;
   state = applyProgress(state, {
     type: "claim-rngween-aura",
@@ -213,10 +231,10 @@ test("no progress outside the event, offline credit, duplicate rolls or future-y
 });
 
 test("unfinished and uncollected auras expire; ownership, not the date, gates equipping", () => {
-  const ready = {
+  const ready = withAllFragments({
     ...emptyProgress(),
     tasks: { ...emptyTasks(), rngween: finishedEvent() },
-  };
+  });
   for (const time of [startsAt - 1, endsAt, at(10, 25, 12, 0, 0, 2027)]) {
     expect(() =>
       applyProgress(ready, {
@@ -285,7 +303,7 @@ test("twenty-one ordinary task claims unlock Blood Moon; skips and list bonuses 
     applyProgress(bonus, { type: "claim-task", id: ids[0], at: time }),
   ).toThrow("already claimed");
   const balance = bonus.balance;
-  state = applyProgress(bonus, {
+  state = applyProgress(withAllFragments(bonus), {
     type: "claim-rngween-aura",
     id: "blood-moon",
     at: time,
@@ -534,6 +552,8 @@ test("collect a task aura, see only that reward in the shop, equip it free and r
       counts: { rolls: 300, rare: 1, banked: 100000, taskClaims: 2 },
     },
   };
+  // Rolls done, but the Pumpkin Patch fragment is still missing: the card
+  // shows the World half and the collect button stays shut until it exists.
   await seedProgress(page, { tasks, balance: 123456, totalEarned: 123456 });
   await page.goto("/tasks");
   const panel = page.locator(".rngween-event");
@@ -547,7 +567,26 @@ test("collect a task aura, see only that reward in the shop, equip it free and r
     panel.locator('[data-event-mission="blood-moon"]'),
   ).toContainText("2 / 21 tasks");
   const reward = panel.locator('[data-event-mission="jack-o-glow"]');
+  await expect(reward).toHaveAttribute("data-state", "open");
+  await expect(reward.locator(".rngween-mission-world")).toContainText(
+    "Pumpkin Patch fragment · not yet",
+  );
+  await expect(
+    reward.getByRole("button", { name: "Collect Jack-o'-Glow", exact: true }),
+  ).toBeDisabled();
+  await reward.getByRole("button", { name: "Open the World" }).click();
+  await expect(page).toHaveURL(/\/rngween-world\/?$/);
+  await page.evaluate(() => {
+    const key = "rng-infinite-progress-v1";
+    const data = JSON.parse(localStorage.getItem(key));
+    data.rngweenLimited.world.fragments["pumpkin-patch"] = true;
+    localStorage.setItem(key, JSON.stringify(data));
+  });
+  await page.goto("/tasks");
   await expect(reward).toHaveAttribute("data-state", "claimable");
+  await expect(reward.locator(".rngween-mission-world")).toContainText(
+    "Pumpkin Patch fragment · found",
+  );
   await reward
     .getByRole("button", { name: "Collect Jack-o'-Glow", exact: true })
     .click();
@@ -842,6 +881,7 @@ test("collecting an aura needs a fresh website date, not a cached clock after a 
   const website = await mockSeasonClock(page, at(10, 26, 12));
   await seedProgress(page, {
     tasks: { ...emptyTasks(), rngween: finishedEvent() },
+    rngweenLimited: withAllFragments(emptyProgress()).rngweenLimited,
   });
   await page.goto("/tasks");
   const reward = page.getByRole("button", {

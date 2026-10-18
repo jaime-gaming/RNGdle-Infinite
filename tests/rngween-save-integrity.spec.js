@@ -8,6 +8,8 @@ import {
   revealWorld,
   savedWorld,
   withWorldPoints,
+  withWorldPath,
+  withAllFragments,
 } from "./helpers/world-roll.js";
 import {
   applyProgress,
@@ -41,8 +43,9 @@ const account = (patch = {}) => ({
   totalEarned: 100000000,
   ...patch,
 });
+// Zones open in path order: these helpers start with the Graveyard open.
 function funded() {
-  const p = account();
+  const p = withWorldPath(account(), "graveyard");
   p.rngweenLimited.pumpkoins = 50000;
   return withWorldPoints(p, 5000);
 }
@@ -50,7 +53,7 @@ const read = (p) => parseAndRepairProgress(JSON.stringify(p));
 const buy = (p, id, time = at) =>
   applyProgress(p, { type: "buy-rngween-limited", id, at: time });
 function claimed() {
-  let p = account();
+  let p = withAllFragments(account());
   for (const mission of RNGWEEN_MISSIONS) {
     p.tasks.rngween.counts[mission.metric] = mission.goal;
     p = applyProgress(p, { type: "claim-rngween-aura", id: mission.id, at });
@@ -58,7 +61,10 @@ function claimed() {
   return p;
 }
 function fourGraves() {
-  let p = account({ owned: ["starfall"], equipped: "starfall" });
+  let p = withWorldPath(
+    account({ owned: ["starfall"], equipped: "starfall" }),
+    "graveyard",
+  );
   for (const number of [66, 13, 49, 66])
     p = completedWorldRoll(p, { zone: "graveyard", number, at });
   return p;
@@ -209,8 +215,8 @@ test("a surviving final speed receipt proves the previously paid prefix, not a n
 test("forge receipts restore the already-earned distinct fragments and key, never the badge score or a coin reward", () => {
   let p = completedWorldObjectives(account(), "pumpkin-patch", at);
   p = completedWorldObjectives(p, "graveyard", at + 30000);
-  p = completedWorldObjectives(p, "haunted-house", at + 60000);
-  p = completedWorldObjectives(p, "blood-moon-ridge", at + 150000);
+  p = completedWorldObjectives(p, "blood-moon-ridge", at + 60000);
+  p = completedWorldObjectives(p, "haunted-house", at + 150000);
   p = applyProgress(p, { type: "forge-rngween-key", at: at + 200000 });
   const broken = structuredClone(p);
   broken.rngweenLimited.world.fragments = {
@@ -443,13 +449,16 @@ test("a failed linked save never replaces the current account or acknowledges it
 }) => {
   const existing = account({ owned: ["starfall"], equipped: "starfall" });
   const peer = completedWorldObjectives(
-    account({
-      profile: {
-        ...testProfile,
-        id: "incoming-profile",
-        username: "IncomingUser",
-      },
-    }),
+    withWorldPath(
+      account({
+        profile: {
+          ...testProfile,
+          id: "incoming-profile",
+          username: "IncomingUser",
+        },
+      }),
+      "graveyard",
+    ),
     "graveyard",
     at,
   );

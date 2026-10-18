@@ -1,5 +1,6 @@
 import { test, expect } from "./helpers/clock.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
+import { withAllFragments } from "./helpers/world-roll.js";
 import { chooseTheme } from "./helpers/appearance.js";
 import { seedProgress } from "./helpers/progress.js";
 import {
@@ -124,11 +125,14 @@ test("turning Halloween off preserves tasks, rewards and ownership; it persists 
   page,
 }) => {
   await mockSeasonClock(page, active);
-  await seedProgress(page, {
-    tasks: finished,
-    balance: 1000,
-    totalEarned: 1000,
-  });
+  await seedProgress(
+    page,
+    withAllFragments({
+      tasks: finished,
+      balance: 1000,
+      totalEarned: 1000,
+    }),
+  );
   await page.goto("/tasks");
   await expect(page.locator(".rngween-decor")).toBeVisible();
   const before = await saved(page);

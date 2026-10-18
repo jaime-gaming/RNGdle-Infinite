@@ -48,13 +48,14 @@ export function WorldBadgeGlyph({ badge, size = 19 }) {
 export function WorldResultBadges({ result, counts = null }) {
   return (
     <div className="world-result-badges" aria-label="Badges on this roll">
-      {result.badges.map((badge) => {
+      {result.badges.map((badge, index) => {
         const first = counts ? (counts[badge.id] ?? 0) === 1 : false;
         return (
           <span
             key={badge.id}
             className={`world-badge-chip world-tier-${badge.tier}${first ? " is-new" : ""}`}
             data-result-badge={badge.id}
+            style={{ "--n": index }}
           >
             <WorldBadgeGlyph badge={badge} size={14} />
             {badge.name}

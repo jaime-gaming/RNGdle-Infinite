@@ -15,9 +15,11 @@ export default function WorldAuraTrial({
   busy,
 }) {
   const aura = RNGWEEN_AURAS.find((item) => item.id === phase.auraId);
-  const trial = rngweenState(progress.tasks, now).missions.find(
-    (item) => item.auraId === phase.auraId,
-  );
+  const trial = rngweenState(
+    progress.tasks,
+    now,
+    progress.rngweenLimited,
+  ).missions.find((item) => item.auraId === phase.auraId);
   // Phones fold the long copy behind one tap; desktop always shows it (CSS).
   const [more, setMore] = useState(false);
   // The Valley's aura is Hexbound itself; Key & prize already explains it.

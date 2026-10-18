@@ -38,3 +38,21 @@ export function markRngweenWorldEntered() {
     /* private mode: the Reaper simply greets again next time */
   }
 }
+
+// CLEANUP Nov 4, 2026: remove with WorldIntro. The World's opening plays on
+// the first visit only; "watch again" lives on the World page.
+export const RNGWEEN_WORLD_INTRO_KEY = "rng-infinite-rngween-world-intro-v1";
+export function hasSeenRngweenWorldIntro() {
+  try {
+    return localStorage.getItem(RNGWEEN_WORLD_INTRO_KEY) === RNGWEEN_ID;
+  } catch {
+    return true;
+  }
+}
+export function markRngweenWorldIntroSeen() {
+  try {
+    localStorage.setItem(RNGWEEN_WORLD_INTRO_KEY, RNGWEEN_ID);
+  } catch {
+    /* private mode: the opening may play again next time */
+  }
+}

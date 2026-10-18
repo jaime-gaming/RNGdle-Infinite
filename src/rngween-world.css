@@ -520,16 +520,16 @@
   vertical-align: top;
   animation: world-digit-wait 1.2s ease-in-out infinite;
 }
-/* While a roll is pending each hidden slot spins a fixed 0–9 reel like a
-   slot machine. It is decoration only: the real digits are already decided
-   when the roll starts and the reel just scrolls a constant strip. The reel
-   slows down as the reveal clock runs out (driven by --reveal on the stage). */
+/* While a roll is pending each hidden slot runs a 0–9 reel like a slot
+   machine and lands on the real digit at its reveal moment (--land, --spin
+   and --since come from the stage). Decoration only: the number was decided
+   when the roll started; the reel just scrolls a constant strip to it. */
 .world-reel {
   display: block;
   line-height: 1;
-  animation: world-reel-spin calc(0.55s + var(--reveal, 0) * 0.9s) linear
-    infinite;
-  animation-delay: calc(var(--slot, 0) * -0.17s);
+  /* Three loops down to the real digit, easing out so it visibly settles. */
+  animation: world-reel-land var(--spin, 10s) cubic-bezier(0.1, 0.6, 0.15, 1)
+    var(--since, 0s) both;
 }
 .world-reel > i {
   display: block;
@@ -1043,6 +1043,48 @@
 .world-shop-actions > button {
   font-size: 10px;
 }
+.world-exchange {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed #44314e;
+}
+.world-exchange h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.world-exchange > p {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: #b7a6c3;
+}
+.world-exchange-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+.world-exchange-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  justify-items: start;
+  gap: 2px 10px;
+  padding: 10px 14px;
+  text-align: left;
+}
+.world-exchange-option > svg {
+  grid-row: 1 / span 2;
+}
+.world-exchange-option small {
+  font-size: 10px;
+  color: #b7a6c3;
+}
+.world-zone.is-locked {
+  opacity: 0.62;
+}
+.world-zone.is-locked.is-selected {
+  opacity: 0.85;
+}
 .world-shop-pending-note {
   display: flex;
   align-items: center;
@@ -1173,12 +1215,76 @@
     opacity: 0.16;
   }
 }
-@keyframes world-reel-spin {
+/* Zone switches: the scene fades up and the title slides in. */
+.world-scene {
+  animation: world-scene-in 0.9s ease-out both;
+}
+.world-zone-heading {
+  animation: world-heading-in 0.6s 0.1s ease-out both;
+}
+/* A ready roll button breathes; badge chips arrive one after another. */
+.world-roll-button:not(:disabled) {
+  animation: world-roll-pulse 2.6s ease-in-out infinite;
+}
+.world-result-badges .world-badge-chip {
+  animation: world-chip-in 0.45s calc(var(--n, 0) * 90ms + 0.25s)
+    cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.is-jackpot .world-result-stage::before {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff5f8a66 0, transparent 60%);
+  animation: world-jackpot-flash 1.6s ease-out both;
+  pointer-events: none;
+}
+@keyframes world-scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(1.02);
+  }
+}
+@keyframes world-heading-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes world-roll-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--world-accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 9px transparent;
+  }
+}
+@keyframes world-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}
+@keyframes world-jackpot-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+@keyframes world-reel-land {
   from {
     transform: translateY(0);
   }
   to {
-    transform: translateY(-10em);
+    transform: translateY(calc(var(--land, 0) * -1em));
   }
 }
 @keyframes world-digit-land {
