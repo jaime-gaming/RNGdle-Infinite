@@ -1236,16 +1236,22 @@ function applyEvent(state, action) {
     const earned =
       limited.skinEarned ||
       (pending.zone === "valley" && pending.number === RNGWEEN_WORLD_TARGET);
+    // Pumpkoins for the roll itself, plus the fragment bonus the first time
+    // a zone is cleared. A wallet at the ceiling simply stops growing.
+    const { payout, ...outcome } = recordWorldOutcome(limited, pending);
     const next = {
       ...state,
       rngweenLimited: {
         ...limited,
+        pumpkoins: validAmount(limited.pumpkoins + payout)
+          ? limited.pumpkoins + payout
+          : limited.pumpkoins,
         drawn:
           pending.zone === "valley"
             ? [...limited.drawn, pending.number]
             : limited.drawn,
         skinEarned: earned,
-        world: recordWorldOutcome(limited, pending),
+        world: outcome,
       },
       ...(earned && !state.owned.includes(RNGWEEN_WORLD_SKIN.id)
         ? {
@@ -2582,7 +2588,13 @@ function parseHistory(value) {
       )
         return [];
       if (e.type === "rngween-exchange") {
-        if (!validAmount(e.ep) || e.ep !== e.pumpkoins * EP_PER_PUMPKOIN)
+        // The rate has changed before; an older receipt is still a valid one
+        // as long as it paid a whole number of EP per coin.
+        if (
+          !validAmount(e.ep) ||
+          e.ep < e.pumpkoins ||
+          e.ep % e.pumpkoins !== 0
+        )
           return [];
         next = { ...base, name: e.name, ep: e.ep, pumpkoins: e.pumpkoins };
       } else {

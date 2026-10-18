@@ -58,7 +58,7 @@ const onlineRoll = (id, time, number = 103001) => ({
 });
 const finishedEvent = (earned = []) => ({
   ...emptyRngween(),
-  counts: { rolls: 200, rare: 40, banked: 5000000, taskClaims: 18 },
+  counts: { rolls: 300, rare: 60, banked: 8000000, taskClaims: 21 },
   earned,
 });
 const finishedTasks = (time) => {
@@ -130,15 +130,15 @@ test("Halloween uses fixed UTC dates: Oct 21–Nov 3 decoration, Oct 25–31 one
 
 test("missions use online progress, require manual collection and never spend EP", () => {
   let state = emptyProgress();
-  for (let i = 0; i < 200; i++)
+  for (let i = 0; i < 300; i++)
     state = applyProgress(
       state,
       onlineRoll(`halloween-${i}`, startsAt + i * 60000, 109),
     );
   expect(state.tasks.rngween.counts).toEqual({
-    rolls: 200,
-    rare: 40,
-    banked: 5000000,
+    rolls: 300,
+    rare: 60,
+    banked: 8000000,
     taskClaims: 0,
   });
   expect(state.tasks.rngween.earned).toEqual([]);
@@ -259,11 +259,11 @@ test("unfinished and uncollected auras expire; ownership, not the date, gates eq
   );
 });
 
-test("eighteen ordinary task claims unlock Blood Moon; skips and list bonuses do not", () => {
+test("twenty-one ordinary task claims unlock Blood Moon; skips and list bonuses do not", () => {
   let state = emptyProgress();
   let time;
   let ids;
-  for (let day = 25; day <= 30; day++) {
+  for (let day = 25; day <= 31; day++) {
     time = at(10, day, 12);
     const tasks = finishedTasks(time);
     tasks.rngween = state.tasks.rngween;
@@ -272,7 +272,7 @@ test("eighteen ordinary task claims unlock Blood Moon; skips and list bonuses do
     for (const id of ids)
       state = applyProgress(state, { type: "claim-task", id, at: time });
   }
-  expect(state.tasks.rngween.counts.taskClaims).toBe(18);
+  expect(state.tasks.rngween.counts.taskClaims).toBe(21);
   expect(state.tasks.rngween.earned).toEqual([]);
   expect(state.owned).not.toContain("blood-moon");
   const bonus = applyProgress(state, {
@@ -377,7 +377,7 @@ test("retired progress is dropped without erasing old auras or inheriting Hallow
       rngween: undefined,
       event: {
         id: "randomness-signal-2026",
-        counts: { rolls: 200, rare: 40, banked: 5000000, taskClaims: 18 },
+        counts: { rolls: 300, rare: 60, banked: 8000000, taskClaims: 21 },
         earned: ["static", "bitstorm", "scramble", "hexdump"],
       },
     },
@@ -423,7 +423,7 @@ test("Halloween receipts are validated and restore collected auras after save re
   expect(damaged.repaired).toBe(true);
   expect(damaged.rngween).toEqual({
     id: RNGWEEN_ID,
-    counts: { rolls: 0, rare: 40, banked: 0, taskClaims: 2 },
+    counts: { rolls: 0, rare: 60, banked: 0, taskClaims: 2 },
     earned: ["phantom-veil"],
   });
   const foreign = parseRngween({
@@ -437,8 +437,8 @@ test("Halloween receipts are validated and restore collected auras after save re
     { rolls: Number.MAX_SAFE_INTEGER, banked: 9999999 },
     startsAt,
   );
-  expect(capped.counts.rolls).toBe(200);
-  expect(capped.counts.banked).toBe(5000000);
+  expect(capped.counts.rolls).toBe(300);
+  expect(capped.counts.banked).toBe(8000000);
 });
 
 test("Halloween ownership, equipped look and task progress survive Rebirth, Prestige and Rollback", () => {
@@ -531,7 +531,7 @@ test("collect a task aura, see only that reward in the shop, equip it free and r
     ...emptyTasks(),
     rngween: {
       ...emptyRngween(),
-      counts: { rolls: 200, rare: 1, banked: 100000, taskClaims: 2 },
+      counts: { rolls: 300, rare: 1, banked: 100000, taskClaims: 2 },
     },
   };
   await seedProgress(page, { tasks, balance: 123456, totalEarned: 123456 });
@@ -545,7 +545,7 @@ test("collect a task aura, see only that reward in the shop, equip it free and r
   ).toHaveCount(0);
   await expect(
     panel.locator('[data-event-mission="blood-moon"]'),
-  ).toContainText("2 / 18 tasks");
+  ).toContainText("2 / 21 tasks");
   const reward = panel.locator('[data-event-mission="jack-o-glow"]');
   await expect(reward).toHaveAttribute("data-state", "claimable");
   await reward
@@ -936,7 +936,7 @@ test("Halloween decorations are actually painted only in dark mode on desktop an
 
 test("the challenges are the only goals: an aura receipt without the finished count is dropped", () => {
   expect(RNGWEEN_MISSIONS.map(({ goal }) => goal)).toEqual([
-    200, 40, 5000000, 18,
+    300, 60, 8000000, 21,
   ]);
   const previous = {
     ...emptyRngween(),

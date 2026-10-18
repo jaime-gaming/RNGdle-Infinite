@@ -24,7 +24,7 @@ const finished = {
   ...emptyTasks(),
   rngween: {
     ...emptyRngween(),
-    counts: { rolls: 200, rare: 40, banked: 5000000, taskClaims: 18 },
+    counts: { rolls: 300, rare: 60, banked: 8000000, taskClaims: 21 },
   },
 };
 const ids = ["jack-o-glow", "phantom-veil", "witchfire", "blood-moon"];

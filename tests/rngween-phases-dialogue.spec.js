@@ -13,6 +13,7 @@ import {
   WORLD_ZONES,
   WORLD_REVEAL_MS,
   emptyRngweenWorld,
+  WORLD_FRAGMENT_PUMPKOINS,
 } from "../src/rngween-world-zones.js";
 import {
   WORLD_BADGES,
@@ -79,10 +80,10 @@ test("five numbered World phases map to the original event auras without replaci
       mission.pumpkoins,
     ]),
   ).toEqual([
-    ["jack-o-glow", 200, 100],
-    ["phantom-veil", 40, 150],
-    ["witchfire", 5000000, 200],
-    ["blood-moon", 18, 150],
+    ["jack-o-glow", 300, 100],
+    ["phantom-veil", 60, 150],
+    ["witchfire", 8000000, 200],
+    ["blood-moon", 21, 150],
   ]);
   expect(Object.values(WORLD_BADGES).flat()).toHaveLength(60);
   for (const list of Object.values(WORLD_BADGES)) expect(list).toHaveLength(12);
@@ -129,7 +130,11 @@ test("all Pumpkin Patch milestones are persistent collection goals that earn the
     "receipts",
   ])
     expect(p[field]).toEqual(initial[field]);
-  expect(p.rngweenLimited.pumpkoins).toBe(0);
+  // The rolls and the finished fragment pay Pumpkoins; nothing else does.
+  expect(p.rngweenLimited.pumpkoins).toBe(p.rngweenLimited.world.earned);
+  expect(p.rngweenLimited.world.earned).toBeGreaterThanOrEqual(
+    WORLD_FRAGMENT_PUMPKOINS + stats.rolls,
+  );
   expect(p.rngweenLimited.world.fragments).toEqual({
     "pumpkin-patch": true,
     graveyard: false,
@@ -327,7 +332,7 @@ test("the original aura mission remains claimable from Tasks, not from clearing 
   page,
 }) => {
   const p = account();
-  p.tasks.rngween.counts.rolls = 200;
+  p.tasks.rngween.counts.rolls = 300;
   await mockSeasonClock(page, at);
   await seedProgress(page, p);
   await page.goto("/rngween-world");

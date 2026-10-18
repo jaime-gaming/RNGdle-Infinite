@@ -64,7 +64,7 @@ test("calendar eligibility is independent of a roll's device timestamp", () => {
       ...emptyTasks(),
       rngween: {
         ...emptyRngween(),
-        counts: { ...emptyRngween().counts, rolls: 200 },
+        counts: { ...emptyRngween().counts, rolls: 300 },
       },
     },
   };
@@ -129,7 +129,7 @@ test("a claim waiting for website time cannot grant an aura to a replacement acc
     ...emptyTasks(),
     rngween: {
       ...emptyRngween(),
-      counts: { ...emptyRngween().counts, rolls: 200 },
+      counts: { ...emptyRngween().counts, rolls: 300 },
     },
   };
   await mockSeasonClock(page, active);

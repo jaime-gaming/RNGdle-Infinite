@@ -30,6 +30,11 @@ import {
 import { rngweenValleyUnlocked } from "../src/rngween-world-zones.js";
 import { worldMiniSummary } from "../src/rngween-world-badges.js";
 
+// World rolls pay a few Pumpkoins of their own; these checks are about every
+// other source, so they read the wallet without the World's running total.
+const coins = (p) =>
+  p.rngweenLimited.pumpkoins - (p.rngweenLimited.world?.earned ?? 0);
+
 const at = Date.UTC(2026, 9, 26, 12);
 const sales = Date.UTC(2026, 10, 2, 12);
 const end = Date.UTC(2026, 10, 4);
@@ -92,7 +97,7 @@ test("owned Halloween looks backfill permanent receipts, including Hexbound, wit
     ids.filter((id) => id !== "hexbound"),
   );
   expect(fixed.progress.rngweenLimited.skinEarned).toBe(true);
-  expect(fixed.progress.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(fixed.progress)).toBe(0);
   expect(fixed.progress.tasks.rngween.earned).toEqual([]);
   const retired = retireRngweenLimited(fixed.progress, end);
   retired.owned = [];
@@ -110,7 +115,7 @@ test("claimed aura missions keep an independent permanent ledger when task/histo
   const fixed = read(broken).progress;
   expect(fixed.owned).toEqual(p.owned);
   expect(fixed.equipped).toBe(p.equipped);
-  expect(fixed.rngweenLimited.pumpkoins).toBe(expectedCoins);
+  expect(coins(fixed)).toBe(expectedCoins);
   expect(
     applyProgress(fixed, { type: "claim-rngween-coins", at }).rngweenLimited
       .pumpkoins,
@@ -128,7 +133,7 @@ test("paid aura receipts recover missing inventory and ledger entries both befor
     expect(fixed.equipped).toBe("witchfire");
     expect(fixed.rngweenLimited.auras).toEqual(["witchfire"]);
     expect(fixed.balance).toBe(saved.balance);
-    expect(fixed.rngweenLimited.pumpkoins).toBe(saved.rngweenLimited.pumpkoins);
+    expect(coins(fixed)).toBe(coins(saved));
     expect(read(fixed).repairs).toEqual([]);
   }
 });
@@ -141,7 +146,7 @@ test("surviving paid temporary entitlements repair an active save without chargi
   broken.rngweenLimited.bought = [];
   const fixed = read(broken).progress;
   expect(fixed.rngweenLimited.bought).toEqual(p.rngweenLimited.bought);
-  expect(fixed.rngweenLimited.pumpkoins).toBe(p.rngweenLimited.pumpkoins);
+  expect(coins(fixed)).toBe(coins(p));
   expect(fixed.owned).toContain(RNGWEEN_SKILL.id);
   expect(fixed.pets).toContain(RNGWEEN_PET.id);
   expect(rngweenValleyUnlocked(fixed.rngweenLimited)).toBe(true);
@@ -175,9 +180,7 @@ test("speed purchase receipts are repaired before parsing a committed deadline, 
   ]);
   expect(fixed.progress.rngweenLimited.world.pending).toEqual(pending);
   expect(pending.revealsAt - pending.startedAt).toBe(8000);
-  expect(fixed.progress.rngweenLimited.pumpkoins).toBe(
-    p.rngweenLimited.pumpkoins,
-  );
+  expect(coins(fixed.progress)).toBe(p.rngweenLimited.pumpkoins);
   expect(fixed.progress.rngweenLimited.world.mini.graveyard.rolls).toBe(0);
   expect(read(fixed.progress).repairs).toEqual([]);
 });
@@ -202,7 +205,7 @@ test("a surviving final speed receipt proves the previously paid prefix, not a n
   expect(fixed.rngweenLimited.world.pending).toEqual(
     p.rngweenLimited.world.pending,
   );
-  expect(fixed.rngweenLimited.pumpkoins).toBe(p.rngweenLimited.pumpkoins);
+  expect(coins(fixed)).toBe(coins(p));
 });
 
 test("forge receipts restore the already-earned distinct fragments and key, never the badge score or a coin reward", () => {
@@ -226,7 +229,7 @@ test("forge receipts restore the already-earned distinct fragments and key, neve
   expect(fixed.rngweenLimited.world.keyForged).toBe(true);
   expect(fixed.rngweenLimited.world.mini).toEqual(p.rngweenLimited.world.mini);
   expect(fixed.balance).toBe(p.balance);
-  expect(fixed.rngweenLimited.pumpkoins).toBe(p.rngweenLimited.pumpkoins);
+  expect(coins(fixed)).toBe(coins(p));
   expect(() => applyProgress(fixed, { type: "forge-rngween-key", at })).toThrow(
     "already unlocked",
   );
@@ -272,7 +275,7 @@ test("outside-event, unknown and wrong-price history entries cannot mint keys, u
   expect(fixed.rngweenLimited.world.upgrades).toEqual([]);
   expect(fixed.rngweenLimited.world.keyForged).toBe(false);
   expect(fixed.owned).toEqual([]);
-  expect(fixed.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(fixed)).toBe(0);
 });
 
 test("permanent skin proof survives a redundant retired pool leak while every temporary field is removed", () => {
@@ -308,7 +311,7 @@ test("same-account reconciliation preserves all known permanent skins, not tempo
   expect(merged.balance).toBe(777);
   expect(merged.rngweenLimited.auras).toEqual(["witchfire"]);
   expect(merged.rngweenLimited.skinEarned).toBe(true);
-  expect(merged.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(merged)).toBe(0);
   expect(merged.tasks).toEqual(next.tasks);
   expect(preservePermanentCosmetics(previous, merged)).toBe(merged);
 });
@@ -420,7 +423,7 @@ test("linked snapshots persist their canonical repairs, not the damaged wire byt
   const fixed = await savedWorld(page);
   expect(fixed.rngweenLimited.world.upgrades).toEqual(["wisp-lantern"]);
   expect(fixed.rngweenLimited.world.pending).toEqual(pending);
-  expect(fixed.rngweenLimited.pumpkoins).toBe(peer.rngweenLimited.pumpkoins);
+  expect(coins(fixed)).toBe(coins(peer));
   expect(read(fixed).repairs).toEqual([]);
   await revealWorld(page);
   await expect
@@ -580,7 +583,7 @@ test("live linked browsers recover an unwritable badge head automatically, shari
     const primary = await a.newPage(),
       secondary = await b.newPage();
     let p = fourGraves();
-    p.rngweenLimited.pumpkoins = 1700;
+    p.rngweenLimited.pumpkoins += 850;
     for (const id of ["wisp-lantern", "phantom-clock", "reapers-hourglass"])
       p = applyProgress(p, { type: "buy-rngween-world", id, at });
     await mockSeasonClock(primary, at + 60000);
@@ -646,7 +649,7 @@ test("live linked browsers recover an unwritable badge head automatically, shari
       other = await savedWorld(secondary);
     expect(other.rngweenLimited.world).toEqual(first.rngweenLimited.world);
     expect(other.equipped).toBe("starfall");
-    expect(other.rngweenLimited.pumpkoins).toBe(0);
+    expect(coins(other)).toBe(0);
     expect(other.rngweenLimited.drawn).toEqual([]);
     await expect(secondary.locator("[data-world-points]")).toHaveText("337");
     await expect(secondary.locator(".world-fragment-owned")).toContainText(

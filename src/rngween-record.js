@@ -15,8 +15,9 @@ import {
   worldMiniSummary,
 } from "./rngween-world-badges.js";
 
-// Pumpkoins arrive from commissions, missions and the EP exchange, and leave
-// through the two shops and the key. Both totals come from the log.
+// Pumpkoins arrive from commissions, missions, the EP exchange and World
+// rolls, and leave through the two shops and the key. The log covers all but
+// the World rolls, which keep their own running total in the save.
 const EARNING = new Set([
   "rngween-hourly",
   "rngween-mission",
@@ -33,7 +34,7 @@ export function rngweenRecord(progress = {}, now = new Date()) {
   const world = worldState(limited);
   const mini = world.mini ?? emptyWorldMini();
   const history = Array.isArray(progress.history) ? progress.history : [];
-  let earned = 0;
+  let earned = Number(world.earned) || 0;
   let spent = 0;
   let commissions = 0;
   for (const entry of history) {

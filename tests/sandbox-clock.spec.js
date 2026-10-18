@@ -137,7 +137,7 @@ test("a review date that cannot be verified still cannot grant an aura", async (
       ...emptyTasks(),
       rngween: {
         ...emptyRngween(),
-        counts: { ...emptyRngween().counts, rolls: 200 },
+        counts: { ...emptyRngween().counts, rolls: 300 },
       },
     },
   });

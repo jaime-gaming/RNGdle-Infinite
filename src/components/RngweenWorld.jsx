@@ -32,6 +32,8 @@ import {
   rngweenValleyUnlocked,
   WORLD_FRAGMENT_ZONES,
   worldFragmentCount,
+  worldRollPumpkoins,
+  WORLD_FRAGMENT_PUMPKOINS,
 } from "../rngween-world-zones.js";
 import {
   WORLD_MINI_RULES,
@@ -230,8 +232,8 @@ export default function RngweenWorld({
             : `Key fragment ${fragments} of ${fragmentTotal} earned`,
         text:
           fragments >= fragmentTotal
-            ? "Open Key & prize to forge the Challenge key and unlock the Valley."
-            : `${fragmentTotal - fragments} more to go. The next zone is open.`,
+            ? `+${WORLD_FRAGMENT_PUMPKOINS} Pumpkoins. Open Key & prize to forge the Challenge key and unlock the Valley.`
+            : `+${WORLD_FRAGMENT_PUMPKOINS} Pumpkoins. ${fragmentTotal - fragments} more to go. The next zone is open.`,
       });
     }
     seenFragments.current = fragments;
@@ -279,7 +281,7 @@ export default function RngweenWorld({
     : jackpot
       ? "6666 — Hexbound unlocked."
       : result
-        ? `${result.tier[0].toUpperCase() + result.tier.slice(1)} · +${result.points.toLocaleString("en-US")} ${zone.name} points`
+        ? `${result.tier[0].toUpperCase() + result.tier.slice(1)} · +${result.points.toLocaleString("en-US")} ${zone.name} points · +${worldRollPumpkoins(last.zone, last.number)} Pumpkoins`
         : "Saved legacy result settled. Existing rewards are kept.";
 
   return (
@@ -827,9 +829,10 @@ export default function RngweenWorld({
       </div>
       <p className="world-fine-print">
         <ScrollText size={13} aria-hidden="true" />
-        World rolls pay zone points and badges, never EP. Reveal upgrades change
-        the wait, not the odds. Everything here retires after Nov 3 UTC;
-        Hexbound and owned auras stay forever.
+        World rolls pay zone points, badges and a few Pumpkoins, never EP.
+        Reveal upgrades change the wait, not the odds. The World opens on the
+        dark theme and leaves yours as it was. Everything here retires after Nov
+        3 UTC; Hexbound and owned auras stay forever.
       </p>
       <ReaperDialog
         open={reaperOpen}

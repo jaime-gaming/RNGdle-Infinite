@@ -247,6 +247,20 @@ guessing.
   Rollback like every other owned aura.
 - World rolls pay no ordinary EP, charges, drops or task credit. Pending World
   outcomes are committed to the save before the animation starts.
+- World rolls do pay Pumpkoins: `WORLD_ROLL_PUMPKOINS` by the roll's best
+  badge tier (1/2/5/12/30) plus `WORLD_FRAGMENT_PUMPKOINS` (100) the first time
+  a zone's fragment flips. The payout is computed in `recordWorldOutcome` and
+  added to `world.earned`, a running total that exists because World rolls
+  write no history rows; `rngweenRecord` adds it to the logged income. Tests
+  that reason about other income read the wallet minus `world.earned`
+  (`coins()` helper in the specs). Reveal upgrades cost 100/250/500.
+- The World always renders on the dark theme (`main.jsx` theme effect checks
+  `page === "rngween-world"`); the saved `rng-theme` is never touched.
+- Economy knobs: `EP_PER_PUMPKOIN` is 15,000; the four aura missions ask for
+  300 rolls, 60 Rare+, 8,000,000 banked EP and 21 task claims (Daily lists
+  hold three a day, so 21 is one full week). Exchange receipts in history only
+  need to be a whole multiple of their coin count, so a rate change never
+  drops old rows.
 - World layout (`src/rngween-world-zones.js`, `src/rngween-world-badges.js`):
   five zones in path order, Pumpkin Patch (1–9), Graveyard (1–99), Blood Moon
   Ridge (1–666), Haunted House (1–999) and Valley of Horrors (1–9999, no

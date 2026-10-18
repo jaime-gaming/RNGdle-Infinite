@@ -19,6 +19,7 @@ import {
 } from "../src/progress.js";
 import { rngweenCalendar } from "../src/rngween.js";
 import {
+  EP_PER_PUMPKOIN,
   RNGWEEN_WORLD_KEY,
   emptyRngweenLimited,
   rngweenWorldUnlocked,
@@ -135,6 +136,11 @@ async function claimOnPage(tab, amount, { inWorld = false } = {}) {
   // The card folds for 300 ms before the save; a frozen test clock must tick.
   await tab.clock.runFor(400).catch(() => {});
 }
+// World rolls pay a few Pumpkoins of their own; these checks are about every
+// other source, so they read the wallet without the World's running total.
+const coins = (p) =>
+  p.rngweenLimited.pumpkoins - (p.rngweenLimited.world?.earned ?? 0);
+
 function worldRoll(p, number, prediction = "odd", at = trials) {
   return completedWorldRoll(p, {
     type: "rngween-world-roll",
@@ -241,7 +247,7 @@ test("every catalog task pays once when claimed and immediately deals a differen
     // Finished but unclaimed: still on the board, nothing paid yet.
     expect(q.rngweenLimited.hourly.slots[0].taskId).toBe(task.id);
     expect(q.rngweenLimited.hourly.slots[0].completedAt).toBe(opening + 1000);
-    expect(q.rngweenLimited.pumpkoins).toBe(p.rngweenLimited.pumpkoins);
+    expect(coins(q)).toBe(coins(p));
     q = claimDone(q);
     expect(q.rngweenLimited.hourly.slots).toHaveLength(4);
     expect(q.rngweenLimited.hourly.slots[0].taskId).not.toBe(task.id);
@@ -250,7 +256,7 @@ test("every catalog task pays once when claimed and immediately deals a differen
     const receipts = q.history.filter((row) => row.taskId === task.id);
     expect(receipts).toHaveLength(1);
     expect(receipts[0].pumpkoins).toBe(task.pumpkoins);
-    expect(q.rngweenLimited.pumpkoins).toBe(
+    expect(coins(q)).toBe(
       q.history.reduce((total, row) => total + row.pumpkoins, 0),
     );
     expect(q.balance).toBe(p.balance);
@@ -268,7 +274,7 @@ test("expiry pays nothing, keeps four slots, prevents late activity credit and s
     { rolls: 1000 },
     opening + RNGWEEN_HOURLY_MS,
   );
-  expect(q.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(q)).toBe(0);
   expect(q.history).toEqual([]);
   expect(q.rngweenLimited.hourly.completed).toBe(0);
   expect(
@@ -297,7 +303,7 @@ test("new phases discard opening assignments, keep totals and serials, and have 
       (s) => s.serial >= before.nextSerial && s.count === 0,
     ),
   ).toBe(true);
-  expect(after.rngweenLimited.pumpkoins).toBe(won.rngweenLimited.pumpkoins);
+  expect(coins(after)).toBe(coins(won));
 });
 
 test("public World commissions join future slots without a key and never skip or overwrite older main assignments", () => {
@@ -382,27 +388,27 @@ test("hourly commissions cannot use Task Skips and neither skips, refreshes, exc
     applyProgress(p, { type: "refresh-rngween-hourly", at: opening + 1000 }),
   ).toBe(p);
   const q = applyProgress(
-    { ...p, balance: 10000, totalEarned: 10000 },
+    { ...p, balance: EP_PER_PUMPKOIN, totalEarned: EP_PER_PUMPKOIN },
     { type: "exchange-pumpkoins", amount: 1, at: opening },
   );
   expect(q.rngweenLimited.hourly).toEqual(p.rngweenLimited.hourly);
-  expect(q.rngweenLimited.pumpkoins).toBe(1);
+  expect(coins(q)).toBe(1);
 });
 
 test("only online committed main numbers count; extras and offline income cannot inflate commissions or replay rewards", () => {
   const p = withContract("main-evening-spirits", opening, { count: 1 });
   const missed = mainRoll(p, 13, { extras: [{ result: evaluate(12) }] });
   expect(missed.rngweenLimited.hourly.slots[0].count).toBe(1);
-  expect(missed.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(missed)).toBe(0);
   const offline = mainRoll(p, 12, { source: "offline" });
   expect(offline.rngweenLimited.hourly).toEqual(p.rngweenLimited.hourly);
   const finished = mainRoll(p, 12);
-  expect(finished.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(finished)).toBe(0);
   expect(finished.rngweenLimited.hourly.slots[0].completedAt).toBe(
     opening + 1000,
   );
   const won = claimDone(finished);
-  expect(won.rngweenLimited.pumpkoins).toBe(15);
+  expect(coins(won)).toBe(15);
   expect(
     won.history.filter((row) => row.type === "rngween-hourly"),
   ).toHaveLength(1);
@@ -452,7 +458,7 @@ test("main and World counters remain separate even if a contract shares a metric
   const main = mainRoll(p, 12);
   expect(main.rngweenLimited.hourly.slots[0].count).toBe(3);
   const q = claimDone(worldRoll(p, 12, "even", opening + 1000));
-  expect(q.rngweenLimited.pumpkoins).toBe(20);
+  expect(coins(q)).toBe(20);
   for (const field of [
     "tasks",
     "balance",
@@ -493,7 +499,7 @@ test("rebirth, prestige, rollback, history pruning and reload preserve the board
       { type, ...values, at: opening + 2000, rngweenAt: opening + 2000 },
     );
     expect(q.rngweenLimited.hourly).toEqual(won.rngweenLimited.hourly);
-    expect(q.rngweenLimited.pumpkoins).toBe(won.rngweenLimited.pumpkoins);
+    expect(coins(q)).toBe(coins(won));
   }
   const cut = applyProgress(won, {
     type: "history-prune",
@@ -531,12 +537,10 @@ test("new temp state parses cleanly, bad boards never mint coins, and Nov 4 remo
       rngweenLimited: { ...q.rngweenLimited, hourly: {} },
     }),
   );
-  expect(corrupted.progress.rngweenLimited.pumpkoins).toBe(
-    q.rngweenLimited.pumpkoins,
-  );
+  expect(coins(corrupted.progress)).toBe(coins(q));
   const refreshed = refreshRngweenHourly(corrupted.progress, opening + 10000);
   expect(refreshed.rngweenLimited.hourly.slots[0].serial).toBeGreaterThan(1);
-  expect(refreshed.rngweenLimited.pumpkoins).toBe(q.rngweenLimited.pumpkoins);
+  expect(coins(refreshed)).toBe(coins(q));
   const retired = applyProgress(q, {
     type: "retire-rngween-limited",
     at: expired,
@@ -775,12 +779,12 @@ test("one committed number can atomically pay four commissions, but never their 
     count: hourlyTaskById.get(ids[i]).goal - 1,
   }));
   const done = mainRoll(p, 0);
-  expect(done.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(done)).toBe(0);
   expect(
     done.rngweenLimited.hourly.slots.every((s) => s.completedAt !== undefined),
   ).toBe(true);
   const q = claimDone(done);
-  expect(q.rngweenLimited.pumpkoins).toBe(100);
+  expect(coins(q)).toBe(100);
   expect(q.rngweenLimited.hourly).toMatchObject({
     completed: 4,
     earned: 100,
@@ -798,7 +802,7 @@ test("the hourly badge streak starts at assignment, breaks on a Common roll and 
   const mini = (p, n, _unusedChoice = n, time = opening - 20000) =>
     completedWorldRoll(p, { zone: "graveyard", number: n, at: time });
   for (const n of [1, 3, 5]) p = mini(p, n);
-  const coins = p.rngweenLimited.pumpkoins;
+  const before = coins(p);
   const assigned = withContract("world-three-in-a-row", opening, {
     world: true,
   });
@@ -812,18 +816,18 @@ test("the hourly badge streak starts at assignment, breaks on a Common roll and 
   p = mini(p, 1, 1, opening + 1000);
   expect(p.rngweenLimited.world.streak).toBe(4);
   expect(p.rngweenLimited.hourly.slots[0].count).toBe(1);
-  expect(p.rngweenLimited.pumpkoins).toBe(coins);
+  expect(coins(p)).toBe(before);
   p = worldRoll(p, 12, "even", opening + 12000);
   expect(p.rngweenLimited.hourly.slots[0].count).toBe(1);
   p = mini(p, 38, 1, opening + 23000);
   expect(p.rngweenLimited.hourly.slots[0].count).toBe(0);
   for (let i = 0; i < 3; i++) p = mini(p, 1, 1, opening + 34000 + i * 11000);
-  expect(p.rngweenLimited.pumpkoins).toBe(coins);
+  expect(coins(p)).toBe(before);
   expect(p.rngweenLimited.hourly.slots[0].completedAt).toBeGreaterThan(
     opening + 56000,
   );
   p = claimDone(p, opening + 70000);
-  expect(p.rngweenLimited.pumpkoins).toBe(coins + 40);
+  expect(coins(p)).toBe(before + 40);
   expect(
     p.history.filter((r) => r.taskId === "world-three-in-a-row"),
   ).toHaveLength(1);
@@ -891,7 +895,7 @@ test("malformed commission receipts are dropped rather than reused or interprete
     expect(read.progress.history.some((r) => r.type === "rngween-hourly")).toBe(
       false,
     );
-    expect(read.progress.rngweenLimited.pumpkoins).toBe(15);
+    expect(coins(read.progress)).toBe(15);
   }
   expect(
     parseRngweenHourly({ ...p.rngweenLimited.hourly, earned: 9999 }).repaired,
@@ -912,7 +916,7 @@ test("failed-write roll recovery uses the saved verified UTC even with a 2099 de
     new Set(["test-main-0"]),
   );
   // The replayed roll finishes the commission; the player still claims it.
-  expect(recovered.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(recovered)).toBe(0);
   expect(recovered.rngweenLimited.retired).not.toBe(true);
   expect(recovered.rngweenLimited.hourly.slots).toEqual(
     temporary.rngweenLimited.hourly.slots,
@@ -921,7 +925,7 @@ test("failed-write roll recovery uses the saved verified UTC even with a 2099 de
     recoverUnsavedRolls(recovered, read.progress, new Set(["test-main-0"])),
   ).toBe(recovered);
   const claimed = claimDone(recovered);
-  expect(claimed.rngweenLimited.pumpkoins).toBe(15);
+  expect(coins(claimed)).toBe(15);
   expect(
     claimed.history.filter((r) => r.type === "rngween-hourly"),
   ).toHaveLength(1);
@@ -940,7 +944,7 @@ test("recovering old or legacy rolls cannot advance tasks that started later, re
     expect(recovered.rngweenLimited.hourly).toEqual(
       newer.rngweenLimited.hourly,
     );
-    expect(recovered.rngweenLimited.pumpkoins).toBe(0);
+    expect(coins(recovered)).toBe(0);
     expect(recovered.balance).toBe(evaluate(12).totalEP);
   }
   const legacy = {
@@ -949,7 +953,7 @@ test("recovering old or legacy rolls cannot advance tasks that started later, re
   };
   const recovered = recoverUnsavedRolls(p, legacy, new Set(["test-main-0"]));
   expect(recovered.rngweenLimited.hourly).toEqual(p.rngweenLimited.hourly);
-  expect(recovered.rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(recovered)).toBe(0);
   expect(recovered.rngweenLimited.retired).not.toBe(true);
 });
 
@@ -1000,12 +1004,10 @@ test("a real online main roll finishes its commission; the Tasks claim button pa
         (await saved(page)).rngweenLimited.hourly.slots[0].completedAt,
     )
     .toBeTruthy();
-  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(await saved(page))).toBe(0);
   await page.goto("/tasks");
   await page.getByRole("button", { name: /Claim \+15/ }).click();
-  await expect
-    .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
-    .toBe(15);
+  await expect.poll(async () => coins(await saved(page))).toBe(15);
   const after = await saved(page);
   expect(after.rngweenLimited.hourly.slots).toHaveLength(4);
   expect(after.rngweenLimited.hourly.slots[0].taskId).not.toBe(
@@ -1036,7 +1038,7 @@ test("idle exact-hour expiry replaces assignments without a reload, payout or de
   await expect
     .poll(async () => (await saved(page)).rngweenLimited.hourly.nextSerial)
     .toBe(9);
-  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(await saved(page))).toBe(0);
   await expect(page.locator("[data-hourly-task]")).toHaveCount(4);
 });
 
@@ -1071,19 +1073,17 @@ test("a public World badge commission can pay Pumpkoins after reveal but never o
   await expect
     .poll(async () => (await saved(page)).rngweenLimited.world.pending?.id)
     .toBeTruthy();
-  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(await saved(page))).toBe(0);
   await revealWorld(page);
   await expect(
     page.getByLabel("World number 2", { exact: true }),
   ).toBeVisible();
-  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(await saved(page))).toBe(0);
   await page.getByRole("tab", { name: "Commissions" }).click();
   await page.getByRole("button", { name: /Claim \+20/ }).click();
-  await expect
-    .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
-    .toBe(20);
+  await expect.poll(async () => coins(await saved(page))).toBe(20);
   const q = await saved(page);
-  expect(q.rngweenLimited.pumpkoins).toBe(20);
+  expect(coins(q)).toBe(20);
   expect(q.rngweenLimited.hourly.slots[0].taskId).not.toBe("world-even-echoes");
   for (const field of [
     "balance",
@@ -1198,9 +1198,7 @@ test("buying a challenge key preserves older main assignments; their next replac
     .toBeTruthy();
   await page.goto("/tasks");
   await page.getByRole("button", { name: /Claim \+15/ }).click();
-  await expect
-    .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
-    .toBe(15);
+  await expect.poll(async () => coins(await saved(page))).toBe(15);
   await expect(page.locator("[data-hourly-task]")).toHaveCount(4);
   await expect(
     page.locator('[data-hourly-task][data-source="world"]'),
@@ -1267,11 +1265,9 @@ test("two same-account World tabs resume one pending number and a near-finished 
       .poll(async () => (await saved(page)).rngweenLimited.drawn.length)
       .toBe(1);
     expect((await saved(page)).rngweenLimited.drawn).toEqual([12]);
-    expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
+    expect(coins(await saved(page))).toBe(0);
     await claimOnPage(page, 20, { inWorld: true });
-    await expect
-      .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
-      .toBe(20);
+    await expect.poll(async () => coins(await saved(page))).toBe(20);
     const q = await saved(page);
     expect(
       q.history.filter((row) => row.type === "rngween-hourly"),
@@ -1368,11 +1364,9 @@ test("a failed World commission commit pays nothing, preserves the pool and safe
   await expect(
     page.getByLabel("World number 12", { exact: true }),
   ).toBeVisible();
-  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(await saved(page))).toBe(0);
   await claimOnPage(page, 20, { inWorld: true });
-  await expect
-    .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
-    .toBe(20);
+  await expect.poll(async () => coins(await saved(page))).toBe(20);
   expect(
     (await saved(page)).history.filter((row) => row.type === "rngween-hourly"),
   ).toHaveLength(1);
@@ -1391,7 +1385,7 @@ test("the saved hourly board recovers from storage failure without inventing ass
   );
   await expect(page.locator("[data-hourly-task]")).toHaveCount(0);
   expect((await saved(page)).rngweenLimited).not.toHaveProperty("hourly");
-  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(await saved(page))).toBe(0);
   await page.evaluate(() => window.restoreCommissionStorage());
   await page.clock.runFor(30000);
   await expect(page.locator("[data-hourly-task]")).toHaveCount(4);
@@ -1423,7 +1417,7 @@ test("an online commission temporarily settled during a storage outage recovers 
   await expect(page.locator(".progress-warning")).toContainText(
     "Local saving is unavailable",
   );
-  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
+  expect(coins(await saved(page))).toBe(0);
   await page.clock.setFixedTime(new Date(Date.UTC(2099, 0, 1)));
   await page.evaluate(() => window.restoreCommissionStorage());
   await page.clock.fastForward(60000);
@@ -1435,9 +1429,7 @@ test("an online commission temporarily settled during a storage outage recovers 
     )
     .toBeTruthy();
   await claimOnPage(page, 15);
-  await expect
-    .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
-    .toBe(15);
+  await expect.poll(async () => coins(await saved(page))).toBe(15);
   const q = await saved(page);
   expect(q.rngweenLimited.retired).not.toBe(true);
   expect(q.history.filter((r) => r.type === "rngween-hourly")).toHaveLength(1);
@@ -1494,12 +1486,12 @@ test("linked browsers share commission payouts and use the main account writer's
       .toBeTruthy();
     await claimOnPage(pageA, 20);
     await expect
-      .poll(async () => (await saved(pageA)).rngweenLimited.pumpkoins, {
+      .poll(async () => coins(await saved(pageA)), {
         timeout: 15000,
       })
       .toBe(20);
     await expect
-      .poll(async () => (await saved(pageB)).rngweenLimited.pumpkoins, {
+      .poll(async () => coins(await saved(pageB)), {
         timeout: 15000,
       })
       .toBe(20);

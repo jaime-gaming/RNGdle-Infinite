@@ -573,8 +573,16 @@ function App() {
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const update = () => {
+      // The World is a night place: it renders dark whatever the setting, and
+      // the saved choice comes back untouched on the way out.
       const resolved =
-        theme === "system" ? (media.matches ? "dark" : "light") : theme;
+        page === "rngween-world"
+          ? "dark"
+          : theme === "system"
+            ? media.matches
+              ? "dark"
+              : "light"
+            : theme;
       document.documentElement.dataset.theme = resolved;
       setAppliedTheme(resolved);
     };
@@ -584,7 +592,7 @@ function App() {
     } catch {}
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme]);
+  }, [theme, page]);
   useEffect(
     () => () => {
       clearTimeout(arrivalTimer.current);

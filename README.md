@@ -54,18 +54,19 @@ so changing your phone's date does nothing.
 
 - **The look.** Webs, lanterns and a dark palette, with a Halloween switch in
   the Appearance menu. It only shows on the dark theme.
-- **Limited Shop.** Trade 10,000 EP for 1 Pumpkoin (no refunds) and spend them
+- **Limited Shop.** Trade 15,000 EP for 1 Pumpkoin (no refunds) and spend them
   on a pumpkin companion, a seasonal skill, a World key or the event auras.
   Unspent coins vanish when the shop closes.
-- **Halloween tasks (Oct 25–31).** Four goals — 200 rolls, 40 Rare+, 5,000,000
-  EP and 18 task claims, all online — unlock **Jack-o'-Glow, Phantom Veil,
+- **Halloween tasks (Oct 25–31).** Four goals — 300 rolls, 60 Rare+, 8,000,000
+  EP and 21 task claims, all online — unlock **Jack-o'-Glow, Phantom Veil,
   Witchfire** and **Blood Moon** for free. On the other days, the Reaper's
   Commissions pay Pumpkoins instead: four small tasks at a time, each with an
   hour on the clock. Finish one, claim it before the hour ends, and a new one
   takes its place.
-- **RNGween World.** Talk to the Reaper at the foot of the Roll page. Four
+- **RNGween World.** Talk to the Reaper at the foot of the Roll page. Five
   haunted zones with their own badges, fragments that forge a key to the Valley
-  of Horrors, and a hidden **Hexbound** aura for rolling 6666.
+  of Horrors, and a hidden **Hexbound** aura for rolling 6666. Every World roll
+  pays a few Pumpkoins, and the World only opens on the dark theme.
 - **What stays.** The auras you collected are yours forever, through Rebirth,
   Prestige and Rollback. Everything else retires on November 4, and the auras
   never return.
