@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: the Reaper key, pumpkin and Halloween skill marks go
+// with their features. KEEP HexboundMark (permanent aura).
 import React from "react";
 
 // Hand-drawn game marks.

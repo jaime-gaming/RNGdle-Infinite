@@ -1,3 +1,8 @@
+// CLEANUP Nov 4, 2026: event wiring in this file — the Reaper gate and
+// dialog (`reaperOpen`, `RngweenGate`), the `rngween-world` page and its
+// redirect effect, the `retire-rngween-limited` effect, the seasonal
+// `RngweenSeason` mount, the Limited shelf opener and the World-forced dark
+// theme. KEEP the `events` attendance stamp and the owned-aura wardrobe.
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {

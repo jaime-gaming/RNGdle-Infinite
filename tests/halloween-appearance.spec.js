@@ -171,9 +171,11 @@ test("the look switch cannot open an expired event or enable out-of-window decor
   await page.clock.setFixedTime(new Date(active));
   await page.goto("/tasks");
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  // Once the event has ended the option is gone, not merely disabled.
+  await expect(page.getByRole("menuitemradio")).toHaveCount(3);
   await expect(
     page.getByRole("menuitemcheckbox", { name: "Halloween mode" }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await expect(page.locator(".rngween-event, .rngween-decor")).toHaveCount(0);
 });
 

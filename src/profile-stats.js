@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: drop the RNGWEEN_PET special cases (companion count
+// and lookup) once the pet is out of the catalogue.
 import {
   BADGE_TOTAL,
   cycleEarnedEp,

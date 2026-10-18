@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file with the World.
 import React, { useState } from "react";
 import { ArrowRight, Check, ChevronDown, Sparkles } from "lucide-react";
 import { RNGWEEN_AURAS, rngweenState } from "../rngween.js";

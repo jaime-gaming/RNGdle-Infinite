@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: delete this file with the World. Ordinary rolls never
+// used it.
 import { WORLD_MINI_RANGES } from "./rngween-world-badges.js";
 
 // An independent, finite world. Main-game rolls still allow repeats and keep

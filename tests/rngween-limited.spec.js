@@ -54,8 +54,8 @@ const finished = {
 const account = (values = {}) => ({
   ...emptyProgress(),
   profile: testProfile,
-  balance: 1000000000,
-  totalEarned: 1000000000,
+  balance: 500000000,
+  totalEarned: 500000000,
   ...values,
 });
 const keyAccount = (values = {}) =>
@@ -120,7 +120,7 @@ test("EP exchange is whole, one-way, atomic, and does not manufacture income or 
   expect(q.totalEarned).toBe(p.totalEarned);
   expect(q.cycleEarnedEP).toBe(p.cycleEarnedEP);
   expect(q.tasks).toEqual(p.tasks);
-  expect(tallyEntries(q.history).spent).toBe(1000 * EP_PER_PUMPKOIN);
+  expect(tallyEntries(q.history).spent).toBe(10000000);
   expect(parseProgress(JSON.stringify(q)).history).toEqual(q.history);
   expect(exchange(q, 1000)).toEqual(q);
   for (const amount of [0, -1, 1.5, "1", Infinity, Number.MAX_SAFE_INTEGER])
@@ -404,7 +404,7 @@ test("save repair retains valid world numbers and restores the prize without los
     JSON.stringify(account({ rngweenLimited: limited })),
   );
   expect(p.progress.owned).toContain("hexbound");
-  expect(p.progress.balance).toBe(1000000000);
+  expect(p.progress.balance).toBe(500000000);
   expect(parseAndRepairProgress(JSON.stringify(p.progress)).repairs).toEqual(
     [],
   );
@@ -564,7 +564,7 @@ test("the limited shop is the first full-width shelf; exchange/purchase confirma
     0,
   );
   const p = await saved(page);
-  expect(p.balance).toBe(100000000 - 5000 * EP_PER_PUMPKOIN);
+  expect(p.balance).toBe(50000000);
   expect(p.rngweenLimited.pumpkoins).toBe(0);
   expect(p.owned).toContain("jack-o-glow");
   expect(rngweenWorldUnlocked(p.tasks)).toBe(true);

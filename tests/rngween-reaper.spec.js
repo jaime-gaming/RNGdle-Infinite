@@ -26,11 +26,6 @@ import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { evaluate } from "./helpers/index.js";
 import { tallyEntries } from "../src/history-tally.js";
 
-// World rolls pay a few Pumpkoins of their own; these checks are about every
-// other source, so they read the wallet without the World's running total.
-const coins = (p) =>
-  p.rngweenLimited.pumpkoins - (p.rngweenLimited.world?.earned ?? 0);
-
 const active = Date.UTC(2026, 9, 26, 12);
 const sales = Date.UTC(2026, 10, 1);
 const expired = Date.UTC(2026, 10, 4);
@@ -121,7 +116,7 @@ test("aura purchases require verified November 1–3 UTC, not the mission window
       id: "jack-o-glow",
       at,
     });
-    expect(coins(q)).toBe(45000);
+    expect(q.rngweenLimited.pumpkoins).toBe(45000);
     expect(q.tasks).toEqual(p.tasks);
     expect(q.rngweenLimited.rewardedMissions).toEqual([]);
   }
@@ -158,7 +153,7 @@ test("Halloween missions pay aura and Pumpkoins together exactly once, never EP 
       }),
     ).toThrow("already been collected");
   }
-  expect(coins(p)).toBe(600);
+  expect(p.rngweenLimited.pumpkoins).toBe(600);
   expect(
     p.history.filter((entry) => entry.type === "rngween-mission"),
   ).toHaveLength(4);
@@ -190,7 +185,7 @@ test("older collected mission receipts get their new coin reward once, but never
     type: "claim-rngween-coins",
     at: active,
   });
-  expect(coins(q)).toBe(300);
+  expect(q.rngweenLimited.pumpkoins).toBe(300);
   expect(q.rngweenLimited.rewardedMissions).toEqual([
     "jack-o-glow",
     "witchfire",
@@ -214,7 +209,7 @@ test("older collected mission receipts get their new coin reward once, but never
 test("a challenge key is a saved shortcut to two World fragments, not a skin, aura, EP purchase or mission shortcut", () => {
   const p = wallet();
   const q = buyKey(p);
-  expect(coins(q)).toBe(0);
+  expect(q.rngweenLimited.pumpkoins).toBe(0);
   expect(q.rngweenLimited.bought).toEqual([RNGWEEN_WORLD_KEY.id]);
   expect(q.owned).toEqual([]);
   expect(q.pets).toEqual([]);
@@ -390,12 +385,12 @@ test("the Reaper explains public zones, confirms a paid challenge key and rememb
   await dialog.getByRole("button", { name: "I'll buy a key." }).click();
   await expect(dialog).toContainText("No refunds, no aura, no Hexbound");
   await dialog.getByRole("button", { name: "Not now" }).click();
-  expect(coins(await saved(page))).toBe(2000);
+  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(2000);
   await dialog.getByRole("button", { name: "I'll buy a key." }).click();
   await dialog.getByRole("button", { name: "Buy the key · 2,000" }).click();
   await expect(dialog).toContainText("Your Valley key is good");
   const before = await saved(page);
-  expect(coins(before)).toBe(0);
+  expect(before.rngweenLimited.pumpkoins).toBe(0);
   expect(before.tasks.rngween.earned).toEqual([]);
   await dialog.getByRole("button", { name: "Enter RNGween World" }).click();
   await expect(page).toHaveURL(/\/rngween-world\/?$/);
@@ -451,7 +446,7 @@ test("completed aura trials do not gate public entry; Nov 3 still permits a paid
   await dialog.getByRole("button", { name: "I'll buy a key." }).click();
   await dialog.getByRole("button", { name: "Buy the key · 2,000" }).click();
   await expect(dialog).toContainText("Your Valley key is good");
-  expect(coins(await saved(page))).toBe(0);
+  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
 });
 
 test("new and previously collected tasks visibly pay Pumpkoins once and their history is a task reward", async ({
@@ -465,15 +460,21 @@ test("new and previously collected tasks visibly pay Pumpkoins once and their hi
     },
   });
   await page.goto("/tasks");
-  await expect.poll(async () => coins(await saved(page))).toBe(200);
+  await expect
+    .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
+    .toBe(200);
   const card = page.locator('[data-event-mission="jack-o-glow"]');
   await expect(card).toContainText("100 Pumpkoins");
   await card
     .getByRole("button", { name: "Collect Jack-o'-Glow", exact: true })
     .click();
-  await expect.poll(async () => coins(await saved(page))).toBe(300);
+  await expect
+    .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
+    .toBe(300);
   await page.reload();
-  await expect.poll(async () => coins(await saved(page))).toBe(300);
+  await expect
+    .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
+    .toBe(300);
   await page.goto("/history");
   await page.getByRole("button", { name: "Tasks", exact: true }).last().click();
   await expect(page.locator('[data-event-type="rngween-mission"]')).toHaveCount(
@@ -678,7 +679,7 @@ test("a missing paid-coin flag is repaired from history instead of paying a clai
   delete q.rngweenLimited.rewardedMissions;
   const r = parseProgress(JSON.stringify(q));
   expect(r.rngweenLimited.rewardedMissions).toEqual(["witchfire"]);
-  expect(coins(r)).toBe(200);
+  expect(r.rngweenLimited.pumpkoins).toBe(200);
   expect(applyProgress(r, { type: "claim-rngween-coins", at: active })).toBe(r);
 });
 
@@ -712,7 +713,7 @@ test("a key needs fresh website verification even after its purchase was confirm
     "Connect to the website to verify",
   );
   const p = await saved(page);
-  expect(coins(p)).toBe(2000);
+  expect(p.rngweenLimited.pumpkoins).toBe(2000);
   expect(p.rngweenLimited.bought).toEqual([]);
   expect(p.history.filter((row) => row.type === "rngween-purchase")).toEqual(
     [],
@@ -782,7 +783,7 @@ test("two same-account key confirmations spend only once under the writer lock",
       .toBe(true);
     const p = await saved(page);
     expect(clicks).toBe(2);
-    expect(coins(p)).toBe(0);
+    expect(p.rngweenLimited.pumpkoins).toBe(0);
     expect(
       p.history.filter((row) => row.productId === RNGWEEN_WORLD_KEY.id),
     ).toHaveLength(1);

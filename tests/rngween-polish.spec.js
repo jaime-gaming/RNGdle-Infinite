@@ -30,11 +30,6 @@ import { sandboxProgress } from "../tools/sandbox-progress.mjs";
 import { unlockedRngweenPreview } from "../tools/rngween-preview-data.mjs";
 import { runInNewContext } from "node:vm";
 
-// World rolls pay a few Pumpkoins of their own; these checks are about every
-// other source, so they read the wallet without the World's running total.
-const coins = (p) =>
-  p.rngweenLimited.pumpkoins - (p.rngweenLimited.world?.earned ?? 0);
-
 const active = Date.UTC(2026, 9, 26, 12);
 const expired = Date.UTC(2026, 10, 4);
 const SIX = [88125, 375660, 861456, 90750, 577281, 1000000];
@@ -241,7 +236,7 @@ test("every owned aura can be equipped during a six-number roll without changing
     before.history,
   );
   expect(after.balance).toBe(before.balance);
-  expect(coins(after)).toBe(coins(before));
+  expect(after.rngweenLimited.pumpkoins).toBe(before.rngweenLimited.pumpkoins);
 });
 
 test("the key is Limited Shop stock, never ordinary EP stock or a goal; Hexbound remains a world-only reward", () => {
@@ -275,7 +270,7 @@ test("Shop confirms the same saved key, spends once and opens the Reaper with pa
   });
   await expect(dialog).toContainText("no aura or Hexbound included");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  expect(coins(await saved(page))).toBe(2000);
+  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(2000);
   await key
     .getByRole("button", {
       name: "Buy Valley Challenge Key for 2000 Pumpkoins",
@@ -285,7 +280,7 @@ test("Shop confirms the same saved key, spends once and opens the Reaper with pa
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
   await expect(key).toContainText("Valley key owned");
-  expect(coins(await saved(page))).toBe(0);
+  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
   await page.reload();
   await key.getByRole("button", { name: "View World" }).click();
   const reaper = page.getByRole("dialog", { name: "The Reaper", exact: true });
@@ -373,7 +368,7 @@ test("unowned Hexbound has a Shop preview and a route to the Reaper, but no buy 
   await expect(reaper).toContainText("6666");
   await reaper.getByRole("button", { name: "See Hexbound in Shop" }).click();
   await expect(page).toHaveURL(/\/shop\/limited$/);
-  expect(coins(await saved(page))).toBe(2000);
+  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(2000);
 });
 
 test("earned Hexbound is equipped from its Shop reward card for free and remains in the owned aura collection", async ({
@@ -657,7 +652,7 @@ test("the generated sandbox seed really opens every event reward, preserves spen
   await expect(intro).toBeVisible();
   await intro.getByRole("button", { name: "Let's play", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-season", "rngween");
-  expect(coins(await saved(page))).toBe(50000);
+  expect((await saved(page)).rngweenLimited.pumpkoins).toBe(50000);
   await page.goto("/tasks");
   await expect(
     page.getByRole("list", { name: "Halloween tasks" }).locator("li"),

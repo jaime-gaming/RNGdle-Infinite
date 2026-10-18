@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: remove the "rngween-world" page and the `rngween`
+// family alias; keep `/shop/auras` working for owned event auras.
 // Real URLs instead of hash fragments: /shop, /badges, /history, /settings.
 // The site is also published to a repository subpath on GitHub Pages, so every
 // route is resolved against the build-time base rather than the domain root.

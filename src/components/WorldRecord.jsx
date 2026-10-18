@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file with the World.
 import React from "react";
 import { Check, Trophy } from "lucide-react";
 import { rngweenRecord } from "../rngween-record.js";

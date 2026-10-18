@@ -1,3 +1,10 @@
+// CLEANUP Nov 4, 2026: event reducer actions — buy-rngween-limited,
+// exchange-pumpkoins, claim-rngween-aura, claim-rngween-coins,
+// claim-rngween-hourly, refresh-rngween-hourly, buy-rngween-world,
+// forge-rngween-key, rngween-world-roll, rngween-world-reveal and
+// retire-rngween-limited — plus the `rngweenLimited` save slot and the
+// `tasks.rngween` tally. KEEP: parsing a retired `rngweenLimited` (owned auras,
+// `skinEarned`), the `rngween-*` history row shapes and `events` attendance.
 import { allTimeTally } from "./profile-stats.js";
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import {
@@ -140,6 +147,8 @@ import {
   recordWorldOutcome,
   rngweenValleyUnlocked,
   worldFragmentsComplete,
+  worldPointsAvailable,
+  worldPointsSpent,
 } from "./rngween-world-zones.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
@@ -1174,14 +1183,19 @@ function applyEvent(state, action) {
         throw new Error("You already own this World upgrade.");
       if (world.upgrades.length !== item.level - 1)
         throw new Error("Buy the previous World speed upgrade first.");
-      if (limited.pumpkoins < item.pumpkoinPrice)
-        throw new Error("Not enough Pumpkoins for this World upgrade.");
+      if (worldPointsAvailable(limited) < item.pointPrice)
+        throw new Error(
+          "Not enough World points for this upgrade. Keep rolling in the World.",
+        );
       return {
         ...state,
         rngweenLimited: {
           ...limited,
-          pumpkoins: limited.pumpkoins - item.pumpkoinPrice,
-          world: { ...world, upgrades: [...world.upgrades, item.id] },
+          world: {
+            ...world,
+            spent: worldPointsSpent(world) + item.pointPrice,
+            upgrades: [...world.upgrades, item.id],
+          },
         },
         history: appendHistory(state.history, [
           {
@@ -1190,7 +1204,7 @@ function applyEvent(state, action) {
             at,
             productId: item.id,
             name: item.name,
-            pumpkoins: item.pumpkoinPrice,
+            points: item.pointPrice,
           },
         ]),
       };
@@ -1236,22 +1250,16 @@ function applyEvent(state, action) {
     const earned =
       limited.skinEarned ||
       (pending.zone === "valley" && pending.number === RNGWEEN_WORLD_TARGET);
-    // Pumpkoins for the roll itself, plus the fragment bonus the first time
-    // a zone is cleared. A wallet at the ceiling simply stops growing.
-    const { payout, ...outcome } = recordWorldOutcome(limited, pending);
     const next = {
       ...state,
       rngweenLimited: {
         ...limited,
-        pumpkoins: validAmount(limited.pumpkoins + payout)
-          ? limited.pumpkoins + payout
-          : limited.pumpkoins,
         drawn:
           pending.zone === "valley"
             ? [...limited.drawn, pending.number]
             : limited.drawn,
         skinEarned: earned,
-        world: outcome,
+        world: recordWorldOutcome(limited, pending),
       },
       ...(earned && !state.owned.includes(RNGWEEN_WORLD_SKIN.id)
         ? {
@@ -2588,8 +2596,8 @@ function parseHistory(value) {
       )
         return [];
       if (e.type === "rngween-exchange") {
-        // The rate has changed before; an older receipt is still a valid one
-        // as long as it paid a whole number of EP per coin.
+        // An older receipt stays valid across a rate change as long as it
+        // paid a whole number of EP per coin.
         if (
           !validAmount(e.ep) ||
           e.ep < e.pumpkoins ||
@@ -2613,17 +2621,13 @@ function parseHistory(value) {
       }
     } else if (e.type === "rngween-world-purchase") {
       const item = worldSpeedById.get(e.productId);
-      if (
-        !item ||
-        !validAmount(e.pumpkoins) ||
-        e.pumpkoins !== item.pumpkoinPrice
-      )
+      if (!item || !validAmount(e.points) || e.points !== item.pointPrice)
         return [];
       next = {
         ...base,
         productId: item.id,
         name: item.name,
-        pumpkoins: item.pumpkoinPrice,
+        points: item.pointPrice,
       };
     } else if (e.type === "rngween-forged-key") {
       if (e.id !== `rngween-forged-key:${RNGWEEN_ID}`) return [];

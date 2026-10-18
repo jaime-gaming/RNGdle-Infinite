@@ -1,3 +1,4 @@
+// KEEP after Nov 4, 2026: release notes are history; the RNGween entry stays.
 // Release notes, newest first. `version` doubles as the "seen" marker: the
 // header badge appears while the newest entry has not been acknowledged.
 export const CHANGELOG = [

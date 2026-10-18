@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: delete this file. Aura missions are not claimable after
+// the event and owned auras are shown by the wardrobe, not by this panel.
 import React, { useRef, useState } from "react";
 import { ArrowUpRight, Check, Gift, Timer } from "lucide-react";
 import { rngweenState } from "../rngween.js";

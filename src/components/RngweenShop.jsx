@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: delete this file except the `Pumpkoin` mark if the
+// Activity feed still needs it for old exchange rows; otherwise move that too.
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,

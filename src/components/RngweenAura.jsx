@@ -1,3 +1,5 @@
+// KEEP after Nov 4, 2026: the four event auras and Hexbound stay owned forever;
+// this art is permanent. Only the event that handed them out goes away.
 import React from "react";
 import {
   BatMark,

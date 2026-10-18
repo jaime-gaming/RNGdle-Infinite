@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file (first-visit event intro).
 import React, { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { rngweenCalendar, RNGWEEN_MISSIONS } from "../rngween.js";

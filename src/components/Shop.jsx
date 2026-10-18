@@ -1850,8 +1850,11 @@ export default function Shop({
         </nav>
       )}
       <p className="shop-save-note">
-        Ordinary shelves use EP; the Limited Shop uses Pumpkoins. Rebirth resets
-        the run but keeps every aura you own.{" "}
+        {/* CLEANUP Nov 4, 2026: drop the Limited Shop clause with the shelf. */}
+        {limitedLive
+          ? "Ordinary shelves use EP; the Limited Shop uses Pumpkoins. "
+          : "Every shelf here uses EP. "}
+        Rebirth resets the run but keeps every aura you own.{" "}
         {progress.profile
           ? `Saved locally as ${progress.profile.username}.`
           : "Sign up to keep your wallet across reloads."}

@@ -59,3 +59,46 @@ export function completedWorldObjectives(progress, zone, at) {
     );
   return p;
 }
+
+// Grant World points without scripting dozens of rolls: n Infernal results in
+// the Haunted House (500 points each), recorded the way the parser expects.
+export function withWorldPoints(progress, points) {
+  const n = Math.ceil(points / 500);
+  const limited = progress.rngweenLimited;
+  const world = worldState(limited);
+  const previous = world.mini?.["haunted-house"] ?? {
+    rolls: 0,
+    counts: {},
+    rareRolls: 0,
+    last: null,
+    best: null,
+  };
+  return {
+    ...progress,
+    rngweenLimited: {
+      ...limited,
+      world: {
+        ...world,
+        rounds: {
+          ...world.rounds,
+          "haunted-house": world.rounds["haunted-house"] + n,
+        },
+        visited: world.visited.includes("haunted-house")
+          ? world.visited
+          : [...world.visited, "haunted-house"],
+        mini: {
+          ...world.mini,
+          "haunted-house": {
+            ...previous,
+            rolls: previous.rolls + n,
+            counts: {
+              ...previous.counts,
+              infernal: (previous.counts.infernal ?? 0) + n,
+            },
+            rareRolls: previous.rareRolls + n,
+          },
+        },
+      },
+    },
+  };
+}

@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: remove the `rngween` tally slot and its parse/record
+// calls. Old saves may still carry the slot; ignore it rather than repair it.
 import { emptyRngween, parseRngween, recordRngweenTally } from "./rngween.js";
 
 // Tasks: small daily and weekly goals that pay EP once per reset.

@@ -1,3 +1,6 @@
+// KEEP after Nov 4, 2026: `rngween-*` history rows persist in saves after the
+// event, so their icons and labels stay. Only remove them if history parsing
+// drops those types too.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -776,10 +779,12 @@ export default function ActivityFeed({
                         <>
                           Four World fragments · Free · never consumed on entry
                         </>
-                      ) : [
-                          "rngween-purchase",
-                          "rngween-world-purchase",
-                        ].includes(event.type) ? (
+                      ) : event.type === "rngween-world-purchase" ? (
+                        <>
+                          <strong>−{count(event.points)} World points</strong> ·{" "}
+                          Expires after November 3 (UTC)
+                        </>
+                      ) : event.type === "rngween-purchase" ? (
                         <>
                           <strong>−{count(event.pumpkoins)} Pumpkoins</strong> ·{" "}
                           {event.productId === "pumpkin-familiar" ||

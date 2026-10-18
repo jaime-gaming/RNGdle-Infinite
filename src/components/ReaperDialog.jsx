@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file. The Reaper's dialogue is event-only.
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, Check, ChevronRight, KeyRound, X } from "lucide-react";

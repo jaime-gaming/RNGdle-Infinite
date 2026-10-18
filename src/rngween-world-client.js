@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file with the World (worker client).
 let worker;
 let serial = 0;
 const pending = new Map();

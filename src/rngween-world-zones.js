@@ -7,6 +7,7 @@ import {
   recordWorldMini,
   scoreWorldNumber,
   worldFragmentComplete,
+  worldMiniSummary,
   worldValleyMini,
 } from "./rngween-world-badges.js";
 
@@ -105,7 +106,7 @@ export const WORLD_SPEED_ITEMS = [
     id: "wisp-lantern",
     name: "Wisp Lantern",
     level: 1,
-    pumpkoinPrice: 100,
+    pointPrice: 200,
     revealMS: 8000,
     icon: "lantern",
     detail: "Reduces World reveals from 10 to 8 seconds.",
@@ -114,7 +115,7 @@ export const WORLD_SPEED_ITEMS = [
     id: "phantom-clock",
     name: "Phantom Clock",
     level: 2,
-    pumpkoinPrice: 250,
+    pointPrice: 500,
     revealMS: 5000,
     icon: "clock",
     detail: "Reduces World reveals from 8 to 5 seconds.",
@@ -123,7 +124,7 @@ export const WORLD_SPEED_ITEMS = [
     id: "reapers-hourglass",
     name: "Reaper's Hourglass",
     level: 3,
-    pumpkoinPrice: 500,
+    pointPrice: 1000,
     revealMS: 2000,
     icon: "hourglass",
     detail: "Reduces World reveals from 5 to 2 seconds.",
@@ -132,20 +133,25 @@ export const WORLD_SPEED_ITEMS = [
 export const worldSpeedById = new Map(
   WORLD_SPEED_ITEMS.map((item) => [item.id, item]),
 );
-// Every settled World roll pays a few Pumpkoins by its best badge tier, and
-// a finished fragment zone pays a bonus once. A full tour to the key (about
-// 80 rolls) comes to roughly 500-700, enough for the reveal upgrades without
-// touching the EP exchange.
-export const WORLD_ROLL_PUMPKOINS = {
-  common: 1,
-  uncommon: 2,
-  rare: 5,
-  epic: 12,
-  legendary: 30,
-};
-export const WORLD_FRAGMENT_PUMPKOINS = 100;
-export function worldRollPumpkoins(zone, number) {
-  return WORLD_ROLL_PUMPKOINS[scoreWorldNumber(zone, number).tier] ?? 0;
+// Reveal upgrades are paid with World points: the badge points of all five
+// zones added together, minus what the shop already took (`world.spent`).
+// Points are never removed from the zone records themselves, so the Record
+// and the collections keep showing everything the player earned.
+export function worldPointsTotal(world) {
+  const mini = world?.mini ?? emptyWorldMini();
+  return WORLD_ZONES.reduce(
+    (sum, zone) => sum + worldMiniSummary(zone.id, mini[zone.id]).score,
+    0,
+  );
+}
+export function worldPointsSpent(world) {
+  return Number.isSafeInteger(world?.spent) && world.spent >= 0
+    ? world.spent
+    : 0;
+}
+export function worldPointsAvailable(limited) {
+  const world = worldState(limited);
+  return Math.max(0, worldPointsTotal(world) - worldPointsSpent(world));
 }
 const amount = (n) => Number.isSafeInteger(n) && n >= 0;
 const time = (n) => amount(n) && n <= 8640000000000000;
@@ -186,7 +192,7 @@ export function emptyRngweenWorld(drawn = [], legacyPass = false) {
     wins: 0,
     streak: 0,
     bestStreak: 0,
-    earned: 0,
+    spent: 0,
     nextSerial: 1,
     pending: null,
     last: null,
@@ -370,11 +376,11 @@ export function parseRngweenWorld(value, drawn = []) {
     wins = streak = bestStreak = 0;
     repaired = true;
   }
-  // Pumpkoins paid by World rolls, kept here because those rolls are not in
-  // the history. Saves from before the payout simply start at zero.
-  let earned = value.earned === undefined ? 0 : value.earned;
-  if (!amount(earned)) {
-    earned = 0;
+  // Points the shop took. Older saves have none; a total above what the zones
+  // ever paid is impossible and clamps down.
+  let spent = value.spent === undefined ? 0 : value.spent;
+  if (!amount(spent)) {
+    spent = 0;
     repaired = true;
   }
   const games = { graveyard: 0, "haunted-house": 0 };
@@ -438,6 +444,14 @@ export function parseRngweenWorld(value, drawn = []) {
   }
   repaired ||= pending.repaired || last.repaired;
   mini.valley = worldValleyMini(mini.valley, drawn, last.roll);
+  const pointsTotal = WORLD_ZONES.reduce(
+    (sum, zone) => sum + worldMiniSummary(zone.id, mini[zone.id]).score,
+    0,
+  );
+  if (spent > pointsTotal) {
+    spent = pointsTotal;
+    repaired = true;
+  }
   return {
     world: {
       fragments,
@@ -451,7 +465,7 @@ export function parseRngweenWorld(value, drawn = []) {
       wins,
       streak,
       bestStreak,
-      earned,
+      spent,
       nextSerial,
       pending: pending.roll,
       last: last.roll,
@@ -502,15 +516,6 @@ export function recordWorldOutcome(limited, pending) {
   const wins = previous.wins + (won ? 1 : 0);
   if (![...Object.values(rounds), wins, streak].every(amount))
     throw new Error("The World's saved round limit has been reached.");
-  const payout =
-    worldRollPumpkoins(zone.id, pending.number) +
-    (complete && zone.fragment && !previous.fragments[zone.fragment]
-      ? WORLD_FRAGMENT_PUMPKOINS
-      : 0);
-  const earnedBefore = amount(previous.earned) ? previous.earned : 0;
-  const earned = amount(earnedBefore + payout)
-    ? earnedBefore + payout
-    : earnedBefore;
   return {
     ...previous,
     fragments: {
@@ -526,8 +531,6 @@ export function recordWorldOutcome(limited, pending) {
     wins,
     streak,
     bestStreak: Math.max(previous.bestStreak, streak),
-    earned,
-    payout,
     pending: null,
     last: { ...pending },
   };

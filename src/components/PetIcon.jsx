@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: drop the `is-rngween-familiar` class below; the pumpkin
+// familiar is removed from every save at retirement (`retireRngweenLimited`).
 import React from "react";
 import { useMotionPreference } from "../use-settings.jsx";
 import { CreatureIcon } from "./game-icons.jsx";

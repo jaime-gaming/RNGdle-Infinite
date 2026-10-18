@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file with the World Record tab.
 // Your RNGween in numbers: what the event has given you so far, read from the
 // save and the activity log the same way the profile reads its record. It
 // feeds the "Record" tab of the World. Nothing here is stored twice.
@@ -15,26 +16,22 @@ import {
   worldMiniSummary,
 } from "./rngween-world-badges.js";
 
-// Pumpkoins arrive from commissions, missions, the EP exchange and World
-// rolls, and leave through the two shops and the key. The log covers all but
-// the World rolls, which keep their own running total in the save.
+// Pumpkoins arrive from commissions, missions and the EP exchange, and leave
+// through the Limited Shop and the paid key. Both totals come from the log.
+// World reveal upgrades cost World points, not Pumpkoins, so they are not here.
 const EARNING = new Set([
   "rngween-hourly",
   "rngween-mission",
   "rngween-exchange",
 ]);
-const SPENDING = new Set([
-  "rngween-purchase",
-  "rngween-world-purchase",
-  "rngween-forged-key",
-]);
+const SPENDING = new Set(["rngween-purchase", "rngween-forged-key"]);
 
 export function rngweenRecord(progress = {}, now = new Date()) {
   const limited = progress.rngweenLimited ?? null;
   const world = worldState(limited);
   const mini = world.mini ?? emptyWorldMini();
   const history = Array.isArray(progress.history) ? progress.history : [];
-  let earned = Number(world.earned) || 0;
+  let earned = 0;
   let spent = 0;
   let commissions = 0;
   for (const entry of history) {

@@ -127,30 +127,34 @@ export default function AppearanceMenu({
           ))}
           {/* CLEANUP Nov 4, 2026: remove this seasonal option/calendar gate and
               halloweenMode preference. Keep the ordinary theme menu. */}
-          <div className="appearance-season">
-            <button
-              type="button"
-              role="menuitemcheckbox"
-              aria-checked={haunted}
-              aria-describedby={`${id}-season-note`}
-              disabled={!calendar.decorated || !dark}
-              className="appearance-option appearance-halloween"
-              onClick={() => update({ halloweenMode: !settings.halloweenMode })}
-            >
-              <PumpkinMark size={19} />
-              <span>Halloween mode</span>
-              <span className="appearance-mini-switch" aria-hidden="true" />
-            </button>
-            <p id={`${id}-season-note`}>
-              {calendar.decorated
-                ? dark
-                  ? "Decorations only. Tasks and the shop stay active."
-                  : "A dark theme is required. Tasks and the shop stay active."
-                : calendar.phase === "unavailable"
-                  ? "Checking the website calendar…"
-                  : "Seasonal look · Oct 21–Nov 3 (UTC)."}
-            </p>
-          </div>
+          {calendar.phase !== "ended" && (
+            <div className="appearance-season">
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={haunted}
+                aria-describedby={`${id}-season-note`}
+                disabled={!calendar.decorated || !dark}
+                className="appearance-option appearance-halloween"
+                onClick={() =>
+                  update({ halloweenMode: !settings.halloweenMode })
+                }
+              >
+                <PumpkinMark size={19} />
+                <span>Halloween mode</span>
+                <span className="appearance-mini-switch" aria-hidden="true" />
+              </button>
+              <p id={`${id}-season-note`}>
+                {calendar.decorated
+                  ? dark
+                    ? "Decorations only. Tasks and the shop stay active."
+                    : "A dark theme is required. Tasks and the shop stay active."
+                  : calendar.phase === "unavailable"
+                    ? "Checking the website calendar…"
+                    : "Seasonal look · Oct 21–Nov 3 (UTC)."}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

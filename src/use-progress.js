@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: the "limited action" gating (event actions need a
+// verified website date and the main writer) goes with the event actions.
 import { gameNow } from "./game-clock";
 import { refreshSeasonClock, seasonNow } from "./season-clock.js";
 import { useEffect, useRef, useState } from "react";

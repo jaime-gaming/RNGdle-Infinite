@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file with the Reaper gate and dialog.
 import React, { useId } from "react";
 
 // Keep the original silhouette, crescent scythe and emerald lantern. The

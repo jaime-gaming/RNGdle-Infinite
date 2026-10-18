@@ -13,7 +13,6 @@ import {
   WORLD_ZONES,
   WORLD_REVEAL_MS,
   emptyRngweenWorld,
-  WORLD_FRAGMENT_PUMPKOINS,
 } from "../src/rngween-world-zones.js";
 import {
   WORLD_BADGES,
@@ -130,11 +129,7 @@ test("all Pumpkin Patch milestones are persistent collection goals that earn the
     "receipts",
   ])
     expect(p[field]).toEqual(initial[field]);
-  // The rolls and the finished fragment pay Pumpkoins; nothing else does.
-  expect(p.rngweenLimited.pumpkoins).toBe(p.rngweenLimited.world.earned);
-  expect(p.rngweenLimited.world.earned).toBeGreaterThanOrEqual(
-    WORLD_FRAGMENT_PUMPKOINS + stats.rolls,
-  );
+  expect(p.rngweenLimited.pumpkoins).toBe(0);
   expect(p.rngweenLimited.world.fragments).toEqual({
     "pumpkin-patch": true,
     graveyard: false,

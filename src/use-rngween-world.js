@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file with the World.
 import { useEffect, useRef, useState } from "react";
 import { seasonNow } from "./season-clock.js";
 import { worldState } from "./rngween-world-zones.js";

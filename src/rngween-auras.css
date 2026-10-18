@@ -1,3 +1,4 @@
+/* KEEP after Nov 4, 2026: permanent art for owned event auras and Hexbound. */
 /* Permanent cosmetics earned in a temporary season. They keep working after
    Halloween; these layers never replace the underlying rarity palette. */
 .number-box[data-cosmetic="jack-o-glow"] .box-halo {

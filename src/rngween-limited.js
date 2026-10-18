@@ -24,7 +24,7 @@ import {
 // CLEANUP Nov 4, 2026 00:00 UTC: remove the limited shop, exchange and world
 // action/UI wiring. Keep parsing/retirement, purchased-aura and skin receipts,
 // and the permanent Hexbound registry/art. Never restore expired currency.
-export const EP_PER_PUMPKOIN = 15000;
+export const EP_PER_PUMPKOIN = 10000;
 export const RNGWEEN_WORLD_MAX = WORLD_VALLEY_MAX;
 export const RNGWEEN_WORLD_TARGET = WORLD_VALLEY_TARGET;
 export const RNGWEEN_PET = {
@@ -172,7 +172,7 @@ function recoverLimitedReceipts(
       const item = WORLD_SPEED_ITEMS.find(
         (item) => item.id === entry.productId,
       );
-      if (item && entry.pumpkoins === item.pumpkoinPrice)
+      if (item && entry.points === item.pointPrice)
         upgradeLevel = Math.max(upgradeLevel, item.level);
     } else if (
       entry.type === "rngween-forged-key" &&

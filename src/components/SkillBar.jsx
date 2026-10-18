@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: drop the `is-rngween-skill` / familiar styling hooks
+// below; the event skill and signature leave every save at retirement.
 import React, {
   useEffect,
   useId,

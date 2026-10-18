@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: remove RNGWEEN_PET from the catalogue. Retired saves no
+// longer hold it; keep the parser tolerant of its id for one more version.
 import { RNGWEEN_PET } from "./rngween-limited.js";
 
 // Companions are collectable friends that carry a wallet multiplier and one

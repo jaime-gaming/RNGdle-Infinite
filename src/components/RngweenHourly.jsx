@@ -1,3 +1,4 @@
+// CLEANUP Nov 4, 2026: delete this file. Hourly commissions end with the event.
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,

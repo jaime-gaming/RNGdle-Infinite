@@ -193,8 +193,9 @@ effect of other work.
   parse as 0. The Tasks page never states the size of a pool; tests pin the
   pool sizes (`tests/task-list.spec.js`, `tests/tasks.spec.js`), so update
   both when adding tasks.
-- **Bookmarks** are capped at 3. The README, the "Bookmarks (n/3)" chip and the
-  tests all state that cap.
+- **Bookmarks** are capped at 10 (`BOOKMARK_LIMIT` in `history-log.js`), for
+  everyone, from the start: no purchase, upgrade or rebirth changes it. The
+  "Bookmarks (n/10)" chip, the profile card and the tests read that constant.
 - **Companion signatures** ("firmas") take a slot on the rack, like any other
   circle.
 - **Logos.** The favicon and the mobile app icon are a flat wordmark derived
@@ -247,20 +248,22 @@ guessing.
   Rollback like every other owned aura.
 - World rolls pay no ordinary EP, charges, drops or task credit. Pending World
   outcomes are committed to the save before the animation starts.
-- World rolls do pay Pumpkoins: `WORLD_ROLL_PUMPKOINS` by the roll's best
-  badge tier (1/2/5/12/30) plus `WORLD_FRAGMENT_PUMPKOINS` (100) the first time
-  a zone's fragment flips. The payout is computed in `recordWorldOutcome` and
-  added to `world.earned`, a running total that exists because World rolls
-  write no history rows; `rngweenRecord` adds it to the logged income. Tests
-  that reason about other income read the wallet minus `world.earned`
-  (`coins()` helper in the specs). Reveal upgrades cost 100/250/500.
+- World rolls never pay Pumpkoins. The World shop (reveal upgrades, 200 / 500 /
+  1,000) is paid with **World points**: `worldPointsTotal` adds the badge points
+  of all five zones and `world.spent` records what the shop took, so
+  `worldPointsAvailable = total − spent`. Zone scores are never reduced; the
+  Record and collections keep showing them. `spent` is clamped to the total on
+  load. Purchase rows carry `points`, not `pumpkoins`, and `rngweenRecord`
+  leaves them out of the Pumpkoin ledger. Tests grant points with
+  `withWorldPoints()` (`tests/helpers/world-roll.js`).
 - The World always renders on the dark theme (`main.jsx` theme effect checks
   `page === "rngween-world"`); the saved `rng-theme` is never touched.
-- Economy knobs: `EP_PER_PUMPKOIN` is 15,000; the four aura missions ask for
-  300 rolls, 60 Rare+, 8,000,000 banked EP and 21 task claims (Daily lists
-  hold three a day, so 21 is one full week). Exchange receipts in history only
-  need to be a whole multiple of their coin count, so a rate change never
-  drops old rows.
+- Economy knobs: `EP_PER_PUMPKOIN` is 10,000; Pumpkoins come only from hourly
+  commissions, the four aura missions and the exchange, and buy the Limited
+  Shop and the 2,000 shortcut key. The aura missions ask for 300 rolls, 60
+  Rare+, 8,000,000 banked EP and 21 task claims (Daily lists hold three a day,
+  so 21 is one full week). Exchange receipts in history only need to be a whole
+  multiple of their coin count, so a rate change never drops old rows.
 - World layout (`src/rngween-world-zones.js`, `src/rngween-world-badges.js`):
   five zones in path order, Pumpkin Patch (1–9), Graveyard (1–99), Blood Moon
   Ridge (1–666), Haunted House (1–999) and Valley of Horrors (1–9999, no
@@ -290,6 +293,38 @@ guessing.
   After November 4 remove the seasonal UI, shop, World and the season clock, but
   keep the aura registry, art, receipts and the save parsing so collected
   cosmetics still restore.
+
+### What ends on November 4 (verified) and the cleanup release
+
+Checked with the website clock set to Nov 3 23:59, Nov 4 00:01 and Nov 20 UTC
+on a save that owns everything: the home page loses the Reaper gate, the
+decorations and the Halloween Appearance option; `/rngween-world` redirects
+home; `/shop` lists no Limited shelf and `/shop/limited` by direct URL shows
+only the farewell card ("The lanterns have gone out"); `/tasks` shows no
+missions or commissions; the first signed-in load after the end runs
+`retire-rngween-limited`, which removes Pumpkoins, the pumpkin familiar, the
+event skill/signature and the World, and keeps owned auras, Hexbound and
+`events` attendance. Nothing is paid or granted after `limitedEndsAt`.
+
+The code that then becomes dead is marked in place. Every event-only file or
+block carries `CLEANUP Nov 4, 2026:` with what to remove; everything that must
+survive the event carries `KEEP after Nov 4, 2026:`. The cleanup release is:
+
+1. `grep -rn "CLEANUP Nov 4, 2026" src` — delete the files whose header says
+   "delete this file", then remove the marked blocks in shared files
+   (`main.jsx`, `progress.js`, `use-progress.js`, `router.js`, `Shop.jsx`,
+   `Tasks.jsx`, `AppearanceMenu.jsx`, `shop-data.js`, `skills.js`, `pets.js`,
+   `tasks.js`, `settings.js`, the CSS files).
+2. `grep -rn "KEEP after Nov 4, 2026" src` — do not touch: `RngweenAura.jsx`,
+   `rngween-auras.css`, the wardrobe, the `rngween-*` history row rendering
+   and tally skips, the changelog entry, Hexbound, `events` attendance.
+3. Keep `parseRngweenLimited` able to read a retired slot (`{id, auras,
+skinEarned, retired: true}`) and `parseRngween` able to drop the
+   `tasks.rngween` slot; both exist in real saves forever.
+4. Delete `tests/rngween-*.spec.js`, `tests/halloween-*.spec.js`,
+   `tests/sandbox-clock.spec.js` and `tools/rngween-preview-data.mjs`,
+   `tools/sandbox-*.mjs`; keep the aura-ownership and history tests that moved
+   elsewhere. Then `npm run pages:publish`.
 
 ## Device linking (`src/sync.js`)
 

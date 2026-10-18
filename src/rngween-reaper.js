@@ -111,7 +111,7 @@ export function reaperDialogue(
     return {
       title: "The World",
       lines: [
-        "Five haunted places, each bigger than the last: the Patch, the Graveyard, the Ridge, the Haunted House and the Valley. Sixty badges to find. Every roll in here pays a few Pumpkoins, more for the better badges. And it is always night in here, whatever your screen says outside.",
+        "Five haunted places, each bigger than the last: the Patch, the Graveyard, the Ridge, the Haunted House and the Valley. Sixty badges to find. Their points buy my reveal upgrades and nothing else. And it is always night in here, whatever your screen says outside.",
       ],
     };
   if (topic === "fragments")
@@ -127,7 +127,7 @@ export function reaperDialogue(
     return {
       title: "Reveal speed",
       lines: [
-        `A reveal here takes ${worldRevealMS(limited) / 1000} seconds. My shop sells patience in three sizes: 8, 5 and 2 seconds. The Pumpkoins your rolls pay cover it. It changes the wait, never the number.`,
+        `A reveal here takes ${worldRevealMS(limited) / 1000} seconds. My shop sells patience in three sizes: 8, 5 and 2 seconds, paid in World points. It changes the wait, never the number.`,
       ],
     };
   if (topic === "reward")

@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: remove RNGWEEN_SKILL / RNGWEEN_SIGNATURE and the
+// `source === "event"` branches. Keep parsers dropping their ids silently.
 import { RNGWEEN_SKILL, RNGWEEN_SIGNATURE } from "./rngween-limited.js";
 
 // Skills are charged, one-shot effects that fire on the next completed roll.

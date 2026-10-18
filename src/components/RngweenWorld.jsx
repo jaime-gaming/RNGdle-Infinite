@@ -32,8 +32,7 @@ import {
   rngweenValleyUnlocked,
   WORLD_FRAGMENT_ZONES,
   worldFragmentCount,
-  worldRollPumpkoins,
-  WORLD_FRAGMENT_PUMPKOINS,
+  worldPointsAvailable,
 } from "../rngween-world-zones.js";
 import {
   WORLD_MINI_RULES,
@@ -112,7 +111,9 @@ export default function RngweenWorld({
   const world = worldState(progress.rngweenLimited);
   const limited = progress.rngweenLimited;
   const drawn = limited?.drawn ?? [];
-  const wallet = limited?.pumpkoins ?? 0;
+  // The World shop runs on World points: every zone's badge points together,
+  // minus what the shop already took. Pumpkoins never enter this page.
+  const wallet = worldPointsAvailable(limited);
   const reduced = useMotionPreference();
   const [selected, setSelected] = useState(
     () => world.pending?.zone ?? world.last?.zone ?? "pumpkin-patch",
@@ -232,8 +233,8 @@ export default function RngweenWorld({
             : `Key fragment ${fragments} of ${fragmentTotal} earned`,
         text:
           fragments >= fragmentTotal
-            ? `+${WORLD_FRAGMENT_PUMPKOINS} Pumpkoins. Open Key & prize to forge the Challenge key and unlock the Valley.`
-            : `+${WORLD_FRAGMENT_PUMPKOINS} Pumpkoins. ${fragmentTotal - fragments} more to go. The next zone is open.`,
+            ? "Open Key & prize to forge the Challenge key and unlock the Valley."
+            : `${fragmentTotal - fragments} more to go. The next zone is open.`,
       });
     }
     seenFragments.current = fragments;
@@ -281,7 +282,7 @@ export default function RngweenWorld({
     : jackpot
       ? "6666 — Hexbound unlocked."
       : result
-        ? `${result.tier[0].toUpperCase() + result.tier.slice(1)} · +${result.points.toLocaleString("en-US")} ${zone.name} points · +${worldRollPumpkoins(last.zone, last.number)} Pumpkoins`
+        ? `${result.tier[0].toUpperCase() + result.tier.slice(1)} · +${result.points.toLocaleString("en-US")} ${zone.name} points`
         : "Saved legacy result settled. Existing rewards are kept.";
 
   return (
@@ -305,7 +306,7 @@ export default function RngweenWorld({
         <span className="world-event-date">RNGween 2026 · until Nov 3 UTC</span>
         <button
           className="world-wallet"
-          aria-label={`World shop · ${wallet.toLocaleString("en-US")} Pumpkoins`}
+          aria-label={`World shop · ${wallet.toLocaleString("en-US")} World points`}
           onClick={() => {
             setShopOpen(true);
             setError("");
@@ -313,8 +314,10 @@ export default function RngweenWorld({
           }}
           aria-haspopup="dialog"
         >
-          <Pumpkoin size={20} />
-          <strong>{wallet.toLocaleString("en-US")}</strong>
+          <Medal size={20} />
+          <strong data-world-points-total>
+            {wallet.toLocaleString("en-US")}
+          </strong>
           <ShoppingBag size={16} />
           <span>World shop</span>
         </button>
@@ -829,10 +832,10 @@ export default function RngweenWorld({
       </div>
       <p className="world-fine-print">
         <ScrollText size={13} aria-hidden="true" />
-        World rolls pay zone points, badges and a few Pumpkoins, never EP.
-        Reveal upgrades change the wait, not the odds. The World opens on the
-        dark theme and leaves yours as it was. Everything here retires after Nov
-        3 UTC; Hexbound and owned auras stay forever.
+        World rolls pay zone points and badges, never EP or Pumpkoins. Reveal
+        upgrades are bought with those points and change the wait, not the odds.
+        The World opens on the dark theme and leaves yours as it was. Everything
+        here retires after Nov 3 UTC; Hexbound and owned auras stay forever.
       </p>
       <ReaperDialog
         open={reaperOpen}
@@ -875,11 +878,14 @@ export default function RngweenWorld({
             <h2 id="world-shop-title">World shop</h2>
             <p>
               Buy upgrades in order to shorten reveals in all five zones. They
+              cost World points, the badge points of all your zones together,
               apply from the next roll and expire after Nov 3 UTC.
             </p>
             <div className="world-shop-wallet">
-              <Pumpkoin size={22} />
-              <strong>{wallet.toLocaleString("en-US")} Pumpkoins</strong>
+              <Medal size={22} />
+              <strong>
+                {wallet.toLocaleString("en-US")} World points available
+              </strong>
               <span>{worldRevealMS(limited) / 1000}s current reveal</span>
             </div>
             <div className="world-speed-items">
@@ -908,8 +914,8 @@ export default function RngweenWorld({
                       </small>
                     </div>
                     <strong className="world-upgrade-price">
-                      <Pumpkoin size={16} />
-                      {item.pumpkoinPrice.toLocaleString("en-US")}
+                      <Medal size={16} />
+                      {item.pointPrice.toLocaleString("en-US")} pts
                     </strong>
                     <button
                       className={owned ? "secondary-button" : "primary-button"}
@@ -919,7 +925,7 @@ export default function RngweenWorld({
                         busy ||
                         !live ||
                         !progress.profile ||
-                        wallet < item.pumpkoinPrice
+                        wallet < item.pointPrice
                       }
                       onClick={() =>
                         run(

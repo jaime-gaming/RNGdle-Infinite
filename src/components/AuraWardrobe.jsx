@@ -1,3 +1,4 @@
+// KEEP after Nov 4, 2026: the wardrobe keeps listing owned event auras.
 import React, { useState } from "react";
 import { Shirt, Check, ArrowRight } from "lucide-react";
 import { auraProducts, productById } from "../shop-data.js";

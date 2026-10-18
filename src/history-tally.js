@@ -1,3 +1,5 @@
+// KEEP after Nov 4, 2026: history rows of the `rngween-*` types stay in old
+// saves; the tally must keep skipping them as non-roll income.
 // What the activity log adds up to, kept per cycle so that entries can leave the
 // log without taking their share of the profile with them.
 //

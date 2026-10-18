@@ -1,3 +1,4 @@
+/* CLEANUP Nov 4, 2026: the .rngween-* selectors in this file go with their components. */
 /* Phone pass. Loaded last on purpose so it wins the cascade: the desktop
    families set their own tiny sizes and this sheet only raises the floor.
    Three ideas: text you can read at arm's length, targets you can hit with a

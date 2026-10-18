@@ -1,3 +1,5 @@
+// CLEANUP Nov 4, 2026: remove the `limited` shelf entry and RNGWEEN_SKILL from
+// the catalogue. KEEP RNGWEEN_COSMETICS / RNGWEEN_FAMILY as owned-only auras.
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
 import { RNGWEEN_SKILL } from "./rngween-limited.js";

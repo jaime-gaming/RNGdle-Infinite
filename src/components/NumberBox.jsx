@@ -1,3 +1,4 @@
+// KEEP after Nov 4, 2026: the hexbound/event aura rendering is permanent.
 import React from "react";
 import { useSettings } from "../use-settings.jsx";
 import "../number-box.css";

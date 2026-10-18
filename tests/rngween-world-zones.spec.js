@@ -9,6 +9,7 @@ import {
   revealWorld,
   completedWorldObjectives,
   completedWorldRoll,
+  withWorldPoints,
 } from "./helpers/world-roll.js";
 import {
   applyProgress,
@@ -46,9 +47,7 @@ import {
   worldRevealMS,
   rngweenValleyUnlocked,
   requireWorldZone,
-  WORLD_ROLL_PUMPKOINS,
-  WORLD_FRAGMENT_PUMPKOINS,
-  worldRollPumpkoins,
+  worldPointsAvailable,
 } from "../src/rngween-world-zones.js";
 import { rngweenRecord } from "../src/rngween-record.js";
 import {
@@ -71,12 +70,12 @@ const account = (patch = {}) => ({
   profile: testProfile,
   ...patch,
 });
-// World rolls pay a few Pumpkoins of their own; these checks are about every
-// other source, so they read the wallet without the World's running total.
-const coins = (p) =>
-  p.rngweenLimited.pumpkoins - (p.rngweenLimited.world?.earned ?? 0);
-const funded = (coins = 5000) =>
-  account({ rngweenLimited: { ...emptyRngweenLimited(), pumpkoins: coins } });
+// `coins` is World points here: the speed shop takes points, never Pumpkoins.
+const funded = (points = 5000) =>
+  withWorldPoints(
+    account({ rngweenLimited: { ...emptyRngweenLimited(), pumpkoins: 5000 } }),
+    points,
+  );
 const keyAccount = () =>
   account({
     rngweenLimited: {
@@ -221,7 +220,7 @@ test("all external prices double, old purchases are kept, and Hexbound remains n
   expect(rngweenValleyUnlocked(read.progress.rngweenLimited)).toBe(true);
 });
 
-test("speed upgrades cost Pumpkoins in order, only shorten future World reveals and do not alter a committed deadline", () => {
+test("speed upgrades cost World points in order, only shorten future World reveals and do not alter a committed deadline", () => {
   let p = funded();
   const first = start(p);
   const deadline = first.rngweenLimited.world.pending.revealsAt;
@@ -243,7 +242,10 @@ test("speed upgrades cost Pumpkoins in order, only shorten future World reveals 
       applyProgress(p, { type: "buy-rngween-world", id: item.id, at }),
     ).toThrow("already own");
   }
-  expect(coins(p)).toBe(5000 - 100 - 250 - 500);
+  // 5,000 points of badges minus 200 + 500 + 1,000; Pumpkoins untouched.
+  expect(worldPointsAvailable(p.rngweenLimited)).toBe(3300);
+  expect(p.rngweenLimited.world.spent).toBe(1700);
+  expect(p.rngweenLimited.pumpkoins).toBe(5000);
   expect(p.balance).toBe(balance);
   expect(p.tasks).toEqual(tasks);
   expect(parseAndRepairProgress(JSON.stringify(p)).repairs).toEqual([]);
@@ -254,12 +256,12 @@ test("speed upgrades cost Pumpkoins in order, only shorten future World reveals 
       p.rngweenLimited.world.pending.startedAt,
   ).toBe(2000);
   expect(() =>
-    applyProgress(funded(99), {
+    applyProgress(funded(0), {
       type: "buy-rngween-world",
       id: "wisp-lantern",
       at,
     }),
-  ).toThrow("Not enough Pumpkoins");
+  ).toThrow("Not enough World points");
   expect(() =>
     applyProgress(funded(), { type: "buy-rngween-world", id: "missing", at }),
   ).toThrow("not for sale");
@@ -321,7 +323,7 @@ test("malformed pending results, skipped speed purchases and invalid forge flags
   expect(malformed.world.upgrades).toEqual([]);
   expect(malformed.world.keyForged).toBe(false);
   expect(p.owned).not.toContain("hexbound");
-  expect(coins(p)).toBe(0);
+  expect(p.rngweenLimited.pumpkoins).toBe(0);
 });
 
 test("Nov 4 retires all temporary World state; an already committed legitimate 6666 keeps its permanent prize", () => {
@@ -443,7 +445,7 @@ test("a pending roll survives reload and navigation, resumes the same outcome, a
   ).toBeVisible();
 });
 
-test("the internal shop charges sequential Pumpkoin upgrades, keeps a current deadline and reveals future results in two seconds", async ({
+test("the internal shop charges sequential World-point upgrades, keeps a current deadline and reveals future results in two seconds", async ({
   page,
 }) => {
   await mockSeasonClock(page, at);
@@ -475,7 +477,10 @@ test("the internal shop charges sequential Pumpkoin upgrades, keeps a current de
   expect((await savedWorld(page)).rngweenLimited.world.pending.revealsAt).toBe(
     deadline,
   );
-  expect(coins(await savedWorld(page))).toBe(5000 - 100 - 250 - 500);
+  expect(worldPointsAvailable((await savedWorld(page)).rngweenLimited)).toBe(
+    3300,
+  );
+  expect((await savedWorld(page)).rngweenLimited.pumpkoins).toBe(5000);
   await page.keyboard.press("Escape");
   await expect(shop).not.toBeVisible();
   await settle(page);
@@ -538,11 +543,16 @@ test("Valley colors every 6 red, never other digits; its animated scenery fits m
   await expect(page.getByRole("dialog", { name: "World shop" })).toBeVisible();
   expect(await overflow()).toBe(false);
   const shop = page.getByRole("dialog", { name: "World shop" });
-  const coin = await shop
-    .locator(".world-shop-wallet > .pumpkoin-mark")
+  // The wallet shows World points now, with a medal instead of a coin.
+  await expect(shop.locator(".world-shop-wallet")).toContainText(
+    "World points available",
+  );
+  const mark = await shop
+    .locator(".world-shop-wallet > svg")
+    .first()
     .boundingBox();
-  expect(coin.width).toBeLessThanOrEqual(40);
-  expect(coin.height).toBeLessThanOrEqual(40);
+  expect(mark.width).toBeLessThanOrEqual(40);
+  expect(mark.height).toBeLessThanOrEqual(40);
   expect(
     await shop.evaluate((node) => node.scrollWidth <= node.clientWidth),
   ).toBe(true);
@@ -572,7 +582,7 @@ test("World roll and speed purchase require fresh website UTC even after enterin
   await expect(page.getByRole("dialog")).toContainText(
     "Connect to the website",
   );
-  expect(coins(await savedWorld(page))).toBe(5000);
+  expect((await savedWorld(page)).rngweenLimited.pumpkoins).toBe(5000);
   expect((await savedWorld(page)).rngweenLimited.world.upgrades).toEqual([]);
 });
 
@@ -612,7 +622,7 @@ test("a committed World result, fragments, paid key and speed upgrades survive r
   }
 });
 
-test("a failed internal speed-shop save charges no Pumpkoins and owns nothing until a successful retry", async ({
+test("a failed internal speed-shop save charges no World points and owns nothing until a successful retry", async ({
   page,
 }) => {
   await mockSeasonClock(page, at);
@@ -634,7 +644,7 @@ test("a failed internal speed-shop save charges no Pumpkoins and owns nothing un
     .getByRole("button", { name: "Buy Wisp Lantern", exact: true })
     .click();
   await expect(shop.getByRole("alert")).toContainText("not saved");
-  expect(coins(await savedWorld(page))).toBe(5000);
+  expect((await savedWorld(page)).rngweenLimited.world.spent).toBe(0);
   expect((await savedWorld(page)).rngweenLimited.world.upgrades).toEqual([]);
   await page.evaluate(() => window.restoreSpeedShopStorage());
   await shop
@@ -643,7 +653,8 @@ test("a failed internal speed-shop save charges no Pumpkoins and owns nothing un
   await expect(
     shop.locator('[data-world-upgrade="wisp-lantern"]'),
   ).toContainText("Owned");
-  expect(coins(await savedWorld(page))).toBe(5000 - 100);
+  expect((await savedWorld(page)).rngweenLimited.world.spent).toBe(200);
+  expect((await savedWorld(page)).rngweenLimited.pumpkoins).toBe(5000);
 });
 
 test("fragment zones use fair repeatable 1–99 / 1–999 rejection samples, never choices or the Valley pool", () => {
@@ -824,7 +835,7 @@ test("objectives accumulate across Common rolls and repeat badges, award one fra
   ).score;
   p = applyProgress(p, { type: "forge-rngween-key", at: at + 300000 });
   expect(rngweenValleyUnlocked(p.rngweenLimited)).toBe(true);
-  expect(coins(p)).toBe(0);
+  expect(p.rngweenLimited.pumpkoins).toBe(0);
   expect(
     p.history.filter((entry) => entry.type === "rngween-forged-key"),
   ).toHaveLength(1);
@@ -909,7 +920,7 @@ test("completed collection receipts repair a missing fragment without paying coi
   expect(read.repairs.length).toBeGreaterThan(0);
   expect(read.progress.rngweenLimited.world.fragments.graveyard).toBe(true);
   expect(read.progress.rngweenLimited.world.keyForged).toBe(false);
-  expect(coins(read.progress)).toBe(0);
+  expect(read.progress.rngweenLimited.pumpkoins).toBe(0);
   expect(read.progress.history).toEqual(p.history);
 });
 
@@ -1134,7 +1145,7 @@ test("a keyless profile rolls for badges and three objectives per zone, earns di
   await expect(
     page.getByRole("heading", { name: "Your key is ready" }),
   ).toBeVisible();
-  expect(coins(await savedWorld(page))).toBe(0);
+  expect((await savedWorld(page)).rngweenLimited.pumpkoins).toBe(0);
   await page.getByRole("button", { name: /Enter Valley/ }).click();
   await expect(
     page.getByRole("button", { name: /Roll in the Valley/ }),
@@ -1399,7 +1410,7 @@ test("legacy unseen-pool receipts restore Valley badges and last/best numbers wi
   expect(stats.last).toEqual({ number: 6666, serial: null, at: null });
   expect(stats.best).toEqual(stats.last);
   expect(migrated.progress.balance).toBe(p.balance);
-  expect(coins(migrated.progress)).toBe(0);
+  expect(migrated.progress.rngweenLimited.pumpkoins).toBe(0);
   expect(migrated.progress.history).toEqual(p.history);
   expect(
     parseAndRepairProgress(JSON.stringify(migrated.progress)).repairs,
@@ -1449,7 +1460,7 @@ test("malformed pre-World pools never brick save migration or manufacture a numb
   expect(fixed.progress.rngweenLimited.world.mini.valley.counts.hexbound).toBe(
     1,
   );
-  expect(coins(fixed.progress)).toBe(0);
+  expect(fixed.progress.rngweenLimited.pumpkoins).toBe(0);
 });
 
 test("filled event badge collections never receive impossible new-badge commissions while repeatable World errands stay available", () => {
@@ -1553,47 +1564,68 @@ test("a pre-assignment pending result reserves its finite badges and zone visit 
   ).toBe(false);
 });
 
-test("every settled World roll pays Pumpkoins by its best badge tier, a cleared zone pays its bonus once, and the Record counts both", () => {
-  expect(WORLD_ROLL_PUMPKOINS).toEqual({
-    common: 1,
-    uncommon: 2,
-    rare: 5,
-    epic: 12,
-    legendary: 30,
-  });
-  expect(WORLD_SPEED_ITEMS.map((item) => item.pumpkoinPrice)).toEqual([
-    100, 250, 500,
+test("World points are the sum of every zone's badge points; the shop spends them without touching Pumpkoins, zone records or the Record", () => {
+  expect(WORLD_SPEED_ITEMS.map((item) => item.pointPrice)).toEqual([
+    200, 500, 1000,
   ]);
   let p = account();
-  let expected = 0;
-  // Pumpkin Patch: 1..9 clears the zone on the way; the bonus lands exactly
-  // when the fragment flips and never again on later rolls there.
-  for (const number of [1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 1]) {
-    const before = worldState(p.rngweenLimited).fragments["pumpkin-patch"];
+  for (const number of [1, 2, 3, 4, 5, 6, 7, 8, 9])
     p = completedWorldRoll(p, { zone: "pumpkin-patch", number, at });
-    const tier = scoreWorldNumber("pumpkin-patch", number).tier;
-    expect(worldRollPumpkoins("pumpkin-patch", number)).toBe(
-      WORLD_ROLL_PUMPKOINS[tier],
-    );
-    expected += WORLD_ROLL_PUMPKOINS[tier];
-    const after = worldState(p.rngweenLimited).fragments["pumpkin-patch"];
-    if (after && !before) expected += WORLD_FRAGMENT_PUMPKOINS;
-    expect(p.rngweenLimited.pumpkoins).toBe(expected);
-    expect(p.rngweenLimited.world.earned).toBe(expected);
-  }
-  expect(expected).toBeGreaterThan(WORLD_FRAGMENT_PUMPKOINS + 11);
-  // No EP, no history entry per roll, and the save round-trips as is.
-  expect(p.balance).toBe(account().balance);
-  expect(p.history.filter((e) => e.type?.startsWith("rngween"))).toEqual([]);
-  expect(parseAndRepairProgress(JSON.stringify(p)).repairs).toEqual([]);
-  expect(rngweenRecord(p, new Date(at)).earned).toBe(expected);
-  // Older saves without the running total simply start at zero.
-  const legacy = JSON.parse(JSON.stringify(p));
-  delete legacy.rngweenLimited.world.earned;
-  const read = parseAndRepairProgress(JSON.stringify(legacy));
-  expect(read.repairs).toEqual([]);
-  expect(read.progress.rngweenLimited.world.earned).toBe(0);
-  expect(read.progress.rngweenLimited.pumpkoins).toBe(expected);
+  for (const number of [66, 13, 49])
+    p = completedWorldRoll(p, { zone: "graveyard", number, at });
+  const patch = worldMiniSummary(
+    "pumpkin-patch",
+    p.rngweenLimited.world.mini["pumpkin-patch"],
+  ).score;
+  const graves = worldMiniSummary(
+    "graveyard",
+    p.rngweenLimited.world.mini.graveyard,
+  ).score;
+  expect(worldPointsAvailable(p.rngweenLimited)).toBe(patch + graves);
+  expect(p.rngweenLimited.pumpkoins).toBe(0);
+  // Rolls never pay Pumpkoins and the Record's income stays at zero.
+  expect(rngweenRecord(p, new Date(at)).earned).toBe(0);
+  const funds = worldPointsAvailable(p.rngweenLimited);
+  if (funds < 200) p = withWorldPoints(p, 200 - funds);
+  const before = worldPointsAvailable(p.rngweenLimited);
+  const bought = applyProgress(p, {
+    type: "buy-rngween-world",
+    id: "wisp-lantern",
+    at,
+  });
+  expect(worldPointsAvailable(bought.rngweenLimited)).toBe(before - 200);
+  expect(bought.rngweenLimited.world.spent).toBe(200);
+  expect(bought.rngweenLimited.pumpkoins).toBe(0);
+  // Zone totals are untouched: the Record and the collections keep them.
+  expect(
+    worldMiniSummary(
+      "pumpkin-patch",
+      bought.rngweenLimited.world.mini["pumpkin-patch"],
+    ).score,
+  ).toBe(patch);
+  const record = rngweenRecord(bought, new Date(at));
+  expect(record.zones.find((z) => z.id === "pumpkin-patch").points).toBe(patch);
+  expect(record.spent).toBe(0);
+  expect(bought.history.at(-1)).toMatchObject({
+    type: "rngween-world-purchase",
+    productId: "wisp-lantern",
+    points: 200,
+  });
+  expect(bought.history.at(-1)).not.toHaveProperty("pumpkoins");
+  const again = parseAndRepairProgress(JSON.stringify(bought));
+  expect(again.repairs).toEqual([]);
+  expect(again.progress.rngweenLimited.world.spent).toBe(200);
+  // A spent total above what the zones ever paid is clamped on load.
+  const tampered = JSON.parse(JSON.stringify(bought));
+  tampered.rngweenLimited.world.spent = 999999;
+  const fixed = parseAndRepairProgress(JSON.stringify(tampered));
+  expect(fixed.progress.rngweenLimited.world.spent).toBe(before);
+  expect(fixed.repairs.length).toBeGreaterThan(0);
+  // A save from before the points shop simply starts at zero spent.
+  delete tampered.rngweenLimited.world.spent;
+  const legacy = parseAndRepairProgress(JSON.stringify(tampered));
+  expect(legacy.repairs).toEqual([]);
+  expect(legacy.progress.rngweenLimited.world.spent).toBe(0);
 });
 
 test("the World renders on the dark theme whatever the setting and hands the saved theme back on the way out", async ({
@@ -1612,7 +1644,6 @@ test("the World renders on the dark theme whatever the setting and hands the sav
   await page.getByRole("button", { name: "Back to Roll" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.goto("/rngween-world");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.goto("/");
