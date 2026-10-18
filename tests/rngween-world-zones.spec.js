@@ -4,6 +4,7 @@ import { test, expect } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { mockWorldNumbers } from "./helpers/world-random.js";
+import { RNGWEEN_INTRO_KEY } from "../src/rngween-intro.js";
 import {
   savedWorld,
   revealWorld,
@@ -1793,4 +1794,41 @@ test("the World renders on the dark theme whatever the setting and hands the sav
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("the World opening plays once per device, can be stepped through and replayed, and stays still with reduced motion", async ({
+  page,
+}) => {
+  await mockSeasonClock(page, at);
+  await seedProgress(page, account(), { introSeen: false });
+  await page.addInitScript(
+    (key) => localStorage.setItem(key, "rngween-2026"),
+    RNGWEEN_INTRO_KEY,
+  );
+  await page.goto("/rngween-world");
+  const opening = page.getByRole("dialog", { name: "RNGween World opening" });
+  await expect(opening).toHaveAttribute("data-world-intro", "0");
+  await opening.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(opening).toHaveAttribute("data-world-intro", "1");
+  await opening.getByRole("button", { name: "Next", exact: true }).click();
+  await opening.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(opening).toHaveAttribute("data-world-intro", "3");
+  await opening.getByRole("button", { name: "Enter the World" }).click();
+  await expect(opening).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Roll in Pumpkin Patch/ }),
+  ).toBeVisible();
+  // Seen once: a reload goes straight to the zones.
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: /Roll in Pumpkin Patch/ }),
+  ).toBeVisible();
+  await expect(opening).toHaveCount(0);
+  // Replay from the footer, and the reduced-motion version is a still page.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Watch the opening again" }).click();
+  await expect(opening).toHaveClass(/is-still/);
+  await expect(opening).toHaveAttribute("data-world-intro", "3");
+  await opening.getByRole("button", { name: "Close the opening" }).click();
+  await expect(opening).toHaveCount(0);
 });
