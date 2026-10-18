@@ -265,8 +265,9 @@ guessing.
   `withWorldPath(progress, zone)` / `openWorldPath(page, zone)`
   (`tests/helpers/world-roll.js`); `withAllFragments` marks all four.
 - **World points → Pumpkoins / EP** (`WORLD_POINT_EXCHANGE`, action
-  `exchange-world-points`): 100 points buy 10 Pumpkoins or 100,000 EP, one
-  block per click in the World shop, deliberately small. The trade is taken
+  `exchange-world-points`): 500 points buy 2 Pumpkoins or 10,000 EP, one
+  block per click in the World shop, deliberately small (a whole World run is
+  a few thousand points). The trade is taken
   from `world.spent` like the upgrades, so zone records, badges and the Record
   never change; EP also raises `totalEarned` so the wallet survives the load
   check. History row `rngween-world-exchange` (`points` + `pumpkoins` or `ep`)

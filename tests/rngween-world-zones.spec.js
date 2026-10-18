@@ -1666,11 +1666,11 @@ test("World points are the sum of every zone's badge points; the shop spends the
 
 test("spare World points trade for small fixed blocks of Pumpkoins or EP out of the spent pool, never out of records or badges", () => {
   expect(WORLD_POINT_EXCHANGE).toEqual({
-    points: 100,
-    pumpkoins: 10,
-    ep: 100000,
+    points: 500,
+    pumpkoins: 2,
+    ep: 10000,
   });
-  let p = funded(1000);
+  let p = funded(2000);
   const patchScore = worldPointsTotal(p.rngweenLimited.world);
   const balance = p.balance;
   const coins = p.rngweenLimited.pumpkoins;
@@ -1680,33 +1680,33 @@ test("spare World points trade for small fixed blocks of Pumpkoins or EP out of 
     blocks: 2,
     at,
   });
-  expect(coinsOut.rngweenLimited.pumpkoins).toBe(coins + 20);
+  expect(coinsOut.rngweenLimited.pumpkoins).toBe(coins + 4);
   expect(coinsOut.balance).toBe(balance);
-  expect(coinsOut.rngweenLimited.world.spent).toBe(200);
+  expect(coinsOut.rngweenLimited.world.spent).toBe(1000);
   expect(worldPointsAvailable(coinsOut.rngweenLimited)).toBe(
-    worldPointsAvailable(p.rngweenLimited) - 200,
+    worldPointsAvailable(p.rngweenLimited) - 1000,
   );
   // Totals, records and the Pumpkoin ledger of the Record page are unchanged
   // by the trade itself; the Record counts the coins as event income.
   expect(worldPointsTotal(coinsOut.rngweenLimited.world)).toBe(patchScore);
-  expect(rngweenRecord(coinsOut, new Date(at)).earned).toBe(20);
+  expect(rngweenRecord(coinsOut, new Date(at)).earned).toBe(4);
   expect(coinsOut.history.at(-1)).toMatchObject({
     type: "rngween-world-exchange",
-    points: 200,
-    pumpkoins: 20,
+    points: 1000,
+    pumpkoins: 4,
   });
   const epOut = applyProgress(coinsOut, {
     type: "exchange-world-points",
     to: "ep",
     at,
   });
-  expect(epOut.balance).toBe(balance + 100000);
-  expect(epOut.rngweenLimited.pumpkoins).toBe(coins + 20);
-  expect(epOut.rngweenLimited.world.spent).toBe(300);
+  expect(epOut.balance).toBe(balance + 10000);
+  expect(epOut.rngweenLimited.pumpkoins).toBe(coins + 4);
+  expect(epOut.rngweenLimited.world.spent).toBe(1500);
   expect(epOut.history.at(-1)).toMatchObject({
     type: "rngween-world-exchange",
-    points: 100,
-    ep: 100000,
+    points: 500,
+    ep: 10000,
   });
   // The ledger survives a reload intact and nothing is repaired.
   const again = parseAndRepairProgress(JSON.stringify(epOut));
@@ -1732,23 +1732,23 @@ test("spare World points trade for small fixed blocks of Pumpkoins or EP out of 
   expect(() =>
     applyProgress(account(), { type: "exchange-world-points", to: "ep", at }),
   ).toThrow("Not enough World points");
-  // Same upgrades still buyable afterwards from what is left (1000 − 300).
+  // Same upgrades still buyable afterwards from what is left (2000 − 1500).
   const upgraded = applyProgress(epOut, {
     type: "buy-rngween-world",
     id: "wisp-lantern",
     at,
   });
   expect(worldPointsAvailable(upgraded.rngweenLimited)).toBe(
-    worldPointsAvailable(p.rngweenLimited) - 500,
+    worldPointsAvailable(p.rngweenLimited) - 1700,
   );
 });
 
-test("the World shop trades 100 points for 10 Pumpkoins or 100,000 EP from the page", async ({
+test("the World shop trades 500 points for 2 Pumpkoins or 10,000 EP from the page", async ({
   page,
 }) => {
   await mockSeasonClock(page, at);
   await seedProgress(page, {
-    rngweenLimited: funded(300).rngweenLimited,
+    rngweenLimited: funded(1200).rngweenLimited,
     balance: 5000,
     totalEarned: 5000,
   });
@@ -1758,20 +1758,16 @@ test("the World shop trades 100 points for 10 Pumpkoins or 100,000 EP from the p
   await shop.locator("[data-world-exchange=pumpkoins]").click();
   await expect
     .poll(async () => (await savedWorld(page)).rngweenLimited.pumpkoins)
-    .toBe(5010);
+    .toBe(5002);
   await shop.locator("[data-world-exchange=ep]").click();
-  await expect.poll(async () => (await savedWorld(page)).balance).toBe(105000);
-  // funded() rounds up to 500 points (one Infernal); spend the rest.
-  for (const balance of [205000, 305000, 405000]) {
-    await shop.locator("[data-world-exchange=ep]").click();
-    await expect
-      .poll(async () => (await savedWorld(page)).balance)
-      .toBe(balance);
-  }
+  await expect.poll(async () => (await savedWorld(page)).balance).toBe(15000);
+  // funded() rounds up to 1,500 points (three Infernals); spend the rest.
+  await shop.locator("[data-world-exchange=ep]").click();
+  await expect.poll(async () => (await savedWorld(page)).balance).toBe(25000);
   // Nothing left to trade: both buttons close.
   await expect(shop.locator("[data-world-exchange=ep]")).toBeDisabled();
   await expect(shop.locator("[data-world-exchange=pumpkoins]")).toBeDisabled();
-  expect((await savedWorld(page)).rngweenLimited.world.spent).toBe(500);
+  expect((await savedWorld(page)).rngweenLimited.world.spent).toBe(1500);
 });
 
 test("the World renders on the dark theme whatever the setting and hands the saved theme back on the way out", async ({

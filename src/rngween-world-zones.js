@@ -246,14 +246,16 @@ export function requireOpenWorldZone(limited, zoneId) {
   );
 }
 
-// World points can be traded for Pumpkoins or EP in fixed 100-point blocks.
-// Kept deliberately small: the World is about badges, not farming. Trades are
+// World points can be traded for Pumpkoins or EP in fixed 500-point blocks.
+// Kept deliberately small (a full Valley run is a few thousand points, so a
+// whole World is worth a handful of Pumpkoins): the World is about badges,
+// not farming. Trades are
 // taken from `world.spent`, the same place the speed shelf draws from, so zone
 // records, collections and the Record page never change.
 export const WORLD_POINT_EXCHANGE = {
-  points: 100,
-  pumpkoins: 10,
-  ep: 100000,
+  points: 500,
+  pumpkoins: 2,
+  ep: 10000,
 };
 
 export function requireWorldZone(zoneId) {
