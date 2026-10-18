@@ -15,7 +15,11 @@ import {
   RNGWEEN_PET,
   RNGWEEN_SKILL,
 } from "../rngween-limited.js";
-import { rngweenValleyUnlocked, worldState } from "../rngween-world-zones.js";
+import {
+  rngweenValleyUnlocked,
+  worldState,
+  worldFragmentsComplete,
+} from "../rngween-world-zones.js";
 import { useFormatEP } from "../use-settings.jsx";
 import { waitText } from "../tasks.js";
 import NumberBox from "./NumberBox.jsx";
@@ -111,8 +115,7 @@ export default function RngweenShop({
   const valid = Number.isSafeInteger(amount) && amount > 0 && amount <= max;
   const unlocked = rngweenValleyUnlocked(limited);
   const world = worldState(limited);
-  const readyToForge =
-    world.fragments.graveyard && world.fragments["haunted-house"];
+  const readyToForge = worldFragmentsComplete(world);
   const hexboundOwned = progress.owned.includes(RNGWEEN_WORLD_SKIN.id);
   const items = RNGWEEN_LIMITED_ITEMS.filter(
     (item) => item.kind !== "aura" || !progress.owned.includes(item.id),
@@ -296,10 +299,10 @@ export default function RngweenShop({
               <div>
                 <h2>RNGween World is open to everyone</h2>
                 <p>
-                  Collect badges in Graveyard and Haunted House for two key
-                  fragments. Forge your Valley challenge key for free, or buy
-                  the 2,000 Pumpkoin shortcut below. Speak to The Reaper below
-                  Roll to enter. Find 6666 in the Valley for permanent Hexbound.
+                  Collect badges in four haunted zones for four key fragments.
+                  Forge your Valley challenge key for free, or buy the 2,000
+                  Pumpkoin shortcut below. Speak to The Reaper below Roll to
+                  enter. Find 6666 in the Valley for permanent Hexbound.
                 </p>
               </div>
               <button className="secondary-button" onClick={onWorld}>
@@ -390,7 +393,7 @@ export default function RngweenShop({
                           {owned
                             ? "Valley key owned"
                             : readyToForge && !unlocked
-                              ? "Both fragments ready · forge for free"
+                              ? "All fragments ready · forge for free"
                               : "Valley challenge unlocked"}
                         </span>
                         <button className="secondary-button" onClick={onWorld}>

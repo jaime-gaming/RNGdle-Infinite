@@ -14,6 +14,7 @@ import {
   LockKeyhole,
   Medal,
   Moon,
+  MoonStar,
   ShoppingBag,
   Skull,
   Trophy,
@@ -29,6 +30,8 @@ import {
   worldState,
   worldRevealMS,
   rngweenValleyUnlocked,
+  WORLD_FRAGMENT_ZONES,
+  worldFragmentCount,
 } from "../rngween-world-zones.js";
 import {
   WORLD_MINI_RULES,
@@ -73,6 +76,7 @@ const ZONE_ICONS = {
   "pumpkin-patch": PumpkinMark,
   graveyard: Skull,
   "haunted-house": DoorClosed,
+  "blood-moon-ridge": MoonStar,
   valley: Flame,
 };
 const SPEED_ICONS = [Moon, Clock3, Hourglass];
@@ -151,9 +155,8 @@ export default function RngweenWorld({
   const live =
     rngweenCalendar(now).limitedPhase === "active" && !limited?.retired;
   const key = rngweenValleyUnlocked(limited);
-  const fragments =
-    Number(world.fragments.graveyard) +
-    Number(world.fragments["haunted-house"]);
+  const fragments = worldFragmentCount(world);
+  const fragmentTotal = WORLD_FRAGMENT_ZONES.length;
   const exhausted = drawn.length >= RNGWEEN_WORLD_MAX;
   const duration = pending
     ? pending.revealsAt - pending.startedAt
@@ -198,21 +201,22 @@ export default function RngweenWorld({
             text: "The key is forged. Roll in the Valley until 6666 turns up.",
             zone: "valley",
           }
-        : fragments === 2
+        : fragments === fragmentTotal
           ? {
-              text: "Both fragments found. Forge the key in Key & prize.",
+              text: "All four fragments found. Forge the key in Key & prize.",
               zone: null,
               tab: "key",
             }
-          : !world.fragments.graveyard
-            ? {
-                text: `Clear the three Graveyard objectives (${goalsDone("graveyard")}/3) to earn the first key fragment.`,
-                zone: "graveyard",
-              }
-            : {
-                text: `Clear the three Haunted House objectives (${goalsDone("haunted-house")}/3) to earn the second key fragment.`,
-                zone: "haunted-house",
+          : (() => {
+              const next = WORLD_FRAGMENT_ZONES.find(
+                (id) => !world.fragments[id],
+              );
+              const item = worldZoneById.get(next);
+              return {
+                text: `Clear the three ${item.name} objectives (${goalsDone(next)}/3) to earn key fragment ${fragments + 1} of ${fragmentTotal}.`,
+                zone: next,
               };
+            })();
   // A fragment lands at the end of a reveal, with no click to answer; say
   // it out loud once so the player knows the zone is done and where to go.
   const seenFragments = useRef(fragments);
@@ -221,11 +225,13 @@ export default function RngweenWorld({
       notify({
         kind: "milestone",
         title:
-          fragments >= 2 ? "Both key fragments earned" : "Key fragment earned",
+          fragments >= fragmentTotal
+            ? "All four key fragments earned"
+            : `Key fragment ${fragments} of ${fragmentTotal} earned`,
         text:
-          fragments >= 2
+          fragments >= fragmentTotal
             ? "Open Key & prize to forge the Challenge key and unlock the Valley."
-            : "One more fragment to go. Clear the other zone's objectives.",
+            : `${fragmentTotal - fragments} more to go. The next zone is open.`,
       });
     }
     seenFragments.current = fragments;
@@ -316,7 +322,7 @@ export default function RngweenWorld({
         <p>
           {key
             ? "Valley unlocked. Find 6666 to earn Hexbound."
-            : "Two fragments make the key. The key opens the Valley. 6666 in the Valley earns Hexbound."}
+            : "Four zones, four key fragments. The key opens the Valley. 6666 in the Valley earns Hexbound."}
         </p>
         <div className="world-next-step" data-world-next-step>
           <span className="world-eyebrow">Next step</span>
@@ -391,23 +397,14 @@ export default function RngweenWorld({
               <span className="world-zone-number">{item.phase}</span>
               <strong>{item.name}</strong>
               <small>
-                {item.id === "pumpkin-patch" ? (
-                  complete ? (
-                    <>
-                      <Check size={12} />
-                      Warm-up done
-                    </>
-                  ) : (
-                    "Warm-up · optional"
-                  )
-                ) : item.fragment ? (
+                {item.fragment ? (
                   ready ? (
                     <>
                       <Check size={12} />
                       Fragment found
                     </>
                   ) : (
-                    `Fragment ${item.phase - 1} · ${goalsDone(item.id)}/3 done`
+                    `Fragment ${item.phase} · ${goalsDone(item.id)}/3 done`
                   )
                 ) : ready ? (
                   <>
@@ -550,8 +547,8 @@ export default function RngweenWorld({
               <div className="world-challenge-lock">
                 <LockKeyhole size={19} />
                 <p>
-                  Clear Graveyard and Haunted House, then forge the key in the
-                  Key & prize tab. Or buy one in the Limited Shop.
+                  Clear the four zones before this one, then forge the key in
+                  the Key & prize tab. Or buy one in the Limited Shop.
                 </p>
                 <button className="secondary-button" onClick={onShop}>
                   View key <ArrowRight size={14} />
@@ -658,7 +655,7 @@ export default function RngweenWorld({
                   {commissionsReopen(now)}
                 </small>
               )}
-              {id === "key" && !key && fragments === 2 && (
+              {id === "key" && !key && fragments === fragmentTotal && (
                 <i className="world-tab-dot" aria-hidden="true" />
               )}
               {id === "commissions" &&
@@ -700,7 +697,7 @@ export default function RngweenWorld({
                 )
               }
             />
-            {worldPhaseComplete(zone.id, stats) && zone.phase < 4 && (
+            {worldPhaseComplete(zone.id, stats) && zone.phase < 5 && (
               <div className="world-phase-continue">
                 <Check size={15} />
                 <span>Phase 0{zone.phase} objectives cleared.</span>
@@ -714,10 +711,10 @@ export default function RngweenWorld({
                 </button>
               </div>
             )}
-            {!key && fragments === 2 && (
+            {!key && fragments === fragmentTotal && (
               <div className="world-phase-continue">
                 <KeyRound size={15} />
-                <span>Both fragments found.</span>
+                <span>All four fragments found.</span>
                 <button
                   className="secondary-button"
                   onClick={() => setTab("key")}
@@ -736,7 +733,9 @@ export default function RngweenWorld({
             >
               <div className="world-key-symbol">
                 <KeyRound size={32} />
-                <span>{key ? <Check size={13} /> : `${fragments}/2`}</span>
+                <span>
+                  {key ? <Check size={13} /> : `${fragments}/${fragmentTotal}`}
+                </span>
               </div>
               <div>
                 <span className="world-eyebrow">The Valley challenge</span>
@@ -746,7 +745,7 @@ export default function RngweenWorld({
                 <p>
                   {key
                     ? "The key unlocks the Valley until Nov 3 UTC. It is not consumed."
-                    : "Complete both zones' objectives, then combine their fragments for free."}
+                    : "Clear the three objectives in each of the four zones, then combine their fragments for free."}
                 </p>
                 <div className="world-fragments">
                   {WORLD_ZONES.filter((item) => item.fragment).map((item) => (
@@ -778,7 +777,12 @@ export default function RngweenWorld({
               ) : (
                 <button
                   className="primary-button"
-                  disabled={fragments < 2 || busy || !live || !progress.profile}
+                  disabled={
+                    fragments < fragmentTotal ||
+                    busy ||
+                    !live ||
+                    !progress.profile
+                  }
                   onClick={() =>
                     run(
                       { type: "forge-rngween-key" },
@@ -867,7 +871,7 @@ export default function RngweenWorld({
             </span>
             <h2 id="world-shop-title">World shop</h2>
             <p>
-              Buy upgrades in order to shorten reveals in all four phases. They
+              Buy upgrades in order to shorten reveals in all five zones. They
               apply from the next roll and expire after Nov 3 UTC.
             </p>
             <div className="world-shop-wallet">

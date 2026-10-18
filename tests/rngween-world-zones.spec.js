@@ -121,11 +121,12 @@ async function settle(page) {
 
 // Each test uses real deadlines and the real secure worker; the fixture only
 // supplies deterministic crypto words and a verified website calendar.
-test("World is public with exactly four English phases; aura missions never replace the challenge key", () => {
+test("World is public with exactly five English phases; aura missions never replace the challenge key", () => {
   expect(WORLD_ZONES.map((z) => z.name)).toEqual([
     "Pumpkin Patch",
     "Graveyard",
     "Haunted House",
+    "Blood Moon Ridge",
     "Valley of Horrors",
   ]);
   expect(rngweenWorldUnlocked(account().tasks, account().rngweenLimited)).toBe(
@@ -656,8 +657,8 @@ test("fragment zones use fair repeatable 1–99 / 1–999 rejection samples, nev
   expect(randomWorldNumber([1, 2], words([0]))).toBe(3);
 });
 
-test("39 event-only patterns score their fixed-width faces, stack points and leave ordinary metadata alone", () => {
-  expect(Object.values(WORLD_BADGES).flat()).toHaveLength(39);
+test("60 event-only patterns score their fixed-width faces, stack points and leave ordinary metadata alone", () => {
+  expect(Object.values(WORLD_BADGES).flat()).toHaveLength(60);
   for (const [zone, { max, digits }] of Object.entries(WORLD_MINI_RANGES)) {
     for (const number of [1, max, Number("6".repeat(digits))]) {
       const scored = scoreWorldNumber(zone, number);
@@ -694,6 +695,23 @@ test("39 event-only patterns score their fixed-width faces, stack points and lea
   expect(scoreWorldNumber("valley", 6666)).toMatchObject({
     points: 2686,
     tier: "legendary",
+  });
+  // The Ridge tops out at 666: its own legendary face, never Hexbound.
+  expect(scoreWorldNumber("blood-moon-ridge", 666)).toMatchObject({
+    points: 654,
+    tier: "legendary",
+  });
+  expect(
+    scoreWorldNumber("blood-moon-ridge", 666).badges.map((badge) => badge.id),
+  ).toContain("eclipse");
+  expect(scoreWorldNumber("graveyard", 13).badges.map((b) => b.id)).toEqual([
+    "night-watch",
+    "black-cat",
+    "cursed-prime",
+  ]);
+  expect(worldBadgeOdds("blood-moon-ridge").eclipse).toEqual({
+    count: 1,
+    total: 666,
   });
   expect(worldBadgeOdds("graveyard")["double-hex"]).toEqual({
     count: 1,
@@ -764,8 +782,10 @@ test("objectives accumulate across Common rolls and repeat badges, award one fra
   expect(p.rngweenLimited.world.fragments.graveyard).toBe(false);
   p = completedWorldObjectives(p, "graveyard", at + 30000);
   expect(p.rngweenLimited.world.fragments).toEqual({
+    "pumpkin-patch": false,
     graveyard: true,
     "haunted-house": false,
+    "blood-moon-ridge": false,
   });
   expect(
     worldFragmentGoals(
@@ -774,13 +794,21 @@ test("objectives accumulate across Common rolls and repeat badges, award one fra
     ).every((goal) => goal.complete),
   ).toBe(true);
   expect(() => applyProgress(p, { type: "forge-rngween-key", at })).toThrow(
-    "one fragment",
+    "all four fragment zones",
   );
   p = completedWorldObjectives(p, "haunted-house", at + 120000);
   expect(p.owned).not.toContain("hexbound");
+  // Three of four is still no key.
+  p = completedWorldObjectives(p, "pumpkin-patch", at + 200000);
+  expect(() => applyProgress(p, { type: "forge-rngween-key", at })).toThrow(
+    "all four fragment zones",
+  );
+  p = completedWorldObjectives(p, "blood-moon-ridge", at + 250000);
   expect(p.rngweenLimited.world.fragments).toEqual({
+    "pumpkin-patch": true,
     graveyard: true,
     "haunted-house": true,
+    "blood-moon-ridge": true,
   });
   const score = worldMiniSummary(
     "haunted-house",
@@ -854,8 +882,10 @@ test("repair derives points from known badge counts, keeps valid zones and never
     read.progress.rngweenLimited.world.mini["haunted-house"].rareRolls,
   ).toBe(0);
   expect(read.progress.rngweenLimited.world.fragments).toEqual({
+    "pumpkin-patch": false,
     graveyard: false,
     "haunted-house": false,
+    "blood-moon-ridge": false,
   });
   expect(read.progress.balance).toBe(0);
   expect(read.progress.owned).toEqual([]);
@@ -1009,17 +1039,19 @@ test("a keyless profile rolls for badges and three objectives per zone, earns di
   test.setTimeout(90000);
   await mockSeasonClock(page, at);
   await mockWorldNumbers(page, {
+    "pumpkin-patch": [1, 2, 3, 4, 5, 6, 7, 8, 9],
     graveyard: [66, 13, 49, 66, 6],
     "haunted-house": [
       666, 13, 123, 313, 111, 169, 343, 246, 123, 666, 111, 121,
     ],
+    "blood-moon-ridge": [666, 606, 616, 626],
   });
   await seedProgress(page);
   await openGraveyardWorld(page);
-  await expect(page.locator("[data-world-zone]")).toHaveCount(4);
+  await expect(page.locator("[data-world-zone]")).toHaveCount(5);
   await expect(page.locator(".world-choices, .world-run")).toHaveCount(0);
   await expect(page.locator("[data-world-objective]")).toHaveCount(3);
-  await expect(page.locator("[data-world-badge]")).toHaveCount(9);
+  await expect(page.locator("[data-world-badge]")).toHaveCount(12);
   // The key lives on its own tab; the stage stays on screen whichever is open.
   await page.getByRole("tab", { name: "Key & prize" }).click();
   await expect(
@@ -1038,12 +1070,12 @@ test("a keyless profile rolls for badges and three objectives per zone, earns di
   await expect(page.locator(".world-fragment-owned")).toContainText(
     "Fragment owned",
   );
-  await expect(page.locator("[data-world-points]")).toHaveText("325");
+  await expect(page.locator("[data-world-points]")).toHaveText("337");
   expect(
     (await savedWorld(page)).rngweenLimited.world.fragments["haunted-house"],
   ).toBe(false);
   await selectZone(page, "haunted-house");
-  await expect(page.locator("[data-world-badge]")).toHaveCount(11);
+  await expect(page.locator("[data-world-badge]")).toHaveCount(12);
   for (let index = 0; index < 12; index++) {
     await page.getByRole("button", { name: /Roll in Haunted House/ }).click();
     await expect
@@ -1054,6 +1086,41 @@ test("a keyless profile rolls for badges and three objectives per zone, earns di
     await settle(page);
   }
   expect((await savedWorld(page)).owned).not.toContain("hexbound");
+  // Two of four: the forge stays closed and the page points at the next zone.
+  await expect(page.getByRole("button", { name: "Forge the key" })).toHaveCount(
+    0,
+  );
+  await expect(page.locator("[data-world-next-step]")).toContainText(
+    "Pumpkin Patch",
+  );
+  await selectZone(page, "pumpkin-patch");
+  for (let index = 0; index < 9; index++) {
+    await page.getByRole("button", { name: /Roll in Pumpkin Patch/ }).click();
+    await expect
+      .poll(
+        async () => (await savedWorld(page)).rngweenLimited.world.pending?.id,
+      )
+      .toBeTruthy();
+    await settle(page);
+  }
+  await selectZone(page, "blood-moon-ridge");
+  await expect(page.locator("[data-world-badge]")).toHaveCount(12);
+  for (let index = 0; index < 4; index++) {
+    await page
+      .getByRole("button", { name: /Roll in Blood Moon Ridge/ })
+      .click();
+    await expect
+      .poll(
+        async () => (await savedWorld(page)).rngweenLimited.world.pending?.id,
+      )
+      .toBeTruthy();
+    await settle(page);
+  }
+  await expect(page.locator("[data-result-badge=red-six]")).toBeVisible();
+  expect((await savedWorld(page)).owned).not.toContain("hexbound");
+  expect(
+    Object.values((await savedWorld(page)).rngweenLimited.world.fragments),
+  ).toEqual([true, true, true, true]);
   await page.getByRole("button", { name: "Forge the key" }).click();
   await page.getByRole("button", { name: "Forge key · free" }).click();
   await expect(
@@ -1064,7 +1131,7 @@ test("a keyless profile rolls for badges and three objectives per zone, earns di
   await expect(
     page.getByRole("button", { name: /Roll in the Valley/ }),
   ).toBeEnabled();
-  await expect(page.locator("[data-world-badge]")).toHaveCount(11);
+  await expect(page.locator("[data-world-badge]")).toHaveCount(12);
 });
 
 test("last/best results and event collection remain visible after another zone rolls and a reload", async ({
@@ -1172,7 +1239,7 @@ test("two account tabs settle one badge result and objective fragment, never dup
     expect(saved.nextSerial).toBe(6);
     expect(saved.rounds.graveyard).toBe(5);
     expect(saved.mini.graveyard.rolls).toBe(5);
-    expect(worldMiniSummary("graveyard", saved.mini.graveyard).score).toBe(325);
+    expect(worldMiniSummary("graveyard", saved.mini.graveyard).score).toBe(337);
     expect(saved.fragments.graveyard).toBe(true);
     await expect(other.locator(".world-fragment-owned")).toContainText(
       "Fragment owned",
@@ -1225,7 +1292,7 @@ test("failed badge settlement leaves the committed result, counts and skin uncha
       "graveyard",
       (await savedWorld(page)).rngweenLimited.world.mini.graveyard,
     ).score,
-  ).toBe(325);
+  ).toBe(337);
   await page.reload();
   expect(
     (await savedWorld(page)).rngweenLimited.world.mini.graveyard.rolls,
@@ -1381,21 +1448,23 @@ test("filled event badge collections never receive impossible new-badge commissi
   let p = account();
   for (const [zone, numbers] of Object.entries({
     "pumpkin-patch": [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    graveyard: [66, 13, 49, 66, 6, 12],
+    graveyard: [66, 13, 49, 66, 6, 12, 97, 99],
     "haunted-house": [
       666, 13, 123, 313, 111, 229, 343, 246, 123, 666, 111, 121,
     ],
+    "blood-moon-ridge": [666, 606, 616, 626, 7, 123, 67],
   }))
     for (const number of numbers) p = finish(start(p, zone, number));
-  expect(
-    worldMiniSummary("graveyard", p.rngweenLimited.world.mini.graveyard).unique,
-  ).toBe(9);
-  expect(
-    worldMiniSummary(
-      "haunted-house",
-      p.rngweenLimited.world.mini["haunted-house"],
-    ).unique,
-  ).toBe(11);
+  for (const zone of [
+    "pumpkin-patch",
+    "graveyard",
+    "haunted-house",
+    "blood-moon-ridge",
+  ])
+    expect(
+      worldMiniSummary(zone, p.rngweenLimited.world.mini[zone]).unique,
+      zone,
+    ).toBe(12);
   expect(
     eligibleHourlyTasks(p).some((task) => task.metric === "newCurios"),
   ).toBe(false);
@@ -1408,11 +1477,11 @@ test("filled event badge collections never receive impossible new-badge commissi
   expect(
     eligibleHourlyTasks(p).some((task) => task.metric === "newCurios"),
   ).toBe(true);
-  for (const number of [1234, 1354, 10, 1353, 6666])
+  for (const number of [1234, 1354, 10, 1353, 1361, 6666])
     p = finish(start(p, "valley", number));
   expect(
     worldMiniSummary("valley", p.rngweenLimited.world.mini.valley).unique,
-  ).toBe(11);
+  ).toBe(12);
   expect(
     eligibleHourlyTasks(p).some((task) => task.metric === "newCurios"),
   ).toBe(false);
@@ -1443,6 +1512,10 @@ test("a pre-assignment pending result reserves its finite badges and zone visit 
         opening - 110000 + number * 11000,
       ),
     );
+  // Two unvisited free zones remain (Graveyard, Ridge) before the pending roll.
+  initial = finish(
+    start(initial, "haunted-house", 123, null, opening - 150000),
+  );
   const p = start(initial, "graveyard", 66, null, opening);
   expect(
     eligibleHourlyTasks(initial).some((task) => task.metric === "newPlaces"),
@@ -1455,8 +1528,9 @@ test("a pre-assignment pending result reserves its finite badges and zone visit 
   const counts = p.rngweenLimited.world.mini.graveyard.counts;
   for (const badge of WORLD_BADGES.graveyard)
     if (!["six-mark", "double-hex"].includes(badge.id)) counts[badge.id] = 1;
-  for (const badge of WORLD_BADGES["haunted-house"])
-    p.rngweenLimited.world.mini["haunted-house"].counts[badge.id] = 1;
+  for (const zone of ["haunted-house", "blood-moon-ridge"])
+    for (const badge of WORLD_BADGES[zone])
+      p.rngweenLimited.world.mini[zone].counts[badge.id] = 1;
   expect(
     eligibleHourlyTasks({
       ...p,

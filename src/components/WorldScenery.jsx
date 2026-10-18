@@ -6,11 +6,13 @@ export default function WorldScenery({ zone }) {
   const moonColor =
     zone === "valley"
       ? "#f293a3"
-      : zone === "pumpkin-patch"
-        ? "#eccb9c"
-        : zone === "haunted-house"
-          ? "#b7e3c5"
-          : "#d7d0fa";
+      : zone === "blood-moon-ridge"
+        ? "#f05d5d"
+        : zone === "pumpkin-patch"
+          ? "#eccb9c"
+          : zone === "haunted-house"
+            ? "#b7e3c5"
+            : "#d7d0fa";
   return (
     <svg
       className="world-haunted-scene"
@@ -145,6 +147,44 @@ export default function WorldScenery({ zone }) {
             stroke="#b29aac"
           />
         </g>
+      ) : zone === "blood-moon-ridge" ? (
+        <g className="world-scene-ridge">
+          {/* A bigger, lower red moon: the whole zone is lit by it. */}
+          <circle cx="583" cy="67" r="52" fill="#f05d5d22" />
+          <path
+            d="M0 258 70 171l46 38 58-71 54 52 73-96 66 90 52-44 80 70 60-60 71 68 66-48 64 66v86H0Z"
+            fill="#2b1420"
+            stroke="#7a2c3c"
+            strokeWidth="2"
+          />
+          <path
+            d="M0 274q130-50 262-18t214-20 208 2 76 4v58H0Z"
+            fill="#180a14"
+          />
+          <path
+            d="m226 191 2-27 14 9m104-64 1-22 12 8m258 59 3-26 13 9"
+            fill="none"
+            stroke="#c04a5c"
+            strokeWidth="2"
+          />
+          <g
+            className="world-scene-bats"
+            fill="#1a0b12"
+            stroke="#f0a1a1"
+            strokeWidth="1.2"
+          >
+            <path d="m498 101 9-8 7 6 7-6 9 8-9-2-7 5-7-5Z" />
+            <path d="m536 128 7-6 6 5 6-5 7 6-7-1-6 4-6-4Z" />
+            <path d="m626 118 8-7 7 6 7-6 8 7-8-2-7 5-7-5Z" />
+          </g>
+          <path
+            className="world-scene-sigils"
+            d="M380 262v-50m-16 18 16-12 16 12m-26 20 10-8 10 8"
+            fill="none"
+            stroke="#f27b8f"
+            strokeWidth="2"
+          />
+        </g>
       ) : (
         <g className="world-scene-valley">
           <path
@@ -196,7 +236,7 @@ export default function WorldScenery({ zone }) {
           <path d="M219 93h66v47M220 94q37 10 64 46m-63-44q17 38 62 44m-62-45 62 45m-43-31q6-1 16-10m-7 28q8-3 18-12" />
         </g>
       )}
-      {zone === "valley" && (
+      {(zone === "valley" || zone === "blood-moon-ridge") && (
         <g className="world-blood-moon-rings" fill="none" stroke="#ef7c9855">
           <circle cx="583" cy="67" r="34" />
           <circle cx="583" cy="67" r="45" strokeDasharray="2 7" />

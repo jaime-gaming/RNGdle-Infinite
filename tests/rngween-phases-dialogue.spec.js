@@ -57,7 +57,7 @@ async function scene(page) {
   return dialog;
 }
 
-test("four numbered World phases map to the original event auras without replacing their missions", () => {
+test("five numbered World phases map to the original event auras without replacing their missions", () => {
   expect(
     WORLD_ZONES.map((phase) => [
       phase.phase,
@@ -69,7 +69,8 @@ test("four numbered World phases map to the original event auras without replaci
     [1, "pumpkin-patch", "jack-o-glow", 9],
     [2, "graveyard", "phantom-veil", 99],
     [3, "haunted-house", "witchfire", 999],
-    [4, "valley", "blood-moon", 9999],
+    [4, "blood-moon-ridge", "blood-moon", 666],
+    [5, "valley", "hexbound", 9999],
   ]);
   expect(
     RNGWEEN_MISSIONS.map((mission) => [
@@ -83,7 +84,8 @@ test("four numbered World phases map to the original event auras without replaci
     ["witchfire", 5000000, 200],
     ["blood-moon", 18, 150],
   ]);
-  expect(Object.values(WORLD_BADGES).flat()).toHaveLength(39);
+  expect(Object.values(WORLD_BADGES).flat()).toHaveLength(60);
+  for (const list of Object.values(WORLD_BADGES)) expect(list).toHaveLength(12);
 });
 
 test("Pumpkin Patch samples every number uniformly with rejection, never a choice or a changed ordinary random source", () => {
@@ -99,7 +101,7 @@ test("Pumpkin Patch samples every number uniformly with rejection, never a choic
   expect(WORLD_REVEAL_MS).toEqual([10000, 8000, 5000, 2000]);
 });
 
-test("all Pumpkin Patch milestones are persistent collection goals, not an aura, EP, key fragment or ordinary task reward", () => {
+test("all Pumpkin Patch milestones are persistent collection goals that earn the first fragment, not an aura, EP or ordinary task reward", () => {
   const initial = account();
   let p = initial;
   for (let number = 1; number <= 9; number++)
@@ -111,8 +113,8 @@ test("all Pumpkin Patch milestones are persistent collection goals, not an aura,
   const stats = p.rngweenLimited.world.mini["pumpkin-patch"];
   expect(worldMiniSummary("pumpkin-patch", stats)).toMatchObject({
     rolls: 9,
-    unique: 8,
-    score: 100,
+    unique: 12,
+    score: 137,
   });
   expect(worldPhaseComplete("pumpkin-patch", stats)).toBe(true);
   for (const field of [
@@ -129,9 +131,12 @@ test("all Pumpkin Patch milestones are persistent collection goals, not an aura,
     expect(p[field]).toEqual(initial[field]);
   expect(p.rngweenLimited.pumpkoins).toBe(0);
   expect(p.rngweenLimited.world.fragments).toEqual({
+    "pumpkin-patch": true,
     graveyard: false,
     "haunted-house": false,
+    "blood-moon-ridge": false,
   });
+  expect(p.rngweenLimited.world.keyForged).toBe(false);
   expect(parseAndRepairProgress(JSON.stringify(p)).repairs).toEqual([]);
 });
 
@@ -166,10 +171,14 @@ for (const zone of ["graveyard", "haunted-house", "valley"])
     expect(fixed.progress.equipped).toBe("starfall");
   });
 
-test("the Reaper's four phase and aura scripts read real progress, preserve the original trials and grant nothing", () => {
+test("the Reaper's phase and aura scripts read real progress, preserve the original trials and grant nothing", () => {
   const p = account(),
     before = JSON.stringify(p);
-  for (const phase of WORLD_ZONES) {
+  // The Valley's aura is Hexbound itself: no Tasks mission, one line.
+  const valley = reaperDialogue(p, at, "aura:valley");
+  expect(valley.aura).toBeNull();
+  expect(valley.lines.join(" ")).toContain("6666");
+  for (const phase of WORLD_ZONES.filter((zone) => zone.fragment)) {
     const dialogue = reaperDialogue(p, at, `aura:${phase.id}`);
     expect(dialogue.phaseId).toBe(phase.id);
     expect(dialogue.aura.id).toBe(phase.auraId);
@@ -190,15 +199,20 @@ test("Reaper artwork improves the original vector silhouette rather than loading
   expect(source).not.toMatch(/<image|<img|\.png|\.jpe?g|\.webp/);
 });
 
-test("the four phases show distinct aura previews while the real result uses only the owned equipped skin", async ({
+test("the fragment phases show distinct aura previews while the real result uses only the owned equipped skin", async ({
   page,
 }) => {
   await mockSeasonClock(page, at);
   await seedProgress(page, { owned: ["starfall"], equipped: "starfall" });
   await page.goto("/rngween-world");
-  await expect(page.locator("[data-world-zone]")).toHaveCount(4);
+  await expect(page.locator("[data-world-zone]")).toHaveCount(5);
   for (const phase of WORLD_ZONES) {
     await page.locator(`[data-world-zone="${phase.id}"]`).click();
+    if (phase.id === "valley") {
+      // Hexbound is the Valley's aura; Key & prize explains it, no Tasks card.
+      await expect(page.locator("[data-phase-aura]")).toHaveCount(0);
+      continue;
+    }
     await expect(page.locator("[data-phase-aura]")).toHaveAttribute(
       "data-phase-aura",
       phase.auraId,
@@ -333,7 +347,7 @@ test("the original aura mission remains claimable from Tasks, not from clearing 
 });
 
 for (const width of [340, 390, 768, 1440])
-  test(`four decorated phases and the Reaper reply scene fit ${width}px in both themes`, async ({
+  test(`five decorated phases and the Reaper reply scene fit ${width}px in both themes`, async ({
     page,
   }) => {
     test.setTimeout(60000);
@@ -365,7 +379,7 @@ for (const width of [340, 390, 768, 1440])
             exact: true,
           })
           .click();
-        await expect(dialog).toContainText("Two fragments make a key");
+        await expect(dialog).toContainText("Four fragments make a key");
         await page.keyboard.press("Escape");
       }
     }

@@ -774,8 +774,7 @@ export default function ActivityFeed({
                         </>
                       ) : event.type === "rngween-forged-key" ? (
                         <>
-                          Two distinct World fragments · Free · never consumed
-                          on entry
+                          Four World fragments · Free · never consumed on entry
                         </>
                       ) : [
                           "rngween-purchase",

@@ -30,10 +30,14 @@ export async function revealWorld(page) {
 // Accumulate real badge results through committed deadlines, not fragment
 // flags. Deterministic test numbers never change production randomness.
 export function completedWorldObjectives(progress, zone, at) {
-  const numbers =
-    zone === "graveyard"
-      ? [66, 13, 49, 66, 6]
-      : [666, 13, 123, 313, 111, 169, 343, 246, 123, 666, 111, 121, 313];
+  const numbers = {
+    "pumpkin-patch": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    graveyard: [66, 13, 49, 66, 6],
+    "haunted-house": [
+      666, 13, 123, 313, 111, 169, 343, 246, 123, 666, 111, 121, 313,
+    ],
+    "blood-moon-ridge": [666, 606, 616, 626, 13, 7],
+  }[zone];
   let p = progress,
     cursor = at;
   for (

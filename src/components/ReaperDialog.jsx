@@ -7,6 +7,7 @@ import {
   rngweenValleyUnlocked,
   worldState,
   worldZoneById,
+  worldFragmentsComplete,
 } from "../rngween-world-zones.js";
 import { REAPER_TOPICS, reaperDialogue } from "../rngween-reaper.js";
 import { useModalDialog } from "../use-modal-dialog.js";
@@ -41,8 +42,7 @@ export default function ReaperDialog({
   const limited = progress.rngweenLimited;
   const world = worldState(limited);
   const challenge = rngweenValleyUnlocked(limited);
-  const canForge =
-    world.fragments.graveyard && world.fragments["haunted-house"];
+  const canForge = worldFragmentsComplete(world);
   const live = calendar.limitedPhase === "active" && !limited?.retired;
   const wallet = limited?.pumpkoins ?? 0;
   const price = RNGWEEN_WORLD_KEY.pumpkoinPrice;
@@ -350,7 +350,8 @@ export default function ReaperDialog({
                 </div>
                 {live && !challenge && canForge && (
                   <p className="reaper-forge-reminder">
-                    Both fragments are ready. Forge your key inside the World.
+                    All four fragments are ready. Forge your key inside the
+                    World.
                   </p>
                 )}
               </section>

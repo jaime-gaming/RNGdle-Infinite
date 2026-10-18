@@ -7,6 +7,7 @@ import {
   WORLD_VALLEY_TARGET,
   rngweenValleyUnlocked,
   worldState,
+  WORLD_FRAGMENT_ZONES,
 } from "./rngween-world-zones.js";
 import {
   WORLD_BADGES,
@@ -78,10 +79,9 @@ export function rngweenRecord(progress = {}, now = new Date()) {
     ),
     points: zones.reduce((sum, zone) => sum + zone.points, 0),
     zones,
-    fragments: {
-      graveyard: world.fragments?.graveyard === true,
-      "haunted-house": world.fragments?.["haunted-house"] === true,
-    },
+    fragments: Object.fromEntries(
+      WORLD_FRAGMENT_ZONES.map((id) => [id, world.fragments?.[id] === true]),
+    ),
     key: rngweenValleyUnlocked(limited),
     valleyBest,
     jackpot: hexbound || valleyBest?.number === WORLD_VALLEY_TARGET,

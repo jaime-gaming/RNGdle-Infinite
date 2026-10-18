@@ -206,13 +206,17 @@ test("a surviving final speed receipt proves the previously paid prefix, not a n
 });
 
 test("forge receipts restore the already-earned distinct fragments and key, never the badge score or a coin reward", () => {
-  let p = completedWorldObjectives(account(), "graveyard", at);
+  let p = completedWorldObjectives(account(), "pumpkin-patch", at);
+  p = completedWorldObjectives(p, "graveyard", at + 30000);
   p = completedWorldObjectives(p, "haunted-house", at + 60000);
+  p = completedWorldObjectives(p, "blood-moon-ridge", at + 150000);
   p = applyProgress(p, { type: "forge-rngween-key", at: at + 200000 });
   const broken = structuredClone(p);
   broken.rngweenLimited.world.fragments = {
+    "pumpkin-patch": false,
     graveyard: false,
     "haunted-house": false,
+    "blood-moon-ridge": false,
   };
   broken.rngweenLimited.world.keyForged = false;
   const fixed = read(broken).progress;
@@ -493,7 +497,7 @@ test("a failed linked save never replaces the current account or acknowledges it
     peer.rngweenLimited.world.mini,
   );
   await page.reload();
-  await expect(page.locator("[data-world-points]")).toHaveText("325");
+  await expect(page.locator("[data-world-points]")).toHaveText("337");
 });
 
 test("same-account old linked snapshots cannot remove known skins; explicit new equipment preferences still work", async ({
@@ -599,7 +603,7 @@ test("live linked browsers recover an unwritable badge head automatically, shari
       )
       .toBe(4);
     await secondary.goto("/rngween-world");
-    await expect(secondary.locator("[data-world-points]")).toHaveText("314");
+    await expect(secondary.locator("[data-world-points]")).toHaveText("326");
     await secondary.evaluate((key) => {
       window.restoreLiveLinkedStorage = Storage.prototype.setItem;
       Storage.prototype.setItem = function (k, value) {
@@ -644,7 +648,7 @@ test("live linked browsers recover an unwritable badge head automatically, shari
     expect(other.equipped).toBe("starfall");
     expect(other.rngweenLimited.pumpkoins).toBe(0);
     expect(other.rngweenLimited.drawn).toEqual([]);
-    await expect(secondary.locator("[data-world-points]")).toHaveText("325");
+    await expect(secondary.locator("[data-world-points]")).toHaveText("337");
     await expect(secondary.locator(".world-fragment-owned")).toContainText(
       "Fragment owned",
     );

@@ -11,6 +11,8 @@ import {
   worldState,
   worldRevealMS,
   worldZoneById,
+  worldFragmentCount,
+  WORLD_FRAGMENT_ZONES,
 } from "./rngween-world-zones.js";
 
 // CLEANUP Nov 4, 2026: remove seasonal dialogue, not Hexbound/owned auras.
@@ -37,9 +39,8 @@ export function reaperDialogue(
     limited?.skinEarned || progress.owned?.includes(RNGWEEN_WORLD_SKIN.id);
   const key = rngweenValleyUnlocked(limited);
   const seen = limited?.drawn?.length ?? 0;
-  const fragments =
-    Number(world.fragments.graveyard) +
-    Number(world.fragments["haunted-house"]);
+  const fragments = worldFragmentCount(world);
+  const fragmentTotal = WORLD_FRAGMENT_ZONES.length;
   const price = RNGWEEN_WORLD_KEY.pumpkoinPrice.toLocaleString("en-US");
   if (calendar.limitedPhase === "unavailable")
     return {
@@ -76,26 +77,30 @@ export function reaperDialogue(
       topic === "greeting" ||
       topic.startsWith("aura"))
   ) {
-    const aura = RNGWEEN_AURAS.find((item) => item.id === zone.auraId);
+    const aura = RNGWEEN_AURAS.find((item) => item.id === zone.auraId) ?? null;
     const mission = event.missions.find((item) => item.auraId === zone.auraId);
     const stats = world.mini?.[zone.id];
     const arrivals = {
       "pumpkin-patch":
-        "The patch. One digit, nothing scary. Find a few patterns and move on to the graves.",
+        "The patch. One digit, nothing scary. Nine reveals, a few patterns, and the first fragment is yours.",
       graveyard:
         "Two digits among the stones. Twins, steps, sixes, thirteens. Clear my three objectives and a fragment is yours.",
       "haunted-house":
         "Three digits and a house that creaks. Palindromes, triples. Three objectives, one fragment.",
+      "blood-moon-ridge":
+        "The ridge stops at 666. Sixes, sevens, primes. Clear my three objectives and the last fragment is yours. If you see 666 up here, that's the Eclipse, not Hexbound.",
       valley: key
         ? "Your key fits. Nothing repeats in the Valley. If you see 6666, don't blink."
-        : "Not without a key. Forge it from both fragments, or pay me and skip the work.",
+        : "Not without a key. Forge it from all four fragments, or pay me and skip the work.",
     };
     return {
       title: `${zone.name}`,
       phaseId: zone.id,
       lines: topic.startsWith("aura")
         ? [
-            `${aura.name}? That isn't earned in here. ${mission.detail} Then claim it in Tasks, October 25–31.`,
+            aura && mission
+              ? `${aura.name}? That isn't earned in here. ${mission.detail} Then claim it in Tasks, October 25–31.`
+              : "Hexbound is the only aura the World gives. One number, 6666, in the Valley. Nothing else.",
           ]
         : [arrivals[zone.id]],
       objectives: worldPhaseGoals(zone.id, stats),
@@ -106,16 +111,16 @@ export function reaperDialogue(
     return {
       title: "The World",
       lines: [
-        "Four haunted places, each bigger than the last: the Patch, the Graveyard, the Haunted House and the Valley. Thirty-nine badges to find. They mean nothing out there, and everything in here.",
+        "Five haunted places, each bigger than the last: the Patch, the Graveyard, the Haunted House, the Ridge and the Valley. Sixty badges to find. They mean nothing out there, and everything in here.",
       ],
     };
   if (topic === "fragments")
     return {
       title: "The key",
       lines: [
-        fragments === 2
-          ? "You have both fragments. Forge the key inside and the Valley is yours."
-          : `Two fragments make a key: one from the Graveyard, one from the Haunted House. You hold ${fragments}. In a hurry? ${price} Pumpkoins and I'll hand you one.`,
+        fragments === fragmentTotal
+          ? "You have all four fragments. Forge the key inside and the Valley is yours."
+          : `Four fragments make a key: one from each zone before the Valley. You hold ${fragments}. In a hurry? ${price} Pumpkoins and I'll hand you one.`,
       ],
     };
   if (topic === "speed")
@@ -154,10 +159,10 @@ export function reaperDialogue(
       seen
         ? key
           ? `Back again. ${seen.toLocaleString("en-US")} numbers so far and none repeated. The Valley is waiting.`
-          : `Back again. ${fragments} of 2 fragments. The Valley will keep.`
+          : `Back again. ${fragments} of ${fragmentTotal} fragments. The Valley will keep.`
         : key
-          ? "Your Valley key is good. All four doors are open to you now, and nothing repeats in the Valley."
-          : "Evening. The first three doors are open to anyone. The fourth needs a key, and I don't give those away.",
+          ? "Your Valley key is good. All five doors are open to you now, and nothing repeats in the Valley."
+          : "Evening. The first four doors are open to anyone. The fifth needs a key, and I don't give those away.",
       !progress.profile
         ? "Make yourself a profile first, or I'll forget everything you do in here."
         : "Ask, if you must. Or just go in.",

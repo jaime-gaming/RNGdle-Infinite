@@ -595,7 +595,7 @@ test("the four-phase World keeps its own controls, saves timed unseen Valley rol
   await expect(
     page.getByRole("heading", { name: "RNGween World", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("[data-world-zone]")).toHaveCount(4);
+  await expect(page.locator("[data-world-zone]")).toHaveCount(5);
   await expect(page.getByRole("button", { name: /^Predict/ })).toHaveCount(0);
   await expect(
     page.locator(".header, .mobile-tabbar, .skill-rack, .rngween-curios"),

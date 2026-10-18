@@ -139,6 +139,7 @@ import {
   requireWorldZone,
   recordWorldOutcome,
   rngweenValleyUnlocked,
+  worldFragmentsComplete,
 } from "./rngween-world-zones.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
@@ -1199,9 +1200,9 @@ function applyEvent(state, action) {
         throw new Error(
           "Your Valley challenge is already unlocked. Keep your Pumpkoins.",
         );
-      if (!world.fragments.graveyard || !world.fragments["haunted-house"])
+      if (!worldFragmentsComplete(world))
         throw new Error(
-          "Find one fragment in Graveyard and one in Haunted House first.",
+          "Clear the objectives in all four fragment zones first: Pumpkin Patch, Graveyard, Haunted House and Blood Moon Ridge.",
         );
       return {
         ...state,
@@ -1324,11 +1325,10 @@ function applyEvent(state, action) {
         );
       if (
         item.id === RNGWEEN_WORLD_KEY.id &&
-        worldState(limited).fragments.graveyard &&
-        worldState(limited).fragments["haunted-house"]
+        worldFragmentsComplete(worldState(limited))
       )
         throw new Error(
-          "Both fragments are ready. Forge your Valley key for free inside the World.",
+          "All four fragments are ready. Forge your Valley key for free inside the World.",
         );
       if (
         state.owned.includes(item.id) ||

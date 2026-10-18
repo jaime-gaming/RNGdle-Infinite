@@ -23,6 +23,18 @@ export const WORLD_LEGACY_STAGES = {
   graveyard: [6, 2],
   "haunted-house": [3, 4, 3],
 };
+const legacyGame = (zone) => Object.hasOwn(WORLD_LEGACY_STAGES, zone?.id);
+// Four fragment zones, in path order; the Valley key needs all four.
+export const WORLD_FRAGMENT_ZONES = [
+  "pumpkin-patch",
+  "graveyard",
+  "haunted-house",
+  "blood-moon-ridge",
+];
+export const worldFragmentCount = (world) =>
+  WORLD_FRAGMENT_ZONES.filter((id) => world?.fragments?.[id] === true).length;
+export const worldFragmentsComplete = (world) =>
+  worldFragmentCount(world) === WORLD_FRAGMENT_ZONES.length;
 export const WORLD_ZONES = [
   {
     id: "pumpkin-patch",
@@ -30,10 +42,10 @@ export const WORLD_ZONES = [
     name: "Pumpkin Patch",
     subtitle: "The lantern path",
     detail:
-      "Roll from 1 to 9 among the harvest lanterns. Start your event badge collection; progress is kept on every roll.",
+      "Roll from 1 to 9 among the harvest lanterns. Nine quick reveals start your badge collection and earn the first key fragment.",
     ...WORLD_MINI_RANGES["pumpkin-patch"],
     accent: "#fbbf77",
-    fragment: null,
+    fragment: "pumpkin-patch",
     auraId: "jack-o-glow",
   },
   {
@@ -43,7 +55,7 @@ export const WORLD_ZONES = [
     name: "Graveyard",
     subtitle: "Two-digit badge hunt",
     detail:
-      "Roll from 1 to 99. Collect badges and complete three objectives to earn the first key fragment.",
+      "Roll from 1 to 99. Collect badges and complete three objectives to earn the second key fragment.",
     ...WORLD_MINI_RANGES.graveyard,
     accent: "#b7adf0",
     fragment: "graveyard",
@@ -55,15 +67,27 @@ export const WORLD_ZONES = [
     name: "Haunted House",
     subtitle: "Three-digit badge hunt",
     detail:
-      "Roll from 1 to 999. Build a larger collection and find rarer patterns to earn the second key fragment.",
+      "Roll from 1 to 999. Build a larger collection and find rarer patterns to earn the third key fragment.",
     ...WORLD_MINI_RANGES["haunted-house"],
     accent: "#95dfa3",
     fragment: "haunted-house",
   },
   {
-    id: "valley",
+    id: "blood-moon-ridge",
     phase: 4,
     auraId: "blood-moon",
+    name: "Blood Moon Ridge",
+    subtitle: "The 666 climb",
+    detail:
+      "Roll from 1 to 666 under the red moon. Sixes, sevens and primes earn the last key fragment; 666 is the Eclipse.",
+    ...WORLD_MINI_RANGES["blood-moon-ridge"],
+    accent: "#f87171",
+    fragment: "blood-moon-ridge",
+  },
+  {
+    id: "valley",
+    phase: 5,
+    auraId: "hexbound",
     name: "Valley of Horrors",
     subtitle: "The 6666 challenge",
     detail:
@@ -128,7 +152,9 @@ export function emptyRngweenWorld(drawn = [], legacyPass = false) {
       ]
     : [];
   return {
-    fragments: { graveyard: false, "haunted-house": false },
+    fragments: Object.fromEntries(
+      WORLD_FRAGMENT_ZONES.map((id) => [id, false]),
+    ),
     games: { graveyard: 0, "haunted-house": 0 },
     mini: { ...emptyWorldMini(), valley: worldValleyMini(null, drawn) },
     keyForged: false,
@@ -138,6 +164,7 @@ export function emptyRngweenWorld(drawn = [], legacyPass = false) {
       "pumpkin-patch": 0,
       graveyard: 0,
       "haunted-house": 0,
+      "blood-moon-ridge": 0,
       valley: drawn.length,
     },
     visited: drawn.length ? ["valley"] : [],
@@ -174,7 +201,7 @@ export function requireWorldZone(zoneId) {
   const zone = worldZoneById.get(zoneId);
   if (!zone)
     throw new Error(
-      "Choose Pumpkin Patch, Graveyard, Haunted House or Valley of Horrors.",
+      "Choose Pumpkin Patch, Graveyard, Haunted House, Blood Moon Ridge or Valley of Horrors.",
     );
   return zone;
 }
@@ -193,7 +220,7 @@ function readRoll(value, drawn, upgrades, nextSerial, pending) {
   if (!object(value)) return { roll: null, repaired: true };
   const zone = worldZoneById.get(value.zone);
   const mini = value.rules === WORLD_MINI_RULES;
-  const staged = !!zone?.fragment && value.rules === 2;
+  const staged = legacyGame(zone) && value.rules === 2;
   const stageMax = staged
     ? WORLD_LEGACY_STAGES[value.zone]?.[value.stage]
     : null;
@@ -201,12 +228,12 @@ function readRoll(value, drawn, upgrades, nextSerial, pending) {
     ? zone?.max
     : staged
       ? stageMax
-      : zone?.fragment
+      : legacyGame(zone)
         ? WORLD_LEGACY_STAGES[value.zone][0]
         : zone?.max;
   if (
     !zone ||
-    (zone.id === "pumpkin-patch" && !mini) ||
+    (!legacyGame(zone) && zone.id !== "valley" && !mini) ||
     (value.rules !== undefined && !staged && !mini) ||
     (!staged && value.stage !== undefined) ||
     (staged && (!amount(value.stage) || !stageMax)) ||
@@ -226,11 +253,11 @@ function readRoll(value, drawn, upgrades, nextSerial, pending) {
     value.number < 1 ||
     value.number > max ||
     (!mini &&
-      zone.fragment &&
+      legacyGame(zone) &&
       (!Number.isInteger(value.choice) ||
         value.choice < 1 ||
         value.choice > max)) ||
-    ((mini || !zone.fragment) && value.choice !== null) ||
+    ((mini || !legacyGame(zone)) && value.choice !== null) ||
     value.expectedCount !==
       (zone.id === "valley"
         ? pending
@@ -270,7 +297,7 @@ export function parseRngweenWorld(value, drawn = []) {
   if (!object(value)) return { world: fallback, repaired: true };
   let repaired = false;
   const fragments = {};
-  for (const id of ["graveyard", "haunted-house"]) {
+  for (const id of WORLD_FRAGMENT_ZONES) {
     fragments[id] = value.fragments?.[id] === true;
     if (typeof value.fragments?.[id] !== "boolean") repaired = true;
   }
@@ -284,9 +311,7 @@ export function parseRngweenWorld(value, drawn = []) {
   if (JSON.stringify(upgrades) !== JSON.stringify(value.upgrades))
     repaired = true;
   let keyForged =
-    value.keyForged === true &&
-    fragments.graveyard &&
-    fragments["haunted-house"];
+    value.keyForged === true && worldFragmentsComplete({ fragments });
   const legacyPass = value.legacyPass === true && drawn.length > 0;
   if (
     typeof value.keyForged !== "boolean" ||
@@ -300,7 +325,7 @@ export function parseRngweenWorld(value, drawn = []) {
     rounds[id] = amount(value.rounds?.[id]) ? value.rounds[id] : 0;
     if (
       rounds[id] !== value.rounds?.[id] &&
-      !(id === "pumpkin-patch" && value.rounds?.[id] === undefined)
+      !(!legacyGame({ id }) && value.rounds?.[id] === undefined)
     )
       repaired = true;
   }
@@ -321,7 +346,7 @@ export function parseRngweenWorld(value, drawn = []) {
     bestStreak = value.bestStreak;
   if (
     ![wins, streak, bestStreak].every(amount) ||
-    wins > rounds.graveyard + rounds["haunted-house"] ||
+    wins > WORLD_FRAGMENT_ZONES.reduce((sum, id) => sum + rounds[id], 0) ||
     streak > bestStreak ||
     bestStreak > wins ||
     (wins === 0) !== (bestStreak === 0)
@@ -371,11 +396,7 @@ export function parseRngweenWorld(value, drawn = []) {
           repaired = true;
         }
   }
-  if (
-    value.keyForged === true &&
-    fragments.graveyard &&
-    fragments["haunted-house"]
-  )
+  if (value.keyForged === true && worldFragmentsComplete({ fragments }))
     keyForged = true;
   const pending = readRoll(value.pending, drawn, upgrades, nextSerial, true);
   const last = readRoll(value.last, drawn, upgrades, nextSerial, false);
@@ -440,7 +461,7 @@ export function recordWorldOutcome(limited, pending) {
       "The saved legacy result no longer matches its run. Reload your save.",
     );
   const games = { graveyard: 0, "haunted-house": 0, ...previous.games };
-  if (zone.fragment)
+  if (legacyGame(zone))
     games[zone.id] =
       !isMini && pending.rules === 2 && won && !complete
         ? pending.stage + 1

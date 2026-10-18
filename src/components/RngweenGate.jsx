@@ -29,7 +29,7 @@ export default function RngweenGate({
               The Reaper's Gate · until Nov 3 UTC
             </span>
             <strong>RNGween World</strong>
-            <span>Four phases. Two fragments unlock the Valley challenge.</span>
+            <span>Five zones. Four fragments unlock the Valley challenge.</span>
           </div>
           <button
             className="secondary-button"

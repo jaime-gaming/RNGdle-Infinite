@@ -95,11 +95,12 @@ export function unlockedRngweenPreview() {
   };
   const samples = {
     "pumpkin-patch": [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    graveyard: [66, 13, 49, 66, 6, 12],
+    graveyard: [66, 13, 49, 66, 6, 12, 97, 99],
     "haunted-house": [
       666, 13, 123, 313, 111, 229, 343, 246, 123, 666, 111, 121,
     ],
-    valley: [1234, 1354, 10, 1353, RNGWEEN_WORLD_TARGET],
+    "blood-moon-ridge": [666, 606, 616, 626, 13, 7, 123, 67],
+    valley: [1234, 1354, 10, 1353, 1361, RNGWEEN_WORLD_TARGET],
   };
   let cursor =
     Date.UTC(2026, 9, 26, 12) - Object.values(samples).flat().length * 2000;

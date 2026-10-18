@@ -114,9 +114,8 @@ export default function RngweenIntro({ now, paused = false, onOpenChange }) {
               <li>
                 <strong>RNGween World · the Reaper at the foot of Roll</strong>
                 <span>
-                  Four haunted zones with their own badges. Clear the Graveyard
-                  and the Haunted House to forge a key to the Valley of Horrors,
-                  or buy one for{" "}
+                  Five haunted zones with their own badges. Clear the first four
+                  to forge a key to the Valley of Horrors, or buy one for{" "}
                   {RNGWEEN_WORLD_KEY.pumpkoinPrice.toLocaleString("en-US")}{" "}
                   Pumpkoins. Roll 6666 in the Valley and Hexbound is yours.
                 </span>

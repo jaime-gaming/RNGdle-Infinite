@@ -124,10 +124,8 @@ export default function WorldCollection({ zone, stats, fragmentOwned, drawn }) {
             <div>
               <span className="world-eyebrow">
                 {zone.fragment
-                  ? `Earns key fragment ${zone.phase - 1} of 2`
-                  : zone.id === "valley"
-                    ? "Valley milestones"
-                    : "Warm-up · optional"}
+                  ? `Earns key fragment ${zone.phase} of 4`
+                  : "Valley milestones"}
               </span>
               <h3>{zone.name} objectives</h3>
             </div>
@@ -145,13 +143,9 @@ export default function WorldCollection({ zone, stats, fragmentOwned, drawn }) {
               ? fragmentOwned
                 ? "Your fragment is saved. You can keep collecting badges for points and the Record."
                 : "Finish all three and the fragment is yours, automatically. Progress here never resets."
-              : zone.id === "valley"
-                ? complete
-                  ? "All Valley milestones done. Only 6666 is left to find."
-                  : "Milestones for the Record. Hexbound still needs the number 6666 itself."
-                : complete
-                  ? "Warm-up done. The key fragments wait in the Graveyard and the Haunted House."
-                  : "A warm-up to learn the rolls: badges add points, points and badges fill these bars. Nothing here is needed for the key."}
+              : complete
+                ? "All Valley milestones done. Only 6666 is left to find."
+                : "Milestones for the Record. Hexbound still needs the number 6666 itself."}
           </p>
           <div className="world-objective-grid">
             {goals.map((goal) => (

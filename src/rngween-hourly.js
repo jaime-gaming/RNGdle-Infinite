@@ -414,7 +414,7 @@ export const RNGWEEN_HOURLY_TASKS = [
   world(
     "three-in-a-row",
     "Three in a row",
-    "Roll Uncommon or better 3 times in a row in Graveyard or Haunted House. Common results reset this task.",
+    "Roll Uncommon or better 3 times in a row in any zone before the Valley. Common results reset this task.",
     "streak",
     3,
     40,
@@ -763,7 +763,7 @@ export function worldHourlyTally(previous, next, number, zoneId = "valley") {
   const legacyMax =
     after.last?.rules === 2
       ? WORLD_LEGACY_STAGES[zoneId]?.[after.last.stage]
-      : zone.fragment
+      : WORLD_LEGACY_STAGES[zoneId]
         ? WORLD_LEGACY_STAGES[zoneId][0]
         : zone.max;
   const high = number >= Math.floor((mini ? zone.max : legacyMax) / 2) + 1;

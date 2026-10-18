@@ -17,10 +17,12 @@ export default function WorldAuraTrial({
   const trial = rngweenState(progress.tasks, now).missions.find(
     (item) => item.auraId === phase.auraId,
   );
-  const owned = progress.owned.includes(aura.id);
-  const equipped = progress.equipped === aura.id;
   // Phones fold the long copy behind one tap; desktop always shows it (CSS).
   const [more, setMore] = useState(false);
+  // The Valley's aura is Hexbound itself; Key & prize already explains it.
+  if (!aura || !trial) return null;
+  const owned = progress.owned.includes(aura.id);
+  const equipped = progress.equipped === aura.id;
   const foldId = `world-aura-fold-${aura.id}`;
   return (
     <section

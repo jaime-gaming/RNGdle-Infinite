@@ -7,6 +7,8 @@ export const WORLD_MINI_RANGES = {
   "pumpkin-patch": { max: 9, digits: 1 },
   graveyard: { max: 99, digits: 2 },
   "haunted-house": { max: 999, digits: 3 },
+  // 666 is the top of the Ridge: the zone's own "hex" face.
+  "blood-moon-ridge": { max: 666, digits: 3 },
   valley: { max: 9999, digits: 4 },
 };
 export const WORLD_BADGE_TIERS = [
@@ -100,6 +102,42 @@ export const WORLD_BADGES = {
       "nine",
       "pumpkin",
     ),
+    badge(
+      "low-vines",
+      "Low Vines",
+      "Roll 1, 2 or 3.",
+      "common",
+      2,
+      "low",
+      "stairs",
+    ),
+    badge(
+      "tall-stalks",
+      "Tall Stalks",
+      "Roll 7, 8 or 9.",
+      "uncommon",
+      3,
+      "high",
+      "stairs",
+    ),
+    badge(
+      "five-candles",
+      "Five Candles",
+      "Roll exactly 5.",
+      "rare",
+      10,
+      "five",
+      "candle",
+    ),
+    badge(
+      "fat-gourd",
+      "Fat Gourd",
+      "Roll exactly 8.",
+      "rare",
+      12,
+      "eight",
+      "pumpkin",
+    ),
   ],
   graveyard: [
     badge(
@@ -173,6 +211,33 @@ export const WORLD_BADGES = {
       50,
       "cat13",
       "cat",
+    ),
+    badge(
+      "raven-seven",
+      "Raven Seven",
+      "Find a 7 in either digit.",
+      "uncommon",
+      5,
+      "hasSeven",
+      "crow",
+    ),
+    badge(
+      "cursed-prime",
+      "Cursed Prime",
+      "Roll a prime number.",
+      "rare",
+      12,
+      "prime",
+      "candle",
+    ),
+    badge(
+      "last-plot",
+      "Last Plot",
+      "Roll exactly 99.",
+      "epic",
+      60,
+      "top",
+      "door",
     ),
     badge(
       "double-hex",
@@ -276,9 +341,128 @@ export const WORLD_BADGES = {
       "ghost",
     ),
     badge(
+      "sealed-door",
+      "Sealed Door",
+      "Roll a prime number.",
+      "rare",
+      30,
+      "prime",
+      "door",
+    ),
+    badge(
       "infernal",
       "Infernal",
       "Roll exactly 666. This badge does not award Hexbound.",
+      "legendary",
+      500,
+      "hex",
+      "hex",
+    ),
+  ],
+  "blood-moon-ridge": [
+    badge(
+      "moonrise",
+      "Moonrise",
+      "Roll an even number.",
+      "common",
+      1,
+      "even",
+      "moon",
+    ),
+    badge(
+      "moonset",
+      "Moonset",
+      "Roll an odd number.",
+      "common",
+      1,
+      "odd",
+      "moon",
+    ),
+    badge(
+      "red-six",
+      "Red Six",
+      "Find at least one 6.",
+      "uncommon",
+      8,
+      "six",
+      "skull",
+    ),
+    badge(
+      "blind-moon",
+      "Blind Moon",
+      "Find at least one 0.",
+      "uncommon",
+      8,
+      "zero",
+      "moon",
+    ),
+    badge(
+      "twin-bats",
+      "Twin Bats",
+      "Roll a repeated digit.",
+      "uncommon",
+      10,
+      "repeat",
+      "bones",
+    ),
+    badge(
+      "seventh-night",
+      "Seventh Night",
+      "Find at least one 7.",
+      "uncommon",
+      10,
+      "hasSeven",
+      "crow",
+    ),
+    badge(
+      "blood-mirror",
+      "Blood Mirror",
+      "Roll a three-digit palindrome.",
+      "rare",
+      35,
+      "palindrome",
+      "mirror",
+    ),
+    badge(
+      "cliff-steps",
+      "Cliff Steps",
+      "Roll three digits in ascending or descending order.",
+      "rare",
+      45,
+      "steps",
+      "stairs",
+    ),
+    badge(
+      "thirteen-drops",
+      "Thirteen Drops",
+      "Roll digits whose sum is 13.",
+      "rare",
+      25,
+      "sum13",
+      "candle",
+    ),
+    badge(
+      "blood-prime",
+      "Blood Prime",
+      "Roll a prime number.",
+      "rare",
+      30,
+      "prime",
+      "door",
+    ),
+    badge(
+      "triple-howl",
+      "Triple Howl",
+      "Roll three identical digits.",
+      "epic",
+      100,
+      "same",
+      "ghost",
+    ),
+    badge(
+      "eclipse",
+      "Eclipse",
+      "Roll exactly 666, the top of the Ridge. This badge does not award Hexbound.",
       "legendary",
       500,
       "hex",
@@ -377,6 +561,15 @@ export const WORLD_BADGES = {
       "ghost",
     ),
     badge(
+      "valley-prime",
+      "Valley Prime",
+      "Roll a prime number.",
+      "rare",
+      50,
+      "prime",
+      "candle",
+    ),
+    badge(
       "hexbound",
       "Hexbound",
       "Roll exactly 6666 to earn the permanent skin.",
@@ -387,13 +580,30 @@ export const WORLD_BADGES = {
     ),
   ],
 };
+// Every fragment zone asks for about half its collection plus one zone
+// flavour goal: enough to see the badges, short enough to stay fun.
 export const WORLD_FRAGMENT_GOALS = {
+  "pumpkin-patch": [
+    {
+      id: "collection",
+      name: "Collect 6 different badges",
+      metric: "unique",
+      goal: 6,
+    },
+    {
+      id: "points",
+      name: "Earn 60 Pumpkin Patch points",
+      metric: "score",
+      goal: 60,
+    },
+    { id: "rolls", name: "Reveal 9 numbers", metric: "rolls", goal: 9 },
+  ],
   graveyard: [
     {
       id: "collection",
-      name: "Collect 5 different badges",
+      name: "Collect 6 different badges",
       metric: "unique",
-      goal: 5,
+      goal: 6,
     },
     {
       id: "points",
@@ -412,36 +622,36 @@ export const WORLD_FRAGMENT_GOALS = {
     },
     {
       id: "points",
-      name: "Earn 1,000 Haunted House points",
+      name: "Earn 600 Haunted House points",
       metric: "score",
-      goal: 1000,
+      goal: 600,
     },
     {
       id: "rares",
-      name: "Roll Rare or better 10 times",
+      name: "Roll Rare or better 6 times",
       metric: "rareRolls",
-      goal: 10,
+      goal: 6,
     },
   ],
-};
-// Phase objectives are collection milestones, never aura missions. Only
-// Graveyard/Haunted House award key fragments; auras keep their original trials.
-export const WORLD_PHASE_GOALS = {
-  "pumpkin-patch": [
+  "blood-moon-ridge": [
     {
       id: "collection",
-      name: "Collect 4 different badges",
+      name: "Collect 6 different badges",
       metric: "unique",
-      goal: 4,
+      goal: 6,
     },
     {
       id: "points",
-      name: "Earn 60 Pumpkin Patch points",
+      name: "Earn 500 Blood Moon Ridge points",
       metric: "score",
-      goal: 60,
+      goal: 500,
     },
-    { id: "rolls", name: "Reveal 9 numbers", metric: "rolls", goal: 9 },
+    { id: "sixes", name: "Get Red Six 4 times", metric: "six", goal: 4 },
   ],
+};
+// Phase objectives are collection milestones, never aura missions. The four
+// fragment zones award key fragments; auras keep their original trials.
+export const WORLD_PHASE_GOALS = {
   ...WORLD_FRAGMENT_GOALS,
   valley: [
     {
@@ -452,9 +662,9 @@ export const WORLD_PHASE_GOALS = {
     },
     {
       id: "points",
-      name: "Earn 5,000 Valley points",
+      name: "Earn 3,000 Valley points",
       metric: "score",
-      goal: 5000,
+      goal: 3000,
     },
     {
       id: "rares",
@@ -484,8 +694,21 @@ export function scoreWorldNumber(zone, number) {
       .slice(1)
       .every((digit, index) => digit === digits[index] + direction),
   );
+  const prime =
+    number > 1 &&
+    Array.from(
+      { length: Math.floor(Math.sqrt(number)) - 1 },
+      (_, i) => i + 2,
+    ).every((divisor) => number % divisor !== 0);
   const matches = {
     even: number % 2 === 0,
+    low: number <= 3,
+    high: number >= 7,
+    five: number === 5,
+    eight: number === 8,
+    hasSeven: text.includes("7"),
+    prime,
+    top: number === range.max,
     odd: number % 2 !== 0,
     six: text.includes("6"),
     zero: text.includes("0"),
@@ -533,6 +756,13 @@ export function emptyWorldMini() {
     ]),
   );
 }
+const SIX_BADGE = {
+  "pumpkin-patch": "pumpkin-six",
+  graveyard: "six-mark",
+  "haunted-house": "haunted-six",
+  "blood-moon-ridge": "red-six",
+  valley: "red-mark",
+};
 export function worldMiniSummary(zone, stats) {
   const counts = stats?.counts ?? {};
   const badges = WORLD_BADGES[zone] ?? [];
@@ -546,16 +776,7 @@ export function worldMiniSummary(zone, stats) {
     unique: badges.filter((entry) => (counts[entry.id] ?? 0) > 0).length,
     total: badges.length,
     rareRolls: stats?.rareRolls ?? 0,
-    six:
-      counts[
-        zone === "pumpkin-patch"
-          ? "pumpkin-six"
-          : zone === "graveyard"
-            ? "six-mark"
-            : zone === "haunted-house"
-              ? "haunted-six"
-              : "red-mark"
-      ] ?? 0,
+    six: counts[SIX_BADGE[zone]] ?? 0,
   };
 }
 export function worldFragmentGoals(zone, stats) {

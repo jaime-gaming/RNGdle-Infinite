@@ -17,6 +17,8 @@ import {
   parseRngweenWorld,
   rngweenValleyUnlocked,
   worldState,
+  worldFragmentsComplete,
+  WORLD_FRAGMENT_ZONES,
 } from "./rngween-world-zones.js";
 
 // CLEANUP Nov 4, 2026 00:00 UTC: remove the limited shop, exchange and world
@@ -74,7 +76,7 @@ export const RNGWEEN_WORLD_KEY = {
   pumpkoinPrice: 2000,
   icon: "world-key",
   description:
-    "Opens the Valley of Horrors challenge, not the World entrance. Forge one from a Graveyard fragment and a Haunted House fragment, or buy this shortcut. Never consumed on entry or rebirth. No aura or Hexbound included. Expires after November 3 UTC.",
+    "Opens the Valley of Horrors challenge, not the World entrance. Forge one from the four zone fragments, or buy this shortcut. Never consumed on entry or rebirth. No aura or Hexbound included. Expires after November 3 UTC.",
 };
 export const RNGWEEN_LIMITED_ITEMS = [
   RNGWEEN_PET,
@@ -176,12 +178,10 @@ function recoverLimitedReceipts(
       entry.type === "rngween-forged-key" &&
       entry.id === `rngween-forged-key:${RNGWEEN_ID}`
     ) {
-      if (
-        !world.keyForged ||
-        !world.fragments?.graveyard ||
-        !world.fragments?.["haunted-house"]
-      ) {
-        world.fragments = { graveyard: true, "haunted-house": true };
+      if (!world.keyForged || !worldFragmentsComplete(world)) {
+        world.fragments = Object.fromEntries(
+          WORLD_FRAGMENT_ZONES.map((id) => [id, true]),
+        );
         world.keyForged = true;
         repaired = worldRecovered = true;
       }

@@ -1146,7 +1146,7 @@ test("four-phase scenes fit 340px and desktop; repeatable badge rolls keep their
     await expect(
       page.getByRole("button", { name: /Roll in Graveyard/ }),
     ).toBeVisible();
-    await expect(page.locator("[data-world-zone]")).toHaveCount(4);
+    await expect(page.locator("[data-world-zone]")).toHaveCount(5);
   }
   clock.set(trials + 50000);
   await page.reload();

@@ -140,7 +140,7 @@ effect of other work.
   Objectives (collection, aura trial, default), Key & prize, Commissions,
   Record. Tests that need the key forge switch to its tab first. Under the
   title a `.world-next-step` box (`data-world-next-step`) names the single
-  thing to do next (profile → fragments → forge → Valley → keep rolling); keep
+  thing to do next (profile → four fragments → forge → Valley → keep rolling); keep
   it to one sentence and one button.
 - **Profile share links** (`src/profile-card.js`): the `?card=` token is a
   compact base36 line (format v2, ~300 chars). v1 JSON tokens still decode;
@@ -247,6 +247,15 @@ guessing.
   Rollback like every other owned aura.
 - World rolls pay no ordinary EP, charges, drops or task credit. Pending World
   outcomes are committed to the save before the animation starts.
+- World layout (`src/rngween-world-zones.js`, `src/rngween-world-badges.js`):
+  five zones in path order, Pumpkin Patch (1–9), Graveyard (1–99), Haunted
+  House (1–999), Blood Moon Ridge (1–666) and Valley of Horrors (1–9999, no
+  repeats). The first four are `WORLD_FRAGMENT_ZONES`; each has 12 badges and
+  three objectives that award its key fragment, and the free forge needs all
+  four (`worldFragmentsComplete`). Objectives are tuned so a zone takes about
+  10–30 rolls (see the sim in the round notes), never hundreds. Legacy staged
+  minigame fields (`games`, `WORLD_LEGACY_STAGES`) only exist for Graveyard and
+  Haunted House; use `legacyGame(zone)`, not `zone.fragment`, to detect them.
 - The dev previews (`dev:rngween*`, `tools/sandbox-*.mjs`) are `apply: "serve"`
   Vite plugins. Nothing from them reaches a production build; keep it so.
 - **Event attendance (`progress.events`).** An account that opens the game

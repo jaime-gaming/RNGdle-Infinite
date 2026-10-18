@@ -215,7 +215,7 @@
 .world-zones {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -1099,6 +1099,13 @@
   .world-zones {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 9px;
+  }
+  /* Five cards in two columns: the Valley, the finale, takes the full row. */
+  .world-zone[data-world-zone="valley"] {
+    grid-column: 1 / -1;
+  }
+  .world-zones::before {
+    display: none;
   }
   .world-zone {
     padding: 13px 10px;
@@ -2512,4 +2519,20 @@
 }
 .world-aura-trial-copy > .world-aura-source-note {
   margin: 8px 0 0;
+}
+
+/* ---- Blood Moon Ridge: bats cross the moon, slowly --------------------- */
+.world-scene-bats {
+  animation: world-bat-sweep 9s ease-in-out infinite alternate;
+}
+@keyframes world-bat-sweep {
+  from {
+    transform: translate(-14px, 4px);
+  }
+  to {
+    transform: translate(14px, -6px);
+  }
+}
+.world-motion-reduced .world-scene-bats {
+  animation: none;
 }

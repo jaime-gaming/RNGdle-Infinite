@@ -1,6 +1,7 @@
 import React from "react";
 import { Check, Trophy } from "lucide-react";
 import { rngweenRecord } from "../rngween-record.js";
+import { WORLD_FRAGMENT_ZONES, worldZoneById } from "../rngween-world-zones.js";
 
 // The "Record" tab: your event in numbers. Figures come from the save and
 // the log, nothing is stored twice.
@@ -29,8 +30,10 @@ export default function WorldRecord({ progress, now }) {
     ],
   ];
   const pieces = [
-    ["Graveyard fragment", record.fragments.graveyard],
-    ["Haunted House fragment", record.fragments["haunted-house"]],
+    ...WORLD_FRAGMENT_ZONES.map((id) => [
+      `${worldZoneById.get(id).name} fragment`,
+      record.fragments[id],
+    ]),
     ["Key forged", record.key],
     ["6666 in the Valley", record.jackpot],
   ];

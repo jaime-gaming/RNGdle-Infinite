@@ -56,6 +56,7 @@ test("the event record adds up what the log and the save say", () => {
     "pumpkin-patch",
     "graveyard",
     "haunted-house",
+    "blood-moon-ridge",
     "valley",
   ]);
   expect(record.rolls).toBe(0);
@@ -94,7 +95,7 @@ test("the World has a Record tab with the event figures", async ({ page }) => {
   await expect(panel.locator(".world-record-auras")).toContainText(
     "Jack-o'-Glow · Witchfire",
   );
-  await expect(panel.getByLabel("Zones").locator("li")).toHaveCount(4);
+  await expect(panel.getByLabel("Zones").locator("li")).toHaveCount(5);
   await expect(
     panel.getByLabel("The Valley key").locator('[data-done="true"]'),
   ).toHaveCount(0);

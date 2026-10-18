@@ -293,14 +293,19 @@ test("Shop confirms the same saved key, spends once and opens the Reaper with pa
   ).toHaveLength(1);
 });
 
-test("Shop does not sell an unnecessary challenge key when both distinct fragments are ready to forge for free", async ({
+test("Shop does not sell an unnecessary challenge key when all four fragments are ready to forge for free", async ({
   page,
 }) => {
   await mockSeasonClock(page, active);
   const p = wallet(2000, { tasks: fullTasks });
   p.rngweenLimited.world = {
     ...emptyRngweenWorld(),
-    fragments: { graveyard: true, "haunted-house": true },
+    fragments: {
+      "pumpkin-patch": true,
+      graveyard: true,
+      "haunted-house": true,
+      "blood-moon-ridge": true,
+    },
     rounds: { graveyard: 1, "haunted-house": 1, valley: 0 },
     visited: ["graveyard", "haunted-house"],
     wins: 2,
@@ -310,7 +315,7 @@ test("Shop does not sell an unnecessary challenge key when both distinct fragmen
   await seedProgress(page, p);
   await page.goto("/shop/limited");
   const key = page.locator(`[data-limited-item="${RNGWEEN_WORLD_KEY.id}"]`);
-  await expect(key).toContainText("Both fragments ready · forge for free");
+  await expect(key).toContainText("All fragments ready · forge for free");
   await expect(key.getByRole("button", { name: /^Buy/ })).toHaveCount(0);
   expect((await saved(page)).rngweenLimited.bought).not.toContain(
     RNGWEEN_WORLD_KEY.id,
@@ -318,7 +323,9 @@ test("Shop does not sell an unnecessary challenge key when both distinct fragmen
   await key.getByRole("button", { name: "View World" }).click();
   await expect(
     page.getByRole("dialog", { name: "The Reaper", exact: true }),
-  ).toContainText("Both fragments are ready. Forge your key inside the World.");
+  ).toContainText(
+    "All four fragments are ready. Forge your key inside the World.",
+  );
 });
 
 test("a Shop key purchase still needs a fresh verified calendar and never charges on failure", async ({
@@ -474,7 +481,7 @@ test("the Reaper's trial and reward conversations fit a phone and report real pr
   expect(box.y).toBeGreaterThanOrEqual(0);
   expect(box.y + box.height).toBeLessThanOrEqual(740);
   await dialog.getByRole("button", { name: "What is this place?" }).click();
-  await expect(dialog).toContainText("Four haunted places");
+  await expect(dialog).toContainText("Five haunted places");
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
 });
@@ -599,7 +606,7 @@ test("the unlocked sandbox fixture is opt-in, cleanly parsed, six-draw safe and 
       (sum, stats) => sum + Object.keys(stats.counts).length,
       0,
     ),
-  ).toBe(39);
+  ).toBe(60);
   expect(fixture.progress.owned).toContain("hexbound");
   const values = new Map();
   const localStorage = {

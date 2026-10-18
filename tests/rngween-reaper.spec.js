@@ -377,11 +377,11 @@ test("the Reaper explains public zones, confirms a paid challenge key and rememb
   await dialog.getByRole("button", { name: "What is this place?" }).click();
   await expect(dialog).toContainText("Graveyard");
   await expect(dialog).toContainText("Haunted House");
-  await expect(dialog).toContainText("Thirty-nine badges");
+  await expect(dialog).toContainText("Sixty badges");
   await dialog
     .getByRole("button", { name: "How do I get into the Valley?" })
     .click();
-  await expect(dialog).toContainText("Two fragments make a key");
+  await expect(dialog).toContainText("Four fragments make a key");
   await dialog.getByRole("button", { name: "I'll buy a key." }).click();
   await expect(dialog).toContainText("No refunds, no aura, no Hexbound");
   await dialog.getByRole("button", { name: "Not now" }).click();
@@ -394,7 +394,7 @@ test("the Reaper explains public zones, confirms a paid challenge key and rememb
   expect(before.tasks.rngween.earned).toEqual([]);
   await dialog.getByRole("button", { name: "Enter RNGween World" }).click();
   await expect(page).toHaveURL(/\/rngween-world\/?$/);
-  await expect(page.locator("[data-world-zone]")).toHaveCount(4);
+  await expect(page.locator("[data-world-zone]")).toHaveCount(5);
   await page.locator('[data-world-zone="valley"]').click();
   for (let i = 1; i <= 2; i++) {
     await page.getByRole("button", { name: /Roll in the Valley/ }).click();
