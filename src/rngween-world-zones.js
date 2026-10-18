@@ -28,8 +28,8 @@ const legacyGame = (zone) => Object.hasOwn(WORLD_LEGACY_STAGES, zone?.id);
 export const WORLD_FRAGMENT_ZONES = [
   "pumpkin-patch",
   "graveyard",
-  "haunted-house",
   "blood-moon-ridge",
+  "haunted-house",
 ];
 export const worldFragmentCount = (world) =>
   WORLD_FRAGMENT_ZONES.filter((id) => world?.fragments?.[id] === true).length;
@@ -61,28 +61,28 @@ export const WORLD_ZONES = [
     fragment: "graveyard",
   },
   {
-    id: "haunted-house",
-    phase: 3,
-    auraId: "witchfire",
-    name: "Haunted House",
-    subtitle: "Three-digit badge hunt",
-    detail:
-      "Roll from 1 to 999. Build a larger collection and find rarer patterns to earn the third key fragment.",
-    ...WORLD_MINI_RANGES["haunted-house"],
-    accent: "#95dfa3",
-    fragment: "haunted-house",
-  },
-  {
     id: "blood-moon-ridge",
-    phase: 4,
+    phase: 3,
     auraId: "blood-moon",
     name: "Blood Moon Ridge",
     subtitle: "The 666 climb",
     detail:
-      "Roll from 1 to 666 under the red moon. Sixes, sevens and primes earn the last key fragment; 666 is the Eclipse.",
+      "Roll from 1 to 666 under the red moon. Sixes, sevens and primes earn the third key fragment; 666 is the Eclipse.",
     ...WORLD_MINI_RANGES["blood-moon-ridge"],
     accent: "#f87171",
     fragment: "blood-moon-ridge",
+  },
+  {
+    id: "haunted-house",
+    phase: 4,
+    auraId: "witchfire",
+    name: "Haunted House",
+    subtitle: "Three-digit badge hunt",
+    detail:
+      "Roll from 1 to 999. Build a larger collection and find rarer patterns to earn the last key fragment.",
+    ...WORLD_MINI_RANGES["haunted-house"],
+    accent: "#95dfa3",
+    fragment: "haunted-house",
   },
   {
     id: "valley",
@@ -163,8 +163,8 @@ export function emptyRngweenWorld(drawn = [], legacyPass = false) {
     rounds: {
       "pumpkin-patch": 0,
       graveyard: 0,
-      "haunted-house": 0,
       "blood-moon-ridge": 0,
+      "haunted-house": 0,
       valley: drawn.length,
     },
     visited: drawn.length ? ["valley"] : [],
@@ -201,7 +201,7 @@ export function requireWorldZone(zoneId) {
   const zone = worldZoneById.get(zoneId);
   if (!zone)
     throw new Error(
-      "Choose Pumpkin Patch, Graveyard, Haunted House, Blood Moon Ridge or Valley of Horrors.",
+      "Choose Pumpkin Patch, Graveyard, Blood Moon Ridge, Haunted House or Valley of Horrors.",
     );
   return zone;
 }

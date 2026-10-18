@@ -125,8 +125,8 @@ test("World is public with exactly five English phases; aura missions never repl
   expect(WORLD_ZONES.map((z) => z.name)).toEqual([
     "Pumpkin Patch",
     "Graveyard",
-    "Haunted House",
     "Blood Moon Ridge",
+    "Haunted House",
     "Valley of Horrors",
   ]);
   expect(rngweenWorldUnlocked(account().tasks, account().rngweenLimited)).toBe(

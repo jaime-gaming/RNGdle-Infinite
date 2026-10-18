@@ -68,8 +68,8 @@ test("five numbered World phases map to the original event auras without replaci
   ).toEqual([
     [1, "pumpkin-patch", "jack-o-glow", 9],
     [2, "graveyard", "phantom-veil", 99],
-    [3, "haunted-house", "witchfire", 999],
-    [4, "blood-moon-ridge", "blood-moon", 666],
+    [3, "blood-moon-ridge", "blood-moon", 666],
+    [4, "haunted-house", "witchfire", 999],
     [5, "valley", "hexbound", 9999],
   ]);
   expect(

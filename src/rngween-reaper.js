@@ -86,9 +86,9 @@ export function reaperDialogue(
       graveyard:
         "Two digits among the stones. Twins, steps, sixes, thirteens. Clear my three objectives and a fragment is yours.",
       "haunted-house":
-        "Three digits and a house that creaks. Palindromes, triples. Three objectives, one fragment.",
+        "Three digits and a house that creaks. Palindromes, triples. Three objectives, and the last fragment.",
       "blood-moon-ridge":
-        "The ridge stops at 666. Sixes, sevens, primes. Clear my three objectives and the last fragment is yours. If you see 666 up here, that's the Eclipse, not Hexbound.",
+        "The ridge stops at 666. Sixes, sevens, primes. Clear my three objectives and a fragment is yours. If you see 666 up here, that's the Eclipse, not Hexbound.",
       valley: key
         ? "Your key fits. Nothing repeats in the Valley. If you see 6666, don't blink."
         : "Not without a key. Forge it from all four fragments, or pay me and skip the work.",
@@ -111,7 +111,7 @@ export function reaperDialogue(
     return {
       title: "The World",
       lines: [
-        "Five haunted places, each bigger than the last: the Patch, the Graveyard, the Haunted House, the Ridge and the Valley. Sixty badges to find. They mean nothing out there, and everything in here.",
+        "Five haunted places, each bigger than the last: the Patch, the Graveyard, the Ridge, the Haunted House and the Valley. Sixty badges to find. They mean nothing out there, and everything in here.",
       ],
     };
   if (topic === "fragments")

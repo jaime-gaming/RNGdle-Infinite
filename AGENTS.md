@@ -248,8 +248,8 @@ guessing.
 - World rolls pay no ordinary EP, charges, drops or task credit. Pending World
   outcomes are committed to the save before the animation starts.
 - World layout (`src/rngween-world-zones.js`, `src/rngween-world-badges.js`):
-  five zones in path order, Pumpkin Patch (1–9), Graveyard (1–99), Haunted
-  House (1–999), Blood Moon Ridge (1–666) and Valley of Horrors (1–9999, no
+  five zones in path order, Pumpkin Patch (1–9), Graveyard (1–99), Blood Moon
+  Ridge (1–666), Haunted House (1–999) and Valley of Horrors (1–9999, no
   repeats). The first four are `WORLD_FRAGMENT_ZONES`; each has 12 badges and
   three objectives that award its key fragment, and the free forge needs all
   four (`worldFragmentsComplete`). Objectives are tuned so a zone takes about
@@ -307,6 +307,11 @@ guessing.
   instead of acknowledging. That protects a device whose storage is full or
   whose save is mid-repair.
 - The save never has to pass through the broker. Keep it that way.
+- The peer id is built from the room only, so the broker (and anyone who can
+  guess or observe an id) knows the room but never the key. Every WebRTC frame
+  therefore carries `key` (`sendPeerMessage` adds it) and the receiver closes
+  the channel on the first frame whose key does not match, before any state or
+  hello is processed. The relay path checks the key in its URL instead.
 - `tests/device-link.spec.js` covers the relay path; `device-link-webrtc.spec.js`
   needs a local `peer` server and is the one to run after touching reconnects.
 

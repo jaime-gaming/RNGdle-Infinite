@@ -1202,7 +1202,7 @@ function applyEvent(state, action) {
         );
       if (!worldFragmentsComplete(world))
         throw new Error(
-          "Clear the objectives in all four fragment zones first: Pumpkin Patch, Graveyard, Haunted House and Blood Moon Ridge.",
+          "Clear the objectives in all four fragment zones first: Pumpkin Patch, Graveyard, Blood Moon Ridge and Haunted House.",
         );
       return {
         ...state,

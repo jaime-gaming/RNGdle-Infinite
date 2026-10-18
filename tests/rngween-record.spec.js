@@ -55,8 +55,8 @@ test("the event record adds up what the log and the save say", () => {
   expect(record.zones.map((zone) => zone.id)).toEqual([
     "pumpkin-patch",
     "graveyard",
-    "haunted-house",
     "blood-moon-ridge",
+    "haunted-house",
     "valley",
   ]);
   expect(record.rolls).toBe(0);

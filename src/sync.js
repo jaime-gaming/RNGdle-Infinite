@@ -629,6 +629,15 @@ function openPeerSlot(slot) {
       return;
     }
     if (type === "peer-unavailable") {
+      // The other device has not registered yet. Drop the dead attempt now so
+      // the next heartbeat redials, instead of waiting out the stall timeout.
+      if (conn && !conn.open) {
+        const stalled = conn;
+        conn = null;
+        try {
+          stalled.close();
+        } catch {}
+      }
       setStatus("waiting", waitingCopy());
       return;
     }
@@ -709,8 +718,22 @@ function attachConnection(connection, epoch = linkEpoch) {
     sendPeerState();
   });
   connection.on("data", (data) => {
-    if (conn === connection && epoch === linkEpoch)
-      handlePeerMessage(data, "peer");
+    if (conn !== connection || epoch !== linkEpoch) return;
+    // The broker only knows the room; the key never leaves the link URL. A
+    // peer that dialled the room without it is not ours: drop it, do not
+    // hand it the save.
+    if (!data || typeof data !== "object" || data.key !== key) {
+      conn = null;
+      lastPongAt = 0;
+      peers = peer && !peer.destroyed ? 1 : 0;
+      setStatus("waiting", waitingCopy());
+      try {
+        connection.close();
+      } catch {}
+      schedulePeerReconnect(epoch);
+      return;
+    }
+    handlePeerMessage(data, "peer");
   });
   connection.on("close", () => {
     if (conn !== connection || epoch !== linkEpoch) return;
@@ -736,7 +759,7 @@ function attachConnection(connection, epoch = linkEpoch) {
 function sendPeerMessage(message) {
   if (!conn?.open) return false;
   try {
-    conn.send(message);
+    conn.send({ ...message, key });
     return true;
   } catch {
     return false;
