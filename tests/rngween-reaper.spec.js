@@ -818,3 +818,31 @@ test("a keyless direct World route stays open while only the Valley challenge re
     page.getByRole("button", { name: /Roll in the Valley/ }),
   ).toHaveCount(0);
 });
+
+test("the home gate skips the Reaper once the player has been inside the World", async ({
+  page,
+}) => {
+  await mockSeasonClock(page, active);
+  await seedProgress(page);
+  await page.goto("/");
+  const gate = page.getByLabel("Halloween world entrance");
+  // First time: only the Reaper opens the way.
+  await expect(
+    gate.getByRole("button", { name: "Speak to The Reaper" }),
+  ).toBeVisible();
+  await expect(
+    gate.getByRole("button", { name: "Enter the World" }),
+  ).toHaveCount(0);
+  await page.goto("/rngween-world");
+  await expect(
+    page.getByRole("heading", { name: "RNGween World", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Back to Roll" }).click();
+  // After that the gate opens straight into the World; the Reaper stays one tap away.
+  await gate.getByRole("button", { name: "Enter the World" }).click();
+  await expect(page).toHaveURL(/\/rngween-world\/?$/);
+  await page.getByRole("button", { name: "Back to Roll" }).click();
+  await expect(
+    gate.getByRole("button", { name: "Speak to The Reaper" }),
+  ).toBeVisible();
+});

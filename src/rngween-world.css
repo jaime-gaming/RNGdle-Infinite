@@ -342,21 +342,31 @@
   box-shadow: 0 15px 50px #10071c22;
   min-height: 500px;
 }
+/* Each zone gets its own sky: a tinted glow up top over the shared dark base. */
+.world-playground[data-zone="pumpkin-patch"] {
+  background:
+    radial-gradient(ellipse at 76% 22%, #4a2f2a55 0, transparent 40%),
+    linear-gradient(#1a1228, #2a1b33 45%, #130d1c);
+}
 .world-playground[data-zone="graveyard"] {
-  background: radial-gradient(
-    ellipse at 50% 50%,
-    #1e3535 0,
-    #171322 57%,
-    #0e0b15 100%
-  );
+  background:
+    radial-gradient(ellipse at 50% 20%, #1e3535 0, transparent 55%),
+    linear-gradient(#0d1420, #171322 55%, #0e0b15);
+}
+.world-playground[data-zone="blood-moon-ridge"] {
+  background:
+    radial-gradient(ellipse at 77% 20%, #6a1f2e66 0, transparent 42%),
+    linear-gradient(#1b0d19, #2b1322 50%, #110a14);
+}
+.world-playground[data-zone="haunted-house"] {
+  background:
+    radial-gradient(ellipse at 50% 12%, #2d2a4a 0, transparent 55%),
+    linear-gradient(#0d0c1c, #181427 55%, #0b0a14);
 }
 .world-playground[data-zone="valley"] {
-  background: radial-gradient(
-    ellipse at 50% 55%,
-    #422431 0,
-    #1a1123 60%,
-    #0e0b15 100%
-  );
+  background:
+    radial-gradient(ellipse at 50% 55%, #422431 0, transparent 60%),
+    linear-gradient(#1a0b16, #1a1123 55%, #0e0b15);
 }
 .world-scene {
   position: absolute;
@@ -372,7 +382,39 @@
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  opacity: 0.66;
+  opacity: 0.8;
+}
+/* Sky stars twinkle in seven staggered groups. */
+.world-scene-stars circle {
+  opacity: 0.35;
+  animation: world-star-twinkle 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--star, 0) * -0.55s);
+}
+.world-patch-fireflies circle {
+  opacity: 0;
+  animation: world-firefly 4.2s ease-in-out infinite;
+  animation-delay: calc(var(--fly, 0) * -0.9s);
+}
+.world-ridge-embers circle {
+  opacity: 0;
+  animation: world-ember-rise 3.4s ease-out infinite;
+  animation-delay: calc(var(--ember, 0) * -0.7s);
+}
+.world-house-smoke {
+  animation: world-smoke 7s ease-in-out infinite;
+  transform-origin: 280px 40px;
+}
+/* The flash is a rare whole-sky blink; the bolt shows only during it. */
+.world-house-lightning,
+.world-house-flash {
+  opacity: 0;
+  animation: world-lightning 11s linear infinite;
+}
+.world-house-flash {
+  animation-name: world-lightning-sky;
+}
+.world-valley-sigils {
+  animation: world-candlelight 3s ease-in-out infinite;
 }
 .world-scene::after {
   content: "";
@@ -471,11 +513,41 @@
 }
 .world-digit.is-masked {
   color: #9c86b0;
-  opacity: 0.55;
+  opacity: 0.7;
+  height: 1em;
+  line-height: 1;
+  overflow: hidden;
+  vertical-align: top;
   animation: world-digit-wait 1.2s ease-in-out infinite;
 }
+/* While a roll is pending each hidden slot spins a fixed 0–9 reel like a
+   slot machine. It is decoration only: the real digits are already decided
+   when the roll starts and the reel just scrolls a constant strip. The reel
+   slows down as the reveal clock runs out (driven by --reveal on the stage). */
+.world-reel {
+  display: block;
+  line-height: 1;
+  animation: world-reel-spin calc(0.55s + var(--reveal, 0) * 0.9s) linear
+    infinite;
+  animation-delay: calc(var(--slot, 0) * -0.17s);
+}
+.world-reel > i {
+  display: block;
+  height: 1em;
+  font-style: normal;
+}
 .world-digit.is-revealed {
-  animation: world-digit-arrive 0.6s ease-out both;
+  animation: world-digit-land 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.world-number-box.is-landed {
+  animation: world-box-land 0.8s ease-out both;
+}
+.world-playground.is-revealing .world-scene::after {
+  background: linear-gradient(
+    color-mix(in srgb, #160e20 calc(44% + var(--reveal, 0) * 40%), transparent),
+    transparent 50%,
+    #0b081450
+  );
 }
 .world-six {
   color: #ff405f !important;
@@ -533,7 +605,9 @@
   left: 8px;
 }
 .world-summoning-circle.is-spinning {
-  animation: world-summon 6s linear infinite;
+  /* Spins faster and brighter as the reveal clock runs down. */
+  opacity: calc(0.6 + var(--reveal, 0) * 0.4);
+  animation: world-summon calc(6s - var(--reveal, 0) * 4.5s) linear infinite;
 }
 .is-revealing .world-wisps i {
   opacity: 0.8;
@@ -1021,6 +1095,115 @@
   50% {
     opacity: 0.8;
     transform: translateY(-2px);
+  }
+}
+@keyframes world-star-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+@keyframes world-firefly {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  30% {
+    opacity: 0.9;
+  }
+  60% {
+    opacity: 0.4;
+    transform: translate(6px, -9px);
+  }
+}
+@keyframes world-ember-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(8px, -70px);
+  }
+}
+@keyframes world-smoke {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translate(0, 0) scale(0.9);
+  }
+  50% {
+    opacity: 0.45;
+    transform: translate(6px, -8px) scale(1.1);
+  }
+}
+@keyframes world-lightning {
+  0%,
+  88%,
+  91.5%,
+  100% {
+    opacity: 0;
+  }
+  89%,
+  90.5% {
+    opacity: 0.95;
+  }
+}
+@keyframes world-lightning-sky {
+  0%,
+  88%,
+  92%,
+  100% {
+    opacity: 0;
+  }
+  89% {
+    opacity: 0.22;
+  }
+  90% {
+    opacity: 0.06;
+  }
+  90.6% {
+    opacity: 0.16;
+  }
+}
+@keyframes world-reel-spin {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-10em);
+  }
+}
+@keyframes world-digit-land {
+  0% {
+    opacity: 0;
+    transform: scale(1.6) translateY(-6px);
+    filter: blur(4px);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.94) translateY(2px);
+    filter: blur(0);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes world-box-land {
+  0% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--world-accent) 70%, transparent);
+  }
+  100% {
+    transform: none;
+    box-shadow: 0 0 0 26px transparent;
   }
 }
 @keyframes world-digit-arrive {

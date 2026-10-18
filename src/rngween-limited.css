@@ -504,7 +504,14 @@
   color: var(--secondary);
   font-size: 11px;
 }
-.rngween-gate-inner > button {
+.rngween-gate-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.rngween-gate-actions > button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -801,8 +808,11 @@
   .rngween-gate-inner > div {
     flex-basis: calc(100% - 60px);
   }
-  .rngween-gate-inner > button {
+  .rngween-gate-actions {
     width: 100%;
+  }
+  .rngween-gate-actions > button {
+    flex: 1 1 160px;
     min-height: 44px;
   }
   .rngween-story-dialog[open] {

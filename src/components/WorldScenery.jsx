@@ -1,6 +1,39 @@
 import React, { useId } from "react";
 
 // Fixed vector scenery; decoration never consumes roll randomness.
+// Star positions are a constant list, never random, so every visit matches.
+const STARS = [
+  [22, 18, 1.2],
+  [58, 44, 0.9],
+  [96, 12, 1.4],
+  [140, 58, 0.8],
+  [172, 24, 1.1],
+  [215, 48, 0.9],
+  [248, 14, 1.3],
+  [290, 66, 0.8],
+  [318, 30, 1.0],
+  [356, 10, 1.2],
+  [392, 52, 0.9],
+  [430, 22, 1.4],
+  [462, 70, 0.8],
+  [498, 38, 1.0],
+  [526, 12, 1.2],
+  [660, 20, 1.1],
+  [700, 54, 0.9],
+  [728, 16, 1.3],
+  [744, 84, 0.8],
+  [40, 92, 0.9],
+  [120, 104, 1.0],
+  [205, 96, 0.8],
+  [330, 100, 1.1],
+  [410, 108, 0.8],
+  [470, 96, 1.0],
+  [660, 110, 0.9],
+  [740, 128, 1.0],
+  [80, 70, 0.7],
+  [560, 120, 0.8],
+  [600, 14, 0.9],
+];
 export default function WorldScenery({ zone }) {
   const id = useId().replaceAll(":", "");
   const moonColor =
@@ -28,7 +61,23 @@ export default function WorldScenery({ zone }) {
           <stop stopColor="#352544" />
           <stop offset="1" stopColor="#0b0815" />
         </linearGradient>
+        <linearGradient id={`haze-${id}`} x2="0" y2="1">
+          <stop stopColor="var(--world-accent)" stopOpacity="0" />
+          <stop offset="1" stopColor="var(--world-accent)" stopOpacity=".16" />
+        </linearGradient>
+        <linearGradient id={`far-${id}`} x2="0" y2="1">
+          <stop stopColor="#2d2140" />
+          <stop offset="1" stopColor="#1a1226" />
+        </linearGradient>
       </defs>
+      {/* Sky: a scatter of fixed stars that twinkle in turn, then a soft haze
+          in the zone's colour where the sky meets the land. */}
+      <g className="world-scene-stars" fill="#e9e1ff">
+        {STARS.map(([x, y, r], i) => (
+          <circle key={i} cx={x} cy={y} r={r} style={{ "--star": i % 7 }} />
+        ))}
+      </g>
+      <rect x="0" y="60" width="760" height="190" fill={`url(#haze-${id})`} />
       <circle cx="583" cy="67" r="64" fill={`url(#moon-${id})`} opacity=".4" />
       <circle
         className="world-scene-moon"
@@ -41,6 +90,12 @@ export default function WorldScenery({ zone }) {
         d="m91 45 8-4 8 4-8-1zm348 19 12-5 12 5-12-2zm240 40 11-5 11 5-11-1"
         fill="#c2afe6"
         opacity=".5"
+      />
+      <path
+        className="world-scene-far"
+        d="M0 206 60 160l58 28 70-58 62 44 84-70 76 60 58-36 72 50 60-30 70 42 50-18 40 24v110H0Z"
+        fill={`url(#far-${id})`}
+        opacity=".55"
       />
       <path
         d="M0 188 82 117l32 40 99-64 40 64 100-94 61 98 54-50 71 59 67-42 55 54 60-20 39 38v100H0Z"
@@ -100,6 +155,45 @@ export default function WorldScenery({ zone }) {
               />
             </g>
           ))}
+          {/* A scarecrow keeps watch; fireflies drift over the rows. */}
+          <g className="world-patch-scarecrow" stroke="#6b4a3c" strokeWidth="3">
+            <path d="M520 262V150m-34 20h68" />
+            <circle
+              cx="520"
+              cy="140"
+              r="11"
+              fill="#c9a06a"
+              stroke="#8a6a46"
+              strokeWidth="2"
+            />
+            <path d="M506 136h28l-14-16Z" fill="#4b3238" stroke="none" />
+            <path
+              d="M502 172 492 212m46-40 10 40M508 170h24v46l-12 8-12-8Z"
+              fill="#5a3c44"
+              stroke="#7d5a52"
+              strokeWidth="2"
+            />
+          </g>
+          <g className="world-patch-crows" fill="#120a12">
+            <path d="m596 139 6-5 4 4 4-4 6 5-6-1-4 3-4-3Z" />
+            <path d="m630 128 5-4 3 3 3-3 5 4-5-1-3 2-3-2Z" />
+          </g>
+          <g className="world-patch-fireflies" fill="#ffe08a">
+            {[
+              [150, 215],
+              [230, 190],
+              [305, 225],
+              [400, 205],
+              [470, 235],
+              [560, 195],
+              [640, 220],
+              [700, 240],
+              [90, 235],
+              [360, 245],
+            ].map(([x, y], i) => (
+              <circle key={i} cx={x} cy={y} r="1.6" style={{ "--fly": i }} />
+            ))}
+          </g>
           <g className="world-patch-lanterns" stroke="#c6a474" fill="#614233">
             <path d="M187 88v91m279-82v93M174 143h26v32h-26Zm279 2h26v32h-26Z" />
             <path d="M180 156h14v14h-14Zm279 2h14v14h-14Z" fill="#edc188" />
@@ -112,6 +206,28 @@ export default function WorldScenery({ zone }) {
           strokeWidth="3"
           fill="#261d35"
         >
+          {/* A far row of stones and an iron fence give the yard depth. */}
+          <g opacity=".45" strokeWidth="2">
+            <path d="M96 246v-24a11 11 0 0 1 22 0v24Zm120-4v-20a10 10 0 0 1 20 0v20Zm190 2v-26a12 12 0 0 1 24 0v26Zm230-2v-22a10 10 0 0 1 20 0v22Zm-110 2v-18a9 9 0 0 1 18 0v18Z" />
+          </g>
+          <g
+            className="world-graveyard-mausoleum"
+            stroke="#6f5f7d"
+            strokeWidth="2"
+          >
+            <path d="M324 258v-62l40-24 40 24v62Z" fill="#1d1529" />
+            <path d="M352 258v-34a12 12 0 0 1 24 0v34Z" fill="#0f0a18" />
+            <path d="M364 176v-16m-6 6h12" stroke="#a2d6c8" />
+          </g>
+          <g
+            className="world-graveyard-fence"
+            stroke="#5f4f6d"
+            strokeWidth="2"
+            fill="none"
+          >
+            <path d="M0 272h760M0 262h760" />
+            <path d="M20 252v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24m30-24v24" />
+          </g>
           <path d="M155 250v-51a22 22 0 0 1 44 0v51Z" />
           <path d="M261 249v-67a24 24 0 0 1 48 0v67Z" />
           <path d="M464 255v-44a19 19 0 0 1 38 0v44Z" />
@@ -145,6 +261,30 @@ export default function WorldScenery({ zone }) {
           <path
             d="m238 100 10 34m-5-19 16-12M334 216l7 18m-1-18 12 11"
             stroke="#b29aac"
+          />
+          {/* Smoke from the chimney and a lightning flash now and then. */}
+          <g
+            className="world-house-smoke"
+            fill="#9b8fa8"
+            opacity=".35"
+            stroke="none"
+          >
+            <circle cx="278" cy="36" r="5" />
+            <circle cx="286" cy="24" r="7" />
+            <circle cx="298" cy="12" r="9" />
+          </g>
+          <path
+            className="world-house-lightning"
+            d="m120 0-22 48 16-4-24 54 38-62-16 4L136 0Z"
+            fill="#f3f0ff"
+            stroke="none"
+          />
+          <rect
+            className="world-house-flash"
+            width="760"
+            height="300"
+            fill="#dfe6ff"
+            stroke="none"
           />
         </g>
       ) : zone === "blood-moon-ridge" ? (
@@ -184,6 +324,25 @@ export default function WorldScenery({ zone }) {
             stroke="#f27b8f"
             strokeWidth="2"
           />
+          {/* Embers that rise from the slope and fade out. */}
+          <g className="world-ridge-embers" fill="#ff9b6a">
+            {[
+              [120, 250],
+              [190, 262],
+              [262, 246],
+              [330, 266],
+              [410, 252],
+              [480, 262],
+              [540, 248],
+              [620, 264],
+              [690, 250],
+              [60, 262],
+              [740, 256],
+              [360, 258],
+            ].map(([x, y], i) => (
+              <circle key={i} cx={x} cy={y} r="1.5" style={{ "--ember": i }} />
+            ))}
+          </g>
         </g>
       ) : (
         <g className="world-scene-valley">
@@ -217,6 +376,27 @@ export default function WorldScenery({ zone }) {
             fill="none"
             stroke="#652f4b"
           />
+          {/* A flagstone path leads to the door; six-sigils glow along it. */}
+          <path
+            d="M300 300q40-30 88-28t84 28"
+            fill="none"
+            stroke="#3b2033"
+            strokeWidth="26"
+            strokeLinecap="round"
+          />
+          <g
+            className="world-valley-sigils"
+            fill="none"
+            stroke="#e0607f"
+            strokeWidth="1.6"
+          >
+            <path d="M340 280a6 6 0 1 0 6-6q-7 0-7 8m65-6a6 6 0 1 0 6-6q-7 0-7 8m48-6a6 6 0 1 0 6-6q-7 0-7 8" />
+          </g>
+          <g className="world-valley-crows" fill="#0f0810">
+            <path d="m160 96 8-6 5 5 5-5 8 6-8-1-5 4-5-4Z" />
+            <path d="m196 84 6-5 4 4 4-4 6 5-6-1-4 3-4-3Z" />
+            <path d="m630 110 7-6 5 5 5-5 7 6-7-1-5 3-5-3Z" />
+          </g>
         </g>
       )}
       {zone === "graveyard" && (

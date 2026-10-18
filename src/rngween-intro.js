@@ -18,3 +18,23 @@ export function markRngweenIntroSeen() {
     return false;
   }
 }
+
+// CLEANUP Nov 4, 2026: remove with the World gate. A local receipt that the
+// player has already walked into the World once, so the home gate can open
+// straight into it instead of routing through the Reaper every time.
+export const RNGWEEN_WORLD_ENTERED_KEY =
+  "rng-infinite-rngween-world-entered-v1";
+export function hasEnteredRngweenWorld() {
+  try {
+    return localStorage.getItem(RNGWEEN_WORLD_ENTERED_KEY) === RNGWEEN_ID;
+  } catch {
+    return false;
+  }
+}
+export function markRngweenWorldEntered() {
+  try {
+    localStorage.setItem(RNGWEEN_WORLD_ENTERED_KEY, RNGWEEN_ID);
+  } catch {
+    /* private mode: the Reaper simply greets again next time */
+  }
+}

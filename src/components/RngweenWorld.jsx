@@ -47,6 +47,7 @@ import { useMotionPreference } from "../use-settings.jsx";
 import { useModalDialog } from "../use-modal-dialog.js";
 import NumberBox from "./NumberBox.jsx";
 import WorldScenery from "./WorldScenery.jsx";
+import { markRngweenWorldEntered } from "../rngween-intro.js";
 import ReaperFigure from "./ReaperFigure.jsx";
 import ReaperDialog from "./ReaperDialog.jsx";
 import RngweenHourly from "./RngweenHourly.jsx";
@@ -82,6 +83,10 @@ const ZONE_ICONS = {
 };
 const SPEED_ICONS = [Moon, Clock3, Hourglass];
 // Scenery never consumes gameplay randomness.
+
+// The spinning strip behind a hidden digit. "?" comes first so a still frame
+// (reduced motion, screenshots) reads as unknown; the rest is a plain 0–9 loop.
+const REEL = ["?", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 function useRevealClock(now, pending, reduced) {
   const [clock, setClock] = useState(() => seasonNow() ?? now);
@@ -124,6 +129,10 @@ export default function RngweenWorld({
   // under it: objectives, key and prize, commissions, record. The fine print lives
   // in one line under the panel instead of a tab of its own.
   const [tab, setTab] = useState("objectives");
+  // Being here once is enough for the home gate to skip the Reaper next time.
+  useEffect(() => {
+    markRngweenWorldEntered();
+  }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -431,6 +440,7 @@ export default function RngweenWorld({
         className={`world-playground${pending ? " is-revealing" : ""}${jackpot ? " is-jackpot" : ""}`}
         data-zone={zone.id}
         aria-labelledby="world-zone-title"
+        style={{ "--reveal": pending ? fraction.toFixed(2) : 0 }}
       >
         <div className="world-scene">
           <WorldScenery zone={zone.id} />
@@ -478,7 +488,7 @@ export default function RngweenWorld({
                   : result.tier
                 : "neutral"
             }
-            className={`world-number-box${pending ? " is-revealing" : ""}`}
+            className={`world-number-box${pending ? " is-revealing" : last ? " is-landed" : ""}`}
             aria-label={
               pending || !last
                 ? "Waiting for a World result"
@@ -495,8 +505,19 @@ export default function RngweenWorld({
                   <span
                     key={`${outcome?.serial ?? "empty"}:${i}:${shown}`}
                     className={`world-digit${!shown ? " is-masked" : " is-revealed"}${shown && zone.id === "valley" && digit === "6" ? " world-six" : ""}`}
+                    style={{ "--slot": i }}
                   >
-                    {shown ? digit : "?"}
+                    {shown ? (
+                      digit
+                    ) : !pending ? (
+                      "?"
+                    ) : (
+                      <span className="world-reel">
+                        {REEL.map((glyph, r) => (
+                          <i key={r}>{glyph}</i>
+                        ))}
+                      </span>
+                    )}
                   </span>
                 );
               })}
