@@ -222,6 +222,7 @@ export default function RngweenWorld({
 
     function scheduleNext() {
       if (!keepRolling || zone.id !== "valley" || !key) return;
+      // Small delay so the UI has a frame to update between rolls.
       keepRollingInterval.current = setTimeout(() => {
         if (!keepRolling || zone.id !== "valley" || !key || pending) return;
         run(
@@ -239,7 +240,7 @@ export default function RngweenWorld({
             });
           }
         });
-      }, 0);
+      }, 50);
     }
 
     scheduleNext();
