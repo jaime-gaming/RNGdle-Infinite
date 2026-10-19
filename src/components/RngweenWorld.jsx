@@ -221,10 +221,23 @@ export default function RngweenWorld({
     if (pending) return; // wait for the current reveal to settle
 
     function scheduleNext() {
-      if (!keepRolling || zone.id !== "valley" || !key) return;
-      // Small delay so the UI has a frame to update between rolls.
+      // Re-check at execution time: the toggle may have been turned off
+      // between scheduling and execution, or the zone may have changed.
+      if (!keepRolling || zone.id !== "valley" || !key) {
+        keepRollingInterval.current = null;
+        return;
+      }
+      if (pending) {
+        // Still revealing; reschedule after a short wait.
+        keepRollingInterval.current = setTimeout(scheduleNext, 50);
+        return;
+      }
       keepRollingInterval.current = setTimeout(() => {
-        if (!keepRolling || zone.id !== "valley" || !key || pending) return;
+        // Final check before starting the roll.
+        if (!keepRolling || zone.id !== "valley" || !key || pending) {
+          keepRollingInterval.current = null;
+          return;
+        }
         run(
           {
             type: "rngween-world-keep-rolling",
