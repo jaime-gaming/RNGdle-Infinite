@@ -44,6 +44,17 @@ function linkBadges(text, ids, onBadge) {
   });
 }
 
+// "Oct 10, 2026" from the entry's ISO day; the date is a calendar day, so
+// it is formatted in UTC and never shifts with the device's timezone.
+function releaseDate(iso) {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export default function Changelog({ onSeen, onBadge }) {
   // Opening the page is the acknowledgement: the "New Version" flag clears.
   useEffect(() => {
@@ -63,6 +74,11 @@ export default function Changelog({ onSeen, onBadge }) {
             <span className="changelog-version">{entry.version}</span>
             <span className="changelog-dash">—</span>
             <span className="changelog-title">{entry.title}</span>
+            {entry.date && (
+              <time className="changelog-date" dateTime={entry.date}>
+                {releaseDate(entry.date)}
+              </time>
+            )}
           </h2>
           {entry.body.map((paragraph, index) => (
             <p key={index}>{linkBadges(paragraph, entry.badges, onBadge)}</p>

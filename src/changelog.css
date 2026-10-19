@@ -39,6 +39,12 @@
 .changelog-title {
   color: var(--text);
 }
+.changelog-date {
+  margin-left: auto;
+  font: 500 11px var(--font-mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
 .changelog-entry p {
   margin: 0 0 6px;
   font-size: 12.5px;

@@ -1,9 +1,12 @@
 // KEEP after Nov 4, 2026: release notes are history; the RNGween entry stays.
 // Release notes, newest first. `version` doubles as the "seen" marker: the
 // header badge appears while the newest entry has not been acknowledged.
+// `date` is the day the version reached the main branch (UTC), shown on the
+// Changelog page.
 export const CHANGELOG = [
   {
     version: "v0.5.1",
+    date: "2026-10-21",
     title: "RNGween update",
     body: [
       "RNGween runs October 21–November 3, 2026 (UTC): Halloween decorations, a Limited Shop with Pumpkoins and the Reaper's World.",
@@ -17,6 +20,7 @@ export const CHANGELOG = [
   },
   {
     version: "v0.5",
+    date: "2026-10-10",
     title: "tasks and a larger activity history",
     body: [
       "tasks arrive: three daily and four weekly goals, each claimed on its own. A skip costs 125,000 EP, one per day and three in five days.",
@@ -31,11 +35,13 @@ export const CHANGELOG = [
   },
   {
     version: "v0.4.1",
+    date: "2026-10-06",
     title: "tiny update",
     body: ["QoL, like basic UI changes :D"],
   },
   {
     version: "v0.4",
+    date: "2026-10-04",
     title:
       "rebirth rewards the overshoot, ultra-rebirths throw a ceremony, and devices link live",
     body: [
@@ -51,6 +57,7 @@ export const CHANGELOG = [
   },
   {
     version: "v0.3",
+    date: "2026-09-28",
     title: "one release: the shop, the rack, rebirth and the shelves",
     body: [
       "the shop opens as six shelves, cheapest first: skills, pace, companions, auras, offline and tools. Each has its own page.",
@@ -64,6 +71,7 @@ export const CHANGELOG = [
   },
   {
     version: "v0.2",
+    date: "2026-09-19",
     title: "companions, cheaper upgrades and real URLs",
     body: [
       "companions multiply the EP you bank, never your odds. Buy one, or find one at roughly 1 in 250 rolls.",
@@ -80,6 +88,7 @@ export const CHANGELOG = [
   },
   {
     version: "v0.1",
+    date: "2026-09-18",
     title: "launch",
     body: [
       "RNGdle Infinite is live: roll a number from 0 to 1,000,000 and find out what makes it special.",
