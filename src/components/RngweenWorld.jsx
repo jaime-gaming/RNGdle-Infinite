@@ -162,6 +162,8 @@ export default function RngweenWorld({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [keepRolling, setKeepRolling] = useState(false);
+  const keepRollingInterval = useRef(null);
   const sending = useRef(false);
   const shopDialog = useModalDialog(shopOpen);
   const pending = world.pending;
@@ -193,6 +195,70 @@ export default function RngweenWorld({
   const live =
     rngweenCalendar(now).limitedPhase === "active" && !limited?.retired;
   const key = rngweenValleyUnlocked(limited);
+  // Keep rolling: a toggle that chains Valley rolls while the tab stays open.
+  // It stops on 6666, on tab hide, or when the player turns it off.
+  useEffect(() => {
+    if (!keepRolling || zone.id !== "valley" || !key || !progress.profile) {
+      if (keepRollingInterval.current) {
+        clearTimeout(keepRollingInterval.current);
+        keepRollingInterval.current = null;
+      }
+      return;
+    }
+    if (pending) return; // wait for the current reveal to settle
+
+    function scheduleNext() {
+      if (!keepRolling || zone.id !== "valley" || !key) return;
+      keepRollingInterval.current = setTimeout(() => {
+        if (!keepRolling || zone.id !== "valley" || !key || pending) return;
+        run(
+          {
+            type: "rngween-world-roll",
+            zone: "valley",
+          },
+          undefined,
+        ).catch(() => {
+          /* the tab may have moved on; ignore transient failures */
+        });
+      }, 0);
+    }
+
+    scheduleNext();
+    return () => {
+      if (keepRollingInterval.current) {
+        clearTimeout(keepRollingInterval.current);
+        keepRollingInterval.current = null;
+      }
+    };
+  }, [
+    keepRolling,
+    zone.id,
+    key,
+    progress.profile,
+    pending,
+    run,
+  ]);
+
+  // Stop the chain when 6666 appears or the tab goes hidden.
+  useEffect(() => {
+    if (!keepRolling) return;
+    function onVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        setKeepRolling(false);
+      }
+    }
+    function onJackpot() {
+      if (last?.zone === "valley" && last.number === WORLD_VALLEY_TARGET) {
+        setKeepRolling(false);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    onJackpot();
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [keepRolling, last]);
+
   const fragments = worldFragmentCount(world);
   const fragmentTotal = WORLD_FRAGMENT_ZONES.length;
   const exhausted = drawn.length >= RNGWEEN_WORLD_MAX;
@@ -695,6 +761,24 @@ export default function RngweenWorld({
                       ? "Roll in the Valley"
                       : `Roll in ${zone.name}`}
                 <span>{duration / 1000}s reveal</span>
+              </button>
+            )}
+            {zone.id === "valley" && key && !exhausted && !pending && (
+              <button
+                className={`world-keep-rolling${keepRolling ? " is-active" : ""}`}
+                type="button"
+                onClick={() => {
+                  if (keepRolling) {
+                    setKeepRolling(false);
+                  } else {
+                    setKeepRolling(true);
+                  }
+                }}
+                disabled={busy || !live || !progress.profile}
+                title="Chain Valley rolls while this tab stays open. Stops on 6666 or when you close this page."
+              >
+                <Flame size={16} />
+                {keepRolling ? "Stop chain" : "Keep rolling"}
               </button>
             )}
             <small>

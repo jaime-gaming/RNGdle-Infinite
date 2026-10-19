@@ -191,6 +191,10 @@ export default function Tasks({
     return "Swap this task for another from its pool.";
   }
 
+  const eventCalendar = rngweenCalendar(eventNow);
+  const eventActive = eventCalendar.limitedPhase === "active";
+  const [eventTab, setEventTab] = useState("commissions");
+
   return (
     <>
       {!progress.profile && (
@@ -204,30 +208,56 @@ export default function Tasks({
           </button>
         </div>
       )}
-      {/* CLEANUP Nov 4, 2026: remove the temporary commission mount. */}
-      <RngweenHourly
-        progress={progress}
-        now={eventNow}
-        openWorld={openWorld}
-        openSignup={openSignup}
-        onAction={onAction}
-        notify={notify}
-      />
-      {/* Remove the event import/mount after Oct 31, 2026 ends (Nov 1 UTC).
-          The owned-only aura collection and permanent effects must stay. */}
-      <RngweenTasks
-        {...{ progress, onAction, notify, openAuraFamily, openWorld }}
-        now={eventNow}
-      />
-      {!progress.rngweenLimited?.retired &&
-        rngweenCalendar(eventNow).limitedPhase === "active" && (
-          <button
-            className="secondary-button rngween-world-launch"
-            onClick={openWorld}
-          >
-            <Sparkles size={17} /> Enter RNGween World
-          </button>
-        )}
+      {/* RNGween event panel: auras and hourly commissions under one tabbed roof. */}
+      {eventActive && progress.profile && (
+        <section className="rngween-event-panel">
+          <div className="rngween-event-tabs" role="tablist" aria-label="RNGween event sections">
+            <button
+              role="tab"
+              id="event-tab-auras"
+              aria-selected={eventTab === "auras"}
+              className={eventTab === "auras" ? "is-selected" : ""}
+              onClick={() => setEventTab("auras")}
+            >
+              Auras
+            </button>
+            <button
+              role="tab"
+              id="event-tab-commissions"
+              aria-selected={eventTab === "commissions"}
+              className={eventTab === "commissions" ? "is-selected" : ""}
+              onClick={() => setEventTab("commissions")}
+            >
+              Commissions
+            </button>
+          </div>
+          <div className="rngween-event-content">
+            {eventTab === "auras" ? (
+              <RngweenTasks
+                {...{ progress, onAction, notify, openAuraFamily, openWorld }}
+                now={eventNow}
+              />
+            ) : (
+              <RngweenHourly
+                progress={progress}
+                now={eventNow}
+                openWorld={openWorld}
+                openSignup={openSignup}
+                onAction={onAction}
+                notify={notify}
+              />
+            )}
+          </div>
+        </section>
+      )}
+      {!progress.rngweenLimited?.retired && eventActive && (
+        <button
+          className="secondary-button rngween-world-launch"
+          onClick={openWorld}
+        >
+          <Sparkles size={17} /> Enter RNGween World
+        </button>
+      )}
       <section className="tasks-summary" aria-label="Task summary">
         <div className="tasks-stat">
           <span className="tasks-stat-label">Available</span>

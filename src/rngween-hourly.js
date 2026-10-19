@@ -324,6 +324,86 @@ export const RNGWEEN_HOURLY_TASKS = [
     40,
     "peak",
   ),
+  main(
+    "double-sixes",
+    "Double sixes",
+    "Roll 2 numbers containing at least two 6s each.",
+    "contains6",
+    2,
+    35,
+  ),
+  main(
+    "lucky-seven",
+    "Lucky seven",
+    "Roll a number containing a 7 in the last position.",
+    "ends7",
+    1,
+    30,
+  ),
+  main(
+    "shadow-ten",
+    "Shadow ten",
+    "Roll a number below 100,000.",
+    "low100k",
+    1,
+    25,
+  ),
+  main(
+    "high-noon",
+    "High noon",
+    "Roll a number of 900,000 or more.",
+    "high900",
+    1,
+    30,
+  ),
+  main(
+    "mirror-moon",
+    "Mirror moon",
+    "Roll a four-digit palindrome number.",
+    "palindrome4",
+    1,
+    35,
+  ),
+  main(
+    "candle-nine",
+    "Candle nine",
+    "Roll 3 numbers containing a 9.",
+    "contains9",
+    3,
+    25,
+  ),
+  main(
+    "four-knocks",
+    "Four knocks",
+    "Roll 3 multiples of 4.",
+    "divisible4",
+    3,
+    25,
+  ),
+  main(
+    "twelve-knocks",
+    "Twelve knocks",
+    "Roll a multiple of 12.",
+    "divisible12",
+    1,
+    30,
+  ),
+  main(
+    "clover-seven",
+    "Clover seven",
+    "Roll 2 numbers with digits that sum to exactly 7.",
+    "sum7",
+    2,
+    25,
+  ),
+  main(
+    "black-cat-lucky",
+    "Black cat lucky",
+    "Roll a number ending in 13.",
+    "ends13",
+    1,
+    35,
+  ),
   world(
     "footsteps",
     "Footsteps in the mist",
@@ -716,6 +796,9 @@ export function mainHourlyTally(result, { banked = 0 } = {}) {
   const digits = String(number);
   const sum = [...digits].reduce((total, digit) => total + Number(digit), 0);
   const tier = result.tier;
+  const lastTwo = number % 100;
+  const padded = digits.padStart(4, "0");
+  const isPalindrome4 = padded.length === 4 && padded === [...padded].reverse().join("");
   return {
     rolls: 1,
     banked,
@@ -723,9 +806,13 @@ export function mainHourlyTally(result, { banked = 0 } = {}) {
     odd: number % 2 === 1 ? 1 : 0,
     high: number >= 500000 ? 1 : 0,
     low: number < 500000 ? 1 : 0,
+    high900: number >= 900000 ? 1 : 0,
+    low100k: number < 100000 ? 1 : 0,
     ends0: number % 10 === 0 ? 1 : 0,
     ends5: number % 10 === 5 ? 1 : 0,
     ends6: number % 10 === 6 ? 1 : 0,
+    ends7: number % 10 === 7 ? 1 : 0,
+    ends13: lastTwo === 13 ? 1 : 0,
     ...Object.fromEntries(
       [0, 1, 3, 6, 7, 8, 9].map((digit) => [
         `contains${digit}`,
@@ -735,9 +822,12 @@ export function mainHourlyTally(result, { banked = 0 } = {}) {
     repeated: new Set(digits).size < digits.length ? 1 : 0,
     sumHigh: sum >= 30 ? 1 : 0,
     sumLow: sum <= 15 ? 1 : 0,
+    sum7: sum === 7 ? 1 : 0,
     ...Object.fromEntries(
       [3, 5, 7, 11].map((n) => [`divisible${n}`, number % n === 0 ? 1 : 0]),
     ),
+    divisible4: number % 4 === 0 ? 1 : 0,
+    divisible12: number % 12 === 0 ? 1 : 0,
     ascending: [...digits].some(
       (digit, i) => i > 0 && Number(digit) === Number(digits[i - 1]) + 1,
     )
@@ -748,6 +838,7 @@ export function mainHourlyTally(result, { banked = 0 } = {}) {
     )
       ? 1
       : 0,
+    palindrome4: isPalindrome4 ? 1 : 0,
     badges12: result.badges.length >= 12 ? 1 : 0,
     badges18: result.badges.length >= 18 ? 1 : 0,
     rare: ["rare", "epic", "anomaly", "mythic", "godly"].includes(tier) ? 1 : 0,

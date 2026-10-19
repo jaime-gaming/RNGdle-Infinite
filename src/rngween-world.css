@@ -2825,3 +2825,33 @@
 .world-motion-reduced .world-scene-bats {
   animation: none;
 }
+
+/* ---- Keep rolling toggle (Valley chain) -------------------------------- */
+.world-keep-rolling {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  color: var(--world-muted);
+  border: 1px solid #463853;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 12px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.world-keep-rolling:hover:not(:disabled) {
+  color: var(--world-text);
+  border-color: #a17e99;
+}
+.world-keep-rolling.is-active {
+  background: #2b1a3a;
+  border-color: #8b5cf6;
+  color: #c4b5fd;
+}
+.world-keep-rolling.is-active:hover:not(:disabled) {
+  background: #3d2652;
+  border-color: #a78bfa;
+  color: #ddd6fe;
+}

@@ -6,7 +6,7 @@
 export const CHANGELOG = [
   {
     version: "v0.5.1",
-    date: "2026-10-21",
+    date: "2026-10-20",
     title: "RNGween update",
     body: [
       "RNGween runs October 21–November 3, 2026 (UTC): Halloween decorations, a Limited Shop with Pumpkoins and the Reaper's World.",

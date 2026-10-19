@@ -34,12 +34,12 @@ export function rngweenCalendar(at) {
           ? "active"
           : "ended",
     decorated: verified && at >= decoratesAt && at < decorationsEndAt,
-    // Four rotating commissions only outside the October 25–31 aura trials.
+    // Four rotating commissions run all event windows, including during the
+    // October 25–31 aura trials: players can farm Pumpkoins alongside auras.
     // A new phase starts a fresh board; the verified UTC clock owns expiry.
     hourlyPhase: !verified
       ? "unavailable"
-      : (at >= limitedStartsAt && at < startsAt) ||
-          (at >= endsAt && at < limitedEndsAt)
+      : at >= limitedStartsAt && at < limitedEndsAt
         ? "active"
         : "inactive",
     hourlyWindow: !verified

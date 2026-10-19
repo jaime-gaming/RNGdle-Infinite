@@ -383,3 +383,48 @@
   box-shadow: 0 0 0 2px var(--bg);
   animation: tabbar-dot-pulse 2.2s ease-in-out infinite;
 }
+
+/* ---- RNGween event panel: auras + commissions under one tabbed roof ----- */
+.rngween-event-panel {
+  margin: 18px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.rngween-event-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+.rngween-event-tabs button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 12px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.rngween-event-tabs button:hover {
+  color: var(--text);
+}
+.rngween-event-tabs button.is-selected {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.rngween-event-content {
+  padding: 16px;
+}
+.rngween-event-content > *:only-child {
+  margin: 0;
+}
