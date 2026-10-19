@@ -174,7 +174,7 @@ export const TASKS = [
     detail: "Companions turn up on about one roll in 250.",
     metric: "pets",
     goal: 1,
-    reward: 100000,
+    reward: 150000,
   },
   {
     id: "daily-rolls-20",
@@ -251,11 +251,12 @@ export const TASKS = [
   {
     id: "daily-trash-5",
     cadence: "daily",
-    title: "Roll 5 Trash numbers",
+    // Trash is about 1% of rolls, as rare as a Mythic: one is a day's work.
+    title: "Roll a Trash number",
     detail: "Bad luck pays too. Only the lowest tier counts.",
     metric: "trash",
-    goal: 5,
-    reward: 15000,
+    goal: 1,
+    reward: 40000,
   },
   {
     id: "daily-high-3",
@@ -273,7 +274,7 @@ export const TASKS = [
     detail: "About one roll in a hundred lands this low.",
     metric: "low",
     goal: 1,
-    reward: 40000,
+    reward: 90000,
   },
   {
     id: "daily-badges-60",
@@ -324,10 +325,10 @@ export const TASKS = [
   {
     id: "weekly-mythic",
     cadence: "weekly",
-    title: "Roll 10 Mythic or GODLY",
+    title: "Roll 6 Mythic or GODLY",
     detail: "The top two tiers, from Monday to Monday. A long shot.",
     metric: "mythic",
-    goal: 10,
+    goal: 6,
     reward: 900000,
   },
   {

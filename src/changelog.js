@@ -11,6 +11,7 @@ export const CHANGELOG = [
       "repeat numbers get a déjà vu look, nothing extra paid. Profile has up to ten bookmarks, a PNG card and a link anyone can open.",
       "prestige sends the rebirth ladder back to rung one, and a Rollback sends the three prestiges back too: every climb is earned again.",
       "RNGween World opens zone by zone, each aura task also wants its zone's key fragment, and spare World points trade for a few Pumpkoins or EP.",
+      "auras now colour the digits in their own shades, and the Trash, low-number, companion and Mythic tasks pay closer to what they ask.",
       "and a lot under the hood: how rolls settle, the animations, the shop, the tasks and a few more things. You will notice.",
     ],
   },
