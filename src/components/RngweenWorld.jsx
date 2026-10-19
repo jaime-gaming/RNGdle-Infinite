@@ -195,8 +195,11 @@ export default function RngweenWorld({
   const live =
     rngweenCalendar(now).limitedPhase === "active" && !limited?.retired;
   const key = rngweenValleyUnlocked(limited);
+  // Track whether the player left the Valley while keep rolling was on.
+  // If they exit and come back, we do not auto-restart the chain.
+  const valleyExited = useRef(false);
   // Keep rolling: a toggle that chains Valley rolls while the tab stays open.
-  // It stops on 6666, on tab hide, or when the player turns it off.
+  // It stops on 6666, on tab hide, on zone change, or when the player turns it off.
   // Each chained roll spends a small fixed block of World points.
   useEffect(() => {
     if (!keepRolling || zone.id !== "valley" || !key || !progress.profile) {
@@ -204,6 +207,15 @@ export default function RngweenWorld({
         clearTimeout(keepRollingInterval.current);
         keepRollingInterval.current = null;
       }
+      // If the player left the Valley (or never entered), remember the exit.
+      if (zone.id !== "valley") {
+        valleyExited.current = true;
+      }
+      return;
+    }
+    // If the player exited the Valley while keep rolling was on, do not restart.
+    if (valleyExited.current) {
+      setKeepRolling(false);
       return;
     }
     if (pending) return; // wait for the current reveal to settle
@@ -254,13 +266,12 @@ export default function RngweenWorld({
         setKeepRolling(false);
       }
     }
-    function onJackpot() {
-      if (last?.zone === "valley" && last.number === WORLD_VALLEY_TARGET) {
-        setKeepRolling(false);
-      }
+    // Stop if 6666 just appeared.
+    if (last?.zone === "valley" && last.number === WORLD_VALLEY_TARGET) {
+      setKeepRolling(false);
+      return;
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
-    onJackpot();
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
@@ -782,16 +793,22 @@ export default function RngweenWorld({
                   }
                 }}
                 disabled={busy || !live || !progress.profile}
-                title="Chain Valley rolls while this tab stays open. Stops on 6666 or when you close this page."
+                title="Chain Valley rolls while this tab stays open. Costs 50 World points per roll. Stops on 6666, zone change, or when you close this page."
               >
                 <Flame size={16} />
                 {keepRolling ? "Stop chain" : "Keep rolling"}
+                <small className="world-keep-rolling-cost">
+                  {worldPointsAvailable(limited) >= KEEP_ROLLING_COST.points
+                    ? `${KEEP_ROLLING_COST.points} pts/roll · ${worldPointsAvailable(limited)} available`
+                    : `Need ${KEEP_ROLLING_COST.points} pts (have ${worldPointsAvailable(limited)})`}
+                </small>
               </button>
             )}
             <small>
               {zone.id !== "valley"
                 ? `1–${zone.max} · repeats allowed · free rolls`
-                : `${(RNGWEEN_WORLD_MAX - drawn.length).toLocaleString("en-US")} unseen numbers remain · 6666 alone earns Hexbound`}
+                : `${(RNGWEEN_WORLD_MAX - drawn.length).toLocaleString("en-US")} unseen numbers remain${drawn.length > 0 ? ` · ${drawn.length} rolled${drawn.includes(WORLD_VALLEY_TARGET) ? "" : ", 6666 not yet"}` : ""}
+                  · {drawn.length - (drawn.includes(WORLD_VALLEY_TARGET) ? 1 : 0)} discarded${drawn.includes(WORLD_VALLEY_TARGET) ? ", 6666 found" : ""}`}
             </small>
           </div>
         )}

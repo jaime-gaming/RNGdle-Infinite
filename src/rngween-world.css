@@ -2855,3 +2855,16 @@
   border-color: #a78bfa;
   color: #ddd6fe;
 }
+.world-keep-rolling-cost {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--world-muted);
+  margin-top: 3px;
+}
+.world-keep-rolling.is-active .world-keep-rolling-cost {
+  color: #a78bfa;
+}
+.world-keep-rolling:not(:disabled):hover .world-keep-rolling-cost {
+  color: var(--world-text);
+}
