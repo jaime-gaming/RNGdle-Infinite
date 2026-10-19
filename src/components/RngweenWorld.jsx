@@ -645,13 +645,30 @@ export default function RngweenWorld({
             ) : zone.id === "valley" && !key ? (
               <div className="world-challenge-lock">
                 <LockKeyhole size={19} />
-                <p>
-                  Clear the four zones before this one, then forge the key in
-                  the Key & prize tab. Or buy one in the Limited Shop.
-                </p>
-                <button className="secondary-button" onClick={onShop}>
-                  View key <ArrowRight size={14} />
-                </button>
+                {fragments === fragmentTotal ? (
+                  <>
+                    <p>
+                      All four fragments are yours. Forge the key in the Key &
+                      prize tab and the Valley opens.
+                    </p>
+                    <button
+                      className="secondary-button"
+                      onClick={() => setTab("key")}
+                    >
+                      Forge the key <ArrowRight size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      Clear the four zones before this one, then forge the key
+                      in the Key & prize tab. Or buy one in the Limited Shop.
+                    </p>
+                    <button className="secondary-button" onClick={onShop}>
+                      View key <ArrowRight size={14} />
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <button

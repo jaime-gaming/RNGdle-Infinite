@@ -48,7 +48,7 @@
   border-color: #a17e99;
 }
 .world-event-date {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.07em;
   color: #968598;
   margin: 0 auto;
@@ -58,7 +58,7 @@
   font-variant-numeric: tabular-nums;
 }
 .world-wallet > span:last-child {
-  font-size: 10px;
+  font-size: 11px;
 }
 .world-heading {
   text-align: center;
@@ -69,7 +69,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -190,7 +190,7 @@
   border-radius: 999px;
   background: #241a33;
   color: #a893b5;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.2px;
   white-space: nowrap;
@@ -305,7 +305,7 @@
   justify-content: center;
   border-radius: 999px;
   background: #2a1f38;
-  font-size: 9px;
+  font-size: 11px;
   color: #9d8cae;
 }
 .world-zone > strong {
@@ -316,7 +316,7 @@
   color: #f1e9fa;
 }
 .world-zone > span:not(.world-zone-glyph):not(.world-zone-number) {
-  font-size: 10px;
+  font-size: 11px;
   color: #9b8caa;
 }
 .world-zone > small {
@@ -324,7 +324,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--zone-accent);
 }
 .world-playground {
@@ -645,7 +645,7 @@
   align-items: center;
   gap: 7px;
   color: var(--world-accent);
-  font-size: 10px;
+  font-size: 11px;
 }
 .world-reveal-timer strong {
   margin-left: auto;
@@ -703,13 +703,13 @@
   filter: brightness(1.12);
 }
 .world-roll-button > span {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 500;
   padding-left: 9px;
   border-left: 1px solid #16102030;
 }
 .world-roll-controls > small {
-  font-size: 9px;
+  font-size: 11px;
   color: #a18ca6;
   text-align: center;
   line-height: 1.7;
@@ -730,12 +730,12 @@
 .world-challenge-lock p {
   flex: 1;
   min-width: 180px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
   margin: 0;
 }
 .world-challenge-lock button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .world-zone-footer {
   position: relative;
@@ -747,7 +747,7 @@
   border-top: 1px solid #67507140;
   padding: 14px 24px;
   background: #0c081552;
-  font-size: 9px;
+  font-size: 11px;
   color: #aa98b4;
 }
 .world-zone-footer > span {
@@ -761,7 +761,7 @@
   background: none;
   color: #d7ab91;
   cursor: pointer;
-  font-size: 9px;
+  font-size: 11px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -798,7 +798,7 @@
   position: absolute;
   bottom: -3px;
   right: -2px;
-  font-size: 8px;
+  font-size: 11px;
 }
 .world-key-forge > div:nth-child(2) {
   flex: 1;
@@ -810,14 +810,14 @@
   color: #f0dfca;
 }
 .world-key-forge p {
-  font-size: 10px;
+  font-size: 11px;
   color: #aa9bb5;
   line-height: 1.8;
   margin: 0;
 }
 .world-key-forge > button {
   flex: none;
-  font-size: 10px;
+  font-size: 11px;
   background-color: #282030;
   color: #efcfa3;
 }
@@ -834,7 +834,7 @@
   border: 1px solid #4e3d56;
   border-radius: 5px;
   padding: 5px 7px;
-  font-size: 8px;
+  font-size: 10px;
   color: #96829e;
 }
 .world-fragments > span.is-found {
@@ -869,7 +869,7 @@
 }
 .world-prize-note p {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.6;
   margin: 6px 0 0;
   color: #a08aaf;
@@ -896,7 +896,7 @@
   color: #c5b1d7;
 }
 .world-guest button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .world-alert,
 .world-notice {
@@ -969,7 +969,7 @@
 }
 .world-shop-wallet > span:last-child {
   margin-left: auto;
-  font-size: 9px;
+  font-size: 11px;
   color: #bea1b8;
 }
 .world-speed-items {
@@ -1003,14 +1003,14 @@
 }
 .world-speed-item p {
   margin: 0;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
   color: #b29cbd;
 }
 .world-speed-item small {
   display: block;
   margin-top: 6px;
-  font-size: 8px;
+  font-size: 11px;
   color: #e3b593;
 }
 .world-upgrade-price {
@@ -1023,7 +1023,7 @@
 }
 .world-speed-item > button {
   grid-column: 2 / -1;
-  font-size: 10px;
+  font-size: 11px;
   justify-self: start;
 }
 .world-speed-item.is-owned {
@@ -1041,7 +1041,7 @@
   flex-wrap: wrap;
 }
 .world-shop-actions > button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .world-exchange {
   margin-top: 18px;
@@ -1076,7 +1076,7 @@
   grid-row: 1 / span 2;
 }
 .world-exchange-option small {
-  font-size: 10px;
+  font-size: 11px;
   color: #b7a6c3;
 }
 .world-zone.is-locked {
@@ -1365,7 +1365,7 @@
     order: 3;
     flex: 1 0 100%;
     text-align: center;
-    font-size: 8px;
+    font-size: 11px;
   }
   .world-wallet {
     margin-left: auto;
@@ -1374,16 +1374,16 @@
   }
   .world-back {
     padding: 10px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .world-wallet > span:last-child {
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-heading {
     padding: 29px 5px 24px;
   }
   .world-heading > p {
-    font-size: 10px;
+    font-size: 11px;
   }
   .world-zones {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1413,18 +1413,18 @@
     left: 6px;
     width: 15px;
     height: 15px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .world-zone > strong {
     font-size: 12px;
     min-height: 30px;
   }
   .world-zone > span:not(.world-zone-glyph):not(.world-zone-number) {
-    font-size: 8px;
+    font-size: 10px;
     min-height: 22px;
   }
   .world-zone > small {
-    font-size: 7px;
+    font-size: 11px;
     line-height: 1.5;
     align-items: flex-start;
     min-height: 22px;
@@ -1442,18 +1442,18 @@
     padding: 27px 18px 16px;
   }
   .world-zone-heading p {
-    font-size: 10px;
+    font-size: 11px;
   }
   .world-roll-controls {
     padding: 0 16px 25px;
   }
   .world-roll-button {
     padding: 12px 13px;
-    font-size: 10px;
+    font-size: 11px;
     gap: 8px;
   }
   .world-roll-button > span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .world-challenge-lock {
     padding: 15px;
@@ -1463,7 +1463,7 @@
   }
   .world-zone-footer {
     padding: 13px 15px;
-    font-size: 8px;
+    font-size: 11px;
     justify-content: center;
   }
   .world-key-forge {
@@ -1492,7 +1492,7 @@
     gap: 6px;
   }
   .world-fragments > span {
-    font-size: 7px;
+    font-size: 10px;
   }
   .world-guest {
     flex-wrap: wrap;
@@ -1508,7 +1508,7 @@
     padding: 26px 17px 20px;
   }
   .world-shop-dialog .world-eyebrow {
-    font-size: 8px;
+    font-size: 11px;
     padding-right: 25px;
   }
   .world-shop-dialog h2 {
@@ -1535,10 +1535,10 @@
     width: 24px;
   }
   .world-speed-item p {
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-upgrade-price {
-    font-size: 10px;
+    font-size: 11px;
     gap: 4px;
   }
 }
@@ -1561,7 +1561,7 @@
   justify-content: center;
   gap: 8px;
   color: #efc69c;
-  font-size: 10px;
+  font-size: 11px;
   padding: 0 16px 12px;
   text-align: center;
 }
@@ -1601,15 +1601,15 @@
   color: var(--badge-color);
   border-radius: 20px;
   padding: 7px 10px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .world-badge-chip strong {
-  font-size: 9px;
+  font-size: 11px;
 }
 .world-legacy-note {
   position: relative;
   margin: 0 20px;
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
   line-height: 1.7;
   color: #b4a6c5;
@@ -1640,7 +1640,7 @@
   border-left: 1px solid #4b395b;
 }
 .world-mini-stats span {
-  font-size: 10px;
+  font-size: 11px;
   color: #b5a7c4;
 }
 .world-mini-stats strong {
@@ -1649,7 +1649,7 @@
   font-variant-numeric: tabular-nums;
 }
 .world-mini-stats small {
-  font-size: 10px;
+  font-size: 11px;
   color: #b5a7c4;
   font-weight: 400;
 }
@@ -1683,7 +1683,7 @@
   align-items: center;
   gap: 6px;
   color: #8ae0ba;
-  font-size: 10px;
+  font-size: 11px;
   flex: none;
 }
 .world-objectives > p {
@@ -1785,7 +1785,7 @@
 }
 .world-badge-book > summary > small {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 11px;
   color: #b5a3c3;
 }
 .world-badge-book > summary:focus-visible {
@@ -1845,7 +1845,7 @@
 }
 .world-badge-tier {
   text-transform: uppercase;
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.13em;
   color: var(--badge-color);
 }
@@ -1856,7 +1856,7 @@
   color: #ddd4e9;
 }
 .world-badge-card p {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.65;
   color: #b9acc7;
   margin: 0;
@@ -1867,7 +1867,7 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  font-size: 9px;
+  font-size: 11px;
   border-top: 1px solid #47354f60;
   padding-top: 10px;
 }
@@ -1882,7 +1882,7 @@
 }
 .world-badge-card-footer > small {
   flex-basis: 100%;
-  font-size: 9px;
+  font-size: 11px;
   color: #b3a4c1;
 }
 .is-collected .world-badge-card-footer > small {
@@ -1894,14 +1894,14 @@
     gap: 6px;
   }
   .world-badge-chip {
-    font-size: 9px;
+    font-size: 11px;
     padding: 6px 8px;
   }
   .world-mini-stats {
     padding: 18px 6px;
   }
   .world-mini-stats span {
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-mini-stats strong {
     font-size: 22px;
@@ -1910,7 +1910,7 @@
     font-size: 20px;
   }
   .world-mini-stats small {
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-objectives {
     padding: 18px 15px;
@@ -1919,10 +1919,10 @@
     font-size: 15px;
   }
   .world-collection-heading .world-eyebrow {
-    font-size: 8px;
+    font-size: 11px;
   }
   .world-fragment-owned {
-    font-size: 9px;
+    font-size: 11px;
     gap: 4px;
   }
   .world-objective-grid {
@@ -1937,7 +1937,7 @@
   }
   .world-objective-grid article > span {
     min-height: 0;
-    font-size: 10px;
+    font-size: 11px;
     align-items: center;
   }
   .world-objective-grid strong {
@@ -1946,7 +1946,7 @@
     align-self: center;
   }
   .world-objective-grid small {
-    font-size: 10px;
+    font-size: 11px;
   }
   .world-objective-grid progress {
     grid-column: 1 / -1;
@@ -1964,7 +1964,7 @@
   .world-badge-book > summary > small {
     order: 2;
     flex-basis: 100%;
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-badge-book > summary::after {
     margin-left: auto;
@@ -1989,13 +1989,13 @@
     font-size: 11px;
   }
   .world-badge-card p {
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-badge-card-footer {
-    font-size: 8px;
+    font-size: 11px;
   }
   .world-badge-card-footer > small {
-    font-size: 8px;
+    font-size: 11px;
   }
 }
 @media (max-width: 360px) {
@@ -2020,7 +2020,7 @@
 
 /* Four aura atmospheres: preview/theme only, never automatic equipment. */
 .world-zone-number {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 .world-zone > strong {
@@ -2078,7 +2078,7 @@
   border-radius: 10px;
   padding: 7px 12px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
 }
 .world-talk-button > .reaper-figure {
   width: 25px;
@@ -2122,7 +2122,7 @@
   background: none;
   color: #e1bdab;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
   padding: 7px 0;
   flex: none;
 }
@@ -2150,7 +2150,7 @@
   --box-font: 27px !important;
 }
 .world-aura-preview > small {
-  font-size: 8px;
+  font-size: 11px;
   color: #baacc8;
 }
 .world-aura-trial-copy {
@@ -2171,12 +2171,12 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 400;
   color: #8ee0b8;
 }
 .world-aura-trial-copy > p {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.8;
   color: #baadc7;
   margin: 0;
@@ -2198,17 +2198,17 @@
 }
 .world-aura-mission > span {
   flex-basis: 100%;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
   color: #c8b9d1;
 }
 .world-aura-mission > small {
-  font-size: 9px;
+  font-size: 11px;
   color: #b5a4c3;
   margin-top: 3px;
 }
 .world-aura-trial-copy > .world-aura-source-note {
-  font-size: 9px;
+  font-size: 11px;
   color: #cec2d7;
 }
 .world-aura-actions {
@@ -2218,7 +2218,7 @@
   margin-top: 13px;
 }
 .world-aura-actions > button {
-  font-size: 10px;
+  font-size: 11px;
   min-height: 35px;
   border-color: #695975;
   color: #dfd2e9;
@@ -2248,7 +2248,7 @@
   flex: 1;
 }
 .world-phase-continue > button {
-  font-size: 10px;
+  font-size: 11px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2265,7 +2265,7 @@
 @media (max-width: 680px) {
   .world-talk-button {
     padding: 5px 9px;
-    font-size: 9px;
+    font-size: 11px;
     gap: 4px;
     order: 2;
   }
@@ -2284,7 +2284,7 @@
     padding: 16px 14px;
   }
   .world-zone-number {
-    font-size: 8px;
+    font-size: 10px;
     right: 14px;
     top: 15px;
   }
@@ -2294,11 +2294,11 @@
   }
   .world-zone > span:not(.world-zone-glyph):not(.world-zone-number) {
     min-height: 0;
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-zone > small {
     min-height: 0;
-    font-size: 8px;
+    font-size: 11px;
   }
   .world-zone-glyph {
     margin-bottom: 9px;
@@ -2320,7 +2320,7 @@
   }
   .world-reaper-guide > button {
     margin-left: 53px;
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-phase-aura {
     gap: 17px;
@@ -2337,7 +2337,7 @@
     --box-font: 20px !important;
   }
   .world-aura-preview > small {
-    font-size: 7px;
+    font-size: 11px;
     text-align: center;
   }
   .world-aura-trial-copy h3 {
@@ -2345,29 +2345,29 @@
     gap: 7px;
   }
   .world-aura-trial-copy > .world-eyebrow {
-    font-size: 8px;
+    font-size: 11px;
   }
   .world-aura-mission {
     padding: 9px;
   }
   .world-aura-mission > strong {
-    font-size: 10px;
+    font-size: 11px;
   }
   .world-aura-mission > span {
-    font-size: 9px;
+    font-size: 11px;
   }
   .world-aura-mission > small {
-    font-size: 8px;
+    font-size: 11px;
     line-height: 1.7;
   }
   .world-aura-actions > button {
-    font-size: 9px;
+    font-size: 11px;
     padding: 8px;
   }
   .world-phase-continue {
     flex-wrap: wrap;
     padding: 13px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .world-phase-continue > button {
     width: 100%;
@@ -2449,7 +2449,7 @@
   margin: 7px 0;
 }
 .world-zone-heading p {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
   max-width: 410px;
 }
@@ -2469,7 +2469,7 @@
 .world-result-copy {
   min-height: 24px;
   margin: 5px auto 10px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .world-result-badges {
   margin: 0 auto 13px;
@@ -2477,7 +2477,7 @@
   padding: 0 14px;
 }
 .world-badge-chip {
-  font-size: 8px;
+  font-size: 11px;
   padding: 5px 7px;
 }
 .world-roll-controls {
@@ -2493,7 +2493,7 @@
 .world-zone-footer {
   padding: 11px 16px;
   gap: 8px;
-  font-size: 8px;
+  font-size: 11px;
 }
 .world-phase-aura {
   margin-top: 13px;
@@ -2521,7 +2521,7 @@
   padding: 8px 11px;
 }
 .world-aura-mission > span {
-  font-size: 9px;
+  font-size: 11px;
 }
 .world-aura-actions {
   margin-top: 8px;
@@ -2565,10 +2565,10 @@
     font-size: 12px;
   }
   .world-zone > span:not(.world-zone-glyph):not(.world-zone-number) {
-    font-size: 8px;
+    font-size: 10px;
   }
   .world-zone > small {
-    font-size: 7px;
+    font-size: 11px;
   }
   .world-phase-aura {
     padding: 13px;
@@ -2582,7 +2582,7 @@
     --box-font: 18px !important;
   }
   .world-zone-footer {
-    font-size: 7px;
+    font-size: 11px;
   }
 }
 
@@ -2615,7 +2615,7 @@
   background: #170f22;
 }
 .world-record-figures dt {
-  font: 700 9px var(--roll-font);
+  font: 700 11px var(--roll-font);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #a893b5;
@@ -2633,7 +2633,7 @@
   color: #fb923c;
 }
 .world-record-figures small {
-  font-size: 10px;
+  font-size: 11px;
   color: #a893b5;
 }
 .world-record-columns {
@@ -2668,7 +2668,7 @@
 }
 .world-record-zones small {
   grid-column: 2;
-  font-size: 10px;
+  font-size: 11px;
   color: #a893b5;
 }
 .world-record-pieces li {
@@ -2766,7 +2766,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 11px;
   padding: 7px 11px;
   background: #2a1d38;
   border-color: #5b4470;
@@ -2780,7 +2780,7 @@
 }
 .world-badge-chip > em {
   font-style: normal;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;

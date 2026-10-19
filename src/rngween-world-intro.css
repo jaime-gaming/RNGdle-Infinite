@@ -220,7 +220,7 @@
   padding: 2px 7px;
   border-radius: 999px;
   background: #0b0814c0;
-  font: 600 10px/1.3 var(--font-mono);
+  font: 600 11px/1.3 var(--font-mono);
   color: #e9ddf5;
   white-space: nowrap;
 }
@@ -576,6 +576,6 @@
     height: 40px;
   }
   .world-intro-marker small {
-    font-size: 9px;
+    font-size: 11px;
   }
 }

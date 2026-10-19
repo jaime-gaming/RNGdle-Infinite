@@ -75,7 +75,7 @@
 .rngween-eyebrow {
   display: block;
   color: var(--secondary);
-  font: 600 9px/1.6 var(--font-mono);
+  font: 600 11px/1.6 var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -129,7 +129,7 @@
   border-radius: 999px;
   background: var(--green-bg);
   color: var(--green);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 650;
 }
 .rngween-event-intro {
@@ -168,7 +168,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .rngween-event progress {
   display: block;
@@ -222,7 +222,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 5px;
-  font: 500 9px/1.5 var(--font-mono);
+  font: 500 11px/1.5 var(--font-mono);
   color: var(--muted);
 }
 .rngween-mission[data-state="claimable"] .rngween-mission-top > span:last-child,
@@ -268,7 +268,7 @@
   flex-direction: column;
   gap: 7px;
   color: var(--secondary);
-  font: 500 10px/1.5 var(--font-mono);
+  font: 500 11px/1.5 var(--font-mono);
 }
 .rngween-mission-world {
   display: flex;
@@ -276,7 +276,7 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 9px;
-  font: 500 10px/1.5 var(--font-mono);
+  font: 500 11px/1.5 var(--font-mono);
   color: var(--secondary);
 }
 .rngween-mission-world[data-done="true"] {
@@ -313,7 +313,7 @@
 .rngween-mission-reward > span {
   margin-left: auto;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 .rngween-mission > button {
   display: flex;
@@ -330,7 +330,7 @@
 .rngween-event-note {
   margin: 16px 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 .shop-card.is-event-aura .shop-source {
@@ -368,7 +368,7 @@
     gap: 8px;
   }
   .rngween-event-head .rngween-eyebrow {
-    font-size: 8px;
+    font-size: 11px;
     max-width: 175px;
   }
   .rngween-event-head h2 {

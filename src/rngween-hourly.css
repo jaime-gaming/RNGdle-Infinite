@@ -57,7 +57,7 @@
 }
 .rngween-hourly-wallet small {
   color: var(--secondary);
-  font-size: 9px;
+  font-size: 11px;
 }
 .rngween-hourly-rules {
   display: flex;
@@ -72,7 +72,7 @@
   padding: 5px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--secondary);
 }
 .rngween-hourly-grid {
@@ -101,7 +101,7 @@
   align-items: center;
   justify-content: space-between;
   color: var(--secondary);
-  font-size: 9px;
+  font-size: 11px;
 }
 .rngween-hourly-card-top > span {
   display: inline-flex;
@@ -128,7 +128,7 @@
 }
 .rngween-hourly-meter {
   margin-top: auto;
-  font: 10px var(--font-mono);
+  font: 11px var(--font-mono);
   color: var(--secondary);
 }
 .rngween-hourly-meter progress {
@@ -180,7 +180,7 @@
   padding-top: 14px;
   border-top: 1px solid var(--border);
   color: var(--secondary);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.8;
 }
 .rngween-hourly-foot p {
@@ -191,7 +191,7 @@
 }
 .rngween-hourly-foot small {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--muted);
 }
 .rngween-hourly-empty p {
