@@ -168,6 +168,10 @@ html.draw-split .install-app {
   text-align: center;
   overflow: hidden;
 }
+/* The stats hint has its own space, never on top of the last badge row. */
+.draw-stage.is-decided .draw-pick {
+  padding-bottom: 28px;
+}
 button.draw-pick {
   cursor: pointer;
 }
@@ -204,6 +208,7 @@ button.draw-pick:focus-visible {
   align-items: center;
   gap: 6px;
   min-width: 0;
+  max-width: 100%;
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -216,6 +221,7 @@ button.draw-pick:focus-visible {
   white-space: nowrap;
 }
 .draw-panel-tag {
+  flex-shrink: 0;
   padding: 1px 6px;
   border: 1px solid var(--border);
   border-radius: 999px;

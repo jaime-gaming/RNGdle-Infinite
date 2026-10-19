@@ -334,6 +334,10 @@ function inkBox(el) {
 
 function hubIsClear(grid, x, y) {
   return ![...grid.querySelectorAll(".draw-panel *")].some((el) => {
+    // Clipped decorative layers are not ink and cannot cover the hub. Measuring
+    // their rotating SVGs instead could move the button as an aura animated.
+    if (el.closest(".box-cosmetic, .box-gloss, .box-shimmer, .godly-particles"))
+      return false;
     if (el.children.length > 0) return false;
     const style = getComputedStyle(el);
     if (style.visibility === "hidden" || Number(style.opacity) === 0) {
@@ -461,7 +465,10 @@ export default function DrawStage({
   // More than one number is paid: each paid number is a card of its own on its
   // stats screen, and no total EP is counted up on the overview.
   const paid = (run.picks ?? []).length + (run.winnerSkill == null ? 1 : 0);
-  const chipLimit = chipLimitFor(numbers.length);
+  // Dense phone panels reserve space for the tap hint. A badge plus a real
+  // remainder count is readable; three wrapped chips could cover that hint.
+  const chipLimit =
+    frame.bottom > 0 && numbers.length >= 5 ? 1 : chipLimitFor(numbers.length);
 
   return (
     <div
@@ -502,7 +509,10 @@ export default function DrawStage({
               <span className="draw-panel-head">
                 <span className="draw-panel-label">Draw {index + 1}</span>
                 {claim && (
-                  <span className={`draw-panel-claim tint-${claim.tint}`}>
+                  <span
+                    className={`draw-panel-claim tint-${claim.tint}`}
+                    title={claim.name}
+                  >
                     {claim.name || "Kept"}
                   </span>
                 )}
@@ -512,6 +522,7 @@ export default function DrawStage({
               </span>
               <NumberBox
                 compact
+                auraLayout="contained"
                 aura={aura}
                 tier={
                   rarityKnown ? (draw.scored?.tier ?? "neutral") : "neutral"

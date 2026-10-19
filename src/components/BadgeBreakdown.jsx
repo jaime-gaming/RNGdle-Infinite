@@ -188,7 +188,8 @@ export default memo(function BadgeBreakdown({
         className={`badge-summary ${summaryVisible ? "is-visible" : ""}`}
         aria-hidden={!summaryVisible}
       >
-        {result.badges.length} badges earned
+        {result.badges.length} {result.badges.length === 1 ? "badge" : "badges"}{" "}
+        earned
       </p>
       <div className="result-badge-list">
         {visible.map((group, i) => (

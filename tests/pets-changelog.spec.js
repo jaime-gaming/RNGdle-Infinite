@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
+import { allBadgeMetadata } from "../src/infinite-badges.js";
 import {
   PETS,
   petById,
@@ -232,6 +233,7 @@ test("the changelog lists every release and flags an unseen version", () => {
   // v0.3 was the shop wave, and v0.4 carries the rebirth rework together with
   // the shelves it regrouped afterwards.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.5.1",
     "v0.5",
     "v0.4.1",
     "v0.4",
@@ -239,7 +241,7 @@ test("the changelog lists every release and flags an unseen version", () => {
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.5");
+  expect(LATEST_VERSION).toBe("v0.5.1");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
@@ -290,21 +292,17 @@ test("the changelog reads like release notes, not like a chat log", () => {
     expect(entry.version).toMatch(/^v\d+\.\d+(\.\d+)?$/);
     expect(entry.title.length).toBeGreaterThan(5);
     for (const line of entry.body) {
-      // v0.4.1 is the author's own note plus the publishing fix that shipped
-      // with it, not a release-notes sentence: both pinned verbatim instead
-      // of styled.
+      // v0.4.1 is the author's own note, not a release-notes sentence:
+      // pinned verbatim instead of styled.
       if (entry.version === "v0.4.1") {
-        expect([
-          "QoL, like basic UI changes :D",
-          "GitHub Pages now publishes the same build as the repository, including the latest assets and offline app files.",
-        ]).toContain(line);
+        expect(line).toBe("QoL, like basic UI changes :D");
         continue;
       }
       // One short line per change, always a finished sentence.
       expect(line.length).toBeLessThanOrEqual(140);
       // House style: a line opens lowercase unless it opens with a name or a
       // figure ("13 companions…", "RNGdle Infinite is live…").
-      expect(line).toMatch(/^([a-z0-9]|RNGdle |Auto-Roll )/);
+      expect(line).toMatch(/^([a-z0-9]|RNGdle |RNGween |Auto-Roll )/);
       expect(line.trim().endsWith(".")).toBe(true);
       // No placeholder chat register anywhere in the notes.
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
@@ -314,6 +312,37 @@ test("the changelog reads like release notes, not like a chat log", () => {
   // the same compact budget: eight lines at most.
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);
+  // The two Infinite-only badges are announced in v0.2, as plain text.
+  const v02 = CHANGELOG.find((entry) => entry.version === "v0.2");
+  const named = v02.body.find((line) => line.startsWith("new badges:"));
+  for (const badge of allBadgeMetadata.filter((b) =>
+    b.id.startsWith("INFINITE_"),
+  ))
+    expect(named).toContain(badge.name);
+});
+
+test("the badge names in the v0.2 note are links that open the badge window", async ({
+  page,
+}) => {
+  await page.goto("/changelog");
+  const links = page.locator(".changelog-badge-link");
+  await expect(links).toHaveCount(2);
+  await expect(links.nth(0)).toHaveText("Pendulum");
+  await expect(links.nth(1)).toHaveText("Last Second");
+  // Still one plain line of the note, not a block of its own; the icons are
+  // drawn by the game's emoji renderer, like on the Badges page.
+  const line = links.first().locator("xpath=..");
+  await expect(line).toContainText(
+    "new badges: Pendulum (anomaly) and Last Second (mythic).",
+  );
+  await expect(line.locator(".emoji img")).toHaveCount(2);
+  await links.nth(1).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator("#modal-title")).toHaveText("Last Second");
+  await expect(dialog).toContainText("Mythic");
+  await expect(dialog).toContainText("Not discovered yet");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
 });
 
 test("every companion wears its own colour and has its own face", async () => {

@@ -1,0 +1,929 @@
+/* CLEANUP Nov 4, 2026: seasonal dialogue scene only; keep owned aura art. */
+.reaper-orbit-arc {
+  stroke: #ba9dcc;
+  stroke-width: 0.7;
+  stroke-dasharray: 29 5;
+  opacity: 0.45;
+}
+.reaper-steel-edge {
+  stroke: #ded4de;
+  stroke-width: 0.8;
+  opacity: 0.7;
+}
+.reaper-cloak-grain {
+  opacity: 0.7;
+}
+.reaper-cloak-seams {
+  stroke: #b29abf;
+  stroke-width: 0.9;
+  opacity: 0.64;
+}
+.reaper-hood-rim {
+  stroke: #ae96c1;
+  stroke-width: 0.8;
+  opacity: 0.8;
+}
+.reaper-face-details > path:first-child {
+  fill: #272431;
+}
+.reaper-eye-light {
+  stroke: #b6e1c5;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 1px #91d8b9);
+}
+.reaper-teeth {
+  stroke: #514653;
+  stroke-width: 0.75;
+  stroke-linecap: round;
+}
+.reaper-hand-joints {
+  stroke: #918174;
+  stroke-width: 0.75;
+}
+.reaper-clasp {
+  fill: #b1baab;
+  stroke: #596a59;
+  stroke-width: 1;
+}
+.reaper-lantern-shine {
+  stroke: #d4efd7;
+  stroke-width: 0.6;
+  opacity: 0.7;
+}
+.reaper-lantern-aureole {
+  opacity: 0.55;
+}
+.reaper-pencil-strokes {
+  stroke: #cebbcf;
+  stroke-width: 0.65;
+  stroke-linecap: round;
+  opacity: 0.47;
+  fill: none;
+}
+.reaper-figure-sketch .reaper-cloak-grain {
+  opacity: 1;
+}
+.reaper-figure-sketch .reaper-orbit {
+  opacity: 0.5;
+}
+.reaper-figure-sketch {
+  filter: drop-shadow(0 15px 12px #08071166);
+}
+.reaper-figure-sketch.is-speaking .reaper-lantern-aureole {
+  animation: reaper-lantern-breath 2.8s ease-in-out infinite;
+}
+.reaper-figure-sketch.is-speaking .reaper-eye-light {
+  animation: reaper-eye-breath 4s ease-in-out infinite;
+}
+.reaper-scene-dialog {
+  --reaper-accent: #adcebb;
+  width: min(1080px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid #78607e;
+  border-radius: 20px;
+  color: #eee5ef;
+  background: #16111f;
+  color-scheme: dark;
+  box-shadow:
+    0 30px 120px #060511b5,
+    inset 0 0 0 5px #9e7b9720;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.reaper-scene-dialog::backdrop {
+  background: #070610bd;
+  backdrop-filter: blur(9px);
+}
+.reaper-scene-dialog[open] {
+  display: block;
+}
+.reaper-scene-dialog button {
+  cursor: pointer;
+  font-family: inherit;
+}
+.reaper-scene-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.reaper-scene-dialog :is(button, input):focus-visible {
+  outline: 2px solid var(--reaper-accent);
+  outline-offset: 4px;
+}
+.reaper-scene {
+  position: relative;
+  isolation: isolate;
+  min-height: 630px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  overflow: hidden;
+}
+.reaper-scene-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 23% 40%,
+    #473149 0,
+    #211824 39%,
+    #14111f 76%
+  );
+}
+.reaper-scene-backdrop > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.42;
+}
+.reaper-scene-moon {
+  position: absolute;
+  top: 82px;
+  left: 9%;
+  width: 115px;
+  height: 115px;
+  border-radius: 50%;
+  background: #c8b6c51a;
+  box-shadow: 0 0 70px #d0b4cd24;
+}
+.reaper-scene-moon::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 0;
+  width: 109px;
+  height: 109px;
+  border-radius: 50%;
+  background: #2e202f;
+}
+.reaper-scene-mist {
+  position: absolute;
+  inset: 58% -20% -10%;
+  background:
+    radial-gradient(ellipse at 23% 55%, #b19eac22, transparent 50%),
+    radial-gradient(ellipse at 75% 80%, #86a69619, transparent 40%);
+  filter: blur(14px);
+  animation: reaper-mist 15s ease-in-out infinite alternate;
+}
+.reaper-scene-header {
+  position: relative;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 61px;
+  padding: 17px 27px;
+  border-bottom: 1px solid #ad8f9c29;
+  z-index: 2;
+}
+.reaper-scene-header > span:first-child {
+  font: 500 11px/1.5 var(--font-mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #c6b5ca;
+}
+.reaper-scene-header > span:nth-child(2) {
+  color: #bfa7bd;
+  font-size: 11px;
+  margin-left: auto;
+}
+.reaper-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #8e708b70;
+  background: #281e31;
+  color: #d1bdcf;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.reaper-close:hover {
+  background: #44314b;
+}
+.reaper-character {
+  position: relative;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 540px;
+  padding: 34px 15px 24px;
+}
+.reaper-sketch-paper {
+  width: min(350px, 100%);
+  position: relative;
+}
+.reaper-sketch-paper::before {
+  content: "";
+  position: absolute;
+  inset: 3% 9% 5%;
+  background: repeating-linear-gradient(
+    25deg,
+    #dac7ca05 0 1px,
+    transparent 1px 7px
+  );
+  transform: rotate(-4deg);
+  border: 1px solid #c6a9bd16;
+  border-radius: 48% 45% 12px 10px;
+}
+.reaper-sketch-paper > .reaper-figure {
+  width: 100%;
+  height: auto;
+  position: relative;
+}
+.reaper-portrait-orbit {
+  position: absolute;
+  top: 10%;
+  bottom: 17%;
+  left: 8%;
+  right: 7%;
+  border: 1px solid #b394ab32;
+  border-radius: 48% 48% 45% 45%;
+  transform: rotate(-7deg);
+}
+.reaper-portrait-orbit::after {
+  content: "✧";
+  color: #bba182;
+  position: absolute;
+  bottom: 6%;
+  right: 10%;
+  font-size: 25px;
+}
+.reaper-character-caption {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 11px;
+  color: #d0b9c7;
+}
+.reaper-character-signature {
+  font:
+    italic 26px/1.8 Georgia,
+    serif;
+  color: #b196b4;
+  transform: rotate(-5deg);
+}
+.reaper-conversation {
+  padding: 30px 32px 29px 4px;
+  min-width: 0;
+  position: relative;
+}
+.reaper-speaker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--reaper-accent);
+}
+.reaper-speaker h2,
+.reaper-speaker-name {
+  font:
+    400 30px/1.25 Georgia,
+    serif;
+  margin: 0;
+  color: #f0e3eb;
+}
+.reaper-dialogue-text {
+  cursor: pointer;
+}
+.reaper-dialogue-text[data-typing="false"] {
+  cursor: default;
+}
+.reaper-speaker > svg {
+  flex: none;
+}
+.reaper-speaker-rule {
+  height: 1px;
+  background: #ac8da14d;
+  flex: 1;
+}
+.reaper-speaker-rule:first-child {
+  max-width: 22px;
+}
+.reaper-chapter-title {
+  display: block;
+  margin: 9px 0 24px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #c6acc2;
+}
+.reaper-dialogue-text {
+  position: relative;
+  min-height: 125px;
+}
+.reaper-dialogue-text > p {
+  white-space: pre-wrap;
+  font:
+    400 16px/1.85 Georgia,
+    serif;
+  color: #e0d1db;
+  margin: 0;
+  overflow-wrap: break-word;
+}
+.reaper-dialogue-text > p::first-letter {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--reaper-accent);
+}
+.reaper-writing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.05em;
+  background: var(--reaper-accent);
+  animation: reaper-writing-blink 0.8s step-end infinite;
+}
+.reaper-writing-cursor.is-finished {
+  visibility: hidden;
+  animation: none;
+}
+.reaper-finish-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #ad8a9d80;
+  color: #e1c5ce;
+  font-size: 11px;
+  padding: 7px 0;
+  margin: 14px 0 0 auto;
+}
+.reaper-finish-line:hover {
+  color: #f4ebf2;
+}
+.reaper-player-echo {
+  margin: 0 0 20px;
+  padding: 12px 15px;
+  border-left: 2px solid #afc4ad;
+  background: #c8d8be08;
+}
+.reaper-player-echo > span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: #b7c9b0;
+}
+.reaper-player-echo > p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #c9d4c5;
+  margin: 7px 0 0;
+  overflow-wrap: anywhere;
+}
+.reaper-account-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 0;
+  margin-top: 18px;
+  border-top: 1px solid #94758830;
+  font-size: 11px;
+  color: #c6b7cb;
+}
+.reaper-account-status > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.reaper-player-turn {
+  margin-top: 8px;
+  background: #17161fa3;
+  border: 1px solid #64796952;
+  border-radius: 13px;
+  padding: 17px;
+}
+.reaper-player-turn > header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 15px;
+}
+.reaper-player-medallion {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #899e886b;
+  border-radius: 50%;
+  background: #242c26;
+  color: #c8e0c8;
+  font:
+    15px Georgia,
+    serif;
+  flex: none;
+}
+.reaper-player-turn strong {
+  color: #e6ede1;
+  font-size: 11px;
+  font-weight: 500;
+}
+.reaper-player-turn small {
+  display: block;
+  margin-top: 4px;
+  color: #b4bfb0;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.reaper-reply-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.reaper-reply-choices > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 10px;
+  border: 1px solid #77876e40;
+  border-radius: 7px;
+  color: #cbd8c5;
+  background: #27302355;
+  min-width: 0;
+}
+.reaper-reply-choices > button > svg {
+  flex: none;
+  opacity: 0.7;
+}
+.reaper-reply-choices > button:hover:not(:disabled),
+.reaper-reply-choices > button[aria-pressed="true"] {
+  background: #3a4a3280;
+  border-color: #a6bf947d;
+  color: #e3efdd;
+}
+.reaper-reply-form {
+  display: flex;
+  gap: 8px;
+  margin: 13px 0;
+}
+.reaper-reply-form > input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #7b86765c;
+  border-radius: 7px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #e5eddf;
+  background: #100f169c;
+}
+.reaper-reply-form > input::placeholder {
+  color: #a5aa9f;
+  font-size: 11px;
+}
+.reaper-reply-form > button {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  flex: none;
+  border: 1px solid #8caa7c8c;
+  border-radius: 7px;
+  background: #34412d;
+  color: #dcecd4;
+}
+.reaper-scene-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #6479693b;
+}
+.reaper-scene-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  min-height: 36px;
+  line-height: 1.6;
+  padding: 9px 12px;
+}
+.reaper-scene-actions > .primary-button {
+  border: 1px solid #b4c6a2a8;
+  background: #a8b998;
+  color: #151e13;
+}
+.reaper-scene-actions > .secondary-button {
+  border: 1px solid #8f8a9266;
+  background: #2e2536;
+  color: #d8c5d7;
+}
+.reaper-scene-actions > .primary-button:hover:not(:disabled) {
+  background: #c4d1b7;
+}
+.reaper-scene-actions > .secondary-button:hover:not(:disabled) {
+  background: #40314b;
+  color: #f1e4f0;
+}
+.reaper-forge-reminder {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #c0d2b4;
+  margin: 12px 0 0;
+}
+.reaper-trial-list {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+.reaper-trial-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  padding: 9px 0;
+  border-top: 1px solid #957a923b;
+  color: #c5b0c1;
+}
+.reaper-trial-list > li > span:first-child {
+  min-width: 0;
+}
+.reaper-trial-list strong {
+  color: #e4d6e0;
+  font-weight: 500;
+  font-size: 11px;
+}
+.reaper-trial-list small {
+  display: block;
+  margin-top: 5px;
+  line-height: 1.6;
+  font-size: 11px;
+}
+.reaper-trial-list > li > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex: none;
+}
+.reaper-trial-list .is-complete > span:last-child {
+  color: #a3d6b7;
+}
+.reaper-key-contract {
+  padding: 20px 0;
+}
+.reaper-key-contract h3 {
+  font-size: 17px;
+  font-family: Georgia, serif;
+  font-weight: 400;
+  color: #e4d2dc;
+  margin: 0 0 15px;
+}
+.reaper-key-contract p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #d4bdcf;
+}
+.reaper-scene-error {
+  border: 1px solid #cf7e8877;
+  border-radius: 8px;
+  background: #3a1d23;
+  padding: 12px;
+  color: #f1b0b8;
+  font-size: 11px;
+  line-height: 1.7;
+}
+@keyframes reaper-writing-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes reaper-lantern-breath {
+  50% {
+    opacity: 0.95;
+  }
+}
+@keyframes reaper-eye-breath {
+  50% {
+    opacity: 0.6;
+  }
+}
+@keyframes reaper-mist {
+  to {
+    transform: translateX(8%);
+  }
+}
+@media (max-width: 720px) {
+  .reaper-scene-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+    border-radius: 15px;
+  }
+  .reaper-scene {
+    display: block;
+    min-height: 0;
+  }
+  .reaper-scene-header {
+    padding: 14px 17px;
+    gap: 9px;
+    min-height: 51px;
+  }
+  .reaper-scene-header > span:first-child {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .reaper-scene-header > span:nth-child(2) {
+    font-size: 11px;
+  }
+  .reaper-scene-moon {
+    width: 100px;
+    height: 100px;
+    left: 18%;
+    top: 70px;
+  }
+  .reaper-character {
+    min-height: 0;
+    padding: 12px 15px 0;
+  }
+  .reaper-sketch-paper {
+    width: 185px;
+  }
+  .reaper-portrait-orbit {
+    top: 6%;
+    bottom: 8%;
+    left: 28%;
+    right: 25%;
+  }
+  .reaper-character-caption {
+    font-size: 11px;
+    margin-top: -8px;
+  }
+  .reaper-character-signature {
+    display: none;
+  }
+  .reaper-conversation {
+    padding: 20px 19px 23px;
+  }
+  .reaper-speaker h2 {
+    font-size: 26px;
+  }
+  .reaper-chapter-title {
+    margin-bottom: 18px;
+    font-size: 11px;
+  }
+  .reaper-dialogue-text > p {
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .reaper-account-status {
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .reaper-player-turn {
+    padding: 13px;
+  }
+  .reaper-player-turn > header {
+    margin-bottom: 12px;
+  }
+  .reaper-reply-choices {
+    gap: 6px;
+  }
+  .reaper-reply-choices > button {
+    font-size: 11px;
+    padding: 10px 8px;
+  }
+  .reaper-scene-actions {
+    flex-direction: column;
+  }
+  .reaper-scene-actions > button {
+    font-size: 11px;
+  }
+}
+@media (max-width: 380px) {
+  .reaper-scene-header > span:nth-child(2) {
+    max-width: 110px;
+    text-align: right;
+    line-height: 1.6;
+  }
+  .reaper-conversation {
+    padding: 19px 15px;
+  }
+  .reaper-reply-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .reaper-reply-form > input::placeholder {
+    font-size: 11px;
+  }
+}
+.reaper-scene-reduced *,
+.reaper-scene-reduced *::before,
+.reaper-scene-reduced *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaper-figure *,
+  .reaper-scene * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.reaper-scene {
+  overflow: clip;
+}
+.reaper-scene-header {
+  position: sticky;
+  top: 0;
+  background: #1c1622f5;
+  backdrop-filter: blur(8px);
+  z-index: 4;
+}
+.reaper-go-to-reply {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  border: 1px solid #82957677;
+  border-radius: 6px;
+  background: #2d392a;
+  color: #d9e9ce;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.reaper-go-to-reply:hover {
+  background: #46513a;
+  color: #f2f5e9;
+}
+@media (max-width: 720px) {
+  .reaper-scene-header {
+    gap: 7px;
+    padding-inline: 13px;
+  }
+  .reaper-go-to-reply {
+    font-size: 11px;
+    padding: 5px 6px;
+  }
+  .reaper-scene-header > span:nth-child(2) {
+    max-width: 105px;
+  }
+}
+
+/* Keep the original character and reply flow, in a smaller conversation pane. */
+.reaper-scene-dialog {
+  width: min(760px, calc(100vw - 24px));
+  border-radius: 12px;
+  max-height: calc(100dvh - 24px);
+}
+.reaper-scene {
+  min-height: 0;
+  grid-template-columns: 152px minmax(0, 1fr);
+}
+.reaper-scene-header {
+  min-height: 43px;
+  padding: 10px 15px;
+}
+.reaper-scene-header > span:first-child {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.reaper-character {
+  min-height: 0;
+  padding: 18px 4px;
+}
+.reaper-sketch-paper {
+  width: 147px;
+}
+.reaper-character-caption,
+.reaper-character-signature {
+  display: none;
+}
+.reaper-portrait-orbit {
+  left: 9%;
+  right: 9%;
+  top: 12%;
+  bottom: 10%;
+}
+.reaper-conversation {
+  padding: 17px 19px 18px 4px;
+}
+.reaper-speaker h2 {
+  font-size: 24px;
+}
+.reaper-chapter-title {
+  margin: 6px 0 13px;
+  font-size: 11px;
+}
+.reaper-dialogue-text {
+  min-height: 58px;
+}
+.reaper-dialogue-text > p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.reaper-dialogue-text > p::first-letter {
+  font-size: inherit;
+  color: inherit;
+}
+.reaper-account-status {
+  margin-top: 12px;
+  padding: 9px 0;
+  font-size: 11px;
+}
+.reaper-player-echo {
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+.reaper-player-echo > p {
+  margin-top: 4px;
+  font-size: 11px;
+}
+.reaper-player-turn {
+  padding: 11px;
+  margin-top: 4px;
+}
+.reaper-player-turn > header {
+  margin-bottom: 9px;
+}
+.reaper-player-turn strong {
+  font-size: 11px;
+}
+.reaper-player-turn small {
+  font-size: 11px;
+  margin-top: 3px;
+}
+.reaper-reply-choices {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+.reaper-reply-choices > button {
+  padding: 7px 8px;
+  font-size: 11px;
+}
+.reaper-reply-form {
+  margin: 10px 0;
+  gap: 5px;
+}
+.reaper-reply-form > input {
+  font-size: 11px;
+  padding: 8px 9px;
+}
+.reaper-reply-form > button {
+  width: 33px;
+}
+.reaper-scene-actions {
+  padding-top: 9px;
+  gap: 6px;
+}
+.reaper-scene-actions > button {
+  min-height: 31px;
+  font-size: 11px;
+  padding: 7px 9px;
+}
+.reaper-scene-moon {
+  width: 70px;
+  height: 70px;
+  top: 61px;
+  left: 4%;
+  opacity: 0.6;
+}
+.reaper-scene-moon::after {
+  width: 65px;
+  height: 65px;
+}
+.reaper-scene-backdrop > svg {
+  opacity: 0.22;
+}
+@media (max-width: 600px) {
+  .reaper-scene {
+    display: block;
+  }
+  .reaper-character {
+    padding: 7px 10px 0;
+  }
+  .reaper-sketch-paper {
+    width: 91px;
+  }
+  .reaper-portrait-orbit {
+    display: none;
+  }
+  .reaper-conversation {
+    padding: 12px 15px 16px;
+  }
+  .reaper-scene-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reaper-reply-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reaper-scene-actions > button {
+    width: auto;
+  }
+}

@@ -17,6 +17,7 @@ import {
   drawPlanFor,
   parseEquippedSkills,
   petSkills,
+  eventSkills,
   rebirthSkill,
   skillArmed,
   skillById,
@@ -72,13 +73,15 @@ const roll = (id, skills = [], extra = {}) => ({
 });
 
 test("every skill states one effect, one charge cost and where it comes from", () => {
-  expect(SKILLS.length).toBe(shopSkills.length + petSkills.length + 6);
+  expect(SKILLS.length).toBe(
+    shopSkills.length + petSkills.length + eventSkills.length + 6,
+  );
   expect(new Set(SKILL_IDS).size).toBe(SKILLS.length);
   for (const skill of SKILLS) {
     expect(skill.charges).toBeGreaterThan(0);
     expect(typeof skill.name).toBe("string");
     expect(skill.description.length).toBeGreaterThan(20);
-    expect(["shop", "pet", "rebirth"]).toContain(skill.source);
+    expect(["shop", "pet", "rebirth", "event"]).toContain(skill.source);
     if (skill.source === "shop")
       expect(productById.get(skill.id)?.price).toBe(skill.price);
     if (skill.source === "pet") expect(petById.has(skill.petId)).toBe(true);
@@ -376,14 +379,14 @@ test("draw skills keep their own budgets and never invent EP", () => {
     keeps: 2,
   });
   expect(drawPlanFor(["griffin-dive", "quarry"])).toEqual({
-    attempts: 8,
-    floor: 100000,
-    keeps: 2,
+    attempts: 3,
+    floor: 0,
+    keeps: 1,
   });
   // Two draw skills pay two numbers, because each keeps its own.
   expect(drawPlanFor(["twice", "bedrock"]).keeps).toBe(2);
-  // Stacking never invents draws past the cap: three draw skills would ask for
-  // eleven, and the plan stops at the eight a roll is allowed to spend.
+  // Six draws fill this roll. Big Game keeps its whole budget and waits;
+  // the runner never silently trims it or consumes its charge.
   expect(drawPlanFor(["twice", "bedrock", "quarry"]).attempts).toBe(
     SKILL_MAX_DRAWS,
   );
@@ -420,12 +423,12 @@ test("the two late shop skills reuse effects that are already proven", () => {
     keeps: 1,
   });
   expect(triptych.attempts).toBeLessThanOrEqual(SKILL_MAX_DRAWS);
-  // Together they stack into eight draws and keep the floor, and still only
-  // pick between numbers that were really drawn.
+  // Triptych fires first; Big Game cannot fit and waits for the following
+  // roll, keeping its whole five-draw promise.
   expect(drawPlanFor(["triptych", "quarry"])).toEqual({
-    attempts: 8,
-    floor: 100000,
-    keeps: 2,
+    attempts: 3,
+    floor: 0,
+    keeps: 1,
   });
 });
 
@@ -729,17 +732,18 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   expect(reborn.profile).toEqual(top.profile);
   // Prestige resets the run like a Rebirth but keeps every aura, including the
   // equipped look; the ordinary upgrade, collection and companions go back.
-  expect(reborn.balance).toBe(cycleStarterEp(REBIRTH_TOTAL, 2));
+  // The rebirth ladder starts over too, so only prestiges fund the wallet.
+  expect(reborn.balance).toBe(cycleStarterEp(0, 2));
   expect(reborn.discovered).toEqual([]);
   expect(reborn.owned).toEqual(["starfall"]);
   expect(reborn.equipped).toBe("starfall");
   expect(reborn.pets).toEqual([]);
-  expect(reborn.skills).toEqual(["reborn-drive"]);
-  expect(reborn.equippedSkills).toEqual(["reborn-drive"]);
+  expect(reborn.skills).toEqual([]);
+  expect(reborn.equippedSkills).toEqual([]);
   expect(reborn.skillCharge).toEqual({});
-  // It costs the run, never the account: the ladder and its bonuses stay.
-  expect(reborn.rebirths).toBe(REBIRTH_TOTAL);
-  expect(reborn.totalEarned).toBe(9000000 + cycleStarterEp(REBIRTH_TOTAL, 2));
+  // The ladder and its skills are climbed again; the prestige bonus stays.
+  expect(reborn.rebirths).toBe(0);
+  expect(reborn.totalEarned).toBe(9000000 + cycleStarterEp(0, 2));
   // The roll that paid for it stays in the log, and the ultra-rebirth is
   // recorded after it: the history is the account's, never the cycle's.
   expect(reborn.history).toHaveLength(2);
@@ -767,11 +771,9 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
     },
     { type: "complete", result, id: "u", cooldownUntil: 2, at: 3 },
   );
-  // The bonus is permanent and multiplies banked EP only: +10% per ultra,
-  // stacked on the +2% every rung of the ladder paid.
-  expect(credited.balance).toBe(
-    Math.round(result.totalEP * 1.2 * (1 + 0.02 * REBIRTH_TOTAL)),
-  );
+  // The bonus is permanent and multiplies banked EP only: +10% per ultra.
+  // The ladder's +2% per rung is gone until the rungs are climbed again.
+  expect(credited.balance).toBe(Math.round(result.totalEP * 1.2));
   // The roll this settlement wrote, not the one that paid for the ultra.
   expect(credited.history.findLast((e) => e.type === "roll").ep).toBe(
     result.totalEP,

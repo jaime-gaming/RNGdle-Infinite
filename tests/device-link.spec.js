@@ -272,7 +272,7 @@ test("send now flushes the save, and the relay address is configurable", async (
     .toBe("https://relay.example:8787");
   await pageA.getByTestId("relay-reset").click();
   await expect(pageA.getByTestId("relay-field")).toHaveValue(
-    "http://127.0.0.1:5173",
+    await pageA.evaluate(() => location.origin),
   );
 
   await contextA.close();

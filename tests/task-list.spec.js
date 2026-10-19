@@ -22,12 +22,19 @@ import { testProfile } from "./helpers/progress.js";
 
 const at = (y, m, d, h = 12, min = 0) =>
   new Date(y, m - 1, d, h, min).getTime();
-const roll = (id, time, tier = "trash", ep = 1000, badges = []) => ({
+const roll = (
+  id,
+  time,
+  tier = "trash",
+  ep = 1000,
+  badges = [],
+  number = 950000,
+) => ({
   type: "complete",
   id,
   at: time,
   cooldownUntil: 0,
-  result: { number: 1, totalEP: ep, tier, badges },
+  result: { number, totalEP: ep, tier, badges },
 });
 const zeroCounts = () =>
   Object.fromEntries(TASK_METRICS.map((metric) => [metric, 0]));
@@ -35,8 +42,8 @@ const day = at(2026, 10, 8, 12);
 
 test("each cadence has a varied pool, a fixed-size list, and real task rewards", () => {
   for (const [cadence, poolSize] of [
-    ["daily", 19],
-    ["weekly", 21],
+    ["daily", 25],
+    ["weekly", 27],
   ]) {
     const pool = TASKS.filter((task) => task.cadence === cadence);
     expect(pool).toHaveLength(poolSize);
@@ -79,12 +86,12 @@ test("a peak keeps the best single roll of the period, and a running total adds 
 
 test("each ready task is claimed on its own, and a claim pays only its reward", () => {
   let state = { ...emptyProgress(), profile: testProfile };
-  // Twelve Rare-or-better rolls, one of them worth 300,000 EP, so several tasks
-  // on the list are finished at once.
+  // Twelve Epic rolls high in the range, each worth 300,000 EP, so several
+  // tasks on the list (volume, rarity, high rolls) are finished at once.
   for (let i = 0; i < 12; i++)
     state = applyProgress(
       state,
-      roll(`r${i}`, day + i * 60000, "rare", 300000),
+      roll(`r${i}`, day + i * 60000, "epic", 300000),
     );
   const ready = claimableIds(state.tasks, "daily", day);
   expect(ready.length).toBeGreaterThan(1);
@@ -128,6 +135,12 @@ test("finishing the last task unlocks the list bonus; collecting it pays once, i
     pets: 1,
     peakEP: 1000000,
     peakBadges: 30,
+    anomaly: 10,
+    trash: 100,
+    high: 100,
+    low: 10,
+    low1k: 1,
+    badges: 1000,
   };
   tasks = recordTally(tasks, every, day);
   let state = { ...emptyProgress(), profile: testProfile, tasks };

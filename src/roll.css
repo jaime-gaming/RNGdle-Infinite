@@ -260,6 +260,10 @@ nav button.active {
    it. It comes back once the screen is minimized to one number's stats. */
 .artifact-stage.is-behind {
   opacity: 0;
+  /* An invisible full-size aura still contributes scroll overflow. Clip it
+     while the overview owns the screen; minimizing restores all its art. */
+  overflow: hidden;
+  pointer-events: none;
 }
 /* The little mark a companion leaves while its signature skill fires: pinned
    to a corner of the number box, tinted like the skill it carries, and gone
@@ -1272,4 +1276,18 @@ nav button.active {
   .idle-roll {
     padding-top: max(12vh, 58px);
   }
+}
+
+/* Déjà vu line under the rank: the number was rolled before. */
+.deja-vu-note {
+  margin: -6px 0 14px;
+  font-size: 12px;
+  color: #b25fb2;
+  text-align: center;
+}
+:root[data-theme="dark"] .deja-vu-note {
+  color: #ffc8ff;
+}
+.deja-vu-note span {
+  color: #e16ee1;
 }

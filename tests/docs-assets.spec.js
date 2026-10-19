@@ -57,26 +57,25 @@ test("the README is a short player guide whose images really exist", () => {
   // Friendly, not exhaustive: the player guide stays short and skimmable.
   expect(readme.split("\n").length).toBeLessThanOrEqual(150);
   for (const section of [
-    "## The basics",
+    "## How to play",
     "## Ways to grow",
     "## Your progress",
     "## FAQ",
     "## Credits",
-    "## Run it locally",
   ])
     expect(readme).toContain(section);
   expect(readme).toContain("https://jaime-gaming.github.io/RNGdle-Infinite/");
   expect(readme).not.toMatch(/^## (Main files|Tests)$/m);
   // Anything that looks like a source path belongs in the agent notes only.
-  const body = readme.slice(0, readme.indexOf("## Run it locally"));
-  expect(body).not.toMatch(/src\/[\w-]+\.jsx?/);
+  expect(readme).not.toMatch(/src\/[\w-]+\.jsx?/);
 });
 
 test("the shop hub links match the shelf pages it renders", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
   const data = fs.readFileSync("src/shop-data.js", "utf8");
   const companion = fs.readFileSync("src/components/PetShelf.jsx", "utf8");
-  const source = `${shop}\n${companion}`;
+  const limited = fs.readFileSync("src/components/RngweenShop.jsx", "utf8");
+  const source = `${shop}\n${companion}\n${limited}`;
   // The sections are catalogue data: routing, the hub and the featured picks
   // all read the one list.
   // A shelf section carries an icon; the aura families that group a shelf's
@@ -100,6 +99,14 @@ test("the shop hub links match the shelf pages it renders", () => {
     expect(shop).toContain('id="shop-hub"');
   }
   expect(seen).toEqual(
-    new Set(["skills", "pace", "companions", "auras", "offline", "tools"]),
+    new Set([
+      "limited",
+      "skills",
+      "pace",
+      "companions",
+      "auras",
+      "offline",
+      "tools",
+    ]),
   );
 });

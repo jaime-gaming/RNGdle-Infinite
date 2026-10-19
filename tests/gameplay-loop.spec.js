@@ -1,3 +1,4 @@
+import { chooseTheme } from "./helpers/appearance.js";
 import { test, expect } from "./helpers/clock.js";
 import {
   availableGoals,
@@ -430,9 +431,7 @@ test("feedback and goals fit narrow screens in both themes and respect reduced m
   await page.setViewportSize({ width: 360, height: 800 });
   await showRoll(page, 1337);
   for (const theme of ["dark", "light"]) {
-    await page
-      .getByRole("button", { name: `${theme} theme`, exact: true })
-      .click();
+    await chooseTheme(page, theme);
     await expect(page.locator(".roll-progress-links")).toBeVisible();
     expect(
       await page.evaluate(

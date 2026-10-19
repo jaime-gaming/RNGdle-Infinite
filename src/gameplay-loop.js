@@ -7,6 +7,7 @@ export function availableGoals(progress, at = Date.now()) {
   return shopProducts
     .filter(
       (item) =>
+        !item.eventOnly &&
         !progress.owned.includes(item.id) &&
         (!item.requires || progress.owned.includes(item.requires)),
     )
@@ -16,10 +17,11 @@ export function availableGoals(progress, at = Date.now()) {
 // the player's products and companions decide it: a companion is never a
 // prerequisite for anything, so it is always reachable while unowned.
 export function validGoal(id, owned = [], pets = []) {
-  if (petById.has(id)) return !pets.includes(id);
+  if (petById.has(id)) return !petById.get(id).eventOnly && !pets.includes(id);
   const item = productById.get(id);
   return (
     !!item &&
+    !item.eventOnly &&
     !owned.includes(id) &&
     (!item.requires || owned.includes(item.requires))
   );
@@ -29,7 +31,7 @@ export function validGoal(id, owned = [], pets = []) {
 // the banner, the recap and the spotlight need no special case.
 export function goalItem(id, at = Date.now()) {
   const pet = petById.get(id);
-  if (pet)
+  if (pet && !pet.eventOnly)
     return {
       id: pet.id,
       name: pet.name,
@@ -39,7 +41,9 @@ export function goalItem(id, at = Date.now()) {
       icon: "companion",
     };
   const item = productById.get(id);
-  return item ? { ...item, price: productPrice(item, at) } : null;
+  return item && !item.eventOnly
+    ? { ...item, price: productPrice(item, at) }
+    : null;
 }
 export function recommendedGoal(progress, at = Date.now()) {
   const available = availableGoals(progress, at).filter(

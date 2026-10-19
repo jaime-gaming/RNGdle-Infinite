@@ -1,0 +1,685 @@
+/* KEEP after Nov 4, 2026: permanent art for owned event auras and Hexbound. */
+/* Permanent cosmetics earned in a temporary season. They keep working after
+   Halloween; these layers never replace the underlying rarity palette. */
+.number-box[data-cosmetic="jack-o-glow"] .box-halo {
+  display: block;
+  inset: -12px;
+  border-radius: 18px;
+  z-index: -1;
+  background: radial-gradient(ellipse at bottom, #fb923c66, transparent 72%);
+  animation: rngween-lantern 4s ease-in-out infinite;
+}
+.number-box[data-cosmetic="jack-o-glow"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 -6px 14px #f9731626,
+    0 0 0 1px #fb923c70;
+}
+.number-box[data-cosmetic="jack-o-glow"] .box-particles i {
+  background: #fb923c;
+  border-radius: 45%;
+  clip-path: polygon(
+    0 30%,
+    28% 15%,
+    43% 20%,
+    45% 0,
+    57% 0,
+    60% 20%,
+    72% 15%,
+    100% 30%,
+    95% 82%,
+    70% 100%,
+    30% 100%,
+    5% 82%
+  );
+  animation: rngween-wisp 5s ease-in-out infinite;
+}
+.number-box[data-cosmetic="phantom-veil"] .box-halo {
+  display: block;
+  inset: -16px;
+  z-index: -1;
+  border-radius: 30%;
+  background: radial-gradient(ellipse, #c4b5fd44, transparent 70%);
+  filter: blur(5px);
+  animation: rngween-lantern 6s ease-in-out infinite;
+}
+.number-box[data-cosmetic="phantom-veil"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    #c4b5fd30 40%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: box-sweep 7s ease-in-out infinite;
+}
+.number-box[data-cosmetic="phantom-veil"] .box-particles i {
+  width: 9px !important;
+  height: 12px !important;
+  background:
+    radial-gradient(circle at 32% 38%, #6d28d9 0 9%, transparent 11%),
+    radial-gradient(circle at 69% 38%, #6d28d9 0 9%, transparent 11%), #ede9fe;
+  clip-path: polygon(
+    0 35%,
+    12% 10%,
+    40% 0,
+    65% 0,
+    88% 10%,
+    100% 35%,
+    100% 100%,
+    76% 80%,
+    50% 100%,
+    25% 80%,
+    0 100%
+  );
+  animation: rngween-wisp 7s ease-in-out infinite;
+}
+.number-box[data-cosmetic="witchfire"] .box-halo {
+  display: block;
+  inset: -10px;
+  z-index: -1;
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 25% 85%, #a3e63555, transparent 60%),
+    radial-gradient(ellipse at 80% 10%, #7c3aed66, transparent 60%);
+  animation: rngween-lantern 3s ease-in-out infinite;
+}
+.number-box[data-cosmetic="witchfire"] .box-ribbon {
+  display: block;
+  inset: -2px;
+  border: 1px solid #a3e63560;
+  border-radius: inherit;
+  box-shadow: inset 0 -8px 12px #a3e63520;
+}
+.number-box[data-cosmetic="witchfire"] .box-particles i {
+  background: linear-gradient(#c4b5fd, #a3e635);
+  clip-path: polygon(
+    50% 0,
+    65% 35%,
+    80% 15%,
+    100% 68%,
+    80% 95%,
+    50% 100%,
+    15% 90%,
+    0 60%,
+    35% 30%
+  );
+  animation: rngween-flame 3.5s ease-in-out infinite;
+}
+.number-box[data-cosmetic="blood-moon"] .box-halo {
+  display: block;
+  inset: -13px;
+  z-index: -1;
+  border: 1px solid #f8717170;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    transparent 52%,
+    #e11d482e 65%,
+    transparent 73%
+  );
+  box-shadow: 0 0 18px #e11d4829;
+  animation: rngween-lantern 6s ease-in-out infinite;
+}
+.number-box[data-cosmetic="blood-moon"] .box-comet {
+  display: block;
+  width: 18px;
+  height: 18px;
+  top: -10px;
+  right: 12px;
+  border-radius: 50%;
+  box-shadow: -5px 2px 0 1px #f87171;
+}
+.number-box[data-cosmetic="blood-moon"] .box-particles i {
+  width: 14px !important;
+  height: 7px !important;
+  background: #be123c;
+  clip-path: polygon(
+    0 0,
+    25% 25%,
+    40% 0,
+    50% 30%,
+    60% 0,
+    75% 25%,
+    100% 0,
+    85% 100%,
+    60% 75%,
+    50% 100%,
+    40% 75%,
+    15% 100%
+  );
+  animation: rngween-wisp 6s ease-in-out infinite;
+}
+@keyframes rngween-lantern {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes rngween-wisp {
+  0%,
+  100% {
+    transform: translateY(3px) rotate(-8deg);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateY(-9px) rotate(6deg);
+    opacity: 0.9;
+  }
+}
+@keyframes rngween-flame {
+  0%,
+  100% {
+    transform: translateY(4px) scale(0.7);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateY(-10px) scale(1);
+    opacity: 0.9;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .number-box .box-cosmetic * {
+    animation: none !important;
+  }
+}
+.number-box[data-motion="reduced"] .box-cosmetic * {
+  animation: none !important;
+}
+
+/* Permanent premium layers: keep after seasonal UI cleanup. All colour and
+   motion live outside the scoring palette and the readable number layer. */
+.rngween-aura {
+  --aura-primary: #fb923c;
+  --aura-secondary: #b45309;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  color: var(--aura-primary);
+  pointer-events: none;
+}
+.aura-spectral {
+  --aura-primary: #b6a2f2;
+  --aura-secondary: #7850bf;
+}
+.aura-alchemy {
+  --aura-primary: #92c83f;
+  --aura-secondary: #9061df;
+}
+.aura-eclipse {
+  --aura-primary: #ed607a;
+  --aura-secondary: #ae2043;
+}
+.aura-atmosphere {
+  position: absolute;
+  inset: -29px -23px;
+  z-index: -1;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      ellipse at 50% 90%,
+      color-mix(in srgb, var(--aura-primary) 38%, transparent),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse at 50% 5%,
+      color-mix(in srgb, var(--aura-secondary) 22%, transparent),
+      transparent 65%
+    );
+  filter: blur(7px);
+  animation: aura-breathe 6s ease-in-out infinite;
+}
+.aura-seal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  z-index: -1;
+  opacity: 0.5;
+  stroke-width: 1;
+  filter: drop-shadow(
+    0 0 4px color-mix(in srgb, var(--aura-primary) 40%, transparent)
+  );
+  animation: aura-seal-turn 50s linear infinite;
+}
+.aura-filigree {
+  position: absolute;
+  inset: -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 16px);
+  opacity: 0.8;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.aura-crest {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: -25px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 34px;
+  margin-left: -19px;
+  border: 1px solid color-mix(in srgb, var(--aura-primary) 55%, transparent);
+  border-radius: 50% 50% 36% 36%;
+  background: var(--surface);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--aura-primary) 22%, transparent);
+}
+.aura-guardian {
+  position: absolute;
+  top: 50%;
+  margin-top: -12px;
+  filter: drop-shadow(
+    0 0 5px color-mix(in srgb, var(--aura-primary) 40%, transparent)
+  );
+  animation: aura-guardian-float 6s ease-in-out infinite alternate;
+}
+.aura-guardian-left {
+  left: -20px;
+}
+.aura-guardian-right {
+  right: -20px;
+  animation-delay: -3s;
+}
+.aura-orbit-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  left: 19%;
+  top: -12px;
+  border-radius: 50%;
+  background: var(--aura-primary);
+  box-shadow: 0 0 6px 2px
+    color-mix(in srgb, var(--aura-primary) 40%, transparent);
+  animation: aura-breathe 4s ease-in-out infinite alternate;
+}
+.aura-orbit-dot-second {
+  left: auto;
+  right: 19%;
+  top: auto;
+  bottom: -12px;
+  animation-delay: -2s;
+}
+.aura-motes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.aura-motes i {
+  position: absolute;
+  width: 3px;
+  height: 6px;
+  left: calc(8% + var(--mote) * 12%);
+  bottom: calc(-10px + var(--mote) * 0.6px);
+  border-radius: 50%;
+  background: var(--aura-primary);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--aura-primary) 55%, transparent);
+  opacity: 0.75;
+  animation: aura-ember-rise 4s ease-in-out infinite;
+  animation-delay: calc(var(--mote) * -0.5s);
+}
+.aura-lantern .aura-seal {
+  opacity: 0.35;
+  animation-duration: 70s;
+}
+.aura-lantern .aura-crest {
+  border-radius: 12px 12px 40% 40%;
+}
+.aura-lantern .aura-guardian {
+  width: 21px;
+  top: auto;
+  bottom: -13px;
+  animation-name: aura-breathe;
+}
+.aura-lantern .aura-guardian-left {
+  left: -10px;
+  transform: rotate(-12deg);
+}
+.aura-lantern .aura-guardian-right {
+  right: -10px;
+  transform: rotate(12deg);
+}
+.aura-spectral .aura-atmosphere {
+  inset: -20px -34px;
+  border-radius: 40%;
+  background: radial-gradient(ellipse at 50% 85%, #ae90ee66, transparent 70%);
+  animation: aura-mist-flow 8s ease-in-out infinite alternate;
+}
+.aura-spectral .aura-seal {
+  transform: rotateX(45deg);
+  animation: aura-spectral-ring 14s ease-in-out infinite alternate;
+}
+.aura-spectral .aura-seal-outer {
+  stroke-dasharray: 28 9;
+}
+.aura-spectral .aura-guardian {
+  top: 35%;
+  opacity: 0.85;
+}
+.aura-spectral .aura-guardian-left {
+  left: -26px;
+}
+.aura-spectral .aura-guardian-right {
+  right: -26px;
+}
+.aura-spectral .aura-motes i {
+  width: 4px;
+  height: 4px;
+  background: #e9dbff;
+  animation-duration: 7s;
+}
+.aura-alchemy .aura-seal {
+  stroke-width: 1.4;
+  opacity: 0.7;
+  animation-duration: 38s;
+}
+.aura-alchemy .aura-filigree {
+  color: var(--aura-secondary);
+}
+.aura-alchemy .aura-guardian {
+  top: auto;
+  bottom: -9px;
+  margin-top: 0;
+  animation: aura-green-flame 4s ease-in-out infinite alternate;
+}
+.aura-alchemy .aura-guardian-left {
+  left: -14px;
+}
+.aura-alchemy .aura-guardian-right {
+  right: -14px;
+  animation-delay: -2s;
+}
+.aura-alchemy .aura-motes i {
+  width: 4px;
+  height: 9px;
+  border-radius: 60% 40% 70% 30%;
+  background: linear-gradient(#d1f7a6, #92c83f);
+}
+.aura-alchemy .aura-motes i:nth-child(even) {
+  background: #b78aef;
+}
+.aura-eclipse .aura-seal {
+  width: 154px;
+  height: 154px;
+  margin: -77px 0 0 -77px;
+  opacity: 0.8;
+  stroke-width: 1.5;
+  background: radial-gradient(
+    circle,
+    transparent 49%,
+    #ae204322 53%,
+    #ed607a44 60%,
+    transparent 67%
+  );
+  border-radius: 50%;
+  animation-direction: reverse;
+}
+.aura-eclipse .aura-crest {
+  top: -31px;
+  width: 42px;
+  height: 42px;
+  margin-left: -21px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #5a2235, #211018);
+  color: #fc8a9f;
+  box-shadow: 0 0 15px #ed607a66;
+}
+.aura-eclipse .aura-guardian {
+  color: #97364b;
+}
+:root[data-theme="dark"] .aura-eclipse .aura-guardian {
+  color: #fc8a9f;
+}
+.aura-eclipse .aura-guardian-left {
+  left: -29px;
+  transform: rotate(-18deg);
+}
+.aura-eclipse .aura-guardian-right {
+  right: -29px;
+  transform: rotate(18deg);
+}
+.aura-eclipse .aura-motes i {
+  height: 3px;
+  animation: aura-eclipse-stars 6s ease-in-out infinite;
+  animation-delay: calc(var(--mote) * -0.65s);
+}
+@keyframes aura-seal-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes aura-breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes aura-guardian-float {
+  from {
+    translate: 0 2px;
+  }
+  to {
+    translate: 0 -7px;
+  }
+}
+@keyframes aura-mist-flow {
+  from {
+    transform: translateX(-7px) scaleX(0.94);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(7px) scaleX(1.06);
+    opacity: 1;
+  }
+}
+@keyframes aura-spectral-ring {
+  from {
+    transform: rotate(-12deg) scaleY(0.8);
+  }
+  to {
+    transform: rotate(12deg) scaleY(1);
+  }
+}
+@keyframes aura-green-flame {
+  from {
+    transform: scaleY(0.85) rotate(-5deg);
+    opacity: 0.7;
+  }
+  to {
+    transform: scaleY(1.08) rotate(5deg);
+    opacity: 1;
+  }
+}
+@keyframes aura-ember-rise {
+  0% {
+    transform: translateY(3px) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-27px) scale(0.3);
+    opacity: 0;
+  }
+}
+@keyframes aura-eclipse-stars {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-6px);
+  }
+}
+/* Compact previews keep every ornament inside its padded scene: the seal
+   shrinks to the box's own height instead of ringing the neighbours. */
+.number-box-compact .aura-seal {
+  width: 84px;
+  height: 84px;
+  margin: -42px 0 0 -42px;
+}
+.number-box-compact .aura-hexbound .aura-seal {
+  width: 108px;
+  height: 108px;
+  margin: -54px 0 0 -54px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rngween-aura *,
+  .rngween-aura *::before,
+  .rngween-aura *::after {
+    animation: none !important;
+  }
+}
+.number-box[data-motion="reduced"] .rngween-aura * {
+  animation: none !important;
+}
+
+/* Permanent world-only skin. Keep after the limited shop/world retire. */
+.aura-hexbound {
+  --aura-primary: #5eead4;
+  --aura-secondary: #8b5cf6;
+}
+.aura-hexbound .aura-seal {
+  width: 184px;
+  height: 184px;
+  margin: -92px 0 0 -92px;
+  stroke-dasharray: 18 5;
+  animation-direction: reverse;
+}
+.hexbound-crown {
+  position: absolute;
+  inset: -31px -18px;
+  width: calc(100% + 36px);
+  height: calc(100% + 62px);
+  z-index: -1;
+  stroke-width: 1.1;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 3px #8b5cf666);
+}
+.aura-hexbound .aura-crest {
+  top: -33px;
+  border-radius: 12px 12px 50% 50%;
+  border-color: #8b5cf680;
+  color: #bda5f8;
+}
+.aura-hexbound .aura-guardian {
+  color: #8b5cf6;
+}
+.number-box[data-cosmetic="hexbound"] .box-ribbon {
+  display: block;
+  inset: -2px;
+  border: 1px solid #5eead480;
+  border-radius: inherit;
+  box-shadow:
+    0 0 24px #8b5cf61a,
+    inset 0 -5px 10px #5eead415;
+}
+.number-box[data-cosmetic="hexbound"] .box-particles i {
+  background: linear-gradient(#5eead4, #8b5cf6);
+  clip-path: polygon(50% 0, 90% 25%, 90% 75%, 50% 100%, 10% 75%, 10% 25%);
+  animation: rngween-wisp 7s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .number-box[data-cosmetic="hexbound"] .box-cosmetic * {
+    animation: none !important;
+  }
+}
+.number-box[data-cosmetic="hexbound"][data-motion="reduced"] .box-cosmetic * {
+  animation: none !important;
+}
+
+/* A miniature seal inside each multi-roll box: never borrow the header/EP
+   row's space. These selectors override every seasonal variant, including
+   Hexbound, while preserving its own colours and glyphs. */
+.number-box[data-aura-layout="contained"] .aura-atmosphere {
+  inset: 0;
+  filter: none;
+  opacity: 0.45;
+}
+.number-box[data-aura-layout="contained"] .aura-seal {
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  opacity: 0.3;
+  filter: none;
+}
+.number-box[data-aura-layout="contained"] .aura-filigree,
+.number-box[data-aura-layout="contained"] .hexbound-crown {
+  inset: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  opacity: 0.5;
+  filter: none;
+}
+.number-box[data-aura-layout="contained"] .aura-crest {
+  top: 3px;
+  right: 3px;
+  left: auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--aura-primary);
+  box-shadow: none;
+  opacity: 0.85;
+}
+.number-box[data-aura-layout="contained"] .aura-crest svg {
+  width: 13px;
+  height: 13px;
+}
+.number-box[data-aura-layout="contained"] .aura-guardian {
+  top: auto;
+  bottom: 3px;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  filter: none;
+  opacity: 0.55;
+  animation-name: aura-breathe;
+}
+.number-box[data-aura-layout="contained"] .aura-guardian svg {
+  width: 12px;
+  height: 12px;
+}
+.number-box[data-aura-layout="contained"] .aura-guardian-left {
+  left: 3px;
+}
+.number-box[data-aura-layout="contained"] .aura-guardian-right {
+  right: 3px;
+}
+.number-box[data-aura-layout="contained"] .aura-orbit-dot {
+  top: 3px;
+  left: 19%;
+  width: 3px;
+  height: 3px;
+  box-shadow: none;
+}
+.number-box[data-aura-layout="contained"] .aura-orbit-dot-second {
+  top: auto;
+  left: auto;
+  right: 19%;
+  bottom: 3px;
+}
+.number-box[data-aura-layout="contained"] .aura-motes i {
+  bottom: 2px;
+  opacity: 0.4;
+}

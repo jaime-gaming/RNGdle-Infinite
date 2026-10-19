@@ -57,10 +57,10 @@ test("the one percentage is the mean of the badge share and the EP share, rounde
   ).toBe(100);
 });
 
-test("the Rollback asks for 75% of the collection and 60 million EP, above the prestige gate", () => {
+test("the Rollback asks for 65% of the collection and 60 million EP, above the prestige gate", () => {
   expect(rollbackRequirement()).toEqual({
-    percent: 75,
-    badges: 177,
+    percent: 65,
+    badges: 153,
     ep: 60000000,
   });
   expect(ROLLBACK_STEP.ep).toBeGreaterThan(30000000);

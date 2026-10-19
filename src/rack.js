@@ -10,7 +10,6 @@ import {
   skillSlots,
   skillTakesSlot,
   skillWaivesCooldown,
-  skillWalletMultiplier,
   trimToSlots,
   unlockedSkills,
 } from "./skills.js";

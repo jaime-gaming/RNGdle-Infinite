@@ -95,7 +95,8 @@
 }
 .profile-history dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  /* Four figures: a 2×2 block on phones, one row where there is room. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 16px;
   margin: 0;
 }
@@ -126,6 +127,49 @@
   font-size: 11.5px;
   line-height: 1.7;
   color: var(--muted);
+}
+/* The copy confirmation sits right under the buttons; a hand-copy field
+   only appears when the clipboard said no. */
+.profile-page .profile-share-note {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+.profile-share-note input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: 12px var(--roll-font);
+}
+/* A shared card is somebody else's record: a calm banner says so before
+   the figures, and the owner-only actions never appear. */
+.profile-shared-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 0 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+.profile-shared-banner svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.profile-shared-banner strong {
+  color: var(--text);
 }
 .profile-actions {
   display: flex;
@@ -204,18 +248,6 @@
   align-items: center;
   gap: 12px;
 }
-.profile-logo {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin: 22px 0 8px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  text-align: left;
-  animation: profile-logo-in 300ms ease-out both;
-}
 @keyframes profile-logo-in {
   from {
     opacity: 0;
@@ -226,37 +258,88 @@
     transform: translateY(0);
   }
 }
-.profile-logo-copy {
-  min-width: 0;
-  flex: 1;
+/* The picture is the upload control: hover or focus reveals what a click
+   does, and the hidden input underneath does the actual picking. */
+.profile-logo-button {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 160ms ease;
 }
-.profile-logo-copy strong {
-  display: block;
-  font-size: 13px;
-  font-weight: 650;
+.profile-logo-button:hover,
+.profile-logo-button:focus-visible {
+  transform: scale(1.04);
+}
+.profile-logo-button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+.profile-logo-button:disabled {
+  cursor: progress;
+}
+.profile-logo-button .avatar-mark {
+  border-style: dashed;
+}
+.profile-logo-button[data-state="logo"] .avatar-mark {
+  border-style: solid;
+}
+.profile-logo-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 72%, transparent);
+  color: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.profile-logo-button:hover .profile-logo-overlay,
+.profile-logo-button:focus-visible .profile-logo-overlay,
+.profile-logo-button[data-state="busy"] .profile-logo-overlay {
+  opacity: 1;
+}
+/* An empty mark is the invitation itself: a dashed ring with "upload" in it,
+   no placeholder icon fighting underneath. */
+.profile-logo-button[data-state="empty"] .avatar-mark > svg {
+  opacity: 0;
+}
+.profile-logo-button[data-state="empty"] .profile-logo-overlay {
+  opacity: 1;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
   color: var(--text);
 }
-.profile-logo-copy p {
-  margin: 5px 0 0;
-  font-size: 11.5px;
-  line-height: 1.7;
-  color: var(--secondary);
-  max-width: 52ch;
+.profile-logo-button[data-state="empty"]:hover .profile-logo-overlay,
+.profile-logo-button[data-state="empty"]:focus-visible .profile-logo-overlay {
+  background: color-mix(in srgb, var(--text) 14%, transparent);
 }
-.profile-logo-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-.profile-logo-actions .secondary-button {
-  margin-top: 0;
+.profile-logo-remove {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 38px;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--secondary);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-/* The picker is driven by the button beside it, so the raw input never shows. */
+.profile-logo-remove:hover {
+  color: var(--text);
+}
+/* The picker is driven by the picture beside it, so the raw input never shows. */
 .profile-logo-input {
   position: absolute;
   width: 1px;
@@ -268,15 +351,101 @@
   overflow: hidden;
   white-space: nowrap;
 }
-.profile-logo-note {
-  margin: 10px 0 0;
+/* Under the title: the save/remove note and the remove link, one quiet line. */
+.profile-logo-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: -6px 0 12px;
   font-size: 11px;
   line-height: 1.6;
-  color: var(--green);
   animation: profile-logo-in 240ms ease-out both;
 }
-@media (max-width: 560px) {
-  .profile-logo {
-    flex-direction: column;
+.profile-logo-line [role="status"] {
+  color: var(--green);
+}
+
+/* The record: best roll on top, pinned rolls below the figures. */
+.profile-best {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.profile-best .number-box {
+  flex: 0 0 auto;
+  min-width: 132px;
+}
+.profile-best-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.profile-best-copy strong {
+  font: 700 18px var(--roll-font);
+  color: var(--text);
+}
+.profile-best-copy small,
+.profile-pins small,
+.profile-pins-empty {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.profile-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 500 10px var(--roll-font);
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.profile-pins {
+  margin-top: 14px;
+}
+.profile-pins ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.profile-pins li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.profile-pins li .number-box {
+  min-width: 108px;
+}
+.profile-pins-empty {
+  display: block;
+  margin-top: 6px;
+}
+.profile-wearing {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.profile-wearing svg {
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+.profile-wearing strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (min-width: 600px) {
+  .profile-history dl {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

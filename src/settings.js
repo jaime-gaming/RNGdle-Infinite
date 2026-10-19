@@ -21,7 +21,10 @@ export const defaultSettings = {
   // Presentation
   reduceMotion: "system", // "system" | "on" | "off"
   compactNumbers: false,
+  // CLEANUP Nov 4, 2026: retire the seasonal appearance option, not earned auras.
+  halloweenMode: true,
   showSkillBar: true,
+  skillBarCollapsed: false,
   showGoalRecap: true,
   confirmPurchases: true,
   // Gameplay conveniences (never a reward or odds change)
@@ -32,7 +35,9 @@ const booleans = [
   "notifyReady",
   "notifySound",
   "compactNumbers",
+  "halloweenMode",
   "showSkillBar",
+  "skillBarCollapsed",
   "showGoalRecap",
   "confirmPurchases",
   "autoRollDefault",

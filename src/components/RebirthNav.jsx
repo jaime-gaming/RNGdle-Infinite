@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, Infinity as InfinityIcon, RefreshCw } from "lucide-react";
+import { Infinity as InfinityIcon, RefreshCw } from "lucide-react";
 import {
   REBIRTH_TOTAL,
   rebirthProgress,

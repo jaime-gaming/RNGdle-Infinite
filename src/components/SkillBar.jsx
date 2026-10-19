@@ -1,4 +1,14 @@
-import React, { useState } from "react";
+// CLEANUP Nov 4, 2026: drop the `is-rngween-skill` / familiar styling hooks
+// below; the event skill and signature leave every save at retirement.
+import React, {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useSettings } from "../use-settings.jsx";
 import { skillById, skillEffectSummary, skillSourceLabel } from "../skills.js";
 import { rackReport } from "../rack.js";
 import { petById } from "../pets.js";
@@ -73,8 +83,9 @@ function SkillCircle({ skill, active }) {
     : "";
   return (
     <div
-      className={`skill-slot tint-${skill.tint} ${skill.armed ? "is-armed" : ""} ${!skill.equipped ? "is-standby" : ""} ${active ? "is-firing" : ""}`}
+      className={`skill-slot ${skill.definition.eventOnly ? "is-rngween-skill" : ""} tint-${skill.tint} ${skill.armed ? "is-armed" : ""} ${!skill.equipped ? "is-standby" : ""} ${active ? "is-firing" : ""}`}
       data-skill={skill.id}
+      onClick={(event) => event.currentTarget.focus()}
       data-armed={skill.armed}
       data-equipped={skill.equipped}
       tabIndex={0}
@@ -207,7 +218,7 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
   const slice = 360 / members.length;
   return (
     <div
-      className={`skill-stack ${armed ? "is-armed" : ""} ${firing ? "is-firing" : ""} ${open ? "is-open" : ""}`}
+      className={`skill-stack ${members.some((member) => member.skill?.definition?.eventOnly || member.passive?.petId === "pumpkin-familiar") ? "is-rngween-stack" : ""} ${armed ? "is-armed" : ""} ${firing ? "is-firing" : ""} ${open ? "is-open" : ""}`}
       data-stack={stackId}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
@@ -334,7 +345,66 @@ export default function SkillBar({
   onToggleAutoRoll,
   className = "",
 }) {
+  const { settings, update } = useSettings();
+  const collapsed = settings.skillBarCollapsed;
+  const itemsId = useId();
   const [open, setOpen] = useState(false);
+  const dock = useRef(null);
+  const summary = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event) => {
+      if (!summary.current?.contains(event.target)) setOpen(false);
+    };
+    const escape = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        summary.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+  useLayoutEffect(() => {
+    const node = dock.current;
+    const root = document.documentElement;
+    if (!node) {
+      root.style.setProperty("--skill-dock-height", "0px");
+      return;
+    }
+    const header = document.querySelector(".header");
+    const warning = document.querySelector(".progress-warning");
+    const media = matchMedia("(max-width: 760px)");
+    const align = () => {
+      node.style.setProperty(
+        "--skill-dock-top",
+        `${Math.max(header?.getBoundingClientRect().bottom ?? 58, warning?.getBoundingClientRect().bottom ?? 0) + 6}px`,
+      );
+      const rect = node.getBoundingClientRect();
+      node.style.setProperty("--rack-panel-top", `${rect.bottom + 8}px`);
+      root.style.setProperty(
+        "--skill-dock-height",
+        `${media.matches && rect.height ? rect.height + 12 : 0}px`,
+      );
+    };
+    const observer = new ResizeObserver(align);
+    observer.observe(node);
+    if (header) observer.observe(header);
+    if (warning) observer.observe(warning);
+    window.addEventListener("scroll", align, { passive: true });
+    media.addEventListener("change", align);
+    align();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", align);
+      media.removeEventListener("change", align);
+      root.style.setProperty("--skill-dock-height", "0px");
+    };
+  }, [progress, collapsed]);
   if (!progress) return null;
   const report = rackReport(progress);
   const equipped = report.equipped
@@ -383,200 +453,230 @@ export default function SkillBar({
   );
   const petId = petPassive?.petId ?? petSkill?.definition?.petId ?? null;
   return (
-    <div className={`skill-bar ${className}`} role="group" aria-label="Skills">
-      {looseSkills.map((skill) => (
-        <SkillCircle
-          key={skill.id}
-          skill={skill}
-          active={firingSet.has(skill.id)}
-        />
-      ))}
-      <GroupCircles
-        stackId="pet"
-        label="Pet"
-        tint="green"
-        icon={
-          petId ? (
-            <CreatureIcon pet={petId} size={17} aria-hidden="true" />
-          ) : (
-            <SkillIcon icon="trail" size={17} aria-hidden="true" />
-          )
-        }
-        members={petMembers}
-        firingSet={firingSet}
-      />
-      <GroupCircles
-        stackId="rebirth"
-        label="Rebirth"
-        tint="green"
-        icon={<LegendMark size={17} aria-hidden="true" />}
-        members={rebirthMembers}
-        firingSet={firingSet}
-      />
-      {report.flywheel.owned && (
-        <div
-          className={`skill-slot skill-flywheel ${report.flywheel.ready ? "is-armed" : ""} ${firingSet.has("flywheel") ? "is-firing" : ""}`}
-          key="flywheel"
-          data-skill="flywheel"
-          tabIndex={0}
-          aria-label={`Flywheel, ${report.flywheel.charge} of ${report.flywheel.required} rolls charged. ${
-            report.flywheel.ready
-              ? "The next roll has no cooldown; the full reveal still plays."
-              : "Completed online rolls charge it. Offline rolls do not count."
-          }`}
-        >
-          <ChargeRing
-            fraction={
-              report.flywheel.required
-                ? report.flywheel.charge / report.flywheel.required
-                : 0
-            }
-            tint="steel"
-          >
-            <CoreMark size={18} aria-hidden="true" />
-          </ChargeRing>
-          {report.flywheel.ready && (
-            <span className="skill-contribution" aria-hidden="true">
-              no cooldown
-            </span>
-          )}
-          <span className="skill-tooltip" role="tooltip">
-            <strong>Flywheel</strong>
-            <span className="skill-tooltip-effect">
-              {report.flywheel.ready
-                ? "Next roll has no cooldown"
-                : "Charge it to make a roll free"}
-            </span>
-            <span className="skill-tooltip-meta">
-              {report.flywheel.charge} / {report.flywheel.required} online rolls
-            </span>
-            <span className="skill-tooltip-state">
-              {report.flywheel.ready
-                ? "Ready — fires on your next roll"
-                : "Charging"}
-            </span>
-          </span>
-          <progress
-            className="sr-only"
-            aria-label="Flywheel charge"
-            value={report.flywheel.charge}
-            max={report.flywheel.required}
-          />
-        </div>
-      )}
-      {/* Auto-Roll is an ability, not a settings toggle: one click arms it, the
-          next click stands it down. It never skips a reveal or a cooldown. */}
-      {hasAutoRoll && (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={autoRoll}
-          aria-label="Auto-Roll"
-          className={`skill-slot skill-ability auto-roll-control tint-cyan is-${autoRollState}`}
-          data-skill="auto-roll"
-          onClick={onToggleAutoRoll}
-        >
-          <ChargeRing fraction={autoRoll ? 1 : 0} tint="cyan">
-            <AutomationMark size={17} aria-hidden="true" />
-          </ChargeRing>
-          {autoRoll && (
-            <span className="skill-contribution" aria-hidden="true">
-              auto
-            </span>
-          )}
-          <span className="skill-tooltip" role="tooltip">
-            <strong>Auto-Roll</strong>
-            <span className="skill-tooltip-effect">
-              {AUTO_ROLL_COPY[autoRollState] ?? AUTO_ROLL_COPY.off}
-            </span>
-            <span className="skill-tooltip-meta">
-              Click to {autoRoll ? "turn it off" : "turn it on"} · identical
-              odds, reveal and cooldown
-            </span>
-            <span className="skill-tooltip-state">
-              {autoRoll ? "Active" : "Standby"}
-            </span>
-          </span>
-        </button>
-      )}
-      {/* One place states the total: every armed contribution, named. */}
+    <div
+      ref={dock}
+      className={`skill-bar ${collapsed ? "is-collapsed" : ""} ${className}`}
+      role="group"
+      aria-label="Skills"
+    >
       <button
         type="button"
-        className={`skill-summary ${open ? "is-open" : ""} ${armedCount ? "is-armed" : ""}`}
-        aria-expanded={open}
-        aria-label={`Rack summary. ${armedCount} armed. Next roll: ${
-          report.next.chips.join(", ") || "no charged effects"
-        }.`}
-        onClick={() => setOpen((value) => !value)}
+        className="skill-rack-toggle"
+        aria-expanded={!collapsed}
+        aria-controls={itemsId}
+        aria-label={collapsed ? "Expand skills" : "Collapse skills"}
+        title={collapsed ? "Expand skills" : "Collapse skills"}
+        onClick={() => {
+          setOpen(false);
+          update({ skillBarCollapsed: !collapsed });
+        }}
       >
-        <span aria-hidden="true">Σ</span>
-        {!!armedCount && (
-          <span className="skill-summary-count" aria-hidden="true">
-            {armedCount}
-          </span>
-        )}
-        <span className="rack-panel" role="tooltip">
-          <strong>Your rack, added up</strong>
-          <span className="rack-panel-row">
-            <span>Rack</span>
-            <span>
-              {report.used} / {report.slots} slots
-              {report.flywheel.owned ? " · Flywheel" : ""}
-              {hasAutoRoll ? " · Auto-Roll" : ""}
-            </span>
-          </span>
-          {report.next.chips.length ? (
-            <>
-              <span className="rack-panel-label">Next roll gets</span>
-              <span className="rack-chips">
-                {report.next.chips.map((chip) => (
-                  <span className="rack-chip" key={chip}>
-                    {chip}
-                  </span>
-                ))}
-              </span>
-            </>
-          ) : (
-            <span className="rack-panel-empty">
-              Nothing charged right now. Rolling online fills these circles.
-            </span>
-          )}
-          <span className="rack-panel-label">Banked EP multiplier</span>
-          <span className="rack-panel-row">
-            <span>Total</span>
-            <strong>×{Number(report.next.walletMultiplier.toFixed(2))}</strong>
-          </span>
-          {report.next.walletParts.map((part) => (
-            <span className="rack-panel-row is-part" key={part.id}>
-              <span>{part.label}</span>
-              <span>×{Number(part.value.toFixed(2))}</span>
-            </span>
-          ))}
-          {!report.next.walletParts.length && (
-            <span className="rack-panel-empty">
-              A companion or a wallet skill raises this.
-            </span>
-          )}
-          <span className="rack-panel-label">Skills</span>
-          {allSkills.length ? (
-            allSkills.map((skill) => (
-              <span className="rack-panel-row" key={skill.id}>
-                <span>{skill.name}</span>
-                <span>
-                  {skill.chip} · {skill.charge}/{skill.charges}
-                  {!skill.equipped ? " (companion)" : ""}
-                </span>
-              </span>
-            ))
-          ) : (
-            <span className="rack-panel-empty">No skills equipped.</span>
-          )}
-          {phase !== "idle" &&
-            equipped.some((skill) => firingSet.has(skill.id)) && (
-              <span className="rack-panel-firing">Firing on this roll</span>
-            )}
+        <span className="skill-rack-collapsed-copy">
+          Skills <span>{report.armed.length} ready</span>
         </span>
+        {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
       </button>
+      {/* Remount only presentation when folded, so an old fan/tooltip cannot
+          reopen itself later. Charging and automation live outside this rack. */}
+      <div className="skill-bar-items" id={itemsId} key={String(collapsed)}>
+        {looseSkills.map((skill) => (
+          <SkillCircle
+            key={skill.id}
+            skill={skill}
+            active={firingSet.has(skill.id)}
+          />
+        ))}
+        <GroupCircles
+          stackId="pet"
+          label="Pet"
+          tint="green"
+          icon={
+            petId ? (
+              <CreatureIcon pet={petId} size={17} aria-hidden="true" />
+            ) : (
+              <SkillIcon icon="trail" size={17} aria-hidden="true" />
+            )
+          }
+          members={petMembers}
+          firingSet={firingSet}
+        />
+        <GroupCircles
+          stackId="rebirth"
+          label="Rebirth"
+          tint="green"
+          icon={<LegendMark size={17} aria-hidden="true" />}
+          members={rebirthMembers}
+          firingSet={firingSet}
+        />
+        {report.flywheel.owned && (
+          <div
+            className={`skill-slot skill-flywheel ${report.flywheel.ready ? "is-armed" : ""} ${firingSet.has("flywheel") ? "is-firing" : ""}`}
+            key="flywheel"
+            data-skill="flywheel"
+            tabIndex={0}
+            aria-label={`Flywheel, ${report.flywheel.charge} of ${report.flywheel.required} rolls charged. ${
+              report.flywheel.ready
+                ? "The next roll has no cooldown; the full reveal still plays."
+                : "Completed online rolls charge it. Offline rolls do not count."
+            }`}
+          >
+            <ChargeRing
+              fraction={
+                report.flywheel.required
+                  ? report.flywheel.charge / report.flywheel.required
+                  : 0
+              }
+              tint="steel"
+            >
+              <CoreMark size={18} aria-hidden="true" />
+            </ChargeRing>
+            {report.flywheel.ready && (
+              <span className="skill-contribution" aria-hidden="true">
+                no cooldown
+              </span>
+            )}
+            <span className="skill-tooltip" role="tooltip">
+              <strong>Flywheel</strong>
+              <span className="skill-tooltip-effect">
+                {report.flywheel.ready
+                  ? "Next roll has no cooldown"
+                  : "Charge it to make a roll free"}
+              </span>
+              <span className="skill-tooltip-meta">
+                {report.flywheel.charge} / {report.flywheel.required} online
+                rolls
+              </span>
+              <span className="skill-tooltip-state">
+                {report.flywheel.ready
+                  ? "Ready — fires on your next roll"
+                  : "Charging"}
+              </span>
+            </span>
+            <progress
+              className="sr-only"
+              aria-label="Flywheel charge"
+              value={report.flywheel.charge}
+              max={report.flywheel.required}
+            />
+          </div>
+        )}
+        {/* Auto-Roll is an ability, not a settings toggle: one click arms it, the
+          next click stands it down. It never skips a reveal or a cooldown. */}
+        {hasAutoRoll && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoRoll}
+            aria-label="Auto-Roll"
+            className={`skill-slot skill-ability auto-roll-control tint-cyan is-${autoRollState}`}
+            data-skill="auto-roll"
+            onClick={onToggleAutoRoll}
+          >
+            <ChargeRing fraction={autoRoll ? 1 : 0} tint="cyan">
+              <AutomationMark size={17} aria-hidden="true" />
+            </ChargeRing>
+            {autoRoll && (
+              <span className="skill-contribution" aria-hidden="true">
+                auto
+              </span>
+            )}
+            <span className="skill-tooltip" role="tooltip">
+              <strong>Auto-Roll</strong>
+              <span className="skill-tooltip-effect">
+                {AUTO_ROLL_COPY[autoRollState] ?? AUTO_ROLL_COPY.off}
+              </span>
+              <span className="skill-tooltip-meta">
+                Click to {autoRoll ? "turn it off" : "turn it on"} · identical
+                odds, reveal and cooldown
+              </span>
+              <span className="skill-tooltip-state">
+                {autoRoll ? "Active" : "Standby"}
+              </span>
+            </span>
+          </button>
+        )}
+        {/* One place states the total: every armed contribution, named. */}
+        <button
+          type="button"
+          ref={summary}
+          className={`skill-summary ${open ? "is-open" : ""} ${armedCount ? "is-armed" : ""}`}
+          aria-expanded={open}
+          aria-label={`Rack summary. ${armedCount} armed. Next roll: ${
+            report.next.chips.join(", ") || "no charged effects"
+          }.`}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span aria-hidden="true">Σ</span>
+          {!!armedCount && (
+            <span className="skill-summary-count" aria-hidden="true">
+              {armedCount}
+            </span>
+          )}
+          <span className="rack-panel" role="tooltip">
+            <strong>Your rack, added up</strong>
+            <span className="rack-panel-row">
+              <span>Rack</span>
+              <span>
+                {report.used} / {report.slots} slots
+                {report.flywheel.owned ? " · Flywheel" : ""}
+                {hasAutoRoll ? " · Auto-Roll" : ""}
+              </span>
+            </span>
+            {report.next.chips.length ? (
+              <>
+                <span className="rack-panel-label">Next roll gets</span>
+                <span className="rack-chips">
+                  {report.next.chips.map((chip) => (
+                    <span className="rack-chip" key={chip}>
+                      {chip}
+                    </span>
+                  ))}
+                </span>
+              </>
+            ) : (
+              <span className="rack-panel-empty">
+                Nothing charged right now. Rolling online fills these circles.
+              </span>
+            )}
+            <span className="rack-panel-label">Banked EP multiplier</span>
+            <span className="rack-panel-row">
+              <span>Total</span>
+              <strong>
+                ×{Number(report.next.walletMultiplier.toFixed(2))}
+              </strong>
+            </span>
+            {report.next.walletParts.map((part) => (
+              <span className="rack-panel-row is-part" key={part.id}>
+                <span>{part.label}</span>
+                <span>×{Number(part.value.toFixed(2))}</span>
+              </span>
+            ))}
+            {!report.next.walletParts.length && (
+              <span className="rack-panel-empty">
+                A companion or a wallet skill raises this.
+              </span>
+            )}
+            <span className="rack-panel-label">Skills</span>
+            {allSkills.length ? (
+              allSkills.map((skill) => (
+                <span className="rack-panel-row" key={skill.id}>
+                  <span>{skill.name}</span>
+                  <span>
+                    {skill.chip} · {skill.charge}/{skill.charges}
+                    {!skill.equipped ? " (companion)" : ""}
+                  </span>
+                </span>
+              ))
+            ) : (
+              <span className="rack-panel-empty">No skills equipped.</span>
+            )}
+            {phase !== "idle" &&
+              equipped.some((skill) => firingSet.has(skill.id)) && (
+                <span className="rack-panel-firing">Firing on this roll</span>
+              )}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }

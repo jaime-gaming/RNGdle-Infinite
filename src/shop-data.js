@@ -1,5 +1,8 @@
+// CLEANUP Nov 4, 2026: remove the `limited` shelf entry and RNGWEEN_SKILL from
+// the catalogue. KEEP RNGWEEN_COSMETICS / RNGWEEN_FAMILY as owned-only auras.
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
-import { AURA_EVENT_END_AT, AURA_EVENT_START_AT } from "./tasks.js";
+import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
+import { RNGWEEN_SKILL } from "./rngween-limited.js";
 
 // Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
@@ -416,7 +419,6 @@ export const shopProducts = [
     kind: "aura",
     name: "Static Veil",
     price: 260000,
-    eventPrice: 840000,
     family: "randomness",
     swatch: ["#e2e8f0", "#475569"],
     icon: "static",
@@ -428,7 +430,6 @@ export const shopProducts = [
     kind: "aura",
     name: "Bit Storm",
     price: 880000,
-    eventPrice: 2640000,
     family: "randomness",
     swatch: ["#22c55e", "#14532d"],
     icon: "bitstorm",
@@ -440,7 +441,6 @@ export const shopProducts = [
     kind: "aura",
     name: "Scramble",
     price: 1800000,
-    eventPrice: 5400000,
     family: "randomness",
     swatch: ["#fcd34d", "#78350f"],
     icon: "scramble",
@@ -452,7 +452,6 @@ export const shopProducts = [
     kind: "aura",
     name: "Hex Dump",
     price: 3000000,
-    eventPrice: 9000000,
     family: "randomness",
     swatch: ["#38bdf8", "#1e3a8a"],
     icon: "hexdump",
@@ -610,7 +609,7 @@ export const shopProducts = [
   })),
   ...SKILL_SLOTS.map((bay) => ({ ...bay })),
 ];
-// The shop's six shelves. Each one is its own sub-page (/shop/skills and so
+// The shop's six permanent shelves and one calendar-gated limited shelf. Each one is its own sub-page (/shop/skills and so
 // on) and every product lives on exactly one shelf, so the hub buttons, the
 // featured picks, a deep link and the back button can never disagree about
 // where an item is sold. Companions keep their shelf too; it is owned by the
@@ -670,6 +669,13 @@ export const AURA_FAMILIES = [
 ];
 
 export const SHOP_SECTIONS = [
+  {
+    id: "limited",
+    label: "Limited Shop: RNGween 2026",
+    icon: "pumpkin",
+    eventOnly: true,
+    blurb: "Pumpkoins, fleeting companions and permanent Halloween treats.",
+  },
   {
     id: "skills",
     label: "Skills",
@@ -801,18 +807,56 @@ export function nextUpgrade(owned, kind) {
   const track = shopProducts.filter((p) => p.kind === kind);
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);
 }
-export const productById = new Map(shopProducts.map((item) => [item.id, item]));
+export const auraProducts = [
+  ...shopProducts.filter((item) => item.kind === "aura"),
+  ...RNGWEEN_COSMETICS,
+];
+export const productById = new Map(
+  [
+    ...shopProducts,
+    ...RNGWEEN_COSMETICS,
+    { ...RNGWEEN_SKILL, kind: "skill" },
+  ].map((item) => [item.id, item]),
+);
 
-// Four R4ND0MN3S5 looks have a limited premium price while the event is live;
-// the catalogue's `price` remains the regular price used before and after it.
-export function productPrice(item, at = Date.now()) {
-  if (!item) return 0;
-  return item.family === "randomness" &&
-    Number.isSafeInteger(item.eventPrice) &&
-    at >= AURA_EVENT_START_AT &&
-    at < AURA_EVENT_END_AT
-    ? item.eventPrice
-    : item.price;
+// Event-owned looks live under one dedicated collection, not in the regular
+// catalogue. The collection can be empty; no unowned aura becomes equipable.
+export const SPECIAL_AURA_COLLECTION = {
+  id: "special",
+  label: "Limited & Special",
+  specialHub: true,
+  blurb: "Your event collections. Each one is a chapter that will not reopen.",
+  font: "Georgia, serif",
+  tracking: "0.02em",
+  casing: "none",
+  weight: 600,
+};
+
+export function auraFamilyById(id) {
+  return (
+    [...AURA_FAMILIES, RNGWEEN_FAMILY, SPECIAL_AURA_COLLECTION].find(
+      (family) => family.id === id,
+    ) ?? null
+  );
+}
+
+// The exclusive collection has no empty banner, locked previews or missing-aura
+// count. Only the looks this player owns may appear, even via a direct link.
+export function visibleAuraFamilies(owned = []) {
+  return RNGWEEN_COSMETICS.some((aura) => owned.includes(aura.id))
+    ? [...AURA_FAMILIES, RNGWEEN_FAMILY]
+    : AURA_FAMILIES;
+}
+
+export function aurasInFamily(id, owned = []) {
+  return auraProducts.filter(
+    (aura) =>
+      aura.family === id && (!aura.eventOnly || owned.includes(aura.id)),
+  );
+}
+
+export function productPrice(item) {
+  return item?.eventOnly ? null : (item?.price ?? 0);
 }
 
 export function rollSettings(owned = []) {

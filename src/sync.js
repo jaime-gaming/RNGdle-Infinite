@@ -33,7 +33,10 @@ const PEER_CODE_LINE = 72;
 const PEER_ID_PREFIX = "rngdle";
 const HEARTBEAT_MS = 3000;
 const PONG_TIMEOUT_MS = 12000;
-const RECONNECT_MS = 2500;
+// A tick that arrives this late means the browser throttled or froze the tab
+// (phone screen off, background tab). The silence was ours, not the link's.
+const FROZEN_GAP_MS = HEARTBEAT_MS * 3;
+const RECONNECT_MS = 1000;
 const ACTION_TIMEOUT_MS = 20000;
 const ACTION_CACHE_LIMIT = 128;
 
@@ -59,6 +62,7 @@ let lastPingNonce = "";
 let lastPongAt = 0;
 let connectingSince = 0;
 let reconnectAttempt = 0;
+let lastHeartbeatTick = 0;
 const pendingActions = new Map();
 const actionListeners = new Set();
 const queuedActions = [];
@@ -78,6 +82,8 @@ let relaySource = null;
 let relaySession = "";
 let relaySendTimer = 0;
 let relayPendingState = "";
+let blockedRemote = null;
+let receiveRetryTimer = 0;
 let relayHelloTimer = 0;
 
 function emit() {
@@ -464,6 +470,9 @@ function teardown() {
   clearTimeout(relayHelloTimer);
   relayHelloTimer = 0;
   relayPendingState = "";
+  clearTimeout(receiveRetryTimer);
+  receiveRetryTimer = 0;
+  blockedRemote = null;
   try {
     conn?.close();
   } catch {}
@@ -483,10 +492,6 @@ function teardown() {
 // ---- PeerJS transport (default: works on GitHub Pages) --------------------
 function peerIdFor(slot) {
   return `${PEER_ID_PREFIX}-${room}-${slot}`;
-}
-
-function otherSlot() {
-  return peerSlot === "a" ? "b" : "a";
 }
 
 function openPeer() {
@@ -534,11 +539,15 @@ function schedulePeerReconnect(epoch = linkEpoch) {
 
 // Skip the backoff: used when the network or the tab comes back.
 function retryPeerNow() {
-  if (!room || !key || !peer || peer.destroyed) return;
+  if (!room || !key) return;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   reconnectAttempt = 0;
   clearTimeout(reconnectTimer);
   reconnectTimer = 0;
+  if (!peer || peer.destroyed) {
+    openPeer();
+    return;
+  }
   if (peer.disconnected) {
     try {
       peer.reconnect();
@@ -620,6 +629,15 @@ function openPeerSlot(slot) {
       return;
     }
     if (type === "peer-unavailable") {
+      // The other device has not registered yet. Drop the dead attempt now so
+      // the next heartbeat redials, instead of waiting out the stall timeout.
+      if (conn && !conn.open) {
+        const stalled = conn;
+        conn = null;
+        try {
+          stalled.close();
+        } catch {}
+      }
       setStatus("waiting", waitingCopy());
       return;
     }
@@ -700,8 +718,22 @@ function attachConnection(connection, epoch = linkEpoch) {
     sendPeerState();
   });
   connection.on("data", (data) => {
-    if (conn === connection && epoch === linkEpoch)
-      handlePeerMessage(data, "peer");
+    if (conn !== connection || epoch !== linkEpoch) return;
+    // The broker only knows the room; the key never leaves the link URL. A
+    // peer that dialled the room without it is not ours: drop it, do not
+    // hand it the save.
+    if (!data || typeof data !== "object" || data.key !== key) {
+      conn = null;
+      lastPongAt = 0;
+      peers = peer && !peer.destroyed ? 1 : 0;
+      setStatus("waiting", waitingCopy());
+      try {
+        connection.close();
+      } catch {}
+      schedulePeerReconnect(epoch);
+      return;
+    }
+    handlePeerMessage(data, "peer");
   });
   connection.on("close", () => {
     if (conn !== connection || epoch !== linkEpoch) return;
@@ -727,11 +759,22 @@ function attachConnection(connection, epoch = linkEpoch) {
 function sendPeerMessage(message) {
   if (!conn?.open) return false;
   try {
-    conn.send(message);
+    conn.send({ ...message, key });
     return true;
   } catch {
     return false;
   }
+}
+
+// One immediate ping with a fresh grace period: used when the tab wakes up or
+// the network returns, so a dead channel is noticed within one timeout and a
+// healthy one is never dropped for a silence the browser caused.
+function probeConnection() {
+  if (!conn?.open) return;
+  lastPongAt = Date.now();
+  lastHeartbeatTick = lastPongAt;
+  lastPingNonce = `${device}:${++pingSequence}:${lastPongAt}`;
+  sendPeerMessage({ type: "ping", nonce: lastPingNonce, from: device });
 }
 
 // True only when the other device is actually reachable: a live data channel,
@@ -893,8 +936,8 @@ function handleActionRequest(message, transport) {
 
 function handleRemoteState(remote, transport = "peer") {
   if (remote?.device) acceptRemoteIdentity(remote.device, remote.ownerDevice);
-  reconcile(remote);
-  if (remote?.id)
+  const accepted = reconcile(remote);
+  if (accepted !== false && remote?.id)
     void sendLinkMessage({
       type: "state-ack",
       id: remote.id,
@@ -905,13 +948,14 @@ function handleRemoteState(remote, transport = "peer") {
 
 // Apply the shared profile-first, then timestamp/device reconciliation policy.
 function reconcile(remote) {
-  if (!remote || !Number.isFinite(remote.savedAt) || !remote.state) return;
+  if (!remote || !Number.isFinite(remote.savedAt) || !remote.state)
+    return false;
   const decision = syncDecision(
     { state: currentSave(), savedAt: queuedStamp(), device },
     remote,
   );
   if (decision.direction === "receive") {
-    receiveRemote(remote);
+    return receiveRemote(remote);
   } else if (decision.direction === "send") {
     // A profile always outranks a guest save. Give that correction a newer
     // stamp so the guest accepts it even if its local clock ran ahead.
@@ -933,29 +977,72 @@ function sendCurrentState() {
   return false;
 }
 
-function receiveRemote(remote) {
+// A live incoming head may be durable on the main device but temporarily
+// unwritable here. Retain only the newest head and retry without acknowledging
+// it, rerolling, or leaving a secondary browser permanently behind the relay.
+function retryRemoteSave(remote) {
+  if (!room) return;
+  if (
+    blockedRemote?.epoch === linkEpoch &&
+    (blockedRemote.remote.savedAt > remote.savedAt ||
+      (blockedRemote.remote.savedAt === remote.savedAt &&
+        blockedRemote.remote.device < remote.device))
+  )
+    return;
+  blockedRemote = { remote, epoch: linkEpoch };
+  clearTimeout(receiveRetryTimer);
+  receiveRetryTimer = setTimeout(() => {
+    const queued = blockedRemote;
+    blockedRemote = null;
+    receiveRetryTimer = 0;
+    if (queued && room && queued.epoch === linkEpoch) reconcile(queued.remote);
+  }, 3000);
+}
+
+function receiveRemote(remote, retry = true) {
   const raw = remote.state;
   try {
-    const parsed = parseProgress(raw);
-    if (!parsed.profile) return;
+    if (!parseProgress(raw).profile) return false;
   } catch {
-    return;
+    return false;
   }
+  const before = { savedAt, pending, dirtyAt, stampedFor };
   savedAt = remote.savedAt;
   pending = false;
   dirtyAt = 0;
   stampedFor = 0;
+  // The save listener can veto an unreadable/unwritable head synchronously.
+  // Never acknowledge it or advance the link stamp before durable adoption.
+  const event = new CustomEvent(SYNC_EVENT, { detail: raw, cancelable: true });
+  if (!window.dispatchEvent(event) || event.progressSaved !== true) {
+    ({ savedAt, pending, dirtyAt, stampedFor } = before);
+    if (retry) retryRemoteSave(remote);
+    return false;
+  }
+  if (blockedRemote && blockedRemote.remote.savedAt <= remote.savedAt) {
+    clearTimeout(receiveRetryTimer);
+    receiveRetryTimer = 0;
+    blockedRemote = null;
+  }
   persistLink();
   markSynced("received");
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: raw }));
+  return true;
 }
 
 // A quiet liveness check keeps stale WebRTC channels from looking connected;
 // state frames are retransmitted only while they remain unacknowledged.
 function startHeartbeat(epoch = linkEpoch) {
   clearInterval(heartbeatTimer);
+  lastHeartbeatTick = Date.now();
   heartbeatTimer = setInterval(() => {
     if (epoch !== linkEpoch || !peer || peer.destroyed) return;
+    const tickAt = Date.now();
+    const frozen = tickAt - lastHeartbeatTick > FROZEN_GAP_MS;
+    lastHeartbeatTick = tickAt;
+    if (frozen && conn?.open) {
+      // Give the channel one fresh round-trip before judging it dead.
+      lastPongAt = tickAt;
+    }
     if (peer.disconnected) {
       setStatus("connecting", "Connection interrupted. Reconnecting…");
       try {
@@ -1285,12 +1372,16 @@ export function adoptPeerCode(code) {
     return { ok: false, reason: "unreadable" };
   }
   if (!parsed?.profile) return { ok: false, reason: "guest" };
-  savedAt = Math.max(savedAt, Number(payload?.at) || 0);
-  pending = false;
-  dirtyAt = 0;
-  persistLink();
-  markSynced("received");
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: payload.save }));
+  if (
+    !receiveRemote(
+      {
+        state: payload.save,
+        savedAt: Math.max(savedAt, Number(payload?.at) || 0),
+      },
+      false,
+    )
+  )
+    return { ok: false, reason: "storage" };
   return { ok: true };
 }
 
@@ -1299,21 +1390,28 @@ if (typeof window !== "undefined") {
   window.addEventListener("online", () => {
     if (!room) return;
     if (status === "offline" || status === "error") openLink();
-    else if (conn?.open && pending) {
-      sendPeerMessage({
-        type: "state",
-        state: currentSave(),
-        savedAt: Math.max(savedAt + 1, dirtyAt || Date.now()),
-        device,
-      });
-    } else if (peer && !peer.destroyed && !conn?.open) retryPeerNow();
+    else if (conn?.open) {
+      probeConnection();
+      if (pending) sendPeerState();
+    } else if (peer && !peer.destroyed) retryPeerNow();
   });
   // A phone that wakes up or a tab that comes back to the front should not
   // wait out a long backoff before the link is retried.
+  const wake = () => {
+    if (!room || !peer || peer.destroyed) return;
+    if (conn?.open) {
+      // The channel may have died silently while the tab slept. Ask now and
+      // flush anything that was waiting, instead of waiting for the next tick.
+      probeConnection();
+      if (pending && currentProfile()) sendPeerState();
+    } else retryPeerNow();
+  };
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") return;
-    if (room && peer && !peer.destroyed && !conn?.open) retryPeerNow();
+    if (document.visibilityState === "visible") wake();
   });
+  window.addEventListener("focus", wake);
+  window.addEventListener("pageshow", wake);
+  document.addEventListener("resume", wake);
   window.addEventListener("offline", () => {
     if (room)
       setStatus(

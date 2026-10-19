@@ -1,3 +1,4 @@
+import { chooseTheme } from "./helpers/appearance.js";
 import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { showRoll } from "./helpers/random-roll.js";
@@ -112,9 +113,7 @@ test("branding, ordered navigation and collection progress fit mobile and both t
   for (const width of [1200, 768, 390, 360, 340]) {
     await page.setViewportSize({ width, height: 900 });
     for (const theme of ["light", "dark"]) {
-      await page
-        .getByRole("button", { name: `${theme} theme`, exact: true })
-        .click();
+      await chooseTheme(page, theme);
       await expect(progress(page)).toBeVisible();
       await expect(page.locator(".brand-name")).toBeVisible();
       expect(

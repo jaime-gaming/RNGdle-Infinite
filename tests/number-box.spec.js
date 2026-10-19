@@ -1,3 +1,4 @@
+import { chooseTheme } from "./helpers/appearance.js";
 import { test, expect } from "./helpers/clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -85,9 +86,7 @@ test("every roll tier uses the observed light/dark Box Lab palettes and shimmer 
       ["trash", "common"].includes(tier) ? 0 : 1,
     );
     for (const [j, theme] of ["light", "dark"].entries()) {
-      await page
-        .getByRole("button", { name: `${theme} theme`, exact: true })
-        .click();
+      await chooseTheme(page, theme);
       const s = await css(box);
       expect(s.border).toBe(rgb(palette[tier][j]));
       expect(s.ink).toBe(rgb(palette[tier][j + 2]));
@@ -131,7 +130,7 @@ test("every aura belongs to a family, shows its colours and is renderable", () =
   expect(shop).toContain('"--swatch-a": item.swatch[0]');
   expect(shop).toContain('"--swatch-b": item.swatch[1]');
   // And the shelf groups by family rather than printing one long list.
-  expect(shop).toContain("AURA_FAMILIES.map((family) => ({");
+  expect(shop).toMatch(/auraGroups\s*=\s*auraFamilies\s*\.map\(/);
 });
 
 test("legacy purchases survive repricing; upgraded cosmetics match previews, respect reduced motion and fit mobile", async ({

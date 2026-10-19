@@ -39,11 +39,33 @@
 .changelog-title {
   color: var(--text);
 }
+.changelog-date {
+  margin-left: auto;
+  font: 500 11px var(--font-mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
 .changelog-entry p {
   margin: 0 0 6px;
   font-size: 12.5px;
   line-height: 1.6;
   color: var(--secondary);
+}
+/* Badge names inside a note: the same text, underlined, opens the badge. */
+.changelog-badge-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--muted);
+  cursor: pointer;
+}
+.changelog-badge-link:hover {
+  color: var(--text);
+  text-decoration-color: currentColor;
 }
 .changelog-entry p:last-child {
   margin-bottom: 0;

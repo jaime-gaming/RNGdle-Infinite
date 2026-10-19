@@ -43,6 +43,7 @@ import { petById, petBonusLabel } from "../pets.js";
 import { skillById, skillForPet } from "../skills.js";
 import { walletMultiplier } from "../progress.js";
 import { walletParts } from "../rack.js";
+import { priorRollsOf } from "../deja-vu.js";
 import { CreatureIcon } from "./game-icons.jsx";
 import "../roll.css";
 
@@ -84,6 +85,7 @@ const NumberArtifact = memo(function NumberArtifact({
   aura,
   dockedPet = null,
   behind = false,
+  dejaVu = false,
 }) {
   const target = String(run.result.number),
     pad = timeline.slots - target.length;
@@ -144,6 +146,7 @@ const NumberArtifact = memo(function NumberArtifact({
       <NumberBox
         tier={tier}
         aura={aura}
+        dejaVu={dejaVu && rarityKnown}
         role="img"
         className={`number-artifact ${tier} ${spinning ? "is-spinning" : pulse ? `pulse-${pulse}` : "is-breathing"}`}
         aria-label={spinning ? "Revealing a random number" : `Number ${target}`}
@@ -286,6 +289,11 @@ export default function RollExperience({
         run?.rollMS,
       ),
     [result, groups, run?.rollMS],
+  );
+  // Déjà vu: this exact number was already rolled on the account. A look only.
+  const dejaVuCount = useMemo(
+    () => (run ? priorRollsOf(session.history, run.result.number, run.id) : 0),
+    [run, session.history],
   );
   const runSettled =
     !!run &&
@@ -1116,6 +1124,7 @@ export default function RollExperience({
               <NumberArtifact
                 key={run.id}
                 {...{ run, elapsed, timeline, reducedMotion, aura }}
+                dejaVu={dejaVuCount > 0}
                 behind={splitOpen}
                 dockedPet={companionSkillFiring ? session.activePet : null}
               />
@@ -1154,6 +1163,14 @@ export default function RollExperience({
                       scale: timeline.scale,
                     }}
                   />
+                )}
+                {digitsDone && rankKnown && dejaVuCount > 0 && (
+                  <p className="deja-vu-note" data-deja-vu-count={dejaVuCount}>
+                    <span aria-hidden="true">✦</span> Déjà vu · you rolled this
+                    exact number{" "}
+                    {dejaVuCount === 1 ? "once" : `${dejaVuCount} times`}{" "}
+                    before. A look, not a bonus.
+                  </p>
                 )}
                 {!stacked && (
                   <div

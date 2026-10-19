@@ -1,3 +1,4 @@
+/* KEEP after Nov 4, 2026: the compact-box rule for .rngween-aura is permanent aura art. */
 /* Shared, independently implemented scoring-box geometry and effect layers. */
 .number-box.number-box {
   position: relative;
@@ -87,6 +88,9 @@ button.number-box.number-box:hover {
 }
 .number-box .box-cosmetic {
   position: absolute;
+  /* A local layer keeps crests/particles below the ink, even when they have
+     their own z-index. Without it a crest could climb above the number. */
+  z-index: 0;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
@@ -433,6 +437,191 @@ button.number-box.number-box:hover {
 @media (prefers-reduced-motion: reduce) {
   .godly-particles i {
     opacity: 0.8;
+  }
+}
+
+/* Shared finish for every aura: a slowly turning two-tone rim light and a soft
+   breathing glow in the aura's own swatch colours, plus a brighter ink glow.
+   It sits under each aura's bespoke layers so none of them need changes. */
+@property --aura-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.box-finish {
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  pointer-events: none;
+}
+.box-finish::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--aura-turn),
+    var(--aura-a, #fff),
+    var(--aura-b, #fff) 35%,
+    transparent 50%,
+    var(--aura-a, #fff) 70%,
+    var(--aura-b, #fff) 90%,
+    var(--aura-a, #fff)
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.55;
+  animation: box-finish-turn 9s linear infinite;
+}
+.box-finish::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 20px;
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    color-mix(in srgb, var(--aura-a, #fff) 28%, transparent),
+    transparent 70%
+  );
+  filter: blur(6px);
+  z-index: -1;
+  animation: box-finish-breathe 5.2s ease-in-out infinite;
+}
+.number-box[data-cosmetic]:not([data-cosmetic="none"]) .number-box-content {
+  text-shadow:
+    0 1px 2px #ffffff80,
+    0 0 14px color-mix(in srgb, var(--aura-a, #fff) 45%, transparent);
+}
+:root[data-theme="dark"]
+  .number-box[data-cosmetic]:not([data-cosmetic="none"])
+  .number-box-content {
+  text-shadow:
+    0 1px 2px #ffffff33,
+    0 0 16px color-mix(in srgb, var(--aura-a, #fff) 55%, transparent);
+}
+:root[data-theme="dark"] .box-finish::before {
+  opacity: 0.7;
+}
+.number-box.number-box-compact .box-finish::after {
+  inset: -6px;
+}
+@keyframes box-finish-turn {
+  to {
+    --aura-turn: 360deg;
+  }
+}
+@keyframes box-finish-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+.number-box[data-motion="reduced"] .box-finish::before,
+.number-box[data-motion="reduced"] .box-finish::after {
+  animation: none;
+}
+
+/* A worn aura also tints the digits: a two-tone gradient in the aura's own
+   swatch, mixed with the rarity ink so the tier still reads at a glance, with
+   a slow sheen passing through. The swatch is first pulled to a readable
+   lightness for the theme (light ink on dark, dark ink on light); browsers
+   without relative colours keep the plain rarity ink. Godly and déjà vu keep
+   their own ink. */
+@property --box-sweep {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.number-box[data-cosmetic]:not([data-cosmetic="none"]):not(.tier-godly):not(
+    [data-deja-vu="true"]
+  )
+  .number-box-content {
+  --aura-ink-a: var(--box-ink);
+  --aura-ink-b: var(--box-ink);
+  background: linear-gradient(
+    110deg,
+    var(--aura-ink-a) 0 32%,
+    color-mix(in srgb, var(--aura-ink-a) 60%, #fff) 46%,
+    var(--aura-ink-b) 60% 100%
+  );
+  background-size: 260% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(
+    0 0 9px color-mix(in srgb, var(--aura-a, #fff) 40%, transparent)
+  );
+  animation: box-ink-sheen 7s ease-in-out infinite;
+}
+@supports (color: oklch(from red l c h)) {
+  .number-box[data-cosmetic]:not([data-cosmetic="none"]):not(.tier-godly):not(
+      [data-deja-vu="true"]
+    )
+    .number-box-content {
+    --aura-ink-a: color-mix(
+      in oklch,
+      oklch(from var(--aura-a, #fff) min(l, 0.48) c h) 70%,
+      var(--box-ink)
+    );
+    --aura-ink-b: color-mix(
+      in oklch,
+      oklch(from var(--aura-b, #fff) min(l, 0.48) c h) 70%,
+      var(--box-ink)
+    );
+  }
+  /* Dark-bodied auras keep light ink on both themes. */
+  :root[data-theme="dark"]
+    .number-box[data-cosmetic]:not([data-cosmetic="none"]):not(.tier-godly):not(
+      [data-deja-vu="true"]
+    )
+    .number-box-content,
+  .number-box:is(
+      [data-cosmetic="singularity"],
+      [data-cosmetic="inkblot"],
+      [data-cosmetic="obsidian"]
+    ):not(.tier-godly):not([data-deja-vu="true"])
+    .number-box-content {
+    --aura-ink-a: color-mix(
+      in oklch,
+      oklch(from var(--aura-a, #fff) max(l, 0.82) c h) 70%,
+      var(--box-ink)
+    );
+    --aura-ink-b: color-mix(
+      in oklch,
+      oklch(from var(--aura-b, #fff) max(l, 0.82) c h) 70%,
+      var(--box-ink)
+    );
+  }
+}
+.number-box[data-cosmetic]:not([data-cosmetic="none"]) .artifact-digits,
+.number-box[data-cosmetic]:not([data-cosmetic="none"]) .artifact-digit {
+  text-shadow: none;
+}
+.number-box[data-motion="reduced"] .number-box-content {
+  animation: none;
+}
+@keyframes box-ink-sheen {
+  0%,
+  55%,
+  100% {
+    background-position: 100% 0;
+  }
+  80% {
+    background-position: 0% 0;
+  }
+}
+@keyframes box-sweep-turn {
+  to {
+    --box-sweep: 360deg;
   }
 }
 
@@ -851,7 +1040,7 @@ button.number-box.number-box:hover {
   z-index: -1;
   border-radius: 50%;
   background: conic-gradient(
-    from 0deg,
+    from var(--box-sweep),
     #7c3aed00,
     #a78bfa99,
     #f0abfcaa,
@@ -859,7 +1048,8 @@ button.number-box.number-box:hover {
     #7c3aed00
   );
   filter: blur(9px);
-  animation: box-spin 9s linear infinite;
+  /* The angle turns, not the element: a spinning ellipse would swing out. */
+  animation: box-sweep-turn 9s linear infinite;
 }
 .number-box[data-cosmetic="singularity"] .box-ribbon {
   display: block;
@@ -1286,7 +1476,7 @@ button.number-box.number-box:hover {
   inset: -8px;
   border-radius: 14px;
   background: conic-gradient(
-    from 0deg,
+    from var(--box-sweep),
     #f59e0b00 0deg,
     #fbbf2466 60deg,
     #fb718599 120deg,
@@ -1304,7 +1494,7 @@ button.number-box.number-box:hover {
     transparent calc(100% - 3px),
     #000 calc(100% - 3px)
   );
-  animation: box-spin 9s linear infinite;
+  animation: box-sweep-turn 9s linear infinite;
 }
 .number-box[data-cosmetic="solstice"] .box-comet {
   display: block;
@@ -1482,12 +1672,12 @@ button.number-box.number-box:hover {
   inset: -9px;
   border-radius: 50% / 26%;
   background: conic-gradient(
-    from 0deg,
+    from var(--box-sweep),
     #38bdf800 0deg,
     #38bdf8cc 22deg,
     #38bdf800 46deg
   );
-  animation: box-spin 6s linear infinite;
+  animation: box-sweep-turn 6s linear infinite;
 }
 
 @keyframes box-drift-cloud {
@@ -1660,4 +1850,168 @@ button.number-box.number-box:hover {
   50% {
     opacity: 0.15;
   }
+}
+
+/* Multi-roll panels have no spare ornament margin. Give each draw its own
+   clipped scene, not a full-size aura that can cross labels or neighbouring
+   numbers. The main result/detail and shop previews keep the full artwork. */
+.number-box[data-aura-layout="contained"] .box-cosmetic,
+.number-box[data-aura-layout="contained"] .godly-particles {
+  overflow: hidden;
+  contain: paint;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.number-box[data-aura-layout="contained"]
+  :is(.box-halo, .box-ribbon, .box-ornament, .aura-trace) {
+  inset: 0;
+}
+.number-box[data-aura-layout="contained"] .box-particles i {
+  width: 4px !important;
+  height: 4px !important;
+  opacity: 0.45;
+}
+.number-box[data-aura-layout="contained"] .box-ornament {
+  opacity: 0.5;
+}
+.number-box[data-aura-layout="contained"] .box-finish {
+  inset: 0;
+  border-radius: inherit;
+}
+.number-box[data-aura-layout="contained"] .box-finish::after {
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* Compact boxes (shop set banners, wardrobe, pinned rolls, profile) sit
+   shoulder to shoulder, so an aura drawn for the big result box — halos
+   20px out, 150px seals — spills over its neighbours and the card edge.
+   Every ornament keeps its shape; it is simply clipped to a snug rounded
+   frame 8px outside the box. The big boxes keep the full artwork, and the
+   RNGween looks are composed for the small box already (crest on the lip,
+   guardians at the sides), so they are left alone. */
+.number-box.number-box-compact .box-cosmetic:not(:has(.rngween-aura)),
+.number-box.number-box-compact .godly-particles {
+  clip-path: inset(-8px round 20px);
+}
+.number-box.number-box-compact .box-particles i {
+  width: 4px !important;
+  height: 4px !important;
+}
+
+/* Déjà vu: an exact number rolled again. Box Lab community recipe "Exactnium"
+   (by Numbas), worn as a look on top of whatever tier the number has. It
+   never changes EP, badges or rank; only the box. */
+@property --deja-vu-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.number-box[data-tier][data-deja-vu="true"] {
+  --box-background: linear-gradient(to bottom right, #64e1e1, #e16ee1, #e1e16e);
+  --box-border: #ffa0ff;
+  --box-shadow:
+    0 0 25px rgba(255, 190, 255, 1), inset 0 2px 4px 0 rgba(100, 225, 225, 0.5);
+  --box-ink: #a0ffff;
+  animation: deja-vu-pulse 4s ease-in-out infinite;
+}
+.number-box[data-deja-vu="true"] .number-box-content,
+.number-box[data-deja-vu="true"] .artifact-digits {
+  background: linear-gradient(180deg, #e0ffff, #a0ffff 55%, #ffc8ff);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+.number-box[data-deja-vu="true"] .artifact-digit {
+  text-shadow: none;
+}
+/* Spinning border: a conic ring just outside the box edge. */
+.number-box[data-deja-vu="true"]::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: -1;
+  border-radius: 14px;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--deja-vu-turn),
+    #ffa0ff,
+    #64e1e1,
+    #e1e16e,
+    #e16ee1,
+    #ffa0ff
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: deja-vu-turn 6s linear infinite;
+}
+/* Holographic sheen over the gradient. */
+.number-box[data-deja-vu="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 1;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    #ffffff55 38%,
+    #ffffff10 45%,
+    #ffffff55 52%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  animation: box-sweep 5s ease-in-out infinite;
+}
+.deja-vu-particles {
+  position: absolute;
+  inset: -6px;
+  pointer-events: none;
+  z-index: 1;
+}
+.deja-vu-particles i {
+  position: absolute;
+  background: #ffc8ff;
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0% 50%,
+    39% 39%
+  );
+  filter: drop-shadow(0 0 3px #e16ee1);
+  animation: box-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes deja-vu-turn {
+  to {
+    --deja-vu-turn: 360deg;
+  }
+}
+@keyframes deja-vu-pulse {
+  50% {
+    box-shadow:
+      0 0 38px rgba(255, 190, 255, 1),
+      inset 0 2px 4px 0 rgba(100, 225, 225, 0.5);
+    transform: scale(1.012);
+  }
+}
+.number-box[data-motion="reduced"][data-deja-vu="true"],
+.number-box[data-motion="reduced"][data-deja-vu="true"]::before,
+.number-box[data-motion="reduced"][data-deja-vu="true"]::after,
+.number-box[data-motion="reduced"] .deja-vu-particles i {
+  animation: none;
+}
+.number-box[data-deja-vu="true"][data-cosmetic] .number-box-content,
+:root[data-theme="dark"]
+  .number-box[data-deja-vu="true"][data-cosmetic]
+  .number-box-content {
+  text-shadow: none;
 }

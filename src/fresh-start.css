@@ -1,0 +1,198 @@
+/* Fresh start: the one-time offer and the "!" that keeps it reachable. */
+.fresh-start-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgb(217 164 65 / 0.55);
+  border-radius: 999px;
+  background: rgb(217 164 65 / 0.12);
+  color: #a97c1f;
+  cursor: pointer;
+  animation: fresh-start-flag-in 420ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.fresh-start-flag:hover {
+  background: rgb(217 164 65 / 0.22);
+}
+.fresh-start-flag svg {
+  animation: fresh-start-flag-pulse 3.4s ease-in-out infinite;
+}
+@keyframes fresh-start-flag-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-20deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fresh-start-flag-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.14);
+  }
+}
+
+.fresh-start-dialog {
+  width: min(460px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel, var(--bg));
+  color: var(--text);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.35);
+}
+.fresh-start-dialog[open] {
+  animation: fresh-start-dialog 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.fresh-start-dialog::backdrop {
+  background: rgb(8 6 12 / 0.6);
+  backdrop-filter: blur(3px);
+  animation: fresh-start-backdrop 320ms ease both;
+}
+@keyframes fresh-start-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fresh-start-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fresh-start-card {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 26px 24px 20px;
+}
+.fresh-start-card > * {
+  animation: fresh-start-rise 420ms ease both;
+}
+.fresh-start-card > :nth-child(3) {
+  animation-delay: 60ms;
+}
+.fresh-start-card > :nth-child(4),
+.fresh-start-card > :nth-child(5) {
+  animation-delay: 120ms;
+}
+.fresh-start-card > :nth-child(6),
+.fresh-start-card > :nth-child(7) {
+  animation-delay: 180ms;
+}
+@keyframes fresh-start-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fresh-start-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  padding: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fresh-start-close:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.fresh-start-orbit {
+  display: inline-flex;
+  width: 52px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgb(217 164 65 / 0.5);
+  background: rgb(217 164 65 / 0.12);
+  color: #a97c1f;
+}
+.fresh-start-orbit svg {
+  animation: fresh-start-spin 9s linear infinite reverse;
+}
+@keyframes fresh-start-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.fresh-start-card h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.fresh-start-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.fresh-start-terms {
+  margin: 0;
+  padding: 12px 14px 12px 30px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.fresh-start-terms strong {
+  color: var(--text);
+}
+.fresh-start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.fresh-start-actions.is-confirm {
+  animation: fresh-start-rise 260ms ease both;
+}
+.fresh-start-actions.is-confirm p {
+  flex: 1 0 100%;
+  font-size: 13px;
+}
+.fresh-start-actions .is-danger {
+  background: #b23a3a;
+  border-color: #b23a3a;
+  color: #fff;
+}
+.fresh-start-card small {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fresh-start-flag,
+  .fresh-start-flag svg,
+  .fresh-start-dialog[open],
+  .fresh-start-dialog::backdrop,
+  .fresh-start-card > *,
+  .fresh-start-orbit svg,
+  .fresh-start-actions.is-confirm {
+    animation: none;
+  }
+}
