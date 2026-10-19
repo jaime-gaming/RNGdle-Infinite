@@ -1,4 +1,7 @@
+// CLEANUP Nov 4, 2026: the "limited action" gating (event actions need a
+// verified website date and the main writer) goes with the event actions.
 import { gameNow } from "./game-clock";
+import { refreshSeasonClock, seasonNow } from "./season-clock.js";
 import { useEffect, useRef, useState } from "react";
 import {
   PROGRESS_KEY,
@@ -6,30 +9,45 @@ import {
   PRE_REPAIR_BACKUP_KEY,
   emptyProgress,
   parseProgress,
+  preservePermanentCosmetics,
   parseAndRepairProgress,
   applyProgress,
+  settleOfflineRoll,
   parsePending,
   recoverUnsavedRolls,
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
+import { drawRngweenWorld } from "./rngween-world-client.js";
+import {
+  RNGWEEN_PET,
+  RNGWEEN_TEMP_SKILL_IDS,
+  requireRngweenWorld,
+  requireRngweenValley,
+  retireRngweenLimited,
+} from "./rngween-limited.js";
+import {
+  requireWorldZone,
+  worldState,
+  worldRevealMS,
+} from "./rngween-world-zones.js";
+import { rngweenCalendar } from "./rngween.js";
 import { runDrawPicks } from "./draw-plan.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
 import {
   armedSkills,
+  SKILL_MAX_DRAWS,
   drawPicksFor,
   drawPlanFor,
   skillWaivesCooldown,
 } from "./skills.js";
 import { parseCooldownWindow } from "./cooldown.js";
 import { rollSettings, offlineSettings, productById } from "./shop-data.js";
-import { AURA_EVENT_MISSIONS } from "./tasks.js";
 import {
   offlinePlan,
   readPresence,
   writePresence,
   clearPresence,
-  OFFLINE_INTERVAL,
 } from "./offline.js";
 import { broadcastSync, SYNC_EVENT } from "./sync.js";
 // Re-exported for the modules that grew up reading it from here.
@@ -40,7 +58,7 @@ function repairWarning(repairs) {
   const shown = repairs.slice(0, 3).join(" ");
   const suffix =
     repairs.length > 3 ? ` Plus ${repairs.length - 3} more fixes.` : "";
-  return `Your save was repaired — nothing was reset. ${shown}${suffix}`;
+  return `Your save was repaired — valid progress was kept. ${shown}${suffix}`;
 }
 function load() {
   try {
@@ -129,9 +147,10 @@ export function useProgress() {
         )
           reset(next);
         else {
-          const merged = healthy.current
+          const recovered = healthy.current
             ? next
             : recoverUnsavedRolls(next, current.current, unsaved.current);
+          const merged = preservePermanentCosmetics(current.current, recovered);
           let persisted = merged === next;
           if (merged !== next) {
             try {
@@ -170,7 +189,10 @@ export function useProgress() {
     function receiveLinked(event) {
       try {
         const next = parseProgress(event.detail);
-        if (!next.profile) return;
+        if (!next.profile) {
+          event.preventDefault();
+          return;
+        }
         const previous = current.current;
         const sameCycle =
           previous.profile?.id === next.profile.id &&
@@ -181,31 +203,28 @@ export function useProgress() {
         // storage could not save. Merge that receipt into the linked head before
         // replacing this tab; otherwise a perfectly readable remote save would
         // erase the only copy of the credited roll.
-        const merged = sameCycle
+        const recovered = sameCycle
           ? recoverUnsavedRolls(next, previous, unsaved.current)
           : next;
+        const merged = preservePermanentCosmetics(previous, recovered);
         let persisted = false;
         try {
-          const raw =
-            merged === next && typeof event.detail === "string"
-              ? event.detail
-              : JSON.stringify(merged);
-          localStorage.setItem(PROGRESS_KEY, raw);
+          // Persist the validated canonical save, not the unparsed wire bytes.
+          localStorage.setItem(PROGRESS_KEY, JSON.stringify(merged));
+          event.progressSaved = true;
           persisted = true;
         } catch {
           healthy.current = false;
           setWarning(
             "A save from the linked device could not be saved. This tab is keeping its current progress.",
           );
+          event.preventDefault();
+          // No incoming World rewards or equipment become live without a
+          // durable save. A subsequent link update can retry the same head.
+          return;
         }
         if (!sameCycle) {
-          reset(next);
-          if (!persisted) {
-            healthy.current = false;
-            setWarning(
-              "A save from the linked device could not be saved. This tab is keeping its current progress.",
-            );
-          }
+          reset(merged);
           return;
         }
         current.current = merged;
@@ -219,6 +238,7 @@ export function useProgress() {
           if (merged !== next) broadcastSync(merged);
         }
       } catch {
+        event.preventDefault();
         healthy.current = false;
         setWarning(
           "A save from the linked device could not be read. This device is keeping its current progress.",
@@ -242,6 +262,49 @@ export function useProgress() {
             ok: false,
             message: "This game was reset. The previous action was cancelled.",
           };
+        // The writer stamps calendar eligibility itself. Never accept a device
+        // date (or a linked client's supplied calendar timestamp) for RNGween.
+        const limitedAction = [
+          "exchange-pumpkoins",
+          "buy-rngween-limited",
+          "claim-rngween-coins",
+          "claim-rngween-hourly",
+          "refresh-rngween-hourly",
+          "rngween-world-roll",
+          "rngween-world-reveal",
+          "buy-rngween-world",
+          "forge-rngween-key",
+          "retire-rngween-limited",
+        ].includes(action.type);
+        const limitedEquipment =
+          (action.type === "equip-pet" && action.id === RNGWEEN_PET.id) ||
+          (action.type === "equip-skill" &&
+            RNGWEEN_TEMP_SKILL_IDS.includes(action.id));
+        const limitedDraw =
+          action.type === "draw" &&
+          (current.current.activePet === RNGWEEN_PET.id ||
+            (current.current.equippedSkills ?? []).some((id) =>
+              RNGWEEN_TEMP_SKILL_IDS.includes(id),
+            ));
+        if (
+          action.type === "claim-rngween-aura" ||
+          (limitedAction && action.type !== "retire-rngween-limited") ||
+          limitedEquipment ||
+          limitedDraw
+        ) {
+          const verified = await refreshSeasonClock();
+          if (token !== generation.current)
+            throw new Error(
+              "This game was reset. The previous action was cancelled.",
+            );
+          if (verified === null)
+            throw new Error(
+              "Connect to the website to verify RNGween availability.",
+            );
+        }
+        const calendarTime = seasonNow();
+        action.rngweenAt =
+          calendarTime === null ? null : Math.floor(calendarTime);
         let previous = current.current;
         let readable = true;
         if (previous.profile) {
@@ -270,17 +333,34 @@ export function useProgress() {
             healthy.current = false;
           }
         }
+        if ((limitedAction || limitedEquipment) && !navigator.locks?.request)
+          throw new Error(
+            "Limited purchases and world rolls require Web Locks support.",
+          );
         if (
-          ["rebirth", "ultra-rebirth", "rollback"].includes(action.type) &&
+          limitedEquipment &&
+          rngweenCalendar(action.rngweenAt).limitedPhase !== "active"
+        )
+          throw new Error(
+            "This temporary item has expired or is not available yet.",
+          );
+        const actionHead = previous;
+        previous = retireRngweenLimited(previous, action.rngweenAt);
+        if (
+          ["rebirth", "ultra-rebirth", "rollback", "fresh-start"].includes(
+            action.type,
+          ) &&
           previous.profile &&
           (!readable || !navigator.locks?.request)
         )
           throw new Error(
-            action.type === "rollback"
-              ? "The Rollback requires working local storage and Web Locks support."
-              : action.type === "ultra-rebirth"
-                ? "Prestige requires working local storage and Web Locks support."
-                : "Rebirth requires working local storage and Web Locks support.",
+            action.type === "fresh-start"
+              ? "A fresh start requires working local storage and Web Locks support."
+              : action.type === "rollback"
+                ? "The Rollback requires working local storage and Web Locks support."
+                : action.type === "ultra-rebirth"
+                  ? "Prestige requires working local storage and Web Locks support."
+                  : "Rebirth requires working local storage and Web Locks support.",
           );
         if (action.type === "delete") {
           if (!previous.profile || previous.profile.id !== action.profileId)
@@ -322,10 +402,7 @@ export function useProgress() {
             };
           }
         }
-        let next,
-          committed,
-          presence,
-          eventRewards = [];
+        let next, committed, presence;
         if (action.type.startsWith("offline-")) {
           if (!previous.profile || !previous.owned.includes("offline-roller"))
             throw new Error(
@@ -392,49 +469,14 @@ export function useProgress() {
             const batch = offline.batch;
             if (!batch) return { ok: true, offlineRemaining: 0 };
             next = previous;
-            let index = batch.index,
-              ep = batch.ep,
-              newBadges = batch.newBadges;
-            const stop = Math.min(index + 10, batch.numbers.length);
-            while (index < stop) {
-              const result = await restoreRoll(batch.numbers[index]);
-              const before = next;
-              next = applyProgress(next, {
-                type: "complete",
-                id: `${batch.id}:${index}`,
-                result,
-                source: "offline",
-                at:
-                  batch.since +
-                  (index + 1) * (batch.intervalMS ?? OFFLINE_INTERVAL),
-                cooldownUntil: previous.cooldownUntil,
-              });
-              ep += next.balance - before.balance;
-              newBadges += next.discovered.length - before.discovered.length;
-              index++;
+            const stop = Math.min(batch.index + 10, batch.numbers.length);
+            while (next.offline.batch && next.offline.batch.index < stop) {
+              const currentBatch = next.offline.batch;
+              const result = await restoreRoll(
+                currentBatch.numbers[currentBatch.index],
+              );
+              next = settleOfflineRoll(next, result, now, action.rngweenAt);
             }
-            next = {
-              ...next,
-              pendingRoll: previous.pendingRoll,
-              offline: {
-                ...offline,
-                batch:
-                  index === batch.numbers.length
-                    ? null
-                    : { ...batch, index, ep, newBadges },
-                report:
-                  index === batch.numbers.length
-                    ? {
-                        id: batch.id,
-                        at: now,
-                        rolls:
-                          (offline.report?.rolls ?? 0) + batch.numbers.length,
-                        ep: (offline.report?.ep ?? 0) + ep,
-                        newBadges: (offline.report?.newBadges ?? 0) + newBadges,
-                      }
-                    : offline.report,
-              },
-            };
           } else if (action.type === "offline-dismiss")
             next = { ...previous, offline: { ...offline, report: null } };
           else throw new Error("Unknown offline action");
@@ -442,6 +484,41 @@ export function useProgress() {
             throw new Error(
               "This account was reset. Offline action cancelled.",
             );
+        } else if (action.type === "rngween-world-roll") {
+          if (!readable || !previous.profile)
+            throw new Error("World rolls require a readable saved profile.");
+          requireRngweenWorld(previous, action.rngweenAt);
+          if (worldState(previous.rngweenLimited).pending) {
+            // Every tab/device resumes the same committed result and deadline.
+            // Never consume a second sample while an animation is in flight.
+            next = previous;
+          } else {
+            const zone = requireWorldZone(action.zone ?? "valley");
+            if (zone.id === "valley")
+              requireRngweenValley(previous, action.rngweenAt);
+            if (
+              action.rngweenAt + worldRevealMS(previous.rngweenLimited) >=
+              rngweenCalendar(action.rngweenAt).limitedEndsAt
+            )
+              throw new Error(
+                "The World closes before this reveal can finish. No roll was started.",
+              );
+            const drawn = previous.rngweenLimited?.drawn ?? [];
+            const number = await drawRngweenWorld(drawn, zone.id);
+            if (token !== generation.current)
+              throw new Error(
+                "This account changed. The world roll was cancelled.",
+              );
+            const verified = seasonNow();
+            action.rngweenAt = verified === null ? null : Math.floor(verified);
+            // Only the writer supplies number, count, time and duration.
+            next = applyProgress(previous, {
+              ...action,
+              zone: zone.id,
+              number,
+              expectedCount: drawn.length,
+            });
+          }
         } else if (action.type === "draw") {
           if (previous.offline?.batch)
             throw new Error(
@@ -472,10 +549,8 @@ export function useProgress() {
           }
           const timing = rollSettings(previous.owned);
           const flywheel = flywheelForDraw(previous);
-          // Every circle that is full fires on this roll. The plan only says
-          // how many ordinary draws to take and when to stop early; each draw
-          // is still an independent, uniform crypto roll scored by the
-          // verified index, and the number that is committed is one of them.
+          // Up to six genuine draws. Skills that cannot fit keep their charge;
+          // only actually-fired skills enter the committed snapshot below.
           const armed = armedSkills(previous);
           const plan = drawPlanFor(armed);
           if (flywheel === "boost" || skillWaivesCooldown(armed))
@@ -509,13 +584,17 @@ export function useProgress() {
             reset(parseProgress(localStorage.getItem(PROGRESS_KEY)));
             throw new Error("The account changed. The draw was cancelled.");
           }
+          const firedPicks = new Set((picks ?? []).map((pick) => pick.skill));
+          const fired = armed.filter(
+            (id) => !drawPicksFor([id]).length || firedPicks.has(id),
+          );
           const pendingRoll = {
             id: crypto.randomUUID(),
             number: result.number,
             startedAt: Math.ceil(gameNow()),
             ...timing,
-            ...(armed.length ? { skills: armed } : {}),
-            ...(draws ? { draws } : {}),
+            ...(fired.length ? { skills: fired } : {}),
+            ...(draws ? { draws, drawLimit: SKILL_MAX_DRAWS } : {}),
             // Which draw skill kept which number, and which one (or the plain
             // draw) supplied the committed result. The roll pays for every kept
             // number, even when two skills happen to keep the same number.
@@ -585,18 +664,7 @@ export function useProgress() {
             throw new Error("Offline Roller requires Web Locks support.");
           next = applyProgress(previous, action);
         }
-        if (next !== previous) {
-          const earnedBefore = new Set(previous.tasks?.event?.earned ?? []);
-          const earnedAfter = new Set(next.tasks?.event?.earned ?? []);
-          eventRewards = AURA_EVENT_MISSIONS.filter(
-            (mission) =>
-              !earnedBefore.has(mission.id) &&
-              earnedAfter.has(mission.id) &&
-              !(previous.owned ?? []).includes(mission.auraId) &&
-              (next.owned ?? []).includes(mission.auraId),
-          ).map((mission) => mission.auraId);
-        }
-        if (next !== previous && next.profile) {
+        if (next !== actionHead && next.profile) {
           try {
             if (!readable) throw new Error("Unreadable storage");
             if (previous.profile) {
@@ -642,7 +710,7 @@ export function useProgress() {
               return {
                 ok: false,
                 message:
-                  action.type === "rebirth"
+                  action.type === "rebirth" || action.type === "fresh-start"
                     ? "Rebirth could not be saved. Your progress has not been reset."
                     : action.type === "ultra-rebirth"
                       ? "Prestige could not be saved. Your progress has not been reset."
@@ -654,18 +722,28 @@ export function useProgress() {
                             ? "Sign-up could not be saved. Your guest progress is still available in this tab."
                             : action.type === "draw"
                               ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
-                              : action.type === "goal"
-                                ? "Your goal could not be saved. Your previous goal and EP are unchanged."
-                                : "Purchase or equipment change not saved. Your EP has not been spent.",
+                              : [
+                                    "rngween-world-roll",
+                                    "rngween-world-reveal",
+                                  ].includes(action.type)
+                                ? "World result not saved. Your run, fragments and number pool are unchanged. Allow storage and retry."
+                                : action.type === "goal"
+                                  ? "Your goal could not be saved. Your previous goal and EP are unchanged."
+                                  : "Purchase or equipment change not saved. Your EP has not been spent.",
               };
           }
         }
         if (
           next !== previous &&
           !next.profile &&
-          ["draw", "complete", "rebirth", "ultra-rebirth", "rollback"].includes(
-            action.type,
-          )
+          [
+            "draw",
+            "complete",
+            "rebirth",
+            "ultra-rebirth",
+            "rollback",
+            "fresh-start",
+          ].includes(action.type)
         ) {
           try {
             sessionStorage.setItem(
@@ -698,7 +776,8 @@ export function useProgress() {
         if (
           action.type === "rebirth" ||
           action.type === "ultra-rebirth" ||
-          action.type === "rollback"
+          action.type === "rollback" ||
+          action.type === "fresh-start"
         ) {
           try {
             if (previous.profile && action.type === "rebirth")
@@ -724,7 +803,27 @@ export function useProgress() {
             ? next.offline.batch.numbers.length - next.offline.batch.index
             : 0,
           ...(committed ? { run: committed } : {}),
-          ...(eventRewards.length ? { eventRewards } : {}),
+          ...((next.rngweenLimited?.hourly?.completed ?? 0) >
+          (previous.rngweenLimited?.hourly?.completed ?? 0)
+            ? {
+                hourlyRewards: next.history
+                  .slice(-4)
+                  .filter(
+                    (entry) =>
+                      entry.type === "rngween-hourly" &&
+                      !previous.history.some((old) => old.id === entry.id),
+                  ),
+              }
+            : {}),
+          ...(["rngween-world-roll", "rngween-world-reveal"].includes(
+            action.type,
+          )
+            ? {
+                worldPending: next.rngweenLimited?.world?.pending ?? null,
+                worldNumber: next.rngweenLimited?.world?.last?.number ?? null,
+                skinEarned: next.rngweenLimited?.skinEarned === true,
+              }
+            : {}),
           // Bulk delete reports how many entries it actually removed.
           ...(action.type === "history-prune"
             ? { removed: previous.history.length - next.history.length }

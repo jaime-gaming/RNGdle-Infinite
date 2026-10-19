@@ -1,0 +1,340 @@
+/* CLEANUP Nov 4, 2026: remove the temporary commission board styles. */
+.rngween-hourly {
+  margin: 0 0 25px;
+  padding: clamp(17px, 3vw, 25px);
+  border: 1px solid color-mix(in srgb, #c4b5fd 25%, var(--border));
+  border-radius: 18px;
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, #8b5cf6 5%, var(--surface)),
+    var(--surface) 55%,
+    color-mix(in srgb, #fb923c 5%, var(--surface))
+  );
+}
+.rngween-hourly-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 13px;
+}
+.rngween-hourly-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  color: #a78bfa;
+  background: color-mix(in srgb, #8b5cf6 8%, var(--bg));
+}
+.rngween-hourly-head h2 {
+  font:
+    700 clamp(20px, 3vw, 27px)/1.25 Georgia,
+    serif;
+  margin: 5px 0;
+}
+.rngween-hourly-head p {
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 0;
+}
+.rngween-hourly-wallet {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 7px;
+  margin-left: auto;
+  align-items: center;
+  color: var(--text);
+}
+.rngween-hourly-wallet svg {
+  color: #fb923c;
+  grid-row: span 2;
+}
+.rngween-hourly-wallet strong {
+  font: 600 16px var(--font-mono);
+}
+.rngween-hourly-wallet small {
+  color: var(--secondary);
+  font-size: 11px;
+}
+.rngween-hourly-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 16px 0 19px;
+}
+.rngween-hourly-rules span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--secondary);
+}
+.rngween-hourly-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.rngween-hourly-card {
+  min-width: 0;
+  padding: 16px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 58%, transparent);
+  display: flex;
+  flex-direction: column;
+}
+.rngween-hourly-card[data-source="world"] {
+  border-color: color-mix(in srgb, #5eead4 24%, var(--border));
+}
+.rngween-hourly-card-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--secondary);
+  font-size: 11px;
+}
+.rngween-hourly-card-top > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.rngween-hourly-card-top svg {
+  flex-shrink: 0;
+}
+.rngween-hourly-countdown {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.rngween-hourly-card h3 {
+  font-size: 14px;
+  font-weight: 650;
+  margin: 16px 0 8px;
+}
+.rngween-hourly-card > p {
+  font-size: 11px;
+  color: var(--secondary);
+  line-height: 1.8;
+  margin: 0 0 17px;
+}
+.rngween-hourly-meter {
+  margin-top: auto;
+  font: 11px var(--font-mono);
+  color: var(--secondary);
+}
+.rngween-hourly-meter progress {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin: 9px 0 15px;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--border);
+  accent-color: #a78bfa;
+}
+.rngween-hourly-meter progress::-webkit-progress-bar {
+  background: var(--border);
+}
+.rngween-hourly-meter progress::-webkit-progress-value {
+  background: #a78bfa;
+}
+.rngween-hourly-reward {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--text);
+  font-size: 11px;
+  min-height: 29px;
+}
+.rngween-hourly-reward > svg {
+  color: #fb923c;
+}
+.rngween-hourly-world-link {
+  display: inline-grid;
+  place-items: center;
+  margin-left: auto;
+  width: 36px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface);
+  cursor: pointer;
+}
+.rngween-hourly-world-link:hover {
+  background: var(--hover);
+}
+.rngween-hourly-foot {
+  display: block;
+  margin-top: 17px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.8;
+}
+.rngween-hourly-foot p {
+  margin: 0 0 6px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.rngween-hourly-foot small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.rngween-hourly-empty p {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.rngween-hourly-empty button {
+  margin: 8px 0;
+}
+.rngween-hourly-card.is-loading {
+  min-height: 150px;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+@media (max-width: 520px) {
+  .rngween-hourly-grid {
+    grid-template-columns: 1fr;
+  }
+  .rngween-hourly-head > div {
+    flex: 1 1 190px;
+  }
+  .rngween-hourly-wallet {
+    margin: 8px 0 0;
+  }
+}
+
+/* A finished commission shows its claim button in place of the reward line. */
+.rngween-hourly-claim {
+  min-height: 36px;
+  padding: 6px 14px;
+  gap: 8px;
+  font-size: 13px;
+}
+.rngween-hourly-card:has(.rngween-hourly-claim) {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 3px rgb(251 146 60 / 0.18);
+}
+
+/* ---- Motion ---------------------------------------------------------------
+   Cards are keyed by serial, so a swapped commission mounts fresh and is
+   dealt onto the board; the claimed one folds away first. */
+.rngween-hourly-card {
+  animation: hourly-deal 460ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  transform-origin: 50% 100%;
+}
+.rngween-hourly-card:nth-child(2) {
+  animation-delay: 70ms;
+}
+.rngween-hourly-card:nth-child(3) {
+  animation-delay: 140ms;
+}
+.rngween-hourly-card:nth-child(4) {
+  animation-delay: 210ms;
+}
+.rngween-hourly-card.is-leaving {
+  animation: hourly-fold 320ms ease-in both;
+  pointer-events: none;
+}
+.rngween-hourly-card.is-fresh {
+  animation-delay: 0ms;
+}
+@keyframes hourly-deal {
+  from {
+    opacity: 0;
+    transform: translateY(14px) rotateX(-18deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hourly-fold {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) rotateX(24deg) scale(0.94);
+    filter: blur(2px);
+  }
+}
+.rngween-hourly-meter progress::-webkit-progress-value {
+  transition: width 420ms ease;
+}
+.rngween-hourly-meter progress::-moz-progress-bar {
+  transition: width 420ms ease;
+}
+.rngween-hourly-card:has(.rngween-hourly-claim) {
+  animation:
+    hourly-deal 460ms cubic-bezier(0.2, 0.8, 0.3, 1) both,
+    hourly-ready 2.4s ease-in-out 460ms infinite;
+}
+.rngween-hourly-claim svg {
+  animation: hourly-claim-bob 1.6s ease-in-out infinite;
+}
+.rngween-hourly-countdown.is-urgent {
+  color: #fb923c;
+  animation: hourly-urgent 1s steps(2, end) infinite;
+}
+@keyframes hourly-ready {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgb(251 146 60 / 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(251 146 60 / 0.08);
+  }
+}
+@keyframes hourly-claim-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@keyframes hourly-urgent {
+  50% {
+    opacity: 0.45;
+  }
+}
+.rngween-hourly-wallet strong {
+  display: inline-block;
+}
+.rngween-hourly-wallet.is-bumped strong {
+  animation: hourly-wallet-bump 520ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes hourly-wallet-bump {
+  30% {
+    transform: scale(1.25);
+    color: #fb923c;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rngween-hourly-card,
+  .rngween-hourly-card.is-leaving,
+  .rngween-hourly-card:has(.rngween-hourly-claim),
+  .rngween-hourly-claim svg,
+  .rngween-hourly-countdown.is-urgent,
+  .rngween-hourly-wallet.is-bumped strong {
+    animation: none;
+  }
+  .rngween-hourly-card.is-leaving {
+    opacity: 0.4;
+  }
+}

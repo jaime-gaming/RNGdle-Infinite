@@ -10,6 +10,8 @@
 // The most entries the log keeps. An entry is about 260 bytes of save, so this
 // stays comfortably inside what mobile browsers allow a site to store.
 export const HISTORY_LIMIT = 6000;
+// How many rolls a player can bookmark; pinned rolls are never pruned.
+export const BOOKMARK_LIMIT = 10;
 // From this many entries on, History warns that space is running low and offers
 // bulk delete. It leaves room for the next few sessions before the cap.
 export const HISTORY_WARNING = 4500;
@@ -18,7 +20,8 @@ export function isCycleMarker(entry) {
   return (
     entry?.type === "rebirth" ||
     entry?.type === "ultra-rebirth" ||
-    entry?.type === "rollback"
+    entry?.type === "rollback" ||
+    entry?.type === "fresh-start"
   );
 }
 
@@ -71,6 +74,7 @@ export function removableCount(history = [], bookmarks = []) {
 // The save keeps the prestige as "ultra-rebirth"; the player sees its name.
 function markerName(entry) {
   if (entry.type === "rollback") return "Rollback";
+  if (entry.type === "fresh-start") return "Fresh start";
   return entry.type === "ultra-rebirth"
     ? `Prestige ${entry.count}`
     : `Rebirth ${entry.count}`;

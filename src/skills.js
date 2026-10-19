@@ -1,3 +1,7 @@
+// CLEANUP Nov 4, 2026: remove RNGWEEN_SKILL / RNGWEEN_SIGNATURE and the
+// `source === "event"` branches. Keep parsers dropping their ids silently.
+import { RNGWEEN_SKILL, RNGWEEN_SIGNATURE } from "./rngween-limited.js";
+
 // Skills are charged, one-shot effects that fire on the next completed roll.
 //
 // Deliberate boundary: a skill may change how a number is *drawn* (extra
@@ -8,11 +12,11 @@
 // genuinely rolled. Wallet effects multiply only the EP that reaches the
 // wallet, exactly like companions.
 //
-// A skill is *armed* when its circle is full. The next draw snapshots every
-// armed skill into the committed roll, so a reload, a second tab or a failed
-// settlement can never re-fire or re-roll it.
+// A full circle is armed. A roll snapshots only the skills that actually fire;
+// draw skills that cannot fit the six-number budget keep their charge for the
+// next roll. Reloading or sharing a committed roll cannot re-fire its skills.
 export const SKILL_SLOTS_BASE = 2;
-export const SKILL_MAX_DRAWS = 8;
+export const SKILL_MAX_DRAWS = 6;
 
 // Shop slot upgrades. Kept here so save validation and the shop can never
 // drift apart; the shop catalogue re-exports them as ordinary products.
@@ -50,6 +54,8 @@ export const SKILL_SLOTS = [
 //   pet-luck   multiplies the chance of a companion appearing on that roll
 //   overdrive  that roll counts N times towards Flywheel and skill charge
 export const SKILLS = [
+  RNGWEEN_SKILL,
+  RNGWEEN_SIGNATURE,
   // ---- Bought in the shop -------------------------------------------------
   {
     id: "surge",
@@ -423,6 +429,7 @@ export const SKILLS = [
 
 export const skillById = new Map(SKILLS.map((skill) => [skill.id, skill]));
 export const shopSkills = SKILLS.filter((skill) => skill.source === "shop");
+export const eventSkills = SKILLS.filter((skill) => skill.source === "event");
 export const petSkills = SKILLS.filter((skill) => skill.source === "pet");
 export const rebirthSkills = SKILLS.filter(
   (skill) => skill.source === "rebirth",
@@ -451,6 +458,14 @@ export function skillSlots(owned = []) {
 export function skillUnlocked(id, progress) {
   const skill = skillById.get(id);
   if (!skill) return false;
+  if (
+    skill.eventOnly &&
+    (progress.rngweenLimited?.retired ||
+      !(progress.rngweenLimited?.bought ?? []).includes(
+        skill.petId ?? skill.id,
+      ))
+  )
+    return false;
   if (skill.source === "pet") return progress.activePet === skill.petId;
   return (progress.skills ?? []).includes(id);
 }
@@ -472,8 +487,8 @@ export function skillArmed(progress, id) {
   );
 }
 
-// Equipped, unlocked and full. These are the circles that fire on the next
-// committed roll, in rack order.
+// Equipped, unlocked and full: eligible to fire, in rack order. A draw skill
+// that cannot fit the current roll stays armed for the following roll.
 export function armedSkills(progress) {
   return (progress.equippedSkills ?? []).filter((id) =>
     skillArmed(progress, id),
@@ -485,50 +500,38 @@ export function armedSkillDefs(progress) {
 }
 
 // ---- Draw plan ------------------------------------------------------------
-// Draw skills no longer merge into one budget: each one keeps its own. Two of
-// them draw their own numbers and each keeps the best of them, so a roll can
-// pay more than once — the reward for stacking them as well as the reward for
-// spending the draws.
-//
-// Budgets still add up (Double Vision's two draws and Bedrock's four spend
-// six), a floor is a promise rather than a quantity so each skill keeps its
-// own, and the whole plan is capped: a roll can never spend more than
-// SKILL_MAX_DRAWS ordinary draws, and the cap is spent in order, so a skill
-// that finds the cupboard bare simply keeps nothing.
-//
-// `drawPicksFor` is what the roll spends; `drawPlanFor` is the same plan
-// collapsed for the rack, which only ever quotes the shape of the next roll.
+// Each draw skill retains its whole budget and keeps one number. Never trim a
+// skill's promise or consume an unfired circle: if it does not fit, it waits.
+// The live runner can make room for a later skill when an earlier floor stops
+// early. The rack quotes the conservative, full-budget plan.
 export function drawPicksFor(ids = []) {
-  const picks = [];
-  let spent = 0;
-  for (const id of ids) {
+  return [...new Set(ids)].flatMap((id) => {
     const skill = skillById.get(id);
-    if (!skill) continue;
-    const kind = skill.kind;
-    if (kind !== "best-of" && kind !== "floor") continue;
-    const budget = Math.min(skill.attempts, SKILL_MAX_DRAWS - spent);
-    // Eight draws are already spoken for: this skill fires for nothing.
-    if (budget <= 0) continue;
-    spent += budget;
-    picks.push({
-      id,
-      name: skill.name,
-      tint: skill.tint,
-      attempts: budget,
-      floor: kind === "floor" ? skill.floor : 0,
-    });
-  }
-  return picks;
+    if (!skill || !["best-of", "floor"].includes(skill.kind)) return [];
+    return [
+      {
+        id,
+        name: skill.name,
+        tint: skill.tint,
+        attempts: skill.attempts,
+        floor: skill.kind === "floor" ? skill.floor : 0,
+      },
+    ];
+  });
 }
 
 export function drawPlanFor(ids = []) {
-  const picks = drawPicksFor(ids);
+  const picks = [];
+  let attempts = 0;
+  for (const pick of drawPicksFor(ids)) {
+    if (attempts + pick.attempts > SKILL_MAX_DRAWS) continue;
+    picks.push(pick);
+    attempts += pick.attempts;
+  }
   if (!picks.length) return null;
   return {
-    attempts: picks.reduce((total, pick) => total + pick.attempts, 0),
+    attempts,
     floor: picks.reduce((best, pick) => Math.max(best, pick.floor), 0),
-    // How many numbers this roll would pay: one for every skill that gets to
-    // spend at least one draw.
     keeps: picks.length,
   };
 }
@@ -611,7 +614,7 @@ export function parseSkillCharge(value) {
 // on earnings.
 export function skillTakesSlot(id) {
   const source = skillById.get(id)?.source;
-  return source === "shop" || source === "pet";
+  return source === "shop" || source === "pet" || source === "event";
 }
 
 // Trim an equipped list to the rack: free skills always stay, slot-taking skills keep
@@ -657,7 +660,10 @@ export function parseUnlockedSkills(value, progress) {
       // A skill bought in the shop must also be owned, so a save cannot grant
       // a purchase it never paid for.
       (skillById.get(id).source !== "shop" ||
-        (progress.owned ?? []).includes(id)),
+        (progress.owned ?? []).includes(id)) &&
+      (skillById.get(id).source !== "event" ||
+        (!progress.rngweenLimited?.retired &&
+          (progress.rngweenLimited?.bought ?? []).includes(id))),
   );
 }
 
@@ -720,5 +726,6 @@ export function skillEffectChips(skill) {
 export function skillSourceLabel(skill, petName = "") {
   if (skill.source === "pet") return `${petName || "Companion"} signature`;
   if (skill.source === "rebirth") return `Rebirth ${skill.rebirth} reward`;
+  if (skill.source === "event") return "RNGween 2026 · until Nov 3 (UTC)";
   return "Shop purchase";
 }

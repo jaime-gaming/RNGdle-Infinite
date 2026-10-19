@@ -1,4 +1,4 @@
-import { SKILL_MAX_DRAWS, drawPicksFor } from "./skills.js";
+import { SKILL_MAX_DRAWS } from "./skills.js";
 
 // The one rule every draw-modifying skill collapses into: take this many
 // ordinary, independent draws and keep the best of them. Two draw skills do
@@ -7,9 +7,9 @@ import { SKILL_MAX_DRAWS, drawPicksFor } from "./skills.js";
 // number the roll commits and shows; the others are paid and recorded beside
 // it rather than thrown away.
 //
-// A live roll with a draw skill also makes one ordinary draw of its own, after
-// the skills'. That number is a plain draw and can win like any other; the
-// skill numbers stay paid whether they win or not.
+// A live roll adds an ordinary draw when the six-number budget has room.
+// Unfired draw skills wait, with their full charge, for the next roll. Never
+// draw a hidden seventh number or discard a skill's unspent attempts.
 //
 // `roll` draws one uniform number and `score` re-reads it from the verified
 // index, so nothing here can invent EP, bias a draw or edit a number: it only
@@ -26,10 +26,8 @@ export async function runDrawPicks(
   let winnerSkill = null;
   let winnerIndex = null;
   for (const pick of picks) {
-    const attempts = Math.min(
-      pick.attempts ?? 1,
-      SKILL_MAX_DRAWS - draws.length,
-    );
+    const attempts = pick.attempts ?? 1;
+    if (attempts > SKILL_MAX_DRAWS - draws.length) continue;
     let bestHere = null,
       bestHereIndex = null,
       spent = 0;
@@ -55,7 +53,7 @@ export async function runDrawPicks(
       winnerIndex = bestHereIndex;
     }
   }
-  if (ordinary) {
+  if (ordinary && draws.length < SKILL_MAX_DRAWS) {
     const number = await roll();
     const drawIndex = draws.length;
     draws.push(number);

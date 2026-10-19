@@ -1,6 +1,11 @@
+// KEEP after Nov 4, 2026: the hexbound/event aura rendering is permanent.
 import React from "react";
+import { useSettings } from "../use-settings.jsx";
 import "../number-box.css";
 import "../number-box-palettes.css";
+import "../rngween-auras.css";
+import RngweenAura from "./RngweenAura.jsx";
+import { productById } from "../shop-data.js";
 
 const tiers = new Set([
   "neutral",
@@ -40,6 +45,11 @@ const cosmetics = new Set([
   "bitstorm",
   "scramble",
   "hexdump",
+  "jack-o-glow",
+  "phantom-veil",
+  "witchfire",
+  "blood-moon",
+  "hexbound",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [
@@ -70,10 +80,13 @@ export default function NumberBox({
   tier = "neutral",
   aura = "none",
   compact = false,
+  auraLayout = "full",
+  dejaVu = false,
   className = "",
   style,
   ...props
 }) {
+  const { settings } = useSettings();
   const rarity = tiers.has(tier) ? tier : "neutral";
   const cosmetic = cosmetics.has(aura) ? aura : "none";
   const shimmer = !["neutral", "trash", "common"].includes(rarity);
@@ -87,18 +100,29 @@ export default function NumberBox({
         : length === 5
           ? 48
           : 36;
+  const swatch = cosmetic !== "none" ? productById.get(cosmetic)?.swatch : null;
   return (
     <Tag
       {...props}
       className={`number-box ${rarity === "godly" ? "tier-godly" : ""} ${compact ? "number-box-compact" : ""} ${className}`}
       data-tier={rarity}
       data-cosmetic={cosmetic}
-      style={{ "--box-font": `${fontSize}px`, ...style }}
+      data-deja-vu={dejaVu || undefined}
+      data-aura-layout={auraLayout === "contained" ? "contained" : undefined}
+      data-motion={settings.reduceMotion === "on" ? "reduced" : undefined}
+      style={{
+        "--box-font": `${fontSize}px`,
+        // Every aura's own two swatch colours drive the shared finish layer.
+        ...(swatch && { "--aura-a": swatch[0], "--aura-b": swatch[1] }),
+        ...style,
+      }}
     >
       <span className="box-gloss" aria-hidden="true" />
       {shimmer && <span className="box-shimmer" aria-hidden="true" />}
       {cosmetic !== "none" && (
         <span className="box-cosmetic" aria-hidden="true">
+          <span className="box-finish" />
+          <RngweenAura aura={cosmetic} />
           <span className="box-halo" />
           <span className="box-ornament">
             <span className="aura-trace" />
@@ -119,6 +143,22 @@ export default function NumberBox({
               />
             ))}
           </span>
+        </span>
+      )}
+      {dejaVu && (
+        <span className="deja-vu-particles" aria-hidden="true">
+          {godlyStars.map(([x, y, size], i) => (
+            <i
+              key={i}
+              style={{
+                left: `${(x * 7 + 11) % 92}%`,
+                top: `${(y * 5 + 7) % 88}%`,
+                width: size,
+                height: size,
+                animationDelay: `-${i * 0.37}s`,
+              }}
+            />
+          ))}
         </span>
       )}
       {rarity === "godly" && (

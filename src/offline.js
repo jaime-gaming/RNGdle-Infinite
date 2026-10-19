@@ -79,6 +79,22 @@ export function parseOffline(value, owned) {
   }
   return { lastSeenAt: value.lastSeenAt, batch, report };
 }
+// Only the current saved batch pointer authorizes an old-dated settlement.
+// Calling something "offline" is not enough to bypass replay protection.
+export function matchesOfflineCommitment(offline, action) {
+  const batch = offline?.batch;
+  if (!batch || action.source !== "offline") return false;
+  const index = batch.index,
+    interval = batch.intervalMS ?? OFFLINE_INTERVAL;
+  return (
+    amount(index) &&
+    index < batch.numbers.length &&
+    action.id === `${batch.id}:${index}` &&
+    action.result?.number === batch.numbers[index] &&
+    action.at === batch.since + (index + 1) * interval
+  );
+}
+
 export function offlinePlan(
   offline,
   now,

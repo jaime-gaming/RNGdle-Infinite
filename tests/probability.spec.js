@@ -181,6 +181,13 @@ test("arbitrary-number contributor diagrams only refer to valid digits; equation
 test("repeated random results each earn EP once and double-clicking cannot bypass cooldown", async ({
   page,
 }) => {
+  // This checks roll accounting, not independent companion luck. A random
+  // first pet would auto-equip and legitimately boost the next roll's wallet.
+  await page.addInitScript(() => {
+    Object.defineProperty(crypto, "getRandomValues", {
+      value: (array) => array.fill(0xffffffff),
+    });
+  });
   await mockRandom(page, [1337, 1337, 604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");

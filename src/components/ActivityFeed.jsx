@@ -1,3 +1,6 @@
+// KEEP after Nov 4, 2026: `rngween-*` history rows persist in saves after the
+// event, so their icons and labels stay. Only remove them if history parsing
+// drops those types too.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -25,6 +28,8 @@ import {
   removableCount,
 } from "../history-log.js";
 import { CADENCE_NAME } from "../tasks.js";
+import { BOOKMARK_LIMIT } from "../progress.js";
+import { dejaVuIds } from "../deja-vu.js";
 import "../activity.css";
 const byId = new Map(badges.map((b) => [b.canonicalId, b]));
 const filters = [
@@ -42,7 +47,10 @@ const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 const shortDate = (at) =>
   at == null
     ? ""
-    : new Date(at).toLocaleDateString(undefined, { dateStyle: "medium" });
+    : new Date(at).toLocaleDateString("en-US", {
+        dateStyle: "medium",
+        timeZone: "UTC",
+      });
 function BadgeList({ ids, openBadge }) {
   return (
     <div className="activity-badges">
@@ -85,6 +93,7 @@ export default function ActivityFeed({
     [pruneError, setPruneError] = useState("");
   const lens = progress.owned.includes("archive-lens");
   const history = progress.history ?? [];
+  const repeats = useMemo(() => dejaVuIds(history), [history]);
   // A few rolls can be pinned for later: the bookmarks live on the save, so
   // they survive reloads, rebirths and other tabs.
   const bookmarks = progress.bookmarks ?? [];
@@ -115,13 +124,25 @@ export default function ActivityFeed({
             (filter === "Rolls" && e.type === "roll") ||
             (filter === "Offline" && e.source === "offline") ||
             (filter === "Rebirths" &&
-              ["rebirth", "ultra-rebirth", "rollback"].includes(e.type)) ||
+              ["rebirth", "ultra-rebirth", "rollback", "fresh-start"].includes(
+                e.type,
+              )) ||
             (filter === "Bookmarks" &&
               e.type === "roll" &&
               bookmarks.includes(e.id)) ||
             (filter === "Badge unlocks" && e.type === "unlock") ||
-            (filter === "Shop" && ["purchase", "equip"].includes(e.type)) ||
-            (filter === "Tasks" && e.type === "task"),
+            (filter === "Shop" &&
+              [
+                "purchase",
+                "equip",
+                "rngween-exchange",
+                "rngween-purchase",
+                "rngween-world-purchase",
+                "rngween-world-exchange",
+                "rngween-forged-key",
+              ].includes(e.type)) ||
+            (filter === "Tasks" &&
+              ["task", "rngween-mission", "rngween-hourly"].includes(e.type)),
         )
         .filter(
           (e) =>
@@ -384,7 +405,7 @@ export default function ActivityFeed({
             }}
           >
             {name === "Bookmarks" && bookmarks.length
-              ? `Bookmarks (${bookmarks.length}/3)`
+              ? `Bookmarks (${bookmarks.length}/${BOOKMARK_LIMIT})`
               : name}
           </button>
         ))}
@@ -481,14 +502,17 @@ export default function ActivityFeed({
                   entry and draws a dotted line where the new one begins. */}
               {(event.type === "rebirth" ||
                 event.type === "ultra-rebirth" ||
-                event.type === "rollback") && (
+                event.type === "rollback" ||
+                event.type === "fresh-start") && (
                 <li className="activity-divider">
                   <span className="activity-divider-label">
                     {event.type === "rollback"
                       ? "Rollback"
-                      : event.type === "ultra-rebirth"
-                        ? `Prestige ${event.count}`
-                        : `Rebirth ${event.count}`}
+                      : event.type === "fresh-start"
+                        ? "Fresh start"
+                        : event.type === "ultra-rebirth"
+                          ? `Prestige ${event.count}`
+                          : `Rebirth ${event.count}`}
                   </span>
                 </li>
               )}
@@ -498,16 +522,25 @@ export default function ActivityFeed({
                     <Coins size={19} />
                   ) : event.type === "unlock" ? (
                     <Medal size={19} />
-                  ) : event.type === "purchase" ? (
+                  ) : [
+                      "purchase",
+                      "rngween-exchange",
+                      "rngween-purchase",
+                      "rngween-world-purchase",
+                      "rngween-world-exchange",
+                    ].includes(event.type) ? (
                     <ShoppingBag size={19} />
                   ) : event.type === "pet" ? (
                     <PawPrint size={19} />
-                  ) : event.type === "rebirth" ? (
+                  ) : event.type === "rebirth" ||
+                    event.type === "fresh-start" ? (
                     <RotateCcw size={19} />
                   ) : event.type === "ultra-rebirth" ||
                     event.type === "rollback" ? (
                     <InfinityIcon size={19} />
-                  ) : event.type === "task" ? (
+                  ) : ["task", "rngween-mission", "rngween-hourly"].includes(
+                      event.type,
+                    ) ? (
                     <ListChecks size={19} />
                   ) : (
                     <Check size={19} />
@@ -524,19 +557,33 @@ export default function ActivityFeed({
                             : "Roll completed"
                         : event.type === "unlock"
                           ? `${event.badges.length} new badge${event.badges.length === 1 ? "" : "s"} unlocked`
-                          : event.type === "purchase"
+                          : [
+                                "purchase",
+                                "rngween-purchase",
+                                "rngween-world-purchase",
+                              ].includes(event.type)
                             ? `Purchased ${event.name}`
-                            : event.type === "pet"
-                              ? `Found ${event.name} on a roll`
-                              : event.type === "rebirth"
-                                ? `Rebirth ${event.count}`
-                                : event.type === "ultra-rebirth"
-                                  ? `Prestige ${event.count}`
-                                  : event.type === "rollback"
-                                    ? "Rollback"
-                                    : event.type === "task"
-                                      ? `Task claimed · ${event.name}`
-                                      : `Equipped ${event.name}`}
+                            : event.type === "rngween-forged-key"
+                              ? "Forged Valley Challenge Key"
+                              : event.type === "rngween-world-exchange"
+                                ? `Traded World points for ${event.ep !== undefined ? `${count(event.ep)} EP` : `${count(event.pumpkoins)} Pumpkoins`}`
+                                : event.type === "rngween-exchange"
+                                  ? `Exchanged EP for ${count(event.pumpkoins)} Pumpkoins`
+                                  : event.type === "pet"
+                                    ? `Found ${event.name} on a roll`
+                                    : event.type === "rebirth"
+                                      ? `Rebirth ${event.count}`
+                                      : event.type === "ultra-rebirth"
+                                        ? `Prestige ${event.count}`
+                                        : event.type === "rollback"
+                                          ? "Rollback"
+                                          : [
+                                                "task",
+                                                "rngween-mission",
+                                                "rngween-hourly",
+                                              ].includes(event.type)
+                                            ? `Task claimed · ${event.name}`
+                                            : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString(undefined, {
@@ -552,6 +599,7 @@ export default function ActivityFeed({
                           compact
                           value={event.number}
                           tier={event.tier}
+                          dejaVu={repeats.has(event.id)}
                           aria-label={`Historical roll ${event.number}`}
                         />
                         <div>
@@ -671,18 +719,38 @@ export default function ActivityFeed({
                     <p>
                       The run started over from the top of the ladder: the
                       collection, every purchase, the companions and the wallet
-                      reset. History, rebirths and bonuses stayed, the cycle
-                      began with {formatEP(event.grant ?? 0)} EP, and the
-                      permanent wallet bonus grew by 10 points.
+                      reset
+                      {event.ladder
+                        ? `, and the ${event.ladder}-rung rebirth ladder went back to its first rung`
+                        : ""}
+                      . History and permanent bonuses stayed, the cycle began
+                      with {formatEP(event.grant ?? 0)} EP, and the permanent
+                      wallet bonus grew by 10 points.
                     </p>
                   ) : event.type === "rollback" ? (
                     <p>
                       The Rollback started the run over from zero: the
                       collection, every purchase, the companions and the wallet
-                      reset. History, rebirths, prestiges and bonuses stayed,
-                      the cycle began with {formatEP(event.grant ?? 0)} EP, and
-                      the permanent wallet bonus grew by 25%. The Rollback can
-                      be taken again.
+                      reset
+                      {event.ladder
+                        ? `, the ${event.ladder}-rung rebirth ladder went back to its first rung`
+                        : ""}
+                      {event.prestiges
+                        ? ` and the ${event.prestiges} prestige${event.prestiges === 1 ? "" : "s"} with their +10% each were handed back`
+                        : ""}
+                      . History, auras and Rollback bonuses stayed, the cycle
+                      began with {formatEP(event.grant ?? 0)} EP, and the
+                      permanent wallet bonus grew by 25%. The Rollback can be
+                      taken again once three prestiges are done.
+                    </p>
+                  ) : event.type === "fresh-start" ? (
+                    <p>
+                      A fresh start, by choice. The old run reached{" "}
+                      {event.before?.ultraRebirths ?? 0} prestiges,{" "}
+                      {event.before?.rebirths ?? 0} rebirths and{" "}
+                      {formatEP(event.before?.totalEarned ?? 0)} EP earned over{" "}
+                      {formatEP(event.before?.rolls ?? 0)} rolls. Everything but
+                      the profile and the auras went back to zero.
                     </p>
                   ) : event.type === "task" ? (
                     <p className="activity-transaction">
@@ -695,6 +763,46 @@ export default function ActivityFeed({
                         <>
                           <strong>−{formatEP(event.ep)} EP</strong> · Kept until
                           your next rebirth
+                        </>
+                      ) : event.type === "rngween-exchange" ? (
+                        <>
+                          <strong>−{formatEP(event.ep)} EP</strong> · +
+                          {count(event.pumpkoins)} Pumpkoins · one-way exchange
+                        </>
+                      ) : event.type === "rngween-hourly" ? (
+                        <div className="activity-summary">
+                          {event.name} · +{event.pumpkoins} Pumpkoins · hourly
+                          commission
+                        </div>
+                      ) : event.type === "rngween-mission" ? (
+                        <>
+                          <strong>+{count(event.pumpkoins)} Pumpkoins</strong> ·
+                          Halloween mission reward · aura kept forever
+                        </>
+                      ) : event.type === "rngween-forged-key" ? (
+                        <>
+                          Four World fragments · Free · never consumed on entry
+                        </>
+                      ) : event.type === "rngween-world-purchase" ? (
+                        <>
+                          <strong>−{count(event.points)} World points</strong> ·{" "}
+                          Expires after November 3 (UTC)
+                        </>
+                      ) : event.type === "rngween-world-exchange" ? (
+                        <>
+                          <strong>−{count(event.points)} World points</strong> ·{" "}
+                          {event.ep !== undefined
+                            ? "Added to your EP balance"
+                            : "Added to your Pumpkoins"}
+                        </>
+                      ) : event.type === "rngween-purchase" ? (
+                        <>
+                          <strong>−{count(event.pumpkoins)} Pumpkoins</strong> ·{" "}
+                          {event.productId === "pumpkin-familiar" ||
+                          event.productId === "midnight-harvest" ||
+                          event.productId === "rngween-world-key"
+                            ? "Expires after November 3 (UTC)"
+                            : "Permanent aura"}
                         </>
                       ) : (
                         <>Free equipment change · No EP spent</>

@@ -33,7 +33,9 @@ export default function OfflineRewards({
             <div className="offline-totals">
               <strong>+{formatEP(report.ep)} EP</strong>
               <span>
-                {report.rolls} rolls · {report.newBadges} new badges
+                {report.rolls} {report.rolls === 1 ? "roll" : "rolls"} ·{" "}
+                {report.newBadges} new{" "}
+                {report.newBadges === 1 ? "badge" : "badges"}
               </span>
             </div>
             <p>

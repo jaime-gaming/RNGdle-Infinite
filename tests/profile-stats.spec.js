@@ -5,6 +5,7 @@ import {
   drawExportCardToCanvas,
   exportFileName,
   exportPayload,
+  profileHighlights,
 } from "../src/profile-stats.js";
 import zlib from "node:zlib";
 import {
@@ -85,6 +86,7 @@ function played(extra = {}) {
     discovered: [badgeA, "missing-badge"],
     pets: ["pebble", "moth"],
     activePet: "pebble",
+    bookmarks: ["r1", "r4"],
     skills: ["surge"],
     equippedSkills: ["surge"],
     rebirths: 2,
@@ -209,6 +211,27 @@ test("an empty save reads as zeros rather than as invented progress", () => {
   expect(stats.lastEventAt).toBeNull();
 });
 
+test("profile highlights resolve the pinned rolls, the best roll and what the account wears", () => {
+  const highlights = profileHighlights(played({ equipped: "starfall" }));
+  expect(highlights.bestRoll).toMatchObject({ number: 999999, tier: "godly" });
+  expect(highlights.pinned.map((roll) => roll.number)).toEqual([812044, 4242]);
+  expect(highlights.pinned[0]).toMatchObject({ ep: 12000, tier: "rare" });
+  expect(highlights.aura).toMatchObject({ id: "starfall" });
+  expect(highlights.companion).toMatchObject({ name: "Pebble" });
+  expect(highlights.favoriteTier).toBe("rare");
+  // A bookmark whose roll left the log is simply not shown.
+  const gone = profileHighlights(played({ bookmarks: ["nope", "r4"] }));
+  expect(gone.pinned.map((roll) => roll.id)).toEqual(["r4"]);
+  const fresh = profileHighlights(emptyProgress());
+  expect(fresh).toEqual({
+    bestRoll: null,
+    pinned: [],
+    favoriteTier: null,
+    aura: null,
+    companion: null,
+  });
+});
+
 test("the export is a read-only PNG snapshot with no import path", async () => {
   const progress = played();
   const payload = exportPayload(progress);
@@ -256,6 +279,8 @@ test("the PNG card paints the logo, the name, the biggest roll and the key stats
         images += 1;
       },
       createLinearGradient: () => ({ addColorStop: () => {} }),
+      createRadialGradient: () => ({ addColorStop: () => {} }),
+      scale: () => {},
       arc: () => {},
       arcTo: () => {},
       beginPath: () => {},
@@ -274,29 +299,36 @@ test("the PNG card paints the logo, the name, the biggest roll and the key stats
   };
   const progress = played();
   const card = paint(progress, { width: 128, height: 128 });
-  expect([card.canvas.width, card.canvas.height]).toEqual([1200, 680]);
+  // Painted at 2× so the PNG stays sharp.
+  expect([card.canvas.width, card.canvas.height]).toEqual([2400, 1520]);
   // Identity: the account name, with its logo drawn beside it.
   expect(card.images).toBe(1);
   expect(card.texts).toContain("LuckyOtter41");
   // The hero: the biggest roll's number, tier and EP — r2, the godly roll.
   expect(card.texts).toContain("BIGGEST ROLL");
-  expect(card.texts).toContain("999,999");
+  // Number boxes show raw digits, like the in-game box.
+  expect(card.texts).toContain("999999");
   expect(card.texts).toContain("GODLY TIER · +512,000 EP");
-  // The key stats grid, all six tiles.
+  // The four key figures, the pinned rolls and what the account wears.
   for (const label of [
     "ALL-TIME EP EARNED",
     "TOTAL ROLLS",
     "BADGES DISCOVERED",
     "REBIRTHS & PRESTIGE",
-    "COMPANIONS",
-    "SKILLS UNLOCKED",
+    "PINNED ROLLS",
+    "WEARING",
   ])
     expect(card.texts).toContain(label);
+  // The fixture pins r1 and r4: both numbers are painted as boxes.
+  expect(card.texts).toContain("812044");
+  expect(card.texts).toContain("4242");
+  expect(card.texts).toContain("Original appearance");
+  expect(card.texts.some((text) => text.startsWith("with Pebble"))).toBe(true);
   // Without a logo the card still paints everything else — just no image.
   const plain = paint(progress, null);
   expect(plain.images).toBe(0);
   expect(plain.texts).toContain("LuckyOtter41");
-  expect(plain.texts).toContain("999,999");
+  expect(plain.texts).toContain("999999");
 });
 
 test("the account logo is part of the save, and only a small image data URL is one", async () => {
@@ -350,6 +382,8 @@ test("the account logo is part of the save, and only a small image data URL is o
 });
 
 test("the PNG card carries the account's own logo", async ({ page }) => {
+  // Two 2× cards are encoded here; give slow CI machines some room.
+  test.slow();
   await page.goto("/");
   // A solid blue square, so the card can be checked pixel by pixel.
   const logo = await page.evaluate(() => {
@@ -378,8 +412,8 @@ test("the PNG card carries the account's own logo", async ({ page }) => {
   );
   const plain = decodePng(Buffer.from(plainPng));
   const card = decodePng(Buffer.from(logoPng));
-  expect([plain.width, plain.height]).toEqual([1200, 680]);
-  expect([card.width, card.height]).toEqual([1200, 680]);
+  expect([plain.width, plain.height]).toEqual([2400, 1520]);
+  expect([card.width, card.height]).toEqual([2400, 1520]);
   // Different pictures: the card with a logo is not the card without one.
   expect(logoPng.length).not.toBe(plainPng.length);
   // The logo sits in a circle just left of the account name: the blue lands
@@ -392,7 +426,11 @@ test("the PNG card carries the account's own logo", async ({ page }) => {
       image.pixels[index + 2],
     ];
   };
-  expect(at(card, 80, 108)[2]).toBeGreaterThan(200);
-  expect(at(card, 80, 108)[0]).toBeLessThan(80);
-  expect(at(plain, 80, 108)[2]).toBeLessThan(200);
+  // Layout pixel (90, 134) is inside the 72px logo circle; the PNG is 2×.
+  expect(at(card, 180, 268)[2]).toBeGreaterThan(200);
+  expect(at(card, 180, 268)[0]).toBeLessThan(80);
+  // Without a logo the name starts there instead: light text or dark
+  // background, but never the pure blue of the logo square.
+  const [plainRed, , plainBlue] = at(plain, 180, 268);
+  expect(plainBlue > 200 && plainRed < 80).toBe(false);
 });

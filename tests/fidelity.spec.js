@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { mockSeasonClock } from "./helpers/season-clock.js";
 import { buildChipPlan, chipLoopFrames } from "../src/chip-motion.js";
 import {
   rankPopFrames,
@@ -193,6 +194,9 @@ test("numbers are read-only; there are no editors or presets", async ({
 test("reveal and badge breakdown geometry match the reference without dashboard cards", async ({
   page,
 }) => {
+  // Pin the reference layout outside the temporary Halloween palette.
+  await page.clock.setFixedTime(new Date(2026, 10, 4, 12));
+  await mockSeasonClock(page, Date.UTC(2026, 10, 4, 12));
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await showRoll(page, 1337);

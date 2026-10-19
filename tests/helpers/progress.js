@@ -1,17 +1,33 @@
+import {
+  RNGWEEN_INTRO_KEY,
+  RNGWEEN_WORLD_INTRO_KEY,
+} from "../../src/rngween-intro.js";
 import { emptyProgress, PROGRESS_KEY } from "../../src/progress.js";
 export const testProfile = {
   id: "test-profile",
   username: "LuckyTester",
   createdAt: 1700000000000,
 };
-export async function seedProgress(page, values = {}) {
+export async function seedProgress(
+  page,
+  values = {},
+  { introSeen = true } = {},
+) {
   await page.addInitScript(
-    ({ key, data }) => {
+    ({ key, data, introSeen, introKey, worldIntroKey }) => {
+      if (introSeen) {
+        localStorage.setItem(introKey, "rngween-2026");
+        // The World's opening too: tests opt in with introSeen: false.
+        localStorage.setItem(worldIntroKey, "rngween-2026");
+      }
       if (localStorage.getItem(key) === null)
         localStorage.setItem(key, JSON.stringify(data));
     },
     {
       key: PROGRESS_KEY,
+      introSeen,
+      introKey: RNGWEEN_INTRO_KEY,
+      worldIntroKey: RNGWEEN_WORLD_INTRO_KEY,
       data: { ...emptyProgress(), profile: testProfile, ...values },
     },
   );

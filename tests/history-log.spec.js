@@ -401,7 +401,10 @@ test("profile figures read the same after bulk delete clears the oldest entries"
   const before = await figures();
   expect(before["Rolls completed"]).toBe(count(HISTORY_WARNING));
   // Every roll pays the same, so the best roll is the first one logged.
-  expect(before["Best roll"]).toMatch(/^0 · /);
+  await expect(page.locator(".profile-best")).toHaveAttribute(
+    "data-best-roll",
+    "0",
+  );
   await page.goto("/history");
   await page
     .locator(".history-space")

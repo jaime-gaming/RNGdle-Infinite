@@ -131,3 +131,41 @@ test("after the network drops, the link recovers as soon as it is back", async (
   await contextB.close();
   await contextA.close();
 });
+
+test("a browser that knows the room but not the key is dropped and never receives the save", async ({
+  browser,
+}) => {
+  test.setTimeout(120000);
+  const contextA = await linkedContext(browser);
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, { balance: 123456, totalEarned: 123456 });
+  await pageA.goto("/settings/link");
+  await pageA.getByTestId("sync-create").click();
+  await expect(pageA.getByTestId("sync-link")).toBeVisible();
+  const link = await pageA.getByTestId("sync-link").inputValue();
+  // Same room, wrong key: the peer id is public on the broker, the key is not.
+  const url = new URL(link);
+  const [room, , owner] = url.searchParams.get("sync").split(".");
+  url.searchParams.set("sync", [room, "not-the-key", owner].join("."));
+
+  const contextB = await linkedContext(browser);
+  const pageB = await contextB.newPage();
+  await pageB.goto(url.toString());
+  await expect
+    .poll(
+      () => pageB.evaluate(() => localStorage.getItem("rng-infinite-sync-v1")),
+      { timeout: 15000 },
+    )
+    .toContain("not-the-key");
+  await pageB.goto("/settings/link");
+  // Both brokers meet and the channel opens; the first frame is refused.
+  await expect(pageA.getByTestId("sync-status")).toContainText(/live|wait/i, {
+    timeout: 30000,
+  });
+  await pageB.waitForTimeout(15000);
+  await expect(pageA.getByTestId("sync-status")).not.toContainText(/live/);
+  await expect(pageB.getByTestId("sync-status")).not.toContainText(/live/);
+  expect((await saved(pageB))?.balance ?? 0).not.toBe(123456);
+  await contextB.close();
+  await contextA.close();
+});

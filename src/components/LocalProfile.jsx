@@ -7,19 +7,17 @@ import {
   X,
   Dices,
   Download,
-  History,
   ImagePlus,
   Link2,
+  Share2,
   UserRound,
 } from "lucide-react";
 import { validUsername } from "../progress.js";
-import { prestigeShown } from "../rebirth.js";
+import { ROLLBACK_AFTER_PRESTIGES } from "../rebirth.js";
 import { AVATAR_ACCEPT, fileToAvatar } from "../avatar.js";
-import {
-  accountStats,
-  exportFileName,
-  renderExportPngBlob,
-} from "../profile-stats.js";
+import { exportFileName, renderExportPngBlob } from "../profile-stats.js";
+import { shareCardData, shareCardUrl } from "../profile-card.js";
+import ProfileRecord from "./ProfileRecord.jsx";
 import "../profile.css";
 
 // A one-way export: the browser saves a PNG card with the account name,
@@ -35,19 +33,6 @@ async function downloadExport(progress) {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function formatStatEP(value) {
-  return `${Math.round(value).toLocaleString("en-US")} EP`;
-}
-
-function when(at) {
-  if (!at) return "—";
-  return new Date(at).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 // The account's face: the logo it uploaded, or the neutral icon every new
@@ -80,60 +65,6 @@ export function AvatarMark({
   );
 }
 
-function ProfileHistory({ progress }) {
-  const stats = accountStats(progress);
-  const items = [
-    ["Rolls completed", stats.rolls.toLocaleString("en-US")],
-    [
-      "Online · offline",
-      `${stats.onlineRolls.toLocaleString("en-US")} · ${stats.offlineRolls.toLocaleString("en-US")}`,
-    ],
-    ["EP earned all-time", formatStatEP(stats.totalEarned)],
-    ["EP spent", formatStatEP(stats.spent)],
-    [
-      "Best roll",
-      stats.bestRoll
-        ? `${stats.bestRoll.number.toLocaleString("en-US")} · ${formatStatEP(stats.bestRoll.ep)}`
-        : "—",
-    ],
-    ["Badges discovered", `${stats.uniqueBadges} of ${stats.badgesTotal}`],
-    [
-      "Companions",
-      `${stats.companions} of ${stats.companionsTotal} · ${stats.companionsFound} found free`,
-    ],
-    ["Skills unlocked", `${stats.skills} of ${stats.skillsTotal}`],
-    ["Charged effects fired", stats.skillsUsed.toLocaleString("en-US")],
-    ["Flywheel boosts used", stats.boostsUsed.toLocaleString("en-US")],
-    prestigeShown(stats)
-      ? ["Rebirths · prestiges", `${stats.rebirths} · ${stats.ultraRebirths}`]
-      : ["Rebirths", `${stats.rebirths}`],
-    [
-      "First · latest entry",
-      `${when(stats.firstEventAt)} · ${when(stats.lastEventAt)}`,
-    ],
-  ];
-  return (
-    <section className="profile-history" aria-label="How far you have come">
-      <h3>
-        <History size={15} aria-hidden="true" /> How far you have come
-      </h3>
-      <dl>
-        {items.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className="profile-history-note">
-        Read from your activity log, the totals of entries cleared from it, and
-        your current save. The log keeps every cycle, not just the current one,
-        and clearing history never lowers these figures.
-      </p>
-    </section>
-  );
-}
-
 // Suggestions are cosmetic only: a starting point for the name field.
 const NAME_PARTS = [
   ["Lucky", "Golden", "Cosmic", "Quiet", "Feral", "Velvet", "Neon", "Humble"],
@@ -144,6 +75,15 @@ function suggestName() {
   return `${pick(NAME_PARTS[0])}${pick(NAME_PARTS[1])}${Math.floor(
     Math.random() * 90 + 10,
   )}`;
+}
+
+// Every prestige means the six rungs were climbed once more; every Rollback
+// means three prestiges and its own climb on top.
+function ladderClimbs(progress) {
+  const n =
+    (progress.ultraRebirths ?? 0) +
+    (progress.rollbacks ?? 0) * (ROLLBACK_AFTER_PRESTIGES + 1);
+  return n === 1 ? "once" : n === 2 ? "twice" : `${n} times`;
 }
 
 export default function LocalProfile({
@@ -161,6 +101,22 @@ export default function LocalProfile({
   const busy = useRef(false);
   const fileInput = useRef(null);
   const [logoNote, setLogoNote] = useState("");
+  const [shareNote, setShareNote] = useState("");
+  // The link is the profile address with the card in it. Copying is the
+  // happy path; when the clipboard is off limits the link is shown to copy
+  // by hand instead of failing quietly.
+  const [shareLink, setShareLink] = useState("");
+  async function copyProfileLink() {
+    const url = shareCardUrl(progress, location.origin);
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareLink("");
+      setShareNote("Link copied. Anyone who opens it sees this record.");
+    } catch {
+      setShareLink(url);
+      setShareNote("Copy the link below.");
+    }
+  }
   const [choosing, setChoosing] = useState(false);
   const avatar = profile?.avatar ?? "";
   async function chooseLogo(event) {
@@ -294,24 +250,76 @@ export default function LocalProfile({
     <>
       <h2 className="profile-title">
         {profile && (
-          <AvatarMark
-            avatar={avatar}
-            size={46}
-            label={`${profile.username}'s logo`}
-          />
+          // The logo is its own control: click it to add or replace the
+          // picture. No separate upload section.
+          <button
+            type="button"
+            className="profile-logo-button"
+            data-testid="avatar-upload"
+            data-state={choosing ? "busy" : avatar ? "logo" : "empty"}
+            disabled={choosing}
+            aria-label={
+              choosing
+                ? "Shrinking the logo"
+                : avatar
+                  ? "Replace logo"
+                  : "Upload logo"
+            }
+            title={
+              avatar ? "Click to replace your logo" : "Click to add a logo"
+            }
+            onClick={() => fileInput.current?.click()}
+          >
+            <AvatarMark avatar={avatar} size={52} label="" />
+            <span className="profile-logo-overlay" aria-hidden="true">
+              <ImagePlus size={16} />
+            </span>
+          </button>
         )}
         {profile
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
       </h2>
-      {profile && (progress?.ultraRebirths ?? 0) > 0 && (
+      {profile && (
+        <input
+          ref={fileInput}
+          className="profile-logo-input"
+          type="file"
+          accept={AVATAR_ACCEPT}
+          data-testid="avatar-input"
+          onChange={chooseLogo}
+          aria-label="Upload a logo"
+        />
+      )}
+      {profile && (avatar || logoNote) && (
+        <p className="profile-logo-line">
+          {logoNote && <span role="status">{logoNote}</span>}
+          {avatar && (
+            <button
+              type="button"
+              className="profile-logo-remove"
+              data-testid="avatar-remove"
+              onClick={removeLogo}
+            >
+              <Trash2 size={12} aria-hidden="true" /> Remove logo
+            </button>
+          )}
+        </p>
+      )}
+      {profile &&
+        ((progress?.ultraRebirths ?? 0) > 0 ||
+          (progress?.rollbacks ?? 0) > 0) && (
+          <p className="profile-prestige">
+            <span aria-hidden="true">✦</span>{" "}
+            {progress.rollbacks > 0 ? `Rollback ×${progress.rollbacks} · ` : ""}
+            Prestige ×{progress.ultraRebirths ?? 0} · ladder climbed{" "}
+            {ladderClimbs(progress)}
+          </p>
+        )}
+      {profile && (progress?.freshStarts ?? 0) > 0 && (
         <p className="profile-prestige">
-          <span aria-hidden="true">✦</span>{" "}
-          {progress.rollbacks > 0
-            ? `Rollback ×${progress.rollbacks}`
-            : "Prestige"}{" "}
-          · {progress.ultraRebirths} prestige
-          {progress.ultraRebirths === 1 ? "" : "s"} beyond the ladder
+          <span aria-hidden="true">↺</span> Fresh start ×{progress.freshStarts}{" "}
+          · this run began from zero by choice
         </p>
       )}
       {profile ? (
@@ -337,65 +345,36 @@ export default function LocalProfile({
             >
               <Download size={15} aria-hidden="true" /> Export my data
             </button>
+            <button
+              type="button"
+              className="secondary-button"
+              data-testid="profile-share"
+              onClick={copyProfileLink}
+            >
+              <Share2 size={15} aria-hidden="true" /> Copy profile link
+            </button>
           </div>
-          <section className="profile-logo" aria-label="Account logo">
-            <AvatarMark avatar={avatar} size={64} label="Your logo" />
-            <div className="profile-logo-copy">
-              <strong>Your logo</strong>
-              <p>
-                A picture this account wears in the header and on its profile.
-                It is saved inside the account on this browser — and, because it
-                rides in the save, a device link carries it too. Nothing is
-                uploaded anywhere.
-              </p>
-              <div className="profile-logo-actions">
+          {shareNote && (
+            <p className="profile-share-note" role="status">
+              {shareNote}
+              {shareLink && (
                 <input
-                  ref={fileInput}
-                  className="profile-logo-input"
-                  type="file"
-                  accept={AVATAR_ACCEPT}
-                  data-testid="avatar-input"
-                  onChange={chooseLogo}
-                  aria-label="Upload a logo"
+                  readOnly
+                  value={shareLink}
+                  aria-label="Profile link"
+                  onFocus={(event) => event.target.select()}
                 />
-                <button
-                  type="button"
-                  className="secondary-button"
-                  data-testid="avatar-upload"
-                  disabled={choosing}
-                  onClick={() => fileInput.current?.click()}
-                >
-                  <ImagePlus size={15} aria-hidden="true" />
-                  {choosing
-                    ? "Shrinking…"
-                    : avatar
-                      ? "Replace logo"
-                      : "Upload logo"}
-                </button>
-                {avatar && (
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    data-testid="avatar-remove"
-                    onClick={removeLogo}
-                  >
-                    <Trash2 size={15} aria-hidden="true" /> Remove
-                  </button>
-                )}
-              </div>
-              {logoNote && (
-                <p className="profile-logo-note" role="status">
-                  {logoNote}
-                </p>
               )}
-            </div>
-          </section>
+            </p>
+          )}
           <p className="profile-export-note">
-            One-way export: a PNG card with your name, your biggest roll and
-            your account’s key stats. Nothing in the game reads a card back, so
-            a downloaded file can never overwrite the game in this browser.
+            One-way export: a sharp PNG card with your name, your biggest roll,
+            your pinned rolls and your key figures. The profile link carries the
+            same record inside the address, so it opens anywhere without an
+            account. Nothing in the game reads a card or a link back, so neither
+            can overwrite the game in this browser.
           </p>
-          {progress && <ProfileHistory progress={progress} />}
+          {progress && <ProfileRecord record={shareCardData(progress)} />}
           <div className="account-danger">
             <button
               className="danger-button"

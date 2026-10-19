@@ -1,0 +1,103 @@
+/* CLEANUP Nov 4, 2026: the .rngween-* selectors in this file go with their components. */
+/* Phone pass. Loaded last on purpose so it wins the cascade: the desktop
+   families set their own tiny sizes and this sheet only raises the floor.
+   Three ideas: text you can read at arm's length, targets you can hit with a
+   thumb, and a home screen that shows the number and the button at once. */
+
+@media (max-width: 760px) {
+  /* --- Readable floor: nothing a player must read goes below 11px. --- */
+  .page-heading > div > p:last-child,
+  .info-box,
+  .signup-note,
+  .rngween-event-note,
+  .rngween-limited-footnote,
+  .changelog-note,
+  .source-note,
+  .world-aura-source-note {
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .roll-hint,
+  .roll-hint > span,
+  .task-kind,
+  .tasks-stat-label,
+  .shop-tile-stat,
+  .spotlight-price,
+  .spotlight-open,
+  .rngween-limited-time,
+  .rngween-exchange-cost,
+  .world-tab-when,
+  .world-zone-footer {
+    font-size: 11px;
+  }
+  .eyebrow,
+  .rngween-eyebrow,
+  .rngween-limited-kicker,
+  .rngween-limited-kind,
+  .world-eyebrow,
+  .world-event-date,
+  .page-heading .eyebrow {
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+  }
+
+  /* --- Thumb targets: 40px tall is the floor for anything tappable. --- */
+  .back-link {
+    min-height: 40px;
+    margin: -8px 0 16px;
+    font-size: 12px;
+  }
+  .rarity-filters button {
+    min-height: 34px;
+    padding: 6px 13px;
+    font-size: 11px;
+  }
+  .roll-progress-links a,
+  .roll-progress-links button {
+    padding: 6px 2px;
+  }
+  .world-back,
+  .world-talk-button {
+    min-height: 40px;
+    font-size: 12px;
+  }
+  .world-zone-footer button {
+    min-height: 36px;
+    font-size: 11px;
+  }
+
+  /* iOS zooms into any field under 16px; keep the page where the player
+     left it. Selects and search fields only, the number inputs are already
+     large. */
+  .search-field input,
+  .filters select,
+  .settings-panel select {
+    font-size: 16px;
+  }
+
+  /* --- Skill dock: packed against the right edge, fold arrow outermost, so
+     two or three circles do not float in the middle of an empty strip. --- */
+  .skill-bar:not(.is-collapsed) {
+    left: auto;
+    max-width: calc(100% - 16px);
+    justify-content: flex-end;
+  }
+  .skill-bar:not(.is-collapsed) .skill-rack-toggle {
+    order: 1;
+    margin-left: 4px;
+  }
+
+  /* --- Home screen: card and button in the first viewport, no dead gap. --- */
+  .idle-roll {
+    padding-top: max(4vh, 18px);
+  }
+  .idle-roll h1 {
+    margin-bottom: 22px;
+  }
+  .signup-note {
+    margin: 20px auto 18px;
+  }
+  .discover-link {
+    margin-top: 16px;
+  }
+}

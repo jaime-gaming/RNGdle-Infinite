@@ -101,7 +101,8 @@
   color: var(--green);
   background: var(--green-bg);
 }
-.event-rebirth {
+.event-rebirth,
+.event-fresh-start {
   color: var(--green);
   background: var(--green-bg);
 }

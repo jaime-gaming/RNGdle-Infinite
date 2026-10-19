@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
 import { createSyncRelay } from "./tools/sync-relay.mjs";
+import { sandboxClock } from "./tools/sandbox-clock.mjs";
+import { sandboxProgress } from "./tools/sandbox-progress.mjs";
 
 // Real routes (/shop, /badges…) are client-side, and static hosts do not rewrite
 // unknown paths. GitHub Pages serves 404.html for them, so ship the app there
@@ -13,8 +15,14 @@ function spaFallback() {
     closeBundle() {
       const outDir = this.environment?.config?.build?.outDir ?? "dist";
       const index = path.resolve(outDir, "index.html");
-      if (fs.existsSync(index))
+      if (fs.existsSync(index)) {
         fs.copyFileSync(index, path.resolve(outDir, "404.html"));
+        // A real directory entry gives World a 200 response on GitHub Pages,
+        // not just the global 404 SPA fallback. Built asset URLs share the base.
+        const worldDir = path.resolve(outDir, "rngween-world");
+        fs.mkdirSync(worldDir, { recursive: true });
+        fs.copyFileSync(index, path.join(worldDir, "index.html"));
+      }
     },
   };
 }
@@ -79,7 +87,19 @@ function deviceSync() {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), appBuildVersion(), spaFallback(), deviceSync()],
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    sandboxClock(
+      process.env.RNGDLE_SANDBOX_DATE ??
+        (["rngween-preview", "rngween-unlocked"].includes(mode)
+          ? "2026-10-26T12:00:00Z"
+          : undefined),
+    ),
+    sandboxProgress(mode === "rngween-unlocked"),
+    react(),
+    appBuildVersion(),
+    spaFallback(),
+    deviceSync(),
+  ],
   server: { host: "0.0.0.0", allowedHosts: [".e2b.app"] },
-});
+}));

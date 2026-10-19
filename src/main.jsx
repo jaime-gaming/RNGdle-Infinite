@@ -1,3 +1,8 @@
+// CLEANUP Nov 4, 2026: event wiring in this file — the Reaper gate and
+// dialog (`reaperOpen`, `RngweenGate`), the `rngween-world` page and its
+// redirect effect, the `retire-rngween-limited` effect, the seasonal
+// `RngweenSeason` mount, the Limited shelf opener and the World-forced dark
+// theme. KEEP the `events` attendance stamp and the owned-aura wardrobe.
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -5,14 +10,10 @@ import {
   History,
   Medal,
   Infinity as InfinityIcon,
-  Sun,
-  Moon,
-  Monitor,
   LogIn,
   Link2,
   CircleHelp,
   ArrowUpRight,
-  ArrowRight,
   X,
   Search,
   ChevronRight,
@@ -38,13 +39,26 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
+import SharedProfile from "./components/SharedProfile.jsx";
+import { shareCardFromLocation } from "./profile-card.js";
 import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
 import Tasks from "./components/Tasks";
 import { taskSummary } from "./tasks.js";
-import { TASKS_GLITCH_DURATION_MS, tasksGlitchDelay } from "./tasks-glitch.js";
+import { useSeasonClock } from "./use-season-clock.js";
+import { RNGWEEN_ID, rngweenState, rngweenCalendar } from "./rngween.js";
+import { useRngweenHourlyMaintenance } from "./use-rngween-hourly.js";
+import { useRngweenWorldMaintenance } from "./use-rngween-world.js";
+import { rngweenWorldUnlocked } from "./rngween-limited.js";
+import RngweenWorld from "./components/RngweenWorld.jsx";
+import RngweenGate from "./components/RngweenGate.jsx";
+import RngweenCountdown from "./components/RngweenCountdown.jsx";
+import RngweenIntro from "./components/RngweenIntro.jsx";
+import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
+import RngweenSeason from "./components/RngweenSeason.jsx";
+import AppearanceMenu from "./components/AppearanceMenu.jsx";
 import { freshRareBadges, newlyReady } from "./notice-rules.js";
 import { badgeMetadata } from "./roll-data.js";
 import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
@@ -60,7 +74,7 @@ import {
   ultraRebirthAvailable,
 } from "./rebirth.js";
 import { gameNow } from "./game-clock.js";
-import { skillPetLuck, skillById } from "./skills.js";
+import { skillPetLuck } from "./skills.js";
 import { randomUnit } from "./random.js";
 import Changelog from "./components/Changelog";
 import {
@@ -93,6 +107,7 @@ import {
 import {
   pageFromLocation,
   pathForPage,
+  pathForProfile,
   pathForSubpage,
   pathForShelfFamily,
   subpageFromLocation,
@@ -100,12 +115,7 @@ import {
   isCurrentPath,
   validPage,
 } from "./router.js";
-import {
-  SHOP_SECTIONS,
-  AURA_FAMILIES,
-  shelfOfProduct,
-  productById,
-} from "./shop-data.js";
+import { SHOP_SECTIONS, auraFamilyById, shelfOfProduct } from "./shop-data.js";
 import {
   joinDeviceLink,
   resumeDeviceLink,
@@ -116,6 +126,8 @@ import {
   syncStatus,
 } from "./sync.js";
 import { profileSyncDescription, profileSyncTone } from "./sync-indicator.js";
+// Last on purpose: the phone sheet must come after every component sheet.
+import "./mobile.css";
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
@@ -123,7 +135,7 @@ import { profileSyncDescription, profileSyncTone } from "./sync-indicator.js";
 function shopFamilyFromLocation(target) {
   // The router only reads a family off the auras shelf.
   const family = familyFromLocation(target);
-  return AURA_FAMILIES.some((entry) => entry.id === family) ? family : "";
+  return auraFamilyById(family) ? family : "";
 }
 
 // Settings owns one sub-page of its own: /settings/link, the device link and
@@ -186,33 +198,19 @@ function App() {
   // Goal picking is armed from the shop's goal banner; the state lives here so
   // it survives shelf changes (the Shop remounts on every sub-page).
   const [pickingGoal, setPickingGoal] = useState(false);
-  // One short Tasks-only glitch, scheduled at a fresh random interval after the
-  // previous one has finished, so occurrences can never overlap.
-  const [tasksGlitchActive, setTasksGlitchActive] = useState(false);
-  useEffect(() => {
-    let nextTimer = null;
-    let finishTimer = null;
-    let stopped = false;
-    const schedule = () => {
-      nextTimer = setTimeout(() => {
-        if (stopped) return;
-        setTasksGlitchActive(true);
-        finishTimer = setTimeout(() => {
-          if (stopped) return;
-          setTasksGlitchActive(false);
-          schedule();
-        }, TASKS_GLITCH_DURATION_MS);
-      }, tasksGlitchDelay());
-    };
-    schedule();
-    return () => {
-      stopped = true;
-      clearTimeout(nextTimer);
-      clearTimeout(finishTimer);
-    };
-  }, []);
+  const { now: taskNow, seasonalNow } = useSeasonClock();
   const [modal, setModal] = useState(null);
+  const [reaperOpen, setReaperOpen] = useState(false);
+  const [eventIntroOpen, setEventIntroOpen] = useState(false);
+  const [freshStartOpen, setFreshStartOpen] = useState(false);
+  const openFreshStart = useCallback(() => setFreshStartOpen(true), []);
+  const closeFreshStart = useCallback(() => setFreshStartOpen(false), []);
   const [selectedBadge, setSelectedBadge] = useState(null);
+  // A profile link with ?card= shows that card, read-only, instead of the
+  // account in this browser. Read from the address on load and on back/forward.
+  const [sharedCard, setSharedCard] = useState(() =>
+    shareCardFromLocation(location),
+  );
   // Notices: a short stack of cards, one per thing that just happened. See
   // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
   const { toasts, notify, dismiss: dismissToast } = useToasts();
@@ -373,21 +371,6 @@ function App() {
       markSeen();
       setSeenVersion(LATEST_VERSION);
     }
-    if (outcome.ok && outcome.eventRewards?.length) {
-      const names = outcome.eventRewards
-        .map((aura) => productById.get(aura)?.name)
-        .filter(Boolean);
-      if (names.length)
-        notify({
-          kind: "milestone",
-          title:
-            names.length === 1
-              ? `${names[0]} unlocked`
-              : "R4ND0MN3S5 signal restored",
-          text: `${names.join(", ")} ${names.length === 1 ? "was" : "were"} added to your aura collection for free.`,
-          icon: <Sparkles size={18} aria-hidden="true" />,
-        });
-    }
     if (outcome.ok && drop) {
       notify({
         kind: "milestone",
@@ -440,7 +423,9 @@ function App() {
   // task that can be claimed, and a badge of Epic or better. The first load is
   // quiet, and one roll that finishes several things is one notice. The badge
   // notice stays off the roll page, where the result already shows the badges.
-  const readyTasks = taskSummary(session.tasks, gameNow()).ready;
+  const readyTasks =
+    taskSummary(session.tasks, taskNow).ready +
+    rngweenState(session.tasks, seasonalNow, session.rngweenLimited).ready;
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
     const rose = newlyReady(lastReadyTasks.current, readyTasks);
@@ -498,6 +483,8 @@ function App() {
     }
     // Leaving the shop disarms goal picking: it belongs to the shop floor.
     if (target !== "shop") setPickingGoal(false);
+    // Any in-app move leaves a shared card behind; only the address brings one.
+    setSharedCard(null);
     setSettingsSection("");
     // Opening the shop on a product or a companion (a goal link, a recap) opens
     // the shelf that sells it, so the card is on screen when the page renders.
@@ -512,7 +499,9 @@ function App() {
       target,
       target === "shop" && section
         ? pathForSubpage("shop", section)
-        : pathForPage(target),
+        : target === "profile"
+          ? pathForProfile(session.profile?.username)
+          : pathForPage(target),
       section,
     );
   };
@@ -529,7 +518,7 @@ function App() {
     );
   };
   const openFamily = (id) => {
-    const family = AURA_FAMILIES.some((entry) => entry.id === id) ? id : "";
+    const family = auraFamilyById(id) ? id : "";
     setShopFocus(null);
     setShopSection("auras");
     setShopFamily(family);
@@ -541,6 +530,7 @@ function App() {
     // 404.html fallback landing must be normalised to its real path once.
     const update = () => {
       setPage(pageFromLocation(location));
+      setSharedCard(shareCardFromLocation(location));
       setShopSection(shopSectionFromLocation(location));
       setShopFamily(shopFamilyFromLocation(location));
       setSettingsSection(settingsSectionFromLocation(location));
@@ -576,11 +566,28 @@ function App() {
       window.removeEventListener("hashchange", update);
     };
   }, []);
+  // The profile address names the signed-in account: /profile/<username>.
+  // Whatever name a link carried, signing up, deleting or loading another
+  // save rewrites it to the one that is actually here, without a new entry.
+  useEffect(() => {
+    if (page !== "profile" || sharedCard) return;
+    const canonical = pathForProfile(session.profile?.username);
+    if (location.pathname !== canonical)
+      history.replaceState(history.state, "", canonical);
+  }, [page, sharedCard, session.profile?.username]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const update = () => {
+      // The World is a night place: it renders dark whatever the setting, and
+      // the saved choice comes back untouched on the way out.
       const resolved =
-        theme === "system" ? (media.matches ? "dark" : "light") : theme;
+        page === "rngween-world"
+          ? "dark"
+          : theme === "system"
+            ? media.matches
+              ? "dark"
+              : "light"
+            : theme;
       document.documentElement.dataset.theme = resolved;
       setAppliedTheme(resolved);
     };
@@ -590,7 +597,7 @@ function App() {
     } catch {}
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme]);
+  }, [theme, page]);
   useEffect(
     () => () => {
       clearTimeout(arrivalTimer.current);
@@ -626,15 +633,17 @@ function App() {
       previousFocus.current?.focus();
     };
   }, [modal]);
-  function openBadge(badge) {
+  function openBadge(badge, { fromRoll = true } = {}) {
     const catalogueBadge = badges.find((b) => b.name === badge.name);
-    setSelectedBadge(
-      catalogueBadge || {
+    setSelectedBadge({
+      ...(catalogueBadge || {
         ...badge,
         rarity: badge.rarity[0].toUpperCase() + badge.rarity.slice(1),
         groups: ["No Set"],
-      },
-    );
+      }),
+      // Opened from the changelog, an unrolled badge is simply undiscovered.
+      fromRoll,
+    });
     setModal("badge");
   }
   // Profile is a page (/profile), not a window: every "sign up" prompt in the
@@ -649,7 +658,89 @@ function App() {
   });
   const rebirthVisible = rebirthUnlocked(session);
   // A ready task shows a dot in the header and the tab bar, until it is claimed.
-  const tasksReady = taskSummary(session.tasks, gameNow()).ready > 0;
+  const tasksReady = readyTasks > 0;
+  const rngweenCalendarNow = rngweenCalendar(seasonalNow);
+  const gateAvailable =
+    !session.rngweenLimited?.retired &&
+    rngweenCalendarNow.limitedPhase === "active";
+  useRngweenHourlyMaintenance(session, seasonalNow, dispatch);
+  const worldRollWarning = useRngweenWorldMaintenance(
+    session,
+    seasonalNow,
+    dispatch,
+  );
+  const pendingMissionCoins = (session.tasks.rngween?.earned ?? []).some(
+    (id) => !(session.rngweenLimited?.rewardedMissions ?? []).includes(id),
+  );
+  // Being here during RNGween is remembered on the account, once, using the
+  // website clock. Nothing is shown for it yet; it is a record for later.
+  useEffect(() => {
+    if (
+      session.profile &&
+      rngweenCalendarNow.limitedPhase === "active" &&
+      !session.events?.[RNGWEEN_ID]
+    )
+      dispatch({
+        type: "attend-event",
+        id: RNGWEEN_ID,
+        // The website clock carries fractions of a millisecond; the save keeps
+        // whole ones.
+        at: Math.round(seasonalNow),
+      });
+  }, [session.profile, rngweenCalendarNow.limitedPhase, session.events]);
+  useEffect(() => {
+    if (session.profile && gateAvailable && pendingMissionCoins)
+      dispatch({ type: "claim-rngween-coins" });
+  }, [
+    session.profile?.id,
+    gateAvailable,
+    pendingMissionCoins,
+    seasonalNow,
+    dispatch,
+  ]);
+  useEffect(() => {
+    if (
+      page !== "roll" ||
+      session.rngweenLimited?.retired ||
+      ["upcoming", "ended"].includes(rngweenCalendarNow.limitedPhase)
+    )
+      setReaperOpen(false);
+  }, [page, rngweenCalendarNow.limitedPhase, session.rngweenLimited?.retired]);
+  useEffect(() => {
+    if (
+      session.profile &&
+      rngweenCalendarNow.limitedPhase === "ended" &&
+      !session.rngweenLimited?.retired
+    )
+      dispatch({ type: "retire-rngween-limited" });
+  }, [
+    seasonalNow,
+    session.profile?.id,
+    session.rngweenLimited?.retired,
+    dispatch,
+  ]);
+  useEffect(() => {
+    if (
+      page === "rngween-world" &&
+      (!rngweenWorldUnlocked(session.tasks, session.rngweenLimited) ||
+        session.rngweenLimited?.retired ||
+        (rngweenCalendarNow.limitedPhase !== "unavailable" &&
+          rngweenCalendarNow.limitedPhase !== "active"))
+    ) {
+      navigate("roll");
+      if (
+        ["active", "unavailable"].includes(rngweenCalendarNow.limitedPhase) &&
+        !session.rngweenLimited?.retired
+      )
+        setReaperOpen(true);
+    }
+  }, [
+    page,
+    seasonalNow,
+    session.profile?.id,
+    session.tasks,
+    session.rngweenLimited,
+  ]);
   // The mobile tab bar marks the rebirth tab ready the moment either a rung
   // or a prestige or the Rollback is available.
   const rebirthReadyNow =
@@ -685,8 +776,28 @@ function App() {
           ? rarities.indexOf(b.rarity) - rarities.indexOf(a.rarity)
           : 0,
     );
+  if (page === "rngween-world" && !session.rngweenLimited?.retired)
+    return (
+      <RngweenWorld
+        progress={session}
+        now={seasonalNow}
+        onAction={dispatch}
+        onBack={() => navigate("roll")}
+        onShop={() => openShelf("limited")}
+        onTasks={() => navigate("tasks")}
+        openSignup={openAuth}
+        notify={notify}
+        warning={[progressWarning, worldRollWarning].filter(Boolean).join(" ")}
+      />
+    );
   return (
     <>
+      <RngweenSeason
+        now={seasonalNow}
+        theme={appliedTheme}
+        interactive={page === "roll"}
+        notify={notify}
+      />
       <header className="header">
         <div className="header-left">
           <button
@@ -717,19 +828,11 @@ function App() {
                     : label
                 }
                 aria-current={page === destination ? "page" : undefined}
-                className={`${page === destination ? "active" : ""} ${destination === "tasks" ? "tasks-nav-glitch" : ""}`}
+                className={page === destination ? "active" : ""}
                 onClick={() => navigate(destination)}
               >
                 <Icon size={16} />
-                <span
-                  className={
-                    destination === "tasks"
-                      ? `tasks-nav-glitch-label${tasksGlitchActive ? " is-glitching" : ""}`
-                      : undefined
-                  }
-                >
-                  {label}
-                </span>
+                <span>{label}</span>
                 {destination === "tasks" && tasksReady && (
                   <i className="nav-ready-dot" aria-hidden="true" />
                 )}
@@ -738,6 +841,7 @@ function App() {
           </nav>
         </div>
         <div className="header-right">
+          <FreshStartFlag progress={session} onOpen={openFreshStart} />
           {showVersionFlag && (
             <button
               className="version-flag"
@@ -748,12 +852,12 @@ function App() {
               <span>New Version</span>
             </button>
           )}
-          {session.ultraRebirths > 0 && (
+          {(session.ultraRebirths > 0 || session.rollbacks > 0) && (
             <span
               className="ultra-mark"
               title={
                 session.rollbacks > 0
-                  ? `Rollback ×${session.rollbacks} · Prestige ×${session.ultraRebirths} · +${Math.round(
+                  ? `Rollback ×${session.rollbacks}${session.ultraRebirths > 0 ? ` · Prestige ×${session.ultraRebirths}` : ""} · +${Math.round(
                       session.ultraRebirths * 10 + session.rollbacks * 25,
                     )}% EP on every banked roll`
                   : `Prestige ×${session.ultraRebirths} · +${Math.round(
@@ -788,23 +892,12 @@ function App() {
           >
             <SlidersHorizontal size={18} />
           </button>
-          <div className="theme-switch" aria-label="Color theme">
-            {[
-              ["light", Sun],
-              ["system", Monitor],
-              ["dark", Moon],
-            ].map(([value, Icon]) => (
-              <button
-                key={value}
-                aria-label={`${value} theme`}
-                aria-pressed={theme === value}
-                className={theme === value ? "selected" : ""}
-                onClick={() => setTheme(value)}
-              >
-                <Icon size={14} />
-              </button>
-            ))}
-          </div>
+          <AppearanceMenu
+            theme={theme}
+            appliedTheme={appliedTheme}
+            onTheme={setTheme}
+            seasonNow={seasonalNow}
+          />
           <button
             className="sign-in"
             aria-label={session.profile ? "Your profile" : "Sign up"}
@@ -851,6 +944,8 @@ function App() {
             active={
               page === "roll" &&
               !modal &&
+              !reaperOpen &&
+              !eventIntroOpen &&
               !offlineState.busy &&
               !session.offline?.batch
             }
@@ -970,7 +1065,12 @@ function App() {
                 <p>What changed, and when.</p>
               </div>
             </div>
-            <Changelog onSeen={() => setSeenVersion(LATEST_VERSION)} />
+            <Changelog
+              onSeen={() => setSeenVersion(LATEST_VERSION)}
+              // The badge window opens right here: the collection hides
+              // badges you have not rolled yet.
+              onBadge={(badge) => openBadge(badge, { fromRoll: false })}
+            />
           </>
         )}
         {page === "profile" && (
@@ -980,9 +1080,9 @@ function App() {
             </button>
             <div className="page-heading">
               <div
-                className={`page-icon ${session.profile?.avatar ? "has-logo" : ""}`}
+                className={`page-icon ${session.profile?.avatar && !sharedCard ? "has-logo" : ""}`}
               >
-                {session.profile?.avatar ? (
+                {session.profile?.avatar && !sharedCard ? (
                   <AvatarMark
                     avatar={session.profile.avatar}
                     size={46}
@@ -994,18 +1094,32 @@ function App() {
               </div>
               <div>
                 <h1>Profile</h1>
-                <p>Your local save and how far you have come.</p>
+                <p>
+                  {sharedCard
+                    ? "A record someone shared with you."
+                    : "Your local save and how far you have come."}
+                </p>
               </div>
             </div>
             <div className="profile-page">
-              <LocalProfile
-                key={epoch}
-                profile={session.profile}
-                progress={session}
-                onAction={dispatch}
-                onContinue={() => navigate("roll")}
-                navigate={navigate}
-              />
+              {sharedCard ? (
+                <SharedProfile
+                  card={sharedCard}
+                  onContinue={() => navigate("roll")}
+                  onOwnProfile={
+                    session.profile ? () => navigate("profile") : null
+                  }
+                />
+              ) : (
+                <LocalProfile
+                  key={epoch}
+                  profile={session.profile}
+                  progress={session}
+                  onAction={dispatch}
+                  onContinue={() => navigate("roll")}
+                  navigate={navigate}
+                />
+              )}
             </div>
           </>
         )}
@@ -1063,10 +1177,13 @@ function App() {
             <Tasks
               key={epoch}
               progress={session}
+              now={taskNow}
+              eventNow={seasonalNow}
               onAction={dispatch}
               notify={notify}
               openSignup={openAuth}
               openAuraFamily={openFamily}
+              openWorld={() => navigate("rngween-world")}
             />
           </>
         )}
@@ -1075,10 +1192,15 @@ function App() {
             key={`${epoch}:${shopSection}:${shopFamily}`}
             progress={session}
             section={shopSection}
+            seasonNow={seasonalNow}
             family={shopFamily}
             onOpenShelf={openShelf}
             onOpenFamily={openFamily}
             focusProduct={shopFocus}
+            onReaper={() => {
+              navigate("roll");
+              setReaperOpen(true);
+            }}
             onAction={dispatch}
             openSignup={openAuth}
             navigate={navigate}
@@ -1265,6 +1387,25 @@ function App() {
           </>
         )}
       </main>
+      {page === "roll" && !gateAvailable && (
+        <RngweenCountdown
+          now={seasonalNow}
+          onChangelog={() => navigate("changelog")}
+        />
+      )}
+      {page === "roll" && gateAvailable && (
+        <RngweenGate
+          progress={session}
+          now={seasonalNow}
+          open={reaperOpen}
+          onOpenChange={setReaperOpen}
+          onAction={dispatch}
+          onWorld={() => navigate("rngween-world")}
+          onTasks={() => navigate("tasks")}
+          onShop={() => openShelf("limited")}
+          openSignup={openAuth}
+        />
+      )}
       <footer>
         <span>
           RNGdle <span className="footer-infinity">∞</span> Infinite
@@ -1294,8 +1435,21 @@ function App() {
         rebirthVisible={rebirthVisible}
         rebirthReady={rebirthReadyNow}
         tasksReady={tasksReady}
-        tasksGlitchActive={tasksGlitchActive}
         navigate={navigate}
+      />
+      <RngweenIntro
+        now={seasonalNow}
+        paused={reaperOpen || !!modal}
+        onOpenChange={setEventIntroOpen}
+      />
+      <FreshStartDialog
+        progress={session}
+        open={freshStartOpen}
+        onClose={closeFreshStart}
+        onAutoOpen={openFreshStart}
+        onAction={dispatch}
+        notify={notify}
+        paused={reaperOpen || eventIntroOpen || !!modal}
       />
       {modal && (
         <div
@@ -1378,9 +1532,11 @@ function App() {
                     <strong>
                       {session.discovered.includes(selectedBadge.canonicalId)
                         ? "Discovered"
-                        : session.rebirths
-                          ? "Not yet rediscovered"
-                          : "Earned in this roll"}
+                        : !selectedBadge.fromRoll
+                          ? "Not discovered yet"
+                          : session.rebirths
+                            ? "Not yet rediscovered"
+                            : "Earned in this roll"}
                     </strong>
                   </div>
                 </div>

@@ -211,7 +211,7 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
   ).toHaveText("#4");
   await expect(page.locator(".rebirth-reward")).toHaveCount(4);
   await expect(page.locator(".rebirth-reward-chip").first()).toContainText(
-    "+2% EP forever",
+    "+2% EP",
   );
   // After 1 rebirth, #4 is clear and the blurred/faded preview moves to #5, hiding #6.
   await page.evaluate((key) => {

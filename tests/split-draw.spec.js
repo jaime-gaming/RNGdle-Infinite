@@ -25,9 +25,9 @@ const KEPT = 90750;
 // than the kept number, so it is one more panel, and it loses.
 const ORDINARY = 139598;
 const PANELS = [...DRAWS, ORDINARY];
-// Double Vision and Bedrock together: six skill draws, then the ordinary one.
+// Double Vision and Bedrock fill six slots: no hidden seventh ordinary draw.
 const SIX = [88125, 375660, 861456, 90750, 577281, 25663];
-const SEVEN = [...SIX, ORDINARY];
+const STACKED = [...SIX, ORDINARY]; // The last sample must not be consumed.
 const REVEAL_MS = 10000;
 
 const seed = {
@@ -306,7 +306,7 @@ test("two draw skills stack their budgets into one plan of panels", async ({
   // none of these numbers reaches Bedrock's floor to stop it early.
   const six = SIX;
   await startSplitRoll(page, {
-    draws: SEVEN,
+    draws: STACKED,
     seed: {
       ...seed,
       owned: [...seed.owned, "twice"],
@@ -315,7 +315,7 @@ test("two draw skills stack their budgets into one plan of panels", async ({
       skillCharge: { bedrock: 9, twice: 9 },
     },
   });
-  await expect(page.locator(".draw-panel")).toHaveCount(SEVEN.length);
+  await expect(page.locator(".draw-panel")).toHaveCount(SIX.length);
   expect(await runUntil(page, decided)).toBe(true);
   await expect(page.locator(".draw-stage-label")).toContainText(
     "2 numbers paid",
@@ -347,7 +347,7 @@ test("a stacked roll counts up no total while its numbers reveal, and ends on on
 }) => {
   const six = SIX;
   await startSplitRoll(page, {
-    draws: SEVEN,
+    draws: STACKED,
     seed: {
       ...seed,
       owned: [...seed.owned, "twice"],
@@ -614,11 +614,11 @@ test("the overview's roll button is centred and covers no number, wherever it si
   await expectButtonPlaced(page, { hub });
 });
 
-test("seven numbers leave the crossing free, and the roll button sits in it", async ({
+test("six numbers leave the crossing free, and the roll button sits in it", async ({
   page,
 }) => {
   await startSplitRoll(page, {
-    draws: SEVEN,
+    draws: STACKED,
     seed: {
       ...seed,
       owned: [...seed.owned, "twice"],
@@ -641,7 +641,7 @@ test("a paid number's stats show the EP balance and share that number's own resu
   const six = SIX;
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await startSplitRoll(page, {
-    draws: SEVEN,
+    draws: STACKED,
     seed: {
       ...seed,
       owned: [...seed.owned, "twice"],
@@ -675,7 +675,7 @@ test("identical skill picks are paid separately, and only their actual draw is m
   page,
 }) => {
   const number = 88125;
-  const draws = [number, number, number, number, number, number, number];
+  const draws = [number, number, number, number, number, number];
   await startSplitRoll(page, {
     draws,
     seed: {
@@ -715,7 +715,7 @@ test("identical skill picks are paid separately, and only their actual draw is m
   const duplicateDetail = page.locator(".draw-detail");
   await expect(duplicateDetail).toHaveAttribute(
     "aria-label",
-    `Draw 5 of 7: ${number}`,
+    `Draw 5 of 6: ${number}`,
   );
   await expect(duplicateDetail.locator(".draw-detail-paid")).toContainText(
     "Paid with Double Vision",

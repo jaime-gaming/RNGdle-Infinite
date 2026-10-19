@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
+  ArrowDownToLine,
   ArrowRightLeft,
-  ArrowUpRight,
+  ArrowUpToLine,
+  Trash2,
   BadgeCheck,
   CalendarDays,
   Check,
@@ -20,12 +22,10 @@ import {
   Zap,
 } from "lucide-react";
 import {
-  ACTIVE_PER_PERIOD,
   CADENCE_NAME,
   LIST_BONUS,
   SKIP_WINDOW_LIMIT,
   SKIP_WINDOW_MS,
-  TASKS,
   TASK_CADENCES,
   activeTasks,
   listBonusState,
@@ -33,13 +33,12 @@ import {
   skipStatus,
   taskProgress,
   taskSummary,
-  auraEventState,
   waitText,
 } from "../tasks.js";
 import { formatEP } from "../roll-data.js";
-import { productById } from "../shop-data.js";
-import NumberBox from "./NumberBox";
-import { gameNow } from "../game-clock.js";
+import RngweenTasks from "./RngweenTasks.jsx";
+import RngweenHourly from "./RngweenHourly.jsx";
+import { rngweenCalendar } from "../rngween.js";
 import "../tasks.css";
 
 // How long until a reset, in words short enough for a card header.
@@ -61,42 +60,30 @@ const KIND = {
   peakEP: { name: "Big roll", icon: TrendingUp },
   skills: { name: "Skills", icon: Zap },
   pets: { name: "Companion", icon: PawPrint },
+  anomaly: { name: "Rarity", icon: Sparkles },
+  trash: { name: "Bad luck", icon: Trash2 },
+  high: { name: "High roll", icon: ArrowUpToLine },
+  low: { name: "Low roll", icon: ArrowDownToLine },
+  low1k: { name: "Low roll", icon: ArrowDownToLine },
+  badges: { name: "Badges", icon: Medal },
 };
 
 const count = (n) => n.toLocaleString("en-US");
-const POOL_SIZE = (cadence) =>
-  TASKS.filter((task) => task.cadence === cadence).length;
-
-function eventCountText(mission) {
-  if (mission.metric === "banked")
-    return `${formatEP(mission.count)} / ${formatEP(mission.goal)} EP`;
-  const unit =
-    mission.metric === "rare"
-      ? "Rare+"
-      : mission.metric === "taskClaims"
-        ? "tasks"
-        : "rolls";
-  return `${count(mission.count)} / ${count(mission.goal)} ${unit}`;
-}
 
 export default function Tasks({
   progress,
+  now,
+  eventNow,
   onAction,
   notify,
   openSignup,
   openAuraFamily,
+  openWorld,
 }) {
-  const [now, setNow] = useState(() => gameNow());
   // The one action in flight, and the one card asking to be confirmed.
   const [pending, setPending] = useState("");
   const [confirming, setConfirming] = useState("");
-  // The countdowns and the reset itself stay honest while the page is open.
-  useEffect(() => {
-    const timer = setInterval(() => setNow(gameNow()), 30000);
-    return () => clearInterval(timer);
-  }, []);
   const summary = taskSummary(progress.tasks, now);
-  const transmission = auraEventState(progress.tasks, now);
   const skips = skipStatus(progress.tasks, now);
   const skipsFull = skips.tokens >= skips.limit;
   const skipNote = skipsFull
@@ -178,27 +165,6 @@ export default function Tasks({
       });
   }
 
-  async function collectAura(mission, aura) {
-    const actionId = `event-${mission.id}`;
-    setPending(actionId);
-    const outcome = await onAction?.({
-      type: "claim-event-aura",
-      id: mission.id,
-    });
-    setPending("");
-    if (outcome?.ok)
-      notify?.({
-        kind: "reward",
-        title: `${aura?.name ?? "Event aura"} collected`,
-        text: "Added to your collection. It stays with you through rebirths.",
-      });
-    else
-      notify?.({
-        kind: "error",
-        text: outcome?.message ?? "That aura could not be collected yet.",
-      });
-  }
-
   async function skip(task) {
     setConfirming("");
     setPending(task.id);
@@ -225,6 +191,10 @@ export default function Tasks({
     return "Swap this task for another from its pool.";
   }
 
+  const eventCalendar = rngweenCalendar(eventNow);
+  const eventActive = eventCalendar.limitedPhase === "active";
+  const [eventTab, setEventTab] = useState("commissions");
+
   return (
     <>
       {!progress.profile && (
@@ -238,154 +208,56 @@ export default function Tasks({
           </button>
         </div>
       )}
-      <section
-        className="signal-event"
-        data-event-phase={transmission.phase}
-        aria-labelledby="signal-event-title"
-      >
-        <header className="signal-event-head">
-          <div className="signal-event-heading">
-            <span className="signal-event-eyebrow">Limited event</span>
-            <h2 id="signal-event-title">R4ND0MN3S5</h2>
+      {/* RNGween event panel: auras and hourly commissions under one tabbed roof. */}
+      {eventActive && progress.profile && (
+        <section className="rngween-event-panel">
+          <div className="rngween-event-tabs" role="tablist" aria-label="RNGween event sections">
+            <button
+              role="tab"
+              id="event-tab-auras"
+              aria-selected={eventTab === "auras"}
+              className={eventTab === "auras" ? "is-selected" : ""}
+              onClick={() => setEventTab("auras")}
+            >
+              Auras
+            </button>
+            <button
+              role="tab"
+              id="event-tab-commissions"
+              aria-selected={eventTab === "commissions"}
+              className={eventTab === "commissions" ? "is-selected" : ""}
+              onClick={() => setEventTab("commissions")}
+            >
+              Commissions
+            </button>
           </div>
-          <div className="signal-event-meta">
-            <span className={`signal-event-status is-${transmission.phase}`}>
-              <i aria-hidden="true" />
-              {transmission.phase === "active"
-                ? "Live"
-                : transmission.phase === "upcoming"
-                  ? "Starts soon"
-                  : "Ended"}
-            </span>
+          <div className="rngween-event-content">
+            {eventTab === "auras" ? (
+              <RngweenTasks
+                {...{ progress, onAction, notify, openAuraFamily, openWorld }}
+                now={eventNow}
+              />
+            ) : (
+              <RngweenHourly
+                progress={progress}
+                now={eventNow}
+                openWorld={openWorld}
+                openSignup={openSignup}
+                onAction={onAction}
+                notify={notify}
+              />
+            )}
           </div>
-        </header>
-        <div className="signal-event-summary">
-          <p>
-            Finish a mission, then collect its matching aura here. Each one is
-            free and stays in your collection through rebirths.
-          </p>
-          <button
-            type="button"
-            className="signal-event-link"
-            onClick={() => openAuraFamily?.("randomness")}
-          >
-            View aura family <ArrowUpRight size={14} aria-hidden="true" />
-          </button>
-        </div>
-        <div className="signal-event-progress">
-          <div className="signal-event-progress-label">
-            <span>Mission progress</span>
-            <strong>
-              {transmission.complete} / {transmission.total} auras
-            </strong>
-          </div>
-          <progress
-            max={transmission.total}
-            value={transmission.complete}
-            aria-label="R4ND0MN3S5 event progress"
-          />
-          <span className="signal-event-countdown">
-            {transmission.phase === "active"
-              ? `Ends in ${waitText(transmission.endsAt - now)}`
-              : transmission.phase === "upcoming"
-                ? `Starts in ${waitText(transmission.startsAt - now)}`
-                : "Event ended"}
-          </span>
-        </div>
-        <ul className="signal-mission-grid" aria-label="Event missions">
-          {transmission.missions.map((mission, index) => {
-            const aura = productById.get(mission.auraId);
-            const isOwned = progress.owned.includes(mission.auraId);
-            const status = mission.collected
-              ? "Collected"
-              : mission.claimable
-                ? "Ready to collect"
-                : mission.complete
-                  ? "Complete"
-                  : transmission.phase === "active"
-                    ? "In progress"
-                    : transmission.phase === "upcoming"
-                      ? "Upcoming"
-                      : "Event ended";
-            return (
-              <li
-                className={`signal-mission ${mission.complete ? "is-complete" : ""}`}
-                key={mission.id}
-                data-event-mission={mission.id}
-                data-state={
-                  mission.collected
-                    ? "collected"
-                    : mission.claimable
-                      ? "claimable"
-                      : mission.complete
-                        ? "complete"
-                        : transmission.phase
-                }
-                style={{
-                  "--signal-a": aura?.swatch?.[0] ?? "#74f0b4",
-                  "--signal-b": aura?.swatch?.[1] ?? "#276a67",
-                }}
-              >
-                <div className="signal-mission-preview" aria-hidden="true">
-                  <NumberBox
-                    value="R4ND"
-                    tier="rare"
-                    aura={mission.auraId}
-                    compact
-                  />
-                </div>
-                <div className="signal-mission-copy">
-                  <div className="signal-mission-line">
-                    <span>Mission {String(index + 1).padStart(2, "0")}</span>
-                    <span
-                      className={
-                        mission.collected || mission.claimable
-                          ? "is-recovered"
-                          : ""
-                      }
-                    >
-                      {status}
-                    </span>
-                  </div>
-                  <h3>{mission.title}</h3>
-                  <p>{mission.detail}</p>
-                </div>
-                <div className="signal-mission-reward">
-                  <strong>{aura?.name ?? mission.auraId}</strong>
-                  <span>
-                    {mission.collected
-                      ? "In collection"
-                      : isOwned
-                        ? "Already owned · collect to finish"
-                        : "Free aura reward"}
-                  </span>
-                </div>
-                <div className="signal-mission-meter">
-                  <progress
-                    max={mission.goal}
-                    value={mission.count}
-                    aria-label={`${mission.title} progress`}
-                  />
-                  <span>{eventCountText(mission)}</span>
-                </div>
-                {mission.claimable && (
-                  <button
-                    type="button"
-                    className="signal-mission-claim"
-                    disabled={busy}
-                    onClick={() => collectAura(mission, aura)}
-                  >
-                    <Gift size={14} aria-hidden="true" />
-                    {pending === `event-${mission.id}`
-                      ? "Collecting…"
-                      : `Collect ${aura?.name ?? "aura"}`}
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+        </section>
+      )}
+      {!progress.rngweenLimited?.retired && eventActive && (
+        <button
+          className="secondary-button rngween-world-launch"
+          onClick={openWorld}
+        >
+          <Sparkles size={17} /> Enter RNGween World
+        </button>
+      )}
       <section className="tasks-summary" aria-label="Task summary">
         <div className="tasks-stat">
           <span className="tasks-stat-label">Available</span>
@@ -432,8 +304,9 @@ export default function Tasks({
               <div>
                 <h2 id={`task-group-${cadence}`}>{CADENCE_NAME[cadence]}</h2>
                 <p className="task-group-sub">
-                  {ACTIVE_PER_PERIOD[cadence]} of {POOL_SIZE(cadence)} tasks on
-                  your list
+                  {cadence === "daily"
+                    ? "Three tasks a day, new ones at reset"
+                    : "Four tasks a week, new ones on Monday"}
                 </p>
               </div>
               <div className="task-group-meta">
@@ -445,9 +318,9 @@ export default function Tasks({
                     />
                   ))}
                 </span>
-                <span className="task-reset">
+                <span className="task-reset" title="Lists reset at 00:00 UTC">
                   <Timer size={13} aria-hidden="true" />
-                  Resets in {resetCountdown(list.reset)}
+                  Resets in {resetCountdown(list.reset)} · UTC
                 </span>
               </div>
             </header>
