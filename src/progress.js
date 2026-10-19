@@ -151,6 +151,7 @@ import {
   worldFragmentsComplete,
   worldPointsAvailable,
   worldPointsSpent,
+  KEEP_ROLLING_COST,
 } from "./rngween-world-zones.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
@@ -1468,6 +1469,15 @@ function applyEvent(state, action) {
     const max = zone.max;
     if (zone.id === "valley") requireRngweenValley(state, at);
     else requireOpenWorldZone(limited, zone.id);
+    // Keep rolling spends a small fixed block of World points per chained roll.
+    if (action.type === "rngween-world-keep-rolling") {
+      const pointsAvailable = worldPointsAvailable(limited);
+      if (pointsAvailable < KEEP_ROLLING_COST.points) {
+        throw new Error(
+          `Not enough World points to keep rolling. Need ${KEEP_ROLLING_COST.points}, have ${pointsAvailable}.`,
+        );
+      }
+    }
     const duration = worldRevealMS(limited);
     if (at + duration >= rngweenCalendar(at).limitedEndsAt)
       throw new Error(
@@ -1504,12 +1514,21 @@ function applyEvent(state, action) {
     // Commit the result and its full duration before animation. No fragments,
     // Pumpkoins, pool entries or skin are paid until the saved reveal settles.
     const { adventure: _legacyExpedition, ...currentLimited } = limited;
+    const nextLimited = {
+      ...currentLimited,
+      world: { ...world, nextSerial: world.nextSerial + 1, pending },
+    };
+    // Keep rolling spends World points at commit time, so the cost is charged
+    // before the reveal settles and can be refunded on a failed reveal.
+    if (action.type === "rngween-world-keep-rolling") {
+      nextLimited.world = {
+        ...nextLimited.world,
+        spent: (nextLimited.world.spent ?? 0) + KEEP_ROLLING_COST.points,
+      };
+    }
     return {
       ...state,
-      rngweenLimited: {
-        ...currentLimited,
-        world: { ...world, nextSerial: world.nextSerial + 1, pending },
-      },
+      rngweenLimited: nextLimited,
     };
   }
 

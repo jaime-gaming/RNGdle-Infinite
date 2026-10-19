@@ -258,6 +258,12 @@ export const WORLD_POINT_EXCHANGE = {
   ep: 10000,
 };
 
+// Keep rolling in the Valley spends a small fixed block of World points per
+// chained roll, so the feature is cheap but never free and never farmable.
+export const KEEP_ROLLING_COST = {
+  points: 100,
+};
+
 export function requireWorldZone(zoneId) {
   const zone = worldZoneById.get(zoneId);
   if (!zone)

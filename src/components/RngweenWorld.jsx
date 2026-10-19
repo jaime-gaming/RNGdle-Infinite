@@ -197,6 +197,7 @@ export default function RngweenWorld({
   const key = rngweenValleyUnlocked(limited);
   // Keep rolling: a toggle that chains Valley rolls while the tab stays open.
   // It stops on 6666, on tab hide, or when the player turns it off.
+  // Each chained roll spends a small fixed block of World points.
   useEffect(() => {
     if (!keepRolling || zone.id !== "valley" || !key || !progress.profile) {
       if (keepRollingInterval.current) {
@@ -213,12 +214,18 @@ export default function RngweenWorld({
         if (!keepRolling || zone.id !== "valley" || !key || pending) return;
         run(
           {
-            type: "rngween-world-roll",
+            type: "rngween-world-keep-rolling",
             zone: "valley",
           },
           undefined,
-        ).catch(() => {
-          /* the tab may have moved on; ignore transient failures */
+        ).catch((error) => {
+          if (error?.message?.includes("World points") || error?.message?.includes("not enough")) {
+            setKeepRolling(false);
+            notify({
+              kind: "error",
+              text: "Not enough World points to keep rolling. Buy reveal upgrades or trade points for EP.",
+            });
+          }
         });
       }, 0);
     }
