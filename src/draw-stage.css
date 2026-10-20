@@ -613,6 +613,20 @@ button.draw-pick:focus-visible {
   min-height: 96px;
   padding: 0 12px 10px;
 }
+/* In the strip the wrap never collapses. The global rise animation shrinks the
+   wrap to zero and slides it up 28px; inside the strip that starts the button
+   below the stage's bottom edge, where it is clipped off-screen or under the
+   tab bar — it looked like the button had fallen out of the view. The strip
+   already reserves the wrap's height, so the button only fades and rises the
+   short distance that always stays inside. */
+.draw-stage .draw-stage-roll .generate-wrap {
+  max-height: 96px;
+}
+.draw-stage .draw-stage-roll .generate-wrap.is-away {
+  max-height: 96px;
+  transform: translateY(12px);
+  overflow: visible;
+}
 
 /* The roll button in the middle of the overview, where the panels meet. It only
    appears where the layout measured that it covers nothing; otherwise the strip

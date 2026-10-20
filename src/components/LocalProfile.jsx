@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { validUsername } from "../progress.js";
 import { ROLLBACK_AFTER_PRESTIGES } from "../rebirth.js";
-import { AVATAR_ACCEPT, fileToAvatar } from "../avatar.js";
+import { AVATAR_ACCEPT, compactAvatar, fileToAvatar } from "../avatar.js";
 import { exportFileName, renderExportPngBlob } from "../profile-stats.js";
 import { shareCardData, shareCardUrl } from "../profile-card.js";
 import ProfileRecord from "./ProfileRecord.jsx";
@@ -104,10 +104,17 @@ export default function LocalProfile({
   const [shareNote, setShareNote] = useState("");
   // The link is the profile address with the card in it. Copying is the
   // happy path; when the clipboard is off limits the link is shown to copy
-  // by hand instead of failing quietly.
+  // by hand instead of failing quietly. The logo is shrunk to link size
+  // first, so the address stays pastable.
   const [shareLink, setShareLink] = useState("");
   async function copyProfileLink() {
-    const url = shareCardUrl(progress, location.origin);
+    const avatar = await compactAvatar(profile?.avatar ?? "");
+    const url = shareCardUrl(
+      avatar
+        ? { ...progress, profile: { ...progress.profile, avatar } }
+        : progress,
+      location.origin,
+    );
     try {
       await navigator.clipboard.writeText(url);
       setShareLink("");

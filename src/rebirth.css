@@ -868,9 +868,9 @@
 }
 .rebirth-ultra-figure svg {
   color: var(--green);
-  animation: ultra-mark-breathe 4.6s ease-in-out infinite;
+  animation: rebirth-figure-breathe 4.6s ease-in-out infinite;
 }
-@keyframes ultra-mark-breathe {
+@keyframes rebirth-figure-breathe {
   0%,
   100% {
     transform: scale(1);
@@ -1060,30 +1060,6 @@
   margin: 0;
   font: 700 17px var(--roll-font);
   color: #a97c1f;
-}
-.rebirth-dev-note {
-  margin: 18px 0 0;
-  padding: 16px 18px;
-  border-left: 3px solid #d9a441;
-  border-radius: 0 12px 12px 0;
-  background: linear-gradient(90deg, rgb(217 164 65 / 0.1), transparent 70%);
-}
-.rebirth-dev-note-label {
-  margin: 0 0 6px;
-  font: 700 10px var(--roll-font);
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: #a97c1f;
-}
-.rebirth-dev-note p:not(.rebirth-dev-note-label) {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.75;
-}
-.rebirth-dev-note footer {
-  margin-top: 8px;
-  font: 500 12px var(--roll-font);
-  color: var(--muted);
 }
 
 /* ---- Phones -------------------------------------------------------------- */

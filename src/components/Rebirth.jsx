@@ -22,6 +22,7 @@ import {
   REBIRTH_TOTAL,
   ROLLBACK_AFTER_PRESTIGES,
   ROLLBACK_BONUS,
+  SURPLUS_BANKED_CAP,
   SURPLUS_BANKED_EP_STEP,
   SURPLUS_START_SHARE,
   ULTRA_BONUS_PER_REBIRTH,
@@ -710,9 +711,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             earned, and grants a skill found nowhere else, a permanent +2% EP
             and the sum the next cycle starts with. No purchase is ever
             required. Whatever the cycle scores <em>over</em> the gate is
-            surplus: a quarter joins the new wallet, and every{" "}
-            {formatEP(SURPLUS_BANKED_EP_STEP)} of it banks +1% EP forever, up to
-            +5% on a single rebirth.
+            surplus: {Math.round(SURPLUS_START_SHARE * 100)}% joins the new
+            wallet, and every {formatEP(SURPLUS_BANKED_EP_STEP)} of it banks +1%
+            EP forever, up to +{Math.round(SURPLUS_BANKED_CAP * 100)}% on a
+            single rebirth.
           </p>
         </header>
         <ol className="rebirth-ladder">
@@ -928,9 +930,8 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
       )}
 
       {/* Past the ladder the account keeps its own page: what every prestige
-          has paid so far, the Rollback if it was taken, which exclusives are
-          wearing, and the note the developer left at the very top for whoever
-          made it. */}
+          has paid so far, the Rollback if it was taken, and which exclusives
+          are wearing. */}
       {(ladderComplete || ultras > 0 || rollbacks > 0) && (
         <section
           className="rebirth-block rebirth-legacy"
@@ -985,21 +986,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                   <Lock size={14} />
                 )}
                 <span>
-                  <strong>Gold halo on every roll</strong>
-                  <small>
-                    {ultras > 0 || rollbacks > 0
-                      ? "Worn now: the stage carries your prestige while you roll."
-                      : "Unlocks with your first prestige."}
-                  </small>
-                </span>
-              </li>
-              <li>
-                {ultras > 0 || rollbacks > 0 ? (
-                  <Check size={14} />
-                ) : (
-                  <Lock size={14} />
-                )}
-                <span>
                   <strong>Prestige title</strong>
                   <small>
                     {ultras > 0 || rollbacks > 0
@@ -1021,17 +1007,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               </li>
             </ul>
           </div>
-          <blockquote className="rebirth-dev-note">
-            <p className="rebirth-dev-note-label">A note from the developer</p>
-            <p>
-              I didn&apos;t know you would get this far. The ladder started as a
-              joke about very big numbers, and here you are at the top of it —
-              with an account that outlived every single run. Thank you for
-              playing. Take the glow, keep the history, and go do it all over
-              again.
-            </p>
-            <footer>— Jaime, making RNGdle</footer>
-          </blockquote>
         </section>
       )}
 

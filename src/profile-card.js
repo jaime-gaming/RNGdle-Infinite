@@ -5,13 +5,19 @@
 // pins, what it wears). Opening the link shows that snapshot to anyone, on
 // any browser, and never touches the game saved there. Nothing in the game
 // reads a card back into a save, so a link can never overwrite progress.
+import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
 import { BOOKMARK_LIMIT } from "./history-log.js";
 import { TIERS } from "./history-tally.js";
 import { accountStats, profileHighlights } from "./profile-stats.js";
 import { pathForProfile } from "./router.js";
+import { validAvatar } from "./progress.js";
 
-export const CARD_VERSION = 2;
-const KNOWN_VERSIONS = new Set([1, CARD_VERSION]);
+export const CARD_VERSION = 3;
+const KNOWN_VERSIONS = new Set([1, 2, CARD_VERSION]);
+// The token carries the card line deflated and base64url'd, tagged "z1".
+// Legacy tokens are base64url of raw text (which always begins A–f), so a
+// leading "z" cannot ever be one of them and the versions never collide.
+const TOKEN_TAG = "z1";
 const NAME_MAX = 20;
 const NUMBER = /^\d{1,6}$/;
 
@@ -43,6 +49,11 @@ export function shareCardData(progress = {}, now = new Date()) {
     favoriteTier: stats.favoriteTier,
     aura: highlights.aura?.name ?? null,
     companion: highlights.companion?.name ?? null,
+    // The face of the account rides along, so a shared profile shows the same
+    // logo the owner wears. Absent or invalid, the card simply carries none.
+    avatar: validAvatar(progress.profile?.avatar)
+      ? progress.profile.avatar
+      : null,
   };
 }
 
@@ -63,6 +74,11 @@ const seconds = (value) => {
 const fromSeconds = (text) => (text ? fromB36(text) * 1000 : null);
 const plain = (value) =>
   typeof value === "string" ? value.replace(/[|,:]/g, "").trim() : "";
+// The logo is kept verbatim (its base64 payload is too structured to scrub);
+// only the field separator is stripped, and decoding re-validates the whole
+// data URL with the save's own rules.
+const avatarText = (value) =>
+  validAvatar(value) ? value.replace(/[|]/g, "") : "";
 const tierIndex = (tier) => {
   const index = TIERS.indexOf(tier);
   return index < 0 ? "" : String(index);
@@ -107,12 +123,14 @@ export function encodeShareCard(card) {
     tierIndex(card?.favoriteTier),
     plain(card?.aura),
     plain(card?.companion),
+    avatarText(card?.avatar),
   ].join(FIELD);
-  return toBase64Url(line);
+  // Deflating the line first keeps a link short enough to paste anywhere;
+  // the base64url wrapper is what makes it query-string safe.
+  return TOKEN_TAG + toBase64Url(deflateSync(strToU8(line), { level: 9 }));
 }
 
-function toBase64Url(text) {
-  const bytes = new TextEncoder().encode(text);
+function toBase64Url(bytes) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary)
@@ -124,8 +142,7 @@ function toBase64Url(text) {
 function fromBase64Url(token) {
   const padded = token.replace(/-/g, "+").replace(/_/g, "/");
   const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 // The card named by a link, cleaned field by field, or null when the data
@@ -134,7 +151,11 @@ export function decodeShareCard(token) {
   if (typeof token !== "string" || !token) return null;
   let text;
   try {
-    text = fromBase64Url(token);
+    if (token.startsWith(TOKEN_TAG))
+      text = strFromU8(
+        inflateSync(fromBase64Url(token.slice(TOKEN_TAG.length))),
+      );
+    else text = new TextDecoder().decode(fromBase64Url(token));
   } catch {
     return null;
   }
@@ -148,7 +169,8 @@ export function decodeShareCard(token) {
     }
   } else {
     const f = text.split(FIELD);
-    if (f.length !== 15) return null;
+    // 15 fields are a version-2 card (no logo); version 3 appends the logo.
+    if (f.length !== 15 && f.length !== 16) return null;
     raw = {
       v: Number(f[0]),
       name: f[1],
@@ -165,6 +187,7 @@ export function decodeShareCard(token) {
       favoriteTier: tierAt(f[12]),
       aura: f[13],
       companion: f[14],
+      avatar: f[15] ?? "",
     };
   }
   return cleanCard(raw);
@@ -208,6 +231,7 @@ function cleanCard(raw) {
     favoriteTier: TIERS.includes(raw.favoriteTier) ? raw.favoriteTier : null,
     aura: text(raw.aura),
     companion: text(raw.companion),
+    avatar: validAvatar(raw.avatar) ? raw.avatar : null,
   };
 }
 
