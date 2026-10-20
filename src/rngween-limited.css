@@ -802,6 +802,18 @@
     width: 42px;
     height: 55px;
   }
+  /* The wrap maths above budgets 42px for the mark: the countdown's own
+     54px disc broke it, so the text wrapped below the mark, the strip grew
+     and the "What is coming" button fell under the bottom tab bar. Same
+     size as the Reaper figure keeps the button clear of it. */
+  .rngween-countdown-mark {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+  .rngween-countdown-line {
+    padding: 12px 18px 14px;
+  }
   .rngween-gate-inner strong {
     font-size: 17px;
   }

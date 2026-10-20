@@ -3,8 +3,24 @@
   margin: 0 auto;
 }
 .about-intro {
+  position: relative;
   text-align: center;
   padding-bottom: 26px;
+}
+/* A quiet halo behind the welcome block, grey like every shadow on the
+   site — the page's business is trust, not decoration. It bleeds
+   vertically only: sideways bleed would scroll the document on phones. */
+.about-intro::before {
+  content: "";
+  position: absolute;
+  inset: -34px 0 8px;
+  background: radial-gradient(
+    55% 70% at 50% 30%,
+    color-mix(in srgb, var(--text) 5%, transparent),
+    transparent 75%
+  );
+  pointer-events: none;
+  z-index: -1;
 }
 .about-intro h2 {
   margin: 8px 0 10px;
@@ -17,6 +33,14 @@
   font-size: 13.5px;
   line-height: 1.7;
   color: var(--secondary);
+}
+.about-intro p.about-glance {
+  margin: 12px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .about-steps {
   display: grid;
@@ -42,6 +66,10 @@
   gap: 4px;
   flex-shrink: 0;
   width: 40px;
+  padding: 8px 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
   color: var(--muted);
 }
 .about-step-mark b {
@@ -72,6 +100,15 @@
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 11px;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+.about-topic:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--text) 14%, var(--border));
+  box-shadow: var(--shadow);
 }
 .about-topic h3 {
   display: flex;
@@ -101,9 +138,15 @@
   margin-bottom: 26px;
 }
 .about-fair h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 8px;
   font-size: 13px;
   font-weight: 640;
+  color: var(--green);
+}
+.about-fair h3 svg {
   color: var(--green);
 }
 .about-fair p {

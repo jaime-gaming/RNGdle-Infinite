@@ -6,6 +6,7 @@ import {
   ListChecks,
   ShoppingBag,
   PawPrint,
+  ShieldCheck,
   Sparkles,
   Save,
   ArrowRight,
@@ -134,6 +135,10 @@ export default function About({ navigate, progress }) {
           Generate a number and find out what makes it special. That is the
           whole game — everything else is optional.
         </p>
+        <p className="about-glance">
+          {POPULATION.toLocaleString("en-US")} numbers with equal odds ·{" "}
+          {BADGE_TOTAL} badges · {PETS.length} companions
+        </p>
       </section>
 
       <ol className="about-steps">
@@ -167,7 +172,9 @@ export default function About({ navigate, progress }) {
       </div>
 
       <section className="about-fair">
-        <h3>The promise</h3>
+        <h3>
+          <ShieldCheck size={15} /> The promise
+        </h3>
         <p>
           Nothing sold in this game improves your luck. The draw is uniform over
           all {POPULATION.toLocaleString("en-US")} numbers and is generated with

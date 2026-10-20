@@ -423,7 +423,17 @@ export default function DrawStage({
     };
     probe();
     window.addEventListener("resize", probe);
-    return () => window.removeEventListener("resize", probe);
+    // Ink moves when the real fonts swap in for the fallbacks, and the
+    // decision is only as good as the measurement: probe again once they are
+    // in, so the button is placed against the layout the player sees.
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled) probe();
+    });
+    return () => {
+      cancelled = true;
+      window.removeEventListener("resize", probe);
+    };
   }, [decided, numbers.length, hasRoll, frame.top, frame.bottom]);
 
   // The overview is a takeover, not a panel: it starts under the header and

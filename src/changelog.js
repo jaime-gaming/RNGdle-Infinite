@@ -9,9 +9,9 @@ export const CHANGELOG = [
     date: "2026-10-20",
     title: "RNGween update",
     body: [
-      "RNGween: Halloween decorations, Limited Shop with Pumpkoins and the Reaper's World — Oct 21 to Nov 3, 2026.",
-      "Four aura tasks (Oct 25–31) unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon. Collect now or buy them Nov 1–3.",
-      "Under the hood: roll settle, animations, shop, tasks and a few more things changed. You will notice.",
+      "RNGween brings Halloween decorations, the Limited Shop with Pumpkoins and the Reaper's World, Oct 21 – Nov 3, 2026.",
+      "four aura tasks unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon, October 25–31, 2026. Buy them Nov 1–3; they never return.",
+      "under the hood: roll settle, animations, shop, tasks and a few more things changed. You will notice.",
     ],
   },
   {

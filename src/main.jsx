@@ -9,7 +9,6 @@ import {
   ShoppingBag,
   History,
   Medal,
-  Infinity as InfinityIcon,
   LogIn,
   Link2,
   CircleHelp,
@@ -851,25 +850,6 @@ function App() {
               <span className="version-flag-dot" aria-hidden="true" />
               <span>New Version</span>
             </button>
-          )}
-          {(session.ultraRebirths > 0 || session.rollbacks > 0) && (
-            <span
-              className="ultra-mark"
-              title={
-                session.rollbacks > 0
-                  ? `Rollback ×${session.rollbacks}${session.ultraRebirths > 0 ? ` · Prestige ×${session.ultraRebirths}` : ""} · +${Math.round(
-                      session.ultraRebirths * 10 + session.rollbacks * 25,
-                    )}% EP on every banked roll`
-                  : `Prestige ×${session.ultraRebirths} · +${Math.round(
-                      session.ultraRebirths * 10,
-                    )}% EP on every banked roll`
-              }
-            >
-              <InfinityIcon size={13} aria-hidden="true" />{" "}
-              {session.rollbacks > 0
-                ? `Rollback ×${session.rollbacks}`
-                : `Prestige ×${session.ultraRebirths}`}
-            </span>
           )}
           <RebirthNav
             progress={session}

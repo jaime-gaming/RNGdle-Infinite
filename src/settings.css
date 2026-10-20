@@ -36,10 +36,15 @@
   padding: 14px 0;
   border-top: 1px solid var(--border);
 }
-.setting-copy label {
+.setting-copy label,
+.setting-copy .setting-title {
   display: block;
   font-size: 13px;
   font-weight: 600;
+}
+.setting-copy .setting-title {
+  margin: 0;
+  color: var(--text);
 }
 .setting-copy p {
   margin: 5px 0 0;

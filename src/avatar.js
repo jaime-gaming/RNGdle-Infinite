@@ -69,3 +69,33 @@ export async function fileToAvatar(file, limit = AVATAR_LIMIT) {
     "That picture is still too large after shrinking. Try a simpler logo.",
   );
 }
+
+// A profile link carries the logo, so it travels as a small square: the
+// picture is redrawn at link size and re-encoded, the way fileToAvatar does
+// for the save. Tiny logos pass through untouched — nothing to win, and a
+// crisp small mark deserves its exact bytes. Best effort only: a browser
+// without canvas keeps the original and the link simply stays longer.
+export async function compactAvatar(dataUrl, size = 96) {
+  if (!dataUrl || dataUrl.length <= 2200) return dataUrl;
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const picture = new Image();
+      picture.onload = () => resolve(picture);
+      picture.onerror = () => reject(new Error("Unreadable logo."));
+      picture.src = dataUrl;
+    });
+    const canvas = drawSquare(image, size);
+    let best = "";
+    for (const [type, quality] of [
+      ["image/webp", 0.85],
+      ["image/jpeg", 0.85],
+      ["image/png", undefined],
+    ]) {
+      const data = encode(canvas, type, quality);
+      if (!best || data.length < best.length) best = data;
+    }
+    return best && best.length < dataUrl.length ? best : dataUrl;
+  } catch {
+    return dataUrl;
+  }
+}

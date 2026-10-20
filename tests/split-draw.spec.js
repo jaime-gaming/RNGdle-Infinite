@@ -634,6 +634,40 @@ test("six numbers leave the crossing free, and the roll button sits in it", asyn
   await expectButtonPlaced(page, { hub: true });
 });
 
+test("the strip's roll button never waits outside the stage and lands above the tab bar", async ({
+  page,
+}) => {
+  // A phone packs five panels tightly, so the crossing is covered and the
+  // button takes the strip under the numbers.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await startSplitRoll(page);
+  expect(await runUntil(page, decided)).toBe(true);
+  // While the reveal is still busy the button waits hidden, but its box stays
+  // inside the strip's reserved space: no collapsing wrap, no slide that
+  // starts below the stage's bottom edge.
+  const waiting = await page.evaluate(() => {
+    const wrap = document.querySelector(".draw-stage .generate-wrap");
+    const stage = document.querySelector(".draw-stage").getBoundingClientRect();
+    const box = wrap.getBoundingClientRect();
+    const style = getComputedStyle(wrap);
+    return {
+      isAway: wrap.classList.contains("is-away"),
+      maxH: style.maxHeight,
+      transform: style.transform,
+      inside: box.top >= stage.top - 1 && box.bottom <= stage.bottom + 1,
+    };
+  });
+  expect(waiting.isAway).toBe(true);
+  expect(waiting.maxH).toBe("96px");
+  expect(waiting.transform).toBe("matrix(1, 0, 0, 1, 0, 12)");
+  expect(waiting.inside).toBe(true);
+  // And once it arrives it is still inside: centred, above the tab bar, and
+  // clear of every number.
+  expect(await runUntil(page, complete)).toBe(true);
+  expect((await page.locator(".draw-hub").count()) === 1).toBe(false);
+  await expectButtonPlaced(page, { hub: false });
+});
+
 test("a paid number's stats show the EP balance and share that number's own result", async ({
   page,
   context,

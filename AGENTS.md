@@ -142,10 +142,13 @@ effect of other work.
   title a `.world-next-step` box (`data-world-next-step`) names the single
   thing to do next (profile → four fragments → forge → Valley → keep rolling); keep
   it to one sentence and one button.
-- **Profile share links** (`src/profile-card.js`): the `?card=` token is a
-  compact base36 line (format v2, ~300 chars). v1 JSON tokens still decode;
-  bump `CARD_VERSION` and add to `KNOWN_VERSIONS` when the shape changes, never
-  reuse a field position.
+- **Profile share links** (`src/profile-card.js`): the `?card=` token is the
+  card line deflated behind a `z1` tag (base64url, URL-safe). The line itself
+  is a base36 field string (format v3: the last field carries the profile
+  logo, shrunk to link size first). Uncompressed v2/v3 lines and v1 JSON
+  tokens still decode — their base64url always begins A–f, so `z1` never
+  collides. Bump `CARD_VERSION` and add to `KNOWN_VERSIONS` when the field
+  shape changes, never reuse a field position.
 - **Aura finish**: every aura gets a shared layer (`.box-finish` in
   `src/number-box.css`): a turning two-tone rim and a breathing glow in the
   aura's `swatch` colours, which `NumberBox` passes as `--aura-a`/`--aura-b`.

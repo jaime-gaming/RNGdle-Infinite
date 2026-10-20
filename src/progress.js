@@ -1547,8 +1547,8 @@ function applyEvent(state, action) {
       throw new Error("Rebirth count limit reached.");
     const granted = nextRebirthSkill(count);
     // Whatever the cycle scored over this rung's gate pays its dividend now:
-    // a quarter of the surplus joins the starting sum, and whole 5M blocks of
-    // it bank a permanent +1% (up to +5% on a single rebirth).
+    // half of the surplus joins the starting sum, and whole blocks of
+    // SURPLUS_BANKED_EP_STEP bank a permanent +1% each (up to the cap).
     const gate = rebirthRequirement(count);
     const surplus = rebirthSurplus(cycleEarnedEp(state), gate.ep);
     const starter =

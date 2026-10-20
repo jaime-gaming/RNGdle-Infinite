@@ -99,6 +99,30 @@ export default function Settings({
     }
   }
 
+  // One button for the section: the ready notification and its chime. The
+  // rank alert stays the player's own choice, and the permission prompt is
+  // the only thing the button cannot answer for them.
+  async function enableNotifications() {
+    let result = permission;
+    if (result !== "granted") {
+      result = await requestNotificationPermission();
+      setPermission(result);
+    }
+    const granted = result === "granted";
+    update({ notifyReady: granted, notifySound: true });
+    notify?.(
+      granted
+        ? { kind: "done", text: "Notifications are on." }
+        : {
+            kind: "warning",
+            text:
+              result === "unsupported"
+                ? "This browser does not support desktop notifications. The chime is on."
+                : "Your browser blocked notifications. Allow them in site settings and try again. The chime is on.",
+          },
+    );
+  }
+
   return (
     <section className="settings-panel" aria-label="Game settings">
       <div className="settings-group">
@@ -109,6 +133,26 @@ export default function Settings({
           Desktop alerts can announce a finished cooldown or a rank you choose.
           They never roll for you, award EP, or change your timings.
         </p>
+        <div className="setting-row">
+          <div className="setting-copy">
+            <p className="setting-title">Turn on notifications</p>
+            <p>
+              One button for the ready notification and its chime. A rank alert
+              stays yours to choose below.
+            </p>
+          </div>
+          <button
+            id="setting-notify-all"
+            type="button"
+            className="secondary-button"
+            disabled={unsupported}
+            onClick={enableNotifications}
+          >
+            {notificationsActive && settings.notifySound
+              ? "Notifications on"
+              : "Enable notifications"}
+          </button>
+        </div>
         <Toggle
           id="setting-notify-ready"
           label="Desktop notification when a roll is ready"

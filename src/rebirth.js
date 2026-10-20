@@ -126,9 +126,9 @@ export function prestigeBenefits(progress = {}) {
     },
     {
       id: "legacy",
-      title: "Prestige appearance and title",
+      title: "Prestige title",
       detail:
-        "Gold halo and a profile title from the first Prestige. Owned auras and Prestige bonuses stay.",
+        "A profile title from the first Prestige. Owned auras and Prestige bonuses stay.",
     },
   ];
   if (count >= PRESTIGE_LIMIT)
@@ -177,15 +177,15 @@ export function rollbackBenefits(progress = {}) {
 // while the cycle keeps earning EP, so the rebirth is usually taken with far
 // more EP than the rung asked for — and the overshoot should pay, otherwise
 // every roll past the gate is dead weight. Two dividends on the surplus:
-// a quarter of it joins the starting sum of the new cycle, and every full
-// 5,000,000 surplus EP adds a permanent +1% to the banked wallet, capped at
-// +5% on any single rebirth (or ultra-rebirth). The example the player asked
-// for: a gate of 100,000 with 1,000,000 in the cycle carries 225,000 EP of
+// half of it joins the starting sum of the new cycle, and every full
+// 2,000,000 surplus EP adds a permanent +1% to the banked wallet, capped at
+// +10% on any single rebirth (or ultra-rebirth). The example the player asked
+// for: a gate of 100,000 with 1,000,000 in the cycle carries 450,000 EP of
 // surplus into the next wallet.
-export const SURPLUS_START_SHARE = 0.25;
-export const SURPLUS_BANKED_EP_STEP = 5_000_000;
+export const SURPLUS_START_SHARE = 0.5;
+export const SURPLUS_BANKED_EP_STEP = 2_000_000;
 export const SURPLUS_BANKED_PER_STEP = 0.01;
-export const SURPLUS_BANKED_CAP = 0.05;
+export const SURPLUS_BANKED_CAP = 0.1;
 
 export function rebirthSurplus(earned = 0, gate = 0) {
   const above = Number.isFinite(earned) ? earned : 0;
