@@ -338,7 +338,8 @@ test("the Rollback appears after the third prestige and takes the run", async ({
   );
   await expect(page.locator(".rebirth-hero h2")).toContainText("Rebirth 1");
   await expect(page.locator(".rebirth-legacy")).toContainText("1 taken");
-  // The prestiges went back too, so the header mark reads Rollback alone.
+  // The prestiges went back too, and nothing but the legacy panel carries the
+  // count: the header badge is gone with the rest of the prestige marks.
   expect((await saved(page)).ultraRebirths).toBe(0);
   await expect(
     page
@@ -350,7 +351,8 @@ test("the Rollback appears after the third prestige and takes the run", async ({
       .locator(".rebirth-page")
       .getByRole("button", { name: "Rollback", exact: true }),
   ).toHaveCount(0);
-  await expect(page.locator(".ultra-mark")).toContainText("Rollback");
+  await expect(page.locator(".ultra-mark")).toHaveCount(0);
+  await expect(page.locator(".rebirth-legacy")).toContainText("Rollback");
 });
 
 test("the Rollback can be taken again and again, each one stacking", async ({

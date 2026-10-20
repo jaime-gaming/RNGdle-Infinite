@@ -329,8 +329,8 @@ test("rebirth resets non-aura purchases, companions and wallet but keeps every o
     // Reset: the collection, non-aura purchases, companions and wallet. The
     // active aura stays equipped. The wallet restarts at the rung's starting
     // sum plus the surplus from the roll above its 250,000 EP gate.
-    balance: REBIRTH_STARTER_EP + 25000,
-    totalEarned: before.totalEarned + REBIRTH_STARTER_EP + 25000,
+    balance: REBIRTH_STARTER_EP + 50000,
+    totalEarned: before.totalEarned + REBIRTH_STARTER_EP + 50000,
     cycleEarnedEP: 0,
     owned: ["starfall", "static", "bitstorm"],
     equipped: "static",
@@ -360,9 +360,9 @@ test("rebirth resets non-aura purchases, companions and wallet but keeps every o
     type: "rebirth",
     count: 1,
     skill: "reborn-drive",
-    grant: REBIRTH_STARTER_EP + 25000,
+    grant: REBIRTH_STARTER_EP + 50000,
   });
-  // The overshoot was 100,000 EP — under one 5M block, so it banks no
+  // The overshoot was 100,000 EP — under one 2M block, so it banks no
   // permanent dividend, only its share of the starting sum.
   expect(next.surplusBanked).toBe(0);
   expect(parseProgress(JSON.stringify(next))).toEqual(next);
@@ -437,7 +437,7 @@ test("every rung of the ladder grants its own skill, and the last one opens the 
     expect(next.equipped).toBe("prism");
     expect(next.pets).toEqual([]);
     // The cycle was seeded far past every gate, so the wallet refills with
-    // the rung's sum plus a quarter of the overshoot, and whole 5M blocks of
+    // the rung's sum plus half of the overshoot, and whole 2M blocks of
     // that overshoot have banked a permanent +1% each.
     expect(overshoot.surplus).toBeGreaterThan(0);
     expect(next.balance).toBe(
@@ -562,11 +562,11 @@ test("every cycle starts with the EP its rungs and ultra-rebirths paid", () => {
   expect(ultra.equippedSkills).toEqual([]);
   expect(ultra.owned).toEqual(auraIds);
   expect(ultra.equipped).toBe("prism");
-  expect(ultra.balance).toBe(cycleStarterEp(0, 1) + 1250000);
+  expect(ultra.balance).toBe(cycleStarterEp(0, 1) + 2500000);
   expect(ultra.balance).toBeLessThanOrEqual(ultra.totalEarned);
-  expect(ultra.surplusBanked).toBe(banked + 1);
+  expect(ultra.surplusBanked).toBe(banked + 2);
   expect(walletMultiplier(ultra, [])).toBeCloseTo(
-    1.1 * (1 + (banked + 1) / 100),
+    1.1 * (1 + (banked + 2) / 100),
     6,
   );
   expect(ultra.history.at(-1)).toMatchObject({
@@ -575,7 +575,7 @@ test("every cycle starts with the EP its rungs and ultra-rebirths paid", () => {
     ladder: REBIRTH_TOTAL,
   });
   const reloaded = parseProgress(JSON.stringify(ultra));
-  expect(reloaded.history.at(-1).grant).toBe(cycleStarterEp(0, 1) + 1250000);
+  expect(reloaded.history.at(-1).grant).toBe(cycleStarterEp(0, 1) + 2500000);
   expect(reloaded.history.at(-1).ladder).toBe(REBIRTH_TOTAL);
   expect(reloaded.rebirths).toBe(0);
   // The next prestige asks for the whole ladder again.
@@ -584,17 +584,17 @@ test("every cycle starts with the EP its rungs and ultra-rebirths paid", () => {
 
 test("overshooting the gate pays a surplus: starting EP now, a banked dividend forever", () => {
   // The exact case asked for: the rung wants 100,000 and the cycle brings
-  // 1,000,000 — a quarter of the 900,000 overshoot joins the new wallet.
+  // 1,000,000 — half of the 900,000 overshoot joins the new wallet.
   const example = rebirthSurplus(1000000, 100000);
   expect(example.surplus).toBe(900000);
-  expect(example.starterBonus).toBe(225000);
-  expect(example.bankedBonus).toBe(0); // whole 5M blocks only
-  // Twenty million over a 100,000 gate: three whole blocks of 5M bank +3%.
+  expect(example.starterBonus).toBe(450000);
+  expect(example.bankedBonus).toBe(0); // whole 2M blocks only
+  // Twenty million over a 100,000 gate: nine whole blocks of 2M bank +9%.
   const big = rebirthSurplus(20000000, 100000);
-  expect(big.starterBonus).toBe(4975000);
-  expect(big.bankedBonus).toBe(0.03);
-  // A single rebirth never banks more than +5%, however huge the cycle.
-  expect(rebirthSurplus(100000000, 100000).bankedBonus).toBe(0.05);
+  expect(big.starterBonus).toBe(9950000);
+  expect(big.bankedBonus).toBe(0.09);
+  // A single rebirth never banks more than +10%, however huge the cycle.
+  expect(rebirthSurplus(100000000, 100000).bankedBonus).toBe(0.1);
   // Meeting the gate exactly, or never reaching it, pays nothing extra.
   const none = { surplus: 0, starterBonus: 0, bankedBonus: 0 };
   expect(rebirthSurplus(100000, 100000)).toEqual(none);
@@ -603,18 +603,18 @@ test("overshooting the gate pays a surplus: starting EP now, a banked dividend f
   expect(surplusMultiplier(0)).toBe(1);
   expect(surplusMultiplier(17)).toBeCloseTo(1.17, 6);
   const reborn = applyProgress(state({ history: earned(20150000) }), action);
-  expect(reborn.surplusBanked).toBe(3);
-  expect(reborn.balance).toBe(REBIRTH_STARTER_EP + 4975000);
-  expect(walletMultiplier(reborn, [])).toBeCloseTo(1.02 * 1.03, 6);
+  expect(reborn.surplusBanked).toBe(9);
+  expect(reborn.balance).toBe(REBIRTH_STARTER_EP + 9950000);
+  expect(walletMultiplier(reborn, [])).toBeCloseTo(1.02 * 1.09, 6);
   // The surplus is written into the log through the grant it produced, and a
   // reload keeps both the wallet and the banked dividend intact.
   expect(reborn.history.at(-1)).toMatchObject({
     type: "rebirth",
     cost: 250000,
-    grant: REBIRTH_STARTER_EP + 4975000,
+    grant: REBIRTH_STARTER_EP + 9950000,
   });
   expect(parseProgress(JSON.stringify(reborn))).toEqual(reborn);
-  expect(SURPLUS_BANKED_EP_STEP).toBe(5000000);
+  expect(SURPLUS_BANKED_EP_STEP).toBe(2000000);
 });
 
 test("old saves default to zero rebirths and ultra-rebirths, and optional bar snapshots cannot shorten a deadline", () => {
@@ -760,7 +760,7 @@ test("rebirth confirms in its dialog, applies once, and restarts the run without
   // 604827 barely scores, and the rung asks for 250,000 EP earned in this
   // cycle, so the seed carries a cycle that has already earned it.
   initial.history = [...initial.history, ...earned(350000, 2000)];
-  // The cycle sits over the 250,000 gate, so a quarter of the overshoot
+  // The cycle sits over the 250,000 gate, so half of the overshoot
   // joins the starting sum when the rebirth lands.
   const carry = rebirthSurplus(cycleEarnedEp(initial), 250000).starterBonus;
   expect(carry).toBeGreaterThan(0);
@@ -931,12 +931,12 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   );
   // The stale tab neither spent EP nor revived an old purchase: the rebirth
   // handed the shelf back, so nothing was sold and the wallet holds only the
-  // sum the new cycle started with — the rung's share plus the surplus of
-  // funded()'s 20M-EP cycle over the 100k gate.
+  // sum the new cycle started with — the rung's grant plus the surplus of
+  // funded()'s 35M-EP cycle over the 250k gate.
   const after = await saved(page);
   expect(after.owned).toEqual(auraIds);
-  expect(after.balance).toBe(REBIRTH_STARTER_EP + 8687500);
-  expect(after.surplusBanked).toBe(5);
+  expect(after.balance).toBe(REBIRTH_STARTER_EP + 17375000);
+  expect(after.surplusBanked).toBe(10);
   expect(after.rebirths).toBe(1);
   await other.close();
 });
@@ -1164,7 +1164,7 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
   await expect(page.locator(".roll-progress-links")).toContainText("1 rebirth");
 });
 
-test("a prestige runs the ceremony, wears the prestige mark and reads the developer's note", async ({
+test("a prestige runs the ceremony and wears its profile title, and nothing else", async ({
   page,
 }) => {
   // A finished ladder with a 35M-EP cycle — over the prestige's 30M gate.
@@ -1185,22 +1185,22 @@ test("a prestige runs the ceremony, wears the prestige mark and reads the develo
   );
   await expect.poll(async () => (await saved(page)).ultraRebirths).toBe(1);
   // The ceremony ends on the roll page — back to the rebirth page for the
-  // legacy panel: the figures, the exclusives and the note left at the top.
+  // legacy panel: the figures and the exclusives it pays.
   await page.goto("/#rebirth");
   await expect(page.locator(".rebirth-legacy")).toContainText(
     "Your prestige legacy",
   );
   await expect(page.locator(".rebirth-legacy")).toContainText("Prestige title");
-  await expect(page.locator(".rebirth-dev-note")).toContainText(
-    "I didn't know you would get this far",
-  );
-  // The mark follows the account: a still gold halo on the roll stage…
+  // The gold halo, the developer's note and the header badge are gone for
+  // good: a prestige carries no mark on the game's chrome or the roll stage.
+  await expect(page.locator(".rebirth-dev-note")).toHaveCount(0);
   await page.goto("/");
-  await expect(page.locator(".roll-experience")).toHaveAttribute(
+  await expect(page.locator(".roll-experience")).not.toHaveAttribute(
     "data-prestige",
     "true",
   );
-  // …and the title only on the profile.
+  await expect(page.locator(".ultra-mark")).toHaveCount(0);
+  // The title is the one thing that follows the account: the profile only.
   await page.getByRole("button", { name: /profile/i }).click();
   await expect(page.locator(".profile-prestige")).toContainText("Prestige");
 });

@@ -48,3 +48,30 @@ test("the home screen counts down at the gate's seam, then hands over to the Rea
     page.getByRole("complementary", { name: "Halloween world entrance" }),
   ).toBeVisible();
 });
+
+test("on a phone the countdown's button never hides behind the bottom tab bar", async ({
+  page,
+}) => {
+  await mockSeasonClock(page, Date.UTC(2026, 9, 18, 7, 30));
+  await seedProgress(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const line = page.getByRole("complementary", { name: "RNGween countdown" });
+  await expect(line).toContainText("RNGween starts in");
+  const box = await page.evaluate(() => {
+    const button = document
+      .querySelector(".rngween-countdown-line")
+      .querySelector("button");
+    const tab = document.querySelector(".mobile-tabbar");
+    const b = button.getBoundingClientRect();
+    return {
+      bottom: Math.round(b.bottom),
+      height: Math.round(b.height),
+      tabTop: Math.round(tab.getBoundingClientRect().top),
+    };
+  });
+  // The mark and the text share one row (the wrap budget is 42px), so the
+  // button sits above the tab bar instead of sliding under it.
+  expect(box.height).toBeGreaterThan(36);
+  expect(box.bottom).toBeLessThanOrEqual(box.tabTop);
+});

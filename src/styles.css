@@ -1197,23 +1197,6 @@ footer button:hover,
 .offline-actions .secondary-button {
   margin-top: 0;
 }
-.ultra-mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border: 1px solid rgb(217 164 65 / 0.48);
-  border-radius: 999px;
-  background: rgb(217 164 65 / 0.12);
-  color: #a97c1f;
-  font: 700 10px var(--roll-font);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-:root[data-theme="dark"] .ultra-mark {
-  color: #f1c768;
-}
 .rebirth-count {
   margin: 0 0 16px;
   font: 600 11px var(--roll-font);
@@ -1711,9 +1694,6 @@ footer button:hover,
   .version-flag {
     padding: 4px 8px;
     font-size: 9px;
-  }
-  .ultra-mark {
-    display: none;
   }
   /* Phones keep a compact icon-only profile button; only the text label is
      hidden — the avatar mark is a span too and must stay visible. */

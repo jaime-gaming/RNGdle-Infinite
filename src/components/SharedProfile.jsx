@@ -11,7 +11,11 @@ export default function SharedProfile({ card, onContinue, onOwnProfile }) {
   return (
     <>
       <h2 className="profile-title">
-        <AvatarMark size={52} label={`${card.name} profile`} />
+        <AvatarMark
+          avatar={card.avatar || undefined}
+          size={52}
+          label={`${card.name} profile`}
+        />
         {card.name}
       </h2>
       {card.prestiges > 0 && (

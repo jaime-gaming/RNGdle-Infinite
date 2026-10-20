@@ -12,10 +12,19 @@ import {
 const at = (day) => Date.UTC(2026, 2, day, 10, 0, 0);
 const iso = (day) => new Date(at(day)).toISOString();
 
+// A logo that satisfies the save's avatar validation: one png data URL.
+const LOGO =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
 function played() {
   return {
     ...emptyProgress(),
-    profile: { id: "p1", username: "LuckyOtter41", createdAt: at(1) },
+    profile: {
+      id: "p1",
+      username: "LuckyOtter41",
+      createdAt: at(1),
+      avatar: LOGO,
+    },
     balance: 125000,
     totalEarned: 400000,
     bookmarks: ["r1", "r3"],
@@ -87,6 +96,54 @@ test("a profile card survives the trip through the address and rejects damage", 
     { number: "812044", ep: 12000, tier: "rare" },
     { number: "1337", ep: 40, tier: "trash" },
   ]);
+  // The logo rides along, so a shared profile shows the same face its owner
+  // wears; a card without one keeps sharing just the same.
+  expect(card.avatar).toBe(LOGO);
+  expect(back.avatar).toBe(LOGO);
+  expect(
+    decodeShareCard(encodeShareCard({ ...card, avatar: null })).avatar,
+  ).toBeNull();
+  // A forged logo — the wrong mime, markup, a remote address — is dropped.
+  for (const forged of [
+    "data:text/html;base64,PGI+",
+    "https://example.com/logo.png",
+    `${LOGO}|extra`,
+  ])
+    expect(
+      decodeShareCard(encodeShareCard({ ...card, avatar: forged })).avatar,
+    ).toBeNull();
+  // The token is the card line deflated behind a "z1" tag: a share stays
+  // compact even with a logo inside, and the tag cannot collide with a plain
+  // old token (those are base64url of raw text and always begin A–f).
+  expect(token.startsWith("z1")).toBe(true);
+  expect(token.length).toBeLessThan(500);
+  // An uncompressed old link still opens: version 2 predates the logo field.
+  const secs = (day) => Math.floor(at(day) / 1000).toString(36);
+  const legacyToken = btoa(
+    [
+      "2",
+      "LuckyOtter41",
+      secs(5),
+      secs(1),
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "Starfall",
+      "",
+    ].join("|"),
+  )
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  const legacy = decodeShareCard(legacyToken);
+  expect(legacy.name).toBe("LuckyOtter41");
+  expect(legacy.avatar).toBeNull();
   // Damaged, foreign or oversized data is dropped field by field or whole.
   expect(decodeShareCard("")).toBeNull();
   expect(decodeShareCard("not-a-card")).toBeNull();
@@ -128,6 +185,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
     balance: 5000,
     totalEarned: 90000,
     bookmarks: ["r1"],
+    profile: { ...testProfile, avatar: LOGO },
     history: [
       {
         id: "r1",
@@ -156,6 +214,10 @@ test("the profile link opens as a read-only card anywhere, and never touches the
     visitor.getByRole("heading", { level: 2, name: testProfile.username }),
   ).toBeVisible();
   await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();
+  // The logo came along: the shared profile wears the same face.
+  await expect(
+    visitor.locator(".profile-title .avatar-mark img"),
+  ).toHaveAttribute("src", LOGO);
   await expect(visitor.locator(".profile-best")).toHaveAttribute(
     "data-best-roll",
     "424242",
@@ -188,4 +250,62 @@ test("the profile link opens as a read-only card anywhere, and never touches the
       name: `Your profile, ${testProfile.username}`,
     }),
   ).toBeVisible();
+});
+
+test("a heavy logo is shrunk to link size before it travels", async ({
+  page,
+  browser,
+}) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await seedProgress(page, { balance: 5000, totalEarned: 90000 });
+  await page.goto("/profile");
+  // A real photo-like logo (random pixels, the compressible kind never
+  // shrinks) goes into the save, then the link is copied. It stays under the
+  // save's avatar ceiling so it survives the parse on reload.
+  const heavy = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 200;
+    const context = canvas.getContext("2d");
+    let seed = 7;
+    const roll = () => (
+      (seed = (seed * 1103515245 + 12345) & 0x7fffffff),
+      seed
+    );
+    const noise = context.createImageData(200, 200);
+    for (let i = 0; i < noise.data.length; i += 4) {
+      noise.data[i] = roll() % 256;
+      noise.data[i + 1] = roll() % 256;
+      noise.data[i + 2] = roll() % 256;
+      noise.data[i + 3] = 255;
+    }
+    context.putImageData(noise, 0, 0);
+    return canvas.toDataURL("image/png");
+  });
+  expect(heavy.length).toBeGreaterThan(50000);
+  expect(heavy.length).toBeLessThanOrEqual(240000);
+  await page.evaluate(
+    ([key, avatar]) => {
+      const saved = JSON.parse(localStorage.getItem(key));
+      saved.profile.avatar = avatar;
+      localStorage.setItem(key, JSON.stringify(saved));
+    },
+    ["rng-infinite-progress-v1", heavy],
+  );
+  await page.reload();
+  await page.getByTestId("profile-share").click();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  // Compact: the logo rides as a small square, not as the whole picture.
+  expect(link.length).toBeLessThan(heavy.length / 4);
+
+  // The visitor still sees the face that was shared.
+  const other = await browser.newContext();
+  const visitor = await other.newPage();
+  await visitor.goto(link);
+  await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();
+  const src = await visitor
+    .locator(".profile-title .avatar-mark img")
+    .getAttribute("src");
+  expect(src.startsWith("data:image/")).toBe(true);
+  expect(src.length).toBeLessThan(12000);
+  await other.close();
 });

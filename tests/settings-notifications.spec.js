@@ -304,3 +304,47 @@ test("the goal recap ring reflects the wallet without inventing progress", async
   // Saved EP is capped at the price, so it can never overstate progress.
   expect(Math.min(goal.price * 3, goal.price)).toBe(goal.price);
 });
+
+test("one button turns on the ready notification and the chime", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    class TestNotification {
+      static permission = "granted";
+      static requestPermission(callback) {
+        callback("granted");
+      }
+      constructor() {}
+      close() {}
+    }
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: TestNotification,
+    });
+  });
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Enable notifications" }).click();
+  await expect(
+    page.getByRole("switch", {
+      name: "Desktop notification when a roll is ready",
+    }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    page.getByRole("switch", { name: "Play a chime when a roll is ready" }),
+  ).toHaveAttribute("aria-checked", "true");
+  const saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)),
+    SETTINGS_KEY,
+  );
+  expect(saved.notifyReady).toBe(true);
+  expect(saved.notifySound).toBe(true);
+  // The rank alert is the player's own choice: the button never picks one.
+  expect(saved.notifyRank).toBeNull();
+  await expect(page.getByLabel("Notify me at this rank or higher")).toHaveValue(
+    "",
+  );
+  // The button owns up to the state it set.
+  await expect(
+    page.getByRole("button", { name: "Notifications on" }),
+  ).toBeVisible();
+});
