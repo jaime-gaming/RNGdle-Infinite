@@ -529,6 +529,11 @@ export default function RollExperience({
     setAutoRoll(false);
     showRankNotification(alert.rank, {
       onClick: () => navigate("roll"),
+      onStopAutoRoll: () => {
+        setAutoRoll(false);
+        writeAutoRoll(session.profile?.id, false);
+      },
+      autoRoll: alert.autoRoll,
     });
   }, [run?.id, elapsed, timeline.end, navigate]);
 
@@ -715,13 +720,16 @@ export default function RollExperience({
     if (!committed || activeRun.current === committed.id) return;
     const minimumRank = preferences.notifyRank;
     const rolledRank = committed.result?.tier;
-    const notificationsEnabled =
-      preferences.notifyReady && notificationPermission() === "granted";
+    const rankAlertEnabled =
+      preferences.notifyRankEnabled && notificationPermission() === "granted";
     const rankMatched =
-      notificationsEnabled && rankMeetsMinimum(rolledRank, minimumRank);
+      rankAlertEnabled && rankMeetsMinimum(rolledRank, minimumRank);
     const draws = committed.draws ?? [];
+    // Remember whether Auto-Roll was on when the matching roll committed: the
+    // rank notification offers to stop it, but only if it was actually on.
+    const autoRollWasActive = autoRoll;
     rankAlertRun.current = rankMatched
-      ? { id: committed.id, rank: rolledRank }
+      ? { id: committed.id, rank: rolledRank, autoRoll: autoRollWasActive }
       : null;
     if (rankMatched) {
       // Turn Auto-Roll off before the result settles, so no queued roll can

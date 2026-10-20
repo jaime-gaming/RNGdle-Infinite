@@ -3,6 +3,14 @@ export const APP_UPDATE_QUERY = "__rngdle_refresh";
 export const APP_BUILD_META = "rngdle-build-id";
 export const APP_UPDATE_POLL_MS = 2500;
 
+// Internal label for bug-patch rebuilds of the same public version
+// (RNGdle-Infinitev0.5.1fix0, fix1, fix2 …). Bump the fix number for a patch
+// instead of moving the public 0.x(.x) version. Only the "Reload until
+// updated" flow uses it, to scope the update intent to the current internal
+// build. It is never added to the changelog or shown as a release.
+// Current: RNGdle-Infinitev0.5.1fix2.
+export const APP_INTERNAL_VERSION = "RNGdle-Infinitev0.5.1fix2";
+
 let pollTimer = null;
 let reloadTimer = null;
 let checking = false;
@@ -208,6 +216,12 @@ async function checkForCurrentBuild() {
     clearTimers();
     return;
   }
+  if (intent.internalVersion !== APP_INTERNAL_VERSION) {
+    // Intent left by an older internal build: this page is already current.
+    removeAppUpdateIntent();
+    clearTimers();
+    return;
+  }
   checking = true;
   try {
     if (intent.forceRefreshPending) {
@@ -300,6 +314,7 @@ export function startAppUpdate() {
     active: true,
     lastReloadAt: 0,
     forceRefreshPending: true,
+    internalVersion: APP_INTERNAL_VERSION,
   };
   if (!saveAppUpdateIntent(intent)) {
     publish({

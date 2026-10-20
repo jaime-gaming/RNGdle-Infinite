@@ -73,6 +73,7 @@ export default function Settings({
   const unsupported = permission === "unsupported";
   const denied = permission === "denied";
   const notificationsActive = settings.notifyReady && permission === "granted";
+  const rankActive = settings.notifyRankEnabled && permission === "granted";
 
   async function toggleNotifications(next) {
     if (!next) {
@@ -89,6 +90,32 @@ export default function Settings({
       });
     } else {
       update({ notifyReady: false });
+      notify?.({
+        kind: "warning",
+        text:
+          result === "unsupported"
+            ? "This browser does not support desktop notifications."
+            : "Your browser blocked notifications. Allow them in site settings and try again.",
+      });
+    }
+  }
+
+  async function toggleRankNotifications() {
+    if (settings.notifyRankEnabled) {
+      update({ notifyRankEnabled: false });
+      return;
+    }
+    if (unsupported || denied) return;
+    const result = await requestNotificationPermission();
+    setPermission(result);
+    if (result === "granted") {
+      update({ notifyRankEnabled: true });
+      notify?.({
+        kind: "done",
+        text: "Rank alerts enabled. Choose a minimum rank above to be alerted and stop Auto-Roll for review.",
+      });
+    } else {
+      update({ notifyRankEnabled: false });
       notify?.({
         kind: "warning",
         text:
@@ -167,27 +194,35 @@ export default function Settings({
           disabled={unsupported || denied}
           onChange={toggleNotifications}
         />
+        <Toggle
+          id="setting-notify-rank-toggle"
+          label="Notify me at this rank or higher"
+          description={
+            unsupported
+              ? "This browser does not support rank alerts."
+              : denied
+                ? "Blocked by your browser. Allow notifications for this site, then switch this on."
+                : "Rolls at the chosen rank or higher alert you and stop Auto-Roll for review. Independent of the ready-roll notification."
+          }
+          checked={rankActive}
+          disabled={unsupported || denied}
+          onChange={toggleRankNotifications}
+        />
         <div className="setting-row setting-rank-row">
           <div className="setting-copy">
-            <label htmlFor="setting-notify-rank">
-              Notify me at this rank or higher
-            </label>
+            <label htmlFor="setting-notify-rank-select">Minimum rank</label>
             <p>
-              {unsupported
-                ? "This browser does not support rank alerts."
+              {!rankActive
+                ? "Turn on rank alerts above to choose a minimum rank."
                 : denied
-                  ? "Allow desktop notifications in browser settings to use a rank alert."
-                  : notificationsActive
-                    ? settings.notifyRank
-                      ? `A roll at ${rankLabel(settings.notifyRank)} rank or higher will alert you. Auto-Roll stops so you can review its stats.`
-                      : "Choose a minimum rank. Rolls at that rank or higher will alert you and stop Auto-Roll for review."
-                    : "Turn on desktop notifications above to choose a minimum rank and stop Auto-Roll on a match."}
+                  ? "Allow desktop notifications to receive rank alerts."
+                  : "Rolls at this rank or higher alert you and stop Auto-Roll for review."}
             </p>
           </div>
           <select
-            id="setting-notify-rank"
+            id="setting-notify-rank-select"
             value={settings.notifyRank ?? ""}
-            disabled={unsupported || denied || !notificationsActive}
+            disabled={!rankActive || unsupported || denied}
             onChange={(event) =>
               update({ notifyRank: event.target.value || null })
             }
