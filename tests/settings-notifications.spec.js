@@ -46,6 +46,7 @@ test("settings default to a quiet, unchanged game and are keyed separately from 
   expect(defaultSettings).toEqual({
     notifyReady: false,
     notifySound: false,
+    notifyRankEnabled: false,
     notifyRank: null,
     reduceMotion: "system",
     compactNumbers: false,
@@ -340,9 +341,12 @@ test("one button turns on the ready notification and the chime", async ({
   expect(saved.notifySound).toBe(true);
   // The rank alert is the player's own choice: the button never picks one.
   expect(saved.notifyRank).toBeNull();
-  await expect(page.getByLabel("Notify me at this rank or higher")).toHaveValue(
-    "",
-  );
+  expect(saved.notifyRankEnabled).toBe(false);
+  await expect(page.getByLabel("Minimum rank")).toHaveValue("");
+  // Rank alerts are off until the player switches them on themselves.
+  await expect(
+    page.getByRole("switch", { name: "Notify me at this rank or higher" }),
+  ).toHaveAttribute("aria-checked", "false");
   // The button owns up to the state it set.
   await expect(
     page.getByRole("button", { name: "Notifications on" }),

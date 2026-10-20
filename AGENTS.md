@@ -440,9 +440,27 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
 
 - Work on the branch the session names, commit with clear messages, and push
   to that same branch. Do not push to `main` directly.
+- **Always commit & push.** Do not leave changes uncommitted or unpushed until
+  the user explicitly says otherwise.
+- **Do not open a PR until the user asks for one.** When they do, open a pull
+  request from the session branch to `main` with all the changes summarized
+  (or the changelog entry, if there is one).
+- `main` must be merged with **Squash and Merge**, and the merge commit title
+  must be `RNGdle Infinite: 0.x(.x)` (for example `RNGdle Infinite: 0.5.1`),
+  matching the release version.
 - `node_modules/`, `dist/`, `test-results/`, `playwright-report/` and `.cache/`
   are ignored. Do not commit them.
 - Use `gh` for pull requests and checks.
+
+### Internal version (Reload until updated)
+
+`src/app-update.js` defines `APP_INTERNAL_VERSION`, for example
+`RNGdle-Infinitev0.5.1fix2`. It is only used by the "Reload until updated"
+flow, to scope the update intent to the current internal build. It is never
+added to the changelog or shown as a release. Bump the fix number for
+bug-patch rebuilds of the same public version (`fix0 → fix1 → fix2 …`)
+instead of moving the public `0.x(.x)` version. Current:
+`RNGdle-Infinitev0.5.1fix2`.
 
 ## Style
 

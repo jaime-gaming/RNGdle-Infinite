@@ -39,13 +39,15 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
   });
 
   await page.goto("/settings");
-  const rankSelect = page.getByLabel("Notify me at this rank or higher");
+  const rankToggle = page.getByRole("switch", {
+    name: "Notify me at this rank or higher",
+  });
+  const rankSelect = page.getByLabel("Minimum rank");
+  await expect(rankToggle).toHaveAttribute("aria-checked", "false");
   await expect(rankSelect).toBeDisabled();
-  await page
-    .getByRole("switch", {
-      name: "Desktop notification when a roll is ready",
-    })
-    .click();
+  // Rank alerts activate on their own switch, not via the ready notification.
+  await rankToggle.click();
+  await expect(rankToggle).toHaveAttribute("aria-checked", "true");
   await expect(rankSelect).toBeEnabled();
   await rankSelect.selectOption(MINIMUM_RANK);
   await expect(rankSelect).toHaveValue(MINIMUM_RANK);
@@ -55,6 +57,12 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
       SETTINGS_KEY,
     ),
   ).toBe(MINIMUM_RANK);
+  expect(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).notifyRankEnabled,
+      SETTINGS_KEY,
+    ),
+  ).toBe(true);
 
   await page
     .getByRole("button", { name: "Back to rolling", exact: true })
@@ -89,10 +97,16 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
   const notification = await page.evaluate(() => window.__rankNotifications[0]);
   expect(notification).toMatchObject({
     title: "Common rank reached",
-    body: "Auto-Roll stopped. Return to RNGdle Infinite to review this roll.",
+    body: "Return to RNGdle Infinite to review this roll.",
     tag: "rngdle-infinite-rank",
     silent: true,
   });
+  // Auto-Roll was on when the matching roll committed, so the notification
+  // offers to stop it, plus a plain dismiss.
+  expect(notification.options.actions).toEqual([
+    { action: "stop-auto-roll", title: "Stop auto roll" },
+    { action: "dismiss", title: "Dismiss" },
+  ]);
   expect(notification.title).not.toContain(String(ROLL_NUMBER));
   expect(notification.body).not.toContain(String(ROLL_NUMBER));
   expect((await rolls(page)).map((entry) => entry.number)).toEqual([

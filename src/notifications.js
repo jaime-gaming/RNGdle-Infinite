@@ -58,15 +58,39 @@ export function showReadyNotification({
   }
 }
 
-export function showRankNotification(rank, { onClick } = {}) {
+export function showRankNotification(
+  rank,
+  { onClick, onStopAutoRoll, autoRoll } = {},
+) {
   if (!NOTIFICATION_RANKS.includes(rank)) return null;
+  if (Notification.permission !== "granted") return null;
   const label = rank[0].toUpperCase() + rank.slice(1);
-  return showReadyNotification({
-    title: `${label} rank reached`,
-    body: "Auto-Roll stopped. Return to RNGdle Infinite to review this roll.",
-    onClick,
+  const actions = [];
+  if (autoRoll)
+    actions.push({ action: "stop-auto-roll", title: "Stop auto roll" });
+  actions.push({ action: "dismiss", title: "Dismiss" });
+  const notification = new Notification(`${label} rank reached`, {
+    body: "Return to RNGdle Infinite to review this roll.",
     tag: RANK_NOTIFICATION_TAG,
+    renotify: true,
+    silent: true,
+    actions,
   });
+  notification.onclick = () => {
+    try {
+      window.focus();
+    } catch {}
+    notification.close();
+    onClick?.();
+  };
+  notification.onaction = (event) => {
+    notification.close();
+    if (event.action === "stop-auto-roll") {
+      onStopAutoRoll?.();
+      onClick?.();
+    }
+  };
+  return notification;
 }
 
 // A short, quiet two-tone chime. No asset download, and no audio unless the

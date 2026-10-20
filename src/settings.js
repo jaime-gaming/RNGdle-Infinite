@@ -17,6 +17,7 @@ export const defaultSettings = {
   // Alerts
   notifyReady: false,
   notifySound: false,
+  notifyRankEnabled: false,
   notifyRank: null,
   // Presentation
   reduceMotion: "system", // "system" | "on" | "off"
@@ -34,6 +35,7 @@ export const defaultSettings = {
 const booleans = [
   "notifyReady",
   "notifySound",
+  "notifyRankEnabled",
   "compactNumbers",
   "halloweenMode",
   "showSkillBar",
