@@ -88,6 +88,7 @@ import Toasts from "./components/Toasts";
 import { useToasts } from "./use-toasts.js";
 import {
   getAppUpdateState,
+  recoverSaveAfterUpdate,
   resumeAppUpdate,
   startAppUpdate,
   stopAppUpdate,
@@ -113,6 +114,7 @@ import {
   familyFromLocation,
   isCurrentPath,
   validPage,
+  TASK_SECTIONS,
 } from "./router.js";
 import { SHOP_SECTIONS, auraFamilyById, shelfOfProduct } from "./shop-data.js";
 import {
@@ -144,6 +146,15 @@ function settingsSectionFromLocation(target) {
   if (pageFromLocation(target) !== "settings") return "";
   const named = subpageFromLocation(target);
   return SETTINGS_SECTIONS.includes(named) ? named : "";
+}
+
+// Tasks owns two sub-pages of its own: /tasks/main for the ordinary daily and
+// weekly lists and /tasks/rngween for everything the Halloween event adds.
+// Anything else under /tasks is the main page.
+function tasksSectionFromLocation(target) {
+  if (pageFromLocation(target) !== "tasks") return "";
+  const named = subpageFromLocation(target);
+  return TASK_SECTIONS.includes(named) ? named : "";
 }
 
 function shopSectionFromLocation(target) {
@@ -194,6 +205,9 @@ function App() {
   const [shopFamily, setShopFamily] = useState(() =>
     shopFamilyFromLocation(location),
   );
+  const [tasksSection, setTasksSection] = useState(() =>
+    tasksSectionFromLocation(location),
+  );
   // Goal picking is armed from the shop's goal banner; the state lives here so
   // it survives shelf changes (the Shop remounts on every sub-page).
   const [pickingGoal, setPickingGoal] = useState(false);
@@ -218,6 +232,12 @@ function App() {
   useEffect(() => {
     const unsubscribe = subscribeAppUpdate(setAppUpdate);
     resumeAppUpdate();
+    if (updateSaveRecovery?.recovered)
+      notify({
+        kind: "warning",
+        title: "Progress restored",
+        text: "The update could not read your save, so the copy made before the refresh was put back. Nothing was lost.",
+      });
     return unsubscribe;
   }, []);
   // A prestige (the ultra-rebirth in the save) earns a moment, and so does the
@@ -482,6 +502,9 @@ function App() {
     }
     // Leaving the shop disarms goal picking: it belongs to the shop floor.
     if (target !== "shop") setPickingGoal(false);
+    // The Tasks tab always lands on the everyday list; the event has its own
+    // address and is opened from the switch at the top of the page.
+    if (target === "tasks") setTasksSection("");
     // Any in-app move leaves a shared card behind; only the address brings one.
     setSharedCard(null);
     setSettingsSection("");
@@ -524,6 +547,17 @@ function App() {
     setPage("shop");
     push("shop", pathForShelfFamily("shop", "auras", family), "auras");
   };
+  // /tasks/main or /tasks/rngween: the two halves of the Tasks page.
+  const openTasks = (section = "") => {
+    const clean = TASK_SECTIONS.includes(section) ? section : "";
+    setTasksSection(clean);
+    setPage("tasks");
+    push(
+      "tasks",
+      clean ? pathForSubpage("tasks", clean) : pathForPage("tasks"),
+      clean,
+    );
+  };
   useEffect(() => {
     // Back/forward must move between pages, and a legacy #shop link or a
     // 404.html fallback landing must be normalised to its real path once.
@@ -533,12 +567,14 @@ function App() {
       setShopSection(shopSectionFromLocation(location));
       setShopFamily(shopFamilyFromLocation(location));
       setSettingsSection(settingsSectionFromLocation(location));
+      setTasksSection(tasksSectionFromLocation(location));
     };
     update();
     const landed = pageFromLocation(location);
     const section = shopSectionFromLocation(location);
     const family = shopFamilyFromLocation(location);
     const settingsSub = settingsSectionFromLocation(location);
+    const tasksSub = tasksSectionFromLocation(location);
     // A legacy "#shop" bookmark keeps working, a "#skills" one lands on the
     // shelf, and an unknown sub-path is normalised back to the shop hub.
     if (
@@ -547,6 +583,7 @@ function App() {
       (landed === "shop" && subpageFromLocation(location) !== section) ||
       (landed === "settings" &&
         subpageFromLocation(location) !== settingsSub) ||
+      (landed === "tasks" && subpageFromLocation(location) !== tasksSub) ||
       (section === "auras" && familyFromLocation(location) !== family)
     )
       history.replaceState(
@@ -556,7 +593,9 @@ function App() {
           ? pathForShelfFamily("shop", section, family)
           : landed === "settings" && settingsSub
             ? pathForSubpage("settings", settingsSub)
-            : pathForPage(landed),
+            : landed === "tasks" && tasksSub
+              ? pathForSubpage("tasks", tasksSub)
+              : pathForPage(landed),
       );
     window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
@@ -747,6 +786,13 @@ function App() {
     (rebirthReady(session, gameNow()) ||
       ultraRebirthAvailable(session, gameNow()) ||
       rollbackAvailable(session, gameNow()));
+  // The event half of Tasks only exists while the event does: a bookmark kept
+  // after November 3 lands on the everyday list instead of an empty page.
+  useEffect(() => {
+    if (page !== "tasks" || tasksSection !== "rngween") return;
+    if (gateAvailable) return;
+    openTasks("");
+  }, [page, tasksSection, gateAvailable]);
   // A direct link to a page that has not been unlocked yet simply goes home:
   // no locked panel, no counter, nothing to explain the mystery early.
   useEffect(() => {
@@ -783,7 +829,7 @@ function App() {
         onAction={dispatch}
         onBack={() => navigate("roll")}
         onShop={() => openShelf("limited")}
-        onTasks={() => navigate("tasks")}
+        onTasks={() => openTasks("rngween")}
         openSignup={openAuth}
         notify={notify}
         warning={[progressWarning, worldRollWarning].filter(Boolean).join(" ")}
@@ -1149,8 +1195,9 @@ function App() {
               <div>
                 <h1>Tasks</h1>
                 <p>
-                  Small goals that pay EP. Daily tasks reset each day, weekly
-                  ones on Monday.
+                  {tasksSection === "rngween"
+                    ? "Everything the Halloween event adds: aura missions and hourly commissions."
+                    : "Small goals that pay EP. Daily tasks reset each day, weekly ones on Monday."}
                 </p>
               </div>
             </div>
@@ -1159,6 +1206,8 @@ function App() {
               progress={session}
               now={taskNow}
               eventNow={seasonalNow}
+              section={tasksSection}
+              onSection={openTasks}
               onAction={dispatch}
               notify={notify}
               openSignup={openAuth}
@@ -1381,7 +1430,7 @@ function App() {
           onOpenChange={setReaperOpen}
           onAction={dispatch}
           onWorld={() => navigate("rngween-world")}
-          onTasks={() => navigate("tasks")}
+          onTasks={() => openTasks("rngween")}
           onShop={() => openShelf("limited")}
           openSignup={openAuth}
         />
@@ -1589,6 +1638,11 @@ function App() {
     </>
   );
 }
+
+// A reload during "Reload until updated" leaves a copy of the save behind. If
+// the build that landed cannot read its own save, the copy is put back before
+// the app ever reads storage, so an update can never cost a player their game.
+const updateSaveRecovery = recoverSaveAfterUpdate();
 
 createRoot(document.getElementById("root")).render(
   <SettingsProvider>

@@ -249,6 +249,18 @@ guessing.
 - Event auras are `eventOnly`: never in the EP catalogue, never a random drop,
   and only owned ones appear in the wardrobe. They survive Rebirth, Prestige and
   Rollback like every other owned aura.
+- **Auras are bought only while their missions are closed**:
+  `rngweenCalendar(at).aurasBuyable` is true Oct 21–24 and Nov 1–3 and false
+  through the Oct 25–31 trials, when the mission is the only way in. The
+  limited shelf shows the "tasks are running" lock and `buy-rngween-limited`
+  refuses an aura in that window.
+- **The event has its own page**: `/tasks` is Main (daily and weekly lists) and
+  `/tasks/rngween` holds everything the event adds (aura missions, hourly
+  commissions, the World door). `TASK_SECTIONS` in `src/router.js` owns the two
+  slugs; the switch at the top of Tasks is the only way between them, and both
+  addresses survive a reload. After November 4 the event page redirects to
+  Main. Specs that need the missions or the commissions open
+  `/tasks/rngween`, not `/tasks`.
 - World rolls pay no ordinary EP, charges, drops or task credit. Pending World
   outcomes are committed to the save before the animation starts.
 - World rolls never pay Pumpkoins. The World shop (reveal upgrades, 200 / 500 /
@@ -291,6 +303,10 @@ guessing.
   `introSeen: false`.
 - The World always renders on the dark theme (`main.jsx` theme effect checks
   `page === "rngween-world"`); the saved `rng-theme` is never touched.
+- The Halloween tab icon is not the shell's alone: `useSeasonFavicon()`
+  (`src/use-season-favicon.js`) swaps the `link[rel="icon"]` for the decorated
+  window and puts it back, and both `RngweenSeason` and `RngweenWorld` call it
+  so the World wears it too.
 - Economy knobs: `EP_PER_PUMPKOIN` is 10,000; Pumpkoins come only from hourly
   commissions, the four aura missions and the exchange, and buy the Limited
   Shop and the 2,000 shortcut key. The aura missions ask for 300 rolls, 60
@@ -455,12 +471,30 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
 ### Internal version (Reload until updated)
 
 `src/app-update.js` defines `APP_INTERNAL_VERSION`, for example
-`RNGdle-Infinitev0.5.1fix2`. It is only used by the "Reload until updated"
+`RNGdle-Infinitev0.5.1fix3`. It is only used by the "Reload until updated"
 flow, to scope the update intent to the current internal build. It is never
 added to the changelog or shown as a release. Bump the fix number for
 bug-patch rebuilds of the same public version (`fix0 → fix1 → fix2 …`)
 instead of moving the public `0.x(.x)` version. Current:
-`RNGdle-Infinitev0.5.1fix2`.
+`RNGdle-Infinitev0.5.1fix3`.
+
+What the flow is allowed to touch, because the save outranks everything else:
+
+- It works like clearing the browser cache, never like clearing site data.
+  `clearGameCaches()` drops every Cache Storage entry and refreshes the
+  service-worker registrations, and the reload always uses a unique
+  `__rngdle_refresh` address so the document itself cannot come from a cache.
+  `localStorage` is only read — no key is removed, rewritten or cleared.
+- Before every reload, `snapshotSaveForUpdate()` copies the exact save bytes
+  to `sessionStorage`. `recoverSaveAfterUpdate()` runs in `main.jsx` before
+  React mounts: a copy is used only when the stored save is missing or is not
+  JSON, and it is dropped on every load, so it can never resurrect a deleted
+  account.
+- `decideUpdateStep()` is the whole policy (done / wait / reload / stuck) and
+  is tested without a browser. The loop gives up after
+  `APP_UPDATE_MAX_RELOADS` reloads instead of reloading forever.
+- `tests/app-update.spec.js` covers the decisions, the save copy and the
+  cache-invalidation run; keep that spec green before shipping a build.
 
 ## Style
 

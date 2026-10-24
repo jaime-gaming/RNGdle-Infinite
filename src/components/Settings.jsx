@@ -447,7 +447,7 @@ export default function Settings({
         </button>
         <p data-testid="update-status" role="status" aria-live="polite">
           {appUpdate?.message ||
-            "Checks for the newest published build and reloads this page until it arrives. Your game progress and settings are kept."}
+            "Clears the files this browser cached for the game, then reloads until the newest build arrives. Your progress, profile and settings are stored separately and stay exactly as they are."}
         </p>
       </div>
     </section>
