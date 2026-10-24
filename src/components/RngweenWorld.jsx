@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { RNGWEEN_WORLD_SKIN, rngweenCalendar } from "../rngween.js";
+import { useLiveEventClock } from "../use-live-clock.js";
 import { RNGWEEN_WORLD_MAX } from "../rngween-limited.js";
 import {
   WORLD_ZONES,
@@ -46,7 +47,6 @@ import {
   worldPhaseComplete,
   worldPhaseGoals,
 } from "../rngween-world-badges.js";
-import { seasonNow } from "../season-clock.js";
 import { hourlyView, hourlyTaskById } from "../rngween-hourly.js";
 import { useMotionPreference, useSettings } from "../use-settings.jsx";
 import { useSeasonFavicon } from "../use-season-favicon.js";
@@ -104,15 +104,13 @@ const REEL = ["?", ...Array.from({ length: 30 }, (_, i) => String(i % 10))];
 const reelLanding = (digit) => 21 + Number(digit);
 
 function useRevealClock(now, pending, reduced) {
-  const [clock, setClock] = useState(() => seasonNow() ?? now);
-  useEffect(() => {
-    setClock(seasonNow() ?? now);
-    if (!pending) return;
-    const tick = () => setClock(seasonNow() ?? now);
-    const timer = window.setInterval(tick, reduced ? 250 : 80);
-    return () => window.clearInterval(timer);
-  }, [now, pending?.id, reduced]);
-  return clock;
+  // The reveal, the shop deadline and the Halloween strip read one live clock,
+  // so their seconds agree and none of them freezes between page renders. The
+  // reveal also slides its digits, so it samples faster while one is running.
+  return useLiveEventClock(now, {
+    animate: !!pending,
+    interval: pending ? (reduced ? 250 : 80) : 1000,
+  });
 }
 
 // CLEANUP Nov 4, 2026: remove this event-only view and speed shelf. Permanent

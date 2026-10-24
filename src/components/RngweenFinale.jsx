@@ -1,9 +1,9 @@
 // CLEANUP Nov 4, 2026: delete with the rest of the event. Halloween night is
 // one day long, and this is the only thing that says so.
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Flame, Gift, PartyPopper, Timer } from "lucide-react";
 import { RNGWEEN_FINALE_SKIN, rngweenCalendar } from "../rngween.js";
-import { seasonNow } from "../season-clock.js";
+import { useLiveEventClock } from "../use-live-clock.js";
 import { PumpkinMark } from "./game-icons.jsx";
 import "../rngween-finale.css";
 
@@ -16,34 +16,15 @@ function clock(ms) {
 // The night of October 31 speaks for itself: a strip above the page that says
 // what is double, how long is left, and how to keep the lantern.
 export default function RngweenFinale({ progress, now, onAction, notify }) {
-  const calendar = rngweenCalendar(now);
-  // `now` is the verified date the page render started with, and it is only
-  // renewed every half minute. The countdown reads the live clock on each tick
-  // instead, so seconds move at the same pace as every other event timer.
-  const [state, setState] = useState(() => ({
-    left: Number.isFinite(now) ? calendar.endsAt - now : 0,
-    live: calendar.finaleActive,
-    multiplier: calendar.pumpkoinMultiplier,
-  }));
-  const { left, live, multiplier } = state;
+  // `now` is the date the page rendered with, renewed only every half minute.
+  // The strip is a clock, so it ticks off the live verified date instead and
+  // its seconds match every other event timer.
+  const live = useLiveEventClock(now);
+  const calendar = rngweenCalendar(live);
+  const left = Number.isFinite(live) ? calendar.endsAt - live : 0;
+  const multiplier = calendar.pumpkoinMultiplier;
   const [pending, setPending] = useState(false);
-  useEffect(() => {
-    const read = () => seasonNow() ?? now;
-    const tick = () => {
-      const at = read();
-      const next = rngweenCalendar(at);
-      setState({
-        left: Number.isFinite(at) ? next.endsAt - at : 0,
-        live: next.finaleActive,
-        multiplier: next.pumpkoinMultiplier,
-      });
-    };
-    tick();
-    if (!rngweenCalendar(read()).finaleActive) return;
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [now]);
-  if (!live || left <= 0) return null;
+  if (!calendar.finaleActive || left <= 0) return null;
   const limited = progress.rngweenLimited;
   const taken =
     limited?.finaleEarned === true ||

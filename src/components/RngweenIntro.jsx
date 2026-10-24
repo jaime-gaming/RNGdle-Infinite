@@ -125,7 +125,7 @@ export default function RngweenIntro({ now, paused = false, onOpenChange }) {
             </ul>
             <p className="rngween-story-note">
               All dates are UTC. When the event ends, the auras you collected
-              stay. Everything else goes.
+              stay and unspent Pumpkoins come back as a small EP farewell.
             </p>
             <button className="primary-button" onClick={close}>
               Let's play
