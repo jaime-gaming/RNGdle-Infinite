@@ -590,9 +590,10 @@ export default function ActivityFeed({
                                               : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
-                      {new Date(event.at).toLocaleString(undefined, {
+                      {new Date(event.at).toLocaleString("en-US", {
                         dateStyle: "medium",
                         timeStyle: "short",
+                        timeZone: "UTC",
                       })}
                     </time>
                   </div>
