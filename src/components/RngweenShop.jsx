@@ -380,8 +380,9 @@ export default function RngweenShop({
                     <p>{item.description}</p>
                     {saleLocked && (
                       <p className="rngween-aura-sale-note">
-                        <Clock size={13} /> Purchases open November 1 UTC. Earn
-                        this aura from tasks until October 31.
+                        <Clock size={13} /> On sale while the tasks are closed:
+                        October 21–24 and November 1–3 UTC. Finish this aura's
+                        task by October 31 to earn it.
                       </p>
                     )}
                     <strong className="rngween-limited-price">
@@ -449,7 +450,7 @@ export default function RngweenShop({
                         aria-label={`Buy ${item.name} for ${item.pumpkoinPrice} Pumpkoins`}
                       >
                         {saleLocked ? (
-                          "Available November 1"
+                          "Tasks are running"
                         ) : (
                           <>
                             Buy for {count(item.pumpkoinPrice)}{" "}
@@ -540,9 +541,10 @@ export default function RngweenShop({
               </p>
             )}
             <p className="rngween-limited-footnote">
-              Tasks close October 31; aura purchases open November 1. Shop,
-              exchange and world close November 3 at 23:59 UTC. No EP, task
-              progress or main-game rolls are awarded by the mini RNG.
+              Auras are on sale while their tasks are closed: October 21–24 and
+              November 1–3. Shop, exchange and world close November 3 at 23:59
+              UTC. No EP, task progress or main-game rolls are awarded by the
+              mini RNG.
             </p>
           </>
         )}

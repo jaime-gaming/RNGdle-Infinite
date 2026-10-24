@@ -1392,7 +1392,7 @@ function applyEvent(state, action) {
       if (!item) throw new Error("That limited item is not for sale.");
       if (item.kind === "aura" && !rngweenCalendar(at).aurasBuyable)
         throw new Error(
-          "Aura purchases open November 1, 2026 (UTC). Earn them from Halloween tasks until October 31.",
+          "Halloween auras are sold only while their tasks are closed: October 21–24 and November 1–3, 2026 (UTC).",
         );
       if (item.id === RNGWEEN_WORLD_KEY.id && rngweenValleyUnlocked(limited))
         throw new Error(

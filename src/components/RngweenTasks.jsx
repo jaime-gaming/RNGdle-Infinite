@@ -89,9 +89,10 @@ export default function RngweenTasks({
       <div className="rngween-event-intro">
         <p>
           Complete and claim these tasks by October 31 UTC for their auras and
-          Pumpkoins. Missing auras go on sale in Limited Shop November 1–3.
-          Collected auras survive resets and will not return after this event.
-          World badges are separate; speak to The Reaper below Roll to play.
+          Pumpkoins. Auras also go on sale in the Limited Shop while their tasks
+          are closed: October 21–24 and November 1–3. Collected auras survive
+          resets and will not return after this event. World badges are
+          separate; speak to The Reaper below Roll to play.
         </p>
         {hasCollection && (
           <button

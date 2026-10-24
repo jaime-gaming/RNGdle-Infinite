@@ -108,8 +108,9 @@ export default function RngweenIntro({ now, paused = false, onOpenChange }) {
                 <strong>Limited Shop · Oct 21–Nov 3</strong>
                 <span>
                   Trade EP for Pumpkoins and spend them on a pumpkin companion,
-                  a seasonal skill and a key to the Valley. Any aura you missed
-                  goes on sale November 1.
+                  a seasonal skill and a key to the Valley. Auras are also on
+                  sale while the tasks are closed, October 21–24 and November
+                  1–3.
                 </span>
               </li>
               <li>

@@ -17,6 +17,10 @@ export function rngweenCalendar(at) {
   const limitedEndsAt = Date.UTC(RNGWEEN_YEAR, 10, 4);
   const decorationsEndAt = limitedEndsAt;
   const verified = Number.isFinite(at);
+  // Auras are sold whenever their missions are not running: the four quiet
+  // days before the trials (Oct 21–24) and the three days after them (Nov 1–3).
+  // While a mission is live the only way to its aura is to finish the mission.
+  const missionsActive = at >= startsAt && at < endsAt;
   return {
     decoratesAt,
     limitedStartsAt,
@@ -25,7 +29,12 @@ export function rngweenCalendar(at) {
     decorationsEndAt,
     limitedEndsAt,
     auraSalesAt: endsAt,
-    aurasBuyable: verified && at >= endsAt && at < limitedEndsAt,
+    missionsActive: verified && missionsActive,
+    aurasBuyable:
+      verified &&
+      at >= limitedStartsAt &&
+      at < limitedEndsAt &&
+      !missionsActive,
     limitedPhase: !verified
       ? "unavailable"
       : at < limitedStartsAt
@@ -78,7 +87,7 @@ export const RNGWEEN_AURAS = [
     swatch: ["#fb923c", "#9a3412"],
     icon: "pumpkin",
     description:
-      "Pumpkin frame with orange embers. Collect from RNGween tasks or buy November 1–3. Permanent; only available in this event.",
+      "Pumpkin frame with orange embers. Collect from RNGween tasks, or buy it while those tasks are closed (Oct 21–24 and Nov 1–3). Permanent; only available in this event.",
   },
   {
     id: "phantom-veil",
@@ -89,7 +98,7 @@ export const RNGWEEN_AURAS = [
     swatch: ["#c4b5fd", "#6d28d9"],
     icon: "phantom",
     description:
-      "Ghost frame with violet mist. Collect from RNGween tasks or buy November 1–3. Permanent; only available in this event.",
+      "Ghost frame with violet mist. Collect from RNGween tasks, or buy it while those tasks are closed (Oct 21–24 and Nov 1–3). Permanent; only available in this event.",
   },
   {
     id: "witchfire",
@@ -100,7 +109,7 @@ export const RNGWEEN_AURAS = [
     swatch: ["#a3e635", "#7c3aed"],
     icon: "witchfire",
     description:
-      "Green flames and a rotating violet seal. Collect from RNGween tasks or buy November 1–3. Permanent; only available in this event.",
+      "Green flames and a rotating violet seal. Collect from RNGween tasks, or buy it while those tasks are closed (Oct 21–24 and Nov 1–3). Permanent; only available in this event.",
   },
   {
     id: "blood-moon",
@@ -111,7 +120,7 @@ export const RNGWEEN_AURAS = [
     swatch: ["#f87171", "#881337"],
     icon: "bloodmoon",
     description:
-      "Red moon with orbiting bats. Collect from RNGween tasks or buy November 1–3. Permanent; only available in this event.",
+      "Red moon with orbiting bats. Collect from RNGween tasks, or buy it while those tasks are closed (Oct 21–24 and Nov 1–3). Permanent; only available in this event.",
   },
 ];
 
