@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { eventContext } from "./helpers/intro.js";
-import { seedProgress } from "./helpers/progress.js";
+import { seedProgress, testProfile } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { shopProducts } from "../src/shop-data.js";
 
@@ -505,6 +505,93 @@ test("linked screens never settle two rolls: the main device draws for both", as
     new Set([...(state.receipts ?? []), state.pendingRoll?.id].filter(Boolean));
   expect([...settled(await saved(pageA))]).toEqual([rollId]);
   expect([...settled(await saved(pageB))]).toEqual([rollId]);
+
+  await contextB.close();
+  await contextA.close();
+});
+
+// Linking is a choice about which account survives, and the answer is the one
+// that has actually been played. A browser opened once cannot wipe a full save
+// just because its own last write happens to be newer.
+const richAccount = (profile) => ({
+  profile,
+  balance: 4000000,
+  totalEarned: 4000000,
+  owned: ["static", "quickwind-1"],
+  discovered: ["even", "odd", "round"],
+  history: Array.from({ length: 40 }, (_, index) => ({
+    id: `roll:${index}`,
+    type: "roll",
+    at: 1000 + index,
+    number: 123456,
+    tier: "common",
+    ep: 12,
+    badges: [],
+  })),
+});
+const phoneAccount = {
+  id: "account-phone",
+  username: "SecondPlayer",
+  createdAt: 1700000500000,
+};
+
+test("the device with more progress is the primary when two different accounts link", async ({
+  browser,
+}) => {
+  const contextA = await eventContext(browser);
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, richAccount(testProfile));
+  await pageA.goto("/settings/link");
+  await pageA.getByTestId("sync-create").click();
+  const link = await pageA.getByTestId("sync-link").inputValue();
+  const richSave = await saved(pageA);
+
+  // B has an account of its own, with almost nothing in it.
+  const contextB = await eventContext(browser);
+  const pageB = await contextB.newPage();
+  await seedProgress(pageB, { profile: phoneAccount });
+  await pageB.goto(link);
+
+  // The played account is the one that is kept: B adopts it whole, and A is
+  // left exactly as it was instead of being replaced by the empty one.
+  await expect
+    .poll(async () => (await saved(pageB))?.profile?.username, {
+      timeout: 15000,
+    })
+    .toBe("LuckyTester");
+  expect((await saved(pageB)).history).toHaveLength(40);
+  expect((await saved(pageB)).owned).toEqual(["static", "quickwind-1"]);
+  expect((await saved(pageA)).profile).toEqual(testProfile);
+  expect((await saved(pageA)).history).toEqual(richSave.history);
+
+  await contextB.close();
+  await contextA.close();
+});
+
+test("when the second device is the one with more progress, it keeps its save and the first adopts it", async ({
+  browser,
+}) => {
+  const contextA = await eventContext(browser);
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, { profile: phoneAccount });
+  await pageA.goto("/settings/link");
+  await pageA.getByTestId("sync-create").click();
+  const link = await pageA.getByTestId("sync-link").inputValue();
+
+  const contextB = await eventContext(browser);
+  const pageB = await contextB.newPage();
+  await seedProgress(pageB, richAccount(testProfile));
+  await pageB.goto(link);
+
+  // The richer device does not surrender its account to a leaner link owner.
+  await expect
+    .poll(async () => (await saved(pageA))?.profile?.username, {
+      timeout: 15000,
+    })
+    .toBe("LuckyTester");
+  expect((await saved(pageB)).profile).toEqual(testProfile);
+  expect((await saved(pageB)).history).toHaveLength(40);
+  expect((await saved(pageA)).history).toHaveLength(40);
 
   await contextB.close();
   await contextA.close();

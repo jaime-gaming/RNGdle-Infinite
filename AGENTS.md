@@ -428,6 +428,15 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
 - The device that created the link is the **main** device (slot `a`). It dials;
   the other device (`b`) listens. While both are connected, actions started on
   `b` are sent to `a` to run once.
+- Linking is a choice about **whose account survives**, and every transport asks
+  the same question through `syncDecision` in `src/sync-policy.js` — the peer
+  `reconcile` and the relay's `relayApplyLatest` both call it. A profile beats a
+  guest; otherwise a save that carries clearly more of the game
+  (`progressWeight`, 50% and at least 40 points ahead) is the primary, and the
+  other device adopts it whole. Never decide this by timestamp alone: a browser
+  opened once must not wipe a played save because its last write is newer. Two
+  devices of the *same* account keep the timestamp order, so a queued change
+  from either one is never refused.
 - The PeerJS broker can be overridden with the localStorage key
   `rng-infinite-peer-broker` (`{host, port, path, secure}`). The WebRTC spec uses
   this to run a local `peer` server on port 9000. Port 9123 is blocked by

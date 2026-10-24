@@ -1172,17 +1172,22 @@ function relayApplyLatest(latest, onEmpty) {
     onEmpty?.();
     return;
   }
-  const local = queuedStamp();
-  if (
-    latest.savedAt > local ||
-    (latest.savedAt === local && latest.device < device)
-  ) {
-    receiveRemote(latest);
-  } else if (
-    latest.savedAt < local ||
-    (latest.savedAt === local && latest.device !== device)
-  ) {
-    void relayPushState(currentSave());
+  // The relay hands over whatever the room holds last, so this is often the
+  // first sight of the other device's account: it goes through the same policy
+  // as the peer transport, where the account with more progress is the primary
+  // and a leaner one adopts it instead of overwriting it.
+  const decision = syncDecision(
+    { state: currentSave(), savedAt: queuedStamp(), device },
+    latest,
+  );
+  if (decision.direction === "receive") {
+    void receiveRemote(latest);
+  } else if (decision.direction === "send") {
+    if (decision.savedAt !== savedAt) {
+      savedAt = decision.savedAt;
+      persistLink();
+    }
+    void relayPushState(currentSave(), decision.savedAt);
   }
 }
 

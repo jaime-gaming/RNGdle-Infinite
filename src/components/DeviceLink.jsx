@@ -129,7 +129,9 @@ export function DeviceLinkSummary({ progress, navigate }) {
         relay you run yourself when one answers. One device is the account
         controller; actions from the other are sent to it, so the two screens
         cannot start competing rolls. Disconnected changes queue and sync when
-        the link returns.
+        the link returns. When two different accounts meet, the one that has
+        been played more is the one that is kept — and the other device adopts
+        it, so a browser that was barely used cannot wipe a full save.
       </p>
       <div className="setting-row">
         <div className="setting-copy">
@@ -337,8 +339,8 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
   const note = !health
     ? "This deployment has no relay of its own, so saves travel browser-to-browser through WebRTC, with a free public broker handling only the initial handshake. Both devices therefore have to be open at the same time at least once. Treat the link like a password: whoever holds it plays this account."
     : health.store === "disk"
-      ? "The relay above keeps rooms on its own disk, so either device may be closed and catch up later, and the newer save wins when both played apart. Treat the link like a password: whoever holds it plays this account."
-      : "The relay above keeps rooms in memory. A room stays with it for as long as the relay runs, so a device that was closed still gets the newest save when it opens the link; a room nobody touches for a month is dropped. A restart of the relay forgets every room, so run your own relay with a store to keep rooms across restarts. Treat the link like a password: whoever holds it plays this account.";
+      ? "The relay above keeps rooms on its own disk, so either device may be closed and catch up later, and the newer save wins when both played apart — unless the two browsers are different accounts, where the one with more progress is the one that is kept. Treat the link like a password: whoever holds it plays this account."
+      : "The relay above keeps rooms in memory. A room stays with it for as long as the relay runs, so a device that was closed still gets the newest save when it opens the link; a room nobody touches for a month is dropped. A restart of the relay forgets every room, so run your own relay with a store to keep rooms across restarts. When the two browsers are different accounts, the one with more progress is the one that is kept. Treat the link like a password: whoever holds it plays this account.";
 
   const details = [
     ["Transport", transport],
@@ -384,7 +386,10 @@ export default function DeviceLinkPanel({ progress, notify, navigate }) {
         yourself when one answers. Whichever device comes back catches up as
         soon as the two can see each other, and when both played apart the newer
         save wins — with a relay that keeps a store, a returning device is
-        handed everything it missed even if the other one is closed.
+        handed everything it missed even if the other one is closed. Two
+        browsers that are not the same account yet are joined by how much they
+        carry: the one with more progress is the primary, it is kept whole, and
+        the other adopts it instead of overwriting it.
       </p>
 
       <div className="setting-row">
