@@ -656,7 +656,7 @@ test("the generated sandbox seed really opens every event reward, preserves spen
   await intro.getByRole("button", { name: "Let's play", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-season", "rngween");
   expect((await saved(page)).rngweenLimited.pumpkoins).toBe(50000);
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(
     page.getByRole("list", { name: "Halloween tasks" }).locator("li"),
   ).toHaveCount(4);

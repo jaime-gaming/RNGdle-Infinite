@@ -135,7 +135,7 @@ test("a claim waiting for website time cannot grant an aura to a replacement acc
   };
   await mockSeasonClock(page, active);
   await seedProgress(page, withAllFragments({ tasks }));
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   const claim = page.getByRole("button", {
     name: "Collect Jack-o'-Glow",
     exact: true,

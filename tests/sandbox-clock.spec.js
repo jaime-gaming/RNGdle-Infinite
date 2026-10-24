@@ -110,7 +110,7 @@ test("Halloween renders through a preview with replaced Date headers and a wrong
 }) => {
   await page.clock.setFixedTime(new Date("2030-02-15T12:00:00Z"));
   const clock = await reviewClock(page);
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(page.locator("html")).toHaveAttribute("data-season", "rngween");
   await expect(
     page.getByRole("heading", { name: "RNGween", exact: true }),
@@ -145,7 +145,7 @@ test("a review date that cannot be verified still cannot grant an aura", async (
       },
     }),
   );
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   const reward = page.getByRole("button", {
     name: "Collect Jack-o'-Glow",
     exact: true,
@@ -168,7 +168,7 @@ test("the review clock restores the ordinary theme and favicon after the seasona
   page,
 }) => {
   const clock = await reviewClock(page);
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(page.locator(".rngween-event")).toBeVisible();
   clock.set(ended);
   await page.evaluate(async () => {

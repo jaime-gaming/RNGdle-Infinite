@@ -134,7 +134,7 @@ function claimDone(p, at = opening + 1000, world = null) {
 async function claimOnPage(tab, amount, { inWorld = false } = {}) {
   if (inWorld)
     await tab.getByRole("tab", { name: "Commissions", exact: true }).click();
-  else await tab.goto("/tasks");
+  else await tab.goto("/tasks/rngween");
   await tab
     .getByRole("button", { name: new RegExp(`Claim \\+${amount}`) })
     .first()
@@ -971,7 +971,7 @@ test("four public main/World commissions are visible before the trials, persist 
 }) => {
   await mockSeasonClock(page, opening);
   await seedProgress(page);
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   const board = page.locator("[data-hourly-board]");
   await expect(board.locator("[data-hourly-task]")).toHaveCount(4);
   expect(await board.locator('[data-source="world"]').count()).toBeGreaterThan(
@@ -1008,7 +1008,7 @@ test("a real online main roll finishes its commission; the Tasks claim button pa
     )
     .toBeTruthy();
   expect((await saved(page)).rngweenLimited.pumpkoins).toBe(0);
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await page.getByRole("button", { name: /Claim \+15/ }).click();
   await expect
     .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
@@ -1037,7 +1037,7 @@ test("idle exact-hour expiry replaces assignments without a reload, payout or de
     { count: 4 },
   );
   await seedProgress(page, p);
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(page.locator("[data-hourly-task]")).toHaveCount(4);
   await page.clock.runFor(1000);
   await expect
@@ -1047,18 +1047,22 @@ test("idle exact-hour expiry replaces assignments without a reload, payout or de
   await expect(page.locator("[data-hourly-task]")).toHaveCount(4);
 });
 
-test("browser phase changes swap hourly commissions for aura trials and return them on November 1", async ({
+test("the event page appears at the trials without a reload and lists the four aura missions", async ({
   page,
 }) => {
   await page.clock.pauseAt(new Date(Date.UTC(2026, 9, 24, 23, 59, 59)));
   await mockSeasonClock(page, Date.UTC(2026, 9, 24, 23, 59, 59));
   await seedProgress(page);
   await page.goto("/tasks");
-  await expect(page.locator("[data-hourly-task]")).toHaveCount(4);
+  // A second before the trials there is no event page at all.
+  await expect(page.locator(".tasks-switch")).toHaveCount(0);
   await page.clock.runFor(1000);
-  await expect(page.locator("[data-hourly-board]")).toHaveCount(0);
-  await expect(page.locator("[data-event-mission]")).toHaveCount(4);
   await expect(page.locator("html")).toHaveAttribute("data-season", "rngween");
+  await page.getByRole("tab", { name: /RNGween/ }).click();
+  await expect(page).toHaveURL(/\/tasks\/rngween$/);
+  await expect(page.locator(".rngween-event-panel")).toBeVisible();
+  await page.getByRole("tab", { name: "Auras", exact: true }).click();
+  await expect(page.locator("[data-event-mission]")).toHaveCount(4);
 });
 
 test("a public World badge commission can pay Pumpkoins after reveal but never ordinary EP, tasks or skill charge", async ({
@@ -1175,7 +1179,7 @@ test("buying a challenge key preserves older main assignments; their next replac
   const p = withContract("main-evening-spirits", opening, { count: 1 });
   p.rngweenLimited.pumpkoins = 2000;
   await seedProgress(page, p);
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(
     page.locator('[data-hourly-task][data-source="world"]'),
   ).toHaveCount(0);
@@ -1303,8 +1307,8 @@ test("November 1 restores four hourly slots while Nov 4 closes commissions, shop
   await page.clock.pauseAt(new Date(Date.UTC(2026, 9, 31, 23, 59, 59)));
   const clock = await mockSeasonClock(page, Date.UTC(2026, 9, 31, 23, 59, 59));
   await seedProgress(page, keyAccount());
-  await page.goto("/tasks");
-  await expect(page.locator("[data-hourly-board]")).toHaveCount(0);
+  await page.goto("/tasks/rngween");
+  await expect(page.locator(".rngween-event-panel")).toBeVisible();
   await page.clock.runFor(1000);
   await expect(page.locator("[data-hourly-task]")).toHaveCount(4);
   await expect(page.locator("[data-event-mission]")).toHaveCount(0);
@@ -1392,7 +1396,7 @@ test("the saved hourly board recovers from storage failure without inventing ass
   await mockSeasonClock(page, opening);
   await seedProgress(page);
   await blockProgressWrites(page, { beforeLoad: true });
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(page.locator(".progress-warning")).toContainText(
     "Local saving is unavailable",
   );

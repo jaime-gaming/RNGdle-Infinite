@@ -133,7 +133,7 @@ test("turning Halloween off preserves tasks, rewards and ownership; it persists 
       totalEarned: 1000,
     }),
   );
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(page.locator(".rngween-decor")).toBeVisible();
   const before = await saved(page);
   await toggleLook(page);

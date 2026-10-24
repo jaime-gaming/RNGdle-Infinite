@@ -47,7 +47,8 @@ import {
 } from "../rngween-world-badges.js";
 import { seasonNow } from "../season-clock.js";
 import { hourlyView, hourlyTaskById } from "../rngween-hourly.js";
-import { useMotionPreference } from "../use-settings.jsx";
+import { useMotionPreference, useSettings } from "../use-settings.jsx";
+import { useSeasonFavicon } from "../use-season-favicon.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import NumberBox from "./NumberBox.jsx";
 import WorldScenery from "./WorldScenery.jsx";
@@ -133,6 +134,11 @@ export default function RngweenWorld({
   // minus what the shop already took. Pumpkoins never enter this page.
   const wallet = worldPointsAvailable(limited);
   const reduced = useMotionPreference();
+  // This page renders outside the app shell, so it carries the seasonal tab
+  // icon itself. The World is always a night place; the Halloween icon follows
+  // the same rule as the rest of the site (decorated and Halloween mode on).
+  const { settings } = useSettings();
+  useSeasonFavicon(rngweenCalendar(now).decorated && settings.halloweenMode);
   const [selected, setSelected] = useState(
     () => world.pending?.zone ?? world.last?.zone ?? "pumpkin-patch",
   );
@@ -245,7 +251,10 @@ export default function RngweenWorld({
           },
           undefined,
         ).catch((error) => {
-          if (error?.message?.includes("World points") || error?.message?.includes("not enough")) {
+          if (
+            error?.message?.includes("World points") ||
+            error?.message?.includes("not enough")
+          ) {
             setKeepRolling(false);
             notify({
               kind: "error",
@@ -263,14 +272,7 @@ export default function RngweenWorld({
         keepRollingInterval.current = null;
       }
     };
-  }, [
-    keepRolling,
-    zone.id,
-    key,
-    progress.profile,
-    pending,
-    run,
-  ]);
+  }, [keepRolling, zone.id, key, progress.profile, pending, run]);
 
   // Stop the chain when 6666 appears or the tab goes hidden.
   useEffect(() => {

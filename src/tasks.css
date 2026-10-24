@@ -413,7 +413,9 @@
   font-weight: 600;
   color: var(--muted);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 }
 .rngween-event-tabs button:hover {
   color: var(--text);
@@ -427,4 +429,65 @@
 }
 .rngween-event-content > *:only-child {
   margin: 0;
+}
+
+/* ---- Main / RNGween: the event gets a page of its own -------------------- */
+.tasks-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 18px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.tasks-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 20px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.tasks-switch button:hover {
+  color: var(--text);
+}
+.tasks-switch button.is-selected {
+  background: var(--text);
+  color: var(--bg);
+}
+.tasks-switch-live {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tasks-switch button.is-selected .tasks-switch-live {
+  background: color-mix(in srgb, var(--bg) 20%, transparent);
+  color: var(--bg);
+}
+@media (max-width: 760px) {
+  .tasks-switch {
+    display: flex;
+    width: 100%;
+  }
+  .tasks-switch button {
+    flex: 1;
+    padding: 9px 12px;
+  }
 }

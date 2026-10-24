@@ -74,6 +74,9 @@ export default function Tasks({
   progress,
   now,
   eventNow,
+  // "" and "main" are the everyday lists; "rngween" is the event page.
+  section = "",
+  onSection,
   onAction,
   notify,
   openSignup,
@@ -194,6 +197,10 @@ export default function Tasks({
   const eventCalendar = rngweenCalendar(eventNow);
   const eventActive = eventCalendar.limitedPhase === "active";
   const [eventTab, setEventTab] = useState("commissions");
+  // The switch only exists while the event does. A link to the event page
+  // that outlives the event falls back to the everyday list, never a blank.
+  const eventPage = eventActive && !!progress.profile;
+  const onEvent = section === "rngween" && eventPage;
 
   return (
     <>
@@ -208,262 +215,320 @@ export default function Tasks({
           </button>
         </div>
       )}
-      {/* RNGween event panel: auras and hourly commissions under one tabbed roof. */}
-      {eventActive && progress.profile && (
-        <section className="rngween-event-panel">
-          <div className="rngween-event-tabs" role="tablist" aria-label="RNGween event sections">
-            <button
-              role="tab"
-              id="event-tab-auras"
-              aria-selected={eventTab === "auras"}
-              className={eventTab === "auras" ? "is-selected" : ""}
-              onClick={() => setEventTab("auras")}
-            >
-              Auras
-            </button>
-            <button
-              role="tab"
-              id="event-tab-commissions"
-              aria-selected={eventTab === "commissions"}
-              className={eventTab === "commissions" ? "is-selected" : ""}
-              onClick={() => setEventTab("commissions")}
-            >
-              Commissions
-            </button>
-          </div>
-          <div className="rngween-event-content">
-            {eventTab === "auras" ? (
-              <RngweenTasks
-                {...{ progress, onAction, notify, openAuraFamily, openWorld }}
-                now={eventNow}
-              />
-            ) : (
-              <RngweenHourly
-                progress={progress}
-                now={eventNow}
-                openWorld={openWorld}
-                openSignup={openSignup}
-                onAction={onAction}
-                notify={notify}
-              />
-            )}
-          </div>
-        </section>
-      )}
-      {!progress.rngweenLimited?.retired && eventActive && (
-        <button
-          className="secondary-button rngween-world-launch"
-          onClick={openWorld}
-        >
-          <Sparkles size={17} /> Enter RNGween World
-        </button>
-      )}
-      <section className="tasks-summary" aria-label="Task summary">
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Available</span>
-          <strong>
-            <Coins size={15} aria-hidden="true" />
-            {formatEP(progress.balance)} EP
-          </strong>
-        </div>
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Ready</span>
-          <strong>
-            {summary.ready} <small>to claim</small>
-          </strong>
-          <small className="tasks-stat-note">
-            {readyEP > 0
-              ? `Worth +${formatEP(readyEP)} EP together`
-              : "Nothing waiting for you"}
-          </small>
-        </div>
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Claimed</span>
-          <strong>
-            {summary.claimed} <small>of {summary.total} this reset</small>
-          </strong>
-        </div>
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Task Skips</span>
-          <strong>
-            {skips.tokens} <small>of {skips.limit} held</small>
-          </strong>
-          <small className="tasks-stat-note">{skipNote}</small>
-        </div>
-      </section>
-      {lists.map((list) => {
-        const { cadence, views, bonus } = list;
-        const allClaimed = bonus.state === "claimed";
-        return (
-          <section
-            className="task-group"
-            key={cadence}
-            aria-labelledby={`task-group-${cadence}`}
+      {eventPage && (
+        <div className="tasks-switch" role="tablist" aria-label="Task pages">
+          <button
+            role="tab"
+            id="tasks-tab-main"
+            aria-controls="tasks-main-panel"
+            aria-selected={!onEvent}
+            className={!onEvent ? "is-selected" : ""}
+            onClick={() => onSection?.("main")}
           >
-            <header className="task-group-head">
-              <div>
-                <h2 id={`task-group-${cadence}`}>{CADENCE_NAME[cadence]}</h2>
-                <p className="task-group-sub">
-                  {cadence === "daily"
-                    ? "Three tasks a day, new ones at reset"
-                    : "Four tasks a week, new ones on Monday"}
-                </p>
-              </div>
-              <div className="task-group-meta">
-                <span className="task-segments" aria-hidden="true">
-                  {views.map((view) => (
-                    <span
-                      key={view.task.id}
-                      className={`task-seg is-${view.state}`}
-                    />
-                  ))}
-                </span>
-                <span className="task-reset" title="Lists reset at 00:00 UTC">
-                  <Timer size={13} aria-hidden="true" />
-                  Resets in {resetCountdown(list.reset)} · UTC
-                </span>
-              </div>
-            </header>
-            <ul className={`task-list task-list-${cadence}`}>
-              {views.map((view) => {
-                const { task } = view;
-                const shown = Math.min(view.count, view.goal);
-                const kind = KIND[task.metric] ?? {
-                  name: "Task",
-                  icon: CalendarDays,
-                };
-                const Icon = kind.icon;
-                const asking = confirming === task.id;
-                const percent = Math.round((shown / view.goal) * 100);
-                return (
-                  <li
-                    key={task.id}
-                    className={`task-card is-${view.state}`}
-                    data-task={task.id}
-                    data-state={view.state}
-                  >
-                    <div className="task-card-top">
-                      <span className="task-icon" aria-hidden="true">
-                        <Icon size={18} />
-                      </span>
-                      <div className="task-card-title">
-                        <span className="task-kind">{kind.name}</span>
-                        <h3>{task.title}</h3>
-                        <p>{task.detail}</p>
-                      </div>
-                      <span className="task-reward">
-                        +{formatEP(task.reward)} EP
-                      </span>
-                    </div>
-                    <div className="task-progress">
-                      <progress
-                        className="task-bar"
-                        max={view.goal}
-                        value={shown}
-                        aria-label={task.title}
-                        aria-valuetext={`${count(shown)} of ${count(view.goal)}`}
-                      />
-                      <span className="task-count">
-                        {count(shown)} / {count(view.goal)}
-                        <span className="task-percent"> · {percent}%</span>
-                      </span>
-                    </div>
-                    <div className="task-card-foot">
-                      {view.state === "claimed" && (
-                        <span className="task-claimed">
-                          <Check size={14} aria-hidden="true" /> Claimed
-                        </span>
-                      )}
-                      {view.state === "claimable" && (
-                        <button
-                          className="primary-button task-claim"
-                          disabled={busy}
-                          aria-label={`Claim reward for ${task.title}`}
-                          onClick={() => claim(list, task)}
-                        >
-                          {pending === task.id ? "Claiming…" : "Claim"}
-                        </button>
-                      )}
-                      {view.state === "open" && !asking && (
-                        <button
-                          className="secondary-button task-skip"
-                          disabled={busy || skips.tokens < 1}
-                          aria-label={`Skip ${task.title}`}
-                          title={skipHint()}
-                          onClick={() => setConfirming(task.id)}
-                        >
-                          <ArrowRightLeft size={13} aria-hidden="true" />
-                          {pending === task.id ? "Swapping…" : "Skip"}
-                        </button>
-                      )}
-                      {view.state === "open" && asking && (
-                        <span className="task-confirm">
-                          <span>Swap it for another? Uses a Task Skip.</span>
-                          <button
-                            className="primary-button"
-                            disabled={busy}
-                            aria-label={`Confirm skip of ${task.title}`}
-                            onClick={() => skip(task)}
-                          >
-                            Swap
-                          </button>
-                          <button
-                            className="secondary-button"
-                            onClick={() => setConfirming("")}
-                          >
-                            Keep
-                          </button>
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            Main
+          </button>
+          <button
+            role="tab"
+            id="tasks-tab-rngween"
+            aria-controls="tasks-rngween-panel"
+            aria-selected={onEvent}
+            className={onEvent ? "is-selected" : ""}
+            onClick={() => onSection?.("rngween")}
+          >
+            RNGween
+            <span className="tasks-switch-live">Event</span>
+          </button>
+        </div>
+      )}
+      {onEvent ? (
+        <div
+          id="tasks-rngween-panel"
+          role="tabpanel"
+          aria-labelledby="tasks-tab-rngween"
+        >
+          {/* RNGween event panel: auras and hourly commissions under one tabbed roof. */}
+          <section className="rngween-event-panel">
             <div
-              className={`task-bonus is-${bonus.state}`}
-              data-bonus={cadence}
-              data-state={bonus.state}
+              className="rngween-event-tabs"
+              role="tablist"
+              aria-label="RNGween event sections"
             >
-              <span className="task-bonus-icon" aria-hidden="true">
-                {allClaimed ? <CheckCheck size={16} /> : <Gift size={16} />}
-              </span>
-              <div className="task-bonus-text">
-                <strong>
-                  {CADENCE_NAME[cadence]} list bonus · +{formatEP(bonus.reward)}{" "}
-                  EP
-                </strong>
-                <span>
-                  {allClaimed
-                    ? "Paid. Every task on this list is claimed."
-                    : bonus.state === "claimable"
-                      ? "Ready to collect."
-                      : `${bonus.done} of ${bonus.total} claimed. Claim every task to unlock it.`}
-                </span>
-              </div>
-              {bonus.state === "claimable" && (
-                <button
-                  className="primary-button task-claim"
-                  disabled={busy}
-                  aria-label={`Collect ${cadence} list bonus`}
-                  onClick={() => collect(list)}
-                >
-                  {pending === `bonus-${cadence}` ? "Collecting…" : "Collect"}
-                </button>
+              <button
+                role="tab"
+                id="event-tab-auras"
+                aria-selected={eventTab === "auras"}
+                className={eventTab === "auras" ? "is-selected" : ""}
+                onClick={() => setEventTab("auras")}
+              >
+                Auras
+              </button>
+              <button
+                role="tab"
+                id="event-tab-commissions"
+                aria-selected={eventTab === "commissions"}
+                className={eventTab === "commissions" ? "is-selected" : ""}
+                onClick={() => setEventTab("commissions")}
+              >
+                Commissions
+              </button>
+            </div>
+            <div className="rngween-event-content">
+              {eventTab === "auras" ? (
+                <RngweenTasks
+                  {...{ progress, onAction, notify, openAuraFamily, openWorld }}
+                  now={eventNow}
+                />
+              ) : (
+                <RngweenHourly
+                  progress={progress}
+                  now={eventNow}
+                  openWorld={openWorld}
+                  openSignup={openSignup}
+                  onAction={onAction}
+                  notify={notify}
+                />
               )}
             </div>
           </section>
-        );
-      })}
-      <p className="task-note">
-        A reward is paid into your wallet once, when you claim it. Finishing
-        every task on a list unlocks its list bonus, which you collect with its
-        own button. Unclaimed rewards and bonuses expire when their reset comes.
-        Offline rolls do not count, and task EP never counts towards a rebirth.
-        A Task Skip swaps one open task for another from its pool. You can buy
-        one a day in the Shop, no more than {SKIP_WINDOW_LIMIT} in any{" "}
-        {SKIP_WINDOW_MS / 86400000} days, and hold up to three.
-      </p>
+          {!progress.rngweenLimited?.retired && (
+            <button
+              className="secondary-button rngween-world-launch"
+              onClick={openWorld}
+            >
+              <Sparkles size={17} /> Enter RNGween World
+            </button>
+          )}
+          <p className="task-note">
+            Everything here is part of the 2026 Halloween event. Auras and
+            Pumpkoins are claimed on this page; the World badges, the key and
+            the Valley are one tap away. Nothing here pays EP or counts towards
+            a rebirth.
+          </p>
+        </div>
+      ) : (
+        <div
+          id="tasks-main-panel"
+          role="tabpanel"
+          aria-labelledby="tasks-tab-main"
+        >
+          <section className="tasks-summary" aria-label="Task summary">
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Available</span>
+              <strong>
+                <Coins size={15} aria-hidden="true" />
+                {formatEP(progress.balance)} EP
+              </strong>
+            </div>
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Ready</span>
+              <strong>
+                {summary.ready} <small>to claim</small>
+              </strong>
+              <small className="tasks-stat-note">
+                {readyEP > 0
+                  ? `Worth +${formatEP(readyEP)} EP together`
+                  : "Nothing waiting for you"}
+              </small>
+            </div>
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Claimed</span>
+              <strong>
+                {summary.claimed} <small>of {summary.total} this reset</small>
+              </strong>
+            </div>
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Task Skips</span>
+              <strong>
+                {skips.tokens} <small>of {skips.limit} held</small>
+              </strong>
+              <small className="tasks-stat-note">{skipNote}</small>
+            </div>
+          </section>
+          {lists.map((list) => {
+            const { cadence, views, bonus } = list;
+            const allClaimed = bonus.state === "claimed";
+            return (
+              <section
+                className="task-group"
+                key={cadence}
+                aria-labelledby={`task-group-${cadence}`}
+              >
+                <header className="task-group-head">
+                  <div>
+                    <h2 id={`task-group-${cadence}`}>
+                      {CADENCE_NAME[cadence]}
+                    </h2>
+                    <p className="task-group-sub">
+                      {cadence === "daily"
+                        ? "Three tasks a day, new ones at reset"
+                        : "Four tasks a week, new ones on Monday"}
+                    </p>
+                  </div>
+                  <div className="task-group-meta">
+                    <span className="task-segments" aria-hidden="true">
+                      {views.map((view) => (
+                        <span
+                          key={view.task.id}
+                          className={`task-seg is-${view.state}`}
+                        />
+                      ))}
+                    </span>
+                    <span
+                      className="task-reset"
+                      title="Lists reset at 00:00 UTC"
+                    >
+                      <Timer size={13} aria-hidden="true" />
+                      Resets in {resetCountdown(list.reset)} · UTC
+                    </span>
+                  </div>
+                </header>
+                <ul className={`task-list task-list-${cadence}`}>
+                  {views.map((view) => {
+                    const { task } = view;
+                    const shown = Math.min(view.count, view.goal);
+                    const kind = KIND[task.metric] ?? {
+                      name: "Task",
+                      icon: CalendarDays,
+                    };
+                    const Icon = kind.icon;
+                    const asking = confirming === task.id;
+                    const percent = Math.round((shown / view.goal) * 100);
+                    return (
+                      <li
+                        key={task.id}
+                        className={`task-card is-${view.state}`}
+                        data-task={task.id}
+                        data-state={view.state}
+                      >
+                        <div className="task-card-top">
+                          <span className="task-icon" aria-hidden="true">
+                            <Icon size={18} />
+                          </span>
+                          <div className="task-card-title">
+                            <span className="task-kind">{kind.name}</span>
+                            <h3>{task.title}</h3>
+                            <p>{task.detail}</p>
+                          </div>
+                          <span className="task-reward">
+                            +{formatEP(task.reward)} EP
+                          </span>
+                        </div>
+                        <div className="task-progress">
+                          <progress
+                            className="task-bar"
+                            max={view.goal}
+                            value={shown}
+                            aria-label={task.title}
+                            aria-valuetext={`${count(shown)} of ${count(view.goal)}`}
+                          />
+                          <span className="task-count">
+                            {count(shown)} / {count(view.goal)}
+                            <span className="task-percent"> · {percent}%</span>
+                          </span>
+                        </div>
+                        <div className="task-card-foot">
+                          {view.state === "claimed" && (
+                            <span className="task-claimed">
+                              <Check size={14} aria-hidden="true" /> Claimed
+                            </span>
+                          )}
+                          {view.state === "claimable" && (
+                            <button
+                              className="primary-button task-claim"
+                              disabled={busy}
+                              aria-label={`Claim reward for ${task.title}`}
+                              onClick={() => claim(list, task)}
+                            >
+                              {pending === task.id ? "Claiming…" : "Claim"}
+                            </button>
+                          )}
+                          {view.state === "open" && !asking && (
+                            <button
+                              className="secondary-button task-skip"
+                              disabled={busy || skips.tokens < 1}
+                              aria-label={`Skip ${task.title}`}
+                              title={skipHint()}
+                              onClick={() => setConfirming(task.id)}
+                            >
+                              <ArrowRightLeft size={13} aria-hidden="true" />
+                              {pending === task.id ? "Swapping…" : "Skip"}
+                            </button>
+                          )}
+                          {view.state === "open" && asking && (
+                            <span className="task-confirm">
+                              <span>
+                                Swap it for another? Uses a Task Skip.
+                              </span>
+                              <button
+                                className="primary-button"
+                                disabled={busy}
+                                aria-label={`Confirm skip of ${task.title}`}
+                                onClick={() => skip(task)}
+                              >
+                                Swap
+                              </button>
+                              <button
+                                className="secondary-button"
+                                onClick={() => setConfirming("")}
+                              >
+                                Keep
+                              </button>
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div
+                  className={`task-bonus is-${bonus.state}`}
+                  data-bonus={cadence}
+                  data-state={bonus.state}
+                >
+                  <span className="task-bonus-icon" aria-hidden="true">
+                    {allClaimed ? <CheckCheck size={16} /> : <Gift size={16} />}
+                  </span>
+                  <div className="task-bonus-text">
+                    <strong>
+                      {CADENCE_NAME[cadence]} list bonus · +
+                      {formatEP(bonus.reward)} EP
+                    </strong>
+                    <span>
+                      {allClaimed
+                        ? "Paid. Every task on this list is claimed."
+                        : bonus.state === "claimable"
+                          ? "Ready to collect."
+                          : `${bonus.done} of ${bonus.total} claimed. Claim every task to unlock it.`}
+                    </span>
+                  </div>
+                  {bonus.state === "claimable" && (
+                    <button
+                      className="primary-button task-claim"
+                      disabled={busy}
+                      aria-label={`Collect ${cadence} list bonus`}
+                      onClick={() => collect(list)}
+                    >
+                      {pending === `bonus-${cadence}`
+                        ? "Collecting…"
+                        : "Collect"}
+                    </button>
+                  )}
+                </div>
+              </section>
+            );
+          })}
+          <p className="task-note">
+            A reward is paid into your wallet once, when you claim it. Finishing
+            every task on a list unlocks its list bonus, which you collect with
+            its own button. Unclaimed rewards and bonuses expire when their
+            reset comes. Offline rolls do not count, and task EP never counts
+            towards a rebirth. A Task Skip swaps one open task for another from
+            its pool. You can buy one a day in the Shop, no more than{" "}
+            {SKIP_WINDOW_LIMIT} in any {SKIP_WINDOW_MS / 86400000} days, and
+            hold up to three.
+          </p>
+        </div>
+      )}
     </>
   );
 }

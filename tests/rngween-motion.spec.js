@@ -16,7 +16,7 @@ test("the saved reduced-motion setting stills Halloween decorations and cosmetic
       JSON.stringify({ reduceMotion: "on" }),
     );
   });
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(page.locator(".rngween-decor")).toHaveClass(/is-reduced-motion/);
   for (const sprite of await page
     .locator(".rngween-bat, .rngween-ghost, .rngween-spider, .rngween-flame")
