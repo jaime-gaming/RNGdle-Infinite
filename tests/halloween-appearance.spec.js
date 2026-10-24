@@ -31,6 +31,19 @@ const finished = {
 const ids = ["jack-o-glow", "phantom-veil", "witchfire", "blood-moon"];
 const saved = (page) =>
   page.evaluate((key) => localStorage.getItem(key), PROGRESS_KEY);
+// A save that has stopped changing: the event writes a "seen" receipt just
+// after the page loads, and comparing against that half-written state would
+// blame the look switch for someone else's write.
+async function settledSave(page) {
+  let last = await saved(page);
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await page.waitForTimeout(100);
+    const next = await saved(page);
+    if (next === last) return next;
+    last = next;
+  }
+  return last;
+}
 
 async function toggleLook(page) {
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
@@ -135,7 +148,7 @@ test("turning Halloween off preserves tasks, rewards and ownership; it persists 
   );
   await page.goto("/tasks/rngween");
   await expect(page.locator(".rngween-decor")).toBeVisible();
-  const before = await saved(page);
+  const before = await settledSave(page);
   await toggleLook(page);
   await expect(page.locator(".rngween-decor, .rngween-curios")).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute(

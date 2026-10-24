@@ -115,7 +115,7 @@ test("a roll that finishes a task posts a notice that opens the Tasks page", asy
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await pauseClockAt(page, new Date(when));
+  await page.clock.pauseAt(new Date(when));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   // A base roll reveals over 45 seconds of game time, so walk the clock on.
   for (let step = 0; step < 300; step++) {
