@@ -210,7 +210,7 @@ export default function RngweenShop({
             </h2>
             <p>
               {calendar.limitedPhase === "ended" || limited?.retired
-                ? "The shop, Pumpkoins, temporary companion, skill and world have retired. Your collected auras and Hexbound skin are still yours."
+                ? "The shop, Pumpkoins, temporary companion, skill and world have retired. Your collected auras and Hexbound skin are still yours, and unspent coins came back as a small EP farewell."
                 : "This one-time shop uses the website's verified UTC calendar, not your device date."}
             </p>
           </div>
@@ -543,8 +543,8 @@ export default function RngweenShop({
             <p className="rngween-limited-footnote">
               Auras are on sale while their tasks are closed: October 21–24 and
               November 1–3. Shop, exchange and world close November 3 at 23:59
-              UTC. No EP, task progress or main-game rolls are awarded by the
-              mini RNG.
+              UTC, and leftover Pumpkoins come back as a small EP farewell. No
+              EP, task progress or main-game rolls are awarded by the mini RNG.
             </p>
           </>
         )}

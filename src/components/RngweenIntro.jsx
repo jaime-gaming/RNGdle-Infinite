@@ -110,7 +110,7 @@ export default function RngweenIntro({ now, paused = false, onOpenChange }) {
                   Trade EP for Pumpkoins and spend them on a pumpkin companion,
                   a seasonal skill and a key to the Valley. Auras are also on
                   sale while the tasks are closed, October 21–24 and November
-                  1–3.
+                  1–3. Coins you never spend come back as a small EP farewell.
                 </span>
               </li>
               <li>
