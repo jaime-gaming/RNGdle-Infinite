@@ -13,9 +13,12 @@ export function useLiveEventClock(
   fallbackNow,
   { animate = true, interval = 1000 } = {},
 ) {
+  // All UTC: seasonNow is verified UTC, fallbackNow is gameNow (monotonic UTC-epoch).
+  // Use refs so the interval always sees the latest fallback, avoiding stale closure when fallback changes mid-reveal.
   const [clock, setClock] = useState(() => seasonNow() ?? fallbackNow);
   useEffect(() => {
     const anchorGame = gameNow();
+    // Snapshot fallback at effect start; if it changes, effect re-runs via deps and re-anchors.
     const anchorFallback = Number.isFinite(fallbackNow) ? fallbackNow : null;
     const read = () =>
       seasonNow() ??
