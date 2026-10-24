@@ -9,6 +9,7 @@ import {
   withWorldPath,
 } from "./helpers/world-roll.js";
 import { test, expect } from "./helpers/clock.js";
+import { eventContext } from "./helpers/intro.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { RNGWEEN_WORLD_INTRO_KEY } from "../src/rngween-intro.js";
@@ -1465,8 +1466,8 @@ test("linked browsers share commission payouts and use the main account writer's
   browser,
 }) => {
   test.setTimeout(60000);
-  const a = await browser.newContext(),
-    b = await browser.newContext();
+  const a = await eventContext(browser),
+    b = await eventContext(browser);
   try {
     const pageA = await a.newPage(),
       pageB = await b.newPage();

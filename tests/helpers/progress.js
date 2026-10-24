@@ -15,10 +15,14 @@ export async function seedProgress(
 ) {
   await page.addInitScript(
     ({ key, data, introSeen, introKey, worldIntroKey }) => {
+      // The config seeds both receipts; a test that wants to watch them deletes
+      // them here, before the page loads.
       if (introSeen) {
         localStorage.setItem(introKey, "rngween-2026");
-        // The World's opening too: tests opt in with introSeen: false.
         localStorage.setItem(worldIntroKey, "rngween-2026");
+      } else {
+        localStorage.removeItem(introKey);
+        localStorage.removeItem(worldIntroKey);
       }
       if (localStorage.getItem(key) === null)
         localStorage.setItem(key, JSON.stringify(data));

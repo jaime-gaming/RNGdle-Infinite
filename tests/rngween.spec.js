@@ -1,4 +1,5 @@
 import { chooseTheme } from "./helpers/appearance.js";
+import { eventContext } from "./helpers/intro.js";
 import { test, expect } from "./helpers/clock.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import fs from "node:fs";
@@ -826,7 +827,7 @@ for (const timezoneId of [
   test(`Halloween ignores the device date and ${timezoneId} timezone`, async ({
     browser,
   }) => {
-    const context = await browser.newContext({ timezoneId });
+    const context = await eventContext(browser, { timezoneId });
     const page = await context.newPage();
     try {
       await page.clock.install({ time: new Date("2030-02-15T12:00:00Z") });

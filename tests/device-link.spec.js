@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { eventContext } from "./helpers/intro.js";
 import { seedProgress } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { shopProducts } from "../src/shop-data.js";
@@ -36,7 +37,7 @@ async function expectDelivered(page, before) {
 test("one link joins two browsers to the same account, live", async ({
   browser,
 }) => {
-  const contextA = await browser.newContext();
+  const contextA = await eventContext(browser);
   const pageA = await contextA.newPage();
   await seedProgress(pageA, {
     balance: 5000000,
@@ -61,7 +62,7 @@ test("one link joins two browsers to the same account, live", async ({
     "pending",
   );
 
-  const contextB = await browser.newContext();
+  const contextB = await eventContext(browser);
   const pageB = await contextB.newPage();
   await pageB.goto(link);
 
@@ -132,7 +133,7 @@ test("an invalid link fails with a note instead of a blank page", async ({
 test("one device can stay closed while the other contributes, and catches up on return", async ({
   browser,
 }) => {
-  const contextA = await browser.newContext();
+  const contextA = await eventContext(browser);
   const pageA = await contextA.newPage();
   await seedProgress(pageA, {
     balance: 5000000,
@@ -144,7 +145,7 @@ test("one device can stay closed while the other contributes, and catches up on 
   const link = await pageA.getByTestId("sync-link").inputValue();
 
   // B joins the room while A is watching.
-  const contextB = await browser.newContext();
+  const contextB = await eventContext(browser);
   const pageB = await contextB.newPage();
   await pageB.goto(link);
   await expect
@@ -185,7 +186,7 @@ test("one device can stay closed while the other contributes, and catches up on 
 test("a peer code carries the whole account with no relay in the middle", async ({
   browser,
 }) => {
-  const contextA = await browser.newContext();
+  const contextA = await eventContext(browser);
   const pageA = await contextA.newPage();
   await seedProgress(pageA, {
     balance: 5000000,
@@ -204,7 +205,7 @@ test("a peer code carries the whole account with no relay in the middle", async 
 
   // A second, entirely empty browser — no link, no relay, no storage in
   // common — adopts the account the moment the code is pasted.
-  const contextB = await browser.newContext();
+  const contextB = await eventContext(browser);
   const pageB = await contextB.newPage();
   await pageB.goto("/settings/link");
   await pageB.locator(".sync-hand summary").click();
@@ -235,7 +236,7 @@ test("a peer code carries the whole account with no relay in the middle", async 
 test("send now flushes the save, and the relay address is configurable", async ({
   browser,
 }) => {
-  const contextA = await browser.newContext();
+  const contextA = await eventContext(browser);
   const pageA = await contextA.newPage();
   await seedProgress(pageA, {
     balance: 5000000,
@@ -285,7 +286,7 @@ test("the link works when one device is closed the whole time, and when both are
   // yet — it might open the link tomorrow, which is the whole point: the room
   // keeps the newest save on the relay's own store, so a closed device is not
   // a missing device.
-  const contextA = await browser.newContext();
+  const contextA = await eventContext(browser);
   const pageA = await contextA.newPage();
   await seedProgress(pageA, {
     balance: 5000000,
@@ -315,7 +316,7 @@ test("the link works when one device is closed the whole time, and when both are
 
   // Much later, B opens the same link for the first time. It is handed
   // everything that happened while it did not exist.
-  const contextB = await browser.newContext();
+  const contextB = await eventContext(browser);
   const pageB = await contextB.newPage();
   await pageB.goto(link);
   await expect
@@ -400,7 +401,7 @@ test("settings keeps the summary and the link page keeps the details", async ({
 test("a change made while the relay is unreachable is queued and sent later", async ({
   browser,
 }) => {
-  const context = await browser.newContext();
+  const context = await eventContext(browser);
   const page = await context.newPage();
   await seedProgress(page, {
     balance: 5000000,
@@ -450,7 +451,7 @@ test("a change made while the relay is unreachable is queued and sent later", as
 test("linked screens never settle two rolls: the main device draws for both", async ({
   browser,
 }) => {
-  const contextA = await browser.newContext();
+  const contextA = await eventContext(browser);
   const pageA = await contextA.newPage();
   await seedProgress(pageA, {
     balance: 5000000,
@@ -461,7 +462,7 @@ test("linked screens never settle two rolls: the main device draws for both", as
   await pageA.getByTestId("sync-create").click();
   const link = await pageA.getByTestId("sync-link").inputValue();
 
-  const contextB = await browser.newContext();
+  const contextB = await eventContext(browser);
   const pageB = await contextB.newPage();
   await pageB.goto(link);
   await expect
