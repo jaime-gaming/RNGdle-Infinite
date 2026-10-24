@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { eventContext } from "./helpers/intro.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { mockWorldNumbers } from "./helpers/world-random.js";
@@ -584,8 +585,8 @@ test("live linked browsers recover an unwritable badge head automatically, shari
   browser,
 }) => {
   test.setTimeout(60000);
-  const a = await browser.newContext(),
-    b = await browser.newContext();
+  const a = await eventContext(browser),
+    b = await eventContext(browser);
   try {
     const primary = await a.newPage(),
       secondary = await b.newPage();

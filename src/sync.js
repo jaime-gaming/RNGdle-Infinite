@@ -23,6 +23,7 @@ import {
   chooseSyncOwner,
   isSyncWriter,
   pendingStamp,
+  primarySide,
   syncDecision,
 } from "./sync-policy.js";
 
@@ -317,6 +318,22 @@ export function buildDeviceLink(currentRoom = room, currentKey = key) {
     [currentRoom, currentKey, authority].filter(Boolean).join("."),
   );
   return url.toString();
+}
+
+// The primary — the account with more progress — should also be the device that
+// runs actions, so the two halves of the rule never disagree: the save that is
+// kept and the save that is written are the same one.
+function declareSyncOwner(candidate) {
+  const next = typeof candidate === "string" ? candidate : "";
+  if (
+    !next ||
+    next === ownerDevice ||
+    (remoteDevice && next !== device && next !== remoteDevice)
+  )
+    return;
+  ownerDevice = next;
+  persistLink();
+  emit();
 }
 
 function updateSyncOwner(devices = [], declaredOwners = []) {
@@ -950,10 +967,12 @@ function handleRemoteState(remote, transport = "peer") {
 function reconcile(remote) {
   if (!remote || !Number.isFinite(remote.savedAt) || !remote.state)
     return false;
-  const decision = syncDecision(
-    { state: currentSave(), savedAt: queuedStamp(), device },
-    remote,
-  );
+  const local = { state: currentSave(), savedAt: queuedStamp(), device };
+  const decision = syncDecision(local, remote);
+  // Whichever side carries the account is also the one that runs it.
+  const primary = primarySide(local, remote);
+  if (primary === "local") declareSyncOwner(device);
+  else if (primary === "remote") declareSyncOwner(remote.device);
   if (decision.direction === "receive") {
     return receiveRemote(remote);
   } else if (decision.direction === "send") {
@@ -1172,17 +1191,23 @@ function relayApplyLatest(latest, onEmpty) {
     onEmpty?.();
     return;
   }
-  const local = queuedStamp();
-  if (
-    latest.savedAt > local ||
-    (latest.savedAt === local && latest.device < device)
-  ) {
-    receiveRemote(latest);
-  } else if (
-    latest.savedAt < local ||
-    (latest.savedAt === local && latest.device !== device)
-  ) {
-    void relayPushState(currentSave());
+  // The relay hands over whatever the room holds last, so this is often the
+  // first sight of the other device's account: it goes through the same policy
+  // as the peer transport, where the account with more progress is the primary
+  // and a leaner one adopts it instead of overwriting it.
+  const local = { state: currentSave(), savedAt: queuedStamp(), device };
+  const decision = syncDecision(local, latest);
+  const primary = primarySide(local, latest);
+  if (primary === "local") declareSyncOwner(device);
+  else if (primary === "remote") declareSyncOwner(latest?.device);
+  if (decision.direction === "receive") {
+    void receiveRemote(latest);
+  } else if (decision.direction === "send") {
+    if (decision.savedAt !== savedAt) {
+      savedAt = decision.savedAt;
+      persistLink();
+    }
+    void relayPushState(currentSave(), decision.savedAt);
   }
 }
 

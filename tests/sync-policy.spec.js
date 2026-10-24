@@ -2,8 +2,12 @@ import { test, expect } from "@playwright/test";
 import { emptyProgress } from "../src/progress.js";
 import {
   chooseSyncOwner,
+  isBlankSave,
   isSyncWriter,
   pendingStamp,
+  primarySide,
+  progressWeight,
+  richerSide,
   syncDecision,
 } from "../src/sync-policy.js";
 
@@ -88,4 +92,94 @@ test("linked devices agree on one writer, and a legacy link waits until both dev
   expect(isSyncWriter("owner", "owner")).toBe(true);
   expect(isSyncWriter("guest", "owner")).toBe(false);
   expect(isSyncWriter("guest", "")).toBe(false);
+});
+
+// Linking is a decision about which account survives. The one that has been
+// played is the primary; a browser that was barely used adopts it instead of
+// overwriting it, however new its last write happens to be.
+const played = (profile) => ({
+  ...emptyProgress(),
+  profile,
+  balance: 4000000,
+  totalEarned: 4000000,
+  owned: ["static", "quickwind-1"],
+  discovered: ["even", "odd", "round"],
+  history: Array.from({ length: 40 }, (_, index) => ({
+    id: `roll:${index}`,
+    type: "roll",
+    at: 1000 + index,
+    number: 123456,
+    tier: "common",
+    ep: 12,
+    badges: [],
+  })),
+});
+const otherProfile = {
+  id: "account-phone",
+  username: "SecondPlayer",
+  createdAt: 1700000500000,
+};
+
+test("the account with more progress is the primary when two different accounts meet", () => {
+  const rich = JSON.stringify(played(profile));
+  const lean = JSON.stringify({ ...emptyProgress(), profile: otherProfile });
+  expect(progressWeight(rich)).toBeGreaterThan(progressWeight(lean) + 100);
+  expect(isBlankSave(lean)).toBe(true);
+  expect(primarySide({ state: rich }, { state: lean })).toBe("local");
+  expect(primarySide({ state: lean }, { state: rich })).toBe("remote");
+
+  // The lean account's write is far newer, and it still does not win.
+  expect(
+    syncDecision(
+      { state: rich, savedAt: 10, device: "z-rich" },
+      { state: lean, savedAt: 9_000_000, device: "a-lean" },
+      1000,
+    ),
+  ).toEqual({ direction: "send", savedAt: 9_000_001 });
+  expect(
+    syncDecision(
+      { state: lean, savedAt: 9_000_000, device: "a-lean" },
+      { state: rich, savedAt: 10, device: "z-rich" },
+      1000,
+    ),
+  ).toEqual({ direction: "receive" });
+});
+
+test("two devices of one account still settle by timestamp, so no queued change is refused", () => {
+  const rich = JSON.stringify(played(profile));
+  const older = JSON.stringify(played(profile));
+  expect(primarySide({ state: rich }, { state: older })).toBe("");
+  expect(
+    syncDecision(
+      { state: rich, savedAt: 10, device: "a-device" },
+      { state: older, savedAt: 11, device: "z-device" },
+      1000,
+    ),
+  ).toEqual({ direction: "receive" });
+  expect(
+    syncDecision(
+      { state: rich, savedAt: 11, device: "z-device" },
+      { state: older, savedAt: 10, device: "a-device" },
+      1000,
+    ),
+  ).toEqual({ direction: "send", savedAt: 11 });
+});
+
+test("a save that carries nothing never outranks one that carries the game", () => {
+  expect(progressWeight(JSON.stringify(emptyProgress()))).toBe(0);
+  expect(isBlankSave(JSON.stringify(emptyProgress()))).toBe(true);
+  expect(isBlankSave(JSON.stringify(played(profile)))).toBe(false);
+  expect(
+    richerSide(
+      JSON.stringify(played(profile)),
+      JSON.stringify(emptyProgress()),
+    ),
+  ).toBe("local");
+  // Two saves of comparable weight are left to the timestamp order.
+  expect(
+    richerSide(
+      JSON.stringify(played(profile)),
+      JSON.stringify(played(profile)),
+    ),
+  ).toBe("");
 });

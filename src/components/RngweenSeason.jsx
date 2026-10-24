@@ -8,6 +8,7 @@ import {
   PumpkinMark,
 } from "./game-icons.jsx";
 import RngweenSecrets from "./RngweenSecrets.jsx";
+import { useSeasonFavicon } from "../use-season-favicon.js";
 import "../rngween.css";
 
 function Web({ className }) {
@@ -58,20 +59,13 @@ export default function RngweenSeason({
   }, [enabled]);
   useEffect(() => {
     const root = document.documentElement;
-    const favicon = document.querySelector('link[rel="icon"]');
-    const originalIcon = favicon?.getAttribute("href");
-    if (enabled) {
-      root.dataset.season = "rngween";
-      favicon?.setAttribute(
-        "href",
-        `${import.meta.env.BASE_URL}favicon-halloween.svg`,
-      );
-    } else delete root.dataset.season;
+    if (enabled) root.dataset.season = "rngween";
+    else delete root.dataset.season;
     return () => {
       delete root.dataset.season;
-      if (originalIcon) favicon?.setAttribute("href", originalIcon);
     };
   }, [enabled]);
+  useSeasonFavicon(enabled);
   if (!enabled) return null;
   return (
     <>

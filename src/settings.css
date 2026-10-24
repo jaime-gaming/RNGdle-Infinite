@@ -594,3 +594,34 @@
     gap: 7px;
   }
 }
+
+/* The save block: what this browser keeps, and the way back to it. */
+.settings-save {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 18px 0 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.settings-save h2 {
+  margin: 0;
+  font-size: 14px;
+}
+.settings-save p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.settings-save small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.settings-save button {
+  min-height: 40px;
+}

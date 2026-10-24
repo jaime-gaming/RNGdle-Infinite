@@ -11,13 +11,15 @@ import {
   AURA_FAMILIES,
 } from "../src/shop-data.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+import { mockSeasonClock } from "./helpers/season-clock.js";
 
 // The shop is a street of sub-pages: the hub is an index of six buttons, each
 // one opening its own URL (/shop/skills, /shop/auras …), the flywheel tiers
 // live on the Skills shelf because Flywheel is a skill, and the shop skills
 // themselves are a rotating stall — three on sale, refreshed every five
 // minutes.
-// Every shelf reads from the cheapest item upwards.
+// Every shelf reads from the cheapest item upwards. The tests pin the site
+// clock outside the Halloween window, where the street has exactly six doors.
 
 const funded = {
   ...emptyProgress(),
@@ -48,6 +50,7 @@ test("the hub is an index of shelf buttons, and each one is its own page", async
   page,
 }) => {
   await seedProgress(page, funded);
+  await mockSeasonClock(page, Date.UTC(2027, 0, 1, 12));
   await page.goto("/shop");
   const hub = page.getByRole("navigation", { name: "Shop sections" });
   await expect(hub).toBeVisible();
@@ -80,6 +83,7 @@ test("deep links and legacy shelf hashes land on the right shelf", async ({
   page,
 }) => {
   await seedProgress(page, funded);
+  await mockSeasonClock(page, Date.UTC(2027, 0, 1, 12));
   // A shared legacy link lands on its shelf, normalised to the real path.
   await page.goto("/shop#tools");
   await expect(page).toHaveURL(/\/shop\/tools$/);

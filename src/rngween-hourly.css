@@ -338,3 +338,14 @@
     opacity: 0.4;
   }
 }
+
+/* Between the opening window and November 1 the board has nothing to deal:
+   one short line instead of four cards that look like a failed save. */
+.rngween-hourly-card.is-paused {
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--muted);
+}

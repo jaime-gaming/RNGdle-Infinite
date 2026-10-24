@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { eventContext } from "./helpers/intro.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { emptyProgress } from "../src/progress.js";
 import {
@@ -207,7 +208,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   expect(link).toMatch(new RegExp(`/profile/${testProfile.username}\\?card=`));
 
   // A different browser, a different (guest) player.
-  const other = await browser.newContext();
+  const other = await eventContext(browser);
   const visitor = await other.newPage();
   await visitor.goto(link);
   await expect(
@@ -298,7 +299,7 @@ test("a heavy logo is shrunk to link size before it travels", async ({
   expect(link.length).toBeLessThan(heavy.length / 4);
 
   // The visitor still sees the face that was shared.
-  const other = await browser.newContext();
+  const other = await eventContext(browser);
   const visitor = await other.newPage();
   await visitor.goto(link);
   await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();

@@ -50,6 +50,7 @@ const cosmetics = new Set([
   "witchfire",
   "blood-moon",
   "hexbound",
+  "hollow-lantern",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [

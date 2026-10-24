@@ -16,6 +16,7 @@ const ART = {
   witchfire: { Mark: WitchfireMark, side: WitchfireMark, label: "alchemy" },
   "blood-moon": { Mark: BloodMoonMark, side: BatMark, label: "eclipse" },
   hexbound: { Mark: HexboundMark, side: PhantomMark, label: "hexbound" },
+  "hollow-lantern": { Mark: PumpkinMark, side: PumpkinMark, label: "hollow" },
 };
 
 // Permanent collectible art, shared by previews and live numbers;

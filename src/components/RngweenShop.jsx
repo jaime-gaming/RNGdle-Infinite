@@ -168,7 +168,7 @@ export default function RngweenShop({
               ? "Your Halloween aura stays yours forever."
               : choice.item
                 ? "Available until November 3, 23:59 UTC."
-                : "One-way exchange. Unspent Pumpkoins disappear after November 3 (UTC).",
+                : "One-way exchange. Leftover Pumpkoins come back as a small EP farewell after November 3 (UTC).",
       });
     }
   }
@@ -210,7 +210,7 @@ export default function RngweenShop({
             </h2>
             <p>
               {calendar.limitedPhase === "ended" || limited?.retired
-                ? "The shop, Pumpkoins, temporary companion, skill and world have retired. Your collected auras and Hexbound skin are still yours."
+                ? "The shop, Pumpkoins, temporary companion, skill and world have retired. Your collected auras and Hexbound skin are still yours, and unspent coins came back as a small EP farewell."
                 : "This one-time shop uses the website's verified UTC calendar, not your device date."}
             </p>
           </div>
@@ -234,8 +234,8 @@ export default function RngweenShop({
                 <strong data-pumpkoins={wallet}>{count(wallet)}</strong>
                 <span>Pumpkoins</span>
                 <p>
-                  Only for RNGween 2026. Unspent coins disappear after November
-                  3. No refunds.
+                  Only for RNGween 2026. Leftover coins turn into a small EP
+                  farewell after November 3, at a fraction of what they cost.
                 </p>
               </div>
               <form
@@ -380,8 +380,9 @@ export default function RngweenShop({
                     <p>{item.description}</p>
                     {saleLocked && (
                       <p className="rngween-aura-sale-note">
-                        <Clock size={13} /> Purchases open November 1 UTC. Earn
-                        this aura from tasks until October 31.
+                        <Clock size={13} /> On sale while the tasks are closed:
+                        October 21–24 and November 1–3 UTC. Finish this aura's
+                        task by October 31 to earn it.
                       </p>
                     )}
                     <strong className="rngween-limited-price">
@@ -449,7 +450,7 @@ export default function RngweenShop({
                         aria-label={`Buy ${item.name} for ${item.pumpkoinPrice} Pumpkoins`}
                       >
                         {saleLocked ? (
-                          "Available November 1"
+                          "Tasks are running"
                         ) : (
                           <>
                             Buy for {count(item.pumpkoinPrice)}{" "}
@@ -540,9 +541,10 @@ export default function RngweenShop({
               </p>
             )}
             <p className="rngween-limited-footnote">
-              Tasks close October 31; aura purchases open November 1. Shop,
-              exchange and world close November 3 at 23:59 UTC. No EP, task
-              progress or main-game rolls are awarded by the mini RNG.
+              Auras are on sale while their tasks are closed: October 21–24 and
+              November 1–3. Shop, exchange and world close November 3 at 23:59
+              UTC, and leftover Pumpkoins come back as a small EP farewell. No
+              EP, task progress or main-game rolls are awarded by the mini RNG.
             </p>
           </>
         )}
@@ -569,7 +571,7 @@ export default function RngweenShop({
             <p>
               {confirmation.item
                 ? `${count(confirmation.item.pumpkoinPrice)} Pumpkoins. ${confirmation.item.kind === "aura" ? "This aura is yours forever." : "This item expires after November 3 (UTC)."}`
-                : `${formatEP(confirmation.amount * EP_PER_PUMPKOIN)} EP will be spent. This exchange cannot be reversed; unused coins disappear after November 3 (UTC).`}
+                : `${formatEP(confirmation.amount * EP_PER_PUMPKOIN)} EP will be spent. This exchange cannot be reversed; leftover coins come back as a small EP farewell after November 3 (UTC).`}
             </p>
             {confirmation.item?.kind === "world-key" && (
               <p>

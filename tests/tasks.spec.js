@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import {
   applyProgress,
   emptyProgress,
@@ -541,7 +542,7 @@ test("the Tasks page fits a narrow phone without sideways scrolling", async ({
 test("Tasks labels stay stable on desktop and mobile without the retired glitch", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
   const desktop = page
     .getByRole("navigation", { name: "Main navigation" })

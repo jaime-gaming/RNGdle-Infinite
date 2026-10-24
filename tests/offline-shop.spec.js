@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import {
   offlinePlan,
   parseOffline,
@@ -203,7 +204,7 @@ test("a hidden tab earns on return but a visible Shop page does not count as off
   await expect
     .poll(async () => (await saved(page)).offline.lastSeenAt)
     .toBeGreaterThan(Date.now() - 5000);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", {
       configurable: true,

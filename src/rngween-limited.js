@@ -1,5 +1,6 @@
 import {
   RNGWEEN_AURAS,
+  RNGWEEN_FINALE_SKIN,
   RNGWEEN_ID,
   RNGWEEN_WORLD_SKIN,
   rngweenCalendar,
@@ -25,6 +26,16 @@ import {
 // action/UI wiring. Keep parsing/retirement, purchased-aura and skin receipts,
 // and the permanent Hexbound registry/art. Never restore expired currency.
 export const EP_PER_PUMPKOIN = 10000;
+// The event's goodbye: leftover Pumpkoins come back as EP, at a hundredth of
+// what they cost. It is a keepsake for the wallet, never a second payout, and
+// it is capped so an old hoard cannot dwarf a run.
+export const FAREWELL_EP_PER_PUMPKOIN = 100;
+export const FAREWELL_MAX_EP = 100000;
+
+export function farewellEP(pumpkoins) {
+  if (!Number.isSafeInteger(pumpkoins) || pumpkoins <= 0) return 0;
+  return Math.min(pumpkoins * FAREWELL_EP_PER_PUMPKOIN, FAREWELL_MAX_EP);
+}
 export const RNGWEEN_WORLD_MAX = WORLD_VALLEY_MAX;
 export const RNGWEEN_WORLD_TARGET = WORLD_VALLEY_TARGET;
 export const RNGWEEN_PET = {
@@ -108,6 +119,11 @@ export function emptyRngweenLimited() {
     auras: [],
     drawn: [],
     skinEarned: false,
+    // Halloween night: how many things the player did that day, and whether
+    // the night's one skin has been collected. Two small fields, both repaired
+    // from ownership and history if they go missing.
+    finaleCount: 0,
+    finaleEarned: false,
     rewardedMissions: [],
     world: emptyRngweenWorld(),
   };
@@ -136,9 +152,16 @@ function recoverLimitedReceipts(
       owned.includes(RNGWEEN_WORLD_SKIN.id) ||
       (Array.isArray(value.drawn) &&
         value.drawn.includes(RNGWEEN_WORLD_TARGET)),
+    finaleEarned:
+      value.finaleEarned === true || owned.includes(RNGWEEN_FINALE_SKIN.id),
   };
   let repaired =
-    !Array.isArray(value.auras) || typeof value.skinEarned !== "boolean";
+    !Array.isArray(value.auras) ||
+    typeof value.skinEarned !== "boolean" ||
+    // A save written before Halloween night simply has no such field: it is
+    // older, not damaged, so it must not raise a repair note.
+    (value.finaleEarned !== undefined &&
+      typeof value.finaleEarned !== "boolean");
   const paidHistory = history.filter(
     (entry) => rngweenCalendar(entry.at).limitedPhase === "active",
   );
@@ -238,14 +261,23 @@ export function parseRngweenLimited(value, receipts) {
         "adventure",
         "world",
       ].some((key) => key in value) ||
-      typeof value.skinEarned !== "boolean"
+      typeof value.skinEarned !== "boolean" ||
+      (value.finaleEarned !== undefined &&
+        typeof value.finaleEarned !== "boolean")
     )
       repaired = true;
+    // A retired receipt still remembers Halloween night: the skin was a
+    // permanent gift, so it must never be the thing the event takes back.
     return {
       limited: {
         id: RNGWEEN_ID,
         auras,
         skinEarned: value.skinEarned === true,
+        // Only the night's real receipt is kept: a retired save stays small.
+        ...(amount(value.finaleCount) && value.finaleCount > 0
+          ? { finaleCount: value.finaleCount }
+          : {}),
+        ...(value.finaleEarned === true ? { finaleEarned: true } : {}),
         retired: true,
       },
       repaired,
@@ -277,6 +309,14 @@ export function parseRngweenLimited(value, receipts) {
   const pumpkoins = amount(value.pumpkoins) ? value.pumpkoins : 0;
   if (pumpkoins !== value.pumpkoins) repaired = true;
   if (typeof value.skinEarned !== "boolean") repaired = true;
+  if (
+    value.finaleEarned !== undefined &&
+    typeof value.finaleEarned !== "boolean"
+  )
+    repaired = true;
+  const finaleCount = amount(value.finaleCount) ? value.finaleCount : 0;
+  if (value.finaleCount !== undefined && finaleCount !== value.finaleCount)
+    repaired = true;
   return {
     limited: {
       id: RNGWEEN_ID,
@@ -294,6 +334,10 @@ export function parseRngweenLimited(value, receipts) {
         auraIds,
       ),
       skinEarned: value.skinEarned === true || seen.has(RNGWEEN_WORLD_TARGET),
+      finaleCount,
+      finaleEarned:
+        value.finaleEarned === true ||
+        value.auras?.includes?.(RNGWEEN_FINALE_SKIN.id) === true,
     },
     repaired,
   };
@@ -346,9 +390,10 @@ export function grantRngweenMissionPumpkoins(state, at) {
     (mission) => mission.collected && !paid.includes(mission.id),
   );
   if (!rewards.length) return state;
+  const multiplier = rngweenCalendar(at).pumpkoinMultiplier;
   const pumpkoins =
     limited.pumpkoins +
-    rewards.reduce((sum, mission) => sum + mission.pumpkoins, 0);
+    rewards.reduce((sum, mission) => sum + mission.pumpkoins * multiplier, 0);
   if (!amount(pumpkoins)) throw new Error("Pumpkoin balance limit reached.");
   return {
     ...state,
@@ -371,7 +416,8 @@ export function grantRngweenMissionPumpkoins(state, at) {
         at,
         productId: mission.auraId,
         name: mission.title,
-        pumpkoins: mission.pumpkoins,
+        pumpkoins: mission.pumpkoins * multiplier,
+        ...(multiplier !== 1 ? { multiplier } : {}),
       })),
     ],
   };
@@ -381,7 +427,58 @@ export function limitedRewardIds(limited) {
   return [
     ...(limited?.auras ?? []),
     ...(limited?.skinEarned ? [RNGWEEN_WORLD_SKIN.id] : []),
+    ...(limited?.finaleEarned ? [RNGWEEN_FINALE_SKIN.id] : []),
   ];
+}
+
+// Halloween night counts what the player actually does, once per action. The
+// count is only ever a receipt of taking part: it pays nothing on its own.
+export function markRngweenFinale(state, at) {
+  const limited = state?.rngweenLimited;
+  if (!limited || limited.retired) return state;
+  if (!rngweenCalendar(at).finaleActive) return state;
+  const count = Math.min((limited.finaleCount ?? 0) + 1, 1000000);
+  if (count === limited.finaleCount) return state;
+  return { ...state, rngweenLimited: { ...limited, finaleCount: count } };
+}
+
+// Halloween night itself. Taking part once is the whole key: the skin is a
+// thank-you for being there, not a second job.
+export function claimRngweenFinale(state, at) {
+  if (!state.profile)
+    throw new Error("Create a local profile to keep the night's skin.");
+  const calendar = rngweenCalendar(at);
+  if (!calendar.finaleActive)
+    throw new Error(
+      "The Hollow Lantern is only handed out on Halloween night, October 31, 2026 (UTC).",
+    );
+  const limited = state.rngweenLimited ?? emptyRngweenLimited();
+  if (limited.retired) throw new Error("The RNGween event is over.");
+  if (limited.finaleEarned || state.owned?.includes(RNGWEEN_FINALE_SKIN.id))
+    throw new Error("The Hollow Lantern is already yours.");
+  if (!(limited.finaleCount > 0))
+    throw new Error(
+      "Take part first: claim a commission, collect an aura or roll in the World.",
+    );
+  return {
+    ...state,
+    owned: [...new Set([...(state.owned ?? []), RNGWEEN_FINALE_SKIN.id])],
+    equipped:
+      (state.equipped ?? "none") === "none"
+        ? RNGWEEN_FINALE_SKIN.id
+        : state.equipped,
+    rngweenLimited: { ...limited, finaleEarned: true },
+    history: [
+      ...state.history,
+      {
+        id: `rngween-finale:${RNGWEEN_ID}`,
+        type: "rngween-finale",
+        at,
+        productId: RNGWEEN_FINALE_SKIN.id,
+        name: RNGWEEN_FINALE_SKIN.name,
+      },
+    ],
+  };
 }
 
 // Deletion needs a verified website date, never a device time or UI setting.
@@ -402,18 +499,48 @@ export function retireRngweenLimited(state, at) {
       pending.revealsAt <= at &&
       pending.revealsAt < rngweenCalendar(at).limitedEndsAt &&
       rngweenCalendar(pending.startedAt).limitedPhase === "active");
+  // The Hollow Lantern is permanent, like the world skin: retiring the event
+  // drops coins, fragments and temporary items, never a skin already earned.
+  const finaleEarned =
+    limited?.finaleEarned === true ||
+    limited?.auras?.includes?.(RNGWEEN_FINALE_SKIN.id) === true;
+  // Coins that were never spent are not thrown away: they come back as a small
+  // EP farewell. It is paid once, because the receipt is written with the
+  // retirement that pays it and a retired save has no balance left to convert.
+  const farewell = farewellEP(limited?.pumpkoins);
+  const balance = (state.balance ?? 0) + farewell;
+  const totalEarned = (state.totalEarned ?? 0) + farewell;
+  const paysFarewell =
+    farewell > 0 &&
+    Number.isSafeInteger(balance) &&
+    Number.isSafeInteger(totalEarned);
   return {
     ...state,
+    ...(paysFarewell ? { balance, totalEarned } : {}),
+    history: paysFarewell
+      ? [
+          ...(state.history ?? []),
+          {
+            id: `rngween-farewell:${RNGWEEN_ID}`,
+            type: "rngween-farewell",
+            at,
+            pumpkoins: limited.pumpkoins,
+            ep: farewell,
+          },
+        ]
+      : state.history,
     rngweenLimited: {
       id: RNGWEEN_ID,
       auras: limited?.auras ?? [],
       skinEarned: earned,
+      ...(finaleEarned ? { finaleEarned: true } : {}),
       retired: true,
     },
     owned: [
       ...new Set([
         ...(state.owned ?? []).filter((id) => id !== RNGWEEN_SKILL.id),
         ...(earned ? [RNGWEEN_WORLD_SKIN.id] : []),
+        ...(finaleEarned ? [RNGWEEN_FINALE_SKIN.id] : []),
       ]),
     ],
     equipped:

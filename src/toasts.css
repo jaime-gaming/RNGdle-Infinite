@@ -1,17 +1,18 @@
-/* In-game notices: a short stack of cards at the bottom of the page. The stack
-   itself takes no pointer input, so the page under it stays usable between the
-   cards; each card takes the pointer for itself. */
+/* In-game notices: a short stack of cards in the top-right corner of the page,
+   so the middle of the screen — the stage, the number, the dialogs — stays
+   clear, and nothing sits over the phone's tab bar at the bottom.
+   The stack itself takes no pointer input, so the page under it stays usable
+   between the cards; each card takes the pointer for itself. */
 .toast-stack {
   position: fixed;
-  left: 50%;
-  bottom: 24px;
+  right: 20px;
+  top: 68px;
   z-index: 30;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
-  width: min(440px, calc(100vw - 32px));
-  transform: translateX(-50%);
+  width: min(360px, calc(100vw - 32px));
   pointer-events: none;
 }
 .toast {
@@ -138,7 +139,7 @@
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.97);
+    transform: translateX(16px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -148,12 +149,15 @@
 @keyframes toast-out {
   to {
     opacity: 0;
-    transform: translateY(6px) scale(0.98);
+    transform: translateX(10px) scale(0.98);
   }
 }
-/* The phone's tab bar sits at the bottom edge, so the stack lifts above it. */
+/* The phone's tab bar sits at the bottom edge, so the stack lifts above it and
+   keeps to the safe area on a notched screen. */
 @media (max-width: 760px) {
   .toast-stack {
-    bottom: calc(78px + env(safe-area-inset-bottom));
+    right: calc(10px + env(safe-area-inset-right));
+    top: calc(60px + env(safe-area-inset-top));
+    width: min(360px, calc(100vw - 20px - env(safe-area-inset-left)));
   }
 }

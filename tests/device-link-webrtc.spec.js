@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { eventContext } from "./helpers/intro.js";
 import { PeerServer } from "peer";
 import { seedProgress } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
@@ -21,7 +22,7 @@ test.afterAll(async () => {
 });
 
 async function linkedContext(browser) {
-  const context = await browser.newContext();
+  const context = await eventContext(browser);
   await context.addInitScript(
     ({ port, relay }) => {
       localStorage.setItem(

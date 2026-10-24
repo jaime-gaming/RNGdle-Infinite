@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -162,7 +163,7 @@ test("overflow charge survives settlement and reload, then fires on the followin
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".draw-panel")).toHaveCount(4);
   let progress = await saved(page);

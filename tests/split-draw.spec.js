@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
@@ -53,7 +54,7 @@ async function startSplitRoll(page, overrides = {}) {
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".draw-stage")).toBeVisible();
 }
@@ -463,7 +464,7 @@ async function armedAutoRoll(page, draws = PANELS) {
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await expect(page.locator(".auto-roll-control")).toBeVisible();
   await page.locator(".auto-roll-control").click();
   // The first roll starts by itself, and its overview opens.

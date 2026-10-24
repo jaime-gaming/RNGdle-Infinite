@@ -18,6 +18,13 @@ export const PAGES = [
 ];
 export const HOME = "roll";
 
+// Tasks owns two sub-pages of its own: /tasks/main (the daily and weekly
+// lists) and /tasks/rngween (everything the Halloween event adds). They are
+// real addresses so a player can bookmark the event or come back to it after
+// a reload.
+// CLEANUP Nov 4, 2026: drop "rngween" and keep /tasks/main as the only page.
+export const TASK_SECTIONS = ["main", "rngween"];
+
 // import.meta.env.BASE_URL is "/" locally and "/RNGdle-Infinite/" on Pages.
 export function basePath(base = import.meta.env?.BASE_URL ?? "/") {
   const trimmed = String(base || "/").replace(/\/+$/, "");

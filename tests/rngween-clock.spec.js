@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -83,7 +84,7 @@ test("calendar eligibility is independent of a roll's device timestamp", () => {
 test("real online rolls follow the website date; a rewound player clock never reopens RNGween", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date("2030-02-15T12:00:00Z"));
+  await pauseClockAt(page, new Date("2030-02-15T12:00:00Z"));
   const website = await mockSeasonClock(page, active);
   await mockRandom(page, [861456]);
   await seedProgress(page, {
@@ -135,7 +136,7 @@ test("a claim waiting for website time cannot grant an aura to a replacement acc
   };
   await mockSeasonClock(page, active);
   await seedProgress(page, withAllFragments({ tasks }));
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   const claim = page.getByRole("button", {
     name: "Collect Jack-o'-Glow",
     exact: true,

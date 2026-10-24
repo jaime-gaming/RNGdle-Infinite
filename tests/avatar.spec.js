@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { eventContext } from "./helpers/intro.js";
 import { seedProgress } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { AVATAR_LIMIT } from "../src/progress.js";
@@ -143,7 +144,7 @@ test("a huge picture is shrunk instead of refused, and rubbish is refused", asyn
 test("the logo rides the device link to the other browser", async ({
   browser,
 }) => {
-  const contextA = await browser.newContext();
+  const contextA = await eventContext(browser);
   const pageA = await contextA.newPage();
   await seedProgress(pageA, { balance: 5000000, totalEarned: 5000000 });
   await pageA.goto("/profile");
@@ -162,7 +163,7 @@ test("the logo rides the device link to the other browser", async ({
   await pageA.getByTestId("peer-code-copy").click();
   const code = await pageA.getByTestId("peer-code-field").inputValue();
 
-  const contextB = await browser.newContext();
+  const contextB = await eventContext(browser);
   const pageB = await contextB.newPage();
   await pageB.goto("/settings/link");
   await pageB.locator(".sync-hand summary").click();

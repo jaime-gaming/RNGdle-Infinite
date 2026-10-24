@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { RNGWEEN_WORLD_SKIN, rngweenCalendar } from "../rngween.js";
+import { useLiveEventClock } from "../use-live-clock.js";
 import { RNGWEEN_WORLD_MAX } from "../rngween-limited.js";
 import {
   WORLD_ZONES,
@@ -37,6 +38,7 @@ import {
   WORLD_FRAGMENT_ZONES,
   worldFragmentCount,
   worldPointsAvailable,
+  KEEP_ROLLING_COST,
 } from "../rngween-world-zones.js";
 import {
   WORLD_MINI_RULES,
@@ -45,9 +47,9 @@ import {
   worldPhaseComplete,
   worldPhaseGoals,
 } from "../rngween-world-badges.js";
-import { seasonNow } from "../season-clock.js";
 import { hourlyView, hourlyTaskById } from "../rngween-hourly.js";
-import { useMotionPreference } from "../use-settings.jsx";
+import { useMotionPreference, useSettings } from "../use-settings.jsx";
+import { useSeasonFavicon } from "../use-season-favicon.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import NumberBox from "./NumberBox.jsx";
 import WorldScenery from "./WorldScenery.jsx";
@@ -102,15 +104,13 @@ const REEL = ["?", ...Array.from({ length: 30 }, (_, i) => String(i % 10))];
 const reelLanding = (digit) => 21 + Number(digit);
 
 function useRevealClock(now, pending, reduced) {
-  const [clock, setClock] = useState(() => seasonNow() ?? now);
-  useEffect(() => {
-    setClock(seasonNow() ?? now);
-    if (!pending) return;
-    const tick = () => setClock(seasonNow() ?? now);
-    const timer = window.setInterval(tick, reduced ? 250 : 80);
-    return () => window.clearInterval(timer);
-  }, [now, pending?.id, reduced]);
-  return clock;
+  // The reveal, the shop deadline and the Halloween strip read one live clock,
+  // so their seconds agree and none of them freezes between page renders. The
+  // reveal also slides its digits, so it samples faster while one is running.
+  return useLiveEventClock(now, {
+    animate: !!pending,
+    interval: pending ? (reduced ? 250 : 80) : 1000,
+  });
 }
 
 // CLEANUP Nov 4, 2026: remove this event-only view and speed shelf. Permanent
@@ -133,6 +133,11 @@ export default function RngweenWorld({
   // minus what the shop already took. Pumpkoins never enter this page.
   const wallet = worldPointsAvailable(limited);
   const reduced = useMotionPreference();
+  // This page renders outside the app shell, so it carries the seasonal tab
+  // icon itself. The World is always a night place; the Halloween icon follows
+  // the same rule as the rest of the site (decorated and Halloween mode on).
+  const { settings } = useSettings();
+  useSeasonFavicon(rngweenCalendar(now).decorated && settings.halloweenMode);
   const [selected, setSelected] = useState(
     () => world.pending?.zone ?? world.last?.zone ?? "pumpkin-patch",
   );
@@ -245,7 +250,10 @@ export default function RngweenWorld({
           },
           undefined,
         ).catch((error) => {
-          if (error?.message?.includes("World points") || error?.message?.includes("not enough")) {
+          if (
+            error?.message?.includes("World points") ||
+            error?.message?.includes("not enough")
+          ) {
             setKeepRolling(false);
             notify({
               kind: "error",
@@ -263,14 +271,7 @@ export default function RngweenWorld({
         keepRollingInterval.current = null;
       }
     };
-  }, [
-    keepRolling,
-    zone.id,
-    key,
-    progress.profile,
-    pending,
-    run,
-  ]);
+  }, [keepRolling, zone.id, key, progress.profile, pending, run]);
 
   // Stop the chain when 6666 appears or the tab goes hidden.
   useEffect(() => {
@@ -381,8 +382,8 @@ export default function RngweenWorld({
   // The board can close while the tab is open (midnight UTC); fall back
   // rather than leave an empty panel under a locked tab.
   useEffect(() => {
-    if (tab === "commissions" && !hourly.active) setTab("objectives");
-  }, [tab, hourly.active]);
+    if (tab === "commissions" && !hourly.open) setTab("objectives");
+  }, [tab, hourly.open]);
   const commissionPaid =
     !pending && last && world.last?.serial === last.serial
       ? progress.history
@@ -871,7 +872,7 @@ export default function RngweenWorld({
           // Commissions stay visible but locked while the Reaper is not
           // dealing, so the tab says when to come back instead of opening
           // on an empty room.
-          const locked = id === "commissions" && !hourly.active;
+          const locked = id === "commissions" && !hourly.open;
           return (
             <button
               key={id}
@@ -1056,7 +1057,7 @@ export default function RngweenWorld({
           </>
         )}
         {tab === "record" && <WorldRecord progress={progress} now={now} />}
-        {tab === "commissions" && hourly.active && (
+        {tab === "commissions" && hourly.open && (
           <RngweenHourly
             progress={progress}
             now={now}

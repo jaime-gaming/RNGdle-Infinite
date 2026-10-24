@@ -764,9 +764,13 @@ export function refreshRngweenHourly(
 export function hourlyView(state, at) {
   const calendar = rngweenCalendar(at);
   const board = state.rngweenLimited?.hourly;
-  const active =
+  // `open` means the board is on the page; `active` means it is dealing and
+  // paying. Between the two windows it stays open and says it is paused.
+  const open =
     calendar.hourlyPhase === "active" && !state.rngweenLimited?.retired;
+  const active = open && calendar.hourlyWindow !== null;
   return {
+    open,
     active,
     phase: calendar.hourlyPhase,
     endsAt: calendar.hourlyEndsAt,
@@ -798,7 +802,8 @@ export function mainHourlyTally(result, { banked = 0 } = {}) {
   const tier = result.tier;
   const lastTwo = number % 100;
   const padded = digits.padStart(4, "0");
-  const isPalindrome4 = padded.length === 4 && padded === [...padded].reverse().join("");
+  const isPalindrome4 =
+    padded.length === 4 && padded === [...padded].reverse().join("");
   return {
     rolls: 1,
     banked,
@@ -897,7 +902,9 @@ export function recordRngweenHourly(
   if (
     !state.profile ||
     state.rngweenLimited?.retired ||
-    calendar.hourlyPhase !== "active"
+    calendar.hourlyPhase !== "active" ||
+    // Paused between the windows: nothing counts, so nothing pays later.
+    calendar.hourlyWindow === null
   )
     return state;
   const before = state.rngweenLimited?.hourly;
@@ -964,6 +971,10 @@ export function claimRngweenHourly(
   if (!state.profile) throw new Error("Create a saved profile first.");
   if (state.rngweenLimited?.retired || calendar.hourlyPhase !== "active")
     throw new Error("Commissions are not running right now.");
+  if (calendar.hourlyWindow === null)
+    throw new Error(
+      "Commissions pause while the aura trials run. They come back on November 1.",
+    );
   const board = state.rngweenLimited?.hourly;
   if (!board || board.window !== calendar.hourlyWindow)
     throw new Error("That commission is no longer on the board.");
@@ -978,12 +989,14 @@ export function claimRngweenHourly(
   if (state.history.some((row) => row.id === id))
     throw new Error("That commission was already claimed.");
   const task = hourlyTaskById.get(slot.taskId);
+  // Halloween night pays twice; every other day the multiplier is 1.
+  const payout = task.pumpkoins * calendar.pumpkoinMultiplier;
   const next = {
     ...board,
     dealt: [...board.dealt],
     slots: board.slots.map((entry) => ({ ...entry })),
     completed: board.completed + 1,
-    earned: board.earned + task.pumpkoins,
+    earned: board.earned + payout,
   };
   next.slots.splice(index, 1);
   next.slots.splice(
@@ -991,7 +1004,7 @@ export function claimRngweenHourly(
     0,
     deal(next, state, at, worldUnlocked, slot.taskId, slot.expiresAt),
   );
-  const coins = state.rngweenLimited.pumpkoins + task.pumpkoins;
+  const coins = state.rngweenLimited.pumpkoins + payout;
   if (![coins, next.completed, next.earned].every(amount))
     throw new Error("Pumpkoin balance limit reached.");
   return {
@@ -1005,7 +1018,10 @@ export function claimRngweenHourly(
         at,
         taskId: task.id,
         name: task.title,
-        pumpkoins: task.pumpkoins,
+        pumpkoins: payout,
+        ...(payout !== task.pumpkoins
+          ? { multiplier: calendar.pumpkoinMultiplier }
+          : {}),
       },
     ],
   };
