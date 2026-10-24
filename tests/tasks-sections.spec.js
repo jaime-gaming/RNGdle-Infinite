@@ -39,7 +39,14 @@ test("Tasks opens on Main and the switch moves to the event page and back", asyn
   // The event page, and none of the everyday lists.
   await expect(page.locator(".rngween-event-panel")).toBeVisible();
   await expect(page.locator(".task-group")).toHaveCount(0);
-  await expect(page.locator("[data-hourly-board]")).toHaveCount(1);
+  // During the trials the aura missions are what the page opens on...
+  await expect(
+    page.getByRole("tab", { name: "Auras", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("[data-event-mission]")).toHaveCount(4);
+  // ...and the commissions say why they are resting instead of faking cards.
+  await page.getByRole("tab", { name: "Commissions", exact: true }).click();
+  await expect(page.locator(".rngween-hourly-card.is-paused")).toBeVisible();
 
   // Back and forward move between the two halves like real pages do.
   await page.goBack();

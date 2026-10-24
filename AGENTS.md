@@ -261,6 +261,10 @@ guessing.
   addresses survive a reload. After November 4 the event page redirects to
   Main. Specs that need the missions or the commissions open
   `/tasks/rngween`, not `/tasks`.
+- The event page follows the calendar: it opens on the aura missions during
+  Oct 25–31 and on the commissions in the two open windows, until the player
+  picks a tab. Between the windows the commission board says it is paused
+  rather than dealing empty cards.
 - World rolls pay no ordinary EP, charges, drops or task credit. Pending World
   outcomes are committed to the save before the animation starts.
 - World rolls never pay Pumpkoins. The World shop (reveal upgrades, 200 / 500 /

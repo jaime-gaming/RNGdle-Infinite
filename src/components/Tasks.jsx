@@ -196,7 +196,12 @@ export default function Tasks({
 
   const eventCalendar = rngweenCalendar(eventNow);
   const eventActive = eventCalendar.limitedPhase === "active";
-  const [eventTab, setEventTab] = useState("commissions");
+  // Until the player picks a tab, the page follows the event: the aura
+  // missions during their week, the commissions in the two open windows.
+  const [chosenTab, setChosenTab] = useState(null);
+  const eventTab =
+    chosenTab ?? (eventCalendar.missionsActive ? "auras" : "commissions");
+  const pickTab = (next) => setChosenTab(next);
   // The switch only exists while the event does. A link to the event page
   // that outlives the event falls back to the everyday list, never a blank.
   const eventPage = eventActive && !!progress.profile;
@@ -258,7 +263,7 @@ export default function Tasks({
                 id="event-tab-auras"
                 aria-selected={eventTab === "auras"}
                 className={eventTab === "auras" ? "is-selected" : ""}
-                onClick={() => setEventTab("auras")}
+                onClick={() => pickTab("auras")}
               >
                 Auras
               </button>
@@ -267,7 +272,7 @@ export default function Tasks({
                 id="event-tab-commissions"
                 aria-selected={eventTab === "commissions"}
                 className={eventTab === "commissions" ? "is-selected" : ""}
-                onClick={() => setEventTab("commissions")}
+                onClick={() => pickTab("commissions")}
               >
                 Commissions
               </button>
