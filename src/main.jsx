@@ -96,6 +96,7 @@ import {
   subscribeAppUpdate,
 } from "./app-update.js";
 import { restoreVaultIfNeeded } from "./save-vault.js";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import RebirthNav from "./components/RebirthNav";
 import MobileTabBar from "./components/MobileTabBar";
 import InstallApp from "./components/InstallApp";
@@ -451,9 +452,14 @@ function App() {
   // task that can be claimed, and a badge of Epic or better. The first load is
   // quiet, and one roll that finishes several things is one notice. The badge
   // notice stays off the roll page, where the result already shows the badges.
-  const readyTasks =
-    taskSummary(session.tasks, taskNow).ready +
-    rngweenState(session.tasks, seasonalNow, session.rngweenLimited).ready;
+  let readyTasks = 0;
+  try {
+    readyTasks =
+      (taskSummary(session?.tasks, taskNow)?.ready ?? 0) +
+      (rngweenState(session?.tasks, seasonalNow, session?.rngweenLimited)?.ready ?? 0);
+  } catch {
+    readyTasks = 0;
+  }
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
     const rose = newlyReady(lastReadyTasks.current, readyTasks);
@@ -823,7 +829,7 @@ function App() {
     if (page === "rebirth" && !rebirthVisible) navigate("roll");
   }, [page, rebirthVisible]);
   const discoveredBadges = badges.filter((b) =>
-    session.discovered.includes(b.canonicalId),
+    (session.discovered ?? []).includes(b.canonicalId),
   );
   const discoveredGroups = [
     ...new Set(discoveredBadges.flatMap((b) => b.groups)),
@@ -845,9 +851,16 @@ function App() {
           ? rarities.indexOf(b.rarity) - rarities.indexOf(a.rarity)
           : 0,
     );
+  if (!session) {
+    return (
+      <div style={{ padding: 24, textAlign: "center" }}>
+        Cargando RNGdle Infinite… Si esto no desaparece, recarga la página. Tu progreso está guardado.
+      </div>
+    );
+  }
   if (page === "rngween-world" && !session.rngweenLimited?.retired)
     return (
-      <>
+      <ErrorBoundary>
         <RngweenFinale
           progress={session}
           now={seasonalNow}
@@ -867,7 +880,7 @@ function App() {
             .filter(Boolean)
             .join(" ")}
         />
-      </>
+      </ErrorBoundary>
     );
   return (
     <>
@@ -1225,7 +1238,7 @@ function App() {
           </>
         )}
         {page === "tasks" && (
-          <>
+          <ErrorBoundary>
             <button className="back-link" onClick={() => navigate("roll")}>
               <ArrowLeft size={14} /> Back to rolling
             </button>
@@ -1255,10 +1268,11 @@ function App() {
               openAuraFamily={openFamily}
               openWorld={() => navigate("rngween-world")}
             />
-          </>
+          </ErrorBoundary>
         )}
         {page === "shop" && (
-          <Shop
+          <ErrorBoundary>
+            <Shop
             key={`${epoch}:${shopSection}:${shopFamily}`}
             progress={session}
             section={shopSection}
@@ -1278,9 +1292,10 @@ function App() {
             pickingGoal={pickingGoal}
             onPickingGoal={setPickingGoal}
           />
+          </ErrorBoundary>
         )}
         {page === "badges" && (
-          <>
+          <ErrorBoundary>
             <button className="back-link" onClick={() => navigate("roll")}>
               <ArrowLeft size={14} /> Back to rolling
             </button>
@@ -1454,7 +1469,7 @@ function App() {
               badges are shown. Sign up for a local profile to save your
               collection.
             </p>
-          </>
+          </ErrorBoundary>
         )}
       </main>
       {page === "roll" && !gateAvailable && (
@@ -1690,8 +1705,25 @@ const vaultRecovery = updateSaveRecovery?.recovered
   ? { restored: false }
   : restoreVaultIfNeeded();
 
-createRoot(document.getElementById("root")).render(
-  <SettingsProvider>
-    <App />
-  </SettingsProvider>,
-);
+// Global error handlers to avoid white-screen on unhandled errors
+try {
+  window.addEventListener("error", (e) => {
+    console.error("[RNGdle] window error:", e.message, e.error);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    console.error("[RNGdle] unhandled rejection:", e.reason);
+  });
+} catch {}
+
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  console.error("[RNGdle] #root not found - blank page prevented");
+} else {
+  createRoot(rootEl).render(
+    <ErrorBoundary>
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    </ErrorBoundary>,
+  );
+}

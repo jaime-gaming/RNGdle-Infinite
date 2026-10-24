@@ -34,8 +34,9 @@ function appBuildVersion() {
   const { version } = JSON.parse(
     fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
   );
+  const internalVersion = "RNGdle-Infinitev0.5.1fix6";
   const buildId = `${version}-${Date.now().toString(36)}-${process.pid.toString(36)}`;
-  const payload = JSON.stringify({ version, buildId });
+  const payload = JSON.stringify({ version, buildId, internalVersion });
   let outDir = path.resolve("dist");
 
   return {
@@ -44,8 +45,9 @@ function appBuildVersion() {
       outDir = config.build.outDir;
     },
     transformIndexHtml(html) {
-      const tag = `<meta name="rngdle-build-id" content="${buildId}" />`;
-      return html.replace("</head>", `  ${tag}\n  </head>`);
+      const buildTag = `<meta name="rngdle-build-id" content="${buildId}" />`;
+      const internalTag = `<meta name="rngdle-internal-version" content="${internalVersion}" />`;
+      return html.replace("</head>", `  ${buildTag}\n  ${internalTag}\n  </head>`);
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
