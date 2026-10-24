@@ -436,7 +436,9 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
   other device adopts it whole. Never decide this by timestamp alone: a browser
   opened once must not wipe a played save because its last write is newer. Two
   devices of the *same* account keep the timestamp order, so a queued change
-  from either one is never refused.
+  from either one is never refused. The primary is also declared the **writer**
+  (`declareSyncOwner`), so the save that is kept and the device that runs
+  actions are always the same one.
 - The PeerJS broker can be overridden with the localStorage key
   `rng-infinite-peer-broker` (`{host, port, path, secure}`). The WebRTC spec uses
   this to run a local `peer` server on port 9000. Port 9123 is blocked by

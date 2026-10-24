@@ -596,3 +596,47 @@ test("when the second device is the one with more progress, it keeps its save an
   await contextB.close();
   await contextA.close();
 });
+
+test("the account with more progress also becomes the device that runs actions", async ({
+  browser,
+}) => {
+  const contextA = await eventContext(browser);
+  const pageA = await contextA.newPage();
+  await seedProgress(pageA, { profile: phoneAccount });
+  await pageA.goto("/settings/link");
+  await pageA.getByTestId("sync-create").click();
+  const link = await pageA.getByTestId("sync-link").inputValue();
+
+  const contextB = await eventContext(browser);
+  const pageB = await contextB.newPage();
+  await seedProgress(pageB, richAccount(testProfile));
+  await pageB.goto(link);
+  await expect
+    .poll(async () => (await saved(pageA))?.profile?.username, {
+      timeout: 15000,
+    })
+    .toBe("LuckyTester");
+  await pageB.goto("/settings/link");
+  await expect(pageB.getByTestId("sync-status")).toContainText(/live/, {
+    timeout: 10000,
+  });
+
+  // The kept account is also the one that draws: A asks for a roll, B commits
+  // it, and both screens end up waiting on that single number.
+  await pageA.goto("/");
+  await pageA.getByRole("button", { name: "GENERATE", exact: true }).click();
+  await expect
+    .poll(async () => (await saved(pageB))?.pendingRoll?.id ?? null, {
+      timeout: 15000,
+    })
+    .not.toBeNull();
+  const rollId = (await saved(pageB)).pendingRoll.id;
+  await expect
+    .poll(async () => (await saved(pageA))?.pendingRoll?.id ?? null, {
+      timeout: 15000,
+    })
+    .toBe(rollId);
+
+  await contextB.close();
+  await contextA.close();
+});
