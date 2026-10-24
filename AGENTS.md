@@ -42,6 +42,15 @@ on).
   source of truth for restoring ownership. When you add a field to the save,
   add it to `emptyProgress()`, parse it defensively, and write a spec that
   feeds it garbage.
+- **The save has a compressed second copy.** `src/save-vault.js` keeps
+  `SAVE_VAULT_KEY` (`rng-infinite-progress-vault-v1`) holding
+  `{at, raw: "rngvault1:<base64 gzip>"}`. `use-progress.js` writes it after a
+  healthy save and after a healthy load (at most once per minute) and drops it
+  when the account is deleted; `restoreVaultIfNeeded()` in `main.jsx` runs
+  before React mounts and only steps in when the canonical save is missing or
+  unreadable, then toasts the recovery. Settings shows the copy and can restore
+  it by hand. Never let this path resurrect a deleted account: a profile-less
+  save is deleted, not restored, and the vault is cleared with the account.
 - **Everything is UTC.** Daily and weekly task periods, event boundaries and
   every date shown in the UI use UTC (`Date.UTC`, `getUTC*`, `timeZone: "UTC"`).
   Never use local-date getters for anything a player can see or that gates a
@@ -240,6 +249,25 @@ guessing.
   writes one history row and deals a replacement that keeps the old slot's
   `expiresAt`. An unclaimed slot expires with its hour; nothing is paid
   automatically.
+- **The board is `open` for the whole event but `active` only in the two
+  windows.** `hourlyView()` returns both: `open` keeps the page mounted,
+  `active` deals, credits and pays. Between them (`hourlyWindow === null`,
+  Oct 25–31) the board shows one paused card, `recordRngweenHourly` is a no-op
+  and `claimRngweenHourly` throws instead of paying an expired hour.
+- **Halloween night (Oct 31, 00:00–24:00 UTC) is the event's peak**:
+  `rngweenCalendar(at).finaleActive` is true for that day only and
+  `pumpkoinMultiplier` is 2, so every aura mission pays double (the history row
+  keeps the paid amount plus `multiplier: 2`). `components/RngweenFinale.jsx`
+  draws a sticky strip above the content with the countdown and the ×2 badge;
+  it never covers the header, and it disappears on November 1.
+- **Taking part on the 31st earns `RNGWEEN_FINALE_SKIN` ("Hollow Lantern",
+  `hollow-lantern`)**, a permanent `eventOnly` skin: any mission claim, World
+  rollout or commission claim sets `rngweenLimited.finaleCount`, and the strip's
+  button dispatches `claim-rngween-finale` (`claimRngweenFinale`). The receipt is
+  `{id: "rngween-finale:rngween-2026", type: "rngween-finale"}` plus
+  `finaleEarned` and the aura in `owned`. Both fields are repaired from
+  ownership, carried through `retireRngweenLimited`, and only written when true,
+  so a retired save stays small. Never make the skin missable by a save repair.
 - The Reaper (`src/rngween-reaper.js`, `components/ReaperDialog.jsx`) is a
   short scripted dialogue with button choices only. There is no free-text
   input; keep his lines to one or two sentences with a bit of dry humour.
@@ -264,7 +292,7 @@ guessing.
 - The event page follows the calendar: it opens on the aura missions during
   Oct 25–31 and on the commissions in the two open windows, until the player
   picks a tab. Between the windows the commission board says it is paused
-  rather than dealing empty cards.
+  rather than dealing empty cards (see `hourlyView().open` / `.active`).
 - World rolls pay no ordinary EP, charges, drops or task credit. Pending World
   outcomes are committed to the save before the animation starts.
 - World rolls never pay Pumpkoins. The World shop (reveal upgrades, 200 / 500 /
@@ -512,6 +540,9 @@ What the flow is allowed to touch, because the save outranks everything else:
 - CSS: keep the phone rules next to the desktop rules for the same component,
   use `env(safe-area-inset-*)` for anything pinned to an edge, keep tap targets
   at 40px or more, and prefer `dvh` over `vh` for anything full-height.
+- Notifications (`.toast`) stack in the **top-right corner** (`src/toasts.css`,
+  `top: 68px; right: 20px`), never in the middle of the screen, and slide in
+  from the right. On phones they clear the safe area.
 - Icons come from `game-icons.jsx` or Lucide. The favicon and app icons are a
   flat "RNG / DLE" wordmark on the dark background (`public/favicon.svg`,
   `public/icon-*.png`, `public/apple-touch-icon.png`); regenerate the PNGs when

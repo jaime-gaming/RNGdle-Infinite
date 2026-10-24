@@ -13,6 +13,8 @@ export function rngweenCalendar(at) {
   const limitedStartsAt = Date.UTC(RNGWEEN_YEAR, 9, 21);
   const decoratesAt = limitedStartsAt;
   const startsAt = Date.UTC(RNGWEEN_YEAR, 9, 25);
+  // Halloween itself: the one night the whole event turns everything up.
+  const finaleStartsAt = Date.UTC(RNGWEEN_YEAR, 9, 31);
   const endsAt = Date.UTC(RNGWEEN_YEAR, 10, 1);
   const limitedEndsAt = Date.UTC(RNGWEEN_YEAR, 10, 4);
   const decorationsEndAt = limitedEndsAt;
@@ -21,15 +23,22 @@ export function rngweenCalendar(at) {
   // days before the trials (Oct 21–24) and the three days after them (Nov 1–3).
   // While a mission is live the only way to its aura is to finish the mission.
   const missionsActive = at >= startsAt && at < endsAt;
+  const finaleActive = verified && at >= finaleStartsAt && at < endsAt;
   return {
     decoratesAt,
     limitedStartsAt,
     startsAt,
+    finaleStartsAt,
     endsAt,
+    finaleActive,
+    // Halloween night pays twice, and only then.
+    pumpkoinMultiplier: finaleActive ? 2 : 1,
     decorationsEndAt,
     limitedEndsAt,
     auraSalesAt: endsAt,
     missionsActive: verified && missionsActive,
+    // Auras are bought only while their missions are closed, Halloween night
+    // included: on the 31st the trials are live, so the mission is the way in.
     aurasBuyable:
       verified &&
       at >= limitedStartsAt &&
@@ -43,9 +52,11 @@ export function rngweenCalendar(at) {
           ? "active"
           : "ended",
     decorated: verified && at >= decoratesAt && at < decorationsEndAt,
-    // Four rotating commissions run all event windows, including during the
-    // October 25–31 aura trials: players can farm Pumpkoins alongside auras.
-    // A new phase starts a fresh board; the verified UTC clock owns expiry.
+    // Commissions live for the whole event, but the board only deals in the
+    // two open windows (Oct 21–24 and Nov 1–3). During the October 25–31 aura
+    // trials it stays open and says it is paused: no cards, no progress and no
+    // claims until November 1. A new phase starts a fresh board; the verified
+    // UTC clock owns expiry.
     hourlyPhase: !verified
       ? "unavailable"
       : at >= limitedStartsAt && at < limitedEndsAt
@@ -137,7 +148,25 @@ export const RNGWEEN_WORLD_SKIN = {
   description:
     "Green-violet frame with a ghost and six sigils. Roll 6666 in Valley of Horrors to unlock. Permanent; never sold or returning.",
 };
-export const RNGWEEN_COSMETICS = [...RNGWEEN_AURAS, RNGWEEN_WORLD_SKIN];
+// The Halloween night skin: one night only, and only for players who were here
+// for it. Permanent once earned, never sold and never returning.
+export const RNGWEEN_FINALE_SKIN = {
+  id: "hollow-lantern",
+  kind: "aura",
+  name: "Hollow Lantern",
+  family: "rngween",
+  eventOnly: true,
+  finaleOnly: true,
+  swatch: ["#fdba74", "#7c2d12"],
+  icon: "hollow",
+  description:
+    "A carved lantern with a steady flame. Earn it on Halloween night (October 31, UTC) by taking part in the event. Permanent; it never returns.",
+};
+export const RNGWEEN_COSMETICS = [
+  ...RNGWEEN_AURAS,
+  RNGWEEN_WORLD_SKIN,
+  RNGWEEN_FINALE_SKIN,
+];
 
 export const RNGWEEN_FAMILY = {
   id: "rngween",

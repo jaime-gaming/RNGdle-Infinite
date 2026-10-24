@@ -16,6 +16,7 @@ import {
   parsePending,
   recoverUnsavedRolls,
 } from "./progress.js";
+import { clearVault, readVault, writeVault } from "./save-vault.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
 import { drawRngweenWorld } from "./rngween-world-client.js";
 import {
@@ -91,6 +92,11 @@ function load() {
       } catch {
         progress.pendingRoll = null;
       }
+    }
+    if (!repairs.length) {
+      // A healthy load is the cheapest moment to make sure the safety copy is
+      // there and current, whatever happened in an earlier session.
+      writeVault(stored, { storage: localStorage });
     }
     if (repairs.length) {
       console.info("[RNGdle] save repaired:", repairs);
@@ -269,6 +275,7 @@ export function useProgress() {
           "buy-rngween-limited",
           "claim-rngween-coins",
           "claim-rngween-hourly",
+          "claim-rngween-finale",
           "refresh-rngween-hourly",
           "rngween-world-roll",
           "rngween-world-reveal",
@@ -369,6 +376,9 @@ export function useProgress() {
             if (!readable) throw new Error("Unreadable storage");
             sessionStorage.removeItem(GUEST_ROLL_KEY);
             localStorage.removeItem(PROGRESS_KEY);
+            // The safety copy goes with the account: a deleted profile must
+            // never come back from the vault.
+            clearVault(localStorage);
           } catch {
             return {
               ok: false,
@@ -683,7 +693,11 @@ export function useProgress() {
                 };
               }
             }
-            localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
+            const saved = JSON.stringify(next);
+            localStorage.setItem(PROGRESS_KEY, saved);
+            // Second, compressed copy of the same save: the safety net a bad
+            // write, a full disk or a crash can never take away.
+            writeVault(saved, { storage: localStorage });
             healthy.current = true;
             unsaved.current = new Set();
             setWarning("");
@@ -844,5 +858,25 @@ export function useProgress() {
       message: "Progress could not be updated. Please try again.",
     }));
   }
-  return { progress, warning, dispatch, epoch };
+  // The last good copy this browser keeps, and the manual way back to it.
+  const vault = {
+    get: () => readVault(localStorage),
+    restore: () => {
+      const copy = readVault(localStorage);
+      if (!copy)
+        return { ok: false, message: "There is no backup to restore yet." };
+      try {
+        localStorage.setItem(PROGRESS_KEY, copy.raw);
+      } catch {
+        return {
+          ok: false,
+          message:
+            "The backup could not be written. Allow browser storage and try again.",
+        };
+      }
+      reset(parseAndRepairProgress(copy.raw).progress);
+      return { ok: true, at: copy.at };
+    },
+  };
+  return { progress, warning, dispatch, epoch, vault };
 }

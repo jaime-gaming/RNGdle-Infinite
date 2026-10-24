@@ -37,6 +37,7 @@ import {
   WORLD_FRAGMENT_ZONES,
   worldFragmentCount,
   worldPointsAvailable,
+  KEEP_ROLLING_COST,
 } from "../rngween-world-zones.js";
 import {
   WORLD_MINI_RULES,
@@ -383,8 +384,8 @@ export default function RngweenWorld({
   // The board can close while the tab is open (midnight UTC); fall back
   // rather than leave an empty panel under a locked tab.
   useEffect(() => {
-    if (tab === "commissions" && !hourly.active) setTab("objectives");
-  }, [tab, hourly.active]);
+    if (tab === "commissions" && !hourly.open) setTab("objectives");
+  }, [tab, hourly.open]);
   const commissionPaid =
     !pending && last && world.last?.serial === last.serial
       ? progress.history
@@ -873,7 +874,7 @@ export default function RngweenWorld({
           // Commissions stay visible but locked while the Reaper is not
           // dealing, so the tab says when to come back instead of opening
           // on an empty room.
-          const locked = id === "commissions" && !hourly.active;
+          const locked = id === "commissions" && !hourly.open;
           return (
             <button
               key={id}
@@ -1058,7 +1059,7 @@ export default function RngweenWorld({
           </>
         )}
         {tab === "record" && <WorldRecord progress={progress} now={now} />}
-        {tab === "commissions" && hourly.active && (
+        {tab === "commissions" && hourly.open && (
           <RngweenHourly
             progress={progress}
             now={now}

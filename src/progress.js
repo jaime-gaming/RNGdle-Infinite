@@ -106,6 +106,8 @@ import {
   recordRngweenTally,
 } from "./rngween.js";
 import {
+  claimRngweenFinale,
+  markRngweenFinale,
   EP_PER_PUMPKOIN,
   RNGWEEN_PET,
   RNGWEEN_SKILL,
@@ -125,6 +127,7 @@ import {
 } from "./rngween-limited.js";
 import {
   RNGWEEN_AURAS,
+  RNGWEEN_FINALE_SKIN,
   RNGWEEN_ID,
   RNGWEEN_WORLD_SKIN,
   rngweenCalendar,
@@ -1156,16 +1159,26 @@ function applyEvent(state, action) {
   if (action.type === "claim-rngween-coins") {
     const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
     requireRngweenLimited(state, at);
-    return grantRngweenMissionPumpkoins(state, at);
+    return markRngweenFinale(grantRngweenMissionPumpkoins(state, at), at);
+  }
+  // Halloween night: taking part is the key, and the skin is collected here.
+  if (action.type === "claim-rngween-finale") {
+    const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid event claim time");
+    return claimRngweenFinale(state, at);
   }
   if (action.type === "claim-rngween-hourly") {
     const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
     requireRngweenLimited(state, at);
-    return claimRngweenHourly(
-      state,
-      action.serial,
+    return markRngweenFinale(
+      claimRngweenHourly(
+        state,
+        action.serial,
+        at,
+        rngweenWorldUnlocked(state.tasks, state.rngweenLimited),
+      ),
       at,
-      rngweenWorldUnlocked(state.tasks, state.rngweenLimited),
     );
   }
   if (
@@ -1274,18 +1287,21 @@ function applyEvent(state, action) {
           }
         : {}),
     };
-    return recordRngweenHourly(
-      next,
-      "world",
-      worldHourlyTally(
-        limited,
-        next.rngweenLimited,
-        pending.number,
-        pending.zone,
+    return markRngweenFinale(
+      recordRngweenHourly(
+        next,
+        "world",
+        worldHourlyTally(
+          limited,
+          next.rngweenLimited,
+          pending.number,
+          pending.zone,
+        ),
+        at,
+        true,
+        pending.startedAt,
       ),
       at,
-      true,
-      pending.startedAt,
     );
   }
 
@@ -1776,7 +1792,10 @@ function applyEvent(state, action) {
       at,
       state.rngweenLimited,
     );
-    return grantRngweenMissionPumpkoins(grantRngweenAuras(state, tasks), at);
+    return markRngweenFinale(
+      grantRngweenMissionPumpkoins(grantRngweenAuras(state, tasks), at),
+      at,
+    );
   }
   // A task pays its reward into the wallet once per reset. It is a reward for
   // play, not a sale, so it is logged as income and never counts towards the
@@ -2734,6 +2753,16 @@ function parseHistory(value) {
     } else if (e.type === "rngween-forged-key") {
       if (e.id !== `rngween-forged-key:${RNGWEEN_ID}`) return [];
       next = { ...base, name: "Valley Challenge Key" };
+    } else if (e.type === "rngween-finale") {
+      // Halloween night's skin: one receipt per account, never currency.
+      if (
+        e.id !== `rngween-finale:${RNGWEEN_ID}` ||
+        e.productId !== RNGWEEN_FINALE_SKIN.id ||
+        typeof e.name !== "string" ||
+        e.name.length > 100
+      )
+        return [];
+      next = { ...base, name: e.name, productId: e.productId };
     } else if (e.type === "task") {
       // A claimed task: the reward it paid, with the name it had when claimed.
       if (

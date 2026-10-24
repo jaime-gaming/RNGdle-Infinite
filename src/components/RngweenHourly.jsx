@@ -32,6 +32,8 @@ export default function RngweenHourly({
 }) {
   const clock = useHourlyDisplayClock(now);
   const view = hourlyView(progress, clock);
+  // Halloween night pays twice; every card says the amount it will actually pay.
+  const multiplier = rngweenCalendar(clock).pumpkoinMultiplier;
   const [claiming, setClaiming] = useState(0);
   const [leaving, setLeaving] = useState(0);
   const [bumped, setBumped] = useState(false);
@@ -69,7 +71,7 @@ export default function RngweenHourly({
         notify?.({
           kind: "reward",
           title: `${slot.task.title} claimed`,
-          text: `+${slot.task.pumpkoins} Pumpkoins. A new commission took its place.`,
+          text: `+${slot.task.pumpkoins * multiplier} Pumpkoins${multiplier > 1 ? " (Halloween night doubles it)" : ""}. A new commission took its place.`,
         });
       }
     } finally {
@@ -83,8 +85,8 @@ export default function RngweenHourly({
   // Between the opening window and November 1 the board is dealt nothing on
   // purpose (the aura trials have the stage), so it says so instead of showing
   // four cards that look like they failed to save.
-  const paused = rngweenCalendar(clock).hourlyWindow === null;
-  if (!view.active) return null;
+  const paused = view.open && !view.active;
+  if (!view.open) return null;
   return (
     <section
       className={`rngween-hourly${inWorld ? " is-world-board" : ""}`}
@@ -100,7 +102,10 @@ export default function RngweenHourly({
           <h2 id={`hourly-title-${inWorld ? "world" : "main"}`}>
             The Reaper's commissions
           </h2>
-          <p>Complete commissions within one hour to earn Pumpkoins.</p>
+          <p>
+            Complete commissions within one hour to earn Pumpkoins.
+            {multiplier > 1 ? " Tonight every commission pays twice." : ""}
+          </p>
         </div>
         <span className={`rngween-hourly-wallet${bumped ? " is-bumped" : ""}`}>
           <PumpkinMark size={20} />
@@ -188,11 +193,13 @@ export default function RngweenHourly({
                       onClick={() => claim(slot)}
                       disabled={claiming === slot.serial}
                     >
-                      <PumpkinMark size={17} /> Claim +{slot.task.pumpkoins}
+                      <PumpkinMark size={17} /> Claim +
+                      {slot.task.pumpkoins * multiplier}
                     </button>
                   ) : (
                     <>
-                      <PumpkinMark size={17} /> +{slot.task.pumpkoins} Pumpkoins
+                      <PumpkinMark size={17} /> +
+                      {slot.task.pumpkoins * multiplier} Pumpkoins
                     </>
                   )}
                   {slot.task.source === "world" &&
