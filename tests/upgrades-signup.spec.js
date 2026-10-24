@@ -17,6 +17,7 @@ import {
 } from "../src/roll-timeline.js";
 import { showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
+import { mockSeasonClock } from "./helpers/season-clock.js";
 import { gotoShelfFor, openShelfFor } from "./helpers/shop.js";
 const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
@@ -133,6 +134,9 @@ test("guest rewards and purchases stay in memory and disappear on reload", async
 test("signup names a clean account and never invents guest earnings", async ({
   page,
 }) => {
+  // Before the Halloween window: a fresh account saves exactly what it has,
+  // with no event board dealing itself into the first write.
+  await mockSeasonClock(page, Date.UTC(2026, 9, 1, 12));
   await showRoll(page, 1337);
   await nav(page, "Shop");
   await buy(page, "quickwind-1");

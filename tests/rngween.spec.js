@@ -27,6 +27,7 @@ import {
   rngweenState,
   RNGWEEN_AURAS,
   RNGWEEN_ID,
+  RNGWEEN_COSMETICS,
   RNGWEEN_MISSIONS,
 } from "../src/rngween.js";
 import {
@@ -43,6 +44,7 @@ import { rebirthRelevantPurchases } from "../src/rebirth.js";
 import { CHANGELOG, LATEST_VERSION } from "../src/changelog.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { withAllFragments, worldPathTo } from "./helpers/world-roll.js";
+import { farewellEP } from "../src/rngween-limited.js";
 import { evaluate } from "./helpers/index.js";
 
 const at = (month, day, hour = 0, minute = 0, second = 0, year = 2026) =>
@@ -269,7 +271,11 @@ test("unfinished and uncollected auras expire; ownership, not the date, gates eq
     at: at(12, 1),
   });
   expect(equipped.equipped).toBe("phantom-veil");
-  expect(equipped.balance).toBe(ready.balance);
+  // Equipping is free. The first event action after the end also pays the
+  // farewell for the unspent Pumpkoins, so only that credit separates them.
+  expect(equipped.balance).toBe(
+    unequipped.balance + farewellEP(unequipped.rngweenLimited?.pumpkoins ?? 0),
+  );
   expect(() =>
     applyProgress(equipped, { type: "equip", id: "blood-moon", at: at(12, 1) }),
   ).toThrow("own this aura");
@@ -336,7 +342,12 @@ test("exclusive cosmetics have no EP price and cannot enter ordinary stock or EP
     totalEarned: 100000000,
   };
   expect(shopProducts).toHaveLength(61);
-  expect(auraProducts).toHaveLength(31);
+  // The catalogue plus the event's own looks: four mission auras, the World
+  // skin and the Halloween night skin.
+  expect(auraProducts).toHaveLength(
+    shopProducts.filter((item) => item.kind === "aura").length +
+      RNGWEEN_COSMETICS.length,
+  );
   expect(RNGWEEN_MISSIONS.map((mission) => mission.auraId)).toEqual(auraIds);
   expect(rebirthRelevantPurchases(auraIds)).toEqual([]);
   for (const aura of RNGWEEN_AURAS) {
@@ -739,13 +750,19 @@ test("the event appears at UTC midnight on Oct 25 without reloading or adding a 
   await page.clock.pauseAt(new Date(at(10, 24, 23, 59, 59)));
   await mockSeasonClock(page, at(10, 24, 23, 59, 59));
   await seedProgress(page);
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect(page.locator(".rngween-decor")).toBeAttached();
-  // The event has a page of its own; its switch arrives with the event.
-  await expect(page.locator(".tasks-switch")).toHaveCount(0);
+  // The event page exists for the whole event; what opens at midnight on
+  // October 25 is the aura half of it, which takes the screen over by itself.
+  await expect(page.getByRole("tab", { name: "Commissions" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await page.clock.runFor(1000);
-  await page.getByRole("tab", { name: /RNGween/ }).click();
-  await expect(page).toHaveURL(/\/tasks\/rngween$/);
+  await expect(page.getByRole("tab", { name: "Auras" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect(page.locator(".rngween-event")).toBeVisible();
   await expect(page.locator(".rngween-banner")).toHaveCount(0);
 });
@@ -755,6 +772,7 @@ test("the event ends on Nov 1 UTC, while the Halloween palette and favicon stay 
 }) => {
   await page.clock.pauseAt(new Date(at(10, 31, 23, 59, 59)));
   await mockSeasonClock(page, at(10, 31, 23, 59, 59));
+  await seedProgress(page);
   await page.goto("/tasks/rngween");
   await expect(page.locator(".rngween-event")).toBeVisible();
   await page.clock.runFor(1000);
@@ -832,6 +850,7 @@ for (const timezoneId of [
     try {
       await page.clock.install({ time: new Date("2030-02-15T12:00:00Z") });
       await mockSeasonClock(page, startsAt);
+      await seedProgress(page);
       await page.goto("/tasks/rngween");
       const calendar = await page.evaluate(
         async ({ start, end }) => {
@@ -933,6 +952,7 @@ test("Halloween fits phones in both themes and reduced motion stills the decorat
 }) => {
   await page.clock.setFixedTime(new Date(at(10, 28, 12)));
   await mockSeasonClock(page, at(10, 28, 12));
+  await seedProgress(page, { owned: auraIds });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/tasks/rngween");
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -971,6 +991,7 @@ test("Halloween decorations are actually painted only in dark mode on desktop an
   page,
 }) => {
   await mockSeasonClock(page, at(10, 26, 12));
+  await seedProgress(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/tasks/rngween");
   await expect(page.locator("html")).toHaveAttribute("data-season", "rngween");
