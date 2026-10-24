@@ -104,7 +104,9 @@ export default function RngweenHourly({
           </h2>
           <p>
             Complete commissions within one hour to earn Pumpkoins.
-            {multiplier > 1 ? " Tonight every commission pays twice." : ""}
+            {multiplier > 1 && !paused
+              ? " Tonight every commission pays twice."
+              : ""}
           </p>
         </div>
         <span className={`rngween-hourly-wallet${bumped ? " is-bumped" : ""}`}>
