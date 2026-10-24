@@ -196,3 +196,28 @@ test("the banner stays out of the way on a phone", async ({ page }) => {
   const header = await page.locator(".header").boundingBox();
   expect(header.y).toBeGreaterThanOrEqual(box.y + box.height - 1);
 });
+
+// The strip is a clock, so its seconds have to move with the verified date the
+// rest of the event uses — not with the half-minute page render.
+test("the Halloween strip counts down every second and leaves at midnight", async ({
+  page,
+}) => {
+  await page.clock.pauseAt(new Date(Date.UTC(2026, 9, 31, 23, 59, 54)));
+  await mockSeasonClock(page, Date.UTC(2026, 9, 31, 23, 59, 54));
+  await seedProgress(page, {
+    rngweenLimited: { ...emptyRngweenLimited(), finaleCount: 1 },
+  });
+  await page.goto("/");
+  const banner = page.getByRole("complementary", { name: "Halloween event" });
+  const read = async () =>
+    (await banner.locator(".rngween-finale-clock").innerText()).trim();
+  await expect(banner).toBeVisible();
+  const first = await read();
+  expect(first).toMatch(/^00:00:0[3-6]$/);
+  await page.clock.runFor(2000);
+  const second = await read();
+  expect(second).not.toBe(first);
+  // 23:59:54 -> 00:00:00: the night is over and the strip goes away.
+  await page.clock.runFor(6000);
+  await expect(banner).toHaveCount(0);
+});

@@ -2753,6 +2753,15 @@ function parseHistory(value) {
     } else if (e.type === "rngween-forged-key") {
       if (e.id !== `rngween-forged-key:${RNGWEEN_ID}`) return [];
       next = { ...base, name: "Valley Challenge Key" };
+    } else if (e.type === "rngween-farewell") {
+      // Leftover Pumpkoins come back as EP once, at retirement.
+      if (
+        e.id !== `rngween-farewell:${RNGWEEN_ID}` ||
+        !validAmount(e.ep) ||
+        !validAmount(e.pumpkoins)
+      )
+        return [];
+      next = { ...base, pumpkoins: e.pumpkoins, ep: e.ep };
     } else if (e.type === "rngween-finale") {
       // Halloween night's skin: one receipt per account, never currency.
       if (

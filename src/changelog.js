@@ -9,14 +9,9 @@ export const CHANGELOG = [
     date: "2026-10-20",
     title: "RNGween update",
     body: [
-      "RNGween brings Halloween decorations, the Limited Shop with Pumpkoins and the Reaper's World, Oct 21 – Nov 3, 2026.",
+      "RNGween adds Halloween decorations, the Limited Shop with Pumpkoins and the Reaper's World, Oct 21 – Nov 3, 2026.",
       "four aura tasks unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon, October 25–31, 2026; they never return.",
-      "tasks now has two pages: Main keeps the daily and weekly lists, RNGween holds the event's auras and hourly commissions.",
-      "a Halloween aura can also be bought while its tasks are closed, Oct 21–24 and Nov 1–3, so a missed one is never lost.",
-      "the night of Oct 31 adds a live banner, Pumpkoins ×2 on every reward and the Hollow Lantern skin for taking part.",
-      "your save keeps a compressed backup copy, so the game can restore itself if the browser loses the original.",
-      "the Halloween icon follows you into the World, and Reload until updated clears cached files without touching your save.",
-      "notifications moved to the top-right corner, and a few more things changed under the hood. You will notice.",
+      "tasks splits in two, Oct 31 doubles Pumpkoins and hands out the Hollow Lantern, and leftover coins become a small EP farewell.",
     ],
   },
   {

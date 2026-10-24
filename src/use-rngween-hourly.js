@@ -39,5 +39,8 @@ export function useHourlyDisplayClock(now) {
     const timer = setInterval(() => tick((value) => value + 1), 1000);
     return () => clearInterval(timer);
   }, [active]);
-  return active ? seasonNow() : now;
+  // The verified date while the board runs, so its seconds agree with every
+  // other event timer; the render's own date is the fallback when the website
+  // clock has not answered yet.
+  return (active ? seasonNow() : null) ?? now;
 }

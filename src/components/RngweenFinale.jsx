@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Flame, Gift, PartyPopper, Timer } from "lucide-react";
 import { RNGWEEN_FINALE_SKIN, rngweenCalendar } from "../rngween.js";
+import { seasonNow } from "../season-clock.js";
 import { PumpkinMark } from "./game-icons.jsx";
 import "../rngween-finale.css";
 
@@ -16,18 +17,33 @@ function clock(ms) {
 // what is double, how long is left, and how to keep the lantern.
 export default function RngweenFinale({ progress, now, onAction, notify }) {
   const calendar = rngweenCalendar(now);
-  const [left, setLeft] = useState(() =>
-    Number.isFinite(now) ? calendar.endsAt - now : 0,
-  );
+  // `now` is the verified date the page render started with, and it is only
+  // renewed every half minute. The countdown reads the live clock on each tick
+  // instead, so seconds move at the same pace as every other event timer.
+  const [state, setState] = useState(() => ({
+    left: Number.isFinite(now) ? calendar.endsAt - now : 0,
+    live: calendar.finaleActive,
+    multiplier: calendar.pumpkoinMultiplier,
+  }));
+  const { left, live, multiplier } = state;
   const [pending, setPending] = useState(false);
   useEffect(() => {
-    if (!calendar.finaleActive) return;
-    const tick = () => setLeft(calendar.endsAt - now);
+    const read = () => seasonNow() ?? now;
+    const tick = () => {
+      const at = read();
+      const next = rngweenCalendar(at);
+      setState({
+        left: Number.isFinite(at) ? next.endsAt - at : 0,
+        live: next.finaleActive,
+        multiplier: next.pumpkoinMultiplier,
+      });
+    };
     tick();
+    if (!rngweenCalendar(read()).finaleActive) return;
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [calendar.finaleActive, calendar.endsAt, now]);
-  if (!calendar.finaleActive) return null;
+  }, [now]);
+  if (!live || left <= 0) return null;
   const limited = progress.rngweenLimited;
   const taken =
     limited?.finaleEarned === true ||
@@ -65,7 +81,7 @@ export default function RngweenFinale({ progress, now, onAction, notify }) {
       </span>
       <span className="rngween-finale-title">Halloween Event</span>
       <span className="rngween-finale-badge" data-finale-double>
-        <PumpkinMark size={13} /> Pumpkoins ×{calendar.pumpkoinMultiplier}
+        <PumpkinMark size={13} /> Pumpkoins ×{multiplier}
       </span>
       <span className="rngween-finale-clock" aria-label="Time left tonight">
         <Timer size={12} aria-hidden="true" /> {clock(left)}

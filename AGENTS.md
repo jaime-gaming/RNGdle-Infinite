@@ -55,6 +55,12 @@ on).
   every date shown in the UI use UTC (`Date.UTC`, `getUTC*`, `timeZone: "UTC"`).
   Never use local-date getters for anything a player can see or that gates a
   reward.
+- **A timer that shows seconds reads the verified clock itself.** `now` from a
+  render is only renewed every 30 s (`useSeasonClock`), so a countdown that just
+  subtracts it looks frozen or stutters. `components/RngweenFinale.jsx` and
+  `useHourlyDisplayClock()` call `seasonNow()` on every tick and fall back to
+  the render's `now` while the website clock has not answered. Minute-granular
+  labels may use the render value.
 - **Time has three clocks.** `gameNow()` (`src/game-clock.js`) paces reveals,
   cooldowns and tasks and can be driven by Playwright's fake clock.
   `seasonNow()` (`src/season-clock.js`) is the verified website date used only
@@ -254,6 +260,12 @@ guessing.
   `active` deals, credits and pays. Between them (`hourlyWindow === null`,
   Oct 25–31) the board shows one paused card, `recordRngweenHourly` is a no-op
   and `claimRngweenHourly` throws instead of paying an expired hour.
+- **Unspent Pumpkoins are not lost at the end.** `retireRngweenLimited` converts
+  them with `farewellEP()` at `FAREWELL_EP_PER_PUMPKOIN` (100 EP per coin, a
+  hundredth of what they cost) capped at `FAREWELL_MAX_EP` (100 000 EP), pays it
+  into `balance`/`totalEarned` and writes one `rngween-farewell` row. The
+  retirement itself is the receipt: a retired save has no coins left, so it can
+  never pay twice. `main.jsx` toasts the amount once when the calendar closes.
 - **Halloween night (Oct 31, 00:00–24:00 UTC) is the event's peak**:
   `rngweenCalendar(at).finaleActive` is true for that day only and
   `pumpkoinMultiplier` is 2, so every aura mission pays double (the history row

@@ -26,6 +26,16 @@ import {
 // action/UI wiring. Keep parsing/retirement, purchased-aura and skin receipts,
 // and the permanent Hexbound registry/art. Never restore expired currency.
 export const EP_PER_PUMPKOIN = 10000;
+// The event's goodbye: leftover Pumpkoins come back as EP, at a hundredth of
+// what they cost. It is a keepsake for the wallet, never a second payout, and
+// it is capped so an old hoard cannot dwarf a run.
+export const FAREWELL_EP_PER_PUMPKOIN = 100;
+export const FAREWELL_MAX_EP = 100000;
+
+export function farewellEP(pumpkoins) {
+  if (!Number.isSafeInteger(pumpkoins) || pumpkoins <= 0) return 0;
+  return Math.min(pumpkoins * FAREWELL_EP_PER_PUMPKOIN, FAREWELL_MAX_EP);
+}
 export const RNGWEEN_WORLD_MAX = WORLD_VALLEY_MAX;
 export const RNGWEEN_WORLD_TARGET = WORLD_VALLEY_TARGET;
 export const RNGWEEN_PET = {
@@ -494,8 +504,31 @@ export function retireRngweenLimited(state, at) {
   const finaleEarned =
     limited?.finaleEarned === true ||
     limited?.auras?.includes?.(RNGWEEN_FINALE_SKIN.id) === true;
+  // Coins that were never spent are not thrown away: they come back as a small
+  // EP farewell. It is paid once, because the receipt is written with the
+  // retirement that pays it and a retired save has no balance left to convert.
+  const farewell = farewellEP(limited?.pumpkoins);
+  const balance = (state.balance ?? 0) + farewell;
+  const totalEarned = (state.totalEarned ?? 0) + farewell;
+  const paysFarewell =
+    farewell > 0 &&
+    Number.isSafeInteger(balance) &&
+    Number.isSafeInteger(totalEarned);
   return {
     ...state,
+    ...(paysFarewell ? { balance, totalEarned } : {}),
+    history: paysFarewell
+      ? [
+          ...(state.history ?? []),
+          {
+            id: `rngween-farewell:${RNGWEEN_ID}`,
+            type: "rngween-farewell",
+            at,
+            pumpkoins: limited.pumpkoins,
+            ep: farewell,
+          },
+        ]
+      : state.history,
     rngweenLimited: {
       id: RNGWEEN_ID,
       auras: limited?.auras ?? [],

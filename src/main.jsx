@@ -50,7 +50,7 @@ import { useSeasonClock } from "./use-season-clock.js";
 import { RNGWEEN_ID, rngweenState, rngweenCalendar } from "./rngween.js";
 import { useRngweenHourlyMaintenance } from "./use-rngween-hourly.js";
 import { useRngweenWorldMaintenance } from "./use-rngween-world.js";
-import { rngweenWorldUnlocked } from "./rngween-limited.js";
+import { farewellEP, rngweenWorldUnlocked } from "./rngween-limited.js";
 import RngweenWorld from "./components/RngweenWorld.jsx";
 import RngweenGate from "./components/RngweenGate.jsx";
 import RngweenCountdown from "./components/RngweenCountdown.jsx";
@@ -60,7 +60,7 @@ import RngweenSeason from "./components/RngweenSeason.jsx";
 import RngweenFinale from "./components/RngweenFinale.jsx";
 import AppearanceMenu from "./components/AppearanceMenu.jsx";
 import { freshRareBadges, newlyReady } from "./notice-rules.js";
-import { badgeMetadata } from "./roll-data.js";
+import { badgeMetadata, formatEP } from "./roll-data.js";
 import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
 import Settings from "./components/Settings";
 import { SettingsProvider } from "./use-settings.jsx";
@@ -758,8 +758,20 @@ function App() {
       session.profile &&
       rngweenCalendarNow.limitedPhase === "ended" &&
       !session.rngweenLimited?.retired
-    )
-      dispatch({ type: "retire-rngween-limited" });
+    ) {
+      // The last Pumpkoins are not lost: they come back as a small EP goodbye,
+      // and the player is told once instead of finding it in the log alone.
+      const leftover = session.rngweenLimited?.pumpkoins ?? 0;
+      const farewell = farewellEP(leftover);
+      dispatch({ type: "retire-rngween-limited" }).then((outcome) => {
+        if (!outcome?.ok || !farewell) return;
+        notify({
+          kind: "done",
+          title: "RNGween is over",
+          text: `${leftover.toLocaleString("en-US")} unspent Pumpkoins came back as ${formatEP(farewell)} EP. Thanks for playing.`,
+        });
+      });
+    }
   }, [
     seasonalNow,
     session.profile?.id,

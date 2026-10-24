@@ -168,7 +168,7 @@ export default function RngweenShop({
               ? "Your Halloween aura stays yours forever."
               : choice.item
                 ? "Available until November 3, 23:59 UTC."
-                : "One-way exchange. Unspent Pumpkoins disappear after November 3 (UTC).",
+                : "One-way exchange. Leftover Pumpkoins come back as a small EP farewell after November 3 (UTC).",
       });
     }
   }
@@ -234,8 +234,8 @@ export default function RngweenShop({
                 <strong data-pumpkoins={wallet}>{count(wallet)}</strong>
                 <span>Pumpkoins</span>
                 <p>
-                  Only for RNGween 2026. Unspent coins disappear after November
-                  3. No refunds.
+                  Only for RNGween 2026. Leftover coins turn into a small EP
+                  farewell after November 3, at a fraction of what they cost.
                 </p>
               </div>
               <form
@@ -571,7 +571,7 @@ export default function RngweenShop({
             <p>
               {confirmation.item
                 ? `${count(confirmation.item.pumpkoinPrice)} Pumpkoins. ${confirmation.item.kind === "aura" ? "This aura is yours forever." : "This item expires after November 3 (UTC)."}`
-                : `${formatEP(confirmation.amount * EP_PER_PUMPKOIN)} EP will be spent. This exchange cannot be reversed; unused coins disappear after November 3 (UTC).`}
+                : `${formatEP(confirmation.amount * EP_PER_PUMPKOIN)} EP will be spent. This exchange cannot be reversed; leftover coins come back as a small EP farewell after November 3 (UTC).`}
             </p>
             {confirmation.item?.kind === "world-key" && (
               <p>

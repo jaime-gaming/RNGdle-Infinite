@@ -22,6 +22,7 @@ import {
 } from "../src/rngween.js";
 import {
   EP_PER_PUMPKOIN,
+  farewellEP,
   RNGWEEN_LIMITED_ITEMS,
   RNGWEEN_PET,
   RNGWEEN_SKILL,
@@ -372,8 +373,15 @@ test("temporary wallet perks change banked EP only and cannot pay after expiry",
       rngweenAt: expired,
     },
   );
-  expect(late.balance - p.balance).toBe(result.totalEP);
+  // The retirement that closes the event also converts the leftover coins into
+  // the small EP farewell, so that credit lands with this roll.
+  expect(late.balance - p.balance).toBe(
+    result.totalEP + farewellEP(p.rngweenLimited.pumpkoins),
+  );
   expect(late.rngweenLimited.retired).toBe(true);
+  expect(late.history.some((entry) => entry.type === "rngween-farewell")).toBe(
+    true,
+  );
   const unknown = applyProgress(
     { ...p, pendingRoll: null },
     {
@@ -449,7 +457,9 @@ test("verified expiry removes all temporary balances/equipment/pools, not cosmet
   expect(q.skillCharge).toEqual({ surge: 2 });
   expect(q.loadouts[0].skills).toEqual(["surge"]);
   expect(q.pendingRoll).toEqual(p.pendingRoll);
-  expect(q.balance).toBe(p.balance);
+  // Everything the shop gave is taken back, but the coins that were never
+  // spent are not: they return as the EP farewell.
+  expect(q.balance).toBe(p.balance + farewellEP(p.rngweenLimited.pumpkoins));
   expect(q.tasks).toEqual(p.tasks);
   expect(retireRngweenLimited(q, expired)).toBe(q);
   expect(() => exchange(q, 1, active)).toThrow("open October");

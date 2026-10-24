@@ -18,8 +18,8 @@ export const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 // instead of moving the public 0.x(.x) version. Only the "Reload until
 // updated" flow uses it, to scope the update intent to the current internal
 // build. It is never added to the changelog or shown as a release.
-// Current: RNGdle-Infinitev0.5.1fix4.
-export const APP_INTERNAL_VERSION = "RNGdle-Infinitev0.5.1fix4";
+// Current: RNGdle-Infinitev0.5.1fix3.
+export const APP_INTERNAL_VERSION = "RNGdle-Infinitev0.5.1fix3";
 
 let pollTimer = null;
 let reloadTimer = null;
