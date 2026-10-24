@@ -1,4 +1,5 @@
 import { emptyRngweenWorld } from "../src/rngween-world-zones.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { test, expect } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
@@ -82,7 +83,7 @@ async function startMulti(
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".draw-panel")).toHaveCount(count);
   await page.clock.runFor(11000);

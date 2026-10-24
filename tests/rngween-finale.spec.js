@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { pauseClockAt } from "./helpers/clock.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import {
@@ -202,7 +203,7 @@ test("the banner stays out of the way on a phone", async ({ page }) => {
 test("the Halloween strip counts down every second and leaves at midnight", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(Date.UTC(2026, 9, 31, 23, 59, 54)));
+  await pauseClockAt(page, new Date(Date.UTC(2026, 9, 31, 23, 59, 54)));
   await mockSeasonClock(page, Date.UTC(2026, 9, 31, 23, 59, 54));
   await seedProgress(page, {
     rngweenLimited: { ...emptyRngweenLimited(), finaleCount: 1 },

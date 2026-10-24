@@ -9,6 +9,7 @@ import {
   withWorldPath,
 } from "./helpers/world-roll.js";
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { eventContext } from "./helpers/intro.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
@@ -195,10 +196,16 @@ test("event/shop/Halloween run October 21–November 3 UTC; aura week and hourly
   }
 });
 
-test("50 unique online commissions cover 38 main-game and 12 World tasks with bounded coin rewards", () => {
-  expect(RNGWEEN_HOURLY_TASKS).toHaveLength(50);
-  expect(new Set(RNGWEEN_HOURLY_TASKS.map((t) => t.id)).size).toBe(50);
-  expect(new Set(RNGWEEN_HOURLY_TASKS.map((t) => t.title)).size).toBe(50);
+test("60 unique online commissions cover 48 main-game and 12 World tasks with bounded coin rewards", () => {
+  // The catalogue is whatever it ships with; what matters is that every
+  // commission is distinct and that the World keeps its own twelve.
+  expect(RNGWEEN_HOURLY_TASKS).toHaveLength(60);
+  expect(new Set(RNGWEEN_HOURLY_TASKS.map((t) => t.id)).size).toBe(
+    RNGWEEN_HOURLY_TASKS.length,
+  );
+  expect(new Set(RNGWEEN_HOURLY_TASKS.map((t) => t.title)).size).toBe(
+    RNGWEEN_HOURLY_TASKS.length,
+  );
   expect(RNGWEEN_HOURLY_TASKS.filter((t) => t.source === "world")).toHaveLength(
     12,
   );
@@ -637,23 +644,28 @@ test("legacy prediction receipts remain honest and readable, but live World roll
   expect(q.rngweenLimited.drawn).toEqual([6666]);
 });
 
-test("all 50 commissions can actually finish through scored main settlements or unseen World draws", () => {
+test("all 60 commissions can actually finish through scored main settlements or unseen World draws", () => {
   const sample = {
     rolls: 12,
     even: 12,
     odd: 13,
     high: 861456,
+    high900: 961456,
     low: 12,
+    low100k: 12345,
     ends0: 120,
     ends5: 125,
     ends6: 126,
+    ends7: 127,
     repeated: 111111,
     sumHigh: 999999,
     sumLow: 12,
     divisible3: 33,
     divisible5: 50,
+    divisible4: 12,
     divisible7: 77,
     divisible11: 121,
+    divisible12: 24,
     ascending: 123456,
     descending: 654321,
     badges12: 861456,
@@ -1030,7 +1042,7 @@ test("a real online main roll finishes its commission; the Tasks claim button pa
 test("idle exact-hour expiry replaces assignments without a reload, payout or device clock input", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(opening));
+  await pauseClockAt(page, new Date(opening));
   await mockSeasonClock(page, opening);
   const p = withContract(
     "main-lantern-laps",
@@ -1051,7 +1063,7 @@ test("idle exact-hour expiry replaces assignments without a reload, payout or de
 test("the event page appears at the trials without a reload and lists the four aura missions", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(Date.UTC(2026, 9, 24, 23, 59, 59)));
+  await pauseClockAt(page, new Date(Date.UTC(2026, 9, 24, 23, 59, 59)));
   await mockSeasonClock(page, Date.UTC(2026, 9, 24, 23, 59, 59));
   await seedProgress(page);
   await page.goto("/tasks");
@@ -1208,7 +1220,8 @@ test("buying a challenge key preserves older main assignments; their next replac
         (await saved(page)).rngweenLimited.hourly.slots[0].completedAt,
     )
     .toBeTruthy();
-  await page.goto("/tasks");
+  // Commissions live on the event half of Tasks.
+  await page.goto("/tasks/rngween");
   await page.getByRole("button", { name: /Claim \+15/ }).click();
   await expect
     .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
@@ -1246,7 +1259,7 @@ test("two same-account World tabs resume one pending number and a near-finished 
     // Locator auto-wait can click a *second* button after a real-time reveal.
     // Freeze both clocks and fire once at the currently rendered controls.
     for (const tab of [page, other])
-      await tab.clock.pauseAt(new Date(Date.now() + 1000));
+      await pauseClockAt(tab, new Date(Date.now() + 1000));
     await Promise.all(
       [page, other].map((tab) =>
         tab.evaluate(() =>
@@ -1305,7 +1318,7 @@ test("two same-account World tabs resume one pending number and a near-finished 
 test("November 1 restores four hourly slots while Nov 4 closes commissions, shop, World and Halloween together", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(Date.UTC(2026, 9, 31, 23, 59, 59)));
+  await pauseClockAt(page, new Date(Date.UTC(2026, 9, 31, 23, 59, 59)));
   const clock = await mockSeasonClock(page, Date.UTC(2026, 9, 31, 23, 59, 59));
   await seedProgress(page, keyAccount());
   await page.goto("/tasks/rngween");
@@ -1393,7 +1406,7 @@ test("a failed World commission commit pays nothing, preserves the pool and safe
 test("the saved hourly board recovers from storage failure without inventing assignments or rewards", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(opening));
+  await pauseClockAt(page, new Date(opening));
   await mockSeasonClock(page, opening);
   await seedProgress(page);
   await blockProgressWrites(page, { beforeLoad: true });
@@ -1420,7 +1433,7 @@ test("an online commission temporarily settled during a storage outage recovers 
 }) => {
   test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.clock.pauseAt(new Date(opening));
+  await pauseClockAt(page, new Date(opening));
   await mockSeasonClock(page, opening);
   await mockRandom(page, [12, 14]);
   const p = withContract("main-evening-spirits", opening, { count: 1 });

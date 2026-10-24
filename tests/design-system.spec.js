@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import fs from "node:fs";
 import { emptyProgress } from "../src/progress.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -122,7 +123,7 @@ test("the main action wears the signature ring, and its cooldown bar stays insid
 
   // The cooldown track hugs the bottom edge without poking past it, and the
   // ring rests while the timer is the content.
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await start.click();
   // The draw is committed asynchronously (worker plus Web Lock), so the reveal
   // clock only means anything from the tick the roll is actually committed:

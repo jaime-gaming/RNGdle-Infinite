@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { mockRandom, showRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import {
@@ -114,7 +115,7 @@ test("a roll that finishes a task posts a notice that opens the Tasks page", asy
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(when));
+  await pauseClockAt(page, new Date(when));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   // A base roll reveals over 45 seconds of game time, so walk the clock on.
   for (let step = 0; step < 300; step++) {
@@ -147,7 +148,7 @@ test("an Epic badge found while the roll is off the roll page posts a notice tha
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   // The reveal keeps running on the clock while the player is on the Shop.
   await page.getByRole("button", { name: "Shop", exact: true }).click();
@@ -178,7 +179,7 @@ test("an Epic badge found on the roll page itself posts no notice, since the res
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   for (let step = 0; step < 300; step++) {
     const done = await page.evaluate(

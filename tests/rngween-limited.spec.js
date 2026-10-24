@@ -1,4 +1,5 @@
 import { RNGWEEN_WORLD_KEY } from "../src/rngween-limited.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import {
   rngweenValleyUnlocked,
   emptyRngweenWorld,
@@ -831,7 +832,7 @@ test("verified Nov 4 cleanup persists and a rewound device cannot reopen the lim
 test("the shop/world retire at Nov 4 UTC while an open page stays mounted", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(final));
+  await pauseClockAt(page, new Date(final));
   const website = await mockSeasonClock(page, final);
   await seedProgress(page, {
     tasks: finished,

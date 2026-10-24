@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import {
   emptyProgress,
   parseProgress,
@@ -85,7 +86,7 @@ const scale = (p) =>
 async function start(p, extra = {}) {
   await seedProgress(p, extra);
   await mockRandom(p, [604827]);
-  await p.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(p, new Date(Date.now() + 1000));
   await p.goto("/");
   await p.locator(".generate").click();
   await expect.poll(async () => !!(await saved(p)).pendingRoll).toBe(true);
@@ -944,7 +945,7 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
 test("rebirth waits for cooldown and remains usable on mobile without motion", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   const now = await page.evaluate(() => Date.now());
   await seedProgress(page, {
     ...funded(),

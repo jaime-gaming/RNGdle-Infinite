@@ -4,6 +4,7 @@ import {
   withAllFragments,
 } from "./helpers/world-roll.js";
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { chooseTheme } from "./helpers/appearance.js";
@@ -738,7 +739,7 @@ test("a missing paid-coin flag is repaired from history instead of paying a clai
 test("an open aura shelf starts sales at the November 1 UTC boundary without reloading", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(sales - 1000));
+  await pauseClockAt(page, new Date(sales - 1000));
   const clock = await mockSeasonClock(page, sales - 1000);
   await seedProgress(page, wallet(50000));
   await page.goto("/shop/limited");

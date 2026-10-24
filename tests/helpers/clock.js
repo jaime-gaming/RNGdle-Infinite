@@ -15,3 +15,11 @@ export const test = base.extend({
 });
 
 export { expect };
+// pauseAt() refuses to move backwards, and the suite runs on today's date while
+// its fixtures live on fixed dates that may already be in the past. Setting the
+// system time first makes the pause valid whatever the calendar says.
+export async function pauseClockAt(page, time) {
+  const at = time instanceof Date ? time : new Date(time);
+  await page.clock.setSystemTime(at);
+  await page.clock.pauseAt(at);
+}

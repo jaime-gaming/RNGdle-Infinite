@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { PROGRESS_KEY } from "../src/progress.js";
@@ -70,7 +71,7 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await expect(autoRollSwitch(page)).toHaveAttribute("aria-checked", "false");
   await autoRollSwitch(page).click();
   await page.clock.runFor(300);

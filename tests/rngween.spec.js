@@ -1,4 +1,5 @@
 import { chooseTheme } from "./helpers/appearance.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { eventContext } from "./helpers/intro.js";
 import { test, expect } from "./helpers/clock.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
@@ -747,7 +748,7 @@ test("collected Halloween auras remain visible and equipable after the event, un
 test("the event appears at UTC midnight on Oct 25 without reloading or adding a banner", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(at(10, 24, 23, 59, 59)));
+  await pauseClockAt(page, new Date(at(10, 24, 23, 59, 59)));
   await mockSeasonClock(page, at(10, 24, 23, 59, 59));
   await seedProgress(page);
   await page.goto("/tasks/rngween");
@@ -770,7 +771,7 @@ test("the event appears at UTC midnight on Oct 25 without reloading or adding a 
 test("the event ends on Nov 1 UTC, while the Halloween palette and favicon stay for that day", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(at(10, 31, 23, 59, 59)));
+  await pauseClockAt(page, new Date(at(10, 31, 23, 59, 59)));
   await mockSeasonClock(page, at(10, 31, 23, 59, 59));
   await seedProgress(page);
   await page.goto("/tasks/rngween");
@@ -787,7 +788,7 @@ test("the event ends on Nov 1 UTC, while the Halloween palette and favicon stay 
 test("decoration and favicon revert exactly after Nov 3, preserving the saved dark theme", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(at(11, 3, 23, 59, 59)));
+  await pauseClockAt(page, new Date(at(11, 3, 23, 59, 59)));
   await mockSeasonClock(page, at(11, 3, 23, 59, 59));
   await page.addInitScript(() => localStorage.setItem("rng-theme", "dark"));
   await seedProgress(page, {
