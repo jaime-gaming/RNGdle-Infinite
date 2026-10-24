@@ -148,7 +148,10 @@ function recoverLimitedReceipts(
   let repaired =
     !Array.isArray(value.auras) ||
     typeof value.skinEarned !== "boolean" ||
-    typeof value.finaleEarned !== "boolean";
+    // A save written before Halloween night simply has no such field: it is
+    // older, not damaged, so it must not raise a repair note.
+    (value.finaleEarned !== undefined &&
+      typeof value.finaleEarned !== "boolean");
   const paidHistory = history.filter(
     (entry) => rngweenCalendar(entry.at).limitedPhase === "active",
   );
@@ -249,7 +252,8 @@ export function parseRngweenLimited(value, receipts) {
         "world",
       ].some((key) => key in value) ||
       typeof value.skinEarned !== "boolean" ||
-      typeof value.finaleEarned !== "boolean"
+      (value.finaleEarned !== undefined &&
+        typeof value.finaleEarned !== "boolean")
     )
       repaired = true;
     // A retired receipt still remembers Halloween night: the skin was a
@@ -295,9 +299,14 @@ export function parseRngweenLimited(value, receipts) {
   const pumpkoins = amount(value.pumpkoins) ? value.pumpkoins : 0;
   if (pumpkoins !== value.pumpkoins) repaired = true;
   if (typeof value.skinEarned !== "boolean") repaired = true;
-  if (typeof value.finaleEarned !== "boolean") repaired = true;
+  if (
+    value.finaleEarned !== undefined &&
+    typeof value.finaleEarned !== "boolean"
+  )
+    repaired = true;
   const finaleCount = amount(value.finaleCount) ? value.finaleCount : 0;
-  if (finaleCount !== value.finaleCount) repaired = true;
+  if (value.finaleCount !== undefined && finaleCount !== value.finaleCount)
+    repaired = true;
   return {
     limited: {
       id: RNGWEEN_ID,
