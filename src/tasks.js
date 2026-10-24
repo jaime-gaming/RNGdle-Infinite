@@ -730,19 +730,24 @@ export function listBonusState(tasks, cadence, at) {
 }
 
 export function taskSummary(tasks, at) {
-  let ready = 0;
-  let claimed = 0;
-  let total = 0;
-  for (const cadence of TASK_CADENCES) {
-    for (const task of activeTasks(tasks, cadence, at)) {
-      total++;
-      const { state } = taskProgress(tasks, task, at);
-      if (state === "claimable") ready++;
-      if (state === "claimed") claimed++;
+  try {
+    if (!tasks || typeof tasks !== "object") return { ready: 0, claimed: 0, total: 0 };
+    let ready = 0;
+    let claimed = 0;
+    let total = 0;
+    for (const cadence of TASK_CADENCES) {
+      for (const task of activeTasks(tasks, cadence, at)) {
+        total++;
+        const { state } = taskProgress(tasks, task, at);
+        if (state === "claimable") ready++;
+        if (state === "claimed") claimed++;
+      }
+      if (listBonusState(tasks, cadence, at).state === "claimable") ready++;
     }
-    if (listBonusState(tasks, cadence, at).state === "claimable") ready++;
+    return { ready, claimed, total };
+  } catch {
+    return { ready: 0, claimed: 0, total: 0 };
   }
-  return { ready, claimed, total };
 }
 
 // The Task Skips a save holds right now, and how long until the next one can be
