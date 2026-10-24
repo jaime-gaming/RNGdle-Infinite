@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -200,6 +200,25 @@ export default function RngweenWorld({
   const live =
     rngweenCalendar(now).limitedPhase === "active" && !limited?.retired;
   const key = rngweenValleyUnlocked(limited);
+  const run = useCallback(
+    async (action, success) => {
+      if (sending.current) return;
+      sending.current = true;
+      setBusy(true);
+      setError("");
+      setNotice("");
+      try {
+        const result = await onAction(action);
+        if (!result?.ok)
+          setError(result?.message ?? "Nothing was saved. Try again.");
+        else if (success) setNotice(success);
+      } finally {
+        sending.current = false;
+        setBusy(false);
+      }
+    },
+    [onAction],
+  );
   // Track whether the player left the Valley while keep rolling was on.
   // If they exit and come back, we do not auto-restart the chain.
   const valleyExited = useRef(false);
@@ -212,14 +231,18 @@ export default function RngweenWorld({
         clearTimeout(keepRollingInterval.current);
         keepRollingInterval.current = null;
       }
-      // If the player left the Valley (or never entered), remember the exit.
-      if (zone.id !== "valley") {
+      // Remember if the player left the Valley while keep rolling was active,
+      // so returning does not auto-restart the chain.
+      if (zone.id !== "valley" && keepRolling) {
         valleyExited.current = true;
+        setKeepRolling(false);
       }
       return;
     }
-    // If the player exited the Valley while keep rolling was on, do not restart.
+    // If the player exited the Valley while keep rolling was on, do not auto-restart.
+    // They can manually toggle it again after returning.
     if (valleyExited.current) {
+      valleyExited.current = false;
       setKeepRolling(false);
       return;
     }
@@ -395,22 +418,6 @@ export default function RngweenWorld({
           )
           .reduce((sum, entry) => sum + entry.pumpkoins, 0)
       : 0;
-  async function run(action, success) {
-    if (sending.current) return;
-    sending.current = true;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      const result = await onAction(action);
-      if (!result?.ok)
-        setError(result?.message ?? "Nothing was saved. Try again.");
-      else if (success) setNotice(success);
-    } finally {
-      sending.current = false;
-      setBusy(false);
-    }
-  }
   function closeShop() {
     if (!sending.current) {
       setShopOpen(false);
@@ -804,6 +811,7 @@ export default function RngweenWorld({
                   if (keepRolling) {
                     setKeepRolling(false);
                   } else {
+                    valleyExited.current = false;
                     setKeepRolling(true);
                   }
                 }}
@@ -823,7 +831,7 @@ export default function RngweenWorld({
               {zone.id !== "valley"
                 ? `1–${zone.max} · repeats allowed · free rolls`
                 : `${(RNGWEEN_WORLD_MAX - drawn.length).toLocaleString("en-US")} unseen numbers remain${drawn.length > 0 ? ` · ${drawn.length} rolled${drawn.includes(WORLD_VALLEY_TARGET) ? "" : ", 6666 not yet"}` : ""}
-                  · {drawn.length - (drawn.includes(WORLD_VALLEY_TARGET) ? 1 : 0)} discarded${drawn.includes(WORLD_VALLEY_TARGET) ? ", 6666 found" : ""}`}
+                  · ${drawn.length - (drawn.includes(WORLD_VALLEY_TARGET) ? 1 : 0)} discarded${drawn.includes(WORLD_VALLEY_TARGET) ? ", 6666 found" : ""}`}
             </small>
           </div>
         )}

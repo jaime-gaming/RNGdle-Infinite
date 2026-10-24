@@ -196,14 +196,6 @@ export default function Tasks({
 
   const eventCalendar = rngweenCalendar(eventNow);
   const eventActive = eventCalendar.limitedPhase === "active";
-  // Until the player picks a tab, the page follows the event: the aura
-  // missions during their week, the commissions in the two open windows.
-  const [chosenTab, setChosenTab] = useState(null);
-  const eventTab =
-    chosenTab ?? (eventCalendar.missionsActive ? "auras" : "commissions");
-  const pickTab = (next) => setChosenTab(next);
-  // The switch only exists while the event does. A link to the event page
-  // that outlives the event falls back to the everyday list, never a blank.
   const eventPage = eventActive && !!progress.profile;
   const onEvent = section === "rngween" && eventPage;
 
@@ -251,48 +243,21 @@ export default function Tasks({
           role="tabpanel"
           aria-labelledby="tasks-tab-rngween"
         >
-          {/* RNGween event panel: auras and hourly commissions under one tabbed roof. */}
+          {/* RNGween event panel: auras and commissions together, no selector. */}
           <section className="rngween-event-panel">
-            <div
-              className="rngween-event-tabs"
-              role="tablist"
-              aria-label="RNGween event sections"
-            >
-              <button
-                role="tab"
-                id="event-tab-auras"
-                aria-selected={eventTab === "auras"}
-                className={eventTab === "auras" ? "is-selected" : ""}
-                onClick={() => pickTab("auras")}
-              >
-                Auras
-              </button>
-              <button
-                role="tab"
-                id="event-tab-commissions"
-                aria-selected={eventTab === "commissions"}
-                className={eventTab === "commissions" ? "is-selected" : ""}
-                onClick={() => pickTab("commissions")}
-              >
-                Commissions
-              </button>
-            </div>
-            <div className="rngween-event-content">
-              {eventTab === "auras" ? (
-                <RngweenTasks
-                  {...{ progress, onAction, notify, openAuraFamily, openWorld }}
-                  now={eventNow}
-                />
-              ) : (
-                <RngweenHourly
-                  progress={progress}
-                  now={eventNow}
-                  openWorld={openWorld}
-                  openSignup={openSignup}
-                  onAction={onAction}
-                  notify={notify}
-                />
-              )}
+            <div className="rngween-event-content rngween-event-combined">
+              <RngweenTasks
+                {...{ progress, onAction, notify, openAuraFamily, openWorld }}
+                now={eventNow}
+              />
+              <RngweenHourly
+                progress={progress}
+                now={eventNow}
+                openWorld={openWorld}
+                openSignup={openSignup}
+                onAction={onAction}
+                notify={notify}
+              />
             </div>
           </section>
           {!progress.rngweenLimited?.retired && (

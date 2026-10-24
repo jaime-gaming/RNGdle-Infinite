@@ -278,6 +278,7 @@ export function useProgress() {
           "claim-rngween-finale",
           "refresh-rngween-hourly",
           "rngween-world-roll",
+          "rngween-world-keep-rolling",
           "rngween-world-reveal",
           "buy-rngween-world",
           "forge-rngween-key",
@@ -494,7 +495,10 @@ export function useProgress() {
             throw new Error(
               "This account was reset. Offline action cancelled.",
             );
-        } else if (action.type === "rngween-world-roll") {
+        } else if (
+          action.type === "rngween-world-roll" ||
+          action.type === "rngween-world-keep-rolling"
+        ) {
           if (!readable || !previous.profile)
             throw new Error("World rolls require a readable saved profile.");
           requireRngweenWorld(previous, action.rngweenAt);
@@ -738,6 +742,7 @@ export function useProgress() {
                               ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
                               : [
                                     "rngween-world-roll",
+                                    "rngween-world-keep-rolling",
                                     "rngween-world-reveal",
                                   ].includes(action.type)
                                 ? "World result not saved. Your run, fragments and number pool are unchanged. Allow storage and retry."
@@ -829,15 +834,19 @@ export function useProgress() {
                   ),
               }
             : {}),
-          ...(["rngween-world-roll", "rngween-world-reveal"].includes(
-            action.type,
-          )
-            ? {
-                worldPending: next.rngweenLimited?.world?.pending ?? null,
-                worldNumber: next.rngweenLimited?.world?.last?.number ?? null,
-                skinEarned: next.rngweenLimited?.skinEarned === true,
-              }
-            : {}),
+          ...(
+            [
+              "rngween-world-roll",
+              "rngween-world-keep-rolling",
+              "rngween-world-reveal",
+            ].includes(action.type)
+              ? {
+                  worldPending: next.rngweenLimited?.world?.pending ?? null,
+                  worldNumber: next.rngweenLimited?.world?.last?.number ?? null,
+                  skinEarned: next.rngweenLimited?.skinEarned === true,
+                }
+              : {}
+          ),
           // Bulk delete reports how many entries it actually removed.
           ...(action.type === "history-prune"
             ? { removed: previous.history.length - next.history.length }

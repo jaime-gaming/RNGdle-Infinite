@@ -430,6 +430,11 @@
 .rngween-event-content > *:only-child {
   margin: 0;
 }
+.rngween-event-combined {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 
 /* ---- Main / RNGween: the event gets a page of its own -------------------- */
 .tasks-switch {
