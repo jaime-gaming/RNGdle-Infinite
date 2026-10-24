@@ -3,10 +3,13 @@ import { RNGWEEN_INTRO_KEY } from "../../src/rngween-intro.js";
 // move Date/timezone and the authoritative HTTP Date header.
 export async function mockSeasonClock(page, at, { introSeen = true } = {}) {
   await page.addInitScript(
-    ([key, seen]) =>
-      seen
-        ? localStorage.setItem(key, "rngween-2026")
-        : localStorage.removeItem(key),
+    ([key, seen]) => {
+      if (seen) return localStorage.setItem(key, "rngween-2026");
+      // First document only, so a reload keeps the receipt the game wrote.
+      if (sessionStorage.getItem("rng-tests-intro-cleared")) return;
+      sessionStorage.setItem("rng-tests-intro-cleared", "1");
+      localStorage.removeItem(key);
+    },
     [RNGWEEN_INTRO_KEY, introSeen],
   );
   let time = at;

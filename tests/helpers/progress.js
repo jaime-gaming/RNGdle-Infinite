@@ -20,7 +20,10 @@ export async function seedProgress(
       if (introSeen) {
         localStorage.setItem(introKey, "rngween-2026");
         localStorage.setItem(worldIntroKey, "rngween-2026");
-      } else {
+      } else if (!sessionStorage.getItem("rng-tests-intro-cleared")) {
+        // Only on the first document: a reload must keep whatever the game has
+        // written since, or a once-per-device opening would play again.
+        sessionStorage.setItem("rng-tests-intro-cleared", "1");
         localStorage.removeItem(introKey);
         localStorage.removeItem(worldIntroKey);
       }
