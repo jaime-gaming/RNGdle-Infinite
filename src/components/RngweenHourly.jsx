@@ -9,6 +9,7 @@ import {
   LockKeyhole,
 } from "lucide-react";
 import { hourlyView, RNGWEEN_HOURLY_TASKS } from "../rngween-hourly.js";
+import { rngweenCalendar } from "../rngween.js";
 import { rngweenWorldUnlocked } from "../rngween-limited.js";
 import { useHourlyDisplayClock } from "../use-rngween-hourly.js";
 import { PumpkinMark } from "./game-icons.jsx";
@@ -31,6 +32,8 @@ export default function RngweenHourly({
 }) {
   const clock = useHourlyDisplayClock(now);
   const view = hourlyView(progress, clock);
+  // Halloween night pays twice; every card says the amount it will actually pay.
+  const multiplier = rngweenCalendar(clock).pumpkoinMultiplier;
   const [claiming, setClaiming] = useState(0);
   const [leaving, setLeaving] = useState(0);
   const [bumped, setBumped] = useState(false);
@@ -68,7 +71,7 @@ export default function RngweenHourly({
         notify?.({
           kind: "reward",
           title: `${slot.task.title} claimed`,
-          text: `+${slot.task.pumpkoins} Pumpkoins. A new commission took its place.`,
+          text: `+${slot.task.pumpkoins * multiplier} Pumpkoins${multiplier > 1 ? " (Halloween night doubles it)" : ""}. A new commission took its place.`,
         });
       }
     } finally {
@@ -79,7 +82,11 @@ export default function RngweenHourly({
   const unlocked =
     !!progress.profile &&
     rngweenWorldUnlocked(progress.tasks, progress.rngweenLimited);
-  if (!view.active) return null;
+  // Between the opening window and November 1 the board is dealt nothing on
+  // purpose (the aura trials have the stage), so it says so instead of showing
+  // four cards that look like they failed to save.
+  const paused = view.open && !view.active;
+  if (!view.open) return null;
   return (
     <section
       className={`rngween-hourly${inWorld ? " is-world-board" : ""}`}
@@ -95,7 +102,12 @@ export default function RngweenHourly({
           <h2 id={`hourly-title-${inWorld ? "world" : "main"}`}>
             The Reaper's commissions
           </h2>
-          <p>Complete commissions within one hour to earn Pumpkoins.</p>
+          <p>
+            Complete commissions within one hour to earn Pumpkoins.
+            {multiplier > 1 && !paused
+              ? " Tonight every commission pays twice."
+              : ""}
+          </p>
         </div>
         <span className={`rngween-hourly-wallet${bumped ? " is-bumped" : ""}`}>
           <PumpkinMark size={20} />
@@ -127,90 +139,101 @@ export default function RngweenHourly({
           className="rngween-hourly-grid"
           aria-label="Four hourly commissions"
         >
-          {view.slots.length
-            ? view.slots.map((slot) => (
-                <li
-                  className={`rngween-hourly-card${
-                    leaving === slot.serial ? " is-leaving" : ""
-                  }${fresh.has(slot.serial) ? " is-fresh" : ""}`}
-                  key={slot.key}
-                  data-hourly-task={slot.taskId}
-                  data-hourly-serial={slot.serial}
-                  data-source={slot.task.source}
-                >
-                  <div className="rngween-hourly-card-top">
-                    <span>
-                      {slot.task.source === "world" ? (
-                        <Ghost size={14} />
-                      ) : (
-                        <Dices size={14} />
-                      )}
-                      {slot.task.source === "world"
-                        ? "RNGween World"
-                        : "Main game"}
-                    </span>
-                    <span
-                      className={`rngween-hourly-countdown${
-                        slot.remaining < 5 * 60_000 ? " is-urgent" : ""
-                      }`}
-                      aria-label={`${slot.task.title} time remaining`}
-                    >
-                      <Clock3 size={12} />
-                      {hourlyCountdown(slot.remaining)}
-                    </span>
-                  </div>
-                  <h3>{slot.task.title}</h3>
-                  <p>{slot.task.detail}</p>
-                  <div className="rngween-hourly-meter">
-                    <span>
-                      {slot.count.toLocaleString("en-US")} /{" "}
-                      {slot.task.goal.toLocaleString("en-US")}
-                      {slot.task.metric === "banked" ||
-                      slot.task.metric === "peakEP"
-                        ? " EP"
-                        : ""}
-                    </span>
-                    <progress
-                      max={slot.task.goal}
-                      value={slot.count}
-                      aria-label={`${slot.task.title} progress`}
-                    />
-                  </div>
-                  <div className="rngween-hourly-reward">
-                    {slot.claimable ? (
-                      <button
-                        className="primary-button rngween-hourly-claim"
-                        onClick={() => claim(slot)}
-                        disabled={claiming === slot.serial}
-                      >
-                        <PumpkinMark size={17} /> Claim +{slot.task.pumpkoins}
-                      </button>
+          {view.slots.length ? (
+            view.slots.map((slot) => (
+              <li
+                className={`rngween-hourly-card${
+                  leaving === slot.serial ? " is-leaving" : ""
+                }${fresh.has(slot.serial) ? " is-fresh" : ""}`}
+                key={slot.key}
+                data-hourly-task={slot.taskId}
+                data-hourly-serial={slot.serial}
+                data-source={slot.task.source}
+              >
+                <div className="rngween-hourly-card-top">
+                  <span>
+                    {slot.task.source === "world" ? (
+                      <Ghost size={14} />
                     ) : (
-                      <>
-                        <PumpkinMark size={17} /> +{slot.task.pumpkoins}{" "}
-                        Pumpkoins
-                      </>
+                      <Dices size={14} />
                     )}
-                    {slot.task.source === "world" &&
-                      !inWorld &&
-                      !slot.claimable && (
-                        <button
-                          className="rngween-hourly-world-link"
-                          onClick={openWorld}
-                          aria-label={`Visit the World for ${slot.task.title}`}
-                        >
-                          <ArrowRight size={16} />
-                        </button>
-                      )}
-                  </div>
-                </li>
-              ))
-            : [0, 1, 2, 3].map((i) => (
-                <li key={i} className="rngween-hourly-card is-loading">
-                  <Hourglass size={22} />
-                  <p>Saving your assignment…</p>
-                </li>
-              ))}
+                    {slot.task.source === "world"
+                      ? "RNGween World"
+                      : "Main game"}
+                  </span>
+                  <span
+                    className={`rngween-hourly-countdown${
+                      slot.remaining < 5 * 60_000 ? " is-urgent" : ""
+                    }`}
+                    aria-label={`${slot.task.title} time remaining`}
+                  >
+                    <Clock3 size={12} />
+                    {hourlyCountdown(slot.remaining)}
+                  </span>
+                </div>
+                <h3>{slot.task.title}</h3>
+                <p>{slot.task.detail}</p>
+                <div className="rngween-hourly-meter">
+                  <span>
+                    {slot.count.toLocaleString("en-US")} /{" "}
+                    {slot.task.goal.toLocaleString("en-US")}
+                    {slot.task.metric === "banked" ||
+                    slot.task.metric === "peakEP"
+                      ? " EP"
+                      : ""}
+                  </span>
+                  <progress
+                    max={slot.task.goal}
+                    value={slot.count}
+                    aria-label={`${slot.task.title} progress`}
+                  />
+                </div>
+                <div className="rngween-hourly-reward">
+                  {slot.claimable ? (
+                    <button
+                      className="primary-button rngween-hourly-claim"
+                      onClick={() => claim(slot)}
+                      disabled={claiming === slot.serial}
+                    >
+                      <PumpkinMark size={17} /> Claim +
+                      {slot.task.pumpkoins * multiplier}
+                    </button>
+                  ) : (
+                    <>
+                      <PumpkinMark size={17} /> +
+                      {slot.task.pumpkoins * multiplier} Pumpkoins
+                    </>
+                  )}
+                  {slot.task.source === "world" &&
+                    !inWorld &&
+                    !slot.claimable && (
+                      <button
+                        className="rngween-hourly-world-link"
+                        onClick={openWorld}
+                        aria-label={`Visit the World for ${slot.task.title}`}
+                      >
+                        <ArrowRight size={16} />
+                      </button>
+                    )}
+                </div>
+              </li>
+            ))
+          ) : paused ? (
+            <li className="rngween-hourly-card is-paused">
+              <Hourglass size={22} />
+              <p>
+                Commissions pause while the aura trials run. They come back on
+                November 1.
+              </p>
+            </li>
+          ) : (
+            [0, 1, 2, 3].map((i) => (
+              <li key={i} className="rngween-hourly-card is-loading">
+                <Hourglass size={22} />
+                <p>Saving your assignment…</p>
+              </li>
+            ))
+          )}
         </ul>
       )}
       <footer className="rngween-hourly-foot">

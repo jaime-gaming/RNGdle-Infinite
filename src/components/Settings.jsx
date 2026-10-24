@@ -7,6 +7,7 @@ import {
   Download,
   Eye,
   Gamepad2,
+  History,
   RotateCcw,
   RefreshCw,
   ScrollText,
@@ -62,9 +63,13 @@ export default function Settings({
   appUpdate,
   onStartUpdate,
   onStopUpdate,
+  vault,
 }) {
   const { settings, update, reset, saveError } = useSettings();
   const [permission, setPermission] = useState(notificationPermission);
+  // The backup copy this browser keeps, read once when the page opens.
+  const [backup, setBackup] = useState(() => vault?.get?.() ?? null);
+  const [restoring, setRestoring] = useState(false);
   useEffect(() => {
     const refresh = () => setPermission(notificationPermission());
     document.addEventListener("visibilitychange", refresh);
@@ -429,6 +434,46 @@ export default function Settings({
           progress. They are kept when you delete your account.
         </small>
       </div>
+      <div className="settings-save" data-testid="settings-backup">
+        <h2>Your save</h2>
+        <p>
+          {backup
+            ? `A backup copy of your game was kept on ${new Date(backup.at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" })} UTC. It weighs ${Math.max(1, Math.round(backup.bytes / 1024))} KB once compressed.`
+            : "This browser has not kept a backup copy yet. It writes one as soon as the game saves."}
+        </p>
+        <button
+          type="button"
+          className="secondary-button"
+          data-testid="settings-restore-backup"
+          disabled={!backup || restoring}
+          onClick={() => {
+            setRestoring(true);
+            const outcome = vault?.restore?.();
+            setRestoring(false);
+            notify?.(
+              outcome?.ok
+                ? {
+                    kind: "done",
+                    title: "Backup restored",
+                    text: "The last saved copy is back in this browser.",
+                  }
+                : {
+                    kind: "error",
+                    text:
+                      outcome?.message ?? "The backup could not be restored.",
+                  },
+            );
+          }}
+        >
+          <History size={14} />{" "}
+          {restoring ? "Restoring…" : "Restore the last backup"}
+        </button>
+        <small>
+          Your game is saved in this browser. Reloading, updating the game or
+          clearing cached files never removes it; only deleting your account
+          does. The backup is a second, compressed copy of the same save.
+        </small>
+      </div>
       <div className="settings-update">
         <button
           type="button"
@@ -447,7 +492,7 @@ export default function Settings({
         </button>
         <p data-testid="update-status" role="status" aria-live="polite">
           {appUpdate?.message ||
-            "Checks for the newest published build and reloads this page until it arrives. Your game progress and settings are kept."}
+            "Clears the files this browser cached for the game, then reloads until the newest build arrives. Your progress, profile and settings are stored separately and stay exactly as they are."}
         </p>
       </div>
     </section>

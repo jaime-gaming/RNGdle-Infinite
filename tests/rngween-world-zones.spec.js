@@ -4,7 +4,10 @@ import { test, expect } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { mockWorldNumbers } from "./helpers/world-random.js";
-import { RNGWEEN_INTRO_KEY } from "../src/rngween-intro.js";
+import {
+  RNGWEEN_INTRO_KEY,
+  RNGWEEN_WORLD_INTRO_KEY,
+} from "../src/rngween-intro.js";
 import {
   savedWorld,
   revealWorld,
@@ -392,7 +395,7 @@ test("all public World commission variants remain achievable without a key and d
   expect(q.rngweenLimited.hourly.slots[0].count).toBe(5);
   expect(q.history.filter((e) => e.type === "rngween-hourly")).toHaveLength(0);
   expect(rngweenCalendar(opening).hourlyPhase).toBe("active");
-  expect(RNGWEEN_HOURLY_TASKS).toHaveLength(50);
+  expect(RNGWEEN_HOURLY_TASKS).toHaveLength(60);
   expect(RNGWEEN_HOURLY_MS).toBe(3600000);
 });
 
@@ -400,6 +403,11 @@ test("guests can browse and enter through the Reaper but saved rolls require cre
   page,
 }) => {
   await mockSeasonClock(page, at);
+  // A first visit: the World's opening has not been watched in this browser.
+  await page.addInitScript(
+    (key) => localStorage.removeItem(key),
+    RNGWEEN_WORLD_INTRO_KEY,
+  );
   await page.goto("/");
   await page.getByRole("button", { name: "Speak to The Reaper" }).click();
   const reaper = page.getByRole("dialog", { name: "The Reaper", exact: true });

@@ -4,6 +4,7 @@ import {
   withAllFragments,
 } from "./helpers/world-roll.js";
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { mockSeasonClock } from "./helpers/season-clock.js";
 import { chooseTheme } from "./helpers/appearance.js";
@@ -101,7 +102,7 @@ test("the limited familiar, signature and harvest are costlier and distinctly st
   expect(result.picks[0].spent).toBe(4);
 });
 
-test("aura purchases require verified November 1–3 UTC, not the mission window or a device calendar", () => {
+test("aura purchases need a verified window with the missions closed, never the mission window or a device calendar", () => {
   for (const at of [null, active, sales - 1, expired, Date.UTC(2027, 10, 1)]) {
     expect(rngweenCalendar(at).aurasBuyable).toBe(false);
     expect(() =>
@@ -111,6 +112,19 @@ test("aura purchases require verified November 1–3 UTC, not the mission window
         at,
       }),
     ).toThrow();
+  }
+  // The four quiet days before the trials sell the same auras, so a player can
+  // buy one before the missions start and again after they close.
+  for (const at of [Date.UTC(2026, 9, 21), Date.UTC(2026, 9, 24, 23, 59, 59)]) {
+    expect(rngweenCalendar(at).aurasBuyable).toBe(true);
+    const p = wallet(50000);
+    const q = applyProgress(p, {
+      type: "buy-rngween-limited",
+      id: "jack-o-glow",
+      at,
+    });
+    expect(q.rngweenLimited.pumpkoins).toBe(45000);
+    expect(q.owned).toContain("jack-o-glow");
   }
   for (const at of [sales, expired - 1]) {
     expect(rngweenCalendar(at).aurasBuyable).toBe(true);
@@ -317,7 +331,7 @@ test("the aura shop visibly waits for November 1 and ignores changing the device
   });
   await expect(button).toBeDisabled();
   await expect(page.locator('[data-limited-item="jack-o-glow"]')).toContainText(
-    "Purchases open November 1 UTC",
+    "On sale while the tasks are closed",
   );
   await page.clock.setFixedTime(new Date(sales));
   await refresh(page);
@@ -330,6 +344,37 @@ test("the aura shop visibly waits for November 1 and ignores changing the device
   await expect
     .poll(async () => (await saved(page)).owned.includes("jack-o-glow"))
     .toBe(true);
+});
+
+test("the aura shelf sells in the quiet days before the trials and locks again while they run", async ({
+  page,
+}) => {
+  const opening = Date.UTC(2026, 9, 22, 12);
+  await mockSeasonClock(page, opening);
+  await seedProgress(page, wallet(50000));
+  await page.goto("/shop/limited");
+  const buy = page.getByRole("button", {
+    name: "Buy Jack-o'-Glow for 5000 Pumpkoins",
+  });
+  await expect(buy).toBeEnabled();
+  await expect(
+    page.locator('[data-limited-item="jack-o-glow"]'),
+  ).not.toContainText("On sale while the tasks are closed");
+  await buy.click();
+  await page.getByRole("button", { name: "Confirm purchase" }).click();
+  await expect
+    .poll(async () => (await saved(page)).owned.includes("jack-o-glow"))
+    .toBe(true);
+  // The trials open on October 25: the same card waits for them to close.
+  const clock = await mockSeasonClock(page, active);
+  await refresh(page);
+  await expect(
+    page.getByRole("button", { name: "Buy Phantom Veil for 8000 Pumpkoins" }),
+  ).toBeDisabled();
+  await expect(
+    page.locator('[data-limited-item="phantom-veil"]'),
+  ).toContainText("On sale while the tasks are closed");
+  clock.set(active);
 });
 
 test("the Reaper entrance sits at the Roll/footer seam on desktop and mobile, never in navigation", async ({
@@ -467,7 +512,7 @@ test("new and previously collected tasks visibly pay Pumpkoins once and their hi
     },
     rngweenLimited: withAllFragments(account()).rngweenLimited,
   });
-  await page.goto("/tasks");
+  await page.goto("/tasks/rngween");
   await expect
     .poll(async () => (await saved(page)).rngweenLimited.pumpkoins)
     .toBe(200);
@@ -694,7 +739,7 @@ test("a missing paid-coin flag is repaired from history instead of paying a clai
 test("an open aura shelf starts sales at the November 1 UTC boundary without reloading", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(sales - 1000));
+  await pauseClockAt(page, new Date(sales - 1000));
   const clock = await mockSeasonClock(page, sales - 1000);
   await seedProgress(page, wallet(50000));
   await page.goto("/shop/limited");

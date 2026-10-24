@@ -1,0 +1,162 @@
+/* Halloween night: one strip above everything, impossible to miss, and only
+   ever on October 31. It sits in the flow and sticks to the top, so it never
+   covers the header or the game — the page simply starts below it. */
+.rngween-finale {
+  position: sticky;
+  top: 0;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 16px calc(6px + 1px);
+  border-bottom: 1px solid #fdba7444;
+  background:
+    radial-gradient(120% 180% at 50% -60%, #f9731633, transparent 70%),
+    #171020f2;
+  color: #fde68a;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 20px #00000030;
+  backdrop-filter: blur(6px);
+  animation: rngween-finale-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.rngween-finale::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    #fdba7418 45%,
+    transparent 70%
+  );
+  background-size: 220% 100%;
+  animation: rngween-finale-sheen 5s linear infinite;
+  pointer-events: none;
+}
+.rngween-finale > * {
+  position: relative;
+  z-index: 1;
+}
+.rngween-finale-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f9731633;
+  color: #fdba74;
+}
+.rngween-finale-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fdba74;
+  white-space: nowrap;
+}
+.rngween-finale-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #f9731626;
+  color: #fed7aa;
+  white-space: nowrap;
+}
+.rngween-finale-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+  color: #e7d5c2;
+  white-space: nowrap;
+}
+.rngween-finale-hint,
+.rngween-finale-kept {
+  color: #c9b6a6;
+  font-weight: 600;
+}
+.rngween-finale-kept {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #fdba74;
+}
+.rngween-finale-claim {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 1px solid #fdba7480;
+  border-radius: 999px;
+  background: #f9731626;
+  color: #fed7aa;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rngween-finale-claim:hover,
+.rngween-finale-claim:focus-visible {
+  background: #f9731640;
+  outline: none;
+  box-shadow: 0 0 0 2px #fdba7466;
+}
+.rngween-finale.is-ending {
+  border-bottom-color: #f8717177;
+  animation:
+    rngween-finale-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both,
+    rngween-finale-pulse 1.6s ease-in-out infinite;
+}
+@keyframes rngween-finale-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes rngween-finale-sheen {
+  to {
+    background-position: -220% 0;
+  }
+}
+@keyframes rngween-finale-pulse {
+  50% {
+    box-shadow:
+      0 6px 20px #00000030,
+      inset 0 -2px 0 #f87171;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rngween-finale,
+  .rngween-finale::after,
+  .rngween-finale.is-ending {
+    animation: none;
+  }
+}
+/* Phones: wrap onto a second line rather than squeeze the words. */
+@media (max-width: 760px) {
+  .rngween-finale {
+    gap: 6px 8px;
+    padding: calc(6px + env(safe-area-inset-top)) 10px 6px;
+    font-size: 11px;
+    text-align: center;
+  }
+  .rngween-finale-title {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+  }
+  .rngween-finale-hint {
+    width: 100%;
+  }
+}

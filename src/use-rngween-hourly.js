@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { rngweenCalendar } from "./rngween.js";
 import { hourlyNeedsRefresh } from "./rngween-hourly.js";
-import { seasonNow } from "./season-clock.js";
+import { useLiveEventClock } from "./use-live-clock.js";
 
 // CLEANUP Nov 4, 2026: remove the board timers. Never use the device's Date
 // for assignment or expiry; timers only ask the saved-account writer to check.
@@ -32,12 +32,10 @@ export function useRngweenHourlyMaintenance(progress, now, onAction) {
   ]);
 }
 export function useHourlyDisplayClock(now) {
-  const [, tick] = useState(0);
-  const active = rngweenCalendar(now).hourlyPhase === "active";
-  useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => tick((value) => value + 1), 1000);
-    return () => clearInterval(timer);
-  }, [active]);
-  return active ? seasonNow() : now;
+  // The board counts seconds, so it reads the same live event clock as the
+  // Halloween strip: verified date first, and a ticking fallback if the
+  // website has not answered yet, never a frozen half-minute render.
+  const live = useLiveEventClock(now);
+  const active = rngweenCalendar(live ?? now).hourlyPhase === "active";
+  return active ? live : now;
 }

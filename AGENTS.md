@@ -42,10 +42,25 @@ on).
   source of truth for restoring ownership. When you add a field to the save,
   add it to `emptyProgress()`, parse it defensively, and write a spec that
   feeds it garbage.
+- **The save has a compressed second copy.** `src/save-vault.js` keeps
+  `SAVE_VAULT_KEY` (`rng-infinite-progress-vault-v1`) holding
+  `{at, raw: "rngvault1:<base64 gzip>"}`. `use-progress.js` writes it after a
+  healthy save and after a healthy load (at most once per minute) and drops it
+  when the account is deleted; `restoreVaultIfNeeded()` in `main.jsx` runs
+  before React mounts and only steps in when the canonical save is missing or
+  unreadable, then toasts the recovery. Settings shows the copy and can restore
+  it by hand. Never let this path resurrect a deleted account: a profile-less
+  save is deleted, not restored, and the vault is cleared with the account.
 - **Everything is UTC.** Daily and weekly task periods, event boundaries and
   every date shown in the UI use UTC (`Date.UTC`, `getUTC*`, `timeZone: "UTC"`).
   Never use local-date getters for anything a player can see or that gates a
   reward.
+- **A timer that shows seconds reads the verified clock itself.** `now` from a
+  render is only renewed every 30 s (`useSeasonClock`), so a countdown that just
+  subtracts it looks frozen or stutters. `components/RngweenFinale.jsx` and
+  `useHourlyDisplayClock()` call `seasonNow()` on every tick and fall back to
+  the render's `now` while the website clock has not answered. Minute-granular
+  labels may use the render value.
 - **Time has three clocks.** `gameNow()` (`src/game-clock.js`) paces reveals,
   cooldowns and tasks and can be driven by Playwright's fake clock.
   `seasonNow()` (`src/season-clock.js`) is the verified website date used only
@@ -240,6 +255,31 @@ guessing.
   writes one history row and deals a replacement that keeps the old slot's
   `expiresAt`. An unclaimed slot expires with its hour; nothing is paid
   automatically.
+- **The board is `open` for the whole event but `active` only in the two
+  windows.** `hourlyView()` returns both: `open` keeps the page mounted,
+  `active` deals, credits and pays. Between them (`hourlyWindow === null`,
+  Oct 25–31) the board shows one paused card, `recordRngweenHourly` is a no-op
+  and `claimRngweenHourly` throws instead of paying an expired hour.
+- **Unspent Pumpkoins are not lost at the end.** `retireRngweenLimited` converts
+  them with `farewellEP()` at `FAREWELL_EP_PER_PUMPKOIN` (100 EP per coin, a
+  hundredth of what they cost) capped at `FAREWELL_MAX_EP` (100 000 EP), pays it
+  into `balance`/`totalEarned` and writes one `rngween-farewell` row. The
+  retirement itself is the receipt: a retired save has no coins left, so it can
+  never pay twice. `main.jsx` toasts the amount once when the calendar closes.
+- **Halloween night (Oct 31, 00:00–24:00 UTC) is the event's peak**:
+  `rngweenCalendar(at).finaleActive` is true for that day only and
+  `pumpkoinMultiplier` is 2, so every aura mission pays double (the history row
+  keeps the paid amount plus `multiplier: 2`). `components/RngweenFinale.jsx`
+  draws a sticky strip above the content with the countdown and the ×2 badge;
+  it never covers the header, and it disappears on November 1.
+- **Taking part on the 31st earns `RNGWEEN_FINALE_SKIN` ("Hollow Lantern",
+  `hollow-lantern`)**, a permanent `eventOnly` skin: any mission claim, World
+  rollout or commission claim sets `rngweenLimited.finaleCount`, and the strip's
+  button dispatches `claim-rngween-finale` (`claimRngweenFinale`). The receipt is
+  `{id: "rngween-finale:rngween-2026", type: "rngween-finale"}` plus
+  `finaleEarned` and the aura in `owned`. Both fields are repaired from
+  ownership, carried through `retireRngweenLimited`, and only written when true,
+  so a retired save stays small. Never make the skin missable by a save repair.
 - The Reaper (`src/rngween-reaper.js`, `components/ReaperDialog.jsx`) is a
   short scripted dialogue with button choices only. There is no free-text
   input; keep his lines to one or two sentences with a bit of dry humour.
@@ -249,6 +289,22 @@ guessing.
 - Event auras are `eventOnly`: never in the EP catalogue, never a random drop,
   and only owned ones appear in the wardrobe. They survive Rebirth, Prestige and
   Rollback like every other owned aura.
+- **Auras are bought only while their missions are closed**:
+  `rngweenCalendar(at).aurasBuyable` is true Oct 21–24 and Nov 1–3 and false
+  through the Oct 25–31 trials, when the mission is the only way in. The
+  limited shelf shows the "tasks are running" lock and `buy-rngween-limited`
+  refuses an aura in that window.
+- **The event has its own page**: `/tasks` is Main (daily and weekly lists) and
+  `/tasks/rngween` holds everything the event adds (aura missions, hourly
+  commissions, the World door). `TASK_SECTIONS` in `src/router.js` owns the two
+  slugs; the switch at the top of Tasks is the only way between them, and both
+  addresses survive a reload. After November 4 the event page redirects to
+  Main. Specs that need the missions or the commissions open
+  `/tasks/rngween`, not `/tasks`.
+- The event page follows the calendar: it opens on the aura missions during
+  Oct 25–31 and on the commissions in the two open windows, until the player
+  picks a tab. Between the windows the commission board says it is paused
+  rather than dealing empty cards (see `hourlyView().open` / `.active`).
 - World rolls pay no ordinary EP, charges, drops or task credit. Pending World
   outcomes are committed to the save before the animation starts.
 - World rolls never pay Pumpkoins. The World shop (reveal upgrades, 200 / 500 /
@@ -291,6 +347,10 @@ guessing.
   `introSeen: false`.
 - The World always renders on the dark theme (`main.jsx` theme effect checks
   `page === "rngween-world"`); the saved `rng-theme` is never touched.
+- The Halloween tab icon is not the shell's alone: `useSeasonFavicon()`
+  (`src/use-season-favicon.js`) swaps the `link[rel="icon"]` for the decorated
+  window and puts it back, and both `RngweenSeason` and `RngweenWorld` call it
+  so the World wears it too.
 - Economy knobs: `EP_PER_PUMPKOIN` is 10,000; Pumpkoins come only from hourly
   commissions, the four aura missions and the exchange, and buy the Limited
   Shop and the 2,000 shortcut key. The aura missions ask for 300 rolls, 60
@@ -368,6 +428,17 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
 - The device that created the link is the **main** device (slot `a`). It dials;
   the other device (`b`) listens. While both are connected, actions started on
   `b` are sent to `a` to run once.
+- Linking is a choice about **whose account survives**, and every transport asks
+  the same question through `syncDecision` in `src/sync-policy.js` — the peer
+  `reconcile` and the relay's `relayApplyLatest` both call it. A profile beats a
+  guest; otherwise a save that carries clearly more of the game
+  (`progressWeight`, 50% and at least 40 points ahead) is the primary, and the
+  other device adopts it whole. Never decide this by timestamp alone: a browser
+  opened once must not wipe a played save because its last write is newer. Two
+  devices of the *same* account keep the timestamp order, so a queued change
+  from either one is never refused. The primary is also declared the **writer**
+  (`declareSyncOwner`), so the save that is kept and the device that runs
+  actions are always the same one.
 - The PeerJS broker can be overridden with the localStorage key
   `rng-infinite-peer-broker` (`{host, port, path, secure}`). The WebRTC spec uses
   this to run a local `peer` server on port 9000. Port 9123 is blocked by
@@ -455,12 +526,30 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
 ### Internal version (Reload until updated)
 
 `src/app-update.js` defines `APP_INTERNAL_VERSION`, for example
-`RNGdle-Infinitev0.5.1fix2`. It is only used by the "Reload until updated"
+`RNGdle-Infinitev0.5.1fix3`. It is only used by the "Reload until updated"
 flow, to scope the update intent to the current internal build. It is never
 added to the changelog or shown as a release. Bump the fix number for
 bug-patch rebuilds of the same public version (`fix0 → fix1 → fix2 …`)
 instead of moving the public `0.x(.x)` version. Current:
-`RNGdle-Infinitev0.5.1fix2`.
+`RNGdle-Infinitev0.5.1fix3`.
+
+What the flow is allowed to touch, because the save outranks everything else:
+
+- It works like clearing the browser cache, never like clearing site data.
+  `clearGameCaches()` drops every Cache Storage entry and refreshes the
+  service-worker registrations, and the reload always uses a unique
+  `__rngdle_refresh` address so the document itself cannot come from a cache.
+  `localStorage` is only read — no key is removed, rewritten or cleared.
+- Before every reload, `snapshotSaveForUpdate()` copies the exact save bytes
+  to `sessionStorage`. `recoverSaveAfterUpdate()` runs in `main.jsx` before
+  React mounts: a copy is used only when the stored save is missing or is not
+  JSON, and it is dropped on every load, so it can never resurrect a deleted
+  account.
+- `decideUpdateStep()` is the whole policy (done / wait / reload / stuck) and
+  is tested without a browser. The loop gives up after
+  `APP_UPDATE_MAX_RELOADS` reloads instead of reloading forever.
+- `tests/app-update.spec.js` covers the decisions, the save copy and the
+  cache-invalidation run; keep that spec green before shipping a build.
 
 ## Style
 
@@ -474,6 +563,9 @@ instead of moving the public `0.x(.x)` version. Current:
 - CSS: keep the phone rules next to the desktop rules for the same component,
   use `env(safe-area-inset-*)` for anything pinned to an edge, keep tap targets
   at 40px or more, and prefer `dvh` over `vh` for anything full-height.
+- Notifications (`.toast`) stack in the **top-right corner** (`src/toasts.css`,
+  `top: 68px; right: 20px`), never in the middle of the screen, and slide in
+  from the right. On phones they clear the safe area.
 - Icons come from `game-icons.jsx` or Lucide. The favicon and app icons are a
   flat "RNG / DLE" wordmark on the dark background (`public/favicon.svg`,
   `public/icon-*.png`, `public/apple-touch-icon.png`); regenerate the PNGs when

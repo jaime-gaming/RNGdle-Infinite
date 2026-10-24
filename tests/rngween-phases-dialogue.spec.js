@@ -342,7 +342,8 @@ test("the original aura mission remains claimable from Tasks, not from clearing 
   await seedProgress(page, p);
   await page.goto("/rngween-world");
   await page.getByRole("button", { name: "View aura mission" }).click();
-  await expect(page).toHaveURL(/\/tasks$/);
+  // The aura missions live on the event half of Tasks (the split page).
+  await expect(page).toHaveURL(/\/tasks\/rngween$/);
   await page
     .getByRole("button", { name: "Collect Jack-o'-Glow", exact: true })
     .click();
