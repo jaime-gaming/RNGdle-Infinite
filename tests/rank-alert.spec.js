@@ -104,7 +104,7 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
   });
   // Auto-Roll was on when the matching roll committed, so the notification
   // offers to stop it, plus a plain dismiss.
-  expect(notification.options.actions).toEqual([
+  expect(notification.actions).toEqual([
     { action: "stop-auto-roll", title: "Stop auto roll" },
     { action: "dismiss", title: "Dismiss" },
   ]);

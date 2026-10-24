@@ -42,6 +42,19 @@ const ids = allBadgeMetadata.map((b) => b.id);
 const auraIds = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+// A save that has stopped changing: the event stamps a "seen" receipt and
+// deals its hourly board just after load, and comparing a snapshot taken
+// mid-write would credit the rebirth button with those writes.
+async function settledSave(page) {
+  let last = JSON.stringify(await saved(page));
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await page.waitForTimeout(100);
+    const next = JSON.stringify(await saved(page));
+    if (next === last) return JSON.parse(next);
+    last = next;
+  }
+  return JSON.parse(last);
+}
 const nav = (p, name) =>
   p.getByRole("navigation").getByRole("button", { name, exact: true }).click();
 const state = (extra = {}) => ({
@@ -844,7 +857,7 @@ test("a failed rebirth save leaves all progress intact and allows retry", async 
   await expect
     .poll(async () => (await saved(page)).offline?.lastSeenAt)
     .toBeTruthy();
-  const before = await saved(page);
+  const before = await settledSave(page);
   await page.evaluate((k) => {
     const write = Storage.prototype.setItem;
     window.failRebirth = true;

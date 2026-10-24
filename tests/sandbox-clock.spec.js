@@ -18,7 +18,9 @@ async function reviewClock(page, at = active) {
   let calls = 0;
   // Inject the same marker as the explicit preview, leaving ordinary dev/tests
   // and production calendar behaviour independent of the review mode.
-  await page.route("**/tasks", async (route) => {
+  // Any Tasks URL, including the event's own sub-page.
+  await page.route("**/tasks**", async (route) => {
+    if (route.request().resourceType() !== "document") return route.fallback();
     const response = await route.fetch();
     await route.fulfill({
       response,
@@ -110,6 +112,7 @@ test("Halloween renders through a preview with replaced Date headers and a wrong
 }) => {
   await page.clock.setFixedTime(new Date("2030-02-15T12:00:00Z"));
   const clock = await reviewClock(page);
+  await seedProgress(page);
   await page.goto("/tasks/rngween");
   await expect(page.locator("html")).toHaveAttribute("data-season", "rngween");
   await expect(
@@ -168,6 +171,7 @@ test("the review clock restores the ordinary theme and favicon after the seasona
   page,
 }) => {
   const clock = await reviewClock(page);
+  await seedProgress(page);
   await page.goto("/tasks/rngween");
   await expect(page.locator(".rngween-event")).toBeVisible();
   clock.set(ended);
