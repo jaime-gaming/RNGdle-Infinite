@@ -126,9 +126,22 @@ export default function RngweenWorld({
   warning,
   notify,
 }) {
-  const world = worldState(progress.rngweenLimited);
+  // Defensive: never blank page if progress is missing or malformed
+  if (!progress || typeof progress !== "object") {
+    return (
+      <main className="rngween-world">
+        <p style={{ padding: 24 }}>Cargando RNGween World…</p>
+      </main>
+    );
+  }
+  let world;
+  try {
+    world = worldState(progress.rngweenLimited);
+  } catch {
+    world = worldState(null);
+  }
   const limited = progress.rngweenLimited;
-  const drawn = limited?.drawn ?? [];
+  const drawn = Array.isArray(limited?.drawn) ? limited.drawn : [];
   // The World shop runs on World points: every zone's badge points together,
   // minus what the shop already took. Pumpkoins never enter this page.
   const wallet = worldPointsAvailable(limited);
@@ -171,9 +184,11 @@ export default function RngweenWorld({
   const keepRollingInterval = useRef(null);
   const sending = useRef(false);
   const shopDialog = useModalDialog(shopOpen);
-  const pending = world.pending;
-  const zone = worldZoneById.get(pending?.zone ?? selected);
-  const ZoneIcon = ZONE_ICONS[zone.id];
+  const pending = world?.pending ?? null;
+  const zone =
+    worldZoneById.get(pending?.zone ?? selected) ??
+    worldZoneById.get("pumpkin-patch");
+  const ZoneIcon = ZONE_ICONS[zone.id] ?? Flame;
   const clock = useRevealClock(now, pending, reduced);
   const stats = world.mini?.[zone.id] ?? emptyWorldMini()[zone.id];
   const savedLast = stats.last
@@ -348,7 +363,7 @@ export default function RngweenWorld({
   // One plain sentence that says what to do next, so the page never has to
   // be decoded from its parts. It follows the path: fragments, key, 6666.
   const hexbound =
-    limited.skinEarned || progress.owned.includes(RNGWEEN_WORLD_SKIN.id);
+    limited.skinEarned || progress.owned?.includes?.(RNGWEEN_WORLD_SKIN.id);
   const goalsDone = (id) =>
     worldPhaseGoals(id, world.mini?.[id]).filter((goal) => goal.complete)
       .length;
@@ -407,17 +422,22 @@ export default function RngweenWorld({
   useEffect(() => {
     if (tab === "commissions" && !hourly.open) setTab("objectives");
   }, [tab, hourly.open]);
-  const commissionPaid =
-    !pending && last && world.last?.serial === last.serial
-      ? progress.history
-          .filter(
-            (entry) =>
-              entry.type === "rngween-hourly" &&
-              entry.at >= last.revealsAt &&
-              hourlyTaskById.get(entry.taskId)?.source === "world",
-          )
-          .reduce((sum, entry) => sum + entry.pumpkoins, 0)
-      : 0;
+  let commissionPaid = 0;
+  try {
+    commissionPaid =
+      !pending && last && world.last?.serial === last.serial
+        ? (progress.history ?? [])
+            .filter(
+              (entry) =>
+                entry.type === "rngween-hourly" &&
+                entry.at >= last.revealsAt &&
+                hourlyTaskById.get(entry.taskId)?.source === "world",
+            )
+            .reduce((sum, entry) => sum + (entry.pumpkoins ?? 0), 0)
+        : 0;
+  } catch {
+    commissionPaid = 0;
+  }
   function closeShop() {
     if (!sending.current) {
       setShopOpen(false);
@@ -1052,7 +1072,7 @@ export default function RngweenWorld({
                   <strong>Hexbound</strong>
                   <p>
                     {limited.skinEarned ||
-                    progress.owned.includes(RNGWEEN_WORLD_SKIN.id)
+                    progress.owned?.includes?.(RNGWEEN_WORLD_SKIN.id)
                       ? "Unlocked. Preview or equip it in Shop."
                       : "Never sold. Find 6666 in the Valley."}
                   </p>

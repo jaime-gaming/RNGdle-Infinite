@@ -51,14 +51,33 @@ export function useSettings() {
 // One place decides motion: the system preference, or an explicit override.
 export function useMotionPreference() {
   const { settings } = useSettings();
-  const [systemReduced, setSystemReduced] = useState(
-    () => matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const [systemReduced, setSystemReduced] = useState(() => {
+    try {
+      return typeof matchMedia === "function"
+        ? matchMedia("(prefers-reduced-motion: reduce)").matches
+        : false;
+    } catch {
+      return false;
+    }
+  });
   useEffect(() => {
-    const media = matchMedia("(prefers-reduced-motion: reduce)");
-    const change = () => setSystemReduced(media.matches);
-    media.addEventListener("change", change);
-    return () => media.removeEventListener("change", change);
+    try {
+      if (typeof matchMedia !== "function") return;
+      const media = matchMedia("(prefers-reduced-motion: reduce)");
+      const change = () => {
+        try {
+          setSystemReduced(media.matches);
+        } catch {}
+      };
+      media.addEventListener("change", change);
+      return () => {
+        try {
+          media.removeEventListener("change", change);
+        } catch {}
+      };
+    } catch {
+      return;
+    }
   }, []);
   if (settings.reduceMotion === "on") return true;
   if (settings.reduceMotion === "off") return false;

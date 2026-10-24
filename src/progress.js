@@ -395,7 +395,12 @@ export function parseAndRepairProgress(raw) {
   if (raw === null) return { progress: emptyProgress(), repairs: [] };
   const repairs = [];
   const note = (message) => repairs.push(message);
-  const p = JSON.parse(raw);
+  let p;
+  try {
+    p = JSON.parse(raw);
+  } catch {
+    throw new Error("Unrecognized save version");
+  }
   if (!p || p.version !== 1) throw new Error("Unrecognized save version");
   // Wallet figures. The all-time earned total is trusted over the wallet: a
   // balance above it is clamped down so no EP is ever invented, while an

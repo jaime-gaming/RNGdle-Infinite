@@ -348,8 +348,9 @@ export function rngweenAuraIds(tasks) {
 }
 
 export function rngweenState(tasks, at, limited) {
-  const calendar = rngweenCalendar(at);
-  const rngween = slot(tasks);
+  try {
+    const calendar = rngweenCalendar(at);
+    const rngween = slot(tasks);
   const collected = new Set(rngween.earned);
   const missions = RNGWEEN_MISSIONS.map((mission) => {
     const isCollected = collected.has(mission.id);
@@ -366,13 +367,24 @@ export function rngweenState(tasks, at, limited) {
       claimable: calendar.phase === "active" && complete && !isCollected,
     };
   });
-  return {
-    ...calendar,
-    id: RNGWEEN_ID,
-    missions,
-    complete: missions.filter((mission) => mission.complete).length,
-    collected: missions.filter((mission) => mission.collected).length,
-    ready: missions.filter((mission) => mission.claimable).length,
-    total: missions.length,
-  };
+    return {
+      ...calendar,
+      id: RNGWEEN_ID,
+      missions,
+      complete: missions.filter((mission) => mission.complete).length,
+      collected: missions.filter((mission) => mission.collected).length,
+      ready: missions.filter((mission) => mission.claimable).length,
+      total: missions.length,
+    };
+  } catch {
+    return {
+      ...rngweenCalendar(at),
+      id: RNGWEEN_ID,
+      missions: [],
+      complete: 0,
+      collected: 0,
+      ready: 0,
+      total: 0,
+    };
+  }
 }
