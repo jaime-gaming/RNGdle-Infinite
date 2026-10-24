@@ -1311,6 +1311,7 @@ function applyEvent(state, action) {
       "exchange-world-points",
       "buy-rngween-limited",
       "rngween-world-roll",
+      "rngween-world-keep-rolling",
     ].includes(action.type)
   ) {
     const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
