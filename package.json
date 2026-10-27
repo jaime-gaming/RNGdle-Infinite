@@ -1,16 +1,10 @@
 {
   "name": "rngdle-infinite",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "dev:rngween": "vite --host 0.0.0.0 --mode rngween-preview",
-    "dev:rngween:unlocked": "vite --host 0.0.0.0 --mode rngween-unlocked",
-    "dev:sandbox": "node tools/sandbox-start.mjs",
-    "dev:sandbox:oct26": "node tools/sandbox-start.mjs 2026-10-26T12:00:00Z",
-    "dev:sandbox:oct30": "node tools/sandbox-start.mjs 2026-10-30T12:00:00Z",
-    "relay": "node tools/sync-relay.mjs",
     "build": "vite build",
     "build:pages": "vite build --base=/RNGdle-Infinite/",
     "pages:publish": "node tools/publish-pages.mjs",
@@ -28,19 +22,21 @@
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@fontsource/space-mono": "^5.3.0",
     "fflate": "^0.8.3",
+    "firebase": "^12.19.0",
     "lucide-react": "^0.468.0",
-    "peerjs": "^1.5.5",
-    "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
-    "@sparticuz/chromium": "^153.0.0",
     "@twemoji/svg": "^15.0.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "peer": "^1.0.2",
     "prettier": "^3.9.6",
     "vite": "^6.1.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6",
+    "@firebase/app": "0.16.2",
+    "@firebase/app-compat": "0.5.18"
   }
 }

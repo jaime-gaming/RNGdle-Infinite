@@ -1,4 +1,4 @@
-// KEEP after Nov 4, 2026: the wardrobe keeps listing owned event auras.
+// Owned cosmetics from retired content remain available in the wardrobe.
 import React, { useState } from "react";
 import { Shirt, Check, ArrowRight } from "lucide-react";
 import { auraProducts, productById } from "../shop-data.js";
@@ -25,7 +25,7 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
   const shownAuras = auras.filter(
     (item) =>
       collection === "all" ||
-      (collection === "special" ? item.eventOnly : !item.eventOnly),
+      (collection === "legacy" ? item.eventOnly : !item.eventOnly),
   );
   const equipped = progress.equipped ?? "none";
   const total = auraProducts.filter(
@@ -87,7 +87,7 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
             {[
               ["all", "All"],
               ["regular", "Regular"],
-              ["special", "Limited & Special"],
+              ["legacy", "Legacy"],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -98,9 +98,11 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
               </button>
             ))}
           </div>
-          {collection === "special" && (
+          {collection === "legacy" && (
             <h3 className="wardrobe-collection-title">
-              {shownAuras.length ? "RNGween" : "No special auras collected yet"}
+              {shownAuras.length
+                ? "Legacy aura collection"
+                : "No legacy auras in this save"}
             </h3>
           )}
           <ul className="wardrobe-grid">

@@ -233,6 +233,7 @@ test("the changelog lists every release and flags an unseen version", () => {
   // v0.3 was the shop wave, and v0.4 carries the rebirth rework together with
   // the shelves it regrouped afterwards.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.5.2",
     "v0.5.1",
     "v0.5",
     "v0.4.1",
@@ -241,7 +242,7 @@ test("the changelog lists every release and flags an unseen version", () => {
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.5.1");
+  expect(LATEST_VERSION).toBe("v0.5.2");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
@@ -308,8 +309,11 @@ test("the changelog reads like release notes, not like a chat log", () => {
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
     }
   }
-  // Every release, v0.4's ladder rework and v0.3's shop wave included, fits
-  // the same compact budget: eight lines at most.
+  // Keep the current release note especially compact; older entries remain
+  // archived at their original length.
+  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(3);
+  // Every archived release, v0.4's ladder rework and v0.3's shop wave
+  // included, still fits the historical budget of eight lines.
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);
   // The two Infinite-only badges are announced in v0.2, as plain text.

@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom, showRoll, startRoll } from "./helpers/random-roll.js";
 import { evaluate, inflate } from "./helpers/index.js";
@@ -34,7 +35,7 @@ async function readyAuto(p, words = [604827, 1337]) {
   await expect(
     p.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await p.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(p, new Date(Date.now() + 1000));
 }
 async function enable(p) {
   await auto(p).click();
@@ -189,7 +190,7 @@ test("two account tabs using Auto-Roll share one committed draw and one reward",
   await expect(
     other.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await other.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(other, new Date(Date.now() + 1000));
   await Promise.all([auto(page).click(), auto(other).click()]);
   await Promise.all([page.clock.runFor(300), other.clock.runFor(300)]);
   await settled(page);
@@ -316,7 +317,7 @@ test("Auto-Roll uses purchased timings and Last Second appears in the actual bad
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await auto(page).click();
   await page.clock.runFor(300);
   await expect(page.locator(".roll-experience")).toHaveAttribute(
@@ -372,7 +373,7 @@ test("deleting the account cancels a queued automatic start and removes its swit
     .getByRole("button", { name: "Permanently delete", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(auto(page)).toHaveCount(0);
   await page.clock.fastForward(106000);

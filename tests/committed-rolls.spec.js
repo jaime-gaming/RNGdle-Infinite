@@ -430,7 +430,7 @@ test("failed settlement is merged with later cross-tab spending rather than over
   await other.close();
 });
 
-test("a linked save preserves a roll that this tab could not write", async ({
+test("a concurrent local save preserves a settlement this tab could not write", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -456,13 +456,23 @@ test("a linked save preserves a roll that this tab could not write", async ({
   await page.emulateMedia({ reducedMotion: "reduce" });
   await settled(page);
 
-  // The peer sends the last durable save, which still has the committed roll
-  // pending. It must not replace this tab's only copy of the settlement.
-  const linkedHead = JSON.stringify(await saved(page));
-  await page.evaluate((raw) => {
-    window.failSettlement = false;
-    window.dispatchEvent(new CustomEvent("rng-sync-state", { detail: raw }));
-  }, linkedHead);
+  // Another tab writes the last durable snapshot, which still has the
+  // committed roll pending. The storage event must not replace this tab's
+  // only copy of the settlement.
+  const concurrentHead = JSON.stringify(await saved(page));
+  await page.evaluate(
+    ({ key, raw }) => {
+      window.failSettlement = false;
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key,
+          newValue: raw,
+          oldValue: raw,
+        }),
+      );
+    },
+    { key: PROGRESS_KEY, raw: concurrentHead },
+  );
   await expect
     .poll(async () => {
       const progress = await saved(page);

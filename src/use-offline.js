@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-export function useOffline(progress, dispatch) {
+export function useOffline(progress, dispatch, enabled = true) {
   const action = useRef(dispatch);
   action.current = dispatch;
   const runner = useRef(() => {});
@@ -8,7 +8,7 @@ export function useOffline(progress, dispatch) {
   const profileId = progress.profile?.id,
     owned = progress.owned.includes("offline-roller");
   useEffect(() => {
-    if (!profileId || !owned) {
+    if (!enabled || !profileId || !owned) {
       setBusy(false);
       setError("");
       return;
@@ -86,6 +86,6 @@ export function useOffline(progress, dispatch) {
       document.removeEventListener("visibilitychange", returned);
       window.removeEventListener("pagehide", returned);
     };
-  }, [profileId, owned]);
+  }, [profileId, owned, enabled]);
   return { busy, error, retry: () => runner.current() };
 }

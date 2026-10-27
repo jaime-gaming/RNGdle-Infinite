@@ -1,0 +1,281 @@
+.cloud-account {
+  margin: 0 0 22px;
+  padding: 17px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--hover));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.035);
+}
+.cloud-account-heading {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.cloud-account-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+}
+.cloud-account-heading h2 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: -0.2px;
+}
+.cloud-account-heading p {
+  margin: 4px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.cloud-account-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 600 10px var(--roll-font);
+  white-space: nowrap;
+}
+.cloud-account-status[data-status="synced"] {
+  border-color: color-mix(in srgb, var(--green) 40%, var(--border));
+  color: var(--green);
+}
+.cloud-account-status[data-status="error"] {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+.cloud-account-note,
+.cloud-account-footnote {
+  margin: 12px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+.cloud-login-form,
+.cloud-profile-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.cloud-account label {
+  display: block;
+  margin: 13px 0 6px;
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+.cloud-account input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 500 12px var(--body-font, inherit);
+}
+.cloud-account input:focus-visible {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 10%, transparent);
+}
+.cloud-account input:disabled {
+  opacity: 0.65;
+}
+.cloud-login-providers {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.google-sign-in-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  background: #fff;
+  color: #3c4043;
+  font:
+    600 12px Arial,
+    sans-serif;
+  cursor: pointer;
+  transition:
+    box-shadow 120ms ease,
+    background 120ms ease;
+}
+.google-sign-in-button:hover:not(:disabled) {
+  background: #f8faff;
+  box-shadow: 0 1px 3px rgb(60 64 67 / 0.28);
+}
+.google-sign-in-button:focus-visible {
+  outline: 2px solid #4285f4;
+  outline-offset: 2px;
+}
+.google-sign-in-button:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+.google-mark {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+.cloud-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font: 500 10px var(--roll-font);
+  text-align: center;
+}
+.cloud-login-divider::before,
+.cloud-login-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+  content: "";
+}
+.cloud-login-form > .primary-button,
+.cloud-profile-form > .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.cloud-profile-form > p {
+  margin: 13px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+.cloud-profile-form > label {
+  margin-top: 10px;
+}
+.cloud-profile-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--muted);
+}
+.cloud-profile-input input {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.cloud-profile-input:focus-within {
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 10%, transparent);
+}
+.cloud-profile-input input:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+}
+.cloud-account-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+.cloud-account-actions .google-connect-button {
+  background: var(--surface);
+  color: var(--text);
+}
+.cloud-provider-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--secondary);
+  font-size: 11.5px;
+}
+.cloud-provider-status .google-mark {
+  width: 15px;
+  height: 15px;
+}
+.cloud-account-actions p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.cloud-account-actions .secondary-button,
+.cloud-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+.cloud-account-switch {
+  margin: 12px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+}
+.cloud-account .text-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.cloud-account .text-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.cloud-account-footnote {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.cloud-retry {
+  margin-top: 10px;
+}
+
+@media (max-width: 520px) {
+  .cloud-account {
+    padding: 14px;
+  }
+  .cloud-account-heading {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 9px;
+  }
+  .cloud-account-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .cloud-account-status {
+    grid-column: 2;
+    justify-self: start;
+    white-space: normal;
+  }
+  .cloud-account-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

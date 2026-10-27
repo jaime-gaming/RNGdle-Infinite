@@ -1,8 +1,5 @@
-// CLEANUP Nov 4, 2026: remove the `limited` shelf entry and RNGWEEN_SKILL from
-// the catalogue. KEEP RNGWEEN_COSMETICS / RNGWEEN_FAMILY as owned-only auras.
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
-import { RNGWEEN_SKILL } from "./rngween-limited.js";
 
 // Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
@@ -609,11 +606,10 @@ export const shopProducts = [
   })),
   ...SKILL_SLOTS.map((bay) => ({ ...bay })),
 ];
-// The shop's six permanent shelves and one calendar-gated limited shelf. Each one is its own sub-page (/shop/skills and so
-// on) and every product lives on exactly one shelf, so the hub buttons, the
-// featured picks, a deep link and the back button can never disagree about
-// where an item is sold. Companions keep their shelf too; it is owned by the
-// companion component rather than by this catalogue.
+// The shop's permanent shelves are real sub-pages, so the hub buttons,
+// featured picks, deep links and the back button agree about where an item is
+// sold. Companions keep their shelf too; it is owned by the companion
+// component rather than by this catalogue.
 // Auras are grouped into families so the shelf reads as five small collections
 // instead of one long list. Cosmetic only: a family never changes a price, an
 // order of purchase or anything a roll can score.
@@ -669,13 +665,6 @@ export const AURA_FAMILIES = [
 ];
 
 export const SHOP_SECTIONS = [
-  {
-    id: "limited",
-    label: "Limited Shop: RNGween 2026",
-    icon: "pumpkin",
-    eventOnly: true,
-    blurb: "Pumpkoins, fleeting companions and permanent Halloween treats.",
-  },
   {
     id: "skills",
     label: "Skills",
@@ -812,20 +801,15 @@ export const auraProducts = [
   ...RNGWEEN_COSMETICS,
 ];
 export const productById = new Map(
-  [
-    ...shopProducts,
-    ...RNGWEEN_COSMETICS,
-    { ...RNGWEEN_SKILL, kind: "skill" },
-  ].map((item) => [item.id, item]),
+  [...shopProducts, ...RNGWEEN_COSMETICS].map((item) => [item.id, item]),
 );
 
-// Event-owned looks live under one dedicated collection, not in the regular
-// catalogue. The collection can be empty; no unowned aura becomes equipable.
-export const SPECIAL_AURA_COLLECTION = {
+// The collection can be empty; no unowned special aura becomes equipable.
+export const LEGACY_AURA_COLLECTION = {
   id: "special",
-  label: "Limited & Special",
-  specialHub: true,
-  blurb: "Your event collections. Each one is a chapter that will not reopen.",
+  label: "Legacy collection",
+  legacyHub: true,
+  blurb: "Permanent cosmetics preserved from retired seasonal content.",
   font: "Georgia, serif",
   tracking: "0.02em",
   casing: "none",
@@ -834,13 +818,13 @@ export const SPECIAL_AURA_COLLECTION = {
 
 export function auraFamilyById(id) {
   return (
-    [...AURA_FAMILIES, RNGWEEN_FAMILY, SPECIAL_AURA_COLLECTION].find(
+    [...AURA_FAMILIES, RNGWEEN_FAMILY, LEGACY_AURA_COLLECTION].find(
       (family) => family.id === id,
     ) ?? null
   );
 }
 
-// The exclusive collection has no empty banner, locked previews or missing-aura
+// The legacy collection has no empty banner, locked previews or missing-aura
 // count. Only the looks this player owns may appear, even via a direct link.
 export function visibleAuraFamilies(owned = []) {
   return RNGWEEN_COSMETICS.some((aura) => owned.includes(aura.id))

@@ -1,11 +1,10 @@
 // Independently implemented from the observable timing specification documented at
 // https://github.com/CubityFirst/rngdle-ep-calculator/blob/main/site/README.md#roll-timings
 // Kept separate from rendering and data so a future backend can supply any result.
-import { BASE_ROLL_MS, BASE_COOLDOWN_MS } from "./shop-data.js";
-export const COOLDOWN_MS = BASE_COOLDOWN_MS;
+import { BASE_ROLL_MS } from "./shop-data.js";
 export const SCRAMBLE_MS = 100;
-export const SETTLE_MS = 400;
-export const PULSE_MS = 700;
+const SETTLE_MS = 400;
+const PULSE_MS = 700;
 
 export function buildReferenceTimeline(digitCount, badgeGroupCount) {
   const slots = Math.max(6, digitCount);

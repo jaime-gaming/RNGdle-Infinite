@@ -1,5 +1,5 @@
 /* The install card stays in the phone page flow, below the Roll/footer seam.
-   It must never sit on top of the rack or the Reaper gate. */
+   It must never sit on top of the rack or the game controls. */
 .install-app {
   display: none;
 }

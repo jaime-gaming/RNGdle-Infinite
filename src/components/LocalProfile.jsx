@@ -8,7 +8,6 @@ import {
   Dices,
   Download,
   ImagePlus,
-  Link2,
   Share2,
   UserRound,
 } from "lucide-react";
@@ -91,7 +90,7 @@ export default function LocalProfile({
   progress,
   onAction,
   onContinue,
-  navigate,
+  cloudAccount = null,
 }) {
   const [username, setUsername] = useState(""),
     [pending, setPending] = useState(false),
@@ -138,7 +137,9 @@ export default function LocalProfile({
       const outcome = await onAction({ type: "avatar", avatar: data });
       setLogoNote(
         outcome.ok
-          ? "Logo saved — it travels with your account and its device link."
+          ? cloudAccount
+            ? "Logo saved with your cloud-backed game profile."
+            : "Logo saved with this browser profile."
           : outcome.message,
       );
     } catch (failure) {
@@ -204,14 +205,19 @@ export default function LocalProfile({
   if (profile && deleting)
     return (
       <>
-        <h2>Delete account &amp; progress</h2>{" "}
+        <h2>Delete game profile &amp; progress</h2>
         <form className="delete-confirm" onSubmit={deleteAccount}>
           <p>
-            Delete <strong>{profile.username}</strong> and start over?
+            Delete <strong>{profile.username}</strong>’s game save and start
+            over?
           </p>
           <p>
-            This removes your local profile, EP, badges, items, cooldown, and
-            entire activity history from this browser. Active rolls are
+            This removes the profile, EP, badges, items, cooldown, and activity
+            history from this browser
+            {cloudAccount
+              ? " and the signed-in account’s cloud save."
+              : ". A cloud save for an online account is not removed while signed out."}{" "}
+            Your online sign-in itself is not deleted. Active rolls are
             cancelled in all tabs using this profile. This cannot be undone.
             Your theme preference is kept.
           </p>
@@ -247,7 +253,7 @@ export default function LocalProfile({
               type="submit"
               disabled={pending || confirmation !== "DELETE"}
             >
-              {pending ? "Deleting…" : "Permanently delete"}
+              {pending ? "Deleting…" : "Permanently delete game save"}
             </button>
           </div>
         </form>
@@ -333,13 +339,15 @@ export default function LocalProfile({
         <>
           <p>
             Your EP, discoveries, upgrades, cosmetics, and activity are saved
-            automatically.
+            automatically in this browser
+            {cloudAccount
+              ? " and synchronized with your signed-in cloud account."
+              : "."}
           </p>
           <div className="info-box">
-            This is a local profile on this browser—not an online account. There
-            is no password and no cloud backup: a device link can carry the
-            profile to other browsers you own, and nothing is stored on a
-            server. Clearing site data removes the profile and its progress.
+            {cloudAccount
+              ? "Your game save is stored in this browser and in the configured cloud database for the signed-in account. A later reset/cycle generation wins; within one generation, cloud wins ties or incomparable progress. The displaced copy is kept under Cloud conflict recovery in Settings. Signing out keeps this browser copy; deleting the game save removes both copies."
+              : "This game profile is saved in this browser only. Sign into an online account above to sync it. If that account has no cloud save, an unowned local save is imported; otherwise a later reset/cycle generation wins, or local must clearly dominate the same profile within one generation. The cloud wins ties, incomparable or different-profile saves. The displaced copy is kept in Settings. Clearing site data removes this browser copy."}
           </div>
           <div className="profile-actions">
             <button className="primary-button" onClick={onContinue}>
@@ -390,21 +398,23 @@ export default function LocalProfile({
                 setError("");
               }}
             >
-              Delete account &amp; progress
+              Delete profile &amp; game save
             </button>
           </div>
         </>
       ) : (
         <form onSubmit={register}>
           <p>
-            Pick a name and your progress starts saving from this moment on.
+            Create a local game profile to keep progress in this browser. To
+            back it up across devices, sign in to an online account above.
           </p>
           <ul className="signup-points">
             <li>
               <ShieldCheck size={15} aria-hidden="true" />
               <span>
-                <strong>No email, no password, no server.</strong> The name is
-                just a label for a save file in this browser.
+                <strong>This is a local profile.</strong> Its display name is
+                saved with the game in this browser; it is not your online
+                login.
               </span>
             </li>
             <li>
@@ -417,9 +427,10 @@ export default function LocalProfile({
             <li>
               <X size={15} aria-hidden="true" />
               <span>
-                <strong>Not carried over:</strong> anything you rolled as a
-                guest. Guest play is never saved, so you start at 0 EP with an
-                empty collection.
+                <strong>A fresh start:</strong> local registration starts with 0
+                EP and an empty collection. Sign in above to compare any unowned
+                browser progress with the cloud; the richer-save policy chooses
+                the winner and keeps the displaced copy in Settings.
               </span>
             </li>
           </ul>
@@ -485,22 +496,13 @@ export default function LocalProfile({
             Clearing your browser's site data deletes the save. You can delete
             it yourself at any time.
           </p>
-          {/* Signing up is not the only way in: an account living on another
-              device joins this browser through the device link instead of
-              starting over. */}
-          <div className="signup-link">
-            <p>
-              <strong>Already play on another device?</strong> Link that account
-              here instead — both devices will play the same save.
-            </p>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => navigate?.("settings", "link")}
-            >
-              <Link2 size={15} aria-hidden="true" /> Link an existing account
-            </button>
-          </div>
+          <p className="signup-footnote">
+            Already have an online account? Sign in using the cloud account
+            panel above. If there is no cloud save, an unowned browser save can
+            be imported. Otherwise a later reset/cycle generation wins; within
+            one generation, local must clearly dominate the same profile. The
+            cloud wins ties and incomparable saves.
+          </p>
         </form>
       )}
     </>

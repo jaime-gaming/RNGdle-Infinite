@@ -119,7 +119,7 @@ export default function About({ navigate, progress }) {
       title: "Saving and privacy",
       points: [
         "Guest play is never saved. Rolls, EP and discoveries disappear when you leave.",
-        "Signing up creates a local profile in this browser and starts a clean account — nothing from guest play carries over.",
+        "Creating a local profile starts a clean save in this browser — nothing from guest play carries over. Sign into an online account if you want a cloud save.",
         "There is no email, password, server or leaderboard. Clearing site data deletes the save.",
         "Refreshing resumes the same committed number and deadline. Tabs on one account share a single draw and reward.",
         "Your profile shows how far you have come since the account was created, and you can export it as a card. Nothing in the game reads a card back, so a shared file can never overwrite your save.",

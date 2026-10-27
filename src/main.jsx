@@ -1,8 +1,3 @@
-// CLEANUP Nov 4, 2026: event wiring in this file — the Reaper gate and
-// dialog (`reaperOpen`, `RngweenGate`), the `rngween-world` page and its
-// redirect effect, the `retire-rngween-limited` effect, the seasonal
-// `RngweenSeason` mount, the Limited shelf opener and the World-forced dark
-// theme. KEEP the `events` attendance stamp and the owned-aura wardrobe.
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -10,7 +5,6 @@ import {
   History,
   Medal,
   LogIn,
-  Link2,
   CircleHelp,
   ArrowUpRight,
   X,
@@ -38,25 +32,17 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
+import CloudAccount from "./components/CloudAccount.jsx";
+import { useFirebaseAuth } from "./use-firebase-auth.js";
 import SharedProfile from "./components/SharedProfile.jsx";
 import { shareCardFromLocation } from "./profile-card.js";
-import DeviceLinkPanel from "./components/DeviceLink.jsx";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
 import Tasks from "./components/Tasks";
 import { taskSummary } from "./tasks.js";
-import { useSeasonClock } from "./use-season-clock.js";
-import { RNGWEEN_ID, rngweenState, rngweenCalendar } from "./rngween.js";
-import { useRngweenHourlyMaintenance } from "./use-rngween-hourly.js";
-import { useRngweenWorldMaintenance } from "./use-rngween-world.js";
-import { rngweenWorldUnlocked } from "./rngween-limited.js";
-import RngweenWorld from "./components/RngweenWorld.jsx";
-import RngweenGate from "./components/RngweenGate.jsx";
-import RngweenCountdown from "./components/RngweenCountdown.jsx";
-import RngweenIntro from "./components/RngweenIntro.jsx";
+import { useGameClock } from "./use-game-clock.js";
 import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
-import RngweenSeason from "./components/RngweenSeason.jsx";
 import AppearanceMenu from "./components/AppearanceMenu.jsx";
 import { freshRareBadges, newlyReady } from "./notice-rules.js";
 import { badgeMetadata } from "./roll-data.js";
@@ -88,11 +74,13 @@ import Toasts from "./components/Toasts";
 import { useToasts } from "./use-toasts.js";
 import {
   getAppUpdateState,
+  recoverSaveAfterUpdate,
   resumeAppUpdate,
   startAppUpdate,
   stopAppUpdate,
   subscribeAppUpdate,
 } from "./app-update.js";
+import { restoreVaultIfNeeded } from "./save-vault.js";
 import RebirthNav from "./components/RebirthNav";
 import MobileTabBar from "./components/MobileTabBar";
 import InstallApp from "./components/InstallApp";
@@ -115,18 +103,13 @@ import {
   validPage,
 } from "./router.js";
 import { SHOP_SECTIONS, auraFamilyById, shelfOfProduct } from "./shop-data.js";
-import {
-  joinDeviceLink,
-  resumeDeviceLink,
-  replySyncAction,
-  requestSyncAction,
-  subscribeSync,
-  subscribeSyncActions,
-  syncStatus,
-} from "./sync.js";
-import { profileSyncDescription, profileSyncTone } from "./sync-indicator.js";
 // Last on purpose: the phone sheet must come after every component sheet.
 import "./mobile.css";
+
+// Recover a save before useProgress reads localStorage. A readable current save
+// always wins; these copies are only used after a missing or corrupt write.
+const updateSaveRecovery = recoverSaveAfterUpdate();
+const vaultRecovery = restoreVaultIfNeeded();
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
@@ -135,15 +118,6 @@ function shopFamilyFromLocation(target) {
   // The router only reads a family off the auras shelf.
   const family = familyFromLocation(target);
   return auraFamilyById(family) ? family : "";
-}
-
-// Settings owns one sub-page of its own: /settings/link, the device link and
-// its technical details. Anything else under /settings is the settings list.
-export const SETTINGS_SECTIONS = ["link"];
-function settingsSectionFromLocation(target) {
-  if (pageFromLocation(target) !== "settings") return "";
-  const named = subpageFromLocation(target);
-  return SETTINGS_SECTIONS.includes(named) ? named : "";
 }
 
 function shopSectionFromLocation(target) {
@@ -188,19 +162,14 @@ function App() {
   const [shopSection, setShopSection] = useState(() =>
     shopSectionFromLocation(location),
   );
-  const [settingsSection, setSettingsSection] = useState(() =>
-    settingsSectionFromLocation(location),
-  );
   const [shopFamily, setShopFamily] = useState(() =>
     shopFamilyFromLocation(location),
   );
   // Goal picking is armed from the shop's goal banner; the state lives here so
   // it survives shelf changes (the Shop remounts on every sub-page).
   const [pickingGoal, setPickingGoal] = useState(false);
-  const { now: taskNow, seasonalNow } = useSeasonClock();
+  const taskNow = useGameClock();
   const [modal, setModal] = useState(null);
-  const [reaperOpen, setReaperOpen] = useState(false);
-  const [eventIntroOpen, setEventIntroOpen] = useState(false);
   const [freshStartOpen, setFreshStartOpen] = useState(false);
   const openFreshStart = useCallback(() => setFreshStartOpen(true), []);
   const closeFreshStart = useCallback(() => setFreshStartOpen(false), []);
@@ -214,10 +183,21 @@ function App() {
   // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
   const { toasts, notify, dismiss: dismissToast } = useToasts();
   const [appUpdate, setAppUpdate] = useState(getAppUpdateState);
-  const [linkStatus, setLinkStatus] = useState(syncStatus);
   useEffect(() => {
     const unsubscribe = subscribeAppUpdate(setAppUpdate);
     resumeAppUpdate();
+    if (updateSaveRecovery.recovered)
+      notify({
+        kind: "warning",
+        title: "Progress restored",
+        text: "The update could not read your save, so the copy made before the refresh was put back. Nothing was lost.",
+      });
+    else if (vaultRecovery.restored)
+      notify({
+        kind: "warning",
+        title: "Progress restored",
+        text: "The saved game could not be read, so this browser's backup copy was put back. Nothing was lost.",
+      });
     return unsubscribe;
   }, []);
   // A prestige (the ultra-rebirth in the save) earns a moment, and so does the
@@ -250,86 +230,20 @@ function App() {
   }, []);
   // A companion found on a roll walks in with its own moment on the roll stage.
   const [arrivalPet, setArrivalPet] = useState(null);
+  const auth = useFirebaseAuth();
   const {
     progress: session,
     warning: progressWarning,
-    dispatch: localDispatch,
+    dispatch,
     epoch,
-  } = useProgress();
-  const localDispatchRef = useRef(localDispatch);
-  localDispatchRef.current = localDispatch;
-  const dispatch = useCallback(
-    (action) => {
-      // While the account's main device is reachable, every action goes to it,
-      // so two screens can never settle competing rolls. Otherwise this device
-      // keeps playing its own save and the newer save wins on reconnect.
-      const link = syncStatus();
-      return link.connected && link.ownerDevice && !link.isWriter
-        ? requestSyncAction(action)
-        : localDispatch(action);
-    },
-    [localDispatch],
-  );
-  const profileSyncState = profileSyncTone(linkStatus);
-  const profileSyncLabel = profileSyncDescription(profileSyncState);
-  // Device links: ?sync=ROOM.KEY joins this browser to another device's
-  // account through the memory-only relay, then leaves the address bar. A
-  // reload of a browser already in a room simply reopens the stream, and the
-  // first live pairing (or a lost relay) is announced once, in the toast.
-  useEffect(() => {
-    const token = new URLSearchParams(location.search).get("sync");
-    if (token) {
-      const url = new URL(location.href);
-      url.searchParams.delete("sync");
-      history.replaceState(
-        history.state,
-        "",
-        url.pathname + url.search + url.hash,
-      );
-      joinDeviceLink(token);
-    } else {
-      resumeDeviceLink();
-    }
-    let announced = "";
-    return subscribeSync((state, note) => {
-      setLinkStatus(syncStatus());
-      if (state === "live" && announced !== "live") {
-        announced = "live";
-        notify({
-          kind: "milestone",
-          title: "Devices linked",
-          text: "Both devices now play the same account, live.",
-        });
-      } else if (state === "error" && announced !== "error") {
-        announced = "error";
-        notify({ kind: "error", text: note || "The device link was lost." });
-      } else if (state !== "error") announced = state;
-    });
-  }, []);
-  useEffect(
-    () =>
-      subscribeSyncActions((request) => {
-        if (!syncStatus().isWriter) {
-          replySyncAction(request, {
-            ok: false,
-            message:
-              "The main device is unavailable. Reconnect before changing progress.",
-          });
-          return;
-        }
-        Promise.resolve(localDispatchRef.current(request.action))
-          .then((result) => replySyncAction(request, result))
-          .catch((error) =>
-            replySyncAction(request, {
-              ok: false,
-              message:
-                error?.message ||
-                "The requested action could not be completed.",
-            }),
-          );
-      }),
-    [],
-  );
+    cloud,
+    retryCloudLoad,
+    vault,
+  } = useProgress({
+    userId: auth.user?.id ?? null,
+    authReady: auth.ready,
+    cloudEnabled: auth.configured,
+  });
   useEffect(() => {
     setModal(null);
     setShopFocus(null);
@@ -341,11 +255,6 @@ function App() {
     setPickingGoal(false);
   }, [epoch]);
   async function completeRoll(result, id, cooldownUntil) {
-    // Only the writer settles a shared roll. The other screen reveals the same
-    // committed number, then adopts the writer's receipt through the link.
-    const link = syncStatus();
-    if (link.connected && link.ownerDevice && !link.isWriter)
-      return { ok: true };
     // Companion luck is sampled here, independently of the number itself.
     let drop = null;
     try {
@@ -422,9 +331,7 @@ function App() {
   // task that can be claimed, and a badge of Epic or better. The first load is
   // quiet, and one roll that finishes several things is one notice. The badge
   // notice stays off the roll page, where the result already shows the badges.
-  const readyTasks =
-    taskSummary(session.tasks, taskNow).ready +
-    rngweenState(session.tasks, seasonalNow, session.rngweenLimited).ready;
+  const readyTasks = taskSummary(session.tasks, taskNow).ready;
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
     const rose = newlyReady(lastReadyTasks.current, readyTasks);
@@ -467,24 +374,12 @@ function App() {
       history.pushState({ page: target, section }, "", path);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const openLinkSettings = () => {
-    setSettingsSection("link");
-    setPage("settings");
-    push("settings", pathForSubpage("settings", "link"), "link");
-  };
   const navigate = (next, focusProduct = null) => {
     const target = validPage(next);
-    // The device link is a page of its own under Settings: "settings" with the
-    // link section named lands there, everything else lands on the list.
-    if (target === "settings" && focusProduct === "link") {
-      openLinkSettings();
-      return;
-    }
     // Leaving the shop disarms goal picking: it belongs to the shop floor.
     if (target !== "shop") setPickingGoal(false);
     // Any in-app move leaves a shared card behind; only the address brings one.
     setSharedCard(null);
-    setSettingsSection("");
     // Opening the shop on a product or a companion (a goal link, a recap) opens
     // the shelf that sells it, so the card is on screen when the page renders.
     const section =
@@ -532,21 +427,17 @@ function App() {
       setSharedCard(shareCardFromLocation(location));
       setShopSection(shopSectionFromLocation(location));
       setShopFamily(shopFamilyFromLocation(location));
-      setSettingsSection(settingsSectionFromLocation(location));
     };
     update();
     const landed = pageFromLocation(location);
     const section = shopSectionFromLocation(location);
     const family = shopFamilyFromLocation(location);
-    const settingsSub = settingsSectionFromLocation(location);
     // A legacy "#shop" bookmark keeps working, a "#skills" one lands on the
     // shelf, and an unknown sub-path is normalised back to the shop hub.
     if (
       location.hash ||
       !isCurrentPath(landed, location) ||
       (landed === "shop" && subpageFromLocation(location) !== section) ||
-      (landed === "settings" &&
-        subpageFromLocation(location) !== settingsSub) ||
       (section === "auras" && familyFromLocation(location) !== family)
     )
       history.replaceState(
@@ -554,9 +445,7 @@ function App() {
         "",
         landed === "shop" && section
           ? pathForShelfFamily("shop", section, family)
-          : landed === "settings" && settingsSub
-            ? pathForSubpage("settings", settingsSub)
-            : pathForPage(landed),
+          : pathForPage(landed),
       );
     window.addEventListener("popstate", update);
     window.addEventListener("hashchange", update);
@@ -577,16 +466,8 @@ function App() {
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const update = () => {
-      // The World is a night place: it renders dark whatever the setting, and
-      // the saved choice comes back untouched on the way out.
       const resolved =
-        page === "rngween-world"
-          ? "dark"
-          : theme === "system"
-            ? media.matches
-              ? "dark"
-              : "light"
-            : theme;
+        theme === "system" ? (media.matches ? "dark" : "light") : theme;
       document.documentElement.dataset.theme = resolved;
       setAppliedTheme(resolved);
     };
@@ -596,7 +477,7 @@ function App() {
     } catch {}
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme, page]);
+  }, [theme]);
   useEffect(
     () => () => {
       clearTimeout(arrivalTimer.current);
@@ -645,101 +526,23 @@ function App() {
     });
     setModal("badge");
   }
-  // Profile is a page (/profile), not a window: every "sign up" prompt in the
+  // Profile is a page (/profile), not a window: every profile prompt in the
   // game simply navigates there, and the page remembers itself in the URL.
   function openAuth() {
     navigate("profile");
   }
-  const offlineState = useOffline(session, dispatch);
+  const offlineState = useOffline(session, dispatch, auth.ready && cloud.ready);
   // One alert per finished cooldown, and never while a roll is still revealing.
   useReadyAlert(session.cooldownUntil, {
-    blocked: !!session.pendingRoll || !!session.offline?.batch,
+    blocked:
+      !auth.ready ||
+      !cloud.ready ||
+      !!session.pendingRoll ||
+      !!session.offline?.batch,
   });
   const rebirthVisible = rebirthUnlocked(session);
   // A ready task shows a dot in the header and the tab bar, until it is claimed.
   const tasksReady = readyTasks > 0;
-  const rngweenCalendarNow = rngweenCalendar(seasonalNow);
-  const gateAvailable =
-    !session.rngweenLimited?.retired &&
-    rngweenCalendarNow.limitedPhase === "active";
-  useRngweenHourlyMaintenance(session, seasonalNow, dispatch);
-  const worldRollWarning = useRngweenWorldMaintenance(
-    session,
-    seasonalNow,
-    dispatch,
-  );
-  const pendingMissionCoins = (session.tasks.rngween?.earned ?? []).some(
-    (id) => !(session.rngweenLimited?.rewardedMissions ?? []).includes(id),
-  );
-  // Being here during RNGween is remembered on the account, once, using the
-  // website clock. Nothing is shown for it yet; it is a record for later.
-  useEffect(() => {
-    if (
-      session.profile &&
-      rngweenCalendarNow.limitedPhase === "active" &&
-      !session.events?.[RNGWEEN_ID]
-    )
-      dispatch({
-        type: "attend-event",
-        id: RNGWEEN_ID,
-        // The website clock carries fractions of a millisecond; the save keeps
-        // whole ones.
-        at: Math.round(seasonalNow),
-      });
-  }, [session.profile, rngweenCalendarNow.limitedPhase, session.events]);
-  useEffect(() => {
-    if (session.profile && gateAvailable && pendingMissionCoins)
-      dispatch({ type: "claim-rngween-coins" });
-  }, [
-    session.profile?.id,
-    gateAvailable,
-    pendingMissionCoins,
-    seasonalNow,
-    dispatch,
-  ]);
-  useEffect(() => {
-    if (
-      page !== "roll" ||
-      session.rngweenLimited?.retired ||
-      ["upcoming", "ended"].includes(rngweenCalendarNow.limitedPhase)
-    )
-      setReaperOpen(false);
-  }, [page, rngweenCalendarNow.limitedPhase, session.rngweenLimited?.retired]);
-  useEffect(() => {
-    if (
-      session.profile &&
-      rngweenCalendarNow.limitedPhase === "ended" &&
-      !session.rngweenLimited?.retired
-    )
-      dispatch({ type: "retire-rngween-limited" });
-  }, [
-    seasonalNow,
-    session.profile?.id,
-    session.rngweenLimited?.retired,
-    dispatch,
-  ]);
-  useEffect(() => {
-    if (
-      page === "rngween-world" &&
-      (!rngweenWorldUnlocked(session.tasks, session.rngweenLimited) ||
-        session.rngweenLimited?.retired ||
-        (rngweenCalendarNow.limitedPhase !== "unavailable" &&
-          rngweenCalendarNow.limitedPhase !== "active"))
-    ) {
-      navigate("roll");
-      if (
-        ["active", "unavailable"].includes(rngweenCalendarNow.limitedPhase) &&
-        !session.rngweenLimited?.retired
-      )
-        setReaperOpen(true);
-    }
-  }, [
-    page,
-    seasonalNow,
-    session.profile?.id,
-    session.tasks,
-    session.rngweenLimited,
-  ]);
   // The mobile tab bar marks the rebirth tab ready the moment either a rung
   // or a prestige or the Rollback is available.
   const rebirthReadyNow =
@@ -775,28 +578,8 @@ function App() {
           ? rarities.indexOf(b.rarity) - rarities.indexOf(a.rarity)
           : 0,
     );
-  if (page === "rngween-world" && !session.rngweenLimited?.retired)
-    return (
-      <RngweenWorld
-        progress={session}
-        now={seasonalNow}
-        onAction={dispatch}
-        onBack={() => navigate("roll")}
-        onShop={() => openShelf("limited")}
-        onTasks={() => navigate("tasks")}
-        openSignup={openAuth}
-        notify={notify}
-        warning={[progressWarning, worldRollWarning].filter(Boolean).join(" ")}
-      />
-    );
   return (
     <>
-      <RngweenSeason
-        now={seasonalNow}
-        theme={appliedTheme}
-        interactive={page === "roll"}
-        notify={notify}
-      />
       <header className="header">
         <div className="header-left">
           <button
@@ -872,15 +655,16 @@ function App() {
           >
             <SlidersHorizontal size={18} />
           </button>
-          <AppearanceMenu
-            theme={theme}
-            appliedTheme={appliedTheme}
-            onTheme={setTheme}
-            seasonNow={seasonalNow}
-          />
+          <AppearanceMenu theme={theme} onTheme={setTheme} />
           <button
             className="sign-in"
-            aria-label={session.profile ? "Your profile" : "Sign up"}
+            aria-label={
+              auth.user
+                ? `Online account${auth.user.email ? `, ${auth.user.email}` : ""}`
+                : session.profile
+                  ? "Your profile"
+                  : "Sign in"
+            }
             data-avatar={session.profile?.avatar ? "logo" : "icon"}
             onClick={() => openAuth()}
           >
@@ -888,14 +672,26 @@ function App() {
               <AvatarMark
                 avatar={session.profile.avatar}
                 size={18}
-                label={`${session.profile.username} logo${profileSyncLabel ? `; ${profileSyncLabel}` : ""}`}
-                syncState={profileSyncState}
-                syncLabel={profileSyncLabel}
+                label={`${session.profile.username} logo`}
+                syncState={
+                  auth.user
+                    ? cloud.status === "synced"
+                      ? "connected"
+                      : cloud.status === "saving"
+                        ? "pending"
+                        : cloud.status === "error"
+                          ? "error"
+                          : ""
+                    : ""
+                }
+                syncLabel={auth.user ? `Cloud save: ${cloud.status}` : ""}
               />
             ) : (
               <LogIn size={15} />
             )}
-            <span>{session.profile ? "Profile" : "Sign up"}</span>
+            <span>
+              {auth.user ? "Account" : session.profile ? "Profile" : "Sign in"}
+            </span>
           </button>
         </div>
       </header>
@@ -922,10 +718,10 @@ function App() {
             key={epoch}
             {...{ openBadge, notify, session }}
             active={
+              auth.ready &&
+              cloud.ready &&
               page === "roll" &&
               !modal &&
-              !reaperOpen &&
-              !eventIntroOpen &&
               !offlineState.busy &&
               !session.offline?.batch
             }
@@ -967,51 +763,28 @@ function App() {
         )}
         {page === "settings" && (
           <>
-            <button
-              className="back-link"
-              onClick={() =>
-                settingsSection ? navigate("settings") : navigate("roll")
-              }
-            >
-              <ArrowLeft size={14} />{" "}
-              {settingsSection ? "Back to settings" : "Back to rolling"}
+            <button className="back-link" onClick={() => navigate("roll")}>
+              <ArrowLeft size={14} /> Back to rolling
             </button>
             <div className="page-heading">
               <div className="page-icon">
-                {settingsSection === "link" ? (
-                  <Link2 size={25} />
-                ) : (
-                  <SlidersHorizontal size={25} />
-                )}
+                <SlidersHorizontal size={25} />
               </div>
               <div>
-                <h1>
-                  {settingsSection === "link" ? "Device link" : "Settings"}
-                </h1>
-                <p>
-                  {settingsSection === "link"
-                    ? "One account across your devices, and everything behind it."
-                    : "Alerts, presentation and gameplay conveniences."}
-                </p>
+                <h1>Settings</h1>
+                <p>Alerts, presentation and gameplay conveniences.</p>
               </div>
             </div>
-            {settingsSection === "link" ? (
-              <DeviceLinkPanel
-                notify={notify}
-                progress={session}
-                navigate={navigate}
-              />
-            ) : (
-              <Settings
-                notify={notify}
-                progress={session}
-                onAction={dispatch}
-                navigate={navigate}
-                appUpdate={appUpdate}
-                onStartUpdate={startAppUpdate}
-                onStopUpdate={stopAppUpdate}
-              />
-            )}
+            <Settings
+              notify={notify}
+              progress={session}
+              onAction={dispatch}
+              navigate={navigate}
+              appUpdate={appUpdate}
+              onStartUpdate={startAppUpdate}
+              onStopUpdate={stopAppUpdate}
+              vault={vault}
+            />
           </>
         )}
         {page === "about" && (
@@ -1077,7 +850,9 @@ function App() {
                 <p>
                   {sharedCard
                     ? "A record someone shared with you."
-                    : "Your local save and how far you have come."}
+                    : auth.user
+                      ? "Your online account and game save."
+                      : "Your browser save and how far you have come."}
                 </p>
               </div>
             </div>
@@ -1091,14 +866,23 @@ function App() {
                   }
                 />
               ) : (
-                <LocalProfile
-                  key={epoch}
-                  profile={session.profile}
-                  progress={session}
-                  onAction={dispatch}
-                  onContinue={() => navigate("roll")}
-                  navigate={navigate}
-                />
+                <>
+                  <CloudAccount
+                    auth={auth}
+                    cloud={cloud}
+                    profile={session.profile}
+                    onAction={dispatch}
+                    onRetryCloud={retryCloudLoad}
+                  />
+                  <LocalProfile
+                    key={epoch}
+                    profile={session.profile}
+                    progress={session}
+                    onAction={dispatch}
+                    onContinue={() => navigate("roll")}
+                    cloudAccount={auth.user}
+                  />
+                </>
               )}
             </div>
           </>
@@ -1158,12 +942,9 @@ function App() {
               key={epoch}
               progress={session}
               now={taskNow}
-              eventNow={seasonalNow}
               onAction={dispatch}
               notify={notify}
               openSignup={openAuth}
-              openAuraFamily={openFamily}
-              openWorld={() => navigate("rngween-world")}
             />
           </>
         )}
@@ -1172,15 +953,10 @@ function App() {
             key={`${epoch}:${shopSection}:${shopFamily}`}
             progress={session}
             section={shopSection}
-            seasonNow={seasonalNow}
             family={shopFamily}
             onOpenShelf={openShelf}
             onOpenFamily={openFamily}
             focusProduct={shopFocus}
-            onReaper={() => {
-              navigate("roll");
-              setReaperOpen(true);
-            }}
             onAction={dispatch}
             openSignup={openAuth}
             navigate={navigate}
@@ -1367,25 +1143,6 @@ function App() {
           </>
         )}
       </main>
-      {page === "roll" && !gateAvailable && (
-        <RngweenCountdown
-          now={seasonalNow}
-          onChangelog={() => navigate("changelog")}
-        />
-      )}
-      {page === "roll" && gateAvailable && (
-        <RngweenGate
-          progress={session}
-          now={seasonalNow}
-          open={reaperOpen}
-          onOpenChange={setReaperOpen}
-          onAction={dispatch}
-          onWorld={() => navigate("rngween-world")}
-          onTasks={() => navigate("tasks")}
-          onShop={() => openShelf("limited")}
-          openSignup={openAuth}
-        />
-      )}
       <footer>
         <span>
           RNGdle <span className="footer-infinity">∞</span> Infinite
@@ -1417,11 +1174,6 @@ function App() {
         tasksReady={tasksReady}
         navigate={navigate}
       />
-      <RngweenIntro
-        now={seasonalNow}
-        paused={reaperOpen || !!modal}
-        onOpenChange={setEventIntroOpen}
-      />
       <FreshStartDialog
         progress={session}
         open={freshStartOpen}
@@ -1429,7 +1181,7 @@ function App() {
         onAutoOpen={openFreshStart}
         onAction={dispatch}
         notify={notify}
-        paused={reaperOpen || eventIntroOpen || !!modal}
+        paused={!!modal}
       />
       {modal && (
         <div

@@ -265,20 +265,6 @@ try {
   await page.waitForTimeout(700);
   await shot(page, "changelog");
 
-  // 8. The device link page: a live link waiting for its second device, the
-  //    technical readout, the hand-link fallback and the relay field.
-  await page.setViewportSize({ width: 1280, height: 1500 });
-  await page.goto(`${BASE}/settings/link`);
-  const linkPage = page.locator(".device-link");
-  await linkPage.waitFor({ state: "visible" });
-  await page.getByTestId("sync-create").click();
-  await page.getByTestId("sync-link").waitFor({ state: "visible" });
-  await page.getByTestId("link-details").waitFor({ state: "visible" });
-  await page.locator(".sync-hand summary").click();
-  await page.setViewportSize({ width: 1280, height: 900 });
-  // Let the toast retire so the page is the only thing in the frame.
-  await page.waitForTimeout(4200);
-  await shot(page, "devices", { fullPage: true });
   await page.close();
 } finally {
   await browser.close();

@@ -1,4 +1,4 @@
-/* KEEP after Nov 4, 2026: permanent art for owned event auras and Hexbound. */
+/* Permanent aura art for cosmetics already owned from retired content. */
 /* Permanent cosmetics earned in a temporary season. They keep working after
    Halloween; these layers never replace the underlying rarity palette. */
 .number-box[data-cosmetic="jack-o-glow"] .box-halo {
@@ -190,9 +190,6 @@
   .number-box .box-cosmetic * {
     animation: none !important;
   }
-}
-.number-box[data-motion="reduced"] .box-cosmetic * {
-  animation: none !important;
 }
 
 /* Permanent premium layers: keep after seasonal UI cleanup. All colour and
@@ -547,9 +544,6 @@
     animation: none !important;
   }
 }
-.number-box[data-motion="reduced"] .rngween-aura * {
-  animation: none !important;
-}
 
 /* Permanent world-only skin. Keep after the limited shop/world retire. */
 .aura-hexbound {
@@ -600,9 +594,6 @@
   .number-box[data-cosmetic="hexbound"] .box-cosmetic * {
     animation: none !important;
   }
-}
-.number-box[data-cosmetic="hexbound"][data-motion="reduced"] .box-cosmetic * {
-  animation: none !important;
 }
 
 /* A miniature seal inside each multi-roll box: never borrow the header/EP
@@ -682,4 +673,58 @@
 .number-box[data-aura-layout="contained"] .aura-motes i {
   bottom: 2px;
   opacity: 0.4;
+}
+
+/* Halloween night skin: the lantern that stayed lit. Keep after the event. */
+.aura-hollow {
+  --aura-primary: #fdba74;
+  --aura-secondary: #7c2d12;
+}
+.aura-hollow .aura-seal {
+  stroke-dasharray: 3 11;
+  animation: aura-hollow-turn 26s linear infinite;
+}
+.aura-hollow .aura-atmosphere {
+  background:
+    radial-gradient(circle at 50% 46%, #fdba7455, transparent 58%),
+    radial-gradient(circle at 50% 78%, #7c2d1255, transparent 62%);
+  animation: aura-hollow-breathe 6s ease-in-out infinite;
+}
+.aura-hollow .aura-crest {
+  border-color: #fdba7480;
+  color: #fed7aa;
+  box-shadow: 0 0 18px #fdba7455;
+}
+.aura-hollow .aura-guardian {
+  color: #fb923c;
+}
+.aura-hollow .aura-motes i {
+  background: linear-gradient(#fed7aa, #f97316);
+  border-radius: 50% 50% 40% 40%;
+  animation: rngween-wisp 6s ease-in-out infinite;
+}
+.number-box[data-cosmetic="hollow-lantern"] .box-ribbon {
+  display: block;
+  inset: -2px;
+  border: 1px solid #fdba7480;
+  border-radius: inherit;
+  box-shadow:
+    0 0 26px #f9731620,
+    inset 0 -6px 12px #fdba7418;
+}
+.number-box[data-cosmetic="hollow-lantern"] .box-particles i {
+  background: linear-gradient(#fed7aa, #f97316);
+  border-radius: 50% 50% 40% 40%;
+  animation: rngween-wisp 5.5s ease-in-out infinite;
+}
+@keyframes aura-hollow-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes aura-hollow-breathe {
+  50% {
+    opacity: 0.62;
+    transform: scale(1.04);
+  }
 }

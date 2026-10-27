@@ -22,7 +22,6 @@ const saved = (page) =>
 
 test("wallet rules: one credit per roll, all earned badges unlocked, no duplicate or unaffordable purchases", () => {
   const result = evaluate(1337),
-    // Keep this economy-only fixture outside the October 2026 event window.
     action = {
       type: "complete",
       result,
@@ -44,8 +43,8 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   expect(() =>
     applyProgress(emptyProgress(), { type: "equip", id: "orbit" }),
   ).toThrow("Purchase");
-  // Signing up starts a clean account by design: guest play is not saved. So
-  // the shop run is funded by rolls made *after* registering, not before.
+  // Local profile registration starts fresh; the cloud registration path is
+  // tested below because it deliberately retains the progress being imported.
   let state = applyProgress(emptyProgress(), {
     type: "register",
     id: "shop-test",
@@ -133,6 +132,43 @@ test("saved progress is versioned, self-repairing, and cannot equip an unowned i
   expect(p.discovered).toEqual(["PRIME"]);
   expect(p.owned).toEqual(["starfall"]);
   expect(p.equipped).toBe("none");
+});
+
+test("cloud profile registration retains local progress for first-login import", () => {
+  const local = {
+    ...emptyProgress(),
+    balance: 42000,
+    totalEarned: 42000,
+    discovered: ["PRIME"],
+    owned: ["jack-o-glow", "hollow-lantern"],
+    equipped: "hollow-lantern",
+    history: [
+      {
+        id: "legacy-finale",
+        type: "rngween-finale",
+        at: 1794000000000,
+        productId: "hollow-lantern",
+        name: "Hollow Lantern",
+      },
+    ],
+  };
+  const registered = applyProgress(local, {
+    type: "register-cloud",
+    id: "cloud-profile",
+    username: "CloudKeeper",
+    createdAt: 1000,
+  });
+
+  expect(registered.profile).toMatchObject({
+    id: "cloud-profile",
+    username: "CloudKeeper",
+  });
+  expect(registered.balance).toBe(local.balance);
+  expect(registered.totalEarned).toBe(local.totalEarned);
+  expect(registered.discovered).toEqual(local.discovered);
+  expect(registered.owned).toEqual(local.owned);
+  expect(registered.equipped).toBe(local.equipped);
+  expect(registered.history).toEqual(local.history);
 });
 
 test("undiscovered badges are absent from collection and search; demo cards are removed", async ({

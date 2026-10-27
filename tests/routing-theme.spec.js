@@ -30,7 +30,6 @@ import { allBadgeMetadata } from "../src/infinite-badges.js";
 test("every top navigation destination is a real path, not a hash fragment", () => {
   expect(PAGES).toEqual([
     "roll",
-    "rngween-world",
     "tasks",
     "shop",
     "badges",
@@ -43,10 +42,7 @@ test("every top navigation destination is a real path, not a hash fragment", () 
   ]);
   expect(pathForPage("roll")).toBe("/");
   for (const page of PAGES.filter((p) => p !== HOME))
-    // The World is served from its own folder on Pages, so it keeps a slash.
-    expect(pathForPage(page)).toBe(
-      page === "rngween-world" ? `/${page}/` : `/${page}`,
-    );
+    expect(pathForPage(page)).toBe(`/${page}`);
   // A repository subpath deployment keeps the same routes under its base.
   expect(basePath("/RNGdle-Infinite/")).toBe("/RNGdle-Infinite");
   expect(pathForPage("shop", "/RNGdle-Infinite/")).toBe(

@@ -19,7 +19,7 @@ const nav = (page, name) =>
     .click();
 async function register(page) {
   // Profile is a page now: the button navigates to /profile.
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("textbox", { name: "Username" }).fill("ActivityPlayer");
   await page.getByRole("button", { name: "Start saving my progress" }).click();
   await expect(
@@ -289,7 +289,7 @@ test("deletion requires confirmation, supports cancellation, clears every game f
   await confirmDelete(page);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   expect(await saved(page)).toBeNull();
   // The wallet lives in the shop: after the account is gone it reads empty.
@@ -348,7 +348,7 @@ test("failed deletion leaves the account and complete history intact and support
   });
   await page.getByRole("button", { name: "Permanently delete" }).click();
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   expect(await saved(page)).toBeNull();
 });
@@ -366,7 +366,7 @@ test("deleting in another tab cancels an active reveal and clears its temporary 
   await openDelete(other);
   await confirmDelete(other);
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".number-artifact")).toHaveCount(0);
   await expect(
@@ -399,7 +399,7 @@ test("a stale tab missing the deletion storage event cannot resurrect the accoun
   await confirmDelete(other);
   await page.clock.fastForward(45010);
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   expect(await saved(page)).toBeNull();
   await expect(page.locator(".number-artifact")).toHaveCount(0);
@@ -513,7 +513,7 @@ test("a draw queued behind account deletion cannot recreate progress or leave a 
     .toBe(2);
   await page.evaluate(() => window.releaseDeletionLock());
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),

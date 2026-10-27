@@ -12,7 +12,7 @@ import { accountStats, profileHighlights } from "./profile-stats.js";
 import { pathForProfile } from "./router.js";
 import { validAvatar } from "./progress.js";
 
-export const CARD_VERSION = 3;
+const CARD_VERSION = 3;
 const KNOWN_VERSIONS = new Set([1, 2, CARD_VERSION]);
 // The token carries the card line deflated and base64url'd, tagged "z1".
 // Legacy tokens are base64url of raw text (which always begins A–f), so a

@@ -3,11 +3,12 @@
 **Roll a number from 0 to 1,000,000. Find out what makes it special.**
 
 A free browser game about rolling numbers, earning EP, collecting badges and
-buying upgrades. No energy meter, no daily limit, no account needed.
+buying upgrades. Play without an online account; local profiles save in this
+browser, and configured deployments can sync one save across devices.
 
 <p align="center">
   <a href="https://jaime-gaming.github.io/RNGdle-Infinite/"><strong>▶ Play now</strong></a>
-  · works on desktop and mobile · saves in your browser
+  · works on desktop and mobile · local play needs no sign-in
 </p>
 
 ![The roll screen](media/roll.png)
@@ -15,8 +16,8 @@ buying upgrades. No energy meter, no daily limit, no account needed.
 ---
 
 **Contents:** [How to play](#how-to-play) · [Ways to grow](#ways-to-grow) ·
-[RNGween](#rngween-october-21--november-3-2026) · [Your progress](#your-progress) ·
-[FAQ](#faq) · [Credits](#credits)
+[Online accounts and cloud saves](#online-accounts-and-cloud-saves) ·
+[Legacy records](#legacy-records) · [FAQ](#faq) · [Credits](#credits)
 
 ## How to play
 
@@ -47,41 +48,66 @@ buying upgrades. No energy meter, no daily limit, no account needed.
 
 ![The skill rack](media/skills.png)
 
-## RNGween (October 21 – November 3, 2026)
+## Online accounts and cloud saves
 
-A one-off Halloween event. All dates are UTC and come from the website's clock,
-so changing your phone's date does nothing.
+An online account is optional. Local profiles continue to work in the browser;
+sign in with Google or email/password to keep a cloud save across devices. If
+you already use email/password, sign in first and choose **Connect Google** to
+link both methods to the same Firebase account and save.
 
-- **The look.** Webs, lanterns and a dark palette, with a Halloween switch in
-  the Appearance menu. It only shows on the dark theme.
-- **Limited Shop.** Trade 10,000 EP for 1 Pumpkoin (no refunds) and spend them
-  on a pumpkin companion, a seasonal skill, a World key or the event auras.
-  Unspent coins vanish when the shop closes.
-- **Halloween tasks (Oct 25–31).** Four goals — 300 rolls, 60 Rare+, 8,000,000
-  EP and 21 task claims, all online — unlock **Jack-o'-Glow, Phantom Veil,
-  Witchfire** and **Blood Moon** for free. On the other days, the Reaper's
-  Commissions pay Pumpkoins instead: four small tasks at a time, each with an
-  hour on the clock. Finish one, claim it before the hour ends, and a new one
-  takes its place.
-- **RNGween World.** Talk to the Reaper at the foot of the Roll page. Five
-  haunted zones with their own badges, fragments that forge a key to the Valley
-  of Horrors, and a hidden **Hexbound** aura for rolling 6666. Zone points buy
-  the World's reveal upgrades, and the World always opens in the dark.
-- **What stays.** The auras you collected are yours forever, through Rebirth,
-  Prestige and Rollback. Everything else retires on November 4, and the auras
-  never return.
+If the Firebase account has no save yet, an unowned local save can be imported.
+When both saves exist, they are compared only for the same game profile. First,
+explicitly later reset/cycle counters (fresh start, rollback, prestige, then
+rebirth) identify the newer game generation, so an old cloud copy cannot undo
+a deliberate reset. Within the same generation, local replaces cloud only when
+it is strictly ahead on every measured progress axis and ahead on at least one;
+ties, mixed/incomparable progress, and different profile IDs leave the cloud
+save in place. The comparison considers wallet plus the listed value of owned
+products, lifetime roll/history totals, achievements, owned upgrades,
+companions, skills and best roll rather than trusting one balance or timestamp.
+A save owned by a different Firebase account is never imported. Local progress
+continues to be saved in the browser, and the displaced version is kept
+separately under **Settings → Cloud conflict recovery**. Signing out keeps the
+local browser copy. Deleting the game save
+removes that Firebase user's Firestore document, but not the Firebase sign-in
+itself.
 
-## Your progress
+### Firebase setup
 
-Your save lives in your browser, so there is nothing to sign up for.
+The app is configured for Firebase project `rngdle-infinite-jg`. The public
+Web SDK values are in `.env.production` for production/GitHub Pages builds and
+in `.env.example` for local development; they are not service-account
+credentials. The game uses Firebase Authentication and Cloud Firestore, not
+Firebase Analytics or Cloud Storage. Firestore stores a compressed snapshot at
+`player_saves/{uid}` to stay below its 1 MiB document limit.
 
-**Playing on two devices.** Open **Settings → Device link** on one device and
-open the link (or scan the QR code) on the other. While both are open they stay
-in sync. The device that created the link is the main one: it runs rolls and
-purchases, so the two screens never fight over the same roll. Anyone with the
-link can play your account, so keep it private.
+In Firebase Authentication, enable Email/Password and Google sign-in. Google
+is already enabled for the configured project; when setting up another project,
+add `jaime-gaming.github.io` and `localhost` to Firebase's authorized domains
+for both providers. Create a Firestore database in a European region and
+publish [`firestore.rules`](firestore.rules). Those rules let a signed-in user
+read and write only the document whose ID is their Firebase UID. Do not use
+open/test-mode rules or a service-account key in the browser.
 
-![The device link page](media/devices.png)
+This is a fresh Firebase setup: existing Supabase accounts and cloud saves are
+left in the old project and are not migrated. Players need Firebase accounts;
+old Supabase-owned browser saves are not silently copied into another account.
+The Supabase migration file remains only as historical reference and is not
+used by this build.
+
+For local development, copy `.env.example` to the ignored `.env.local`, then run
+`npm run dev`. Production builds and `npm run pages:publish` use the public
+configuration in `.env.production`, so the generated `docs/` site is ready for
+Firebase. If the Firebase values are absent or invalid in a development build,
+local play remains available but cloud sign-in is disabled.
+
+## Legacy records
+
+RNGween 2026 gameplay and its seasonal interface have retired. The event shop,
+tasks and World are no longer playable. Permanent auras already earned,
+Hexbound, Hollow Lantern, attendance stamps and historical activity remain in
+old saves; these rewards are preserved as legacy cosmetics and are not available
+to earn again.
 
 ## FAQ
 
@@ -96,8 +122,10 @@ earn. Your number and its badges stay the same.
 **Do offline rolls count?** Yes: they pay EP and show up in your history. Skills
 only charge while you are online, though.
 
-**What happens if I clear my browser data?** The save goes with it. Link a
-second device first if you want a copy.
+**What happens if I clear my browser data?** If you have an online account and a
+cloud save, sign in again to restore it. Otherwise the browser-only save is
+removed with the site data. Export a profile card for a record, but it cannot be
+imported into a game save.
 
 **Is this the official RNGdle?** No. It is an independent recreation; see the
 credits below.

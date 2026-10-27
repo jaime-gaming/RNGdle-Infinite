@@ -1,6 +1,5 @@
-// KEEP after Nov 4, 2026: the hexbound/event aura rendering is permanent.
+// Retain rendering for the legacy cosmetics that players already own.
 import React from "react";
-import { useSettings } from "../use-settings.jsx";
 import "../number-box.css";
 import "../number-box-palettes.css";
 import "../rngween-auras.css";
@@ -50,6 +49,7 @@ const cosmetics = new Set([
   "witchfire",
   "blood-moon",
   "hexbound",
+  "hollow-lantern",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [
@@ -86,7 +86,6 @@ export default function NumberBox({
   style,
   ...props
 }) {
-  const { settings } = useSettings();
   const rarity = tiers.has(tier) ? tier : "neutral";
   const cosmetic = cosmetics.has(aura) ? aura : "none";
   const shimmer = !["neutral", "trash", "common"].includes(rarity);
@@ -109,7 +108,6 @@ export default function NumberBox({
       data-cosmetic={cosmetic}
       data-deja-vu={dejaVu || undefined}
       data-aura-layout={auraLayout === "contained" ? "contained" : undefined}
-      data-motion={settings.reduceMotion === "on" ? "reduced" : undefined}
       style={{
         "--box-font": `${fontSize}px`,
         // Every aura's own two swatch colours drive the shared finish layer.

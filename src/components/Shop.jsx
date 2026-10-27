@@ -31,7 +31,7 @@ import {
   visibleAuraFamilies,
   aurasInFamily,
   auraProducts,
-  SPECIAL_AURA_COLLECTION,
+  LEGACY_AURA_COLLECTION,
 } from "../shop-data";
 import { LOADOUT_LIMIT } from "../progress.js";
 import {
@@ -46,8 +46,6 @@ import { currentGoal, validGoal } from "../gameplay-loop.js";
 import { rackReport } from "../rack.js";
 import "../progress-links.css";
 import PetShelf from "./PetShelf";
-import RngweenShop, { RngweenShopDoor } from "./RngweenShop.jsx";
-import { rngweenCalendar } from "../rngween.js";
 import { PETS } from "../pets.js";
 import { flywheelRequired } from "../flywheel.js";
 import {
@@ -174,12 +172,12 @@ const icons = {
   witchfire: WitchfireMark,
   bloodmoon: BloodMoonMark,
   hexbound: HexboundMark,
+  hollow: PumpkinMark,
 };
 // The shelves come from the catalogue, so routing, the hub, the featured picks
 // and the deep links all read the same list. This map only paints them.
 const shelfIcons = {
   skill: SkillMark,
-  pumpkin: PumpkinMark,
   pace: PaceMark,
   companion: CompanionMark,
   aura: AuraMark,
@@ -188,7 +186,6 @@ const shelfIcons = {
 };
 export default function Shop({
   progress,
-  seasonNow,
   // "" is the hub. A section id means that shelf is the page being read.
   section = "",
   // Auras own families: "" is the shelf's index of banners, an id is one set.
@@ -198,7 +195,6 @@ export default function Shop({
   focusProduct,
   onAction,
   navigate,
-  onReaper,
   notify,
   openSignup,
   // Goal picking is armed from the goal banner above the shelves; while it is
@@ -222,12 +218,12 @@ export default function Shop({
   const currentPrice = (item) => productPrice(item, clock);
   const shelf = SHOP_SECTIONS.find((entry) => entry.id === section) ?? null;
   const auraFamilies = visibleAuraFamilies(progress.owned);
-  const specialFamilies = auraFamilies.filter((entry) => entry.eventOnly);
+  const legacyFamilies = auraFamilies.filter((entry) => entry.eventOnly);
   const regularFamilies = auraFamilies.filter((entry) => !entry.eventOnly);
   const auraFamily =
     section === "auras"
       ? family === "special"
-        ? SPECIAL_AURA_COLLECTION
+        ? LEGACY_AURA_COLLECTION
         : (auraFamilies.find((entry) => entry.id === family) ?? null)
       : null;
   const settings = rollSettings(progress.owned);
@@ -239,13 +235,8 @@ export default function Shop({
   // on the shelf's own locked panel, so nothing breaks — it simply never
   // advertises itself early.
   const offlineUnlocked = progress.owned.includes("offline-roller");
-  const limitedLive =
-    rngweenCalendar(seasonNow).limitedPhase === "active" &&
-    !progress.rngweenLimited?.retired;
   const visibleShelves = SHOP_SECTIONS.filter(
-    (entry) =>
-      (!entry.eventOnly || limitedLive) &&
-      (entry.id !== "offline" || offlineUnlocked),
+    (entry) => entry.id !== "offline" || offlineUnlocked,
   );
   const charges = flywheelRequired(progress.owned);
   const rack = rackReport(progress);
@@ -653,7 +644,7 @@ export default function Shop({
           )}
           {item.eventOnly ? (
             <div className="shop-source">
-              RNGween 2026 · Permanent exclusive · Not sold for EP
+              Legacy cosmetic · Permanently owned · Not for sale
             </div>
           ) : (
             <div className="shop-price">
@@ -689,7 +680,7 @@ export default function Shop({
             }}
           >
             {state.profileGated ? (
-              "Sign up to unlock"
+              "Create a profile to unlock"
             ) : restocking ? (
               restockLabel(item.id)
             ) : equipped ? (
@@ -1013,7 +1004,7 @@ export default function Shop({
   // first, with their colours for the gradient behind them.
   function bannerAuras(entry) {
     return (
-      entry.specialHub
+      entry.legacyHub
         ? auraProducts.filter(
             (item) => item.eventOnly && progress.owned.includes(item.id),
           )
@@ -1024,7 +1015,7 @@ export default function Shop({
   }
   function familyBanner(entry, { link = true } = {}) {
     const samples = bannerAuras(entry);
-    const looks = entry.specialHub
+    const looks = entry.legacyHub
       ? auraProducts.filter(
           (item) => item.eventOnly && progress.owned.includes(item.id),
         )
@@ -1057,8 +1048,8 @@ export default function Shop({
           </strong>
           <small>{entry.blurb}</small>
           <span className="aura-family-count">
-            {entry.specialHub
-              ? `${owned} collected looks · ${specialFamilies.length} event sets`
+            {entry.legacyHub
+              ? `${owned} owned looks · ${legacyFamilies.length} legacy sets`
               : entry.eventOnly
                 ? `${owned} collected · yours forever`
                 : `${owned} / ${total} yours`}
@@ -1102,20 +1093,6 @@ export default function Shop({
       </div>
     );
   }
-  if (section === "limited")
-    return (
-      <RngweenShop
-        progress={progress}
-        now={seasonNow}
-        onAction={onAction}
-        onBack={() => onOpenShelf("")}
-        onTasks={() => navigate("tasks")}
-        onWorld={onReaper ?? (() => navigate("roll"))}
-        onCollection={() => onOpenFamily("rngween")}
-        openSignup={openSignup}
-        notify={notify}
-      />
-    );
   return (
     <>
       <button className="back-link" onClick={() => navigate("roll")}>
@@ -1149,7 +1126,7 @@ export default function Shop({
               {auraFamily.eventOnly && (
                 <>
                   <button type="button" onClick={() => onOpenFamily("special")}>
-                    Limited &amp; Special
+                    Special
                   </button>
                   <ChevronRight size={13} aria-hidden="true" />
                 </>
@@ -1168,7 +1145,7 @@ export default function Shop({
             you reload.
           </p>
           <button className="secondary-button" onClick={openSignup}>
-            Sign up to save
+            Create a profile to save
           </button>
         </div>
       )}
@@ -1330,12 +1307,7 @@ export default function Shop({
               <span className="shop-section-stat">Shop · /shop</span>
             </div>
             <nav className="shop-jump" aria-label="Shop sections">
-              {limitedLive && (
-                <RngweenShopDoor progress={progress} onOpen={onOpenShelf} />
-              )}
-              {visibleShelves
-                .filter((entry) => entry.id !== "limited")
-                .map(shelfTile)}
+              {visibleShelves.map(shelfTile)}
             </nav>
           </section>
           {/* A shop window, not a second catalogue: three picks that link into the
@@ -1436,8 +1408,8 @@ export default function Shop({
             <span className="shop-count" role="status">
               {shelf.id === "companions"
                 ? `${PETS.filter((pet) => progress.pets?.includes(pet.id)).length} / ${PETS.length} found`
-                : shelf.id === "auras" && auraFamily?.specialHub
-                  ? `${specialFamilies.length} event sets · ${auraProducts.filter((item) => item.eventOnly && progress.owned.includes(item.id)).length} collected`
+                : shelf.id === "auras" && auraFamily?.legacyHub
+                  ? `${legacyFamilies.length} legacy sets · ${auraProducts.filter((item) => item.eventOnly && progress.owned.includes(item.id)).length} owned`
                   : shelf.id === "auras" && !auraFamily
                     ? // The index has no cards to count — its five banners are
                       // the shelf, so it counts sets instead of calling itself
@@ -1629,14 +1601,14 @@ export default function Shop({
             <div>
               <h2>
                 <AuraMark size={16} />{" "}
-                {auraFamily?.specialHub ? "Limited & Special" : "Auras"}
+                {auraFamily?.legacyHub ? "Legacy auras" : "Auras"}
               </h2>
               <p>
                 {auraFamily
-                  ? auraFamily.specialHub
-                    ? "Event collections. Only owned looks can be equipped."
+                  ? auraFamily.legacyHub
+                    ? "Permanent cosmetics preserved in this save. Only owned looks can be equipped."
                     : auraFamily.eventOnly
-                      ? "Your collected Halloween exclusives. Equip them all year; yours forever."
+                      ? "A permanent legacy collection. Owned looks can be equipped at any time."
                       : `One set of the shelf. ${auraGroups[0]?.items.length ?? 0} looks, cosmetic only.`
                   : `${auraFamilies.length} sets, cosmetic only; wear one at a time.`}
               </p>
@@ -1684,35 +1656,28 @@ export default function Shop({
           {!auraFamily && (
             <div className="aura-family-banners">
               {regularFamilies.map((entry) => familyBanner(entry))}
-              {specialFamilies.length > 0 &&
-                familyBanner(SPECIAL_AURA_COLLECTION)}
+              {legacyFamilies.length > 0 &&
+                familyBanner(LEGACY_AURA_COLLECTION)}
             </div>
           )}
           {/* Inside a family: its banner opens the page, its cards follow. */}
-          {auraFamily?.specialHub && (
+          {auraFamily?.legacyHub && (
             <>
               <div className="aura-family-banners aura-special-banners">
-                {specialFamilies.map((entry) => familyBanner(entry))}
+                {legacyFamilies.map((entry) => familyBanner(entry))}
               </div>
-              {!specialFamilies.length && (
+              {!legacyFamilies.length && (
                 <div className="aura-special-empty">
-                  <h3>No event auras collected yet</h3>
+                  <h3>No legacy auras in this save</h3>
                   <p>
-                    Your event collections appear here when you earn a look.
+                    Permanent legacy looks appear here when included in this
+                    save.
                   </p>
-                  {limitedLive && (
-                    <button
-                      className="secondary-button"
-                      onClick={() => onOpenShelf("limited")}
-                    >
-                      Visit RNGween <ArrowRight size={14} />
-                    </button>
-                  )}
                 </div>
               )}
             </>
           )}
-          {auraFamily && !auraFamily.specialHub && (
+          {auraFamily && !auraFamily.legacyHub && (
             <>
               {familyBanner(auraFamily, { link: false })}
               {auraGroups.map((group) => (
@@ -1720,7 +1685,7 @@ export default function Shop({
                   <div className="shop-family-heading">
                     <h3>
                       {group.family.eventOnly
-                        ? "Your Halloween collection"
+                        ? "Your legacy collection"
                         : `Every ${group.family.label.toLowerCase()} look`}
                     </h3>
                     <p>{group.family.blurb}</p>
@@ -1850,14 +1815,11 @@ export default function Shop({
         </nav>
       )}
       <p className="shop-save-note">
-        {/* CLEANUP Nov 4, 2026: drop the Limited Shop clause with the shelf. */}
-        {limitedLive
-          ? "Ordinary shelves use EP; the Limited Shop uses Pumpkoins. "
-          : "Every shelf here uses EP. "}
-        Rebirth resets the run but keeps every aura you own.{" "}
+        Every shelf here uses EP. Rebirth resets the run but keeps every aura
+        you own.{" "}
         {progress.profile
           ? `Saved locally as ${progress.profile.username}.`
-          : "Sign up to keep your wallet across reloads."}
+          : "Create a profile to keep your wallet across reloads."}
       </p>
       <dialog
         className="shop-confirm"
@@ -1939,7 +1901,7 @@ export default function Shop({
             )}
             {!progress.profile && (
               <p className="guest-purchase-note">
-                Guest purchase: sign up before leaving to save it.
+                Guest purchase: create a profile before leaving to save it.
               </p>
             )}
             <div className="purchase-balance">

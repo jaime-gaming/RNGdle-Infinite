@@ -4,7 +4,7 @@ import { BOOKMARK_LIMIT } from "../progress.js";
 import { prestigeShown } from "../rebirth.js";
 import NumberBox from "./NumberBox.jsx";
 
-export function formatStatEP(value) {
+function formatStatEP(value) {
   return `${Math.round(value).toLocaleString("en-US")} EP`;
 }
 

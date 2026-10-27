@@ -36,13 +36,10 @@ import {
   waitText,
 } from "../tasks.js";
 import { formatEP } from "../roll-data.js";
-import RngweenTasks from "./RngweenTasks.jsx";
-import RngweenHourly from "./RngweenHourly.jsx";
-import { rngweenCalendar } from "../rngween.js";
 import "../tasks.css";
 
 // How long until a reset, in words short enough for a card header.
-export function resetCountdown(ms) {
+function resetCountdown(ms) {
   return waitText(ms);
 }
 
@@ -70,16 +67,7 @@ const KIND = {
 
 const count = (n) => n.toLocaleString("en-US");
 
-export default function Tasks({
-  progress,
-  now,
-  eventNow,
-  onAction,
-  notify,
-  openSignup,
-  openAuraFamily,
-  openWorld,
-}) {
+export default function Tasks({ progress, now, onAction, notify, openSignup }) {
   // The one action in flight, and the one card asking to be confirmed.
   const [pending, setPending] = useState("");
   const [confirming, setConfirming] = useState("");
@@ -191,72 +179,18 @@ export default function Tasks({
     return "Swap this task for another from its pool.";
   }
 
-  const eventCalendar = rngweenCalendar(eventNow);
-  const eventActive = eventCalendar.limitedPhase === "active";
-  const [eventTab, setEventTab] = useState("commissions");
-
   return (
     <>
       {!progress.profile && (
         <div className="guest-save-notice">
           <p>
-            Guest play is not saved, so tasks claimed here are gone when you
-            leave. Signing up starts a saved account.
+            Guest play is temporary. Create a local profile to keep progress in
+            this browser; optional cloud sign-in can sync it across devices.
           </p>
           <button className="secondary-button" onClick={openSignup}>
-            Sign up to save
+            Create a profile to save
           </button>
         </div>
-      )}
-      {/* RNGween event panel: auras and hourly commissions under one tabbed roof. */}
-      {eventActive && progress.profile && (
-        <section className="rngween-event-panel">
-          <div className="rngween-event-tabs" role="tablist" aria-label="RNGween event sections">
-            <button
-              role="tab"
-              id="event-tab-auras"
-              aria-selected={eventTab === "auras"}
-              className={eventTab === "auras" ? "is-selected" : ""}
-              onClick={() => setEventTab("auras")}
-            >
-              Auras
-            </button>
-            <button
-              role="tab"
-              id="event-tab-commissions"
-              aria-selected={eventTab === "commissions"}
-              className={eventTab === "commissions" ? "is-selected" : ""}
-              onClick={() => setEventTab("commissions")}
-            >
-              Commissions
-            </button>
-          </div>
-          <div className="rngween-event-content">
-            {eventTab === "auras" ? (
-              <RngweenTasks
-                {...{ progress, onAction, notify, openAuraFamily, openWorld }}
-                now={eventNow}
-              />
-            ) : (
-              <RngweenHourly
-                progress={progress}
-                now={eventNow}
-                openWorld={openWorld}
-                openSignup={openSignup}
-                onAction={onAction}
-                notify={notify}
-              />
-            )}
-          </div>
-        </section>
-      )}
-      {!progress.rngweenLimited?.retired && eventActive && (
-        <button
-          className="secondary-button rngween-world-launch"
-          onClick={openWorld}
-        >
-          <Sparkles size={17} /> Enter RNGween World
-        </button>
       )}
       <section className="tasks-summary" aria-label="Task summary">
         <div className="tasks-stat">

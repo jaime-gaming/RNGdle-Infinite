@@ -30,7 +30,6 @@ import {
   discoveredCount,
   nextRebirthSkill,
   nextStep,
-  PRESTIGE_LIMIT,
   rebirthBlocker,
   blendedPercent,
   rebirthProgress,
@@ -384,7 +383,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             </p>
           )}
           <div className="rebirth-actions">
-            {ladderComplete && ultras < PRESTIGE_LIMIT && (
+            {ladderComplete && ultras < ROLLBACK_AFTER_PRESTIGES && (
               <button
                 className="primary-button rebirth-ultra"
                 disabled={!ultraReady}
@@ -845,8 +844,8 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               {formatEPCompact(ultraRebirthRequirement().ep)} EP in one cycle,
               and you can take the same fresh start at the top of the ladder —
               for a bonus that never resets, and a bigger sum to begin with.
-              Prestige can be repeated {PRESTIGE_LIMIT} times, and the third
-              closes it for good.
+              Prestige can be repeated {ROLLBACK_AFTER_PRESTIGES} times, and the
+              third closes it for good.
             </p>
           </header>
           <div className="rebirth-ultra-card">
@@ -965,14 +964,14 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               </div>
               <div>
                 <dt>
-                  {ultras >= PRESTIGE_LIMIT
+                  {ultras >= ROLLBACK_AFTER_PRESTIGES
                     ? "Next Rollback starts with"
                     : "Next prestige starts with"}
                 </dt>
                 <dd>
                   {formatEPCompact(
                     // The ladder resets, so only prestiges count here.
-                    ultras >= PRESTIGE_LIMIT ? 0 : ultraStarter,
+                    ultras >= ROLLBACK_AFTER_PRESTIGES ? 0 : ultraStarter,
                   )}{" "}
                   EP
                 </dd>

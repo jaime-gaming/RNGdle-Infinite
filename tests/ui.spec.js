@@ -77,7 +77,7 @@ test("navigation, themes, help and local signup", async ({ page }) => {
     page.getByRole("heading", { name: "How to play", level: 1 }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Back to rolling" }).click();
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.locator(".profile-page")).toBeVisible();
   await page.getByRole("textbox", { name: "Username" }).fill("LuckyPlayer");
   await page.getByRole("button", { name: "Start saving my progress" }).click();

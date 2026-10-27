@@ -1,5 +1,3 @@
-// CLEANUP Nov 4, 2026: drop the `is-rngween-skill` / familiar styling hooks
-// below; the event skill and signature leave every save at retirement.
 import React, {
   useEffect,
   useId,
@@ -83,7 +81,7 @@ function SkillCircle({ skill, active }) {
     : "";
   return (
     <div
-      className={`skill-slot ${skill.definition.eventOnly ? "is-rngween-skill" : ""} tint-${skill.tint} ${skill.armed ? "is-armed" : ""} ${!skill.equipped ? "is-standby" : ""} ${active ? "is-firing" : ""}`}
+      className={`skill-slot tint-${skill.tint} ${skill.armed ? "is-armed" : ""} ${!skill.equipped ? "is-standby" : ""} ${active ? "is-firing" : ""}`}
       data-skill={skill.id}
       onClick={(event) => event.currentTarget.focus()}
       data-armed={skill.armed}
@@ -218,7 +216,7 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
   const slice = 360 / members.length;
   return (
     <div
-      className={`skill-stack ${members.some((member) => member.skill?.definition?.eventOnly || member.passive?.petId === "pumpkin-familiar") ? "is-rngween-stack" : ""} ${armed ? "is-armed" : ""} ${firing ? "is-firing" : ""} ${open ? "is-open" : ""}`}
+      className={`skill-stack ${armed ? "is-armed" : ""} ${firing ? "is-firing" : ""} ${open ? "is-open" : ""}`}
       data-stack={stackId}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);

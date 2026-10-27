@@ -1,17 +1,27 @@
-// KEEP after Nov 4, 2026: release notes are history; the RNGween entry stays.
+// Release notes remain part of the archive, including retired events.
 // Release notes, newest first. `version` doubles as the "seen" marker: the
 // header badge appears while the newest entry has not been acknowledged.
 // `date` is the day the version reached the main branch (UTC), shown on the
 // Changelog page.
 export const CHANGELOG = [
   {
+    version: "v0.5.2",
+    date: "2026-10-24",
+    title: "cloud accounts and a year-round game",
+    body: [
+      "RNGween is retired: event play and screens are gone; legacy cosmetics stay wearable, and old history remains readable.",
+      "sign in with Google or email/password using Firebase; link Google to an existing account. Local play remains; device links are removed.",
+      "cloud sync favors newer reset generations; otherwise local must dominate. Ties or incomparable saves keep cloud; recovery is in Settings.",
+    ],
+  },
+  {
     version: "v0.5.1",
     date: "2026-10-20",
     title: "RNGween update",
     body: [
-      "RNGween brings Halloween decorations, the Limited Shop with Pumpkoins and the Reaper's World, Oct 21 – Nov 3, 2026.",
-      "four aura tasks unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon, October 25–31, 2026. Buy them Nov 1–3; they never return.",
-      "under the hood: roll settle, animations, shop, tasks and a few more things changed. You will notice.",
+      "RNGween adds Halloween decorations, the Limited Shop with Pumpkoins and the Reaper's World, Oct 21 – Nov 3, 2026.",
+      "four aura tasks unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon, October 25–31, 2026; they never return.",
+      "october 31 doubled Pumpkoins and awarded the Hollow Lantern; leftover coins became a small EP farewell.",
     ],
   },
   {
@@ -93,7 +103,7 @@ export const CHANGELOG = [
 ];
 
 export const LATEST_VERSION = CHANGELOG[0].version;
-export const SEEN_KEY = "rng-infinite-changelog-seen-v1";
+const SEEN_KEY = "rng-infinite-changelog-seen-v1";
 
 export function readSeenVersion(storage = globalThis.localStorage) {
   try {

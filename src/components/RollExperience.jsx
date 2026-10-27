@@ -1062,7 +1062,9 @@ export default function RollExperience({
             ) : (
               <>
                 Guest rolls are not saved.{" "}
-                <button onClick={openSignup}>Sign up to start saving</button>
+                <button onClick={openSignup}>
+                  Create a profile to start saving
+                </button>
               </>
             )}
           </p>

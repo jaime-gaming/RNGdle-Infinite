@@ -2,11 +2,14 @@ import React, { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   Bell,
+  Cloud,
+  UserRound,
   BellOff,
   BookOpen,
   Download,
   Eye,
   Gamepad2,
+  History,
   RotateCcw,
   RefreshCw,
   ScrollText,
@@ -22,7 +25,6 @@ import {
   requestNotificationPermission,
   showReadyNotification,
 } from "../notifications.js";
-import { DeviceLinkSummary } from "./DeviceLink.jsx";
 import { openInstallBanner } from "./InstallApp.jsx";
 import "../settings.css";
 
@@ -62,11 +64,22 @@ export default function Settings({
   appUpdate,
   onStartUpdate,
   onStopUpdate,
+  vault,
 }) {
   const { settings, update, reset, saveError } = useSettings();
   const [permission, setPermission] = useState(notificationPermission);
+  // The rolling save backup and the separate copy displaced by cloud sync.
+  const [backup, setBackup] = useState(() => vault?.get?.() ?? null);
+  const [recovery, setRecovery] = useState(
+    () => vault?.getRecovery?.() ?? null,
+  );
+  const [restoring, setRestoring] = useState(false);
   useEffect(() => {
-    const refresh = () => setPermission(notificationPermission());
+    const refresh = () => {
+      setPermission(notificationPermission());
+      setBackup(vault?.get?.() ?? null);
+      setRecovery(vault?.getRecovery?.() ?? null);
+    };
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
   }, []);
@@ -283,24 +296,6 @@ export default function Settings({
         <h2>
           <Eye size={16} aria-hidden="true" /> Presentation
         </h2>
-        <div className="setting-row">
-          <div className="setting-copy">
-            <label htmlFor="setting-motion">Reveal motion</label>
-            <p>
-              Reduced motion completes the reveal instantly. It never shortens
-              your cooldown or changes a score.
-            </p>
-          </div>
-          <select
-            id="setting-motion"
-            value={settings.reduceMotion}
-            onChange={(e) => update({ reduceMotion: e.target.value })}
-          >
-            <option value="system">Match system</option>
-            <option value="off">Full animation</option>
-            <option value="on">Reduced motion</option>
-          </select>
-        </div>
         <Toggle
           id="setting-skill-bar"
           label="Show the skill bar"
@@ -344,7 +339,26 @@ export default function Settings({
         />
       </div>
 
-      <DeviceLinkSummary progress={progress} navigate={navigate} />
+      <div className="settings-group">
+        <h2>
+          <Cloud size={16} aria-hidden="true" /> Online account
+        </h2>
+        <p className="settings-group-note">
+          Sign in and manage Google or email/password from your profile. Local
+          progress remains saved in this browser. A later reset/cycle generation
+          wins; within one generation, local replaces cloud only when its
+          measured progress clearly dominates. Ties and incomparable saves keep
+          cloud, and the displaced version is kept under Cloud conflict recovery
+          below.
+        </p>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => navigate("profile")}
+        >
+          <UserRound size={14} aria-hidden="true" /> Open profile &amp; sign-in
+        </button>
+      </div>
 
       {/* The footer never paints on phones, so its destinations live here —
           the group only renders where the footer is gone. */}
@@ -426,7 +440,93 @@ export default function Settings({
         </button>
         <small>
           Settings are saved in this browser only, separately from your game
-          progress. They are kept when you delete your account.
+          progress. Deleting the game save does not remove them or your online
+          sign-in.
+        </small>
+      </div>
+      <div className="settings-save" data-testid="settings-backup">
+        <h2>Your save</h2>
+        <p>
+          {backup
+            ? `A backup copy of your game was kept on ${new Date(backup.at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" })} UTC. It weighs ${Math.max(1, Math.round(backup.bytes / 1024))} KB once compressed.`
+            : "This browser has not kept a backup copy yet. It writes one as soon as the game saves."}
+        </p>
+        <button
+          type="button"
+          className="secondary-button"
+          data-testid="settings-restore-backup"
+          disabled={!backup || restoring}
+          onClick={() => {
+            setRestoring(true);
+            const outcome = vault?.restore?.();
+            setRestoring(false);
+            notify?.(
+              outcome?.ok
+                ? {
+                    kind: "done",
+                    title: "Backup restored",
+                    text: "The last saved copy is back in this browser.",
+                  }
+                : {
+                    kind: "error",
+                    text:
+                      outcome?.message ?? "The backup could not be restored.",
+                  },
+            );
+          }}
+        >
+          <History size={14} />{" "}
+          {restoring ? "Restoring…" : "Restore the last backup"}
+        </button>
+        <small>
+          Your game is saved in this browser. Reloading, updating the game or
+          clearing cached files never removes it. Deleting the game save also
+          deletes its cloud copy when signed in, but not your online sign-in.
+          The backup is a second, compressed copy of the same save.
+        </small>
+      </div>
+      <div className="settings-save" data-testid="settings-cloud-recovery">
+        <h2>Cloud conflict recovery</h2>
+        <p>
+          {recovery
+            ? `A save displaced by cloud sync was kept on ${new Date(recovery.at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" })} UTC. It weighs ${Math.max(1, Math.round(recovery.bytes / 1024))} KB once compressed.`
+            : "If local and cloud saves conflict, the displaced version is kept separately here."}
+        </p>
+        {recovery?.reason && <small>{recovery.reason}</small>}
+        <button
+          type="button"
+          className="secondary-button"
+          data-testid="settings-restore-cloud-recovery"
+          disabled={!recovery || restoring}
+          onClick={() => {
+            setRestoring(true);
+            const outcome = vault?.restoreRecovery?.();
+            setRestoring(false);
+            setRecovery(vault?.getRecovery?.() ?? null);
+            notify?.(
+              outcome?.ok
+                ? {
+                    kind: "done",
+                    title: "Recovery copy restored",
+                    text: "The displaced save is back in this browser. If you are online, the richer-save sync policy still applies.",
+                  }
+                : {
+                    kind: "error",
+                    text:
+                      outcome?.message ??
+                      "The recovery copy could not be restored.",
+                  },
+            );
+          }}
+        >
+          <History size={14} />{" "}
+          {restoring ? "Restoring…" : "Restore displaced save"}
+        </button>
+        <small>
+          This copy is separate from the rolling browser backup. It stays on
+          this device, and a later conflict replaces it with the newest
+          displaced version. Restoring it does not force an upload over a richer
+          cloud save.
         </small>
       </div>
       <div className="settings-update">
@@ -447,7 +547,7 @@ export default function Settings({
         </button>
         <p data-testid="update-status" role="status" aria-live="polite">
           {appUpdate?.message ||
-            "Checks for the newest published build and reloads this page until it arrives. Your game progress and settings are kept."}
+            "Clears the files this browser cached for the game, then reloads until the newest build arrives. Your progress, profile and settings are stored separately and stay exactly as they are."}
         </p>
       </div>
     </section>

@@ -1,11 +1,8 @@
-// CLEANUP Nov 4, 2026: remove the "rngween-world" page and the `rngween`
-// family alias; keep `/shop/auras` working for owned event auras.
 // Real URLs instead of hash fragments: /shop, /badges, /history, /settings.
 // The site is also published to a repository subpath on GitHub Pages, so every
 // route is resolved against the build-time base rather than the domain root.
 export const PAGES = [
   "roll",
-  "rngween-world",
   "tasks",
   "shop",
   "badges",
@@ -90,12 +87,7 @@ export function pathForShelfFamily(page, shelf, family, base) {
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "");
   const familyId = clean(family);
-  const parts = [
-    clean(shelf),
-    ...(clean(shelf) === "auras" && familyId === "rngween"
-      ? ["special", familyId]
-      : [familyId]),
-  ].filter(Boolean);
+  const parts = [clean(shelf), familyId].filter(Boolean);
   return `${prefix}/${name}${parts.length ? `/${parts.join("/")}` : ""}`.replace(
     /\/{2,}/g,
     "/",
@@ -106,10 +98,7 @@ export function pathForPage(page, base) {
   const prefix = basePath(base);
   const name = validPage(page);
   // basePath("/") is "", so the home route must not collapse into "//".
-  return `${prefix}/${name === HOME ? "" : name}${name === "rngween-world" ? "/" : ""}`.replace(
-    /\/{2,}/g,
-    "/",
-  );
+  return `${prefix}/${name === HOME ? "" : name}`.replace(/\/{2,}/g, "/");
 }
 
 // The profile lives at /profile/<username>: the name is part of the address

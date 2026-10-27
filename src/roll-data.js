@@ -1,6 +1,5 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import { formatPercentile } from "./probability.js";
-export { formatPercentile } from "./probability.js";
 export const badgeMetadata = new Map(metadata.map((b) => [b.id, b]));
 
 export function groupResultBadges(badges) {

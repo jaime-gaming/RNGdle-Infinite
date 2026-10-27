@@ -406,5 +406,3 @@ export default function PetShelf({
     </section>
   );
 }
-
-export { petById };
