@@ -131,8 +131,8 @@ export function profileNameFromLocation(location, base) {
 
 // True when the address bar already points at this page, so history is not
 // filled with duplicate entries when a component re-navigates to itself.
-// /profile/<anyone> counts as the profile page; the name is checked by the
-// page itself, which rewrites the address to the account that is signed in.
+// /profile/<name> counts as the profile page; the app distinguishes its own
+// account from a public profile visitor using the name in the address.
 export function isCurrentPath(page, location, base) {
   const target = pathForPage(page, base);
   const current = String(location.pathname || "/");

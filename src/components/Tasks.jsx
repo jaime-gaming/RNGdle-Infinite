@@ -184,11 +184,11 @@ export default function Tasks({ progress, now, onAction, notify, openSignup }) {
       {!progress.profile && (
         <div className="guest-save-notice">
           <p>
-            Guest play is temporary. Create a local profile to keep progress in
-            this browser; optional cloud sign-in can sync it across devices.
+            Sign in to your Cloud Account to save progress and play. Any unowned
+            browser save can be migrated to Firebase after sign-in.
           </p>
           <button className="secondary-button" onClick={openSignup}>
-            Create a profile to save
+            Open Cloud Account
           </button>
         </div>
       )}

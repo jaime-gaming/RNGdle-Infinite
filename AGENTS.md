@@ -153,8 +153,9 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
 
 ```sh
 npm install
-npm run dev              # Vite on 0.0.0.0:5173
-npm test                 # Playwright suite
+npm run dev              # configured Firebase dev build on 0.0.0.0:5173
+npm run dev:test -- --port 5174 # local-only mode for tests/screenshots
+npm test                 # Playwright suite (starts dev:test on port 5174)
 npx playwright test tests/roll.spec.js
 npm run build            # production build into dist/
 npm run pages:publish    # build docs/ for GitHub Pages
@@ -221,9 +222,9 @@ rather than guessing.
   `/RNGdle-Infinite/`. After a shipping change, run `npm run pages:publish` and
   commit generated docs with the source changes.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. This release target is `RNGdle-Infinitev0.5.2fix1`; bump the fix number
-  only for further patches of the same public release. Public release notes
-  live in `src/changelog.js` and keep historical entries.
+  flow. The current label is exactly `RNGdle-Infinite0.5.1fix0`; do not change it
+  again until the next session or an explicit user request. Public release
+  notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
 

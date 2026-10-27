@@ -13,13 +13,12 @@ const APP_UPDATE_CACHE_TIMEOUT_MS = 1500;
 // The save copy only belongs to the reload that made it.
 const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 
-// Internal label for bug-patch rebuilds of the same public version
-// (RNGdle-Infinitev0.5.1fix0, fix1, fix2 …). Bump the fix number for a patch
-// instead of moving the public 0.x(.x) version. Only the "Reload until
-// updated" flow uses it, to scope the update intent to the current internal
-// build. It is never added to the changelog or shown as a release.
-// Current: RNGdle-Infinitev0.5.2fix1.
-const APP_INTERNAL_VERSION = "RNGdle-Infinitev0.5.2fix1";
+// Internal label for this bug-patch rebuild. Only the "Reload until updated"
+// flow uses it, to scope the update intent to the current internal build. It
+// is never added to the changelog or shown as a public release. Keep this exact
+// label unchanged until the next session or an explicit user request.
+// Current: RNGdle-Infinite0.5.1fix0.
+const APP_INTERNAL_VERSION = "RNGdle-Infinite0.5.1fix0";
 
 let pollTimer = null;
 let reloadTimer = null;

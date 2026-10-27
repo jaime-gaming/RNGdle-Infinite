@@ -2,7 +2,7 @@
 // running game (no mockups), taken from a seeded local save so the collection,
 // the shop and the profile have something to show.
 //
-//   npm run dev            # or any server on 127.0.0.1:5173
+//   npm run dev:test -- --port 5174 # local-only mode on 127.0.0.1:5174
 //   CHROMIUM_PATH=/path/to/chrome node tools/screenshots.mjs
 //
 // Any Chromium/Chrome binary works; the screenshots land in media/.
@@ -13,7 +13,7 @@ import { AUTO_ROLL_KEY } from "../src/auto-roll.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { PETS } from "../src/pets.js";
 
-const BASE = process.env.SCREENSHOT_BASE ?? "http://127.0.0.1:5173";
+const BASE = process.env.SCREENSHOT_BASE ?? "http://127.0.0.1:5174";
 const OUT = new URL("../media/", import.meta.url);
 const ids = allBadgeMetadata.map((badge) => badge.id);
 const owned = [

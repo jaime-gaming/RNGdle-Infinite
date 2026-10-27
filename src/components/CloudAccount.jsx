@@ -10,6 +10,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { validUsername } from "../progress.js";
+import { publicProfileNameAvailable } from "../public-profile.js";
 import "../profile.css";
 import "../cloud-account.css";
 
@@ -284,9 +285,20 @@ export default function CloudAccount({
     setError("");
     setNotice("");
     try {
+      const normalizedUsername = username.trim().normalize("NFKC");
+      const available = await publicProfileNameAvailable(
+        normalizedUsername,
+        auth.user?.id,
+      );
+      if (!available) {
+        setError(
+          "That profile name is already in use. Choose another name for your public profile.",
+        );
+        return;
+      }
       const result = await onAction({
         type: "register-cloud",
-        username: username.trim(),
+        username: normalizedUsername,
         id: crypto.randomUUID(),
         createdAt: Math.ceil(Date.now()),
       });
@@ -296,7 +308,11 @@ export default function CloudAccount({
           "Profile created. Your progress is being saved to the cloud.",
         );
     } catch (failure) {
-      setError(failure?.message || "The profile could not be created.");
+      setError(
+        failure?.code === "permission-denied"
+          ? "The public-profile Firestore rules may not be published yet. Publish firestore.rules and try again."
+          : failure?.message || "The profile could not be created.",
+      );
     } finally {
       busy.current = false;
       setPending(false);
@@ -336,10 +352,26 @@ export default function CloudAccount({
         </span>
       </div>
 
+      <div className="cloud-migration-note" data-testid="cloud-migration-note">
+        <strong>Migration to Cloud</strong>
+        <p>
+          {auth.user
+            ? profile
+              ? "Your profile is being matched with this Firebase account. If it has no cloud save, the unowned browser save can be imported; when both saves exist, conflicts are resolved by your choice and the displaced copy is kept in recovery."
+              : "Create your game profile here to start a Firebase cloud save."
+            : profile
+              ? "Sign in to migrate this browser profile to Firebase. An empty cloud account can import it; if both saves exist, progress is compared and any ambiguous conflict requires your choice."
+              : "Create or sign in to a Cloud Account before playing. Your game progress will be saved to Firebase."}{" "}
+          This migrates only this browser save to Firebase; Supabase accounts
+          and saves are not imported. Your public profile shows a summary, not
+          your private save or login details.
+        </p>
+      </div>
+
       {!auth.configured ? (
         <p className="cloud-account-note">
-          Cloud sign-in is not enabled in this deployment yet. Your existing
-          browser save continues to work; it will not be sent anywhere.
+          Cloud sign-in is not configured in this build, so play is paused. Your
+          existing browser save is preserved and will not be sent anywhere.
         </p>
       ) : !auth.ready ? (
         <p className="cloud-account-note">Checking the current sign-in…</p>

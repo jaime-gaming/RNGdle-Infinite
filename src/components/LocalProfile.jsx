@@ -16,6 +16,7 @@ import { ROLLBACK_AFTER_PRESTIGES } from "../rebirth.js";
 import { AVATAR_ACCEPT, compactAvatar, fileToAvatar } from "../avatar.js";
 import { exportFileName, renderExportPngBlob } from "../profile-stats.js";
 import { shareCardData, shareCardUrl } from "../profile-card.js";
+import { publicProfileUrl } from "../public-profile.js";
 import ProfileRecord from "./ProfileRecord.jsx";
 import "../profile.css";
 
@@ -90,7 +91,11 @@ export default function LocalProfile({
   progress,
   onAction,
   onContinue,
+  onProfileDeleted,
   cloudAccount = null,
+  canContinue = true,
+  canEdit = true,
+  profileLinkAvailable = false,
 }) {
   const [username, setUsername] = useState(""),
     [pending, setPending] = useState(false),
@@ -101,23 +106,38 @@ export default function LocalProfile({
   const fileInput = useRef(null);
   const [logoNote, setLogoNote] = useState("");
   const [shareNote, setShareNote] = useState("");
-  // The link is the profile address with the card in it. Copying is the
-  // happy path; when the clipboard is off limits the link is shown to copy
-  // by hand instead of failing quietly. The logo is shrunk to link size
-  // first, so the address stays pastable.
+  // Cloud profiles use a clean /profile/<username> URL and load their latest
+  // public summary. A local-only profile keeps the legacy read-only snapshot
+  // link until it is migrated to an account.
   const [shareLink, setShareLink] = useState("");
   async function copyProfileLink() {
-    const avatar = await compactAvatar(profile?.avatar ?? "");
-    const url = shareCardUrl(
-      avatar
-        ? { ...progress, profile: { ...progress.profile, avatar } }
-        : progress,
-      location.origin,
-    );
+    let url;
+    if (cloudAccount) {
+      if (!profileLinkAvailable) {
+        setShareLink("");
+        setShareNote(
+          "Your public profile is not available until its cloud save has synced.",
+        );
+        return;
+      }
+      url = publicProfileUrl(profile.username, location.origin);
+    } else {
+      const avatar = await compactAvatar(profile?.avatar ?? "");
+      url = shareCardUrl(
+        avatar
+          ? { ...progress, profile: { ...progress.profile, avatar } }
+          : progress,
+        location.origin,
+      );
+    }
     try {
       await navigator.clipboard.writeText(url);
       setShareLink("");
-      setShareNote("Link copied. Anyone who opens it sees this record.");
+      setShareNote(
+        cloudAccount
+          ? "Public profile link copied. Anyone can view your profile summary."
+          : "Snapshot link copied. Anyone who opens it sees this record.",
+      );
     } catch {
       setShareLink(url);
       setShareNote("Copy the link below.");
@@ -193,16 +213,17 @@ export default function LocalProfile({
     try {
       const result = await onAction({ type: "delete", profileId: profile.id });
       if (result.ok) {
-        // The page stays: with the profile gone, the sign-up form returns.
+        // The page stays: with the profile gone, the account setup returns.
         setDeleting(false);
         setConfirmation("");
+        onProfileDeleted?.();
       } else setError(result.message);
     } finally {
       busy.current = false;
       setPending(false);
     }
   }
-  if (profile && deleting)
+  if (profile && deleting && canEdit)
     return (
       <>
         <h2>Delete game profile &amp; progress</h2>
@@ -262,7 +283,7 @@ export default function LocalProfile({
   return (
     <>
       <h2 className="profile-title">
-        {profile && (
+        {profile && canEdit && (
           // The logo is its own control: click it to add or replace the
           // picture. No separate upload section.
           <button
@@ -293,7 +314,7 @@ export default function LocalProfile({
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
       </h2>
-      {profile && (
+      {profile && canEdit && (
         <input
           ref={fileInput}
           className="profile-logo-input"
@@ -304,7 +325,7 @@ export default function LocalProfile({
           aria-label="Upload a logo"
         />
       )}
-      {profile && (avatar || logoNote) && (
+      {profile && canEdit && (avatar || logoNote) && (
         <p className="profile-logo-line">
           {logoNote && <span role="status">{logoNote}</span>}
           {avatar && (
@@ -346,13 +367,20 @@ export default function LocalProfile({
           </p>
           <div className="info-box">
             {cloudAccount
-              ? "Your game save is stored in this browser and in the configured cloud database for the signed-in account. Different reset generations, same-generation ties or mixed progress, and different profile IDs require your choice; only clear same-generation progress dominance syncs automatically. Different profiles are never merged, and the displaced copy is kept under Cloud conflict recovery in Settings. Signing out keeps this browser copy; deleting the game save removes both copies."
-              : "This game profile is saved in this browser only. Sign into an online account above to sync it. If that account has no cloud save, an unowned local save is imported. When both saves exist, different reset generations and same-generation ties or mixed progress require your choice; clear same-generation progress dominance may sync automatically. Different game profiles are not merged; if both copies are eligible, choose one complete save. A save owned by another Firebase account is never imported. The displaced copy is kept in Settings. Clearing site data removes this browser copy."}
+              ? "Your game save is stored in this browser and in Firebase for the signed-in account. Different reset generations, same-generation ties or mixed progress, and different profile IDs require your choice; only clear same-generation progress dominance syncs automatically. Different profiles are never merged, and the displaced copy is kept under Cloud conflict recovery in Settings. Signing out keeps this browser copy; deleting the game save removes both copies. Your direct public profile page shows a limited summary, not your email or private game save."
+              : "This game profile is saved in this browser only. Sign into a Cloud Account above to migrate it. If that Firebase account has no save, this unowned local save is imported. When both saves exist, different reset generations and same-generation ties or mixed progress require your choice; clear same-generation progress dominance may sync automatically. Different game profiles are not merged; if both copies are eligible, choose one complete save. A save owned by another Firebase account is never imported. The displaced copy is kept in Settings. Clearing site data removes this browser copy."}
           </div>
           <div className="profile-actions">
-            <button className="primary-button" onClick={onContinue}>
-              Continue playing <ArrowRight size={16} />
-            </button>
+            {canContinue ? (
+              <button className="primary-button" onClick={onContinue}>
+                Continue playing <ArrowRight size={16} />
+              </button>
+            ) : (
+              <p className="profile-lock-note">
+                Sign in to your Cloud Account to continue. This browser save is
+                preserved until migration is complete.
+              </p>
+            )}
             <button
               type="button"
               className="secondary-button"
@@ -360,14 +388,22 @@ export default function LocalProfile({
             >
               <Download size={15} aria-hidden="true" /> Export my data
             </button>
-            <button
-              type="button"
-              className="secondary-button"
-              data-testid="profile-share"
-              onClick={copyProfileLink}
-            >
-              <Share2 size={15} aria-hidden="true" /> Copy profile link
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                className="secondary-button"
+                data-testid="profile-share"
+                onClick={copyProfileLink}
+                disabled={Boolean(cloudAccount && !profileLinkAvailable)}
+                title={
+                  cloudAccount && !profileLinkAvailable
+                    ? "Wait until the public profile has synced."
+                    : undefined
+                }
+              >
+                <Share2 size={15} aria-hidden="true" /> Copy profile link
+              </button>
+            )}
           </div>
           {shareNote && (
             <p className="profile-share-note" role="status">
@@ -383,24 +419,27 @@ export default function LocalProfile({
             </p>
           )}
           <p className="profile-export-note">
-            One-way export: a sharp PNG card with your name, your biggest roll,
-            your pinned rolls and your key figures. The profile link carries the
-            same record inside the address, so it opens anywhere without an
-            account. Nothing in the game reads a card or a link back, so neither
-            can overwrite the game in this browser.
+            One-way export: a sharp PNG card with your name, best roll, pinned
+            rolls and key figures.{" "}
+            {cloudAccount
+              ? "Your clean /profile/name link opens the latest public summary; it never contains the compressed card token."
+              : "A legacy snapshot link carries a read-only record in its address."}{" "}
+            Neither an export nor a profile link can overwrite a game save.
           </p>
           {progress && <ProfileRecord record={shareCardData(progress)} />}
-          <div className="account-danger">
-            <button
-              className="danger-button"
-              onClick={() => {
-                setDeleting(true);
-                setError("");
-              }}
-            >
-              Delete profile &amp; game save
-            </button>
-          </div>
+          {canEdit && (
+            <div className="account-danger">
+              <button
+                className="danger-button"
+                onClick={() => {
+                  setDeleting(true);
+                  setError("");
+                }}
+              >
+                Delete profile &amp; game save
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <form onSubmit={register}>

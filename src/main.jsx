@@ -35,7 +35,11 @@ import LocalProfile, { AvatarMark } from "./components/LocalProfile";
 import CloudAccount from "./components/CloudAccount.jsx";
 import { isAuthReadyForCloud, useFirebaseAuth } from "./use-firebase-auth.js";
 import SharedProfile from "./components/SharedProfile.jsx";
+import CloudProfile from "./components/CloudProfile.jsx";
 import { shareCardFromLocation } from "./profile-card.js";
+import { cloudGameAccess } from "./auth-gate.js";
+import { cloudAccountRequired } from "./firebase.js";
+import { normalizedProfileName } from "./public-profile.js";
 import { useOffline } from "./use-offline";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
@@ -97,6 +101,7 @@ import {
   pathForProfile,
   pathForSubpage,
   pathForShelfFamily,
+  profileNameFromLocation,
   subpageFromLocation,
   familyFromLocation,
   isCurrentPath,
@@ -174,10 +179,13 @@ function App() {
   const openFreshStart = useCallback(() => setFreshStartOpen(true), []);
   const closeFreshStart = useCallback(() => setFreshStartOpen(false), []);
   const [selectedBadge, setSelectedBadge] = useState(null);
-  // A profile link with ?card= shows that card, read-only, instead of the
-  // account in this browser. Read from the address on load and on back/forward.
+  // Legacy ?card= links still open as read-only snapshots. New cloud profile
+  // links use the username in /profile/<name> and load the public profile.
   const [sharedCard, setSharedCard] = useState(() =>
     shareCardFromLocation(location),
+  );
+  const [profileName, setProfileName] = useState(() =>
+    profileNameFromLocation(location),
   );
   // Notices: a short stack of cards, one per thing that just happened. See
   // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
@@ -243,8 +251,24 @@ function App() {
   } = useProgress({
     userId: auth.user?.id ?? null,
     authReady: isAuthReadyForCloud(auth),
+    passwordRequired: auth.user?.passwordRequired ?? false,
     cloudEnabled: auth.configured,
+    requireCloudAccount: cloudAccountRequired,
   });
+  const playAccess = cloudGameAccess({
+    required: cloudAccountRequired,
+    configured: auth.configured,
+    authReady: isAuthReadyForCloud(auth),
+    userId: auth.user?.id ?? null,
+    passwordRequired: auth.user?.passwordRequired ?? false,
+  });
+  const viewingOtherProfile =
+    page === "profile" &&
+    !sharedCard &&
+    Boolean(profileName) &&
+    (!session.profile ||
+      normalizedProfileName(profileName) !==
+        normalizedProfileName(session.profile.username));
   useEffect(() => {
     setModal(null);
     setShopFocus(null);
@@ -379,8 +403,12 @@ function App() {
     const target = validPage(next);
     // Leaving the shop disarms goal picking: it belongs to the shop floor.
     if (target !== "shop") setPickingGoal(false);
-    // Any in-app move leaves a shared card behind; only the address brings one.
+    // Any in-app move leaves a shared/public profile behind; only its address
+    // opens somebody else's read-only page.
     setSharedCard(null);
+    setProfileName(
+      target === "profile" ? (session.profile?.username ?? "") : "",
+    );
     // Opening the shop on a product or a companion (a goal link, a recap) opens
     // the shelf that sells it, so the card is on screen when the page renders.
     const section =
@@ -426,6 +454,7 @@ function App() {
     const update = () => {
       setPage(pageFromLocation(location));
       setSharedCard(shareCardFromLocation(location));
+      setProfileName(profileNameFromLocation(location));
       setShopSection(shopSectionFromLocation(location));
       setShopFamily(shopFamilyFromLocation(location));
     };
@@ -455,15 +484,23 @@ function App() {
       window.removeEventListener("hashchange", update);
     };
   }, []);
-  // The profile address names the signed-in account: /profile/<username>.
-  // Whatever name a link carried, signing up, deleting or loading another
-  // save rewrites it to the one that is actually here, without a new entry.
+  // A bare profile URL is canonicalized to this browser's own profile once it
+  // exists. A named path for somebody else is deliberately left alone so it
+  // can load that player's public cloud profile.
   useEffect(() => {
     if (page !== "profile" || sharedCard) return;
+    const requested = profileNameFromLocation(location);
+    const requestedIsOwn =
+      Boolean(requested) &&
+      Boolean(session.profile) &&
+      normalizedProfileName(requested) ===
+        normalizedProfileName(session.profile.username);
+    if (requested && session.profile && !requestedIsOwn) return;
+    if (requested && !session.profile) return;
     const canonical = pathForProfile(session.profile?.username);
     if (location.pathname !== canonical)
       history.replaceState(history.state, "", canonical);
-  }, [page, sharedCard, session.profile?.username]);
+  }, [page, sharedCard, profileName, session.profile?.username]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const update = () => {
@@ -540,6 +577,7 @@ function App() {
   // One alert per finished cooldown, and never while a roll is still revealing.
   useReadyAlert(session.cooldownUntil, {
     blocked:
+      !playAccess.allowed ||
       !isAuthReadyForCloud(auth) ||
       !cloud.ready ||
       !!session.pendingRoll ||
@@ -666,9 +704,11 @@ function App() {
             aria-label={
               auth.user
                 ? `Online account${auth.user.email ? `, ${auth.user.email}` : ""}`
-                : session.profile
-                  ? "Your profile"
-                  : "Sign in"
+                : cloudAccountRequired
+                  ? "Sign in to Cloud Account"
+                  : session.profile
+                    ? "Your profile"
+                    : "Sign in"
             }
             data-avatar={session.profile?.avatar ? "logo" : "icon"}
             onClick={() => openAuth()}
@@ -702,7 +742,13 @@ function App() {
               <LogIn size={15} />
             )}
             <span>
-              {auth.user ? "Account" : session.profile ? "Profile" : "Sign in"}
+              {auth.user
+                ? "Account"
+                : cloudAccountRequired
+                  ? "Sign in"
+                  : session.profile
+                    ? "Profile"
+                    : "Sign in"}
             </span>
           </button>
         </div>
@@ -718,6 +764,21 @@ function App() {
           </button>
         </div>
       )}
+      {cloudAccountRequired &&
+        page !== "profile" &&
+        !auth.user?.passwordRequired &&
+        !playAccess.allowed &&
+        (auth.ready || !auth.configured) && (
+          <div className="auth-required-banner" role="status">
+            <span>
+              {playAccess.message} Your current browser save is preserved; sign
+              in to migrate it to Firebase.
+            </span>
+            <button type="button" onClick={() => navigate("profile")}>
+              Cloud Account
+            </button>
+          </div>
+        )}
       {auth.user?.passwordRequired && (page !== "profile" || sharedCard) && (
         <div className="auth-password-banner" role="alert">
           <span>
@@ -752,6 +813,7 @@ function App() {
             key={epoch}
             {...{ openBadge, notify, session }}
             active={
+              playAccess.allowed &&
               isAuthReadyForCloud(auth) &&
               cloud.ready &&
               page === "roll" &&
@@ -867,9 +929,11 @@ function App() {
             </button>
             <div className="page-heading">
               <div
-                className={`page-icon ${session.profile?.avatar && !sharedCard ? "has-logo" : ""}`}
+                className={`page-icon ${session.profile?.avatar && !sharedCard && !viewingOtherProfile ? "has-logo" : ""}`}
               >
-                {session.profile?.avatar && !sharedCard ? (
+                {session.profile?.avatar &&
+                !sharedCard &&
+                !viewingOtherProfile ? (
                   <AvatarMark
                     avatar={session.profile.avatar}
                     size={46}
@@ -884,9 +948,13 @@ function App() {
                 <p>
                   {sharedCard
                     ? "A record someone shared with you."
-                    : auth.user
-                      ? "Your online account and game save."
-                      : "Your browser save and how far you have come."}
+                    : viewingOtherProfile
+                      ? `Viewing ${profileName}'s public profile.`
+                      : auth.user
+                        ? "Your online account and game save."
+                        : cloudAccountRequired
+                          ? "Sign in to play and migrate your browser save."
+                          : "Your browser save and how far you have come."}
                 </p>
               </div>
             </div>
@@ -894,6 +962,14 @@ function App() {
               {sharedCard ? (
                 <SharedProfile
                   card={sharedCard}
+                  onContinue={() => navigate("roll")}
+                  onOwnProfile={
+                    session.profile ? () => navigate("profile") : null
+                  }
+                />
+              ) : viewingOtherProfile ? (
+                <CloudProfile
+                  username={profileName}
                   onContinue={() => navigate("roll")}
                   onOwnProfile={
                     session.profile ? () => navigate("profile") : null
@@ -909,16 +985,28 @@ function App() {
                     onRetryCloud={retryCloudLoad}
                     onResolveCloudConflict={resolveCloudConflict}
                   />
-                  {!auth.user?.passwordRequired && (
-                    <LocalProfile
-                      key={epoch}
-                      profile={session.profile}
-                      progress={session}
-                      onAction={dispatch}
-                      onContinue={() => navigate("roll")}
-                      cloudAccount={auth.user}
-                    />
-                  )}
+                  {(!cloudAccountRequired || session.profile) &&
+                    !auth.user?.passwordRequired && (
+                      <LocalProfile
+                        key={epoch}
+                        profile={session.profile}
+                        progress={session}
+                        onAction={dispatch}
+                        onContinue={() => navigate("roll")}
+                        onProfileDeleted={() => {
+                          setProfileName("");
+                          history.replaceState(
+                            history.state,
+                            "",
+                            pathForProfile(""),
+                          );
+                        }}
+                        cloudAccount={auth.user}
+                        canContinue={playAccess.allowed && cloud.ready}
+                        canEdit={playAccess.allowed && cloud.ready}
+                        profileLinkAvailable={cloud.publicProfileAvailable}
+                      />
+                    )}
                 </>
               )}
             </div>
@@ -1174,8 +1262,8 @@ function App() {
                 RNGdle Tools <ArrowUpRight size={12} />
               </a>
               . Includes two Infinite-exclusive badges. Only your discovered
-              badges are shown. Sign up for a local profile to save your
-              collection.
+              badges are shown. Sign in to your Cloud Account to save your
+              collection and play across devices.
             </p>
           </>
         )}

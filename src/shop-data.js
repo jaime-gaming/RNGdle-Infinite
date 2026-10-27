@@ -463,7 +463,7 @@ export const shopProducts = [
     icon: "offline",
     requiresProfile: true,
     description:
-      "One normal roll per full 10 minutes away, up to 24 hours (144 rolls). Rewards are calculated and saved when you return. Requires a local profile.",
+      "One normal roll per full 10 minutes away, up to 24 hours (144 rolls). Rewards are calculated and saved when you return. Requires a saved game profile.",
   },
   {
     id: "offline-clock-1",

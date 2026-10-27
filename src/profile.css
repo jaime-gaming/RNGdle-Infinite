@@ -449,3 +449,55 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+.profile-lock-note {
+  flex: 1 1 220px;
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--border));
+  border-radius: 9px;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.cloud-profile-state {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--hover));
+}
+.cloud-profile-state .profile-title {
+  margin-bottom: 12px;
+}
+.cloud-profile-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.cloud-profile-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+  color: var(--danger);
+}
+.cloud-profile-error svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.cloud-profile-error strong {
+  font-size: 12px;
+}
+.cloud-profile-error p {
+  margin: 4px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.6;
+}

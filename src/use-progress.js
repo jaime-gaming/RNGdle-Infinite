@@ -14,6 +14,7 @@ import {
   writeCloudSave,
 } from "./cloud-save.js";
 import { firebaseConfigured } from "./firebase.js";
+import { cloudGameAccess } from "./auth-gate.js";
 import {
   clearCloudRecovery,
   clearVault,
@@ -151,7 +152,9 @@ function load() {
 export function useProgress({
   userId = null,
   authReady = true,
+  passwordRequired = false,
   cloudEnabled = firebaseConfigured,
+  requireCloudAccount = true,
 } = {}) {
   const [initial] = useState(load),
     [progress, setProgress] = useState(initial.progress),
@@ -180,8 +183,20 @@ export function useProgress({
     pendingCloudConflict = useRef(null);
   const cloudRef = useRef(cloud);
   cloudRef.current = cloud;
-  const authRef = useRef({ userId, authReady, cloudEnabled });
-  authRef.current = { userId, authReady, cloudEnabled };
+  const authRef = useRef({
+    userId,
+    authReady,
+    passwordRequired,
+    cloudEnabled,
+    requireCloudAccount,
+  });
+  authRef.current = {
+    userId,
+    authReady,
+    passwordRequired,
+    cloudEnabled,
+    requireCloudAccount,
+  };
   const cloudGate = useRef({
     userId: null,
     ready: !cloudEnabled || (authReady && !userId),
@@ -290,6 +305,7 @@ export function useProgress({
       updatedAt: result.updatedAt ?? null,
       error: "",
       notice: result.notice ?? "",
+      publicProfileAvailable: result.publicProfilePublished ?? false,
       conflict: null,
       resolving: false,
     });
@@ -554,6 +570,7 @@ export function useProgress({
             updatedAt: result.updatedAt ?? cloudRef.current.updatedAt ?? null,
             error: "",
             notice: result.notice || cloudRef.current.notice || "",
+            publicProfileAvailable: result.publicProfilePublished ?? false,
           });
         })
         .catch((error) => {
@@ -679,11 +696,15 @@ export function useProgress({
             message: "This game was reset. The previous action was cancelled.",
           };
         const auth = authRef.current;
-        if (!auth.authReady)
-          return {
-            ok: false,
-            message: "Checking your account before changing progress.",
-          };
+        const accountAccess = cloudGameAccess({
+          required: auth.requireCloudAccount,
+          configured: auth.cloudEnabled,
+          authReady: auth.authReady,
+          userId: auth.userId,
+          passwordRequired: auth.passwordRequired,
+        });
+        if (!accountAccess.allowed)
+          return { ok: false, message: accountAccess.message };
         if (
           auth.cloudEnabled &&
           auth.userId &&
@@ -755,7 +776,7 @@ export function useProgress({
           try {
             if (!readable) throw new Error("Unreadable storage");
             if (cloudUser) {
-              await deleteCloudSave(cloudUser);
+              await deleteCloudSave(cloudUser, previous);
               cloudDeleted = true;
             }
             sessionStorage.removeItem(GUEST_ROLL_KEY);
@@ -786,6 +807,7 @@ export function useProgress({
               error: "",
               notice:
                 "The game save was deleted. Your sign-in remains available.",
+              publicProfileAvailable: false,
             });
           }
           try {

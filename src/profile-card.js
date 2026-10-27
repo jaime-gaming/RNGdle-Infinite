@@ -190,10 +190,10 @@ export function decodeShareCard(token) {
       avatar: f[15] ?? "",
     };
   }
-  return cleanCard(raw);
+  return sanitizeShareCard(raw);
 }
 
-function cleanCard(raw) {
+export function sanitizeShareCard(raw) {
   if (!raw || typeof raw !== "object" || !KNOWN_VERSIONS.has(raw.v))
     return null;
   const name = typeof raw.name === "string" ? raw.name.trim() : "";

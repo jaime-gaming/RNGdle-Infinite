@@ -5,5 +5,41 @@ service cloud.firestore {
       allow read, write: if request.auth != null
                          && request.auth.uid == uid;
     }
+
+    // A public profile is a deliberately small summary, never the private
+    // player_saves document. Visitors may fetch one known username directly,
+    // but cannot enumerate the collection. Owners can publish only their own
+    // document; username conflicts are resolved by the client transaction.
+    match /public_profiles/{profileId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+                    && request.resource.data.owner_uid == request.auth.uid
+                    && request.resource.data.username_key == profileId
+                    && request.resource.data.keys().hasAll([
+                      'owner_uid', 'username', 'username_key', 'record', 'updated_at'
+                    ])
+                    && request.resource.data.keys().hasOnly([
+                      'owner_uid', 'username', 'username_key', 'record', 'updated_at'
+                    ])
+                    && request.resource.data.username is string
+                    && request.resource.data.record is map
+                    && request.resource.data.updated_at is timestamp;
+      allow update: if request.auth != null
+                    && resource.data.owner_uid == request.auth.uid
+                    && request.resource.data.owner_uid == request.auth.uid
+                    && request.resource.data.username_key == profileId
+                    && request.resource.data.keys().hasAll([
+                      'owner_uid', 'username', 'username_key', 'record', 'updated_at'
+                    ])
+                    && request.resource.data.keys().hasOnly([
+                      'owner_uid', 'username', 'username_key', 'record', 'updated_at'
+                    ])
+                    && request.resource.data.username is string
+                    && request.resource.data.record is map
+                    && request.resource.data.updated_at is timestamp;
+      allow delete: if request.auth != null
+                    && resource.data.owner_uid == request.auth.uid;
+    }
   }
 }

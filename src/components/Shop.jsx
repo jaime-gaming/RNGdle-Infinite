@@ -787,7 +787,7 @@ export default function Shop({
     return item.requires ? productById.get(item.requires)?.name : "";
   }
   function noteFor(item, state) {
-    if (state.profileGated) return "Needs a saved local profile.";
+    if (state.profileGated) return "Needs a saved game profile.";
     if (state.requires) return `Requires ${requiresName(item)} first.`;
     if (!state.owned && !state.affordable)
       return `${formatEP(state.price - progress.balance)} more EP needed`;
@@ -1141,11 +1141,11 @@ export default function Shop({
       {!progress.profile && (
         <div className="guest-save-notice">
           <p>
-            You’re playing as a guest. Purchases and progress last only until
-            you reload.
+            Sign in to your Cloud Account before buying or playing. Your browser
+            save will be migrated to Firebase after sign-in.
           </p>
           <button className="secondary-button" onClick={openSignup}>
-            Create a profile to save
+            Open Cloud Account
           </button>
         </div>
       )}
@@ -1876,7 +1876,7 @@ export default function Shop({
                           : selected.id === "persistence-core"
                             ? "lets Auto-Roll remember its switch and run in background tabs."
                             : selected.id === "offline-roller"
-                              ? "earns one roll per 10 minutes away, up to 144 per absence. A local profile is required."
+                              ? "earns one roll per 10 minutes away, up to 144 per absence. A saved game profile is required."
                               : "unlocks advanced history search."
                       : selected.kind === "pace"
                         ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge.`

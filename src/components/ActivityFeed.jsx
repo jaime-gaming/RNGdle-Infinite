@@ -218,11 +218,11 @@ export default function ActivityFeed({
       {!progress.profile && (
         <div className="guest-save-notice">
           <p>
-            Guest play is not saved. This feed disappears when you leave, and
-            signing up starts a fresh account rather than keeping it.
+            Sign in to your Cloud Account before playing. An unowned browser
+            save can be imported to Firebase after sign-in.
           </p>
           <button className="secondary-button" onClick={openSignup}>
-            Create a profile to save
+            Open Cloud Account
           </button>
         </div>
       )}

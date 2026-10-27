@@ -8,7 +8,7 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 15_000 },
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: "http://127.0.0.1:5174",
     launchOptions: process.env.CHROMIUM_PATH
       ? {
           executablePath: process.env.CHROMIUM_PATH,
@@ -17,8 +17,8 @@ export default defineConfig({
       : {},
   },
   webServer: {
-    command: "npm run dev",
-    url: "http://127.0.0.1:5173",
+    command: "npm run dev:test -- --port 5174",
+    url: "http://127.0.0.1:5174",
     reuseExistingServer: !process.env.CI,
   },
 });

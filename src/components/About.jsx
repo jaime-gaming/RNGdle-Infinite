@@ -118,9 +118,9 @@ export default function About({ navigate, progress }) {
       icon: Save,
       title: "Saving and privacy",
       points: [
-        "Guest play is never saved. Rolls, EP and discoveries disappear when you leave.",
-        "Creating a local profile starts a clean save in this browser — nothing from guest play carries over. Sign into an online account if you want a cloud save.",
-        "There is no email, password, server or leaderboard. Clearing site data deletes the save.",
+        "A Cloud Account sign-in is required before playing. An existing browser save stays on this device until you sign in.",
+        "If your Firebase account has no save, an unowned browser save can be migrated. Conflicts are compared by progress and ambiguous choices are yours; displaced saves remain recoverable.",
+        "Your direct public profile link shows a limited profile summary, not your account email or private game save. Clearing site data removes the local copy, not the cloud save.",
         "Refreshing resumes the same committed number and deadline. Tabs on one account share a single draw and reward.",
         "Your profile shows how far you have come since the account was created, and you can export it as a card. Nothing in the game reads a card back, so a shared file can never overwrite your save.",
       ],

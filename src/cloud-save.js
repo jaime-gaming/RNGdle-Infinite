@@ -7,6 +7,11 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { firestoreDb, firebaseConfigured } from "./firebase.js";
+import {
+  PUBLIC_PROFILE_COLLECTION,
+  publicProfileDocument,
+  publicProfileId,
+} from "./public-profile.js";
 import { allTimeTally } from "./profile-stats.js";
 import {
   parseAndRepairProgress,
@@ -520,8 +525,91 @@ export async function writeCloudSave(userId, progress) {
   await setDoc(doc(database, CLOUD_SAVE_COLLECTION, userId), {
     save_data: encodeCloudSave(progress),
     updated_at: serverTimestamp(),
+    public_profile_id: null,
   });
+  // Restoring a save after a failed local deletion must never fail just because
+  // public-profile rules have not been deployed yet.
+  try {
+    await publishPublicProfile(userId, progress);
+  } catch {
+    // The private save is the recovery copy; profile publication can retry later.
+  }
   return new Date().toISOString();
+}
+
+async function publishPublicProfile(userId, progress) {
+  const database = requireFirestore();
+  const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
+  const publicProfile = publicProfileDocument(userId, progress);
+  const publicId = publicProfile.username_key;
+  const publicReference = doc(database, PUBLIC_PROFILE_COLLECTION, publicId);
+  let published = false;
+
+  await runTransaction(database, async (transaction) => {
+    const saveSnapshot = await transaction.get(saveReference);
+    if (!saveSnapshot.exists())
+      throw new Error(
+        "The cloud save changed before its profile could publish.",
+      );
+    const envelope = saveSnapshot.data();
+    const remoteRaw = decodeCloudSave(envelope.save_data);
+    const remoteProgress = parseAndRepairProgress(
+      JSON.stringify(remoteRaw),
+    ).progress;
+    if (!sameSave(remoteProgress, progress))
+      throw new Error(
+        "The cloud save changed before its profile could publish.",
+      );
+
+    const previousId =
+      publicProfileIdFromEnvelope(envelope) ||
+      publicProfileId(remoteProgress.profile?.username);
+    const previousReference =
+      previousId && previousId !== publicId
+        ? doc(database, PUBLIC_PROFILE_COLLECTION, previousId)
+        : null;
+    const publicSnapshot = await transaction.get(publicReference);
+    const previousSnapshot = previousReference
+      ? await transaction.get(previousReference)
+      : null;
+    published =
+      !publicSnapshot.exists() || publicSnapshot.data()?.owner_uid === userId;
+
+    if (
+      previousReference &&
+      previousSnapshot?.exists() &&
+      previousSnapshot.data()?.owner_uid === userId
+    )
+      transaction.delete(previousReference);
+    if (published) {
+      const current = publicSnapshot.exists() ? publicSnapshot.data() : null;
+      const profileChanged =
+        !current ||
+        current.owner_uid !== userId ||
+        current.username !== publicProfile.username ||
+        current.username_key !== publicProfile.username_key ||
+        JSON.stringify({ ...current.record, at: "" }) !==
+          JSON.stringify({ ...publicProfile.record, at: "" });
+      if (profileChanged)
+        transaction.set(publicReference, {
+          ...publicProfile,
+          updated_at: serverTimestamp(),
+        });
+    }
+
+    const nextPublicId = published ? publicId : null;
+    if (envelope.public_profile_id !== nextPublicId)
+      transaction.set(saveReference, {
+        save_data: envelope.save_data,
+        updated_at: envelope.updated_at ?? serverTimestamp(),
+        public_profile_id: nextPublicId,
+      });
+  });
+  return { published, conflict: !published };
+}
+
+function publicProfileIdFromEnvelope(envelope) {
+  return publicProfileId(envelope?.public_profile_id);
 }
 
 /**
@@ -668,6 +756,9 @@ export async function reconcileCloudSave(
       transaction.set(reference, {
         save_data: encodeCloudSave(selected),
         updated_at: serverTimestamp(),
+        // Keep the last successfully published alias until its replacement is
+        // committed. Profile-index writes happen after this private save.
+        public_profile_id: remoteEnvelope?.public_profile_id ?? null,
       });
     }
 
@@ -694,7 +785,6 @@ export async function reconcileCloudSave(
     } else if (choice.winner === "local" && !remoteProgress) {
       notice = "Your existing local save was imported to this cloud account.";
     }
-
     outcome = {
       progress: selected,
       winner: choice.winner,
@@ -707,6 +797,7 @@ export async function reconcileCloudSave(
         ? new Date().toISOString()
         : timestampToIso(remoteEnvelope?.updated_at),
       uploaded: shouldUpload,
+      publicProfilePublished: false,
       notice,
     };
   });
@@ -715,11 +806,87 @@ export async function reconcileCloudSave(
     throw new Error(
       "The cloud save could not be reconciled. Retry before playing.",
     );
+
+  if (outcome.progress?.profile) {
+    try {
+      const publication = await publishPublicProfile(userId, outcome.progress);
+      outcome.publicProfilePublished = publication.published;
+      if (publication.conflict) {
+        const collision = `Your cloud save is safe, but “${outcome.progress.profile.username}” is already used by another public profile. Choose a different profile name before sharing it.`;
+        outcome.notice = [outcome.notice, collision].filter(Boolean).join(" ");
+      }
+    } catch (error) {
+      outcome.publicProfilePublished = false;
+      const missingRules =
+        error?.code === "permission-denied" ||
+        error?.code === "firestore/permission-denied";
+      const publicationNotice = missingRules
+        ? "Your cloud save is synced, but public profile links need the updated Firestore rules. Publish firestore.rules to enable them."
+        : "Your cloud save is synced, but its public profile could not be updated. Retry later.";
+      outcome.notice = [outcome.notice, publicationNotice]
+        .filter(Boolean)
+        .join(" ");
+    }
+  }
   return outcome;
 }
 
-export async function deleteCloudSave(userId) {
+export async function deleteCloudSave(userId, progress = null) {
   if (!userId) return;
   const database = requireFirestore();
-  await deleteDoc(doc(database, CLOUD_SAVE_COLLECTION, userId));
+  const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
+  let publicReadDenied = false;
+  try {
+    await runTransaction(database, async (transaction) => {
+      const saveSnapshot = await transaction.get(saveReference);
+      const envelope = saveSnapshot.exists() ? saveSnapshot.data() : null;
+      const publicIds = new Set();
+      const addPublicId = (username) => {
+        const id = publicProfileId(username);
+        if (id) publicIds.add(id);
+      };
+      addPublicId(envelope?.public_profile_id);
+      addPublicId(progress?.profile?.username);
+      if (envelope?.save_data && !envelope.public_profile_id) {
+        try {
+          const raw = decodeCloudSave(envelope.save_data);
+          const parsed = parseAndRepairProgress(JSON.stringify(raw)).progress;
+          addPublicId(parsed.profile?.username);
+        } catch {
+          // The caller's selected save still supplies its public name; a damaged
+          // legacy envelope must not prevent the private save from being deleted.
+        }
+      }
+      const publicReferences = [...publicIds].map((id) =>
+        doc(database, PUBLIC_PROFILE_COLLECTION, id),
+      );
+      let publicSnapshots;
+      try {
+        publicSnapshots = await Promise.all(
+          publicReferences.map((reference) => transaction.get(reference)),
+        );
+      } catch (error) {
+        publicReadDenied =
+          error?.code === "permission-denied" ||
+          error?.code === "firestore/permission-denied";
+        throw error;
+      }
+      transaction.delete(saveReference);
+      publicSnapshots.forEach((snapshot, index) => {
+        if (snapshot.exists() && snapshot.data()?.owner_uid === userId)
+          transaction.delete(publicReferences[index]);
+      });
+    });
+  } catch (error) {
+    // Prior deployments may deny reads from the new public collection. In
+    // that case, removing the private save is still safe and must remain
+    // possible; no public profile is readable under those rules.
+    if (
+      !publicReadDenied ||
+      (error?.code !== "permission-denied" &&
+        error?.code !== "firestore/permission-denied")
+    )
+      throw error;
+    await deleteDoc(saveReference);
+  }
 }

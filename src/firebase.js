@@ -12,6 +12,10 @@ const config = {
 };
 
 export const firebaseConfigured = Object.values(config).every(Boolean);
+export const cloudAccountRequired =
+  String(env.VITE_REQUIRE_CLOUD_ACCOUNT ?? "true")
+    .trim()
+    .toLowerCase() !== "false";
 
 const app = firebaseConfigured
   ? getApps().length
