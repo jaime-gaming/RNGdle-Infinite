@@ -81,10 +81,10 @@ credentials. The game uses Firebase Authentication and Cloud Firestore, not
 Firebase Analytics or Cloud Storage. Firestore stores a compressed snapshot at
 `player_saves/{uid}` to stay below its 1 MiB document limit.
 
-In Firebase Authentication, enable Email/Password and Google sign-in. Google
-is already enabled for the configured project; when setting up another project,
-add `jaime-gaming.github.io` and `localhost` to Firebase's authorized domains
-for both providers. Create a Firestore database in a European region and
+In Firebase Authentication, Email/Password must be enabled; Google sign-in is
+already enabled for project `rngdle-infinite-jg`. For another project, enable
+both providers and add `jaime-gaming.github.io` and `localhost` to its
+authorized domains. Create a Firestore database in a European region and
 publish [`firestore.rules`](firestore.rules). Those rules let a signed-in user
 read and write only the document whose ID is their Firebase UID. Do not use
 open/test-mode rules or a service-account key in the browser.

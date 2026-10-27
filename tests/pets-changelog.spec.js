@@ -406,7 +406,7 @@ test("sign-up validates the name live and states what is and is not kept", () =>
   expect(source).toContain("disabled={pending || !ready}");
   expect(source).toContain("validUsername");
   expect(source).toContain("aria-invalid");
-  expect(source).toContain("Not carried over:");
+  expect(source).toContain("A fresh start:");
   expect(source).toContain("Saved from here on:");
   // The same validator guards the reducer, so UI and rules cannot disagree.
   for (const good of ["abc", "Lucky_Otter-12", "Zoë99"])
