@@ -57,10 +57,12 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   replacing either copy. The rolling local save and vault remain active. Signing
   out keeps local progress; deleting the game save removes its Firestore
   document, not the Firebase auth identity.
-- **Link sign-in providers, don't fork saves.** Google and email/password use
-  Firebase Auth. If an email account already exists, the player signs in with
-  that method and links Google from the same authenticated account; do not
-  silently create or merge a second UID's save.
+- **Link sign-in providers, don't fork saves.** Email/password users can sign
+  in directly. Google users must add a password after Google authentication;
+  link Email/Password to the same Firebase UID before enabling gameplay or cloud
+  sync. Use Firebase credential linking, never create another UID or merge its
+  save. If an email account already exists, the player signs in with that method
+  first and connects Google from the same authenticated account.
 - **Cloud security is database-enforced.** `firestore.rules` allows each
   authenticated user to access only `player_saves/{their uid}`. Publish those
   rules in the configured Firebase project before enabling cloud play. Browser
@@ -105,10 +107,10 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   1 MiB document limit. Rules are the security boundary.
 - `src/firebase.js` creates the app/Auth/Firestore clients;
   `src/use-firebase-auth.js` handles email/password, Google popup/redirect and
-  provider linking; `src/cloud-save.js` owns Firestore CRUD, richness comparison
-  and ownership/cache/recovery markers; `src/use-progress.js` coordinates the
-  local save with transactional reconciliation. Do not initialize Analytics
-  unless explicitly requested.
+  required password linking after Google sign-in; `src/cloud-save.js` owns
+  Firestore CRUD, progress comparison, and ownership/cache/recovery markers;
+  `src/use-progress.js` coordinates the local save with transactional
+  reconciliation. Do not initialize Analytics unless explicitly requested.
 - Cloud loading gates progress actions for an authenticated user. On a load
   error, retain local data and require an explicit retry before changing the
   save. On sync failure, retain local progress, mark it dirty and offer retry.
@@ -219,7 +221,7 @@ rather than guessing.
   `/RNGdle-Infinite/`. After a shipping change, run `npm run pages:publish` and
   commit generated docs with the source changes.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. This release target is `RNGdle-Infinitev0.5.2fix0`; bump the fix number
+  flow. This release target is `RNGdle-Infinitev0.5.2fix1`; bump the fix number
   only for further patches of the same public release. Public release notes
   live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR

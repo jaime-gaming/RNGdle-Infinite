@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   getRedirectResult,
   GoogleAuthProvider,
+  linkWithCredential,
   linkWithPopup,
   linkWithRedirect,
   onAuthStateChanged,
@@ -20,8 +22,18 @@ export function authMessage(error, fallback) {
     "auth/cancelled-popup-request":
       "Another sign-in window is already open. Finish it or try again.",
     "auth/credential-already-in-use":
-      "That Google account is already connected to a different game account.",
-    "auth/email-already-in-use": "An account with this email already exists.",
+      "That sign-in method is already connected to a different game account. Sign into that account instead; saves are never merged between Firebase users.",
+    "auth/email-already-in-use":
+      "An account with this email already exists. Sign in with that method first, then connect Google from the same profile.",
+    "auth/invalid-login-credentials":
+      "That email/password is incorrect. Check it and try again.",
+    "auth/user-not-found":
+      "No account was found for this email. Check the address or create an account.",
+    "auth/wrong-password":
+      "That email/password is incorrect. Check it and try again.",
+    "auth/missing-email":
+      "Google did not provide an email address, so a password cannot be added to this account.",
+    "auth/missing-password": "Enter your password to continue.",
     "auth/invalid-credential":
       "The email/password or sign-in credential is incorrect or expired. Try again.",
     "auth/invalid-email": "Enter a valid email address.",
@@ -36,7 +48,9 @@ export function authMessage(error, fallback) {
     "auth/popup-closed-by-user":
       "The Google sign-in window was closed before it finished.",
     "auth/provider-already-linked":
-      "Google is already connected to this game account.",
+      "That sign-in method is already connected to this game account.",
+    "auth/requires-recent-login":
+      "Sign in with Google again to verify this account, then set the password.",
     "auth/too-many-requests": "Too many attempts. Wait a moment and try again.",
     "auth/unauthorized-domain":
       "This site is not authorized in Firebase Authentication. Add its domain in Firebase Console.",
@@ -53,16 +67,28 @@ export function authMessage(error, fallback) {
   );
 }
 
+export function requiresPasswordSetup(user) {
+  const providers = new Set(
+    (user?.providerData ?? []).map((provider) => provider.providerId),
+  );
+  return providers.has("google.com") && !providers.has("password");
+}
+
+export function isAuthReadyForCloud(auth) {
+  return Boolean(auth?.ready && !auth.user?.passwordRequired);
+}
+
 function publicUser(user) {
-  return user
-    ? {
-        id: user.uid,
-        email: user.email ?? "",
-        providers: (user.providerData ?? []).map(
-          (provider) => provider.providerId,
-        ),
-      }
-    : null;
+  if (!user) return null;
+  const providers = (user.providerData ?? []).map(
+    (provider) => provider.providerId,
+  );
+  return {
+    id: user.uid,
+    email: user.email ?? "",
+    providers,
+    passwordRequired: requiresPasswordSetup(user),
+  };
 }
 
 function googleProvider() {
@@ -215,12 +241,75 @@ export function useFirebaseAuth() {
     }
   }, []);
 
-  const connectGoogle = useCallback(async () => {
+  const setPassword = useCallback(async (password, expectedUid) => {
     const user = firebaseAuth?.currentUser;
-    if (!user)
+    if (!user || (expectedUid && user.uid !== expectedUid))
       return {
         ok: false,
-        message: "Sign in to this game account before connecting Google.",
+        message:
+          "The signed-in account changed. Sign in with Google again before adding a password.",
+      };
+    if (!user.email)
+      return {
+        ok: false,
+        message: authMessage(
+          { code: "auth/missing-email" },
+          "A verified email is required to add a password.",
+        ),
+      };
+    if (typeof password !== "string" || password.length < 6)
+      return {
+        ok: false,
+        message: authMessage(
+          { code: "auth/weak-password" },
+          "Choose a stronger password with at least 6 characters.",
+        ),
+      };
+
+    if (!requiresPasswordSetup(user)) {
+      const currentUser = publicUser(user);
+      setState({ ready: true, user: currentUser, error: "" });
+      return { ok: true, user: currentUser };
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(user.email, password);
+      const result = await linkWithCredential(user, credential);
+      const linkedUser = publicUser(result.user);
+      const passwordUser = {
+        ...linkedUser,
+        providers: linkedUser.providers.includes("password")
+          ? linkedUser.providers
+          : [...linkedUser.providers, "password"],
+        passwordRequired: false,
+      };
+      setState({ ready: true, user: passwordUser, error: "" });
+      return { ok: true, user: passwordUser };
+    } catch (error) {
+      if (error?.code === "auth/provider-already-linked") {
+        try {
+          await user.reload();
+          const refreshedUser = publicUser(user);
+          if (!refreshedUser.passwordRequired) {
+            setState({ ready: true, user: refreshedUser, error: "" });
+            return { ok: true, user: refreshedUser };
+          }
+        } catch {}
+      }
+      return {
+        ok: false,
+        message: authMessage(error, "The password could not be added."),
+      };
+    }
+  }, []);
+
+  const connectGoogle = useCallback(async (expectedUid) => {
+    const user = firebaseAuth?.currentUser;
+    if (!user || (expectedUid && user.uid !== expectedUid))
+      return {
+        ok: false,
+        message:
+          "The signed-in account changed. Sign in to this game account before connecting Google.",
       };
     try {
       const credential = await linkWithPopup(user, googleProvider());
@@ -274,6 +363,7 @@ export function useFirebaseAuth() {
     signIn,
     signUp,
     signInWithGoogle,
+    setPassword,
     connectGoogle,
     signOut,
   };

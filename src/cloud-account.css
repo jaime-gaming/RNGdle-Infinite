@@ -152,7 +152,8 @@
   content: "";
 }
 .cloud-login-form > .primary-button,
-.cloud-profile-form > .primary-button {
+.cloud-profile-form > .primary-button,
+.cloud-password-form > .primary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -253,6 +254,45 @@
   color: var(--muted);
   font-size: 10.5px;
 }
+.cloud-password-setup {
+  margin-top: 14px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--warning) 5%, var(--surface));
+}
+.cloud-password-setup h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+}
+.cloud-password-setup > p:not(.profile-error) {
+  margin: 7px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.cloud-password-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 10px;
+}
+.cloud-password-form > label:first-child {
+  margin-top: 5px;
+}
+.cloud-password-hint {
+  margin: 7px 0 0;
+  color: var(--warning);
+  font-size: 11px;
+}
+.cloud-password-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 10px;
+}
 .cloud-retry {
   margin-top: 10px;
 }
@@ -346,7 +386,8 @@
   color: var(--text);
   font-size: 12px;
 }
-.cloud-choice-banner button {
+.cloud-choice-banner button,
+.auth-password-banner button {
   flex: 0 0 auto;
   padding: 6px 9px;
   border: 1px solid var(--border);
@@ -356,6 +397,21 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+.auth-password-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px auto;
+  padding: 10px 14px;
+  width: min(100% - 28px, 980px);
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+  color: var(--text);
+  font-size: 12px;
 }
 
 @media (max-width: 520px) {
@@ -389,7 +445,8 @@
     flex: 1 1 auto;
     width: 100%;
   }
-  .cloud-choice-banner {
+  .cloud-choice-banner,
+  .auth-password-banner {
     align-items: stretch;
     flex-direction: column;
   }

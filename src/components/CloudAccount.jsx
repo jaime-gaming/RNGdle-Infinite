@@ -107,17 +107,22 @@ export default function CloudAccount({
   const [mode, setMode] = useState("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const busy = useRef(false);
   const usernameReady = validUsername(username.trim().normalize("NFKC"));
+  const passwordMatches = password === confirmPassword;
   const cloudIsLoading = cloud.status === "loading" || !cloud.ready;
   const googleLinked = auth.user?.providers?.includes("google.com") ?? false;
-  const statusLabel = auth.configured
-    ? (STATUS_LABELS[cloud.status] ?? "Cloud save status unknown")
-    : STATUS_LABELS.unconfigured;
+  const passwordLinked = auth.user?.providers?.includes("password") ?? false;
+  const statusLabel = auth.user?.passwordRequired
+    ? "Password required"
+    : auth.configured
+      ? (STATUS_LABELS[cloud.status] ?? "Cloud save status unknown")
+      : STATUS_LABELS.unconfigured;
 
   async function submitAuth(event) {
     event.preventDefault();
@@ -156,13 +161,46 @@ export default function CloudAccount({
     setPending(true);
     setError("");
     setNotice("");
+    setPassword("");
+    setConfirmPassword("");
     try {
       const result = await auth.signInWithGoogle();
       if (!result.ok) setError(result.message);
       else if (result.redirecting) setNotice("Redirecting to Google…");
+      else if (result.user?.passwordRequired)
+        setNotice("Google sign-in complete. Add a password to finish setup.");
       else setNotice("Signed in with Google. Loading your cloud save…");
     } catch (failure) {
       setError(failure?.message || "Google sign-in failed. Please try again.");
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
+  }
+
+  async function submitPassword(event) {
+    event.preventDefault();
+    if (busy.current) return;
+    setError("");
+    setNotice("");
+    if (!passwordMatches) {
+      setError("The passwords do not match.");
+      return;
+    }
+    busy.current = true;
+    setPending(true);
+    try {
+      const result = await auth.setPassword(password, auth.user?.id);
+      if (!result.ok) setError(result.message);
+      else {
+        setPassword("");
+        setConfirmPassword("");
+        setNotice(
+          "Password added. You can now use Google or email and password to sign in.",
+        );
+      }
+    } catch (failure) {
+      setError(failure?.message || "The password could not be added.");
     } finally {
       busy.current = false;
       setPending(false);
@@ -176,7 +214,7 @@ export default function CloudAccount({
     setError("");
     setNotice("");
     try {
-      const result = await auth.connectGoogle();
+      const result = await auth.connectGoogle(auth.user?.id);
       if (!result.ok) setError(result.message);
       else if (result.redirecting)
         setNotice("Redirecting to Google to connect it…");
@@ -198,7 +236,11 @@ export default function CloudAccount({
     try {
       const result = await auth.signOut();
       if (!result.ok) setError(result.message);
-      else setNotice("Signed out. Your local browser save has been kept.");
+      else {
+        setPassword("");
+        setConfirmPassword("");
+        setNotice("Signed out. Your local browser save has been kept.");
+      }
     } catch (failure) {
       setError(failure?.message || "Sign-out failed. Please try again.");
     } finally {
@@ -303,175 +345,266 @@ export default function CloudAccount({
         <p className="cloud-account-note">Checking the current sign-in…</p>
       ) : auth.user ? (
         <>
-          {error && (
-            <p className="profile-error" role="alert">
-              {error}
-            </p>
-          )}
-          {notice && !cloud.conflict && (
-            <p className="cloud-account-note" role="status">
-              {notice}
-            </p>
-          )}
-          {cloud.notice && !cloud.conflict && cloud.notice !== notice && (
-            <p className="cloud-account-note" role="status">
-              {cloud.notice}
-            </p>
-          )}
-          {cloud.error && cloud.error !== error && (
-            <p className="profile-error" role="alert">
-              {cloud.error}
-            </p>
-          )}
-          {auth.error && (
-            <p className="profile-error" role="alert">
-              {auth.error}
-            </p>
-          )}
-          {cloud.conflict && (
+          {auth.user.passwordRequired ? (
             <div
-              className="cloud-save-conflict"
-              role="alert"
-              data-testid="cloud-save-conflict"
+              className="cloud-password-setup"
+              data-testid="google-password-setup"
             >
-              <div className="cloud-save-conflict-copy">
-                <h3>Choose which save to keep</h3>
-                <p>{cloud.conflict.message}</p>
-              </div>
-              <div className="cloud-save-options">
-                <SaveSummary
-                  title="This device"
-                  summary={cloud.conflict.local}
-                />
-                <SaveSummary title="Cloud" summary={cloud.conflict.cloud} />
-              </div>
-              <div className="cloud-save-choice-actions">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  data-testid="keep-device-save"
-                  onClick={() => chooseConflictSave("local")}
-                  disabled={
-                    pending ||
-                    cloud.resolving ||
-                    !onResolveCloudConflict ||
-                    cloud.conflict.canChooseLocal === false
-                  }
-                >
-                  {cloud.resolving ? "Applying…" : "Keep this device's save"}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  data-testid="keep-cloud-save"
-                  onClick={() => chooseConflictSave("cloud")}
-                  disabled={
-                    pending ||
-                    cloud.resolving ||
-                    !onResolveCloudConflict ||
-                    cloud.conflict.canChooseCloud === false
-                  }
-                >
-                  {cloud.resolving ? "Applying…" : "Use the cloud save"}
-                </button>
-              </div>
-              {!cloud.conflict.canChooseLocal &&
-                !cloud.conflict.canChooseCloud && (
-                  <button
-                    type="button"
-                    className="secondary-button cloud-retry"
-                    onClick={onRetryCloud}
-                    disabled={pending}
-                  >
-                    <RefreshCw size={14} aria-hidden="true" /> Refresh
-                    comparison
-                  </button>
-                )}
-              <p className="cloud-account-note">
-                The save you do not choose is copied to Cloud conflict recovery
-                in Settings before the selected save replaces it. You can sign
-                out to continue with the browser save without syncing.
-              </p>
-            </div>
-          )}
-          {cloud.status === "error" && (
-            <button
-              type="button"
-              className="secondary-button cloud-retry"
-              onClick={onRetryCloud}
-              disabled={pending}
-            >
-              <RefreshCw size={14} aria-hidden="true" /> Retry cloud sync
-            </button>
-          )}
-          {!profile && cloud.ready && (
-            <form className="cloud-profile-form" onSubmit={createProfile}>
+              {error && (
+                <p className="profile-error" role="alert">
+                  {error}
+                </p>
+              )}
+              {auth.error && (
+                <p className="profile-error" role="alert">
+                  {auth.error}
+                </p>
+              )}
+              {notice && (
+                <p className="cloud-account-note" role="status">
+                  {notice}
+                </p>
+              )}
+              <h3>Finish setting up your account</h3>
               <p>
-                This login has no game profile yet. Choose a display name to
-                start one. Any guest progress currently on this device will be
-                kept and saved with it.
+                Google signed you in
+                {auth.user.email ? ` as ${auth.user.email}` : ""}. Add a
+                password to keep this same account accessible with email and
+                password too. Your game and cloud save stay paused until you
+                finish.
               </p>
-              <label htmlFor="cloud-profile-username">Display name</label>
-              <div className="cloud-profile-input">
-                <UserRound size={15} aria-hidden="true" />
+              <form className="cloud-password-form" onSubmit={submitPassword}>
+                <label htmlFor="cloud-new-password">Create a password</label>
                 <input
-                  id="cloud-profile-username"
-                  autoComplete="nickname"
+                  id="cloud-new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={6}
                   required
-                  minLength={3}
-                  maxLength={20}
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder="3–20 letters, numbers, _ or -"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   disabled={pending}
                 />
-              </div>
-              <button
-                type="submit"
-                className="primary-button"
-                disabled={pending || !usernameReady || !cloud.ready}
-              >
-                {pending ? "Creating…" : "Create game profile"}
-              </button>
-            </form>
-          )}
-          <div className="cloud-account-actions">
-            {profile && (
-              <p>
-                Your game profile is <strong>{profile.username}</strong>.
-                {cloud.conflict
-                  ? " Resolve the save choice above before playing."
-                  : cloudIsLoading
-                    ? " Wait for the cloud save to finish loading before playing."
-                    : ""}
+                <label htmlFor="cloud-confirm-password">Confirm password</label>
+                <input
+                  id="cloud-confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={6}
+                  required
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  disabled={pending}
+                />
+                {confirmPassword && !passwordMatches && (
+                  <p className="cloud-password-hint" role="status">
+                    The passwords do not match yet.
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={pending || password.length < 6 || !passwordMatches}
+                >
+                  {pending ? "Setting password…" : "Set password & continue"}
+                </button>
+              </form>
+              <p className="cloud-account-footnote">
+                Firebase stores the password securely. The game never sees your
+                Google password.
               </p>
-            )}
-            {!googleLinked && (
               <button
                 type="button"
-                className="secondary-button google-connect-button"
-                onClick={connectGoogle}
+                className="secondary-button cloud-password-signout"
+                onClick={signOut}
                 disabled={pending}
               >
-                <GoogleMark />
-                {pending ? "Connecting…" : "Connect Google"}
+                <LogOut size={14} aria-hidden="true" />
+                {pending ? "Please wait…" : "Sign out instead"}
               </button>
-            )}
-            {googleLinked && (
-              <p className="cloud-provider-status" role="status">
-                <GoogleMark /> Google connected
-              </p>
-            )}
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={signOut}
-              disabled={pending}
-            >
-              <LogOut size={14} aria-hidden="true" />
-              {pending ? "Signing out…" : "Sign out"}
-            </button>
-          </div>
+            </div>
+          ) : (
+            <>
+              {error && (
+                <p className="profile-error" role="alert">
+                  {error}
+                </p>
+              )}
+              {notice && !cloud.conflict && (
+                <p className="cloud-account-note" role="status">
+                  {notice}
+                </p>
+              )}
+              {cloud.notice && !cloud.conflict && cloud.notice !== notice && (
+                <p className="cloud-account-note" role="status">
+                  {cloud.notice}
+                </p>
+              )}
+              {cloud.error && cloud.error !== error && (
+                <p className="profile-error" role="alert">
+                  {cloud.error}
+                </p>
+              )}
+              {auth.error && (
+                <p className="profile-error" role="alert">
+                  {auth.error}
+                </p>
+              )}
+              {cloud.conflict && (
+                <div
+                  className="cloud-save-conflict"
+                  role="alert"
+                  data-testid="cloud-save-conflict"
+                >
+                  <div className="cloud-save-conflict-copy">
+                    <h3>Choose which save to keep</h3>
+                    <p>{cloud.conflict.message}</p>
+                  </div>
+                  <div className="cloud-save-options">
+                    <SaveSummary
+                      title="This device"
+                      summary={cloud.conflict.local}
+                    />
+                    <SaveSummary title="Cloud" summary={cloud.conflict.cloud} />
+                  </div>
+                  <div className="cloud-save-choice-actions">
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      data-testid="keep-device-save"
+                      onClick={() => chooseConflictSave("local")}
+                      disabled={
+                        pending ||
+                        cloud.resolving ||
+                        !onResolveCloudConflict ||
+                        cloud.conflict.canChooseLocal === false
+                      }
+                    >
+                      {cloud.resolving
+                        ? "Applying…"
+                        : "Keep this device's save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      data-testid="keep-cloud-save"
+                      onClick={() => chooseConflictSave("cloud")}
+                      disabled={
+                        pending ||
+                        cloud.resolving ||
+                        !onResolveCloudConflict ||
+                        cloud.conflict.canChooseCloud === false
+                      }
+                    >
+                      {cloud.resolving ? "Applying…" : "Use the cloud save"}
+                    </button>
+                  </div>
+                  {!cloud.conflict.canChooseLocal &&
+                    !cloud.conflict.canChooseCloud && (
+                      <button
+                        type="button"
+                        className="secondary-button cloud-retry"
+                        onClick={onRetryCloud}
+                        disabled={pending}
+                      >
+                        <RefreshCw size={14} aria-hidden="true" /> Refresh
+                        comparison
+                      </button>
+                    )}
+                  <p className="cloud-account-note">
+                    The save you do not choose is copied to Cloud conflict
+                    recovery in Settings before the selected save replaces it.
+                    You can sign out to continue with the browser save without
+                    syncing.
+                  </p>
+                </div>
+              )}
+              {cloud.status === "error" && (
+                <button
+                  type="button"
+                  className="secondary-button cloud-retry"
+                  onClick={onRetryCloud}
+                  disabled={pending}
+                >
+                  <RefreshCw size={14} aria-hidden="true" /> Retry cloud sync
+                </button>
+              )}
+              {!profile && cloud.ready && (
+                <form className="cloud-profile-form" onSubmit={createProfile}>
+                  <p>
+                    This login has no game profile yet. Choose a display name to
+                    start one. Any guest progress currently on this device will
+                    be kept and saved with it.
+                  </p>
+                  <label htmlFor="cloud-profile-username">Display name</label>
+                  <div className="cloud-profile-input">
+                    <UserRound size={15} aria-hidden="true" />
+                    <input
+                      id="cloud-profile-username"
+                      autoComplete="nickname"
+                      required
+                      minLength={3}
+                      maxLength={20}
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
+                      placeholder="3–20 letters, numbers, _ or -"
+                      disabled={pending}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="primary-button"
+                    disabled={pending || !usernameReady || !cloud.ready}
+                  >
+                    {pending ? "Creating…" : "Create game profile"}
+                  </button>
+                </form>
+              )}
+              <div className="cloud-account-actions">
+                {profile && (
+                  <p>
+                    Your game profile is <strong>{profile.username}</strong>.
+                    {cloud.conflict
+                      ? " Resolve the save choice above before playing."
+                      : cloudIsLoading
+                        ? " Wait for the cloud save to finish loading before playing."
+                        : ""}
+                  </p>
+                )}
+                {!googleLinked && (
+                  <button
+                    type="button"
+                    className="secondary-button google-connect-button"
+                    onClick={connectGoogle}
+                    disabled={pending}
+                  >
+                    <GoogleMark />
+                    {pending ? "Connecting…" : "Connect Google"}
+                  </button>
+                )}
+                {googleLinked && (
+                  <p className="cloud-provider-status" role="status">
+                    <GoogleMark /> Google connected
+                  </p>
+                )}
+                {passwordLinked && (
+                  <p className="cloud-provider-status" role="status">
+                    <Check size={14} aria-hidden="true" /> Email + password
+                    ready
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={signOut}
+                  disabled={pending}
+                >
+                  <LogOut size={14} aria-hidden="true" />
+                  {pending ? "Signing out…" : "Sign out"}
+                </button>
+              </div>
+            </>
+          )}
         </>
       ) : (
         <>
@@ -553,6 +686,8 @@ export default function CloudAccount({
               disabled={pending}
               onClick={() => {
                 setMode(mode === "sign-up" ? "sign-in" : "sign-up");
+                setPassword("");
+                setConfirmPassword("");
                 setError("");
                 setNotice("");
               }}
@@ -561,10 +696,12 @@ export default function CloudAccount({
             </button>
           </p>
           <p className="cloud-account-footnote">
-            Google and email/password authentication are handled by Firebase.
-            The game never receives your Google password. Sign into an existing
-            email account and connect Google above if both methods should use
-            the same cloud save.
+            Google sign-in requires you to add a password before playing online;
+            then both methods open the same Firebase account and cloud save.
+            Email-and-password accounts can sign in directly. If this email
+            already has a password account, sign in with it first and connect
+            Google from that profile. The game never receives your Google
+            password.
           </p>
         </>
       )}

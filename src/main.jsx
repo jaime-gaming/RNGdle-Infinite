@@ -33,7 +33,7 @@ import { useProgress } from "./use-progress";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
 import CloudAccount from "./components/CloudAccount.jsx";
-import { useFirebaseAuth } from "./use-firebase-auth.js";
+import { isAuthReadyForCloud, useFirebaseAuth } from "./use-firebase-auth.js";
 import SharedProfile from "./components/SharedProfile.jsx";
 import { shareCardFromLocation } from "./profile-card.js";
 import { useOffline } from "./use-offline";
@@ -242,7 +242,7 @@ function App() {
     vault,
   } = useProgress({
     userId: auth.user?.id ?? null,
-    authReady: auth.ready,
+    authReady: isAuthReadyForCloud(auth),
     cloudEnabled: auth.configured,
   });
   useEffect(() => {
@@ -532,11 +532,15 @@ function App() {
   function openAuth() {
     navigate("profile");
   }
-  const offlineState = useOffline(session, dispatch, auth.ready && cloud.ready);
+  const offlineState = useOffline(
+    session,
+    dispatch,
+    isAuthReadyForCloud(auth) && cloud.ready,
+  );
   // One alert per finished cooldown, and never while a roll is still revealing.
   useReadyAlert(session.cooldownUntil, {
     blocked:
-      !auth.ready ||
+      !isAuthReadyForCloud(auth) ||
       !cloud.ready ||
       !!session.pendingRoll ||
       !!session.offline?.batch,
@@ -714,6 +718,17 @@ function App() {
           </button>
         </div>
       )}
+      {auth.user?.passwordRequired && (page !== "profile" || sharedCard) && (
+        <div className="auth-password-banner" role="alert">
+          <span>
+            Finish Google sign-in by adding a password. Game actions and cloud
+            sync stay paused until you do.
+          </span>
+          <button type="button" onClick={() => navigate("profile")}>
+            Set password
+          </button>
+        </div>
+      )}
       {progressWarning && (
         <div className="progress-warning" role="status">
           {progressWarning}
@@ -737,7 +752,7 @@ function App() {
             key={epoch}
             {...{ openBadge, notify, session }}
             active={
-              auth.ready &&
+              isAuthReadyForCloud(auth) &&
               cloud.ready &&
               page === "roll" &&
               !modal &&
@@ -894,14 +909,16 @@ function App() {
                     onRetryCloud={retryCloudLoad}
                     onResolveCloudConflict={resolveCloudConflict}
                   />
-                  <LocalProfile
-                    key={epoch}
-                    profile={session.profile}
-                    progress={session}
-                    onAction={dispatch}
-                    onContinue={() => navigate("roll")}
-                    cloudAccount={auth.user}
-                  />
+                  {!auth.user?.passwordRequired && (
+                    <LocalProfile
+                      key={epoch}
+                      profile={session.profile}
+                      progress={session}
+                      onAction={dispatch}
+                      onContinue={() => navigate("roll")}
+                      cloudAccount={auth.user}
+                    />
+                  )}
                 </>
               )}
             </div>

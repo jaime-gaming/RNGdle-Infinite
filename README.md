@@ -50,10 +50,12 @@ browser, and configured deployments can sync one save across devices.
 
 ## Online accounts and cloud saves
 
-An online account is optional. Local profiles continue to work in the browser;
-sign in with Google or email/password to keep a cloud save across devices. If
+An online account is optional. Local profiles continue to work in the browser.
+Sign in with Google or email/password to keep a cloud save across devices. After
+Google sign-in, set a password to finish account setup; it is linked to the same
+Firebase account, so you can use either Google or email/password next time. If
 you already use email/password, sign in first and choose **Connect Google** to
-link both methods to the same Firebase account and save.
+link both methods to the same account and save.
 
 If the Firebase account has no save yet, an unowned local save can be imported.
 For saves with the same game profile, a clearly dominant save can sync
