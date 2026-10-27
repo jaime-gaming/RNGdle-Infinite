@@ -194,10 +194,10 @@ function investedWealth(progress) {
 }
 
 /**
- * Compare the saved cycle generation. Each counter only resets when the
- * counter to its left advances: fresh start, rollback, prestige, then rebirth.
- * That lets us recognize a deliberate newer cycle without treating its reset
- * wallet/collection as evidence that an older snapshot is richer.
+ * Classify reset-generation order. The ordered counters identify whether two
+ * saves are from the same or different reset generations; this comparison is
+ * never sufficient to choose a winner. A generation conflict is shown to the
+ * player, who may keep either complete save.
  */
 export function compareSaveEpoch(local, cloud) {
   if (!local?.profile || !cloud?.profile) return "incomparable";
@@ -212,19 +212,16 @@ export function compareSaveEpoch(local, cloud) {
 }
 
 /**
- * Compare two same-profile saves as a partial order, not a guessed timestamp or
- * one weighted score. A later explicit reset/cycle generation wins first; in
- * the same generation, a save is richer only if it is at least as strong in
- * every measured dimension and ahead in one or more. Ties and mixed evidence
- * deliberately return cloud as the safe winner.
+ * Compare same-profile game progress as a partial order, not by file size or a
+ * guessed timestamp. A save is richer only when it is at least as strong in
+ * every measured progress dimension and ahead in one or more. Generation
+ * conflicts are reported separately so the player can choose safely.
  */
 export function compareSaveRichness(local, cloud) {
   if (!local?.profile && !cloud?.profile) return "equal";
   if (!local?.profile) return "cloud";
   if (!cloud?.profile) return "local";
   if (local.profile.id !== cloud.profile.id) return "incomparable";
-  const epoch = compareSaveEpoch(local, cloud);
-  if (epoch !== "same") return epoch;
 
   const localTally = allTimeTally(local);
   const cloudTally = allTimeTally(cloud);
@@ -258,30 +255,18 @@ export function compareSaveRichness(local, cloud) {
     "rollbacks",
     "freshStarts",
     "surplusBanked",
-    "cooldownUntil",
-    "receiptFloor",
   ])
     compareNumber(local[key], cloud[key]);
-  for (const key of ["rolls", "spent", "companions", "skills", "boosts"])
+  for (const key of ["rolls", "spent"])
     compareNumber(localTally[key], cloudTally[key]);
   compareNumber(localTally.best?.ep, cloudTally.best?.ep);
-  compareNumber(local.history?.length, cloud.history?.length);
 
-  for (const key of ["discovered", "owned", "pets", "skills", "bookmarks"])
+  for (const key of ["discovered", "owned", "pets", "skills"])
     compareSet(local[key], cloud[key]);
   compareSet(localTally.badges, cloudTally.badges);
   compareSet(localTally.discovered, cloudTally.discovered);
   compareSet(localTally.pets, cloudTally.pets);
   compareSet(local.rngweenLimited?.auras, cloud.rngweenLimited?.auras);
-  compareSet(Object.keys(local.events ?? {}), Object.keys(cloud.events ?? {}));
-  compareSet(
-    (local.loadouts ?? []).map((entry) => entry?.id),
-    (cloud.loadouts ?? []).map((entry) => entry?.id),
-  );
-  compareSet(
-    local.profile.avatar ? [local.profile.avatar] : [],
-    cloud.profile.avatar ? [cloud.profile.avatar] : [],
-  );
   compareFlag(
     local.rngweenLimited?.skinEarned,
     cloud.rngweenLimited?.skinEarned,
@@ -310,7 +295,84 @@ export function compareSaveRichness(local, cloud) {
   return localAhead ? "incomparable" : "equal";
 }
 
-export function chooseSaveWinner(local, cloud, { allowLocal = true } = {}) {
+export function summarizeSaveProgress(progress) {
+  const tally = allTimeTally(progress);
+  return {
+    username: String(progress?.profile?.username ?? "Player"),
+    balance: safeAmount(progress?.balance),
+    totalEarned: safeAmount(progress?.totalEarned),
+    cycleEarnedEP: safeAmount(progress?.cycleEarnedEP),
+    rebirths: safeAmount(progress?.rebirths),
+    prestiges: safeAmount(progress?.ultraRebirths),
+    rollbacks: safeAmount(progress?.rollbacks),
+    freshStarts: safeAmount(progress?.freshStarts),
+    surplusBanked: safeAmount(progress?.surplusBanked),
+    rolls: safeAmount(tally.rolls),
+    bestRollEP: safeAmount(tally.best?.ep),
+    badges: new Set([
+      ...uniqueIds(progress?.discovered),
+      ...uniqueIds(tally.discovered),
+    ]).size,
+    upgrades: uniqueIds(progress?.owned).size,
+    skills: uniqueIds(progress?.skills).size,
+    companions: uniqueIds(progress?.pets).size,
+    pendingRoll: Boolean(progress?.pendingRoll),
+  };
+}
+
+function choiceMessage(reason) {
+  if (reason === "generation")
+    return "These saves are from different reset generations. Review both and choose which one to keep; the other will be kept in Cloud conflict recovery.";
+  if (reason === "profile")
+    return "These saves belong to different game profiles, so their progress cannot be compared. Choose which complete save to keep; the other will be kept in Cloud conflict recovery.";
+  if (reason === "tie")
+    return "These saves have the same measured progress but are not identical. Choose which one to keep; the other will be kept in Cloud conflict recovery.";
+  if (reason === "changed")
+    return "A save changed while you were choosing. Review the updated versions and choose again; the other will be kept in Cloud conflict recovery.";
+  return "Each save is ahead in different progress measures. Choose which one to keep; the other will be kept in Cloud conflict recovery.";
+}
+
+function choiceRequiredOutcome({
+  localProgress,
+  cloudProgress,
+  localSource,
+  cloudExists,
+  cloudSaveData,
+  updatedAt,
+  repairs = [],
+  reason,
+  comparison,
+}) {
+  const message = choiceMessage(reason);
+  const canChooseLocal = Boolean(localProgress?.profile);
+  return {
+    progress: null,
+    winner: "choice",
+    comparison,
+    choiceRequired: true,
+    repairs,
+    updatedAt,
+    uploaded: false,
+    notice: message,
+    conflict: {
+      reason,
+      message,
+      canChooseLocal,
+      canChooseCloud: Boolean(cloudProgress?.profile),
+      local: summarizeSaveProgress(localProgress ?? {}),
+      cloud: summarizeSaveProgress(cloudProgress ?? {}),
+      expectedLocalSource: localSource,
+      expectedCloudExists: cloudExists,
+      expectedCloudSaveData: cloudSaveData,
+    },
+  };
+}
+
+export function chooseSaveWinner(
+  local,
+  cloud,
+  { allowLocal = true, decision = null } = {},
+) {
   if (!cloud) {
     return {
       progress: allowLocal ? local : null,
@@ -319,9 +381,51 @@ export function chooseSaveWinner(local, cloud, { allowLocal = true } = {}) {
     };
   }
   const comparison = compareSaveRichness(local, cloud);
-  if (allowLocal && comparison === "local")
-    return { progress: local, winner: "local", comparison };
-  return { progress: cloud, winner: "cloud", comparison };
+  if (!allowLocal || !local?.profile || !cloud?.profile)
+    return { progress: cloud, winner: "cloud", comparison };
+  // Different profile IDs are not mergeable, but the player may explicitly
+  // choose either complete save after reviewing the conflict.
+  if (
+    local.profile.id !== cloud.profile.id &&
+    decision !== "local" &&
+    decision !== "cloud"
+  )
+    return {
+      progress: null,
+      winner: "choice",
+      comparison: "incomparable",
+      choiceReason: "profile",
+    };
+  if (decision === "local" || decision === "cloud")
+    return {
+      progress: decision === "local" ? local : cloud,
+      winner: decision,
+      comparison,
+      selectedByUser: true,
+    };
+  const epoch = compareSaveEpoch(local, cloud);
+  if (epoch !== "same")
+    return {
+      progress: null,
+      winner: "choice",
+      comparison: "generation-conflict",
+      choiceReason: "generation",
+      epoch,
+    };
+  if (comparison === "local" || comparison === "cloud")
+    return {
+      progress: comparison === "local" ? local : cloud,
+      winner: comparison,
+      comparison,
+    };
+  if (comparison === "equal" && sameSave(local, cloud))
+    return { progress: cloud, winner: "cloud", comparison };
+  return {
+    progress: null,
+    winner: "choice",
+    comparison,
+    choiceReason: comparison === "equal" ? "tie" : "incomparable",
+  };
 }
 
 function sameSave(left, right) {
@@ -330,6 +434,24 @@ function sameSave(left, right) {
   } catch {
     return false;
   }
+}
+
+export function cloudConflictVersionChanged({
+  expectedCloudExists,
+  expectedCloudSaveData,
+  expectedLocalSource,
+  cloudExists,
+  cloudSaveData,
+  localSource,
+}) {
+  const cloudChanged =
+    typeof expectedCloudExists === "boolean" &&
+    (cloudExists !== expectedCloudExists ||
+      !sameSave(cloudSaveData ?? null, expectedCloudSaveData ?? null));
+  const localChanged =
+    typeof expectedLocalSource === "string" &&
+    localSource !== expectedLocalSource;
+  return cloudChanged || localChanged;
 }
 
 function writeRecoveryCopy(progress, storage, message, reason) {
@@ -403,15 +525,22 @@ export async function writeCloudSave(userId, progress) {
 }
 
 /**
- * Read and reconcile both snapshots in one Firestore transaction. A later
- * explicit cycle/reset generation wins; within one generation local replaces
- * cloud only by strict dominance. The displaced version is first written to
- * the browser's separate recovery slot; localStorage remains the live save.
+ * Read and reconcile both snapshots in one Firestore transaction. A clear
+ * same-generation progress winner is automatic; generation conflicts, ties,
+ * and incomparable progress wait for the player's choice. The displaced save
+ * is backed up before either the browser or Firestore copy is replaced.
  */
 export async function reconcileCloudSave(
   userId,
   localCandidate,
-  { allowLocal = true, storage } = {},
+  {
+    allowLocal = true,
+    storage,
+    decision = null,
+    expectedCloudExists,
+    expectedCloudSaveData,
+    expectedLocalSource,
+  } = {},
 ) {
   if (!userId) throw new Error("Sign in before reconciling a cloud save.");
   const database = requireFirestore();
@@ -442,9 +571,49 @@ export async function reconcileCloudSave(
     if (remoteProgress && !remoteProgress.profile)
       throw new Error("This cloud account has no saved game profile yet.");
 
+    const cloudExists = snapshot.exists();
+    const cloudSaveData = remoteEnvelope?.save_data ?? null;
+    const expectedWasProvided = typeof expectedCloudExists === "boolean";
+    const versionChanged = cloudConflictVersionChanged({
+      expectedCloudExists,
+      expectedCloudSaveData,
+      expectedLocalSource,
+      cloudExists,
+      cloudSaveData,
+      localSource,
+    });
+    if (expectedWasProvided && versionChanged) {
+      outcome = choiceRequiredOutcome({
+        localProgress,
+        cloudProgress: remoteProgress,
+        localSource,
+        cloudExists,
+        cloudSaveData,
+        updatedAt: timestampToIso(remoteEnvelope?.updated_at),
+        reason: "changed",
+        comparison: "changed",
+      });
+      return;
+    }
+
     const choice = chooseSaveWinner(localProgress, remoteProgress, {
       allowLocal,
+      decision,
     });
+    if (choice.winner === "choice") {
+      outcome = choiceRequiredOutcome({
+        localProgress,
+        cloudProgress: remoteProgress,
+        localSource,
+        cloudExists,
+        cloudSaveData,
+        updatedAt: timestampToIso(remoteEnvelope?.updated_at),
+        repairs: localParsed?.repairs ?? [],
+        reason: choice.choiceReason,
+        comparison: choice.comparison,
+      });
+      return;
+    }
     let selected = choice.progress;
     if (!selected?.profile && !remoteProgress?.profile) {
       outcome = {
@@ -470,7 +639,9 @@ export async function reconcileCloudSave(
         remoteRaw,
         storage,
         "The previous cloud save could not be kept in the local recovery copy. Nothing was overwritten.",
-        "Cloud save before a richer local save replaced it.",
+        choice.selectedByUser
+          ? "Cloud save displaced after the player chose this browser save."
+          : "Cloud save before a richer local save replaced it.",
       );
     } else if (
       choice.winner === "cloud" &&
@@ -481,7 +652,9 @@ export async function reconcileCloudSave(
         localProgress,
         storage,
         "This browser's save could not be kept in the local recovery copy. The cloud save was not applied locally.",
-        "Browser save displaced by an existing cloud save.",
+        choice.selectedByUser
+          ? "Browser save displaced after the player chose the cloud save."
+          : "Browser save displaced by an existing cloud save.",
       );
     }
 
@@ -499,26 +672,25 @@ export async function reconcileCloudSave(
     }
 
     let notice = "";
-    const epochWinner = compareSaveEpoch(localProgress, remoteProgress);
-    if (choice.winner === "local" && remoteProgress) {
+    if (
+      choice.selectedByUser &&
+      localProgress?.profile &&
+      remoteProgress?.profile
+    ) {
       notice =
-        epochWinner === "local"
-          ? "This browser is in a later reset/cycle, so that newer game state was synced. The displaced cloud save is in the local recovery copy."
-          : "This browser had strictly richer progress, so it was synced to the cloud. The displaced cloud save is in the local recovery copy.";
+        choice.winner === "local"
+          ? "You chose this device's save. The cloud save is in Cloud conflict recovery in Settings."
+          : "You chose the cloud save. The device save is in Cloud conflict recovery in Settings.";
+    } else if (choice.winner === "local" && remoteProgress) {
+      notice =
+        "This browser had clearly richer same-generation progress, so it was synced to the cloud. The displaced cloud save is in recovery.";
     } else if (
       choice.winner === "cloud" &&
       localProgress?.profile &&
       !sameSave(localProgress, remoteProgress)
     ) {
-      const reason =
-        epochWinner === "cloud"
-          ? "the cloud save is from a later reset/cycle"
-          : choice.comparison === "equal"
-            ? "the saves were tied"
-            : choice.comparison === "incomparable"
-              ? "the saves were incomparable"
-              : "the cloud save was richer";
-      notice = `The cloud save was kept because ${reason}. The displaced browser save is in the local recovery copy.`;
+      notice =
+        "The cloud save had clearly richer same-generation progress. The displaced browser save is in recovery.";
     } else if (choice.winner === "local" && !remoteProgress) {
       notice = "Your existing local save was imported to this cloud account.";
     }

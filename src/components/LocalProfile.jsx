@@ -346,8 +346,8 @@ export default function LocalProfile({
           </p>
           <div className="info-box">
             {cloudAccount
-              ? "Your game save is stored in this browser and in the configured cloud database for the signed-in account. A later reset/cycle generation wins; within one generation, cloud wins ties or incomparable progress. The displaced copy is kept under Cloud conflict recovery in Settings. Signing out keeps this browser copy; deleting the game save removes both copies."
-              : "This game profile is saved in this browser only. Sign into an online account above to sync it. If that account has no cloud save, an unowned local save is imported; otherwise a later reset/cycle generation wins, or local must clearly dominate the same profile within one generation. The cloud wins ties, incomparable or different-profile saves. The displaced copy is kept in Settings. Clearing site data removes this browser copy."}
+              ? "Your game save is stored in this browser and in the configured cloud database for the signed-in account. Different reset generations, same-generation ties or mixed progress, and different profile IDs require your choice; only clear same-generation progress dominance syncs automatically. Different profiles are never merged, and the displaced copy is kept under Cloud conflict recovery in Settings. Signing out keeps this browser copy; deleting the game save removes both copies."
+              : "This game profile is saved in this browser only. Sign into an online account above to sync it. If that account has no cloud save, an unowned local save is imported. When both saves exist, different reset generations and same-generation ties or mixed progress require your choice; clear same-generation progress dominance may sync automatically. Different game profiles are not merged; if both copies are eligible, choose one complete save. A save owned by another Firebase account is never imported. The displaced copy is kept in Settings. Clearing site data removes this browser copy."}
           </div>
           <div className="profile-actions">
             <button className="primary-button" onClick={onContinue}>
@@ -499,9 +499,10 @@ export default function LocalProfile({
           <p className="signup-footnote">
             Already have an online account? Sign in using the cloud account
             panel above. If there is no cloud save, an unowned browser save can
-            be imported. Otherwise a later reset/cycle generation wins; within
-            one generation, local must clearly dominate the same profile. The
-            cloud wins ties and incomparable saves.
+            be imported. Otherwise, different reset generations, same-generation
+            ties or mixed progress, and different profile IDs require your
+            choice. Only a clearly dominant same-generation save can sync
+            automatically.
           </p>
         </form>
       )}

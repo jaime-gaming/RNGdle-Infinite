@@ -42,16 +42,21 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   in `emptyProgress()`, defensive parsing, and a malformed-save test.
 - **Cloud save precedence is deliberate.** On first Firebase sign-in, import
   an unowned local save only when that user's Firestore document is missing.
-  When both versions exist for the same profile, the ordered reset/cycle
-  counters (fresh start, rollback, prestige, rebirth) first identify a later
-  game generation. Within one generation, local may replace cloud only if it
-  dominates every measured progress dimension and is ahead in at least one;
-  cloud wins ties, mixed/incomparable progress, and different profile IDs.
-  Never copy a save marked as belonging to another auth user. Reconcile in a
-  Firestore transaction and write the displaced snapshot to the separate local
-  cloud-recovery slot before replacing either copy. The rolling local save and
-  vault remain active. Signing out keeps local progress; deleting the game save
-  removes its Firestore document, not the Firebase auth identity.
+  Never copy a save marked as belonging to another auth user. For two saves
+  with the same game profile, a different reset generation (fresh start,
+  rollback, prestige or rebirth) always requires the player's choice; generation
+  order never chooses a winner. Within one generation, automatically use a save
+  only when it clearly dominates on every measured game-progress dimension and
+  is ahead in at least one. Ties and mixed/incomparable progress require an
+  explicit player choice. Compare durable game progress, not file size, log
+  length, timestamps, preferences, or auxiliary records. Different game
+  profile IDs are never merged; when both eligible copies differ, show them as
+  incomparable and let the player choose one complete save. Reconcile in a
+  Firestore transaction and persist the displaced snapshot to the separate
+  local cloud-recovery slot before
+  replacing either copy. The rolling local save and vault remain active. Signing
+  out keeps local progress; deleting the game save removes its Firestore
+  document, not the Firebase auth identity.
 - **Link sign-in providers, don't fork saves.** Google and email/password use
   Firebase Auth. If an email account already exists, the player signs in with
   that method and links Google from the same authenticated account; do not
@@ -110,10 +115,13 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   Never replace a conflicted version unless its recovery copy was persisted.
 - The app starts with Firebase as a new provider; it does not migrate accounts
   or saves from the archived Supabase project. Never merge different game
-  profile IDs automatically. For the same profile, use the componentwise
-  progress comparison (not a timestamp or a single balance) and let cloud win
-  ties/incomparable snapshots. Unowned local progress may be imported when the
-  cloud document is missing.
+  profile IDs; if both candidates are eligible, surface the mismatch and let
+  the player choose one complete save. For the same profile, compare durable
+  game progress—not file size, timestamps, history length or preferences.
+  Different reset generations and same-generation ties/mixed progress require
+  the player's choice; only clear same-generation dominance can resolve
+  automatically. Unowned local progress may be imported when the cloud document
+  is missing, and a save owned by another auth user is never a candidate.
 
 ## Source map
 

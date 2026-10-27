@@ -11,7 +11,7 @@ export const CHANGELOG = [
     body: [
       "RNGween is retired: event play and screens are gone; legacy cosmetics stay wearable, and old history remains readable.",
       "sign in with Google or email/password using Firebase; link Google to an existing account. Local play remains; device links are removed.",
-      "cloud sync favors newer reset generations; otherwise local must dominate. Ties or incomparable saves keep cloud; recovery is in Settings.",
+      "reset-generation conflicts, same-generation ties/mixed progress and different profile IDs prompt a choice; only clear same-generation dominance syncs automatically. The displaced save stays recoverable in Settings.",
     ],
   },
   {

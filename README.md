@@ -56,21 +56,23 @@ you already use email/password, sign in first and choose **Connect Google** to
 link both methods to the same Firebase account and save.
 
 If the Firebase account has no save yet, an unowned local save can be imported.
-When both saves exist, they are compared only for the same game profile. First,
-explicitly later reset/cycle counters (fresh start, rollback, prestige, then
-rebirth) identify the newer game generation, so an old cloud copy cannot undo
-a deliberate reset. Within the same generation, local replaces cloud only when
-it is strictly ahead on every measured progress axis and ahead on at least one;
-ties, mixed/incomparable progress, and different profile IDs leave the cloud
-save in place. The comparison considers wallet plus the listed value of owned
-products, lifetime roll/history totals, achievements, owned upgrades,
-companions, skills and best roll rather than trusting one balance or timestamp.
-A save owned by a different Firebase account is never imported. Local progress
-continues to be saved in the browser, and the displaced version is kept
-separately under **Settings → Cloud conflict recovery**. Signing out keeps the
-local browser copy. Deleting the game save
-removes that Firebase user's Firestore document, but not the Firebase sign-in
-itself.
+For saves with the same game profile, a clearly dominant save can sync
+automatically only when both saves are from the same reset generation. If the
+generations differ, the game explains the reset history and asks you which save
+to keep—neither the later generation nor the
+cloud copy wins automatically. Within one generation, a clear lead in measured
+game progress can decide the sync; a tie or mixed/incomparable progress always
+asks you to choose. The comparison uses gameplay progress such as earned EP,
+rebirth/prestige/reset milestones, rolls, achievements, owned upgrades, skills,
+companions and best roll—not file size, timestamps, history length or profile
+preferences. Different game profiles cannot be compared or merged; when both
+copies are eligible but have different profile IDs, review them as incomparable
+and choose one complete save to keep. A save owned by a different Firebase
+account is never imported. Local progress continues to be saved in the browser,
+and before an overwrite the displaced version is kept separately under
+**Settings → Cloud conflict recovery**. Signing out keeps the
+local browser copy. Deleting the game save removes that Firebase user's
+Firestore document, but not the Firebase sign-in itself.
 
 ### Firebase setup
 

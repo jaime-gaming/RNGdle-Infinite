@@ -238,6 +238,7 @@ function App() {
     epoch,
     cloud,
     retryCloudLoad,
+    resolveCloudConflict,
     vault,
   } = useProgress({
     userId: auth.user?.id ?? null,
@@ -679,12 +680,19 @@ function App() {
                       ? "connected"
                       : cloud.status === "saving"
                         ? "pending"
-                        : cloud.status === "error"
+                        : cloud.status === "error" ||
+                            cloud.status === "needs-choice"
                           ? "error"
                           : ""
                     : ""
                 }
-                syncLabel={auth.user ? `Cloud save: ${cloud.status}` : ""}
+                syncLabel={
+                  auth.user
+                    ? cloud.status === "needs-choice"
+                      ? "Cloud save: choose which version"
+                      : `Cloud save: ${cloud.status}`
+                    : ""
+                }
               />
             ) : (
               <LogIn size={15} />
@@ -695,6 +703,17 @@ function App() {
           </button>
         </div>
       </header>
+      {auth.user && cloud.status === "needs-choice" && page !== "profile" && (
+        <div className="cloud-choice-banner" role="alert">
+          <span>
+            Local and cloud saves need your choice before online play can
+            continue.
+          </span>
+          <button type="button" onClick={() => navigate("profile")}>
+            Review saves
+          </button>
+        </div>
+      )}
       {progressWarning && (
         <div className="progress-warning" role="status">
           {progressWarning}
@@ -873,6 +892,7 @@ function App() {
                     profile={session.profile}
                     onAction={dispatch}
                     onRetryCloud={retryCloudLoad}
+                    onResolveCloudConflict={resolveCloudConflict}
                   />
                   <LocalProfile
                     key={epoch}

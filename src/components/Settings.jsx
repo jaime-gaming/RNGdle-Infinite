@@ -345,11 +345,12 @@ export default function Settings({
         </h2>
         <p className="settings-group-note">
           Sign in and manage Google or email/password from your profile. Local
-          progress remains saved in this browser. A later reset/cycle generation
-          wins; within one generation, local replaces cloud only when its
-          measured progress clearly dominates. Ties and incomparable saves keep
-          cloud, and the displaced version is kept under Cloud conflict recovery
-          below.
+          progress remains saved in this browser. Different reset generations
+          always require your choice. Within one generation, only clear
+          dominance in measured game progress syncs automatically; ties and
+          mixed/incomparable progress also require your choice. Different game
+          profiles are not merged; eligible copies are a whole-save choice. A
+          displaced version is kept under Cloud conflict recovery below.
         </p>
         <button
           type="button"

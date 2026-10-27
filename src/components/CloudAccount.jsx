@@ -46,11 +46,55 @@ const STATUS_LABELS = {
   loading: "Loading cloud save…",
   saving: "Syncing progress…",
   synced: "Cloud save is up to date",
+  "needs-choice": "Choose a save",
   empty: "No cloud save yet",
   error: "Cloud sync needs attention",
   "signed-out": "Not signed in",
   unconfigured: "Cloud login is not configured",
 };
+
+function SaveSummary({ title, summary }) {
+  const number = (value) => Number(value ?? 0).toLocaleString("en-US");
+  const stats = [
+    ["Rebirths", summary?.rebirths],
+    ["Prestige", summary?.prestiges],
+    ["Rollbacks", summary?.rollbacks],
+    ["Fresh starts", summary?.freshStarts],
+    ["EP earned", summary?.totalEarned],
+    ["Cycle EP", summary?.cycleEarnedEP],
+    ["Wallet", summary?.balance],
+    ["Surplus", summary?.surplusBanked, "percent"],
+    ["Rolls", summary?.rolls],
+    ["Best roll EP", summary?.bestRollEP],
+    ["Badges", summary?.badges],
+    ["Upgrades", summary?.upgrades],
+    ["Skills", summary?.skills],
+    ["Companions", summary?.companions],
+    ["Roll in progress", summary?.pendingRoll, "boolean"],
+  ];
+  return (
+    <section className="cloud-save-option">
+      <h4>{title}</h4>
+      <p className="cloud-save-option-name">{summary?.username ?? "Player"}</p>
+      <dl className="cloud-save-summary">
+        {stats.map(([label, value, format]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>
+              {format === "boolean"
+                ? value
+                  ? "Yes"
+                  : "No"
+                : format === "percent"
+                  ? `+${number(value)}%`
+                  : number(value)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
 
 export default function CloudAccount({
   auth,
@@ -58,6 +102,7 @@ export default function CloudAccount({
   profile,
   onAction,
   onRetryCloud,
+  onResolveCloudConflict,
 }) {
   const [mode, setMode] = useState("sign-in");
   const [email, setEmail] = useState("");
@@ -162,6 +207,33 @@ export default function CloudAccount({
     }
   }
 
+  async function chooseConflictSave(decision) {
+    if (busy.current || !onResolveCloudConflict) return;
+    busy.current = true;
+    setPending(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await onResolveCloudConflict(decision);
+      if (result?.needsChoice)
+        setNotice(
+          result.message || "Review the updated saves and choose again.",
+        );
+      else if (!result?.ok)
+        setError(result?.message || "The save choice could not be applied.");
+      else
+        setNotice(
+          result.notice ||
+            "Your save choice was applied and the other copy was preserved.",
+        );
+    } catch (failure) {
+      setError(failure?.message || "The save choice could not be applied.");
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
+  }
+
   async function createProfile(event) {
     event.preventDefault();
     if (busy.current || !usernameReady || !cloud.ready) return;
@@ -236,17 +308,17 @@ export default function CloudAccount({
               {error}
             </p>
           )}
-          {notice && (
+          {notice && !cloud.conflict && (
             <p className="cloud-account-note" role="status">
               {notice}
             </p>
           )}
-          {cloud.notice && (
+          {cloud.notice && !cloud.conflict && cloud.notice !== notice && (
             <p className="cloud-account-note" role="status">
               {cloud.notice}
             </p>
           )}
-          {cloud.error && (
+          {cloud.error && cloud.error !== error && (
             <p className="profile-error" role="alert">
               {cloud.error}
             </p>
@@ -255,6 +327,72 @@ export default function CloudAccount({
             <p className="profile-error" role="alert">
               {auth.error}
             </p>
+          )}
+          {cloud.conflict && (
+            <div
+              className="cloud-save-conflict"
+              role="alert"
+              data-testid="cloud-save-conflict"
+            >
+              <div className="cloud-save-conflict-copy">
+                <h3>Choose which save to keep</h3>
+                <p>{cloud.conflict.message}</p>
+              </div>
+              <div className="cloud-save-options">
+                <SaveSummary
+                  title="This device"
+                  summary={cloud.conflict.local}
+                />
+                <SaveSummary title="Cloud" summary={cloud.conflict.cloud} />
+              </div>
+              <div className="cloud-save-choice-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  data-testid="keep-device-save"
+                  onClick={() => chooseConflictSave("local")}
+                  disabled={
+                    pending ||
+                    cloud.resolving ||
+                    !onResolveCloudConflict ||
+                    cloud.conflict.canChooseLocal === false
+                  }
+                >
+                  {cloud.resolving ? "Applying…" : "Keep this device's save"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  data-testid="keep-cloud-save"
+                  onClick={() => chooseConflictSave("cloud")}
+                  disabled={
+                    pending ||
+                    cloud.resolving ||
+                    !onResolveCloudConflict ||
+                    cloud.conflict.canChooseCloud === false
+                  }
+                >
+                  {cloud.resolving ? "Applying…" : "Use the cloud save"}
+                </button>
+              </div>
+              {!cloud.conflict.canChooseLocal &&
+                !cloud.conflict.canChooseCloud && (
+                  <button
+                    type="button"
+                    className="secondary-button cloud-retry"
+                    onClick={onRetryCloud}
+                    disabled={pending}
+                  >
+                    <RefreshCw size={14} aria-hidden="true" /> Refresh
+                    comparison
+                  </button>
+                )}
+              <p className="cloud-account-note">
+                The save you do not choose is copied to Cloud conflict recovery
+                in Settings before the selected save replaces it. You can sign
+                out to continue with the browser save without syncing.
+              </p>
+            </div>
           )}
           {cloud.status === "error" && (
             <button
@@ -301,9 +439,11 @@ export default function CloudAccount({
             {profile && (
               <p>
                 Your game profile is <strong>{profile.username}</strong>.
-                {cloudIsLoading
-                  ? " Wait for the cloud save to finish loading before playing."
-                  : ""}
+                {cloud.conflict
+                  ? " Resolve the save choice above before playing."
+                  : cloudIsLoading
+                    ? " Wait for the cloud save to finish loading before playing."
+                    : ""}
               </p>
             )}
             {!googleLinked && (
@@ -337,7 +477,7 @@ export default function CloudAccount({
         <>
           <p className="cloud-account-note">
             {profile
-              ? "Local saves stay on this device. An unowned save or this account’s own save is compared with the cloud. A later reset/cycle generation wins; within one generation, local uploads only when it clearly dominates. Cloud wins ties, mixed or different-profile saves. The displaced copy is in Settings. Saves owned by another account are never imported."
+              ? "Local saves stay on this device. An unowned save or this account’s own save is compared with the cloud. Different reset generations always need your choice. Within one generation, only clear dominance in measured game progress is automatic; ties and mixed progress also need your choice. Different game profiles are never merged; when both copies are eligible, choose one complete save. Saves owned by another Firebase account are never imported. Any displaced save is kept in Settings → Cloud conflict recovery."
               : "Your game can be played without an account. Sign in with Google or email and password to keep a cloud save across devices."}
           </p>
           {error && (

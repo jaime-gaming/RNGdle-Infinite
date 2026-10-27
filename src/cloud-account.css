@@ -256,6 +256,107 @@
 .cloud-retry {
   margin-top: 10px;
 }
+.cloud-save-conflict {
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+.cloud-save-conflict-copy h3,
+.cloud-save-option h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+.cloud-save-conflict-copy p,
+.cloud-save-option-name {
+  margin: 5px 0 0;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.cloud-save-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 11px;
+}
+.cloud-save-option {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.cloud-save-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 10px 0 0;
+}
+.cloud-save-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  color: var(--secondary);
+  font-size: 10px;
+}
+.cloud-save-summary dt,
+.cloud-save-summary dd {
+  margin: 0;
+}
+.cloud-save-summary dd {
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-save-choice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.cloud-save-choice-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 180px;
+}
+.cloud-save-choice-actions .secondary-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.cloud-save-conflict > .cloud-account-note {
+  margin-top: 9px;
+}
+.cloud-choice-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px auto;
+  padding: 10px 14px;
+  width: min(100% - 28px, 980px);
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  color: var(--text);
+  font-size: 12px;
+}
+.cloud-choice-banner button {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
 
 @media (max-width: 520px) {
   .cloud-account {
@@ -276,6 +377,20 @@
   }
   .cloud-account-actions {
     align-items: flex-start;
+    flex-direction: column;
+  }
+  .cloud-save-options {
+    grid-template-columns: 1fr;
+  }
+  .cloud-save-choice-actions {
+    flex-direction: column;
+  }
+  .cloud-save-choice-actions .secondary-button {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+  .cloud-choice-banner {
+    align-items: stretch;
     flex-direction: column;
   }
 }

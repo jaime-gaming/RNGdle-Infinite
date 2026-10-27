@@ -2,6 +2,7 @@ import { expect, test } from "./helpers/clock.js";
 import {
   chooseSaveWinner,
   clearCloudDirty,
+  cloudConflictVersionChanged,
   compareSaveEpoch,
   compareSaveRichness,
   decodeCloudSave,
@@ -10,6 +11,7 @@ import {
   markCloudDirty,
   readCloudDirtyOwner,
   selectLocalSaveForCloudUser,
+  summarizeSaveProgress,
 } from "../src/cloud-save.js";
 import { applyProgress, emptyProgress } from "../src/progress.js";
 
@@ -54,9 +56,13 @@ test("same-profile local progress wins only by strict dominance", () => {
   });
 });
 
-test("ties, mixed dimensions and different profiles leave cloud in place", () => {
+test("ties and mixed same-generation progress require a player choice", () => {
   const cloud = progress({ balance: 100, totalEarned: 200 });
-  const tie = progress({ balance: 100, totalEarned: 200 });
+  const tie = progress({
+    profile: { id: "profile-a", username: "another-name", createdAt: 1 },
+    balance: 100,
+    totalEarned: 200,
+  });
   const incomparable = progress({ balance: 150, totalEarned: 150 });
   const anotherProfile = progress({
     profile: { id: "profile-b", username: "player-b", createdAt: 2 },
@@ -64,14 +70,143 @@ test("ties, mixed dimensions and different profiles leave cloud in place", () =>
     totalEarned: 1000,
   });
 
-  expect(chooseSaveWinner(tie, cloud).winner).toBe("cloud");
+  expect(chooseSaveWinner(tie, cloud)).toMatchObject({
+    winner: "choice",
+    choiceReason: "tie",
+  });
   expect(compareSaveRichness(incomparable, cloud)).toBe("incomparable");
-  expect(chooseSaveWinner(incomparable, cloud).winner).toBe("cloud");
+  expect(chooseSaveWinner(incomparable, cloud)).toMatchObject({
+    winner: "choice",
+    choiceReason: "incomparable",
+  });
   expect(compareSaveRichness(anotherProfile, cloud)).toBe("incomparable");
-  expect(chooseSaveWinner(anotherProfile, cloud).winner).toBe("cloud");
+  expect(chooseSaveWinner(anotherProfile, cloud)).toMatchObject({
+    winner: "choice",
+    choiceReason: "profile",
+  });
+  expect(
+    chooseSaveWinner(anotherProfile, cloud, { decision: "local" }),
+  ).toMatchObject({ winner: "local", selectedByUser: true });
+  expect(
+    chooseSaveWinner(anotherProfile, cloud, { decision: "cloud" }),
+  ).toMatchObject({ winner: "cloud", selectedByUser: true });
 });
 
-test("a later explicit cycle/reset epoch beats stale run-bound progress", () => {
+test("a player can explicitly keep either save in a same-generation conflict", () => {
+  const cloud = progress({ balance: 100, totalEarned: 200 });
+  const incomparable = progress({ balance: 150, totalEarned: 150 });
+
+  expect(
+    chooseSaveWinner(incomparable, cloud, { decision: "local" }),
+  ).toMatchObject({
+    winner: "local",
+    selectedByUser: true,
+  });
+  expect(
+    chooseSaveWinner(incomparable, cloud, { decision: "cloud" }),
+  ).toMatchObject({
+    winner: "cloud",
+    selectedByUser: true,
+  });
+});
+
+test("a conflict choice is rejected when either compared save has changed", () => {
+  const expected = {
+    expectedCloudExists: true,
+    expectedCloudSaveData: "cloud-v1",
+    expectedLocalSource: "local-v1",
+  };
+
+  expect(
+    cloudConflictVersionChanged({
+      ...expected,
+      cloudExists: true,
+      cloudSaveData: "cloud-v1",
+      localSource: "local-v1",
+    }),
+  ).toBe(false);
+  expect(
+    cloudConflictVersionChanged({
+      ...expected,
+      cloudExists: true,
+      cloudSaveData: "cloud-v1",
+      localSource: "local-v2",
+    }),
+  ).toBe(true);
+  expect(
+    cloudConflictVersionChanged({
+      ...expected,
+      cloudExists: true,
+      cloudSaveData: "cloud-v2",
+      localSource: "local-v1",
+    }),
+  ).toBe(true);
+  expect(
+    cloudConflictVersionChanged({
+      ...expected,
+      cloudExists: false,
+      cloudSaveData: null,
+      localSource: "local-v1",
+    }),
+  ).toBe(true);
+});
+
+test("settings and log volume do not count as game progress", () => {
+  const cloud = progress();
+  const local = progress({
+    profile: { ...cloud.profile, avatar: "avatar-mark" },
+    cooldownUntil: 600_000,
+    receiptFloor: 500_000,
+    history: Array.from({ length: 40 }, (_, index) => ({
+      id: `note-${index}`,
+      type: "note",
+      at: index + 1,
+    })),
+    events: { rngween: { at: 10 } },
+    bookmarks: ["roll-1"],
+    loadouts: [{ id: "saved-rack", skills: [] }],
+  });
+
+  expect(compareSaveRichness(local, cloud)).toBe("equal");
+  expect(chooseSaveWinner(local, cloud)).toMatchObject({
+    winner: "choice",
+    choiceReason: "tie",
+  });
+});
+
+test("the comparison summary reports durable progress rather than save size", () => {
+  const saved = progress({
+    balance: 500,
+    totalEarned: 12_000,
+    cycleEarnedEP: 2_500,
+    rebirths: 4,
+    ultraRebirths: 1,
+    rollbacks: 2,
+    freshStarts: 1,
+    surplusBanked: 5,
+    owned: ["quickwind-1", "clockwork-1"],
+    skills: ["lucky-charm"],
+    pets: ["cat"],
+    history: [{ id: "roll-a", type: "roll", ep: 8_000, at: 2 }],
+  });
+  expect(summarizeSaveProgress(saved)).toMatchObject({
+    balance: 500,
+    totalEarned: 12_000,
+    cycleEarnedEP: 2_500,
+    rebirths: 4,
+    prestiges: 1,
+    rollbacks: 2,
+    freshStarts: 1,
+    surplusBanked: 5,
+    rolls: 1,
+    bestRollEP: 8_000,
+    upgrades: 2,
+    skills: 1,
+    companions: 1,
+  });
+});
+
+test("a later reset generation requires a choice instead of winning by itself", () => {
   const olderCloud = progress({
     balance: 9_000_000,
     totalEarned: 9_000_000,
@@ -88,11 +223,30 @@ test("a later explicit cycle/reset epoch beats stale run-bound progress", () => 
   });
 
   expect(compareSaveEpoch(newerLocal, olderCloud)).toBe("local");
-  expect(compareSaveRichness(newerLocal, olderCloud)).toBe("local");
-  expect(chooseSaveWinner(newerLocal, olderCloud).winner).toBe("local");
+  expect(chooseSaveWinner(newerLocal, olderCloud)).toMatchObject({
+    winner: "choice",
+    choiceReason: "generation",
+  });
+  expect(
+    chooseSaveWinner(newerLocal, olderCloud, { decision: "local" }),
+  ).toMatchObject({ winner: "local", selectedByUser: true });
+  expect(
+    chooseSaveWinner(newerLocal, olderCloud, { decision: "cloud" }),
+  ).toMatchObject({ winner: "cloud", selectedByUser: true });
 });
 
-test("a rollback epoch takes precedence over an earlier prestige/rebirth ladder", () => {
+test("rebirth progress is compared inside a later prestige generation", () => {
+  const prestigeOnly = progress({ ultraRebirths: 1, rebirths: 0 });
+  const rebirthAndPrestige = progress({ ultraRebirths: 1, rebirths: 4 });
+
+  expect(compareSaveEpoch(rebirthAndPrestige, prestigeOnly)).toBe("local");
+  expect(chooseSaveWinner(rebirthAndPrestige, prestigeOnly)).toMatchObject({
+    winner: "choice",
+    choiceReason: "generation",
+  });
+});
+
+test("a rollback generation also requires an explicit choice", () => {
   const earlier = progress({ rollbacks: 0, ultraRebirths: 3, rebirths: 6 });
   const laterRollback = progress({
     rollbacks: 1,
@@ -100,10 +254,13 @@ test("a rollback epoch takes precedence over an earlier prestige/rebirth ladder"
     rebirths: 0,
   });
   expect(compareSaveEpoch(laterRollback, earlier)).toBe("local");
-  expect(compareSaveRichness(laterRollback, earlier)).toBe("local");
+  expect(chooseSaveWinner(laterRollback, earlier)).toMatchObject({
+    winner: "choice",
+    choiceReason: "generation",
+  });
 });
 
-test("an actual fresh-start reducer result is not rolled back by its old cloud era", () => {
+test("an actual fresh-start result triggers a choice against its older cloud era", () => {
   const oldEra = progress({
     ultraRebirths: 3,
     rebirths: 6,
@@ -119,7 +276,12 @@ test("an actual fresh-start reducer result is not rolled back by its old cloud e
 
   expect(freshStart.freshStarts).toBe(1);
   expect(freshStart.balance).toBe(0);
-  expect(compareSaveRichness(freshStart, oldEra)).toBe("local");
+  expect(compareSaveEpoch(freshStart, oldEra)).toBe("local");
+  expect(compareSaveRichness(freshStart, oldEra)).toBe("incomparable");
+  expect(chooseSaveWinner(freshStart, oldEra)).toMatchObject({
+    winner: "choice",
+    choiceReason: "generation",
+  });
 });
 
 test("an unowned local save remains eligible for first-sign-in import", () => {

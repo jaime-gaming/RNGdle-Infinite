@@ -75,6 +75,14 @@ function parseStoredSave(raw) {
   if (!raw) return { progress: emptyProgress(), repairs: [] };
   return parseAndRepairProgress(raw);
 }
+function readLocalCandidateForCloudUser(userId) {
+  const owner = readCloudOwner();
+  const raw =
+    owner && owner !== userId ? readCachedSaveForUser(userId) : readLocalSave();
+  return raw
+    ? parseStoredSave(raw)
+    : { progress: emptyProgress(), repairs: [] };
+}
 function writeLocalSave(progress) {
   try {
     const raw = JSON.stringify(progress);
@@ -168,7 +176,8 @@ export function useProgress({
     queue = useRef(Promise.resolve()),
     cloudGeneration = useRef(0),
     cloudQueue = useRef(Promise.resolve()),
-    cloudWriteVersion = useRef(0);
+    cloudWriteVersion = useRef(0),
+    pendingCloudConflict = useRef(null);
   const cloudRef = useRef(cloud);
   cloudRef.current = cloud;
   const authRef = useRef({ userId, authReady, cloudEnabled });
@@ -199,6 +208,92 @@ export function useProgress({
     healthy.current = true;
     unsaved.current = new Set();
     setWarning("");
+  }
+  function showCloudConflict(result, activeUserId, cacheWarning = "") {
+    const conflict = result.conflict;
+    if (!conflict) return false;
+    pendingCloudConflict.current = {
+      userId: activeUserId,
+      localCandidate: conflict.expectedLocalSource,
+      expectedCloudExists: conflict.expectedCloudExists,
+      expectedCloudSaveData: conflict.expectedCloudSaveData,
+      cacheWarning,
+    };
+    cloudGate.current = { userId: activeUserId, ready: false };
+    updateCloud({
+      status: "needs-choice",
+      ready: false,
+      userId: activeUserId,
+      updatedAt: result.updatedAt ?? null,
+      error: "",
+      notice: result.notice ?? conflict.message,
+      conflict: {
+        reason: conflict.reason,
+        message: conflict.message,
+        canChooseLocal: conflict.canChooseLocal,
+        canChooseCloud: conflict.canChooseCloud,
+        local: conflict.local,
+        cloud: conflict.cloud,
+      },
+      resolving: false,
+    });
+    return true;
+  }
+  function applyCloudReconciliation(result, activeUserId, cacheWarning = "") {
+    const selected = result.progress ?? emptyProgress();
+    try {
+      sessionStorage.removeItem(GUEST_ROLL_KEY);
+    } catch {}
+
+    if (!writeLocalSave(selected)) {
+      const error =
+        "The cloud save was reconciled, but this browser could not keep a local copy. Allow browser storage before playing.";
+      cloudGate.current = { userId: activeUserId, ready: false };
+      pendingCloudConflict.current = null;
+      updateCloud({
+        status: "error",
+        ready: false,
+        userId: activeUserId,
+        updatedAt: result.updatedAt ?? null,
+        error,
+        notice: result.notice ?? "",
+      });
+      return { ok: false, message: error };
+    }
+
+    reset(selected);
+    if (result.repairs?.length) setWarning(repairWarning(result.repairs));
+    if (cacheWarning) setWarning(cacheWarning);
+    if (!ensureCloudOwner(activeUserId)) {
+      const error =
+        "This browser could not record which Firebase account owns its local save. Free browser storage before playing or switching accounts.";
+      cloudGate.current = { userId: activeUserId, ready: false };
+      pendingCloudConflict.current = null;
+      updateCloud({
+        status: "error",
+        ready: false,
+        userId: activeUserId,
+        updatedAt: result.updatedAt ?? null,
+        error,
+        notice: result.notice ?? "",
+      });
+      return { ok: false, message: error };
+    }
+
+    clearCloudDirty(activeUserId);
+    pendingCloudConflict.current = null;
+    cloudGate.current = { userId: activeUserId, ready: true };
+    updateCloud({
+      status: selected.profile ? "synced" : "empty",
+      ready: true,
+      userId: activeUserId,
+      updatedAt: result.updatedAt ?? null,
+      error: "",
+      notice: result.notice ?? "",
+      conflict: null,
+      resolving: false,
+    });
+    return { ok: true, progress: selected, notice: result.notice ?? "" };
   }
   useEffect(() => {
     function synchronize(event) {
@@ -255,6 +350,12 @@ export function useProgress({
     const request = ++cloudGeneration.current;
     let active = true;
     const currentRequest = () => active && cloudGeneration.current === request;
+    if (
+      !cloudEnabled ||
+      !userId ||
+      pendingCloudConflict.current?.userId !== userId
+    )
+      pendingCloudConflict.current = null;
 
     if (!cloudEnabled) {
       cloudGate.current = { userId: null, ready: true };
@@ -339,57 +440,11 @@ export function useProgress({
       });
       if (!currentRequest()) return;
 
-      const selected = reconciliation.progress ?? emptyProgress();
-      try {
-        sessionStorage.removeItem(GUEST_ROLL_KEY);
-      } catch {}
-
-      const localSaved = writeLocalSave(selected);
-      if (!localSaved) {
-        const error =
-          "The cloud save was reconciled, but this browser could not keep a local copy. Allow browser storage before playing.";
-        setWarning(error);
-        cloudGate.current = { userId, ready: false };
-        updateCloud({
-          status: "error",
-          ready: false,
-          userId,
-          updatedAt: reconciliation.updatedAt ?? null,
-          error,
-          notice: reconciliation.notice,
-        });
+      if (reconciliation.choiceRequired) {
+        showCloudConflict(reconciliation, userId, cacheWarning);
         return;
       }
-
-      reset(selected);
-      if (reconciliation.repairs.length)
-        setWarning(repairWarning(reconciliation.repairs));
-      if (cacheWarning) setWarning(cacheWarning);
-      if (!ensureCloudOwner(userId)) {
-        const error =
-          "This browser could not record which Firebase account owns its local save. Free browser storage before playing or switching accounts.";
-        setWarning(error);
-        cloudGate.current = { userId, ready: false };
-        updateCloud({
-          status: "error",
-          ready: false,
-          userId,
-          updatedAt: reconciliation.updatedAt ?? null,
-          error,
-          notice: reconciliation.notice,
-        });
-        return;
-      }
-      clearCloudDirty(userId);
-      cloudGate.current = { userId, ready: true };
-      updateCloud({
-        status: selected.profile ? "synced" : "empty",
-        ready: true,
-        userId,
-        updatedAt: reconciliation.updatedAt ?? null,
-        error: "",
-        notice: reconciliation.notice,
-      });
+      applyCloudReconciliation(reconciliation, userId, cacheWarning);
     }
 
     restoreCloudSave().catch((error) => {
@@ -435,17 +490,26 @@ export function useProgress({
     });
 
     const timer = setTimeout(() => {
-      const task = cloudQueue.current.then(() =>
-        reconcileCloudSave(userId, snapshot, { allowLocal: true }),
-      );
+      if (cloudGate.current.userId !== userId || !cloudGate.current.ready)
+        return;
+      const task = cloudQueue.current.then(() => {
+        if (cloudGate.current.userId !== userId || !cloudGate.current.ready)
+          return null;
+        return reconcileCloudSave(userId, snapshot, { allowLocal: true });
+      });
       cloudQueue.current = task.catch(() => {});
       task
         .then((result) => {
           if (
+            !result ||
             cloudWriteVersion.current !== version ||
             authRef.current.userId !== userId
           )
             return;
+          if (result.choiceRequired) {
+            showCloudConflict(result, userId);
+            return;
+          }
           const cloudWon =
             result.winner === "cloud" &&
             result.progress?.profile &&
@@ -516,6 +580,88 @@ export function useProgress({
   function retryCloudLoad() {
     if (cloudEnabled && authReady && userId)
       setCloudRetry((retry) => retry + 1);
+  }
+
+  async function resolveCloudConflict(decision) {
+    const pending = pendingCloudConflict.current;
+    const activeUserId = authRef.current.userId;
+    if (
+      !pending ||
+      !activeUserId ||
+      pending.userId !== activeUserId ||
+      !["local", "cloud"].includes(decision)
+    )
+      return {
+        ok: false,
+        message:
+          "The save choice expired. Reload the cloud comparison and try again.",
+      };
+
+    cloudWriteVersion.current++;
+    cloudGate.current = { userId: activeUserId, ready: false };
+    updateCloud({
+      ...cloudRef.current,
+      status: "needs-choice",
+      ready: false,
+      userId: activeUserId,
+      error: "",
+      resolving: true,
+    });
+
+    try {
+      const task = cloudQueue.current.then(() => {
+        const latestLocal =
+          readLocalCandidateForCloudUser(activeUserId).progress;
+        return reconcileCloudSave(activeUserId, latestLocal, {
+          allowLocal: true,
+          storage: localStorage,
+          decision,
+          expectedCloudExists: pending.expectedCloudExists,
+          expectedCloudSaveData: pending.expectedCloudSaveData,
+          expectedLocalSource: pending.localCandidate,
+        });
+      });
+      cloudQueue.current = task.catch(() => {});
+      const result = await task;
+      if (authRef.current.userId !== activeUserId)
+        return {
+          ok: false,
+          message:
+            "The signed-in account changed. Review its cloud save before playing.",
+        };
+      if (result.choiceRequired) {
+        showCloudConflict(result, activeUserId, pending.cacheWarning);
+        return {
+          ok: false,
+          needsChoice: true,
+          message: result.notice,
+        };
+      }
+      return applyCloudReconciliation(
+        result,
+        activeUserId,
+        pending.cacheWarning,
+      );
+    } catch (error) {
+      if (authRef.current.userId !== activeUserId)
+        return {
+          ok: false,
+          message:
+            "The signed-in account changed. Review its cloud save before playing.",
+        };
+      const message =
+        error?.message ||
+        "The selected save could not be applied. Neither copy was discarded.";
+      updateCloud({
+        ...cloudRef.current,
+        status: "needs-choice",
+        ready: false,
+        userId: activeUserId,
+        error: message,
+        resolving: false,
+      });
+      return { ok: false, message };
+    }
   }
 
   function dispatch(input) {
@@ -1097,5 +1243,14 @@ export function useProgress({
       return { ok: true, at: copy.at, reason: copy.reason };
     },
   };
-  return { progress, warning, dispatch, epoch, cloud, retryCloudLoad, vault };
+  return {
+    progress,
+    warning,
+    dispatch,
+    epoch,
+    cloud,
+    retryCloudLoad,
+    resolveCloudConflict,
+    vault,
+  };
 }
