@@ -327,14 +327,14 @@ export function summarizeSaveProgress(progress) {
 
 function choiceMessage(reason) {
   if (reason === "generation")
-    return "These saves are from different reset generations. Review both and choose which one to keep; the other will be kept in Cloud conflict recovery.";
+    return "These copies are from different stages of your game. Choose one; the other stays saved in Settings.";
   if (reason === "profile")
-    return "These saves belong to different game profiles, so their progress cannot be compared. Choose which complete save to keep; the other will be kept in Cloud conflict recovery.";
+    return "These are different profiles and cannot be combined. Choose one; the other stays saved in Settings.";
   if (reason === "tie")
-    return "These saves have the same measured progress but are not identical. Choose which one to keep; the other will be kept in Cloud conflict recovery.";
+    return "These copies contain the same progress but differ in other details. Choose one; the other stays saved in Settings.";
   if (reason === "changed")
-    return "A save changed while you were choosing. Review the updated versions and choose again; the other will be kept in Cloud conflict recovery.";
-  return "Each save is ahead in different progress measures. Choose which one to keep; the other will be kept in Cloud conflict recovery.";
+    return "Your progress changed while you were choosing. Review the latest copies and choose again; the other stays saved in Settings.";
+  return "Each copy has different progress. Choose one; the other stays saved in Settings.";
 }
 
 function choiceRequiredOutcome({
@@ -468,12 +468,12 @@ function writeRecoveryCopy(progress, storage, message, reason) {
 export function encodeCloudSave(progress) {
   const raw = JSON.stringify(progress);
   if (!isReadableSave(raw))
-    throw new Error("The progress snapshot is not a readable save.");
+    throw new Error("The saved progress could not be opened.");
   const packed = packVaultSave(raw);
   const bytes = new TextEncoder().encode(packed).byteLength;
   if (bytes > FIRESTORE_SAVE_LIMIT_BYTES)
     throw new Error(
-      "This save is too large for Firestore. Keep the local save and contact support.",
+      "This progress is too large to back up. Keep your copy on this device and contact support.",
     );
   return packed;
 }
@@ -481,16 +481,18 @@ export function encodeCloudSave(progress) {
 export function decodeCloudSave(value) {
   if (value && typeof value === "object" && !Array.isArray(value)) return value;
   if (typeof value !== "string")
-    throw new Error("The cloud save has an unsupported format.");
+    throw new Error(
+      "This online save cannot be opened by this version of the game.",
+    );
   const raw = unpackVaultSave(value);
   if (!isReadableSave(raw))
-    throw new Error("The cloud save could not be decompressed or read.");
+    throw new Error("This online save could not be opened. Try again later.");
   return JSON.parse(raw);
 }
 
 function requireFirestore() {
   if (!firebaseConfigured || !firestoreDb)
-    throw new Error("Firebase cloud saves are not configured in this build.");
+    throw new Error("Online backups aren’t available here.");
   return firestoreDb;
 }
 
@@ -508,7 +510,7 @@ function timestampToIso(value) {
 }
 
 export async function readCloudSave(userId) {
-  if (!userId) throw new Error("Sign in before loading a cloud save.");
+  if (!userId) throw new Error("Sign in before loading online progress.");
   const database = requireFirestore();
   const snapshot = await getDoc(doc(database, CLOUD_SAVE_COLLECTION, userId));
   if (!snapshot.exists()) return null;
@@ -520,7 +522,7 @@ export async function readCloudSave(userId) {
 }
 
 export async function writeCloudSave(userId, progress) {
-  if (!userId) throw new Error("Sign in before saving to the cloud.");
+  if (!userId) throw new Error("Sign in before backing up progress online.");
   const database = requireFirestore();
   await setDoc(doc(database, CLOUD_SAVE_COLLECTION, userId), {
     save_data: encodeCloudSave(progress),
@@ -549,7 +551,7 @@ async function publishPublicProfile(userId, progress) {
     const saveSnapshot = await transaction.get(saveReference);
     if (!saveSnapshot.exists())
       throw new Error(
-        "The cloud save changed before its profile could publish.",
+        "Your progress changed before your public profile could be updated. Try again.",
       );
     const envelope = saveSnapshot.data();
     const remoteRaw = decodeCloudSave(envelope.save_data);
@@ -558,7 +560,7 @@ async function publishPublicProfile(userId, progress) {
     ).progress;
     if (!sameSave(remoteProgress, progress))
       throw new Error(
-        "The cloud save changed before its profile could publish.",
+        "Your progress changed before your public profile could be updated. Try again.",
       );
 
     const previousId =
@@ -630,7 +632,8 @@ export async function reconcileCloudSave(
     expectedLocalSource,
   } = {},
 ) {
-  if (!userId) throw new Error("Sign in before reconciling a cloud save.");
+  if (!userId)
+    throw new Error("Sign in before choosing between saved progress.");
   const database = requireFirestore();
   const reference = doc(database, CLOUD_SAVE_COLLECTION, userId);
   let outcome = null;
@@ -657,7 +660,7 @@ export async function reconcileCloudSave(
     const localProgress = localParsed?.progress ?? null;
     const remoteProgress = remoteParsed?.progress ?? null;
     if (remoteProgress && !remoteProgress.profile)
-      throw new Error("This cloud account has no saved game profile yet.");
+      throw new Error("This online account does not have a game profile yet.");
 
     const cloudExists = snapshot.exists();
     const cloudSaveData = remoteEnvelope?.save_data ?? null;
@@ -720,16 +723,18 @@ export async function reconcileCloudSave(
     if (!selected?.profile && remoteProgress?.profile)
       selected = remoteProgress;
     if (!selected?.profile)
-      throw new Error("The selected save has no game profile to synchronize.");
+      throw new Error(
+        "This copy does not include a game profile. Choose another copy.",
+      );
 
     if (choice.winner === "local" && remoteRaw) {
       writeRecoveryCopy(
         remoteRaw,
         storage,
-        "The previous cloud save could not be kept in the local recovery copy. Nothing was overwritten.",
+        "The previous online copy could not be saved for recovery. Nothing was overwritten.",
         choice.selectedByUser
-          ? "Cloud save displaced after the player chose this browser save."
-          : "Cloud save before a richer local save replaced it.",
+          ? "Online copy set aside after you chose progress from this device."
+          : "Online copy set aside before progress from this device was saved online.",
       );
     } else if (
       choice.winner === "cloud" &&
@@ -739,10 +744,10 @@ export async function reconcileCloudSave(
       writeRecoveryCopy(
         localProgress,
         storage,
-        "This browser's save could not be kept in the local recovery copy. The cloud save was not applied locally.",
+        "The copy on this device could not be saved for recovery. The online progress was not applied.",
         choice.selectedByUser
-          ? "Browser save displaced after the player chose the cloud save."
-          : "Browser save displaced by an existing cloud save.",
+          ? "Device copy set aside after you chose the online progress."
+          : "Device copy set aside when the online progress was kept.",
       );
     }
 
@@ -770,20 +775,21 @@ export async function reconcileCloudSave(
     ) {
       notice =
         choice.winner === "local"
-          ? "You chose this device's save. The cloud save is in Cloud conflict recovery in Settings."
-          : "You chose the cloud save. The device save is in Cloud conflict recovery in Settings.";
+          ? "You chose progress from this device. The online copy is saved in Settings."
+          : "You chose the online progress. The device copy is saved in Settings.";
     } else if (choice.winner === "local" && remoteProgress) {
       notice =
-        "This browser had clearly richer same-generation progress, so it was synced to the cloud. The displaced cloud save is in recovery.";
+        "This device had more progress, so it was backed up online. The previous online copy is saved in Settings.";
     } else if (
       choice.winner === "cloud" &&
       localProgress?.profile &&
       !sameSave(localProgress, remoteProgress)
     ) {
       notice =
-        "The cloud save had clearly richer same-generation progress. The displaced browser save is in recovery.";
+        "The online progress was ahead. The previous device copy is saved in Settings.";
     } else if (choice.winner === "local" && !remoteProgress) {
-      notice = "Your existing local save was imported to this cloud account.";
+      notice =
+        "Your existing progress on this device was added to this online account.";
     }
     outcome = {
       progress: selected,
@@ -804,7 +810,7 @@ export async function reconcileCloudSave(
 
   if (!outcome)
     throw new Error(
-      "The cloud save could not be reconciled. Retry before playing.",
+      "Your online progress could not be updated. Try again before playing.",
     );
 
   if (outcome.progress?.profile) {
@@ -812,7 +818,7 @@ export async function reconcileCloudSave(
       const publication = await publishPublicProfile(userId, outcome.progress);
       outcome.publicProfilePublished = publication.published;
       if (publication.conflict) {
-        const collision = `Your cloud save is safe, but “${outcome.progress.profile.username}” is already used by another public profile. Choose a different profile name before sharing it.`;
+        const collision = `Your progress is safe, but “${outcome.progress.profile.username}” is already used by another public profile. Choose a different name before sharing it.`;
         outcome.notice = [outcome.notice, collision].filter(Boolean).join(" ");
       }
     } catch (error) {
@@ -821,8 +827,8 @@ export async function reconcileCloudSave(
         error?.code === "permission-denied" ||
         error?.code === "firestore/permission-denied";
       const publicationNotice = missingRules
-        ? "Your cloud save is synced, but public profile links need the updated Firestore rules. Publish firestore.rules to enable them."
-        : "Your cloud save is synced, but its public profile could not be updated. Retry later.";
+        ? "Your progress is backed up, but your public profile is unavailable right now."
+        : "Your progress is backed up, but your public profile could not be updated. Try again later.";
       outcome.notice = [outcome.notice, publicationNotice]
         .filter(Boolean)
         .join(" ");

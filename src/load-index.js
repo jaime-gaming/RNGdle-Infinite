@@ -1,5 +1,5 @@
 const integrityError = () =>
-  new Error("The scoring data failed its integrity check. Please retry.");
+  new Error("The game data could not be loaded. Please try again.");
 
 async function sha256(buffer) {
   const digest = await crypto.subtle.digest("SHA-256", buffer);
@@ -16,7 +16,7 @@ export async function decodeIndex(bytes, file) {
   if (magic[0] === 0x1f && magic[1] === 0x8b) {
     if (typeof DecompressionStream === "undefined")
       throw new Error(
-        "Please use a current browser with gzip decompression support.",
+        "This browser can’t load the game yet. Update it or try a newer browser.",
       );
     const reader = new Blob([bytes])
       .stream()
@@ -59,7 +59,7 @@ export async function readIndex(file, baseURL) {
   );
   if (!response.ok)
     throw new Error(
-      "The scoring data could not be downloaded. Check your connection and retry.",
+      "The game data could not be downloaded. Check your connection and try again.",
     );
   let bytes;
   try {

@@ -3,8 +3,6 @@ import {
   Check,
   ArrowRight,
   Trash2,
-  ShieldCheck,
-  X,
   Dices,
   Download,
   ImagePlus,
@@ -93,6 +91,7 @@ export default function LocalProfile({
   onContinue,
   onProfileDeleted,
   cloudAccount = null,
+  preserveGuestProgress = false,
   canContinue = true,
   canEdit = true,
   profileLinkAvailable = false,
@@ -116,7 +115,7 @@ export default function LocalProfile({
       if (!profileLinkAvailable) {
         setShareLink("");
         setShareNote(
-          "Your public profile is not available until its cloud save has synced.",
+          "Your public profile will be ready once your progress is saved online.",
         );
         return;
       }
@@ -136,7 +135,7 @@ export default function LocalProfile({
       setShareNote(
         cloudAccount
           ? "Public profile link copied. Anyone can view your profile summary."
-          : "Snapshot link copied. Anyone who opens it sees this record.",
+          : "Progress card link copied. Anyone with the link can view this copy.",
       );
     } catch {
       setShareLink(url);
@@ -155,15 +154,11 @@ export default function LocalProfile({
     try {
       const data = await fileToAvatar(file);
       const outcome = await onAction({ type: "avatar", avatar: data });
-      setLogoNote(
-        outcome.ok
-          ? cloudAccount
-            ? "Logo saved with your cloud-backed game profile."
-            : "Logo saved with this browser profile."
-          : outcome.message,
-      );
+      setLogoNote(outcome.ok ? "Logo saved." : outcome.message);
     } catch (failure) {
-      setLogoNote(failure.message);
+      setLogoNote(
+        "That image could not be used. Choose another one and try again.",
+      );
     } finally {
       setChoosing(false);
     }
@@ -195,6 +190,7 @@ export default function LocalProfile({
       const outcome = await onAction({
         type: "register",
         username,
+        preserveGuest: preserveGuestProgress,
         id: crypto.randomUUID(),
         createdAt: Math.ceil(Date.now()),
       });
@@ -229,18 +225,16 @@ export default function LocalProfile({
         <h2>Delete game profile &amp; progress</h2>
         <form className="delete-confirm" onSubmit={deleteAccount}>
           <p>
-            Delete <strong>{profile.username}</strong>’s game save and start
-            over?
+            Delete <strong>{profile.username}</strong>’s profile and all
+            progress?
           </p>
           <p>
-            This removes the profile, EP, badges, items, cooldown, and activity
-            history from this browser
+            This removes the progress saved on this device
             {cloudAccount
-              ? " and the signed-in account’s cloud save."
-              : ". A cloud save for an online account is not removed while signed out."}{" "}
-            Your online sign-in itself is not deleted. Active rolls are
-            cancelled in all tabs using this profile. This cannot be undone.
-            Your theme preference is kept.
+              ? " and its online copy."
+              : ". Your online progress stays untouched while you’re signed out."}{" "}
+            Your account and appearance settings stay. Rolls in other open games
+            are cancelled. This cannot be undone.
           </p>
           <label>
             Type DELETE to confirm
@@ -358,18 +352,11 @@ export default function LocalProfile({
       )}
       {profile ? (
         <>
-          <p>
-            Your EP, discoveries, upgrades, cosmetics, and activity are saved
-            automatically in this browser
-            {cloudAccount
-              ? " and synchronized with your signed-in cloud account."
-              : "."}
-          </p>
-          <div className="info-box">
-            {cloudAccount
-              ? "Your game save is stored in this browser and in Firebase for the signed-in account. Different reset generations, same-generation ties or mixed progress, and different profile IDs require your choice; only clear same-generation progress dominance syncs automatically. Different profiles are never merged, and the displaced copy is kept under Cloud conflict recovery in Settings. Signing out keeps this browser copy; deleting the game save removes both copies. Your direct public profile page shows a limited summary, not your email or private game save."
-              : "This game profile is saved in this browser only. Sign into a Cloud Account above to migrate it. If that Firebase account has no save, this unowned local save is imported. When both saves exist, different reset generations and same-generation ties or mixed progress require your choice; clear same-generation progress dominance may sync automatically. Different game profiles are not merged; if both copies are eligible, choose one complete save. A save owned by another Firebase account is never imported. The displaced copy is kept in Settings. Clearing site data removes this browser copy."}
-          </div>
+          {cloudAccount && (
+            <div className="info-box">
+              Your profile summary is public; your email and full save are not.
+            </div>
+          )}
           <div className="profile-actions">
             {canContinue ? (
               <button className="primary-button" onClick={onContinue}>
@@ -377,8 +364,7 @@ export default function LocalProfile({
               </button>
             ) : (
               <p className="profile-lock-note">
-                Sign in to your Cloud Account to continue. This browser save is
-                preserved until migration is complete.
+                Sign in for an online backup or choose Continue locally to play.
               </p>
             )}
             <button
@@ -397,11 +383,12 @@ export default function LocalProfile({
                 disabled={Boolean(cloudAccount && !profileLinkAvailable)}
                 title={
                   cloudAccount && !profileLinkAvailable
-                    ? "Wait until the public profile has synced."
+                    ? "Your public profile will be ready once your progress is saved online."
                     : undefined
                 }
               >
-                <Share2 size={15} aria-hidden="true" /> Copy profile link
+                <Share2 size={15} aria-hidden="true" />
+                {cloudAccount ? "Copy profile link" : "Copy progress card link"}
               </button>
             )}
           </div>
@@ -419,12 +406,9 @@ export default function LocalProfile({
             </p>
           )}
           <p className="profile-export-note">
-            One-way export: a sharp PNG card with your name, best roll, pinned
-            rolls and key figures.{" "}
             {cloudAccount
-              ? "Your clean /profile/name link opens the latest public summary; it never contains the compressed card token."
-              : "A legacy snapshot link carries a read-only record in its address."}{" "}
-            Neither an export nor a profile link can overwrite a game save.
+              ? "Export a profile card or share your public profile."
+              : "Download or share a copy of your progress card."}
           </p>
           {progress && <ProfileRecord record={shareCardData(progress)} />}
           {canEdit && (
@@ -444,35 +428,12 @@ export default function LocalProfile({
       ) : (
         <form onSubmit={register}>
           <p>
-            Create a local game profile to keep progress in this browser. To
-            back it up across devices, sign in to an online account above.
+            Choose a name to save progress on this device.{" "}
+            {preserveGuestProgress
+              ? "Your current guest progress will be kept."
+              : "Guest progress from this session will not carry over."}{" "}
+            An online backup is optional and can be added later.
           </p>
-          <ul className="signup-points">
-            <li>
-              <ShieldCheck size={15} aria-hidden="true" />
-              <span>
-                <strong>This is a local profile.</strong> Its display name is
-                saved with the game in this browser; it is not your online
-                login.
-              </span>
-            </li>
-            <li>
-              <Check size={15} aria-hidden="true" />
-              <span>
-                <strong>Saved from here on:</strong> your EP, badges, purchases,
-                companions and history.
-              </span>
-            </li>
-            <li>
-              <X size={15} aria-hidden="true" />
-              <span>
-                <strong>A fresh start:</strong> local registration starts with 0
-                EP and an empty collection. Sign in above to compare any unowned
-                browser progress with the cloud; the richer-save policy chooses
-                the winner and keeps the displaced copy in Settings.
-              </span>
-            </li>
-          </ul>
           <label>
             Username
             <span className="signup-field">
@@ -532,16 +493,8 @@ export default function LocalProfile({
             <ArrowRight size={16} />
           </button>
           <p className="signup-footnote">
-            Clearing your browser's site data deletes the save. You can delete
-            it yourself at any time.
-          </p>
-          <p className="signup-footnote">
-            Already have an online account? Sign in using the cloud account
-            panel above. If there is no cloud save, an unowned browser save can
-            be imported. Otherwise, different reset generations, same-generation
-            ties or mixed progress, and different profile IDs require your
-            choice. Only a clearly dominant same-generation save can sync
-            automatically.
+            This profile stays on this device. Clearing this game’s saved data
+            removes it.
           </p>
         </form>
       )}

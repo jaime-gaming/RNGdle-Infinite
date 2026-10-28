@@ -1,7 +1,7 @@
 // Exercise production builds against a strict static server with no SPA rewrite.
 // GitHub Pages' 404.html fallback must still boot deep links under both the
-// domain root and repository base; local play must save and route without
-// Firebase build configuration.
+// domain root and repository base; local play and legal pages must work without
+// cloud sign-in.
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import http from "node:http";
@@ -146,12 +146,36 @@ try {
       assert.ok(fallbacks.has(`${base}shop/auras`));
       await page.goto(`${url}profile`);
       await expect(page.locator(".cloud-account")).toContainText(
-        "Cloud sign-in is not enabled in this deployment yet.",
+        "Online sign-in isn’t available here.",
       );
       await expect(
         page.getByRole("heading", { name: "Your profile, PagesTester" }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Privacy & Rights" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Terms of Service" }),
+      ).toBeVisible();
       assert.ok(fallbacks.has(`${base}profile`));
+
+      await page.goto(`${url}privacy`);
+      await expect(
+        page.getByRole("heading", { name: "Privacy & Rights" }),
+      ).toBeVisible();
+      await expect(
+        page.locator("footer").getByRole("link", { name: /privacy|terms/i }),
+      ).toHaveCount(0);
+      assert.ok(fallbacks.has(`${base}privacy`));
+
+      await page.goto(`${url}tos`);
+      await expect(
+        page.getByRole("heading", { name: "Terms of Service" }),
+      ).toBeVisible();
+      await expect(
+        page.locator("footer").getByRole("link", { name: /privacy|terms/i }),
+      ).toHaveCount(0);
+      assert.ok(fallbacks.has(`${base}tos`));
 
       assert.ok(requests.every((request) => request.startsWith(base)));
       assert.deepEqual(errors, []);

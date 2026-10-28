@@ -343,7 +343,7 @@ function finishUpdateCheck() {
     active: false,
     completed: true,
     message:
-      "This device has the latest version. Cached files were refreshed; your saved progress, profile and settings were kept.",
+      "This device has the latest version. The game was refreshed; your progress, profile and settings are safe.",
   });
 }
 
@@ -355,7 +355,7 @@ function giveUpUpdateCheck() {
     active: false,
     completed: false,
     message:
-      "This browser keeps handing back an old copy of the game. Your progress is safe. Close the tab completely, open the game again, then try once more.",
+      "This device keeps opening an older version of the game. Your progress is safe. Close and reopen the game, then try once more.",
   });
 }
 
@@ -386,7 +386,7 @@ async function checkForCurrentBuild() {
         active: true,
         completed: false,
         message:
-          "Clearing this browser's copy of the game, then reloading. Your progress, profile and settings are stored separately and stay exactly as they are.",
+          "Refreshing the game, then reloading. Your progress, profile and settings stay saved.",
       });
       queueReload();
       return;
@@ -485,7 +485,7 @@ export function startAppUpdate() {
       active: false,
       completed: false,
       message:
-        "The browser could not keep the update check across a reload. Your progress is safe; allow session storage and try again.",
+        "The game could not check for an update after reloading. Your progress is safe; please try again.",
     });
     return false;
   }
@@ -497,7 +497,7 @@ export function startAppUpdate() {
     active: true,
     completed: false,
     message:
-      "Clearing this browser's copy of the game, then reloading. Your progress, profile and settings are stored separately and stay exactly as they are.",
+      "Refreshing the game, then reloading. Your progress, profile and settings stay saved.",
   });
   return resumeAppUpdate();
 }

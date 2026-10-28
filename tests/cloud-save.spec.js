@@ -382,6 +382,6 @@ test("uncompressed legacy save documents remain readable", () => {
 
 test("corrupt Firestore save strings fail closed", () => {
   expect(() => decodeCloudSave("rngvault1:not-valid-gzip")).toThrow(
-    "could not be decompressed or read",
+    "could not be opened",
   );
 });

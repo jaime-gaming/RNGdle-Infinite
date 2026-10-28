@@ -14,16 +14,22 @@ test("Google account collisions guide players to link the existing account", () 
   );
 });
 
-test("Google popup and Firebase domain errors have actionable messages", () => {
+test("sign-in errors use clear, player-friendly messages", () => {
   expect(authMessage({ code: "auth/popup-blocked" })).toContain(
     "Allow pop-ups",
   );
   expect(authMessage({ code: "auth/unauthorized-domain" })).toContain(
-    "authorized in Firebase Authentication",
+    "continue locally",
   );
   expect(authMessage({ code: "auth/operation-not-allowed" })).toContain(
-    "provider is not enabled",
+    "continue locally",
   );
+  expect(
+    authMessage(
+      { code: "auth/unknown", message: "Firebase internal error: 503" },
+      "Please try again.",
+    ),
+  ).toBe("Please try again.");
   expect(authMessage({ code: "auth/wrong-password" })).toContain(
     "email/password is incorrect",
   );

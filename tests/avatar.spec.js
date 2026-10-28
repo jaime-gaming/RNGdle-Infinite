@@ -70,7 +70,7 @@ test("an uploaded logo lands in the save, the header and the profile", async ({
     "Replace logo",
   );
   await expect(page.locator(".profile-logo-line [role=status]")).toContainText(
-    /Logo saved with this browser profile/,
+    /Logo saved\./,
   );
 
   // The save holds a small image data URL, not the original file.

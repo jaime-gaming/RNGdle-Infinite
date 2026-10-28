@@ -130,9 +130,9 @@ export default function ProfileRecord({
       <p className="profile-history-note">
         {shared
           ? live
-            ? `Latest public summary from ${when(record.at)}. Read-only; the private game save and email are not shown.`
-            : `Snapshot taken ${when(record.at)}. Cards are read-only and unverified: they show what the link says, not a live save.`
-          : "Read from your activity log and your save. The log keeps every cycle, and clearing history never lowers these figures."}
+            ? `Latest public profile from ${when(record.at)}. Your full progress and email are private.`
+            : `Saved copy from ${when(record.at)}. It may not include more recent progress.`
+          : "These figures come from your progress. Clearing history does not change them."}
       </p>
     </section>
   );

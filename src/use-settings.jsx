@@ -27,7 +27,7 @@ export function SettingsProvider({ children }) {
     setSaveError(
       saveSettings(next)
         ? ""
-        : "Settings could not be saved in this browser. They apply until you reload.",
+        : "Your settings could not be saved on this device. They will reset when you reload the game.",
     );
   };
   return (

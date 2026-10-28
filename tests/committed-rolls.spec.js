@@ -494,7 +494,7 @@ test("registered browsers without Web Locks fail closed before exposing a new nu
   await page.goto("/");
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-load-error")).toContainText(
-    "Web Locks support",
+    "Update it or try another browser.",
   );
   await expect(page.locator(".number-artifact")).toHaveCount(0);
   expect((await saved(page)).pendingRoll).toBeNull();

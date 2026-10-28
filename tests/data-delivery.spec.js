@@ -74,7 +74,7 @@ test("canonical integrity accepts raw or recompressed bytes but rejects changed 
     Buffer.from([31, 139, 1]),
   ])
     await expect(decodeIndex(buffer(invalid), file)).rejects.toThrow(
-      "integrity check",
+      "game data could not be loaded",
     );
 });
 
@@ -123,7 +123,7 @@ test("HTTP-compressed JSON is decoded once and truly corrupt scoring bytes still
   try {
     const base = `http://127.0.0.1:${server.address().port}/`;
     await expect(readIndex(manifest.files.ep, base)).rejects.toThrow(
-      "integrity check",
+      "game data could not be loaded",
     );
     corrupt = false;
     for (const file of Object.values(manifest.files)) {

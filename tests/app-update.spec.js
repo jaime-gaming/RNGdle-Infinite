@@ -80,9 +80,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     "latest version",
     { timeout: 10000 },
   );
-  await expect(page.getByTestId("settings-update")).toHaveText(
-    "Reload until updated",
-  );
+  await expect(page.getByTestId("settings-update")).toHaveText("Refresh game");
 
   const saved = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)),

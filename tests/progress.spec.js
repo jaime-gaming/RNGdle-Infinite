@@ -171,6 +171,39 @@ test("cloud profile registration retains local progress for first-login import",
   expect(registered.history).toEqual(local.history);
 });
 
+test("a player who chose local play keeps guest progress when naming the profile", () => {
+  const guest = {
+    ...emptyProgress(),
+    balance: 42000,
+    totalEarned: 42000,
+    discovered: ["PRIME"],
+    history: [
+      {
+        id: "guest-roll",
+        type: "roll",
+        at: 1794000000000,
+        number: 1337,
+        tier: "rare",
+        ep: 42000,
+        badges: [],
+      },
+    ],
+  };
+  const named = applyProgress(guest, {
+    type: "register",
+    preserveGuest: true,
+    id: "local-profile",
+    username: "LocalPlayer",
+    createdAt: 2000,
+  });
+
+  expect(named.profile).toMatchObject({ username: "LocalPlayer" });
+  expect(named.balance).toBe(guest.balance);
+  expect(named.totalEarned).toBe(guest.totalEarned);
+  expect(named.discovered).toEqual(guest.discovered);
+  expect(named.history).toEqual(guest.history);
+});
+
 test("undiscovered badges are absent from collection and search; demo cards are removed", async ({
   page,
 }) => {

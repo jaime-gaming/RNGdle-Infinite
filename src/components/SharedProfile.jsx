@@ -34,7 +34,7 @@ export default function SharedProfile({
         <span>
           {live ? (
             <>
-              <strong>A public cloud profile, read-only.</strong> This is
+              <strong>A public profile.</strong> This is
               {` ${card.name}`}'s latest published record, updated{" "}
               {when(card.at)}
               {card.since ? `, playing since ${when(card.since)}` : ""}. It
@@ -42,7 +42,7 @@ export default function SharedProfile({
             </>
           ) : (
             <>
-              <strong>A shared card, read-only.</strong> This is {card.name}'s
+              <strong>A saved profile card.</strong> This is {card.name}'s
               record as it was on {when(card.at)}
               {card.since ? `, playing since ${when(card.since)}` : ""}. Nothing
               here changes your own game.

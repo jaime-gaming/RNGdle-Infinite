@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { validUsername } from "../progress.js";
 import { publicProfileNameAvailable } from "../public-profile.js";
+import { pathForPage } from "../router.js";
 import "../profile.css";
 import "../cloud-account.css";
 
@@ -43,15 +44,15 @@ function GoogleMark() {
 }
 
 const STATUS_LABELS = {
-  "checking-auth": "Checking sign-in…",
-  loading: "Loading cloud save…",
-  saving: "Syncing progress…",
-  synced: "Cloud save is up to date",
-  "needs-choice": "Choose a save",
-  empty: "No cloud save yet",
-  error: "Cloud sync needs attention",
+  "checking-auth": "Checking your account…",
+  loading: "Loading your progress…",
+  saving: "Saving progress online…",
+  synced: "Progress backed up",
+  "needs-choice": "Choose which progress to keep",
+  empty: "No online backup yet",
+  error: "Online backup needs attention",
   "signed-out": "Not signed in",
-  unconfigured: "Cloud login is not configured",
+  unconfigured: "Online sign-in unavailable",
 };
 
 function SaveSummary({ title, summary }) {
@@ -101,6 +102,8 @@ export default function CloudAccount({
   auth,
   cloud,
   profile,
+  localPlay = false,
+  onContinueLocal,
   onAction,
   onRetryCloud,
   onResolveCloudConflict,
@@ -122,7 +125,7 @@ export default function CloudAccount({
   const statusLabel = auth.user?.passwordRequired
     ? "Password required"
     : auth.configured
-      ? (STATUS_LABELS[cloud.status] ?? "Cloud save status unknown")
+      ? (STATUS_LABELS[cloud.status] ?? "Progress status unavailable")
       : STATUS_LABELS.unconfigured;
 
   async function submitAuth(event) {
@@ -146,10 +149,10 @@ export default function CloudAccount({
         );
       } else {
         setPassword("");
-        setNotice("Signed in. Loading your cloud save…");
+        setNotice("Signed in. Loading your progress…");
       }
-    } catch (failure) {
-      setError(failure?.message || "Sign-in failed. Please try again.");
+    } catch {
+      setError("Sign-in failed. Please try again.");
     } finally {
       busy.current = false;
       setPending(false);
@@ -170,9 +173,9 @@ export default function CloudAccount({
       else if (result.redirecting) setNotice("Redirecting to Google…");
       else if (result.user?.passwordRequired)
         setNotice("Google sign-in complete. Add a password to finish setup.");
-      else setNotice("Signed in with Google. Loading your cloud save…");
-    } catch (failure) {
-      setError(failure?.message || "Google sign-in failed. Please try again.");
+      else setNotice("Signed in with Google. Loading your progress…");
+    } catch {
+      setError("Google sign-in failed. Please try again.");
     } finally {
       busy.current = false;
       setPending(false);
@@ -200,8 +203,8 @@ export default function CloudAccount({
           "Password added. You can now use Google or email and password to sign in.",
         );
       }
-    } catch (failure) {
-      setError(failure?.message || "The password could not be added.");
+    } catch {
+      setError("The password could not be added. Please try again.");
     } finally {
       busy.current = false;
       setPending(false);
@@ -220,8 +223,8 @@ export default function CloudAccount({
       else if (result.redirecting)
         setNotice("Redirecting to Google to connect it…");
       else setNotice("Google is now connected to this game account.");
-    } catch (failure) {
-      setError(failure?.message || "Google could not be connected.");
+    } catch {
+      setError("Google could not be connected. Please try again.");
     } finally {
       busy.current = false;
       setPending(false);
@@ -240,10 +243,10 @@ export default function CloudAccount({
       else {
         setPassword("");
         setConfirmPassword("");
-        setNotice("Signed out. Your local browser save has been kept.");
+        setNotice("Signed out. Your progress on this device has been kept.");
       }
-    } catch (failure) {
-      setError(failure?.message || "Sign-out failed. Please try again.");
+    } catch {
+      setError("Sign-out failed. Please try again.");
     } finally {
       busy.current = false;
       setPending(false);
@@ -269,8 +272,8 @@ export default function CloudAccount({
           result.notice ||
             "Your save choice was applied and the other copy was preserved.",
         );
-    } catch (failure) {
-      setError(failure?.message || "The save choice could not be applied.");
+    } catch {
+      setError("The save choice could not be applied. Please try again.");
     } finally {
       busy.current = false;
       setPending(false);
@@ -304,14 +307,12 @@ export default function CloudAccount({
       });
       if (!result.ok) setError(result.message);
       else
-        setNotice(
-          "Profile created. Your progress is being saved to the cloud.",
-        );
+        setNotice("Profile created. Your progress is being backed up online.");
     } catch (failure) {
       setError(
         failure?.code === "permission-denied"
-          ? "The public-profile Firestore rules may not be published yet. Publish firestore.rules and try again."
-          : failure?.message || "The profile could not be created.",
+          ? "Online profiles are unavailable right now. Try again later."
+          : "The profile could not be created. Please try again.",
       );
     } finally {
       busy.current = false;
@@ -326,11 +327,15 @@ export default function CloudAccount({
           {auth.user ? <Cloud size={18} /> : <CloudOff size={18} />}
         </span>
         <div>
-          <h2 id="cloud-account-title">Online account &amp; cloud save</h2>
+          <h2 id="cloud-account-title">Cloud Account</h2>
           <p>
             {auth.user
               ? `Signed in${auth.user.email ? ` as ${auth.user.email}` : ""}.`
-              : "Sign in to keep one game save across your devices."}
+              : profile
+                ? `Local profile: ${profile.username}.`
+                : localPlay
+                  ? "Playing locally as a guest."
+                  : "Choose how to play."}
           </p>
         </div>
         <span
@@ -352,29 +357,44 @@ export default function CloudAccount({
         </span>
       </div>
 
-      <div className="cloud-migration-note" data-testid="cloud-migration-note">
-        <strong>Migration to Cloud</strong>
-        <p>
-          {auth.user
-            ? profile
-              ? "Your profile is being matched with this Firebase account. If it has no cloud save, the unowned browser save can be imported; when both saves exist, conflicts are resolved by your choice and the displaced copy is kept in recovery."
-              : "Create your game profile here to start a Firebase cloud save."
-            : profile
-              ? "Sign in to migrate this browser profile to Firebase. An empty cloud account can import it; if both saves exist, progress is compared and any ambiguous conflict requires your choice."
-              : "Create or sign in to a Cloud Account before playing. Your game progress will be saved to Firebase."}{" "}
-          This migrates only this browser save to Firebase; Supabase accounts
-          and saves are not imported. Your public profile shows a summary, not
-          your private save or login details.
+      {profile && !auth.user && (
+        <p className="cloud-migration-note" data-testid="cloud-migration-note">
+          {auth.configured
+            ? "Your profile is saved on this device. Link a Cloud Account to back it up. If it already has different progress, you’ll choose which copy to keep."
+            : "Your profile is saved on this device."}
         </p>
-      </div>
+      )}
 
       {!auth.configured ? (
-        <p className="cloud-account-note">
-          Cloud sign-in is not configured in this build, so play is paused. Your
-          existing browser save is preserved and will not be sent anywhere.
-        </p>
+        <>
+          <p className="cloud-account-note">
+            Online sign-in isn’t available here. You can still play locally.
+          </p>
+          {!localPlay && (
+            <button
+              type="button"
+              className="secondary-button"
+              data-testid="continue-locally"
+              onClick={onContinueLocal}
+            >
+              Continue locally
+            </button>
+          )}
+        </>
       ) : !auth.ready ? (
-        <p className="cloud-account-note">Checking the current sign-in…</p>
+        <>
+          <p className="cloud-account-note">Checking your sign-in…</p>
+          {!localPlay && (
+            <button
+              type="button"
+              className="secondary-button"
+              data-testid="continue-locally"
+              onClick={onContinueLocal}
+            >
+              Continue locally
+            </button>
+          )}
+        </>
       ) : auth.user ? (
         <>
           {auth.user.passwordRequired ? (
@@ -402,8 +422,8 @@ export default function CloudAccount({
                 Google signed you in
                 {auth.user.email ? ` as ${auth.user.email}` : ""}. Add a
                 password to keep this same account accessible with email and
-                password too. Your game and cloud save stay paused until you
-                finish.
+                password too. Your game and online progress stay paused until
+                you finish.
               </p>
               <form className="cloud-password-form" onSubmit={submitPassword}>
                 <label htmlFor="cloud-new-password">Create a password</label>
@@ -442,8 +462,7 @@ export default function CloudAccount({
                 </button>
               </form>
               <p className="cloud-account-footnote">
-                Firebase stores the password securely. The game never sees your
-                Google password.
+                Your Google password is never shared with the game.
               </p>
               <button
                 type="button"
@@ -489,7 +508,7 @@ export default function CloudAccount({
                   data-testid="cloud-save-conflict"
                 >
                   <div className="cloud-save-conflict-copy">
-                    <h3>Choose which save to keep</h3>
+                    <h3>Choose which progress to keep</h3>
                     <p>{cloud.conflict.message}</p>
                   </div>
                   <div className="cloud-save-options">
@@ -497,7 +516,10 @@ export default function CloudAccount({
                       title="This device"
                       summary={cloud.conflict.local}
                     />
-                    <SaveSummary title="Cloud" summary={cloud.conflict.cloud} />
+                    <SaveSummary
+                      title="Online account"
+                      summary={cloud.conflict.cloud}
+                    />
                   </div>
                   <div className="cloud-save-choice-actions">
                     <button
@@ -528,7 +550,9 @@ export default function CloudAccount({
                         cloud.conflict.canChooseCloud === false
                       }
                     >
-                      {cloud.resolving ? "Applying…" : "Use the cloud save"}
+                      {cloud.resolving
+                        ? "Applying…"
+                        : "Keep the online progress"}
                     </button>
                   </div>
                   {!cloud.conflict.canChooseLocal &&
@@ -539,15 +563,11 @@ export default function CloudAccount({
                         onClick={onRetryCloud}
                         disabled={pending}
                       >
-                        <RefreshCw size={14} aria-hidden="true" /> Refresh
-                        comparison
+                        <RefreshCw size={14} aria-hidden="true" /> Check again
                       </button>
                     )}
                   <p className="cloud-account-note">
-                    The save you do not choose is copied to Cloud conflict
-                    recovery in Settings before the selected save replaces it.
-                    You can sign out to continue with the browser save without
-                    syncing.
+                    We keep a copy of the progress you don’t choose.
                   </p>
                 </div>
               )}
@@ -558,15 +578,15 @@ export default function CloudAccount({
                   onClick={onRetryCloud}
                   disabled={pending}
                 >
-                  <RefreshCw size={14} aria-hidden="true" /> Retry cloud sync
+                  <RefreshCw size={14} aria-hidden="true" /> Try again
                 </button>
               )}
               {!profile && cloud.ready && (
                 <form className="cloud-profile-form" onSubmit={createProfile}>
                   <p>
-                    This login has no game profile yet. Choose a display name to
-                    start one. Any guest progress currently on this device will
-                    be kept and saved with it.
+                    This account has no game profile yet. Choose a display name
+                    to start one. Any guest progress on this device will be kept
+                    with it.
                   </p>
                   <label htmlFor="cloud-profile-username">Display name</label>
                   <div className="cloud-profile-input">
@@ -599,7 +619,7 @@ export default function CloudAccount({
                     {cloud.conflict
                       ? " Resolve the save choice above before playing."
                       : cloudIsLoading
-                        ? " Wait for the cloud save to finish loading before playing."
+                        ? " Wait until your progress is ready before playing."
                         : ""}
                   </p>
                 )}
@@ -640,11 +660,6 @@ export default function CloudAccount({
         </>
       ) : (
         <>
-          <p className="cloud-account-note">
-            {profile
-              ? "Local saves stay on this device. An unowned save or this account’s own save is compared with the cloud. Different reset generations always need your choice. Within one generation, only clear dominance in measured game progress is automatic; ties and mixed progress also need your choice. Different game profiles are never merged; when both copies are eligible, choose one complete save. Saves owned by another Firebase account are never imported. Any displaced save is kept in Settings → Cloud conflict recovery."
-              : "Your game can be played without an account. Sign in with Google or email and password to keep a cloud save across devices."}
-          </p>
           {error && (
             <p className="profile-error" role="alert">
               {error}
@@ -711,7 +726,7 @@ export default function CloudAccount({
           <p className="cloud-account-switch">
             {mode === "sign-up"
               ? "Already have an account?"
-              : "New to cloud saves?"}{" "}
+              : "Need an online account?"}{" "}
             <button
               type="button"
               className="text-button"
@@ -727,16 +742,42 @@ export default function CloudAccount({
               {mode === "sign-up" ? "Sign in" : "Create an account"}
             </button>
           </p>
+          <div className="cloud-local-option">
+            {localPlay ? (
+              <p role="status">
+                {profile
+                  ? "Playing locally."
+                  : "Playing locally. Create a profile below to save progress with a name."}
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  data-testid="continue-locally"
+                  onClick={onContinueLocal}
+                  disabled={pending}
+                >
+                  Continue locally
+                </button>
+                <p>
+                  Play as a guest. Give your profile a name whenever you’re
+                  ready.
+                </p>
+              </>
+            )}
+          </div>
           <p className="cloud-account-footnote">
-            Google sign-in requires you to add a password before playing online;
-            then both methods open the same Firebase account and cloud save.
-            Email-and-password accounts can sign in directly. If this email
-            already has a password account, sign in with it first and connect
-            Google from that profile. The game never receives your Google
-            password.
+            Google accounts need a password before play. You can then use Google
+            or email and password to sign in.
           </p>
         </>
       )}
+      <p className="cloud-legal-links">
+        <a href={pathForPage("privacy")}>Privacy &amp; Rights</a>
+        <span aria-hidden="true"> · </span>
+        <a href={pathForPage("tos")}>Terms of Service</a>
+      </p>
     </section>
   );
 }

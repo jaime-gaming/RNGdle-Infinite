@@ -67,18 +67,34 @@
   border: 1px solid color-mix(in srgb, var(--text) 14%, var(--border));
   border-radius: 10px;
   background: color-mix(in srgb, var(--text) 3%, var(--surface));
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.6;
 }
-.cloud-migration-note strong {
-  display: block;
-  color: var(--text);
-  font-size: 11px;
-  letter-spacing: 0.3px;
+.cloud-local-option {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 16px;
 }
-.cloud-migration-note p {
-  margin: 5px 0 0;
+.cloud-local-option p {
+  margin: 0;
   color: var(--secondary);
   font-size: 11px;
-  line-height: 1.65;
+  line-height: 1.5;
+}
+.cloud-legal-links {
+  margin: 16px 0 0;
+  color: var(--secondary);
+  text-align: center;
+  font-size: 10.5px;
+}
+.cloud-legal-links a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+.cloud-legal-links a:hover {
+  color: var(--text);
 }
 .cloud-login-form,
 .cloud-profile-form {
@@ -391,7 +407,7 @@
   margin-top: 9px;
 }
 .cloud-choice-banner,
-.auth-required-banner {
+.play-choice-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -406,12 +422,12 @@
   color: var(--text);
   font-size: 12px;
 }
-.auth-required-banner {
+.play-choice-banner {
   border-color: color-mix(in srgb, var(--warning) 42%, var(--border));
   background: color-mix(in srgb, var(--warning) 7%, var(--surface));
 }
 .cloud-choice-banner button,
-.auth-required-banner button,
+.play-choice-banner button,
 .auth-password-banner button {
   flex: 0 0 auto;
   padding: 6px 9px;
@@ -471,7 +487,7 @@
     width: 100%;
   }
   .cloud-choice-banner,
-  .auth-required-banner,
+  .play-choice-banner,
   .auth-password-banner {
     align-items: stretch;
     flex-direction: column;

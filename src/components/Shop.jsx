@@ -186,6 +186,8 @@ const shelfIcons = {
 };
 export default function Shop({
   progress,
+  cloudUser = false,
+  cloudSaved = false,
   // "" is the hub. A section id means that shelf is the page being read.
   section = "",
   // Auras own families: "" is the shelf's index of banners, an id is one set.
@@ -204,6 +206,10 @@ export default function Shop({
   onPickingGoal = () => {},
 }) {
   const formatEP = useFormatEP();
+  const hasGuestProgress =
+    (progress.history?.length ?? 0) > 0 ||
+    progress.balance > 0 ||
+    (progress.owned?.length ?? 0) > 0;
   const { settings: preferences } = useSettings();
   const [previewTier, setPreviewTier] = useState("rare");
   const [lastPurchase, setLastPurchase] = useState(null);
@@ -680,7 +686,7 @@ export default function Shop({
             }}
           >
             {state.profileGated ? (
-              "Create a profile to unlock"
+              "Name a profile to unlock"
             ) : restocking ? (
               restockLabel(item.id)
             ) : equipped ? (
@@ -1138,14 +1144,13 @@ export default function Shop({
           )}
         </nav>
       )}
-      {!progress.profile && (
+      {!cloudUser && !progress.profile && hasGuestProgress && (
         <div className="guest-save-notice">
           <p>
-            Sign in to your Cloud Account before buying or playing. Your browser
-            save will be migrated to Firebase after sign-in.
+            Guest progress is temporary. Name a profile to keep this session.
           </p>
           <button className="secondary-button" onClick={openSignup}>
-            Open Cloud Account
+            Name profile
           </button>
         </div>
       )}
@@ -1817,9 +1822,11 @@ export default function Shop({
       <p className="shop-save-note">
         Every shelf here uses EP. Rebirth resets the run but keeps every aura
         you own.{" "}
-        {progress.profile
-          ? `Saved locally as ${progress.profile.username}.`
-          : "Create a profile to keep your wallet across reloads."}
+        {cloudSaved
+          ? "Backed up to your online account."
+          : progress.profile
+            ? `Saved locally as ${progress.profile.username}.`
+            : null}
       </p>
       <dialog
         className="shop-confirm"
@@ -1899,9 +1906,9 @@ export default function Shop({
                 .
               </p>
             )}
-            {!progress.profile && (
+            {!cloudUser && !progress.profile && (
               <p className="guest-purchase-note">
-                Guest purchase: create a profile before leaving to save it.
+                Guest purchase: name your profile before leaving to keep it.
               </p>
             )}
             <div className="purchase-balance">

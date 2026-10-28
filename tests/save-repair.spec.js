@@ -276,7 +276,7 @@ test("booting with a damaged save repairs it, says so, and keeps a backup", asyn
   });
   await page.goto("/");
   await expect(page.locator(".progress-warning")).toContainText(
-    "Your save was repaired",
+    "Some saved details needed fixing",
   );
   const healed = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)),

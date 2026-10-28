@@ -11,6 +11,8 @@ export const PAGES = [
   "changelog",
   "about",
   "profile",
+  "privacy",
+  "tos",
   "rebirth",
 ];
 export const HOME = "roll";

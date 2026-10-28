@@ -174,8 +174,11 @@ test("an unconfigured deployment keeps local profiles available and never preten
 }) => {
   await page.goto("/profile");
   await expect(page.locator(".cloud-account")).toContainText(
-    "Cloud sign-in is not enabled in this deployment yet.",
+    "Online sign-in isn’t available here.",
   );
+  await expect(
+    page.getByRole("button", { name: "Continue locally" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Start saving my progress" }),
   ).toBeVisible();

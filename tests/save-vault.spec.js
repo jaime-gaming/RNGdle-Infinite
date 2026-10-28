@@ -164,7 +164,7 @@ test("Settings shows the backup and puts it back on demand", async ({
   await seedProgress(page, { balance: 4242, totalEarned: 4242 });
   await page.goto("/settings");
   const block = page.getByTestId("settings-backup");
-  await expect(block).toContainText("A backup copy of your game was kept");
+  await expect(block).toContainText("A backup copy was saved on");
   // Damage the save the way a bad write would, then restore from the copy.
   await page.evaluate(
     (key) => localStorage.setItem(key, '{"balance": 1'),
@@ -207,9 +207,9 @@ test("Settings exposes and restores the separate displaced cloud-save copy", asy
 
   const recovery = page.getByTestId("settings-cloud-recovery");
   await expect(recovery).toContainText(
-    "A save displaced by cloud sync was kept",
+    "A second copy of your progress was saved on",
   );
-  await expect(recovery).toContainText("Cloud version kept on a tie.");
+  await expect(recovery).not.toContainText("Cloud version kept on a tie.");
   await recovery.getByTestId("settings-restore-cloud-recovery").click();
   await expect(
     page.getByRole("status").filter({ hasText: "Recovery copy restored" }),

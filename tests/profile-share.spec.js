@@ -213,7 +213,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   await expect(
     visitor.getByRole("heading", { level: 2, name: testProfile.username }),
   ).toBeVisible();
-  await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();
+  await expect(visitor.getByText("A saved profile card.")).toBeVisible();
   // The logo came along: the shared profile wears the same face.
   await expect(
     visitor.locator(".profile-title .avatar-mark img"),
@@ -229,7 +229,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   await expect(visitor.getByText("Delete account")).toHaveCount(0);
   // The address keeps the card, so a reload shows the same thing.
   await visitor.reload();
-  await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();
+  await expect(visitor.getByText("A saved profile card.")).toBeVisible();
   // The visitor's own game is untouched: still a guest with nothing saved.
   expect(
     await visitor.evaluate(() =>
@@ -301,7 +301,7 @@ test("a heavy logo is shrunk to link size before it travels", async ({
   const other = await browser.newContext();
   const visitor = await other.newPage();
   await visitor.goto(link);
-  await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();
+  await expect(visitor.getByText("A saved profile card.")).toBeVisible();
   const src = await visitor
     .locator(".profile-title .avatar-mark img")
     .getAttribute("src");

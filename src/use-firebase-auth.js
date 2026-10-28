@@ -22,7 +22,7 @@ export function authMessage(error, fallback) {
     "auth/cancelled-popup-request":
       "Another sign-in window is already open. Finish it or try again.",
     "auth/credential-already-in-use":
-      "That sign-in method is already connected to a different game account. Sign into that account instead; saves are never merged between Firebase users.",
+      "That sign-in method belongs to a different game account. Sign in there instead; saves are never merged.",
     "auth/email-already-in-use":
       "An account with this email already exists. Sign in with that method first, then connect Google from the same profile.",
     "auth/invalid-login-credentials":
@@ -32,19 +32,19 @@ export function authMessage(error, fallback) {
     "auth/wrong-password":
       "That email/password is incorrect. Check it and try again.",
     "auth/missing-email":
-      "Google did not provide an email address, so a password cannot be added to this account.",
+      "Google sign-in did not provide an email address. Try another sign-in option.",
     "auth/missing-password": "Enter your password to continue.",
     "auth/invalid-credential":
-      "The email/password or sign-in credential is incorrect or expired. Try again.",
+      "The email or password is incorrect or expired. Check it and try again.",
     "auth/invalid-email": "Enter a valid email address.",
     "auth/network-request-failed":
-      "Firebase could not be reached. Check your connection and try again.",
+      "Could not connect. Check your internet connection and try again.",
     "auth/operation-not-allowed":
-      "This sign-in provider is not enabled in Firebase Authentication.",
+      "This sign-in option isn’t available right now. Try another option or continue locally.",
     "auth/operation-not-supported-in-this-environment":
-      "This browser cannot open a Google sign-in window. Allow redirects or try another browser.",
+      "Google sign-in could not open. Allow pop-ups or try another browser.",
     "auth/popup-blocked":
-      "The browser blocked the Google sign-in window. Allow pop-ups and try again.",
+      "Your device blocked Google sign-in. Allow pop-ups and try again.",
     "auth/popup-closed-by-user":
       "The Google sign-in window was closed before it finished.",
     "auth/provider-already-linked":
@@ -53,17 +53,16 @@ export function authMessage(error, fallback) {
       "Sign in with Google again to verify this account, then set the password.",
     "auth/too-many-requests": "Too many attempts. Wait a moment and try again.",
     "auth/unauthorized-domain":
-      "This site is not authorized in Firebase Authentication. Add its domain in Firebase Console.",
+      "Online sign-in isn’t available on this site yet. Try again later or continue locally.",
     "auth/user-disabled":
-      "This Firebase account is disabled. Contact the game administrator.",
+      "This account cannot sign in right now. Contact support for help.",
     "auth/weak-password":
       "Choose a stronger password with at least 6 characters.",
   };
   return (
     messages[error?.code] ??
-    (typeof error?.message === "string" && error.message.trim()
-      ? error.message
-      : fallback)
+    fallback ??
+    "Something went wrong. Please try again."
   );
 }
 
@@ -163,7 +162,8 @@ export function useFirebaseAuth() {
     if (!firebaseAuth)
       return {
         ok: false,
-        message: "Cloud sign-in is not configured in this build.",
+        message:
+          "Online sign-in is unavailable right now. You can continue locally.",
       };
     try {
       const credential = await signInWithEmailAndPassword(
@@ -186,7 +186,8 @@ export function useFirebaseAuth() {
     if (!firebaseAuth)
       return {
         ok: false,
-        message: "Cloud sign-up is not configured in this build.",
+        message:
+          "Online sign-up is unavailable right now. You can continue locally.",
       };
     try {
       const credential = await createUserWithEmailAndPassword(
@@ -212,7 +213,8 @@ export function useFirebaseAuth() {
     if (!firebaseAuth)
       return {
         ok: false,
-        message: "Cloud sign-in is not configured in this build.",
+        message:
+          "Online sign-in is unavailable right now. You can continue locally.",
       };
     try {
       const credential = await signInWithPopup(firebaseAuth, googleProvider());

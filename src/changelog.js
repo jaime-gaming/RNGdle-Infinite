@@ -10,8 +10,8 @@ export const CHANGELOG = [
     title: "cloud accounts and a year-round game",
     body: [
       "RNGween is retired: event play and screens are gone; legacy cosmetics stay wearable, and old history remains readable.",
-      "sign in with Google or email/password using Firebase; link Google to an existing account. Local play remains; device links are removed.",
-      "reset-generation conflicts, same-generation ties/mixed progress and different profile IDs prompt a choice; only clear same-generation dominance syncs automatically. The displaced save stays recoverable in Settings.",
+      "play as a guest, name a profile to save progress on this device, or link a Cloud Account for backup.",
+      "when saves conflict, choose which one to keep. The other stays available for recovery.",
     ],
   },
   {
@@ -78,13 +78,13 @@ export const CHANGELOG = [
   {
     version: "v0.2",
     date: "2026-09-19",
-    title: "companions, cheaper upgrades and real URLs",
+    title: "companions, cheaper upgrades and bookmarkable pages",
     body: [
       "companions multiply the EP you bank, never your odds. Buy one, or find one at roughly 1 in 250 rolls.",
       "rebirth moved to the top bar, with a ring that fills as your collection grows.",
       "shop prices dropped about 40%. The late game was a wall.",
       "light mode is fixed.",
-      "pages have real URLs, so a shelf or a page can be bookmarked.",
+      "you can bookmark a shelf or page and open it again later.",
       "sharing a result copies the link as well as the text.",
       "guest play is not saved, and the interface now says so plainly.",
       "new badges: ↕️ Pendulum (anomaly) and ⏳ Last Second (mythic).",

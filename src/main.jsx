@@ -36,8 +36,14 @@ import CloudAccount from "./components/CloudAccount.jsx";
 import { isAuthReadyForCloud, useFirebaseAuth } from "./use-firebase-auth.js";
 import SharedProfile from "./components/SharedProfile.jsx";
 import CloudProfile from "./components/CloudProfile.jsx";
+import LegalPage from "./components/LegalPage.jsx";
 import { shareCardFromLocation } from "./profile-card.js";
 import { cloudGameAccess } from "./auth-gate.js";
+import {
+  chooseLocalPlay,
+  localPlayEnabled,
+  LOCAL_PLAY_KEY,
+} from "./local-play.js";
 import { cloudAccountRequired } from "./firebase.js";
 import { normalizedProfileName } from "./public-profile.js";
 import { useOffline } from "./use-offline";
@@ -143,6 +149,17 @@ const RARITY_NAME = {
   mythic: "Mythic",
   godly: "GODLY",
 };
+const CLOUD_STATUS_COPY = {
+  "checking-auth": "Checking your account",
+  loading: "Loading your progress",
+  saving: "Saving progress online",
+  synced: "Progress backed up",
+  "needs-choice": "Choose which progress to keep",
+  empty: "No online backup yet",
+  error: "Online backup needs attention",
+  "signed-out": "Not signed in",
+  unconfigured: "Online sign-in unavailable",
+};
 
 function App() {
   const [page, setPage] = useState(() => pageFromLocation(location));
@@ -162,6 +179,7 @@ function App() {
       : theme,
   );
   const [seenVersion, setSeenVersion] = useState(readSeenVersion);
+  const [localPlay, setLocalPlay] = useState(localPlayEnabled);
   const showVersionFlag = hasUnseenVersion(seenVersion);
   const [shopFocus, setShopFocus] = useState(null);
   const [shopSection, setShopSection] = useState(() =>
@@ -192,19 +210,27 @@ function App() {
   const { toasts, notify, dismiss: dismissToast } = useToasts();
   const [appUpdate, setAppUpdate] = useState(getAppUpdateState);
   useEffect(() => {
+    const syncLocalPlay = (event) => {
+      if (event.key === LOCAL_PLAY_KEY || event.key === null)
+        setLocalPlay(localPlayEnabled());
+    };
+    window.addEventListener("storage", syncLocalPlay);
+    return () => window.removeEventListener("storage", syncLocalPlay);
+  }, []);
+  useEffect(() => {
     const unsubscribe = subscribeAppUpdate(setAppUpdate);
     resumeAppUpdate();
     if (updateSaveRecovery.recovered)
       notify({
         kind: "warning",
         title: "Progress restored",
-        text: "The update could not read your save, so the copy made before the refresh was put back. Nothing was lost.",
+        text: "Your progress could not be opened after the update. The earlier copy is back; nothing was lost.",
       });
     else if (vaultRecovery.restored)
       notify({
         kind: "warning",
         title: "Progress restored",
-        text: "The saved game could not be read, so this browser's backup copy was put back. Nothing was lost.",
+        text: "Your saved progress could not be opened, so the backup copy was restored. Nothing was lost.",
       });
     return unsubscribe;
   }, []);
@@ -254,6 +280,7 @@ function App() {
     passwordRequired: auth.user?.passwordRequired ?? false,
     cloudEnabled: auth.configured,
     requireCloudAccount: cloudAccountRequired,
+    localPlay,
   });
   const playAccess = cloudGameAccess({
     required: cloudAccountRequired,
@@ -261,7 +288,14 @@ function App() {
     authReady: isAuthReadyForCloud(auth),
     userId: auth.user?.id ?? null,
     passwordRequired: auth.user?.passwordRequired ?? false,
+    localPlay,
   });
+  const cloudSaved = Boolean(
+    auth.user &&
+    !auth.user.passwordRequired &&
+    cloud.ready &&
+    cloud.status === "synced",
+  );
   const viewingOtherProfile =
     page === "profile" &&
     !sharedCard &&
@@ -569,6 +603,10 @@ function App() {
   function openAuth() {
     navigate("profile");
   }
+  function continueLocally() {
+    chooseLocalPlay(true);
+    setLocalPlay(true);
+  }
   const offlineState = useOffline(
     session,
     dispatch,
@@ -704,10 +742,10 @@ function App() {
             aria-label={
               auth.user
                 ? `Online account${auth.user.email ? `, ${auth.user.email}` : ""}`
-                : cloudAccountRequired
-                  ? "Sign in to Cloud Account"
-                  : session.profile
-                    ? "Your profile"
+                : session.profile
+                  ? `Local profile, ${session.profile.username}`
+                  : localPlay
+                    ? "Guest play and profile"
                     : "Sign in"
             }
             data-avatar={session.profile?.avatar ? "logo" : "icon"}
@@ -732,9 +770,8 @@ function App() {
                 }
                 syncLabel={
                   auth.user
-                    ? cloud.status === "needs-choice"
-                      ? "Cloud save: choose which version"
-                      : `Cloud save: ${cloud.status}`
+                    ? (CLOUD_STATUS_COPY[cloud.status] ??
+                      "Progress status unavailable")
                     : ""
                 }
               />
@@ -744,10 +781,10 @@ function App() {
             <span>
               {auth.user
                 ? "Account"
-                : cloudAccountRequired
-                  ? "Sign in"
-                  : session.profile
-                    ? "Profile"
+                : session.profile
+                  ? "Profile"
+                  : localPlay
+                    ? "Guest"
                     : "Sign in"}
             </span>
           </button>
@@ -756,8 +793,8 @@ function App() {
       {auth.user && cloud.status === "needs-choice" && page !== "profile" && (
         <div className="cloud-choice-banner" role="alert">
           <span>
-            Local and cloud saves need your choice before online play can
-            continue.
+            This device and your online progress differ. Choose which copy to
+            keep before playing online.
           </span>
           <button type="button" onClick={() => navigate("profile")}>
             Review saves
@@ -765,25 +802,31 @@ function App() {
         </div>
       )}
       {cloudAccountRequired &&
-        page !== "profile" &&
+        page === "roll" &&
         !auth.user?.passwordRequired &&
         !playAccess.allowed &&
         (auth.ready || !auth.configured) && (
-          <div className="auth-required-banner" role="status">
+          <div className="play-choice-banner" role="status">
             <span>
-              {playAccess.message} Your current browser save is preserved; sign
-              in to migrate it to Firebase.
+              {session.profile
+                ? "Your profile is saved on this device. Continue locally or link a Cloud Account to back it up."
+                : "Choose how to play: continue locally as a guest, or use a Cloud Account."}
             </span>
             <button type="button" onClick={() => navigate("profile")}>
-              Cloud Account
+              {session.profile ? "Review profile" : "Cloud Account"}
             </button>
+            {!auth.user && (
+              <button type="button" onClick={continueLocally}>
+                Continue locally
+              </button>
+            )}
           </div>
         )}
       {auth.user?.passwordRequired && (page !== "profile" || sharedCard) && (
         <div className="auth-password-banner" role="alert">
           <span>
-            Finish Google sign-in by adding a password. Game actions and cloud
-            sync stay paused until you do.
+            Finish Google sign-in by adding a password. Game actions and online
+            backup stay paused until you do.
           </span>
           <button type="button" onClick={() => navigate("profile")}>
             Set password
@@ -812,6 +855,7 @@ function App() {
           <RollExperience
             key={epoch}
             {...{ openBadge, notify, session }}
+            cloudSaved={cloudSaved}
             active={
               playAccess.allowed &&
               isAuthReadyForCloud(auth) &&
@@ -850,6 +894,7 @@ function App() {
           <ActivityFeed
             key={epoch}
             progress={session}
+            cloudUser={!!auth.user}
             navigate={navigate}
             openSignup={openAuth}
             openBadge={openBadge}
@@ -899,6 +944,9 @@ function App() {
             </div>
             <About navigate={navigate} progress={session} />
           </>
+        )}
+        {(page === "privacy" || page === "tos") && (
+          <LegalPage page={page} navigate={navigate} />
         )}
         {page === "changelog" && (
           <>
@@ -951,10 +999,12 @@ function App() {
                     : viewingOtherProfile
                       ? `Viewing ${profileName}'s public profile.`
                       : auth.user
-                        ? "Your online account and game save."
-                        : cloudAccountRequired
-                          ? "Sign in to play and migrate your browser save."
-                          : "Your browser save and how far you have come."}
+                        ? "Your online account and game progress."
+                        : session.profile
+                          ? "Your profile, saved on this device."
+                          : localPlay
+                            ? "Playing locally as a guest."
+                            : "Choose how you want to play."}
                 </p>
               </div>
             </div>
@@ -981,11 +1031,15 @@ function App() {
                     auth={auth}
                     cloud={cloud}
                     profile={session.profile}
+                    localPlay={localPlay}
+                    onContinueLocal={continueLocally}
                     onAction={dispatch}
                     onRetryCloud={retryCloudLoad}
                     onResolveCloudConflict={resolveCloudConflict}
                   />
-                  {(!cloudAccountRequired || session.profile) &&
+                  {(!cloudAccountRequired ||
+                    session.profile ||
+                    (localPlay && !auth.user)) &&
                     !auth.user?.passwordRequired && (
                       <LocalProfile
                         key={epoch}
@@ -1002,6 +1056,7 @@ function App() {
                           );
                         }}
                         cloudAccount={auth.user}
+                        preserveGuestProgress={localPlay}
                         canContinue={playAccess.allowed && cloud.ready}
                         canEdit={playAccess.allowed && cloud.ready}
                         profileLinkAvailable={cloud.publicProfileAvailable}
@@ -1066,6 +1121,7 @@ function App() {
             <Tasks
               key={epoch}
               progress={session}
+              cloudUser={!!auth.user}
               now={taskNow}
               onAction={dispatch}
               notify={notify}
@@ -1077,6 +1133,8 @@ function App() {
           <Shop
             key={`${epoch}:${shopSection}:${shopFamily}`}
             progress={session}
+            cloudUser={!!auth.user}
+            cloudSaved={cloudSaved}
             section={shopSection}
             family={shopFamily}
             onOpenShelf={openShelf}
@@ -1262,8 +1320,14 @@ function App() {
                 RNGdle Tools <ArrowUpRight size={12} />
               </a>
               . Includes two Infinite-exclusive badges. Only your discovered
-              badges are shown. Sign in to your Cloud Account to save your
-              collection and play across devices.
+              badges are shown.{" "}
+              {auth.user
+                ? "Your collection is backed up online."
+                : session.profile
+                  ? "Your collection is saved on this device."
+                  : discoveredBadges.length > 0
+                    ? "Guest collection is temporary. Name a local profile to keep it."
+                    : null}
             </p>
           </>
         )}

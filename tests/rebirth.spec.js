@@ -1135,7 +1135,9 @@ test("registered rebirth fails closed without Web Locks", async ({ page }) => {
   await page
     .getByRole("button", { name: "Confirm rebirth", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("Web Locks");
+  await expect(page.getByRole("dialog")).toContainText(
+    "Update it or try another browser.",
+  );
   expect((await saved(page)).rebirths).toBe(0);
   expect((await saved(page)).discovered).toHaveLength(235);
 });

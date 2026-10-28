@@ -3,13 +3,12 @@
 **Roll a number from 0 to 1,000,000. Find out what makes it special.**
 
 A free browser game about rolling numbers, earning EP, collecting badges and
-buying upgrades. A Cloud Account is required to play so your save is backed up
-across devices. An existing browser save can be migrated to Firebase after you
-sign in.
+buying upgrades. Play as a guest, save a named profile on this device, or link a
+Cloud Account to keep your progress across devices.
 
 <p align="center">
   <a href="https://jaime-gaming.github.io/RNGdle-Infinite/"><strong>▶ Play now</strong></a>
-  · works on desktop and mobile · sign in to play and save across devices
+  · works on desktop and mobile · play locally or save across devices
 </p>
 
 ![The roll screen](media/roll.png)
@@ -45,22 +44,21 @@ sign in.
 | **Prestige**    | A bigger fresh start, once you own half the collection and have earned 30 million EP in the cycle.                                     |
 | **Rollback**    | A secret that appears after three prestiges. It can be repeated.                                                                       |
 | **Fresh start** | Offered once you have three prestiges: wipe the run and the ladder, keep your profile and every aura.                                  |
-| **Profile**     | Lives at `/profile/your-name`: best roll, up to ten pinned rolls, key figures, what you wear and a direct public profile link.         |
+| **Profile**     | Best roll, pinned rolls, key stats and what you wear; Cloud Accounts get a direct public profile link.                                 |
 
 ![The skill rack](media/skills.png)
 
 ## Online accounts and cloud saves
 
-A Cloud Account sign-in is required before playing. Sign in with Google or
-email/password; after Google sign-in, add a password to finish setup. The
-password is linked to the same Firebase account, so you can use either Google
-or email/password next time. If you already use email/password, sign in first
-and choose **Connect Google** to link both methods to the same account and save.
+Cloud Account is optional. Play as a guest, name your profile to save the
+current session here, then link a Cloud Account later. Sign in with Google or
+email/password; Google accounts need a password before play. Connect Google to
+an existing account from your profile.
 
-The profile link is a clean `/profile/your-name` address—there is no compressed
-`?card=…` token. It opens a read-only public summary of the name, avatar,
-best/pinned rolls, and key stats; the private game save and account email are
-not shown. Older snapshot-card links still open for backwards compatibility.
+Cloud profiles use a clean `/profile/your-name` link, with no `?card=…` token.
+It opens a read-only summary of the name, avatar, best/pinned rolls and key
+stats—not the private save or account email. Local profiles can share a
+read-only snapshot card; older snapshot links still work.
 
 Migration moves only the current browser save to Firebase; existing Supabase
 accounts and cloud saves are not migrated. If the Firebase account has no save,
@@ -101,19 +99,16 @@ read/write restricted to its Firebase UID; public profiles are readable one
 name at a time, cannot be listed, and can only be written or removed by their
 owner. Do not use open/test-mode rules or a service-account key in the browser.
 
-This is a fresh Firebase setup: existing Supabase accounts and cloud saves are
-left in the old project and are not migrated. Players need Firebase accounts;
-old Supabase-owned browser saves are not silently copied into another account.
-The Supabase migration file remains only as historical reference and is not
-used by this build.
+Existing Supabase accounts and cloud saves remain in the old project; they are
+not migrated. Linking only applies to a profile saved in this browser. The old
+Supabase migration file is historical and is not used by this build.
 
 `npm run dev` loads the tracked `.env.development`, so Cloud Account sign-in is
 configured in the normal development server. For a different Firebase project,
 copy `.env.example` to ignored `.env.local` and replace the public values.
 Production builds and `npm run pages:publish` use `.env.production`. If Firebase
-is missing or invalid, play stays paused and the browser save is preserved.
-Playwright runs `npm run dev:test` in test mode, with Firebase disabled and the
-cloud gate explicitly off so local gameplay tests never use the live project.
+is unavailable, choose **Continue locally**; cloud sign-in can be linked later.
+Playwright uses `npm run dev:test` with Firebase disabled.
 
 ## Legacy records
 

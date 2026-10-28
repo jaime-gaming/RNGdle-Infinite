@@ -24,15 +24,12 @@ export default function CloudProfile({ username, onContinue, onOwnProfile }) {
             : { status: "missing", card: null, error: "" },
         );
       },
-      (failure) => {
+      () => {
         if (!active) return;
         setResult({
           status: "error",
           card: null,
-          error:
-            failure?.code === "permission-denied"
-              ? "The public-profile Firestore rules may not be published yet."
-              : failure?.message || "The public profile could not be loaded.",
+          error: "This profile isn’t available right now. Try again later.",
         });
       },
     );
@@ -62,7 +59,7 @@ export default function CloudProfile({ username, onContinue, onOwnProfile }) {
       ) : result.status === "missing" ? (
         <p className="cloud-profile-message" role="status">
           No public profile was found for this name. Check the address or ask
-          the player to sign in and publish their cloud profile.
+          the player to make their profile public from their account.
         </p>
       ) : (
         <div className="cloud-profile-error" role="alert">

@@ -40,8 +40,21 @@ test("the help icon opens a real About page that is not a top navigation entry",
   expect(navSource).not.toContain('"about"');
 });
 
-test("About is grouped content whose figures come from the game modules", () => {
-  // Structure: numbered steps plus topic cards, not one wall of prose.
+test("the play-choice banner appears only at the blocked roll entry point", () => {
+  const bannerStart = main.indexOf('<div className="play-choice-banner"');
+  expect(bannerStart).toBeGreaterThan(0);
+  expect(main.slice(0, bannerStart).slice(-400)).toContain('page === "roll"');
+  expect(main.slice(0, bannerStart).slice(-400)).toContain(
+    "!playAccess.allowed",
+  );
+  const banner = main.slice(bannerStart, main.indexOf("</div>", bannerStart));
+  expect(banner).toContain("Choose how to play:");
+  expect(banner).toContain("Your profile is saved on this device.");
+  expect(banner).not.toContain("Create an account");
+  expect(banner).not.toContain("Create profile");
+});
+
+test("About is concise, current, and uses figures from the game", () => {
   for (const cls of [
     "about-intro",
     "about-steps",
@@ -51,14 +64,12 @@ test("About is grouped content whose figures come from the game modules", () => 
     "about-footnote",
   ])
     expect(about).toContain(cls);
-  expect(about.match(/^\s+title: "/gm)?.length ?? 0).toBeGreaterThanOrEqual(7);
-  // Figures are interpolated from the modules, never typed as literals that
-  // could drift from the rules they describe.
+  // Three short steps and two topic cards keep the page easy to scan.
+  expect(about.match(/^\s+title: "/gm)?.length ?? 0).toBe(5);
   for (const symbol of [
     "POPULATION",
     "BADGE_TOTAL",
     "PETS.length",
-    "PET_DROP_CHANCE",
     "BASE_ROLL_MS",
     "BASE_COOLDOWN_MS",
     "GAME_URL",
@@ -67,9 +78,12 @@ test("About is grouped content whose figures come from the game modules", () => 
   expect(about).not.toContain(String(POPULATION));
   expect(about).not.toMatch(new RegExp(`\\b${BADGE_TOTAL} badges`));
   expect(about).not.toMatch(/\b45 seconds|\b60 seconds/);
+  expect(about).toContain("Continue locally and name a profile");
+  expect(about).toContain("Link a Cloud Account");
   expect(PETS.length).toBeGreaterThan(0);
-  // The fairness promise must state what purchases cannot do.
-  expect(about.toLowerCase()).toContain("no purchase");
+  expect(about.toLowerCase().replace(/\s+/g, " ")).toContain(
+    "nothing you buy changes the odds",
+  );
 });
 
 const pending = (overrides) => ({

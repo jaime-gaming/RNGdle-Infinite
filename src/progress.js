@@ -1305,13 +1305,13 @@ function applyEvent(state, action) {
     )
       throw new Error("Invalid profile");
     const profile = { id: action.id, username, createdAt: action.createdAt };
-    if (action.type === "register-cloud") {
-      // Connecting a cloud login should not throw away the guest session that
-      // is currently on screen. The next local save is imported to the account.
+    if (action.type === "register-cloud" || action.preserveGuest) {
+      // A player who explicitly chose local play can name that guest session
+      // without losing it. Cloud registration also keeps the current session.
       return { ...state, profile };
     }
-    // The original local-only registration remains a deliberately fresh start.
-    // The goal is a preference, not a reward, so it carries over.
+    // Unchosen guest progress is not claimed by a new local profile. The goal
+    // is a preference, not a reward, so it carries over.
     return { ...emptyProgress(), goalId: state.goalId ?? null, profile };
   }
   // A scored roll, checked the same way wherever it comes from: the committed

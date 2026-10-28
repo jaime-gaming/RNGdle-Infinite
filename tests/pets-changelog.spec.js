@@ -406,8 +406,13 @@ test("sign-up validates the name live and states what is and is not kept", () =>
   expect(source).toContain("disabled={pending || !ready}");
   expect(source).toContain("validUsername");
   expect(source).toContain("aria-invalid");
-  expect(source).toContain("A fresh start:");
-  expect(source).toContain("Saved from here on:");
+  expect(source).toContain("Choose a name to save progress on this device.");
+  expect(source).toContain("Your current guest progress will be kept.");
+  expect(source).toContain(
+    "Guest progress from this session will not carry over.",
+  );
+  expect(source).toContain("This profile stays on this device.");
+  expect(source).not.toContain("A fresh start:");
   // The same validator guards the reducer, so UI and rules cannot disagree.
   for (const good of ["abc", "Lucky_Otter-12", "Zoë99"])
     expect(validUsername(good)).toBe(true);

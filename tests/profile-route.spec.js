@@ -7,14 +7,13 @@ test("the profile page lives at /profile/<username> and follows the account", as
   // A guest lands on the bare page: there is no name to show yet.
   await page.goto("/profile");
   await expect(page.getByText("Start saving your progress")).toBeVisible();
-  await expect(page.getByTestId("cloud-migration-note")).toContainText(
-    "Migration to Cloud",
-  );
+  await expect(page.getByTestId("cloud-migration-note")).toHaveCount(0);
   await expect(page).toHaveURL(/\/profile$/);
   // Signing up rewrites the address to the new name without a new entry.
   await page.getByLabel("Username").fill("LuckyOtter41");
   await page.getByRole("button", { name: /Start saving my progress/ }).click();
   await expect(page).toHaveURL(/\/profile\/LuckyOtter41$/);
+  await expect(page.getByTestId("cloud-migration-note")).toBeVisible();
   await page.goBack();
   await expect(page).not.toHaveURL(/\/profile/);
 });

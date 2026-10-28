@@ -84,7 +84,9 @@ test("navigation, themes, help and local signup", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Your profile, LuckyPlayer" }),
   ).toBeVisible();
-  await expect(page.getByText("not an online account")).toBeVisible();
+  await expect(page.getByTestId("cloud-migration-note")).toContainText(
+    "saved on this device",
+  );
   await page.getByRole("button", { name: "Continue playing" }).click();
   await expect(
     page.getByRole("navigation").getByRole("button", { name: "Leaderboard" }),

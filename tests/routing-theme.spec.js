@@ -27,7 +27,7 @@ import { emptyProgress } from "../src/progress.js";
 import { shopProducts, AURA_FAMILIES } from "../src/shop-data.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 
-test("every top navigation destination is a real path, not a hash fragment", () => {
+test("every app page has a direct path, not a hash fragment", () => {
   expect(PAGES).toEqual([
     "roll",
     "tasks",
@@ -38,6 +38,8 @@ test("every top navigation destination is a real path, not a hash fragment", () 
     "changelog",
     "about",
     "profile",
+    "privacy",
+    "tos",
     "rebirth",
   ]);
   expect(pathForPage("roll")).toBe("/");

@@ -72,6 +72,7 @@ function BadgeList({ ids, openBadge }) {
 }
 export default function ActivityFeed({
   progress,
+  cloudUser = false,
   navigate,
   openSignup,
   openBadge,
@@ -176,7 +177,7 @@ export default function ActivityFeed({
     } catch {
       notify?.({
         kind: "error",
-        text: "Clipboard isn’t available. Try copying from a secure browser window.",
+        text: "The result could not be copied. Please try again.",
       });
     }
   }
@@ -210,22 +211,22 @@ export default function ActivityFeed({
         <div>
           <h1>Your activity</h1>
           <p>
-            Every completed roll, new discovery, companion, and shop
-            transaction.
+            Every completed roll, new discovery, companion, and shop purchase.
           </p>
         </div>
       </div>
-      {!progress.profile && (
-        <div className="guest-save-notice">
-          <p>
-            Sign in to your Cloud Account before playing. An unowned browser
-            save can be imported to Firebase after sign-in.
-          </p>
-          <button className="secondary-button" onClick={openSignup}>
-            Open Cloud Account
-          </button>
-        </div>
-      )}
+      {!cloudUser &&
+        !progress.profile &&
+        (progress.history?.length ?? 0) > 0 && (
+          <div className="guest-save-notice">
+            <p>
+              Guest activity is temporary. Name a profile to keep this session.
+            </p>
+            <button className="secondary-button" onClick={openSignup}>
+              Name profile
+            </button>
+          </div>
+        )}
       <div className="activity-summary">
         <span>
           <Coins size={16} /> <strong>{formatEP(progress.balance)} EP</strong>{" "}
@@ -810,7 +811,7 @@ export default function ActivityFeed({
                       ) : event.type === "rngween-world-purchase" ? (
                         <>
                           <strong>−{count(event.points)} World points</strong> ·{" "}
-                          Expires after November 3 (UTC)
+                          Expires after November 3
                         </>
                       ) : event.type === "rngween-world-exchange" ? (
                         <>
@@ -825,7 +826,7 @@ export default function ActivityFeed({
                           {event.productId === "pumpkin-familiar" ||
                           event.productId === "midnight-harvest" ||
                           event.productId === "rngween-world-key"
-                            ? "Expires after November 3 (UTC)"
+                            ? "Expires after November 3"
                             : "Permanent aura"}
                         </>
                       ) : (

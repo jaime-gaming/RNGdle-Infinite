@@ -259,7 +259,9 @@ test("corrupt delivery awards nothing; retry loads the text-safe scoring data", 
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByRole("alert")).toContainText("integrity check");
+  await expect(page.getByRole("alert")).toContainText(
+    "game data could not be loaded",
+  );
   await expect(page.locator(".history-numbers button")).toHaveCount(0);
   await expect(page.locator(".roll-ep")).toHaveCount(0);
   corrupt = false;

@@ -54,13 +54,10 @@ import {
   writePresence,
   clearPresence,
 } from "./offline.js";
-// A repaired save says what was fixed, briefly: the first three notes inline,
-// the rest counted. The full list also goes to the console for support.
+// Keep repair details out of player-facing messages; readable progress stays.
 function repairWarning(repairs) {
-  const shown = repairs.slice(0, 3).join(" ");
-  const suffix =
-    repairs.length > 3 ? ` Plus ${repairs.length - 3} more fixes.` : "";
-  return `Your save was repaired — valid progress was kept. ${shown}${suffix}`;
+  if (!repairs.length) return "";
+  return "Some saved details needed fixing. Your readable progress was kept.";
 }
 function readLocalSave() {
   try {
@@ -145,7 +142,7 @@ function load() {
     return {
       progress: emptyProgress(),
       warning:
-        "Your saved progress could not be read. Progress is temporary until this browser allows saving.",
+        "Your saved progress could not be opened. You can keep playing in this tab, but changes may not be saved.",
     };
   }
 }
@@ -155,6 +152,7 @@ export function useProgress({
   passwordRequired = false,
   cloudEnabled = firebaseConfigured,
   requireCloudAccount = true,
+  localPlay = false,
 } = {}) {
   const [initial] = useState(load),
     [progress, setProgress] = useState(initial.progress),
@@ -189,6 +187,7 @@ export function useProgress({
     passwordRequired,
     cloudEnabled,
     requireCloudAccount,
+    localPlay,
   });
   authRef.current = {
     userId,
@@ -196,6 +195,7 @@ export function useProgress({
     passwordRequired,
     cloudEnabled,
     requireCloudAccount,
+    localPlay,
   };
   const cloudGate = useRef({
     userId: null,
@@ -262,7 +262,7 @@ export function useProgress({
 
     if (!writeLocalSave(selected)) {
       const error =
-        "The cloud save was reconciled, but this browser could not keep a local copy. Allow browser storage before playing.";
+        "Your online progress loaded, but this device could not save a copy. Free up space and try again before playing.";
       cloudGate.current = { userId: activeUserId, ready: false };
       pendingCloudConflict.current = null;
       updateCloud({
@@ -281,7 +281,7 @@ export function useProgress({
     if (cacheWarning) setWarning(cacheWarning);
     if (!ensureCloudOwner(activeUserId)) {
       const error =
-        "This browser could not record which Firebase account owns its local save. Free browser storage before playing or switching accounts.";
+        "This device could not remember which account owns this progress. Free up space before playing or switching accounts.";
       cloudGate.current = { userId: activeUserId, ready: false };
       pendingCloudConflict.current = null;
       updateCloud({
@@ -340,7 +340,7 @@ export function useProgress({
               markLocalCloudDirty();
             } catch {
               setWarning(
-                "Saved progress could not be synchronized. This tab is keeping its current progress.",
+                "Progress could not be saved on this device. This tab is keeping its current progress.",
               );
             }
           }
@@ -355,7 +355,7 @@ export function useProgress({
       } catch {
         healthy.current = false;
         setWarning(
-          "Saved progress could not be synchronized. This tab is keeping its current progress.",
+          "Progress could not be saved on this device. This tab is keeping its current progress.",
         );
       }
     }
@@ -425,10 +425,10 @@ export function useProgress({
         if (!cacheLocalSaveForUser(localOwner, rawToCache)) {
           if (localRaw || localProgress.profile)
             throw new Error(
-              "The previous account’s local save could not be preserved. Free browser storage and retry before switching accounts.",
+              "A copy of the previous account’s progress could not be kept. Free up space and try again before switching accounts.",
             );
           cacheWarning =
-            "This browser could not keep a local copy of the previous account.";
+            "This device could not keep a copy of the previous account’s progress.";
         }
         // A save marked for another auth user is never a first-sign-in import.
         // Only this account's own cached save may follow it across a switch.
@@ -437,7 +437,7 @@ export function useProgress({
           try {
             cachedProgress = parseStoredSave(cached).progress;
           } catch {
-            cacheWarning = "A cached local save could not be read.";
+            cacheWarning = "A saved copy for this account could not be opened.";
           }
         }
       }
@@ -463,7 +463,7 @@ export function useProgress({
       applyCloudReconciliation(reconciliation, userId, cacheWarning);
     }
 
-    restoreCloudSave().catch((error) => {
+    restoreCloudSave().catch(() => {
       if (!currentRequest()) return;
       cloudGate.current = { userId, ready: false };
       updateCloud({
@@ -471,8 +471,7 @@ export function useProgress({
         ready: false,
         userId,
         error:
-          error?.message ||
-          "The cloud save could not be loaded. Retry before changing progress.",
+          "Your online progress could not be loaded. Try again before changing anything.",
       });
     });
 
@@ -539,7 +538,7 @@ export function useProgress({
                 updatedAt:
                   result.updatedAt ?? cloudRef.current.updatedAt ?? null,
                 error:
-                  "The cloud save was kept, but this browser could not update its local copy. Your previous local save is in Cloud conflict recovery.",
+                  "Your online progress was kept, but this device could not update its copy. Your previous progress is saved under Progress recovery.",
                 notice: result.notice || cloudRef.current.notice || "",
               });
               return;
@@ -550,7 +549,7 @@ export function useProgress({
           }
           if (!ensureCloudOwner(userId)) {
             const error =
-              "This browser could not record which Firebase account owns its local save. Free browser storage before switching accounts.";
+              "This device could not remember which account owns this progress. Free up space before switching accounts.";
             cloudGate.current = { userId, ready: false };
             updateCloud({
               status: "error",
@@ -573,7 +572,7 @@ export function useProgress({
             publicProfileAvailable: result.publicProfilePublished ?? false,
           });
         })
-        .catch((error) => {
+        .catch(() => {
           if (
             cloudWriteVersion.current !== version ||
             authRef.current.userId !== userId
@@ -585,8 +584,7 @@ export function useProgress({
             userId,
             updatedAt: cloudRef.current.updatedAt ?? null,
             error:
-              error?.message ||
-              "The cloud save could not be updated. Your local save is still safe.",
+              "Your progress could not be backed up online. The copy on this device is safe. Try again.",
             notice: cloudRef.current.notice ?? "",
           });
         });
@@ -611,7 +609,7 @@ export function useProgress({
       return {
         ok: false,
         message:
-          "The save choice expired. Reload the cloud comparison and try again.",
+          "That choice has expired. Review the latest copies and choose again.",
       };
 
     cloudWriteVersion.current++;
@@ -644,7 +642,7 @@ export function useProgress({
         return {
           ok: false,
           message:
-            "The signed-in account changed. Review its cloud save before playing.",
+            "The signed-in account changed. Review its progress before playing.",
         };
       if (result.choiceRequired) {
         showCloudConflict(result, activeUserId, pending.cacheWarning);
@@ -659,16 +657,15 @@ export function useProgress({
         activeUserId,
         pending.cacheWarning,
       );
-    } catch (error) {
+    } catch {
       if (authRef.current.userId !== activeUserId)
         return {
           ok: false,
           message:
-            "The signed-in account changed. Review its cloud save before playing.",
+            "The signed-in account changed. Review its progress before playing.",
         };
       const message =
-        error?.message ||
-        "The selected save could not be applied. Neither copy was discarded.";
+        "We couldn’t apply that choice. Neither copy was removed. Please try again.";
       updateCloud({
         ...cloudRef.current,
         status: "needs-choice",
@@ -702,6 +699,7 @@ export function useProgress({
           authReady: auth.authReady,
           userId: auth.userId,
           passwordRequired: auth.passwordRequired,
+          localPlay: auth.localPlay,
         });
         if (!accountAccess.allowed)
           return { ok: false, message: accountAccess.message };
@@ -714,7 +712,7 @@ export function useProgress({
             ok: false,
             message:
               cloudRef.current.error ||
-              "Your cloud save is still loading. Retry before changing progress.",
+              "Your online progress is still loading. Try again before changing anything.",
           };
         let previous = current.current;
         let readable = true;
@@ -734,7 +732,7 @@ export function useProgress({
               return {
                 ok: false,
                 message:
-                  "The account or reset cycle changed. The previous action was cancelled.",
+                  "Your profile or progress changed in another tab. This action was cancelled.",
               };
             }
             previous = healthy.current
@@ -755,12 +753,12 @@ export function useProgress({
         )
           throw new Error(
             action.type === "fresh-start"
-              ? "A fresh start requires working local storage and Web Locks support."
+              ? "This browser can’t safely save a fresh start right now. Update it or try another browser."
               : action.type === "rollback"
-                ? "The Rollback requires working local storage and Web Locks support."
+                ? "This browser can’t safely save a Rollback right now. Update it or try another browser."
                 : action.type === "ultra-rebirth"
-                  ? "Prestige requires working local storage and Web Locks support."
-                  : "Rebirth requires working local storage and Web Locks support.",
+                  ? "This browser can’t safely save a Prestige right now. Update it or try another browser."
+                  : "This browser can’t safely save a Rebirth right now. Update it or try another browser.",
           );
         if (action.type === "delete") {
           if (!previous.profile || previous.profile.id !== action.profileId)
@@ -774,7 +772,8 @@ export function useProgress({
               : null;
           let cloudDeleted = false;
           try {
-            if (!readable) throw new Error("Unreadable storage");
+            if (!readable)
+              throw new Error("Your progress could not be opened.");
             if (cloudUser) {
               await deleteCloudSave(cloudUser, previous);
               cloudDeleted = true;
@@ -783,7 +782,7 @@ export function useProgress({
             localStorage.removeItem(PROGRESS_KEY);
             clearVault(localStorage);
             clearCloudRecovery(localStorage);
-          } catch (error) {
+          } catch {
             if (cloudDeleted && cloudUser)
               try {
                 await writeCloudSave(cloudUser, previous);
@@ -791,8 +790,8 @@ export function useProgress({
             return {
               ok: false,
               message: cloudUser
-                ? `Progress could not be deleted everywhere: ${error?.message || "storage is unavailable"}. Your save has not been cleared.`
-                : "Progress could not be deleted. Allow browser storage and try again.",
+                ? "Your progress could not be removed from both places. Please try again."
+                : "Your progress could not be removed from this device. Free up space and try again.",
             };
           }
           if (cloudUser) {
@@ -840,11 +839,11 @@ export function useProgress({
         if (action.type.startsWith("offline-")) {
           if (!previous.profile || !previous.owned.includes("offline-roller"))
             throw new Error(
-              "Offline Roller requires a saved local profile and ownership.",
+              "Create a named profile before buying Offline Roller.",
             );
           if (!readable || !navigator.locks?.request)
             throw new Error(
-              "Offline rewards need writable storage and Web Locks support.",
+              "This browser can’t safely save offline rewards yet. Update it or try another browser.",
             );
           const now = Math.ceil(gameNow()),
             offline = previous.offline ?? {
@@ -913,10 +912,10 @@ export function useProgress({
             }
           } else if (action.type === "offline-dismiss")
             next = { ...previous, offline: { ...offline, report: null } };
-          else throw new Error("Unknown offline action");
+          else throw new Error("That action is not available right now.");
           if (token !== generation.current)
             throw new Error(
-              "This account was reset. Offline action cancelled.",
+              "Your game was restarted. This action was cancelled.",
             );
         } else if (action.type === "draw") {
           if (previous.offline?.batch)
@@ -925,11 +924,11 @@ export function useProgress({
             );
           if (previous.profile && !navigator.locks?.request)
             throw new Error(
-              "This browser cannot safely coordinate account rolls. Use a browser with Web Locks support.",
+              "This browser can’t safely save progress across open tabs. Update it or try another browser.",
             );
           if (!readable)
             throw new Error(
-              "Your saved game cannot be read. No new roll was started.",
+              "Your saved progress could not be opened. No new roll was started.",
             );
           if (previous.pendingRoll) {
             const result = await restoreRoll(previous.pendingRoll.number);
@@ -943,7 +942,7 @@ export function useProgress({
             current.current = previous;
             setProgress(previous);
             throw new Error(
-              "Your next roll is not ready yet. The cooldown is shared across account tabs.",
+              "Your next roll is not ready yet. The timer is the same in every open tab.",
             );
           }
           const timing = rollSettings(previous.owned);
@@ -981,7 +980,9 @@ export function useProgress({
               previous.profile.id
           ) {
             reset(parseProgress(localStorage.getItem(PROGRESS_KEY)));
-            throw new Error("The account changed. The draw was cancelled.");
+            throw new Error(
+              "Your profile changed in another tab. The draw was cancelled.",
+            );
           }
           const firedPicks = new Set((picks ?? []).map((pick) => pick.skill));
           const fired = armed.filter(
@@ -1027,7 +1028,9 @@ export function useProgress({
           }
           const pending = previous.pendingRoll;
           if (!pending || pending.id !== action.id)
-            throw new Error("No matching committed roll. No EP was credited.");
+            throw new Error(
+              "This roll is no longer available. No EP was added.",
+            );
           // Scores and badges come from the verified index, never from a UI payload.
           const result = await restoreRoll(pending.number);
           if (token !== generation.current)
@@ -1060,12 +1063,15 @@ export function useProgress({
               productById.get(action.id)?.kind === "offline") &&
             !navigator.locks?.request
           )
-            throw new Error("Offline Roller requires Web Locks support.");
+            throw new Error(
+              "This browser can’t safely save this purchase yet. Update it or try another browser.",
+            );
           next = applyProgress(previous, action);
         }
         if (next !== actionHead && next.profile) {
           try {
-            if (!readable) throw new Error("Unreadable storage");
+            if (!readable)
+              throw new Error("Your progress could not be opened.");
             if (previous.profile) {
               const latest = parseProgress(localStorage.getItem(PROGRESS_KEY));
               if (
@@ -1078,7 +1084,7 @@ export function useProgress({
                 return {
                   ok: false,
                   message:
-                    "The account changed. The previous action was cancelled.",
+                    "Your profile changed in another tab. The previous action was cancelled.",
                 };
               }
             }
@@ -1096,7 +1102,7 @@ export function useProgress({
           } catch {
             healthy.current = false;
             setWarning(
-              "Local saving is unavailable or full. New draws and purchases require saving. A committed result may be temporarily credited in this tab until saving works again; no saved history has been deleted.",
+              "Saving on this device is unavailable or full. New draws and purchases need a saved copy. A completed roll may be credited in this tab until saving works again; saved history has not been deleted.",
             );
             if (action.type === "complete") {
               // The settled roll is kept in memory only, so remember exactly
@@ -1115,20 +1121,20 @@ export function useProgress({
                 ok: false,
                 message:
                   action.type === "rebirth" || action.type === "fresh-start"
-                    ? "Rebirth could not be saved. Your progress has not been reset."
+                    ? "Rebirth could not be saved. Your progress was not reset. Free up space and try again."
                     : action.type === "ultra-rebirth"
-                      ? "Prestige could not be saved. Your progress has not been reset."
+                      ? "Prestige could not be saved. Your progress was not reset. Free up space and try again."
                       : action.type === "rollback"
-                        ? "The Rollback could not be saved. Your progress has not been reset."
+                        ? "The Rollback could not be saved. Your progress was not reset. Free up space and try again."
                         : action.type.startsWith("offline-")
-                          ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
+                          ? "Offline rewards could not be saved. Your completed rolls are safe. Free up space and try again."
                           : ["register", "register-cloud"].includes(action.type)
                             ? "Sign-up could not be saved. Your current progress is still available in this tab."
                             : action.type === "draw"
-                              ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
+                              ? "The roll could not be saved. No number was revealed and no EP was awarded. Free up space and try again."
                               : action.type === "goal"
                                 ? "Your goal could not be saved. Your previous goal and EP are unchanged."
-                                : "Purchase or equipment change not saved. Your EP has not been spent.",
+                                : "Your purchase or equipment change could not be saved. No EP was spent.",
               };
           }
         }
@@ -1159,11 +1165,11 @@ export function useProgress({
                 ok: false,
                 message:
                   action.type === "rebirth"
-                    ? "Rebirth could not update session storage. Your progress has not been reset."
-                    : "Temporary roll storage is unavailable. No number was revealed. Allow browser storage to roll.",
+                    ? "Rebirth could not be saved for this session. Your progress was not reset. Please try again."
+                    : "The game could not remember this roll. No number was revealed. Free up space and try again.",
               };
             setWarning(
-              "The temporary roll guard could not be updated. Keep this tab open until the cooldown finishes.",
+              "The game could not remember this roll across a refresh. Keep this tab open until the countdown ends.",
             );
           }
         }
@@ -1208,7 +1214,18 @@ export function useProgress({
             : {}),
         };
       } catch (error) {
-        return { ok: false, message: error.message };
+        const message = error instanceof Error ? error.message : "";
+        const technical =
+          /firebase|firestore|web locks|localstorage|sessionstorage|permission-denied|decompress|snapshot|transaction|quotaexceeded|typeerror/i.test(
+            message,
+          );
+        return {
+          ok: false,
+          message:
+            message && !technical
+              ? message
+              : "This action could not be completed. Please try again.",
+        };
       }
     };
     const task = queue.current.then(() =>
@@ -1235,7 +1252,7 @@ export function useProgress({
         return {
           ok: false,
           message:
-            "The backup could not be written. Allow browser storage and try again.",
+            "The backup could not be restored. Free up space on this device and try again.",
         };
       }
       const restored = parseAndRepairProgress(copy.raw).progress;
@@ -1247,7 +1264,7 @@ export function useProgress({
       if (!copy)
         return {
           ok: false,
-          message: "There is no displaced cloud/local save to restore yet.",
+          message: "There is no other saved copy to restore yet.",
         };
       let restored;
       try {
@@ -1258,7 +1275,7 @@ export function useProgress({
         return {
           ok: false,
           message:
-            "The recovery copy could not be read or written. Allow browser storage and try again.",
+            "The saved copy could not be restored. Free up space on this device and try again.",
         };
       }
       reset(restored);

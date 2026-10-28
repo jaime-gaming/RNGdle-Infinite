@@ -32,6 +32,13 @@ function rankLabel(rank) {
   return rank ? rank[0].toUpperCase() + rank.slice(1) : "";
 }
 
+function savedAt(timestamp) {
+  return new Date(timestamp).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 function Toggle({ id, label, description, checked, onChange, disabled }) {
   return (
     <div className="setting-row">
@@ -68,7 +75,7 @@ export default function Settings({
 }) {
   const { settings, update, reset, saveError } = useSettings();
   const [permission, setPermission] = useState(notificationPermission);
-  // The rolling save backup and the separate copy displaced by cloud sync.
+  // The automatic backup and the separate copy kept when progress differs.
   const [backup, setBackup] = useState(() => vault?.get?.() ?? null);
   const [recovery, setRecovery] = useState(
     () => vault?.getRecovery?.() ?? null,
@@ -107,8 +114,8 @@ export default function Settings({
         kind: "warning",
         text:
           result === "unsupported"
-            ? "This browser does not support desktop notifications."
-            : "Your browser blocked notifications. Allow them in site settings and try again.",
+            ? "Desktop alerts are not available on this device."
+            : "Allow notifications for this game in your settings, then try again.",
       });
     }
   }
@@ -133,8 +140,8 @@ export default function Settings({
         kind: "warning",
         text:
           result === "unsupported"
-            ? "This browser does not support desktop notifications."
-            : "Your browser blocked notifications. Allow them in site settings and try again.",
+            ? "Desktop alerts are not available on this device."
+            : "Allow notifications for this game in your settings, then try again.",
       });
     }
   }
@@ -157,8 +164,8 @@ export default function Settings({
             kind: "warning",
             text:
               result === "unsupported"
-                ? "This browser does not support desktop notifications. The chime is on."
-                : "Your browser blocked notifications. Allow them in site settings and try again. The chime is on.",
+                ? "Desktop alerts are not available on this device. The chime is on."
+                : "Allow notifications for this game in your settings, then try again. The chime is on.",
           },
     );
   }
@@ -198,10 +205,10 @@ export default function Settings({
           label="Desktop notification when a roll is ready"
           description={
             unsupported
-              ? "This browser does not support desktop notifications."
+              ? "Desktop alerts are not available on this device."
               : denied
-                ? "Blocked by your browser. Allow notifications for this site, then switch this on."
-                : "Sent only while this tab is in the background, once per cooldown."
+                ? "Allow notifications for this game in your settings, then try again."
+                : "Sent once when your roll is ready, while you are away from the game."
           }
           checked={settings.notifyReady && permission === "granted"}
           disabled={unsupported || denied}
@@ -212,9 +219,9 @@ export default function Settings({
           label="Notify me at this rank or higher"
           description={
             unsupported
-              ? "This browser does not support rank alerts."
+              ? "Rank alerts are not available on this device."
               : denied
-                ? "Blocked by your browser. Allow notifications for this site, then switch this on."
+                ? "Allow notifications for this game in your settings, then try again."
                 : "Rolls at the chosen rank or higher alert you and stop Auto-Roll for review. Independent of the ready-roll notification."
           }
           checked={rankActive}
@@ -344,13 +351,9 @@ export default function Settings({
           <Cloud size={16} aria-hidden="true" /> Online account
         </h2>
         <p className="settings-group-note">
-          Sign in and manage Google or email/password from your profile. Local
-          progress remains saved in this browser. Different reset generations
-          always require your choice. Within one generation, only clear
-          dominance in measured game progress syncs automatically; ties and
-          mixed/incomparable progress also require your choice. Different game
-          profiles are not merged; eligible copies are a whole-save choice. A
-          displaced version is kept under Cloud conflict recovery below.
+          Link a Cloud Account for an online backup. If this device and your
+          online account have different progress, you choose which to keep; the
+          other copy stays safe here.
         </p>
         <button
           type="button"
@@ -440,17 +443,16 @@ export default function Settings({
           <RotateCcw size={14} /> Restore defaults
         </button>
         <small>
-          Settings are saved in this browser only, separately from your game
-          progress. Deleting the game save does not remove them or your online
-          sign-in.
+          Settings stay on this device, separate from your game progress.
+          Deleting your game profile does not remove them or your sign-in.
         </small>
       </div>
       <div className="settings-save" data-testid="settings-backup">
         <h2>Your save</h2>
         <p>
           {backup
-            ? `A backup copy of your game was kept on ${new Date(backup.at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" })} UTC. It weighs ${Math.max(1, Math.round(backup.bytes / 1024))} KB once compressed.`
-            : "This browser has not kept a backup copy yet. It writes one as soon as the game saves."}
+            ? `A backup copy was saved on ${savedAt(backup.at)}.`
+            : "No backup copy has been made yet. One is saved automatically as you play."}
         </p>
         <button
           type="button"
@@ -466,7 +468,7 @@ export default function Settings({
                 ? {
                     kind: "done",
                     title: "Backup restored",
-                    text: "The last saved copy is back in this browser.",
+                    text: "The last saved copy is back on this device.",
                   }
                 : {
                     kind: "error",
@@ -480,20 +482,19 @@ export default function Settings({
           {restoring ? "Restoring…" : "Restore the last backup"}
         </button>
         <small>
-          Your game is saved in this browser. Reloading, updating the game or
-          clearing cached files never removes it. Deleting the game save also
-          deletes its cloud copy when signed in, but not your online sign-in.
-          The backup is a second, compressed copy of the same save.
+          Your progress stays on this device when you reload or update the game.
+          Deleting your game profile also deletes its online copy when you’re
+          signed in, but keeps your sign-in. We keep a second copy here just in
+          case.
         </small>
       </div>
       <div className="settings-save" data-testid="settings-cloud-recovery">
-        <h2>Cloud conflict recovery</h2>
+        <h2>Progress recovery</h2>
         <p>
           {recovery
-            ? `A save displaced by cloud sync was kept on ${new Date(recovery.at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" })} UTC. It weighs ${Math.max(1, Math.round(recovery.bytes / 1024))} KB once compressed.`
-            : "If local and cloud saves conflict, the displaced version is kept separately here."}
+            ? `A second copy of your progress was saved on ${savedAt(recovery.at)}.`
+            : "If this device and your online account have different progress, the copy you don’t choose is kept here."}
         </p>
-        {recovery?.reason && <small>{recovery.reason}</small>}
         <button
           type="button"
           className="secondary-button"
@@ -509,7 +510,7 @@ export default function Settings({
                 ? {
                     kind: "done",
                     title: "Recovery copy restored",
-                    text: "The displaced save is back in this browser. If you are online, the richer-save sync policy still applies.",
+                    text: "Your progress is back on this device. If the online copy differs, you’ll be asked which to keep.",
                   }
                 : {
                     kind: "error",
@@ -521,13 +522,11 @@ export default function Settings({
           }}
         >
           <History size={14} />{" "}
-          {restoring ? "Restoring…" : "Restore displaced save"}
+          {restoring ? "Restoring…" : "Restore other saved copy"}
         </button>
         <small>
-          This copy is separate from the rolling browser backup. It stays on
-          this device, and a later conflict replaces it with the newest
-          displaced version. Restoring it does not force an upload over a richer
-          cloud save.
+          Kept on this device. Restoring it will ask before changing different
+          online progress.
         </small>
       </div>
       <div className="settings-update">
@@ -544,11 +543,11 @@ export default function Settings({
             className={appUpdate?.active ? "is-spinning" : undefined}
             aria-hidden="true"
           />
-          {appUpdate?.active ? "Stop update attempt" : "Reload until updated"}
+          {appUpdate?.active ? "Stop refresh" : "Refresh game"}
         </button>
         <p data-testid="update-status" role="status" aria-live="polite">
           {appUpdate?.message ||
-            "Clears the files this browser cached for the game, then reloads until the newest build arrives. Your progress, profile and settings are stored separately and stay exactly as they are."}
+            "Refreshes the game to get the latest version. Your progress, profile and settings stay saved."}
         </p>
       </div>
     </section>

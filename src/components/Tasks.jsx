@@ -67,7 +67,14 @@ const KIND = {
 
 const count = (n) => n.toLocaleString("en-US");
 
-export default function Tasks({ progress, now, onAction, notify, openSignup }) {
+export default function Tasks({
+  progress,
+  cloudUser = false,
+  now,
+  onAction,
+  notify,
+  openSignup,
+}) {
   // The one action in flight, and the one card asking to be confirmed.
   const [pending, setPending] = useState("");
   const [confirming, setConfirming] = useState("");
@@ -98,6 +105,12 @@ export default function Tasks({ progress, now, onAction, notify, openSignup }) {
       reset: nextReset(cadence, now) - now,
     };
   });
+  const guestHasTaskProgress = lists.some(
+    (list) =>
+      list.views.some((view) => view.count > 0 || view.state !== "open") ||
+      list.bonus.done > 0 ||
+      list.bonus.state !== "open",
+  );
   const readyEP = lists.reduce(
     (sum, list) =>
       sum +
@@ -181,14 +194,11 @@ export default function Tasks({ progress, now, onAction, notify, openSignup }) {
 
   return (
     <>
-      {!progress.profile && (
+      {!cloudUser && !progress.profile && guestHasTaskProgress && (
         <div className="guest-save-notice">
-          <p>
-            Sign in to your Cloud Account to save progress and play. Any unowned
-            browser save can be migrated to Firebase after sign-in.
-          </p>
+          <p>Guest task progress is temporary. Name a profile to keep it.</p>
           <button className="secondary-button" onClick={openSignup}>
-            Open Cloud Account
+            Name profile
           </button>
         </div>
       )}
@@ -252,9 +262,12 @@ export default function Tasks({ progress, now, onAction, notify, openSignup }) {
                     />
                   ))}
                 </span>
-                <span className="task-reset" title="Lists reset at 00:00 UTC">
+                <span
+                  className="task-reset"
+                  title="Tasks refresh at the same time worldwide."
+                >
                   <Timer size={13} aria-hidden="true" />
-                  Resets in {resetCountdown(list.reset)} · UTC
+                  Resets in {resetCountdown(list.reset)}
                 </span>
               </div>
             </header>
