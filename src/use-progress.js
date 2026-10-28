@@ -1,6 +1,7 @@
 import { gameNow } from "./game-clock";
 import { useEffect, useRef, useState } from "react";
 import {
+  accountSwitchSnapshot,
   cacheLocalSaveForUser,
   clearCloudDirty,
   deleteCloudSave,
@@ -421,7 +422,11 @@ export function useProgress({
       let cacheWarning = "";
 
       if (localOwner && localOwner !== userId) {
-        const rawToCache = localRaw || JSON.stringify(localProgress);
+        const rawToCache = accountSwitchSnapshot({
+          localRaw,
+          progress: localProgress,
+          localSaveHealthy: healthy.current,
+        });
         if (!cacheLocalSaveForUser(localOwner, rawToCache)) {
           if (localRaw || localProgress.profile)
             throw new Error(

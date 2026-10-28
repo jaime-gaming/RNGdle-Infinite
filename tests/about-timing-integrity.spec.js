@@ -40,18 +40,23 @@ test("the help icon opens a real About page that is not a top navigation entry",
   expect(navSource).not.toContain('"about"');
 });
 
-test("the play-choice banner appears only at the blocked roll entry point", () => {
-  const bannerStart = main.indexOf('<div className="play-choice-banner"');
-  expect(bannerStart).toBeGreaterThan(0);
-  expect(main.slice(0, bannerStart).slice(-400)).toContain('page === "roll"');
-  expect(main.slice(0, bannerStart).slice(-400)).toContain(
-    "!playAccess.allowed",
+test("the home screen has no generic account banner; account choices stay on the profile page", () => {
+  const cloudStyles = fs.readFileSync("src/cloud-account.css", "utf8");
+  const cloudAccount = fs.readFileSync(
+    "src/components/CloudAccount.jsx",
+    "utf8",
   );
-  const banner = main.slice(bannerStart, main.indexOf("</div>", bannerStart));
-  expect(banner).toContain("Choose how to play:");
-  expect(banner).toContain("Your profile is saved on this device.");
-  expect(banner).not.toContain("Create an account");
-  expect(banner).not.toContain("Create profile");
+  expect(main).not.toContain('className="play-choice-banner"');
+  expect(cloudStyles).not.toContain(".play-choice-banner");
+  // Cloud/local choices remain available from the header's profile route.
+  expect(main).toContain('page === "profile" && (');
+  expect(main).toContain("<CloudAccount");
+  expect(cloudAccount).toContain('data-testid="continue-locally"');
+  expect(cloudAccount).toContain("Create an account");
+  // The contextual alerts are still present for unresolved save conflicts and
+  // Google accounts that must finish password setup.
+  expect(main).toContain('className="cloud-choice-banner"');
+  expect(main).toContain('className="auth-password-banner"');
 });
 
 test("About is concise, current, and uses figures from the game", () => {

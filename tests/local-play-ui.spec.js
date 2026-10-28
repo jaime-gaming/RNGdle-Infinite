@@ -2,10 +2,14 @@ import { expect, test } from "./helpers/clock.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { showRoll } from "./helpers/random-roll.js";
 
-test("a guest can choose local play and keep that choice after reload", async ({
+test("the home screen has no account banner; a guest can choose local play from their profile", async ({
   page,
 }) => {
-  await page.goto("/profile");
+  await page.goto("/");
+  await expect(page.locator(".play-choice-banner")).toHaveCount(0);
+  await expect(page.getByText(/Choose how to play:/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(/\/profile$/);
   const continueLocally = page.getByRole("button", {
     name: "Continue locally",
   });

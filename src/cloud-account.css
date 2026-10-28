@@ -406,8 +406,7 @@
 .cloud-save-conflict > .cloud-account-note {
   margin-top: 9px;
 }
-.cloud-choice-banner,
-.play-choice-banner {
+.cloud-choice-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -422,12 +421,7 @@
   color: var(--text);
   font-size: 12px;
 }
-.play-choice-banner {
-  border-color: color-mix(in srgb, var(--warning) 42%, var(--border));
-  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
-}
 .cloud-choice-banner button,
-.play-choice-banner button,
 .auth-password-banner button {
   flex: 0 0 auto;
   padding: 6px 9px;
@@ -487,7 +481,6 @@
     width: 100%;
   }
   .cloud-choice-banner,
-  .play-choice-banner,
   .auth-password-banner {
     align-items: stretch;
     flex-direction: column;

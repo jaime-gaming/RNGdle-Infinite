@@ -1,5 +1,6 @@
 import { expect, test } from "./helpers/clock.js";
 import {
+  accountSwitchSnapshot,
   chooseSaveWinner,
   clearCloudDirty,
   cloudConflictVersionChanged,
@@ -326,6 +327,26 @@ test("the same account keeps its local save available for dirty recovery", () =>
       emptyProgress: empty,
     }),
   ).toEqual({ progress: localA, owner: "user-a" });
+});
+
+test("switching accounts caches live progress after a failed local write", () => {
+  const staleDiskSave = JSON.stringify(progress({ balance: 100 }));
+  const liveProgress = progress({ balance: 200 });
+
+  expect(
+    accountSwitchSnapshot({
+      localRaw: staleDiskSave,
+      progress: liveProgress,
+      localSaveHealthy: false,
+    }),
+  ).toBe(JSON.stringify(liveProgress));
+  expect(
+    accountSwitchSnapshot({
+      localRaw: staleDiskSave,
+      progress: liveProgress,
+      localSaveHealthy: true,
+    }),
+  ).toBe(staleDiskSave);
 });
 
 test("dirty snapshots remain associated with each account while switching users", () => {

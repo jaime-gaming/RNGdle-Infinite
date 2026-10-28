@@ -93,6 +93,11 @@ test("deep links and legacy shelf hashes land on the right shelf", async ({
   await page.goBack();
   await expect(page).toHaveURL(/\/shop$/);
   await expect(page.locator(".shop-hub")).toBeVisible();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/shop\/pace$/);
+  await expect(page.locator("#shop-pace")).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/shop$/);
 
   // The other five shelves are one click away from any shelf.
   await page.getByRole("link", { name: "Auras", exact: true }).click();
@@ -587,8 +592,30 @@ test("an aura family is a page of its own, reached from its banner", async ({
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(
     shopProducts.filter((p) => p.family === "celestial").length,
   );
+  // A bookmark/reload renders the same family, and browser history restores
+  // the shelf in both directions.
+  await page.reload();
+  await expect(page).toHaveURL(/\/shop\/auras\/celestial$/);
+  await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText(
+    "Spaaaaaace",
+  );
   await page.goBack();
   await expect(page).toHaveURL(/\/shop\/auras$/);
+  await expect(page.locator(".aura-family-banner")).toHaveCount(
+    AURA_FAMILIES.length,
+  );
+  await page.goForward();
+  await expect(page).toHaveURL(/\/shop\/auras\/celestial$/);
+  await expect(page.locator("#shop-auras")).toBeVisible();
+  // Choosing the top-level Shop route clears any stale family state.
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Shop", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/shop$/);
+  await expect(page.locator(".shop-hub")).toBeVisible();
+  await page.reload();
+  await expect(page.locator(".shop-hub")).toBeVisible();
 });
 
 test("the retired aura offer is gone and permanent auras keep regular prices", async ({

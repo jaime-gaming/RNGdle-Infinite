@@ -451,6 +451,7 @@ function App() {
         : "";
     setShopFocus(target === "shop" ? focusProduct : null);
     setShopSection(section);
+    setShopFamily("");
     setPage(target);
     push(
       target,
@@ -801,27 +802,6 @@ function App() {
           </button>
         </div>
       )}
-      {cloudAccountRequired &&
-        page === "roll" &&
-        !auth.user?.passwordRequired &&
-        !playAccess.allowed &&
-        (auth.ready || !auth.configured) && (
-          <div className="play-choice-banner" role="status">
-            <span>
-              {session.profile
-                ? "Your profile is saved on this device. Continue locally or link a Cloud Account to back it up."
-                : "Choose how to play: continue locally as a guest, or use a Cloud Account."}
-            </span>
-            <button type="button" onClick={() => navigate("profile")}>
-              {session.profile ? "Review profile" : "Cloud Account"}
-            </button>
-            {!auth.user && (
-              <button type="button" onClick={continueLocally}>
-                Continue locally
-              </button>
-            )}
-          </div>
-        )}
       {auth.user?.passwordRequired && (page !== "profile" || sharedCard) && (
         <div className="auth-password-banner" role="alert">
           <span>

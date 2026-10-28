@@ -142,6 +142,19 @@ export function selectLocalSaveForCloudUser({
   return { progress: localProgress, owner: localOwner || null };
 }
 
+// When switching accounts, prefer the exact on-disk bytes if the local save is
+// healthy. If a recent write failed, preserve the newer in-memory progress
+// instead of caching a stale readable save from before that failure.
+export function accountSwitchSnapshot({
+  localRaw,
+  progress,
+  localSaveHealthy = true,
+}) {
+  if (localSaveHealthy && typeof localRaw === "string" && localRaw)
+    return localRaw;
+  return JSON.stringify(progress);
+}
+
 function cloudCacheKey(userId) {
   return `${CLOUD_CACHE_PREFIX}${encodeURIComponent(userId)}`;
 }

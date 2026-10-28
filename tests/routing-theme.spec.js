@@ -136,9 +136,13 @@ test("the profile address names the account: /profile/<username>", () => {
   expect(isCurrentPath("shop", { pathname: "/shop/x", hash: "" })).toBe(false);
 });
 
-test("static hosting ships a 404 fallback so real URLs survive a direct load", () => {
-  const config = fs.readFileSync("vite.config.js", "utf8");
-  expect(config).toContain("404.html");
+test("static hosting ships a 404 fallback and Workers serve deep links as an SPA", () => {
+  const vite = fs.readFileSync("vite.config.js", "utf8");
+  expect(vite).toContain("404.html");
+  const workers = fs.readFileSync("wrangler.jsonc", "utf8");
+  expect(workers).toMatch(
+    /"not_found_handling"\s*:\s*"single-page-application"/,
+  );
 });
 
 test("the rebirth ladder depends on the collection alone, never on auras or tools", () => {
