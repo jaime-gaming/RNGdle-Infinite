@@ -12,10 +12,11 @@ import { BASE_ROLL_MS, BASE_COOLDOWN_MS, formatDuration } from "../shop-data";
 import { POPULATION } from "../probability.js";
 import { BADGE_TOTAL, rebirthUnlocked } from "../rebirth.js";
 import { PETS } from "../pets.js";
-import { GAME_URL } from "../roll-data";
+import { gameUrlForLocation } from "../site-links.js";
 import "../about.css";
 
 export default function About({ navigate, progress }) {
+  const gameUrl = gameUrlForLocation();
   const showsRebirth = progress ? rebirthUnlocked(progress) : false;
   const steps = [
     {
@@ -124,8 +125,8 @@ export default function About({ navigate, progress }) {
           RNGdle Tools <ArrowUpRight size={12} />
         </a>
         . Play it at{" "}
-        <a href={GAME_URL} target="_blank" rel="noreferrer">
-          {GAME_URL.replace("https://", "")}
+        <a href={gameUrl} target="_blank" rel="noreferrer">
+          {gameUrl.replace("https://", "")}
         </a>
         .
       </p>

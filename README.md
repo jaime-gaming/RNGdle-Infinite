@@ -2,9 +2,8 @@
 
 **Roll a number from 0 to 1,000,000. Find out what makes it special.**
 
-A free browser game about rolling numbers, earning EP, collecting badges and
-buying upgrades. Play as a guest, save a named profile on this device, or link a
-Cloud Account to keep your progress across devices.
+A browser game about rolls, EP, badges and upgrades. Play as a guest, save a
+named profile on this device, or link a Cloud Account for cross-device progress.
 
 <p align="center">
   <a href="https://jaime-gaming.github.io/RNGdle-Infinite/"><strong>▶ Play now</strong></a>
@@ -17,14 +16,10 @@ Cloud Account to keep your progress across devices.
 
 ## How to play
 
-1. **Roll.** Press **GENERATE** and get a random whole number from 0 to
-   1,000,000.
-2. **Score.** The number earns EP from its patterns: pairs, runs, lucky sevens
-   and many more. Each pattern is a **badge** for your collection.
-3. **Wait.** A short reveal and a cooldown keep things paced. Upgrades make
-   both shorter.
-4. **Spend.** EP is your wallet. Buy upgrades, companions and skills to roll
-   faster and earn more.
+1. **Roll.** Press **GENERATE** for a random number from 0 to 1,000,000.
+2. **Score.** Patterns earn EP and unlock badges for your collection.
+3. **Wait.** Reveals and cooldowns set the pace; upgrades shorten both.
+4. **Spend.** Buy upgrades, companions and skills to earn more per roll.
 
 ![A finished roll with its badges](media/result.png)
 
@@ -129,13 +124,18 @@ earned again.
 
 ## FAQ
 
-**Is there a roll limit?** No. Roll as often as you like once the reveal and
-cooldown finish.
+**Roll limit?** No. Roll as often as you like after the reveal and cooldown.
 
-**What happens if I clear my browser data?** If you have an online account and a
-cloud save, sign in again to restore it. Otherwise the browser-only save is
-removed with the site data. Export a profile card for a record, but it cannot be
-imported into a game save.
+**Can I pick a specific number?** No seed, editor or preset. Companions multiply
+EP, not luck or badge results.
+
+**Do offline rolls count?** Yes: they pay EP and appear in history; skills charge
+only while you are online.
+
+**What if I clear browser data?** Sign in to restore a cloud save; a local-only
+save is removed. Profile cards are records, not importable game saves.
+
+**Is this the official RNGdle?** No, this is an independent recreation; see Credits.
 
 ## Credits
 

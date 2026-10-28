@@ -4,7 +4,7 @@
 // so a damaged, half-written or quota-squeezed save can never be the end of an
 // account. A 6,000-roll save is about 800 KB of JSON and about 46 KB here.
 import { gzipSync, gunzipSync, strToU8, strFromU8 } from "fflate";
-import { PROGRESS_KEY } from "./progress.js";
+import { PRE_REPAIR_BACKUP_KEY, PROGRESS_KEY } from "./progress.js";
 
 export const SAVE_VAULT_KEY = "rng-infinite-progress-vault-v1";
 export const SAVE_VAULT_TAG = "rngvault1:";
@@ -159,9 +159,13 @@ export function readCloudRecovery(storage) {
 
 export function clearCloudRecovery(storage) {
   try {
-    vaultStore(storage)?.removeItem(CLOUD_RECOVERY_KEY);
+    const store = vaultStore(storage);
+    if (!store) return false;
+    store.removeItem(CLOUD_RECOVERY_KEY);
+    return store.getItem(CLOUD_RECOVERY_KEY) === null;
   } catch {
     // A cleanup failure cannot affect the live save.
+    return false;
   }
 }
 
@@ -190,8 +194,71 @@ export function restoreVaultIfNeeded({
 
 export function clearVault(storage) {
   try {
-    vaultStore(storage)?.removeItem(SAVE_VAULT_KEY);
+    const store = vaultStore(storage);
+    if (!store) return false;
+    store.removeItem(SAVE_VAULT_KEY);
+    return store.getItem(SAVE_VAULT_KEY) === null;
   } catch {
     // Nothing to do: the ordinary save is untouched either way.
+    return false;
   }
+}
+
+export function clearLocalSaveRecovery(storage, profileId) {
+  let store;
+  try {
+    store = vaultStore(storage);
+  } catch {
+    return false;
+  }
+  if (!store) return false;
+  if (typeof profileId !== "string" || !profileId) {
+    try {
+      return ![PRE_REPAIR_BACKUP_KEY, SAVE_VAULT_KEY, CLOUD_RECOVERY_KEY].some(
+        (key) => store.getItem(key),
+      );
+    } catch {
+      return false;
+    }
+  }
+  let cleared = true;
+  try {
+    const preRepair = store.getItem(PRE_REPAIR_BACKUP_KEY);
+    if (preRepair) {
+      if (!isReadableSave(preRepair)) cleared = false;
+      else {
+        const savedProfileId = JSON.parse(preRepair).profile?.id;
+        if (savedProfileId === profileId) {
+          store.removeItem(PRE_REPAIR_BACKUP_KEY);
+          cleared = cleared && store.getItem(PRE_REPAIR_BACKUP_KEY) === null;
+        } else if (typeof savedProfileId !== "string" || !savedProfileId)
+          cleared = false;
+      }
+    }
+  } catch {
+    cleared = false;
+  }
+  let vaultRaw = null;
+  try {
+    vaultRaw = store.getItem(SAVE_VAULT_KEY);
+  } catch {
+    cleared = false;
+  }
+  const vault = readVault(store);
+  if (vault?.profileId === profileId) {
+    const vaultCleared = clearVault(store);
+    cleared = cleared && vaultCleared;
+  } else if (vaultRaw && !vault?.profileId) cleared = false;
+  let recoveryRaw = null;
+  try {
+    recoveryRaw = store.getItem(CLOUD_RECOVERY_KEY);
+  } catch {
+    cleared = false;
+  }
+  const recovery = readCloudRecovery(store);
+  if (recovery?.profileId === profileId) {
+    const recoveryCleared = clearCloudRecovery(store);
+    cleared = cleared && recoveryCleared;
+  } else if (recoveryRaw && !recovery?.profileId) cleared = false;
+  return cleared;
 }

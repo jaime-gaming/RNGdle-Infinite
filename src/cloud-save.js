@@ -507,6 +507,16 @@ export function decodeCloudSave(value) {
   return JSON.parse(raw);
 }
 
+const PUBLIC_PROFILE_CLEANUP_ERROR = "public-profile-cleanup-unavailable";
+
+function publicProfileCleanupError() {
+  const error = new Error(
+    "The public profile could not be safely verified or removed.",
+  );
+  error.code = PUBLIC_PROFILE_CLEANUP_ERROR;
+  return error;
+}
+
 function requireFirestore() {
   if (!firebaseConfigured || !firestoreDb)
     throw new Error("Online backups aren’t available here.");
@@ -854,7 +864,11 @@ export async function reconcileCloudSave(
   return outcome;
 }
 
-export async function deleteCloudSave(userId, progress = null) {
+export async function deleteCloudSave(
+  userId,
+  progress = null,
+  { requirePublicProfileCleanup = false } = {},
+) {
   if (!userId) return { exists: false, envelope: null };
   const database = requireFirestore();
   const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
@@ -879,8 +893,9 @@ export async function deleteCloudSave(userId, progress = null) {
           const parsed = parseAndRepairProgress(JSON.stringify(raw)).progress;
           addPublicId(parsed.profile?.username);
         } catch {
-          // The caller's selected save still supplies its public name; a damaged
-          // legacy envelope must not prevent the private save from being deleted.
+          // A normal save deletion remains possible, but account deletion must
+          // not claim success when a damaged envelope hides an unknown profile.
+          if (requirePublicProfileCleanup) throw publicProfileCleanupError();
         }
       }
       const publicReferences = [...publicIds].map((id) =>
@@ -909,15 +924,16 @@ export async function deleteCloudSave(userId, progress = null) {
       });
     });
   } catch (error) {
-    // Prior deployments may deny reads from the new public collection. In
-    // that case, removing the private save is still safe and must remain
-    // possible; no public profile is readable under those rules.
+    // Prior deployments may deny reads from the new public collection. A
+    // normal save deletion can still remove its private document, but full
+    // account deletion must fail closed rather than leave a public profile.
     if (
       !publicReadDenied ||
       (error?.code !== "permission-denied" &&
         error?.code !== "firestore/permission-denied")
     )
       throw error;
+    if (requirePublicProfileCleanup) throw publicProfileCleanupError();
     await deleteDoc(saveReference);
   }
   return {

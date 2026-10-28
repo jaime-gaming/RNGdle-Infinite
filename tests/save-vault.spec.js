@@ -5,6 +5,7 @@ import {
   SAVE_VAULT_KEY,
   SAVE_VAULT_TAG,
   clearCloudRecovery,
+  clearLocalSaveRecovery,
   clearVault,
   isReadableSave,
   packVaultSave,
@@ -15,7 +16,11 @@ import {
   writeCloudRecovery,
   writeVault,
 } from "../src/save-vault.js";
-import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
+import {
+  emptyProgress,
+  PRE_REPAIR_BACKUP_KEY,
+  PROGRESS_KEY,
+} from "../src/progress.js";
 
 // A plain in-memory storage with the three methods the vault uses.
 function fakeStorage(initial = {}) {
@@ -28,8 +33,8 @@ function fakeStorage(initial = {}) {
   };
 }
 
-const save = (balance = 42) =>
-  JSON.stringify({ ...emptyProgress(), balance, profile: { id: "p1" } });
+const save = (balance = 42, profileId = "p1") =>
+  JSON.stringify({ ...emptyProgress(), balance, profile: { id: profileId } });
 
 test("the backup copy is compressed, exact and about twenty times smaller", () => {
   const raw = save(987654);
@@ -129,6 +134,43 @@ test("a broken or missing save comes back from the vault, a healthy one is left 
   clearVault(healthy);
   expect(readVault(healthy)).toBeNull();
   expect(restoreVaultIfNeeded({ storage: healthy }).restored).toBe(false);
+});
+
+test("account deletion clears pre-repair, vault, and cloud recovery copies", () => {
+  const local = fakeStorage({ [PRE_REPAIR_BACKUP_KEY]: save(999) });
+  writeVault(save(777), { storage: local, now: 5000 });
+  writeCloudRecovery(save(555), { storage: local, now: 6000 });
+
+  expect(clearLocalSaveRecovery(local, "p1")).toBe(true);
+  expect(local.map.has(PRE_REPAIR_BACKUP_KEY)).toBe(false);
+  expect(readVault(local)).toBeNull();
+  expect(readCloudRecovery(local)).toBeNull();
+
+  const otherProfile = fakeStorage({
+    [PRE_REPAIR_BACKUP_KEY]: save(999, "p2"),
+  });
+  writeVault(save(777, "p2"), { storage: otherProfile, now: 5000 });
+  writeCloudRecovery(save(555, "p2"), { storage: otherProfile, now: 6000 });
+  expect(clearLocalSaveRecovery(otherProfile, "p1")).toBe(true);
+  expect(readVault(otherProfile).profileId).toBe("p2");
+  expect(readCloudRecovery(otherProfile).profileId).toBe("p2");
+  expect(otherProfile.map.has(PRE_REPAIR_BACKUP_KEY)).toBe(true);
+
+  const unclassified = fakeStorage({ [PRE_REPAIR_BACKUP_KEY]: "not-json" });
+  expect(clearLocalSaveRecovery(unclassified, "p1")).toBe(false);
+  expect(unclassified.map.has(PRE_REPAIR_BACKUP_KEY)).toBe(true);
+
+  const blocked = fakeStorage({ [PRE_REPAIR_BACKUP_KEY]: save(123) });
+  writeVault(save(456), { storage: blocked, now: 7000 });
+  writeCloudRecovery(save(789), { storage: blocked, now: 8000 });
+  const removeItem = blocked.removeItem;
+  blocked.removeItem = (key) => {
+    if (key === PRE_REPAIR_BACKUP_KEY) throw new Error("blocked");
+    return removeItem(key);
+  };
+  expect(clearLocalSaveRecovery(blocked, "p1")).toBe(false);
+  expect(readVault(blocked)).toBeNull();
+  expect(readCloudRecovery(blocked)).toBeNull();
 });
 
 test("playing the game keeps a compressed backup in this browser", async ({

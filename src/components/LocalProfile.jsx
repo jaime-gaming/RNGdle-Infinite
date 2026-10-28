@@ -232,7 +232,7 @@ export default function LocalProfile({
             This removes the progress saved on this device
             {cloudAccount ? " and its online copy." : "."}{" "}
             {cloudAccount
-              ? "Your Firebase sign-in remains; use the Cloud Account section to delete it too."
+              ? "Your Firebase sign-in and appearance settings remain. Use Cloud Account above to delete that account and its online data too."
               : "Your online progress is untouched while you’re signed out. Appearance settings stay."}{" "}
             Rolls in other open games are cancelled. This cannot be undone.
           </p>

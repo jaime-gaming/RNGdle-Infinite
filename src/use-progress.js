@@ -1,5 +1,6 @@
 import { gameNow } from "./game-clock";
 import { useEffect, useRef, useState } from "react";
+import { drainSerialQueue, enqueueSerial } from "./serial-queue.js";
 import {
   accountSwitchSnapshot,
   cacheLocalSaveForUser,
@@ -18,8 +19,7 @@ import {
 import { firebaseConfigured } from "./firebase.js";
 import { cloudGameAccess } from "./auth-gate.js";
 import {
-  clearCloudRecovery,
-  clearVault,
+  clearLocalSaveRecovery,
   readCloudRecovery,
   readVault,
   writeVault,
@@ -472,7 +472,11 @@ export function useProgress({
       applyCloudReconciliation(reconciliation, userId, cacheWarning);
     }
 
-    restoreCloudSave().catch(() => {
+    const loadTask = enqueueSerial(cloudQueue, () => {
+      if (!currentRequest()) return;
+      return restoreCloudSave();
+    });
+    loadTask.catch(() => {
       if (!currentRequest()) return;
       cloudGate.current = { userId, ready: false };
       updateCloud({
@@ -520,12 +524,11 @@ export function useProgress({
         !cloudGate.current.ready
       )
         return;
-      const task = cloudQueue.current.then(() => {
+      const task = enqueueSerial(cloudQueue, () => {
         if (cloudGate.current.userId !== userId || !cloudGate.current.ready)
           return null;
         return reconcileCloudSave(userId, snapshot, { allowLocal: true });
       });
-      cloudQueue.current = task.catch(() => {});
       task
         .then((result) => {
           if (
@@ -637,7 +640,7 @@ export function useProgress({
     });
 
     try {
-      const task = cloudQueue.current.then(() => {
+      const task = enqueueSerial(cloudQueue, () => {
         const latestLocal =
           readLocalCandidateForCloudUser(activeUserId).progress;
         return reconcileCloudSave(activeUserId, latestLocal, {
@@ -649,7 +652,6 @@ export function useProgress({
           expectedLocalSource: pending.localCandidate,
         });
       });
-      cloudQueue.current = task.catch(() => {});
       const result = await task;
       if (authRef.current.userId !== activeUserId)
         return {
@@ -804,8 +806,9 @@ export function useProgress({
           if (!readable && !deletingCloudAccount)
             return { ok: false, message: "Your progress could not be opened." };
           if (cloudUser) {
-            // Stop queued/debounced syncs before removing the Firestore document;
-            // otherwise a save already in flight could recreate it after deletion.
+            // Invalidate an initial cloud load as well as debounced writes; it is
+            // serialized on this queue so deletion can wait for its transaction.
+            if (deletingCloudAccount) cloudGeneration.current += 1;
             cloudWriteVersion.current += 1;
             cloudGate.current = { userId: cloudUser, ready: false };
             updateCloud({
@@ -816,7 +819,7 @@ export function useProgress({
               error: "",
               notice: "",
             });
-            await cloudQueue.current;
+            await drainSerialQueue(cloudQueue);
             if (authRef.current.userId !== cloudUser)
               return {
                 ok: false,
@@ -828,12 +831,14 @@ export function useProgress({
           let cloudSnapshot = null;
           let cloudDeleted = false;
           let authDeleted = false;
+          let localSaveRemoved = !deleteLocal;
           let localCleanupFailed = false;
           try {
             if (cloudUser) {
               cloudSnapshot = await deleteCloudSave(
                 cloudUser,
                 deleteLocal ? previous : null,
+                { requirePublicProfileCleanup: deletingCloudAccount },
               );
               cloudDeleted = true;
             }
@@ -851,6 +856,7 @@ export function useProgress({
               } catch {}
               try {
                 localStorage.removeItem(PROGRESS_KEY);
+                localSaveRemoved = true;
               } catch (error) {
                 if (deletingCloudAccount && authDeleted)
                   localCleanupFailed = true;
@@ -881,6 +887,8 @@ export function useProgress({
             )
               setCloudRetry((retry) => retry + 1);
             const detail = error instanceof Error ? error.message : "";
+            const publicProfileCleanupUnavailable =
+              error?.code === "public-profile-cleanup-unavailable";
             const technical =
               /firebase|firestore|permission|quota|localstorage|sessionstorage|transaction/i.test(
                 detail,
@@ -889,57 +897,73 @@ export function useProgress({
               ok: false,
               message: recoveryFailed
                 ? "The cloud account could not be deleted and its online save could not be restored. The copy on this device is still safe; try again or contact support."
-                : technical
-                  ? cloudUser
-                    ? "The online save could not be safely removed, so the cloud account was not deleted. Check your connection and try again."
-                    : "The save could not be removed from this device. Free up space and try again."
-                  : detail ||
-                    (cloudUser
-                      ? "The account or its progress could not be deleted. Please try again."
-                      : "Your progress could not be removed from this device. Free up space and try again."),
+                : publicProfileCleanupUnavailable
+                  ? "The cloud account was kept because its public profile could not be safely verified or removed. Please contact support before trying again."
+                  : technical
+                    ? cloudUser
+                      ? "The online save could not be safely removed, so the cloud account was not deleted. Check your connection and try again."
+                      : "The save could not be removed from this device. Free up space and try again."
+                    : detail ||
+                      (cloudUser
+                        ? "The account or its progress could not be deleted. Please try again."
+                        : "Your progress could not be removed from this device. Free up space and try again."),
             };
           }
 
           let notice = "";
-          if (deleteLocal) {
-            clearVault(localStorage);
-            clearCloudRecovery(localStorage);
-          }
+          if (
+            deleteLocal &&
+            !clearLocalSaveRecovery(localStorage, previous.profile?.id)
+          )
+            localCleanupFailed = true;
+          if (!deletingCloudAccount && localCleanupFailed)
+            notice =
+              "The game save was deleted, but a local recovery copy could not be erased. Clear this site's data to remove it.";
           if (cloudUser) {
             removeCachedSaveForUser(cloudUser);
             clearCloudDirty(cloudUser);
             if (deletingCloudAccount) {
               let ownerCleared = true;
               if (localOwner === cloudUser)
-                ownerCleared = writeCloudOwner(null);
+                ownerCleared =
+                  localSaveRemoved && !localCleanupFailed
+                    ? writeCloudOwner(null)
+                    : false;
+              notice = deleteLocal
+                ? "The cloud account and its online save were deleted."
+                : "The cloud account and its online save were deleted. A local save not owned by this account was kept on this device.";
+              if (localCleanupFailed)
+                notice +=
+                  " Some local save or recovery data could not be erased; its account marker was kept to prevent importing it into another account. Clear this site's data to remove it.";
+              else if (!ownerCleared)
+                notice +=
+                  " This browser could not clear its account marker; clear this site's data if you want to remove every local trace.";
               cloudGate.current = { userId: null, ready: true };
               updateCloud({
                 status: "signed-out",
                 ready: true,
                 userId: null,
                 error: "",
-                notice: "The cloud account and its online save were deleted.",
+                notice,
                 publicProfileAvailable: false,
               });
-              notice = deleteLocal
-                ? "The cloud account and its online save were deleted."
-                : "The cloud account and its online save were deleted. A local save not owned by this account was kept on this device.";
-              if (!ownerCleared)
-                notice +=
-                  " This browser could not clear its account marker; clear this site's data if you want to remove every local trace.";
-              if (localCleanupFailed)
-                notice +=
-                  " This browser could not erase the account's local save; clear this site's data to remove it.";
             } else {
               writeCloudOwner(cloudUser);
               cloudGate.current = { userId: cloudUser, ready: true };
+              notice = [
+                "The game save was deleted. Your sign-in remains available.",
+                localCleanupFailed
+                  ? "A local recovery copy could not be erased. Clear this site's data to remove it."
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
               updateCloud({
                 status: "empty",
                 ready: true,
                 userId: cloudUser,
                 error: "",
-                notice:
-                  "The game save was deleted. Your sign-in remains available.",
+                notice,
                 publicProfileAvailable: false,
               });
             }
@@ -950,8 +974,10 @@ export function useProgress({
             } catch {}
             clearAutoRoll(previous.profile.id);
           }
-          if (deleteLocal) reset();
-          else {
+          if (deleteLocal) {
+            reset();
+            if (localCleanupFailed) setWarning(notice);
+          } else {
             current.current = previous;
             setProgress(previous);
           }

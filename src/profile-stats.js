@@ -10,6 +10,7 @@ import { LATEST_VERSION } from "./changelog.js";
 import { BOOKMARK_LIMIT, isCycleMarker } from "./history-log.js";
 import { favoriteTier, mergeTallies, tallyEntries } from "./history-tally.js";
 import { productById } from "./shop-data.js";
+import { gameUrlForLocation } from "./site-links.js";
 
 // How far you have come, in numbers.
 //
@@ -574,7 +575,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   ctx.fillText("RNGdle Infinite · Read-only PNG account card", 54, height - 34);
   ctx.textAlign = "right";
   ctx.fillText(
-    "jaime-gaming.github.io/RNGdle-Infinite",
+    gameUrlForLocation().replace(/^https?:\/\//, ""),
     width - 54,
     height - 34,
   );
