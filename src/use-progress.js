@@ -838,7 +838,6 @@ export function useProgress({
               cloudSnapshot = await deleteCloudSave(
                 cloudUser,
                 deleteLocal ? previous : null,
-                { requirePublicProfileCleanup: deletingCloudAccount },
               );
               cloudDeleted = true;
             }
@@ -888,7 +887,9 @@ export function useProgress({
               setCloudRetry((retry) => retry + 1);
             const detail = error instanceof Error ? error.message : "";
             const publicProfileCleanupUnavailable =
-              error?.code === "public-profile-cleanup-unavailable";
+              error?.code === "public-profile-cleanup-unavailable" ||
+              error?.code === "permission-denied" ||
+              error?.code === "firestore/permission-denied";
             const technical =
               /firebase|firestore|permission|quota|localstorage|sessionstorage|transaction/i.test(
                 detail,
@@ -898,7 +899,9 @@ export function useProgress({
               message: recoveryFailed
                 ? "The cloud account could not be deleted and its online save could not be restored. The copy on this device is still safe; try again or contact support."
                 : publicProfileCleanupUnavailable
-                  ? "The cloud account was kept because its public profile could not be safely verified or removed. Please contact support before trying again."
+                  ? deletingCloudAccount
+                    ? "The cloud data could not be safely checked or removed, so the cloud account was kept. Please contact support before trying again."
+                    : "The cloud data could not be safely checked or removed, so the game save was kept. Please contact support before trying again."
                   : technical
                     ? cloudUser
                       ? "The online save could not be safely removed, so the cloud account was not deleted. Check your connection and try again."

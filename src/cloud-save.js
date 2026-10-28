@@ -1,5 +1,4 @@
 import {
-  deleteDoc,
   doc,
   getDoc,
   runTransaction,
@@ -864,78 +863,53 @@ export async function reconcileCloudSave(
   return outcome;
 }
 
-export async function deleteCloudSave(
-  userId,
-  progress = null,
-  { requirePublicProfileCleanup = false } = {},
-) {
+export async function deleteCloudSave(userId, progress = null) {
   if (!userId) return { exists: false, envelope: null };
   const database = requireFirestore();
   const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
-  let publicReadDenied = false;
   let deletedEnvelope = null;
   let deletedPublicProfiles = [];
-  try {
-    await runTransaction(database, async (transaction) => {
-      const saveSnapshot = await transaction.get(saveReference);
-      const envelope = saveSnapshot.exists() ? saveSnapshot.data() : null;
-      deletedEnvelope = envelope;
-      const publicIds = new Set();
-      const addPublicId = (username) => {
-        const id = publicProfileId(username);
-        if (id) publicIds.add(id);
-      };
-      addPublicId(envelope?.public_profile_id);
-      addPublicId(progress?.profile?.username);
-      if (envelope?.save_data && !envelope.public_profile_id) {
-        try {
-          const raw = decodeCloudSave(envelope.save_data);
-          const parsed = parseAndRepairProgress(JSON.stringify(raw)).progress;
-          addPublicId(parsed.profile?.username);
-        } catch {
-          // A normal save deletion remains possible, but account deletion must
-          // not claim success when a damaged envelope hides an unknown profile.
-          if (requirePublicProfileCleanup) throw publicProfileCleanupError();
-        }
-      }
-      const publicReferences = [...publicIds].map((id) =>
-        doc(database, PUBLIC_PROFILE_COLLECTION, id),
-      );
-      let publicSnapshots;
+  // Keep the private save and public listing in one transaction; a permission
+  // error must abort both deletes rather than orphan a profile.
+  await runTransaction(database, async (transaction) => {
+    const saveSnapshot = await transaction.get(saveReference);
+    const envelope = saveSnapshot.exists() ? saveSnapshot.data() : null;
+    deletedEnvelope = envelope;
+    const publicIds = new Set();
+    const addPublicId = (username) => {
+      const id = publicProfileId(username);
+      if (id) publicIds.add(id);
+    };
+    addPublicId(envelope?.public_profile_id);
+    addPublicId(progress?.profile?.username);
+    if (envelope?.save_data) {
       try {
-        publicSnapshots = await Promise.all(
-          publicReferences.map((reference) => transaction.get(reference)),
-        );
-      } catch (error) {
-        publicReadDenied =
-          error?.code === "permission-denied" ||
-          error?.code === "firestore/permission-denied";
-        throw error;
+        const raw = decodeCloudSave(envelope.save_data);
+        const parsed = parseAndRepairProgress(JSON.stringify(raw)).progress;
+        addPublicId(parsed.profile?.username);
+      } catch {
+        // A damaged save could hide a different public username. Do not delete
+        // any part of the account until the full cleanup set can be verified.
+        throw publicProfileCleanupError();
       }
-      deletedPublicProfiles = publicSnapshots.flatMap((snapshot, index) =>
-        snapshot.exists() && snapshot.data()?.owner_uid === userId
-          ? [{ id: publicReferences[index].id, data: snapshot.data() }]
-          : [],
-      );
-      transaction.delete(saveReference);
-      publicSnapshots.forEach((snapshot, index) => {
-        if (snapshot.exists() && snapshot.data()?.owner_uid === userId)
-          transaction.delete(publicReferences[index]);
-      });
+    }
+    const publicReferences = [...publicIds].map((id) =>
+      doc(database, PUBLIC_PROFILE_COLLECTION, id),
+    );
+    const publicSnapshots = await Promise.all(
+      publicReferences.map((reference) => transaction.get(reference)),
+    );
+    deletedPublicProfiles = publicSnapshots.flatMap((snapshot, index) =>
+      snapshot.exists() && snapshot.data()?.owner_uid === userId
+        ? [{ id: publicReferences[index].id, data: snapshot.data() }]
+        : [],
+    );
+    transaction.delete(saveReference);
+    publicSnapshots.forEach((snapshot, index) => {
+      if (snapshot.exists() && snapshot.data()?.owner_uid === userId)
+        transaction.delete(publicReferences[index]);
     });
-  } catch (error) {
-    // Prior deployments may deny reads from the new public collection. A
-    // normal save deletion can still remove its private document, but full
-    // account deletion must fail closed rather than leave a public profile.
-    if (
-      !publicReadDenied ||
-      (error?.code !== "permission-denied" &&
-        error?.code !== "firestore/permission-denied")
-    )
-      throw error;
-    if (requirePublicProfileCleanup) throw publicProfileCleanupError();
-    await deleteDoc(saveReference);
-  }
+  });
   return {
     exists: Boolean(deletedEnvelope || deletedPublicProfiles.length),
     envelope: deletedEnvelope,
