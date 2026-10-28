@@ -8,7 +8,7 @@
     "dev:test": "vite --host 0.0.0.0 --mode test",
     "build": "vite build",
     "build:pages": "vite build --base=/RNGdle-Infinite/",
-    "deploy:workers": "npx wrangler deploy --config ./wrangler.jsonc --no-autoconfig",
+    "deploy:workers": "node tools/deploy-workers.mjs",
     "pages:publish": "node tools/publish-pages.mjs",
     "test:pages": "node tools/test-pages.mjs",
     "screenshots": "node tools/screenshots.mjs",
