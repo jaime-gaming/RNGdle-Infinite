@@ -62,6 +62,10 @@ export function writeCloudOwner(userId, storage) {
   }
 }
 
+export function cloudAccountOwnsLocalSave(userId, localOwner) {
+  return Boolean(userId && localOwner && userId === localOwner);
+}
+
 export function readCloudDirtyOwner(storage) {
   try {
     return storageRef(storage)?.getItem(CLOUD_DIRTY_KEY) ?? "";
@@ -851,14 +855,17 @@ export async function reconcileCloudSave(
 }
 
 export async function deleteCloudSave(userId, progress = null) {
-  if (!userId) return;
+  if (!userId) return { exists: false, envelope: null };
   const database = requireFirestore();
   const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
   let publicReadDenied = false;
+  let deletedEnvelope = null;
+  let deletedPublicProfiles = [];
   try {
     await runTransaction(database, async (transaction) => {
       const saveSnapshot = await transaction.get(saveReference);
       const envelope = saveSnapshot.exists() ? saveSnapshot.data() : null;
+      deletedEnvelope = envelope;
       const publicIds = new Set();
       const addPublicId = (username) => {
         const id = publicProfileId(username);
@@ -890,6 +897,11 @@ export async function deleteCloudSave(userId, progress = null) {
           error?.code === "firestore/permission-denied";
         throw error;
       }
+      deletedPublicProfiles = publicSnapshots.flatMap((snapshot, index) =>
+        snapshot.exists() && snapshot.data()?.owner_uid === userId
+          ? [{ id: publicReferences[index].id, data: snapshot.data() }]
+          : [],
+      );
       transaction.delete(saveReference);
       publicSnapshots.forEach((snapshot, index) => {
         if (snapshot.exists() && snapshot.data()?.owner_uid === userId)
@@ -908,4 +920,66 @@ export async function deleteCloudSave(userId, progress = null) {
       throw error;
     await deleteDoc(saveReference);
   }
+  return {
+    exists: Boolean(deletedEnvelope || deletedPublicProfiles.length),
+    envelope: deletedEnvelope,
+    publicProfiles: deletedPublicProfiles,
+  };
+}
+
+// Account deletion removes Firestore first so an auth failure can be undone.
+// Restore only when no newer save has appeared, never overwriting concurrent
+// progress that another tab or session may have written in the meantime.
+export async function restoreCloudSaveSnapshot(userId, snapshot) {
+  const envelope = snapshot?.envelope;
+  const publicProfiles = Array.isArray(snapshot?.publicProfiles)
+    ? snapshot.publicProfiles.filter(
+        (profile) =>
+          typeof profile?.id === "string" && profile.data?.owner_uid === userId,
+      )
+    : [];
+  if (!userId || (!envelope?.save_data && !publicProfiles.length))
+    return { restored: false };
+
+  const database = requireFirestore();
+  const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
+  const publicReferences = publicProfiles.map((profile) =>
+    doc(database, PUBLIC_PROFILE_COLLECTION, profile.id),
+  );
+  let restored = false;
+  let conflict = false;
+
+  await runTransaction(database, async (transaction) => {
+    const currentSave = await transaction.get(saveReference);
+    if (currentSave.exists()) {
+      conflict = true;
+      return;
+    }
+    const currentProfiles = await Promise.all(
+      publicReferences.map((reference) => transaction.get(reference)),
+    );
+    if (envelope?.save_data) transaction.set(saveReference, envelope);
+    let restoredAnything = Boolean(envelope?.save_data);
+    currentProfiles.forEach((current, index) => {
+      if (current.exists() && current.data()?.owner_uid !== userId) {
+        conflict = true;
+        return;
+      }
+      transaction.set(publicReferences[index], publicProfiles[index].data);
+      restoredAnything = true;
+    });
+    restored = restoredAnything;
+  });
+
+  if (!restored) return { restored: false, conflict };
+  if (envelope?.save_data)
+    try {
+      const raw = decodeCloudSave(envelope.save_data);
+      const progress = parseAndRepairProgress(JSON.stringify(raw)).progress;
+      if (progress.profile) await publishPublicProfile(userId, progress);
+    } catch {
+      // The private save is restored even if public-profile rules or availability
+      // prevent its index entry from being recreated in this attempt.
+    }
+  return { restored: true, conflict };
 }

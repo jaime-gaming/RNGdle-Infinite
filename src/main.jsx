@@ -281,6 +281,7 @@ function App() {
     cloudEnabled: auth.configured,
     requireCloudAccount: cloudAccountRequired,
     localPlay,
+    deleteAuthUser: auth.deleteAccount,
   });
   const playAccess = cloudGameAccess({
     required: cloudAccountRequired,

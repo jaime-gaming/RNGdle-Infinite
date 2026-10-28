@@ -2,6 +2,7 @@ import { expect, test } from "./helpers/clock.js";
 import {
   authMessage,
   isAuthReadyForCloud,
+  isEmailPasswordOnlyUser,
   requiresPasswordSetup,
 } from "../src/use-firebase-auth.js";
 
@@ -55,6 +56,28 @@ test("Google-only accounts must link a password, but email/password accounts do 
     }),
   ).toBe(false);
   expect(requiresPasswordSetup(null)).toBe(false);
+});
+
+test("credential management is limited to password-only accounts", () => {
+  expect(isEmailPasswordOnlyUser({ providers: ["password"] })).toBe(true);
+  expect(
+    isEmailPasswordOnlyUser({
+      providerData: [{ providerId: "password" }],
+    }),
+  ).toBe(true);
+  expect(
+    isEmailPasswordOnlyUser({
+      providers: ["password", "google.com"],
+    }),
+  ).toBe(false);
+  expect(isEmailPasswordOnlyUser({ providers: ["google.com"] })).toBe(false);
+  expect(isEmailPasswordOnlyUser(null)).toBe(false);
+});
+
+test("recent-login errors explain that credentials must be verified again", () => {
+  expect(authMessage({ code: "auth/requires-recent-login" })).toContain(
+    "verify your sign-in again",
+  );
 });
 
 test("cloud gameplay stays gated until a Google account has a password", () => {

@@ -200,7 +200,7 @@ export default function LocalProfile({
       setPending(false);
     }
   }
-  async function deleteAccount(event) {
+  async function deleteGameSave(event) {
     event.preventDefault();
     if (busy.current || confirmation !== "DELETE") return;
     busy.current = true;
@@ -223,18 +223,18 @@ export default function LocalProfile({
     return (
       <>
         <h2>Delete game profile &amp; progress</h2>
-        <form className="delete-confirm" onSubmit={deleteAccount}>
+        <form className="delete-confirm" onSubmit={deleteGameSave}>
           <p>
             Delete <strong>{profile.username}</strong>’s profile and all
             progress?
           </p>
           <p>
             This removes the progress saved on this device
+            {cloudAccount ? " and its online copy." : "."}{" "}
             {cloudAccount
-              ? " and its online copy."
-              : ". Your online progress stays untouched while you’re signed out."}{" "}
-            Your account and appearance settings stay. Rolls in other open games
-            are cancelled. This cannot be undone.
+              ? "Your Firebase sign-in remains; use the Cloud Account section to delete it too."
+              : "Your online progress is untouched while you’re signed out. Appearance settings stay."}{" "}
+            Rolls in other open games are cancelled. This cannot be undone.
           </p>
           <label>
             Type DELETE to confirm

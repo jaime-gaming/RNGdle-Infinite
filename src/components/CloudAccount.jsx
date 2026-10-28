@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Check,
   Cloud,
@@ -10,6 +10,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { validUsername } from "../progress.js";
+import { isEmailPasswordOnlyUser } from "../use-firebase-auth.js";
 import { publicProfileNameAvailable } from "../public-profile.js";
 import { pathForPage } from "../router.js";
 import "../profile.css";
@@ -113,15 +114,39 @@ export default function CloudAccount({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [changeEmail, setChangeEmail] = useState("");
+  const [emailCurrentPassword, setEmailCurrentPassword] = useState("");
+  const [passwordCurrentPassword, setPasswordCurrentPassword] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
+  const [confirmNextPassword, setConfirmNextPassword] = useState("");
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState("");
+  const [deleteAccountConfirmation, setDeleteAccountConfirmation] =
+    useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const busy = useRef(false);
+  const accountUserId = auth.user?.id ?? null;
+  const previousAccountUserId = useRef(accountUserId);
+  useEffect(() => {
+    if (previousAccountUserId.current === accountUserId) return;
+    previousAccountUserId.current = accountUserId;
+    setEmailCurrentPassword("");
+    setPasswordCurrentPassword("");
+    setNextPassword("");
+    setConfirmNextPassword("");
+    setDeleteAccountPassword("");
+    setDeleteAccountConfirmation("");
+    setDeleteAccountOpen(false);
+  }, [accountUserId]);
   const usernameReady = validUsername(username.trim().normalize("NFKC"));
   const passwordMatches = password === confirmPassword;
   const cloudIsLoading = cloud.status === "loading" || !cloud.ready;
   const googleLinked = auth.user?.providers?.includes("google.com") ?? false;
   const passwordLinked = auth.user?.providers?.includes("password") ?? false;
+  const emailPasswordOnly = isEmailPasswordOnlyUser(auth.user);
+  const securityPasswordMatches = nextPassword === confirmNextPassword;
   const statusLabel = auth.user?.passwordRequired
     ? "Password required"
     : auth.configured
@@ -247,6 +272,123 @@ export default function CloudAccount({
       }
     } catch {
       setError("Sign-out failed. Please try again.");
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
+  }
+
+  async function changeAccountEmail(event) {
+    event.preventDefault();
+    if (busy.current) return;
+    busy.current = true;
+    setPending(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await auth.changeEmail(
+        changeEmail,
+        emailCurrentPassword,
+        auth.user?.id,
+      );
+      if (!result.ok) setError(result.message);
+      else {
+        setChangeEmail("");
+        setEmailCurrentPassword("");
+        setPasswordCurrentPassword("");
+        setNotice(
+          `A verification link was sent to ${result.email}. Your sign-in email changes after you verify it.`,
+        );
+      }
+    } catch {
+      setError("The email address could not be changed. Please try again.");
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
+  }
+
+  async function changeAccountPassword(event) {
+    event.preventDefault();
+    if (busy.current) return;
+    setError("");
+    setNotice("");
+    if (!securityPasswordMatches) {
+      setError("The new passwords do not match.");
+      return;
+    }
+    busy.current = true;
+    setPending(true);
+    try {
+      const result = await auth.changePassword(
+        passwordCurrentPassword,
+        nextPassword,
+        auth.user?.id,
+      );
+      if (!result.ok) setError(result.message);
+      else {
+        setEmailCurrentPassword("");
+        setPasswordCurrentPassword("");
+        setNextPassword("");
+        setConfirmNextPassword("");
+        setNotice("Your password has been changed.");
+      }
+    } catch {
+      setError("The password could not be changed. Please try again.");
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
+  }
+
+  async function deleteCloudAccount(event) {
+    event.preventDefault();
+    if (busy.current) return;
+    setError("");
+    setNotice("");
+    if (deleteAccountConfirmation !== "DELETE") {
+      setError("Type DELETE to confirm account deletion.");
+      return;
+    }
+    busy.current = true;
+    setPending(true);
+    try {
+      const verification = passwordLinked
+        ? await auth.reauthenticateWithPassword(
+            deleteAccountPassword,
+            auth.user?.id,
+          )
+        : googleLinked
+          ? await auth.reauthenticateWithGoogle(auth.user?.id)
+          : {
+              ok: false,
+              message:
+                "This account has no supported sign-in method to verify its deletion.",
+            };
+      if (!verification.ok) {
+        setError(verification.message);
+        return;
+      }
+      if (!onAction) {
+        setError("Cloud account deletion is unavailable right now.");
+        return;
+      }
+      const result = await onAction({
+        type: "delete",
+        deleteCloudAccount: true,
+      });
+      if (!result?.ok) {
+        setError(result?.message || "The cloud account could not be deleted.");
+        return;
+      }
+      setDeleteAccountOpen(false);
+      setDeleteAccountPassword("");
+      setDeleteAccountConfirmation("");
+      setNotice(
+        result.notice || "The cloud account and its online save were deleted.",
+      );
+    } catch {
+      setError("The cloud account could not be deleted. Please try again.");
     } finally {
       busy.current = false;
       setPending(false);
@@ -655,8 +797,231 @@ export default function CloudAccount({
                   {pending ? "Signing out…" : "Sign out"}
                 </button>
               </div>
+              {emailPasswordOnly && (
+                <section
+                  className="cloud-account-security"
+                  aria-labelledby="cloud-account-security-title"
+                  data-testid="cloud-account-security"
+                >
+                  <h3 id="cloud-account-security-title">Account security</h3>
+                  <p>
+                    Change the email or password for this email-only account.
+                    Enter your current password to verify each change.
+                  </p>
+                  <form
+                    className="cloud-account-security-form"
+                    onSubmit={changeAccountEmail}
+                    data-testid="change-account-email"
+                  >
+                    <label htmlFor="cloud-security-email-password">
+                      Current password
+                    </label>
+                    <input
+                      id="cloud-security-email-password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={emailCurrentPassword}
+                      onChange={(event) =>
+                        setEmailCurrentPassword(event.target.value)
+                      }
+                      disabled={pending}
+                    />
+                    <label htmlFor="cloud-security-new-email">New email</label>
+                    <input
+                      id="cloud-security-new-email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={changeEmail}
+                      onChange={(event) => setChangeEmail(event.target.value)}
+                      disabled={pending}
+                    />
+                    <button
+                      type="submit"
+                      className="secondary-button"
+                      disabled={
+                        pending || !emailCurrentPassword || !changeEmail.trim()
+                      }
+                    >
+                      {pending ? "Sending…" : "Send email verification"}
+                    </button>
+                  </form>
+                  <form
+                    className="cloud-account-security-form"
+                    onSubmit={changeAccountPassword}
+                    data-testid="change-account-password"
+                  >
+                    <label htmlFor="cloud-security-password-current">
+                      Current password
+                    </label>
+                    <input
+                      id="cloud-security-password-current"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={passwordCurrentPassword}
+                      onChange={(event) =>
+                        setPasswordCurrentPassword(event.target.value)
+                      }
+                      disabled={pending}
+                    />
+                    <label htmlFor="cloud-security-password-new">
+                      New password
+                    </label>
+                    <input
+                      id="cloud-security-password-new"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={6}
+                      required
+                      value={nextPassword}
+                      onChange={(event) => setNextPassword(event.target.value)}
+                      disabled={pending}
+                    />
+                    <label htmlFor="cloud-security-password-confirm">
+                      Confirm new password
+                    </label>
+                    <input
+                      id="cloud-security-password-confirm"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={6}
+                      required
+                      value={confirmNextPassword}
+                      onChange={(event) =>
+                        setConfirmNextPassword(event.target.value)
+                      }
+                      disabled={pending}
+                    />
+                    {confirmNextPassword && !securityPasswordMatches && (
+                      <p className="cloud-password-hint" role="status">
+                        The new passwords do not match yet.
+                      </p>
+                    )}
+                    <button
+                      type="submit"
+                      className="secondary-button"
+                      disabled={
+                        pending ||
+                        !passwordCurrentPassword ||
+                        nextPassword.length < 6 ||
+                        !securityPasswordMatches
+                      }
+                    >
+                      {pending ? "Changing…" : "Change password"}
+                    </button>
+                  </form>
+                </section>
+              )}
             </>
           )}
+          <section
+            className="cloud-account-danger"
+            aria-labelledby="cloud-account-delete-title"
+            data-testid="cloud-account-delete"
+          >
+            <h3 id="cloud-account-delete-title">Delete cloud account</h3>
+            {!deleteAccountOpen ? (
+              <button
+                type="button"
+                className="danger-button cloud-account-danger-toggle"
+                onClick={() => {
+                  setError("");
+                  setNotice("");
+                  setDeleteAccountOpen(true);
+                }}
+                disabled={pending}
+              >
+                Delete cloud account and progress
+              </button>
+            ) : (
+              <form
+                className="cloud-account-delete-form"
+                onSubmit={deleteCloudAccount}
+                data-testid="delete-cloud-account-form"
+              >
+                <p>
+                  This permanently deletes this Firebase account, its online
+                  game save, and its public profile. A local save owned by a
+                  different account, or not linked to a cloud account, is kept.
+                  This cannot be undone.
+                </p>
+                {passwordLinked ? (
+                  <>
+                    <label htmlFor="delete-cloud-current-password">
+                      Current password
+                    </label>
+                    <input
+                      id="delete-cloud-current-password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={deleteAccountPassword}
+                      onChange={(event) =>
+                        setDeleteAccountPassword(event.target.value)
+                      }
+                      disabled={pending}
+                    />
+                    {googleLinked && (
+                      <p className="cloud-account-footnote">
+                        Verify with this account’s password before deletion.
+                      </p>
+                    )}
+                  </>
+                ) : googleLinked ? (
+                  <p className="cloud-account-footnote">
+                    You will verify this account with Google before deletion.
+                  </p>
+                ) : (
+                  <p className="cloud-account-footnote">
+                    Sign in again with this account to verify deletion.
+                  </p>
+                )}
+                <label htmlFor="delete-cloud-confirmation">
+                  Type DELETE to confirm
+                </label>
+                <input
+                  id="delete-cloud-confirmation"
+                  type="text"
+                  autoComplete="off"
+                  required
+                  value={deleteAccountConfirmation}
+                  onChange={(event) =>
+                    setDeleteAccountConfirmation(event.target.value)
+                  }
+                  disabled={pending}
+                />
+                <div className="cloud-account-delete-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={pending}
+                    onClick={() => {
+                      setDeleteAccountOpen(false);
+                      setDeleteAccountPassword("");
+                      setDeleteAccountConfirmation("");
+                      setError("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="danger-button"
+                    disabled={
+                      pending ||
+                      deleteAccountConfirmation !== "DELETE" ||
+                      (!googleLinked && !passwordLinked) ||
+                      (passwordLinked && !deleteAccountPassword)
+                    }
+                  >
+                    {pending ? "Deleting…" : "Permanently delete cloud account"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
         </>
       ) : (
         <>

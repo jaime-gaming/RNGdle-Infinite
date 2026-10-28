@@ -66,6 +66,8 @@ test("the README is a short player guide whose images really exist", () => {
   ])
     expect(readme).toContain(section);
   expect(readme).toContain("https://jaime-gaming.github.io/RNGdle-Infinite/");
+  expect(readme).toContain("https://rngdle-infinite.jaime-gaming.com/");
+  expect(readme).toContain("Delete cloud account and progress");
   expect(readme).not.toMatch(/^## (Main files|Tests)$/m);
   // Anything that looks like a source path belongs in the agent notes only.
   expect(readme).not.toMatch(/src\/[\w-]+\.jsx?/);

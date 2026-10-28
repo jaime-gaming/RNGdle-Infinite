@@ -3,6 +3,7 @@ import {
   accountSwitchSnapshot,
   chooseSaveWinner,
   clearCloudDirty,
+  cloudAccountOwnsLocalSave,
   cloudConflictVersionChanged,
   compareSaveEpoch,
   compareSaveRichness,
@@ -327,6 +328,13 @@ test("the same account keeps its local save available for dirty recovery", () =>
       emptyProgress: empty,
     }),
   ).toEqual({ progress: localA, owner: "user-a" });
+});
+
+test("account deletion only removes a local save owned by that account", () => {
+  expect(cloudAccountOwnsLocalSave("user-a", "user-a")).toBe(true);
+  expect(cloudAccountOwnsLocalSave("user-a", "user-b")).toBe(false);
+  expect(cloudAccountOwnsLocalSave("user-a", "")).toBe(false);
+  expect(cloudAccountOwnsLocalSave("", "user-a")).toBe(false);
 });
 
 test("switching accounts caches live progress after a failed local write", () => {

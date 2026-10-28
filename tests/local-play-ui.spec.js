@@ -20,6 +20,14 @@ test("the home screen has no account banner; a guest can choose local play from 
   await expect(page.locator(".sign-in")).toContainText("Guest");
 });
 
+test("email credential controls and cloud account deletion require a signed-in account", async ({
+  page,
+}) => {
+  await page.goto("/profile");
+  await expect(page.getByTestId("cloud-account-security")).toHaveCount(0);
+  await expect(page.getByTestId("cloud-account-delete")).toHaveCount(0);
+});
+
 test("a local guest can name their profile and keep the current progress", async ({
   page,
 }) => {

@@ -15,10 +15,6 @@ Cloud Account to keep your progress across devices.
 
 ---
 
-**Contents:** [How to play](#how-to-play) · [Ways to grow](#ways-to-grow) ·
-[Online accounts and cloud saves](#online-accounts-and-cloud-saves) ·
-[Legacy records](#legacy-records) · [FAQ](#faq) · [Credits](#credits)
-
 ## How to play
 
 1. **Roll.** Press **GENERATE** and get a random whole number from 0 to
@@ -75,8 +71,13 @@ length or profile preferences. Different game profiles are never merged; when
 profile IDs differ, choose one complete save. A save owned by another Firebase
 account is never imported. Before an overwrite, the displaced version is kept
 under **Settings → Cloud conflict recovery**. Signing out keeps the local
-browser copy. Deleting the game save removes that Firebase user's Firestore
-document and public profile, but not the Firebase sign-in itself.
+browser copy. Deleting a game save removes that Firebase user's Firestore
+document and public profile, but leaves the sign-in available. The separate
+**Delete cloud account and progress** action removes the Firebase Authentication
+account, its Firestore save, and its public profile; a local save owned by a
+different or unlinked account is kept. Email and password can be changed only
+for accounts that use email/password and are not connected to Google. Email
+changes take effect after the verification link is opened.
 
 ### Firebase setup
 
@@ -92,12 +93,13 @@ reads by profile URL but denies collection listing.
 
 In Firebase Authentication, Email/Password must be enabled; Google sign-in is
 already enabled for project `rngdle-infinite-jg`. For another project, enable
-both providers and add `jaime-gaming.github.io` and `localhost` to its
-authorized domains. Create a Firestore database in a European region and
-publish [`firestore.rules`](firestore.rules). Those rules keep each private save
-read/write restricted to its Firebase UID; public profiles are readable one
-name at a time, cannot be listed, and can only be written or removed by their
-owner. Do not use open/test-mode rules or a service-account key in the browser.
+both providers and add `jaime-gaming.github.io`, `localhost`, and (once its DNS
+is active) `rngdle-infinite.jaime-gaming.com` to the authorized domains. Add the
+custom host to the existing Firebase project before using sign-in or email
+verification there; this does not require changing the current provider setup.
+Create Firestore in Europe and publish [`firestore.rules`](firestore.rules);
+they restrict each private save to its Firebase UID and allow public profile
+reads by name only. Never use open rules or a service-account key in the browser.
 
 Existing Supabase accounts and cloud saves remain in the old project; they are
 not migrated. Linking only applies to a profile saved in this browser. The old
@@ -110,34 +112,30 @@ Production builds and `npm run pages:publish` use `.env.production`. If Firebase
 is unavailable, choose **Continue locally**; cloud sign-in can be linked later.
 Playwright uses `npm run dev:test` with Firebase disabled.
 
+### Hosting paths
+
+GitHub Pages keeps its base at `https://jaime-gaming.github.io/RNGdle-Infinite/`;
+`npm run pages:publish` builds that path with a `404.html` fallback. The root
+build (`npm install && npm run build`) serves Workers and
+`https://rngdle-infinite.jaime-gaming.com/`; `wrangler.jsonc` supports direct
+route loads and refreshes. Connect the custom host later without changing Pages'
+`/RNGdle-Infinite/` base, then deploy with `npm run deploy:workers`.
+
 ## Legacy records
 
-RNGween 2026 gameplay and its seasonal interface have retired. The event shop,
-tasks and World are no longer playable. Permanent auras already earned,
-Hexbound, Hollow Lantern, attendance stamps and historical activity remain in
-old saves; these rewards are preserved as legacy cosmetics and are not available
-to earn again.
+RNGween 2026 has retired. Existing auras, Hexbound, Hollow Lantern, attendance
+stamps and activity remain in old saves as legacy cosmetics; they cannot be
+earned again.
 
 ## FAQ
 
 **Is there a roll limit?** No. Roll as often as you like once the reveal and
 cooldown finish.
 
-**Can I pick a specific number?** No. There is no seed, editor or preset.
-
-**Does a companion make my rolls luckier?** No. Companions multiply the EP you
-earn. Your number and its badges stay the same.
-
-**Do offline rolls count?** Yes: they pay EP and show up in your history. Skills
-only charge while you are online, though.
-
 **What happens if I clear my browser data?** If you have an online account and a
 cloud save, sign in again to restore it. Otherwise the browser-only save is
 removed with the site data. Export a profile card for a record, but it cannot be
 imported into a game save.
-
-**Is this the official RNGdle?** No. It is an independent recreation; see the
-credits below.
 
 ## Credits
 

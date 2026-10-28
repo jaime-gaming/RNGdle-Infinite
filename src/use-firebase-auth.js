@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   EmailAuthProvider,
   getRedirectResult,
   GoogleAuthProvider,
@@ -8,10 +9,14 @@ import {
   linkWithPopup,
   linkWithRedirect,
   onAuthStateChanged,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
   signOut as firebaseSignOut,
+  updatePassword,
+  verifyBeforeUpdateEmail,
 } from "firebase/auth";
 import { firebaseAuth, firebaseConfigured } from "./firebase.js";
 
@@ -37,6 +42,13 @@ export function authMessage(error, fallback) {
     "auth/invalid-credential":
       "The email or password is incorrect or expired. Check it and try again.",
     "auth/invalid-email": "Enter a valid email address.",
+    "auth/user-mismatch":
+      "That credential does not match the signed-in account. Check it and try again.",
+    "auth/user-token-expired":
+      "Your sign-in expired. Sign in again and retry this change.",
+    "auth/requires-recent-login":
+      "For security, verify your sign-in again and retry this change.",
+    "auth/too-many-requests": "Too many attempts. Wait a moment and try again.",
     "auth/network-request-failed":
       "Could not connect. Check your internet connection and try again.",
     "auth/operation-not-allowed":
@@ -49,9 +61,6 @@ export function authMessage(error, fallback) {
       "The Google sign-in window was closed before it finished.",
     "auth/provider-already-linked":
       "That sign-in method is already connected to this game account.",
-    "auth/requires-recent-login":
-      "Sign in with Google again to verify this account, then set the password.",
-    "auth/too-many-requests": "Too many attempts. Wait a moment and try again.",
     "auth/unauthorized-domain":
       "Online sign-in isn’t available on this site yet. Try again later or continue locally.",
     "auth/user-disabled":
@@ -66,11 +75,21 @@ export function authMessage(error, fallback) {
   );
 }
 
+function providerIds(user) {
+  const ids = Array.isArray(user?.providers)
+    ? user.providers
+    : (user?.providerData ?? []).map((provider) => provider.providerId);
+  return new Set(ids.filter((provider) => typeof provider === "string"));
+}
+
 export function requiresPasswordSetup(user) {
-  const providers = new Set(
-    (user?.providerData ?? []).map((provider) => provider.providerId),
-  );
+  const providers = providerIds(user);
   return providers.has("google.com") && !providers.has("password");
+}
+
+export function isEmailPasswordOnlyUser(user) {
+  const providers = providerIds(user);
+  return providers.has("password") && !providers.has("google.com");
 }
 
 export function isAuthReadyForCloud(auth) {
@@ -343,6 +362,192 @@ export function useFirebaseAuth() {
     }
   }, []);
 
+  const reauthenticateWithPassword = useCallback(
+    async (password, expectedUid) => {
+      const user = firebaseAuth?.currentUser;
+      if (!user || (expectedUid && user.uid !== expectedUid))
+        return {
+          ok: false,
+          message:
+            "The signed-in account changed. Sign in again before continuing.",
+        };
+      if (!providerIds(user).has("password") || !user.email)
+        return {
+          ok: false,
+          message: "This account does not have an email-and-password sign-in.",
+        };
+      if (typeof password !== "string" || !password)
+        return {
+          ok: false,
+          message: "Enter your current password to continue.",
+        };
+
+      try {
+        const credential = EmailAuthProvider.credential(user.email, password);
+        const result = await reauthenticateWithCredential(user, credential);
+        const refreshedUser = publicUser(result.user);
+        setState({ ready: true, user: refreshedUser, error: "" });
+        return { ok: true, user: refreshedUser };
+      } catch (error) {
+        return {
+          ok: false,
+          message: authMessage(error, "Your password could not be verified."),
+        };
+      }
+    },
+    [],
+  );
+
+  const reauthenticateWithGoogle = useCallback(async (expectedUid) => {
+    const user = firebaseAuth?.currentUser;
+    if (!user || (expectedUid && user.uid !== expectedUid))
+      return {
+        ok: false,
+        message:
+          "The signed-in account changed. Sign in again before continuing.",
+      };
+    if (!providerIds(user).has("google.com"))
+      return {
+        ok: false,
+        message: "Google is not connected to this account.",
+      };
+
+    try {
+      const credential = await reauthenticateWithPopup(user, googleProvider());
+      const refreshedUser = publicUser(credential.user);
+      setState({ ready: true, user: refreshedUser, error: "" });
+      return { ok: true, user: refreshedUser };
+    } catch (error) {
+      return {
+        ok: false,
+        message: authMessage(
+          error,
+          "Google could not verify this account. Sign out and sign in again, then retry.",
+        ),
+      };
+    }
+  }, []);
+
+  const changeEmail = useCallback(
+    async (email, currentPassword, expectedUid) => {
+      const user = firebaseAuth?.currentUser;
+      if (
+        !user ||
+        (expectedUid && user.uid !== expectedUid) ||
+        !isEmailPasswordOnlyUser(user)
+      )
+        return {
+          ok: false,
+          message:
+            "Email changes are available only for email-and-password accounts that are not connected to Google.",
+        };
+      const nextEmail = typeof email === "string" ? email.trim() : "";
+      if (!nextEmail)
+        return { ok: false, message: "Enter the new email address." };
+      if (nextEmail.toLowerCase() === user.email?.toLowerCase())
+        return {
+          ok: false,
+          message: "Enter a different email address from the one you use now.",
+        };
+      if (typeof currentPassword !== "string" || !currentPassword)
+        return {
+          ok: false,
+          message: "Enter your current password to continue.",
+        };
+
+      try {
+        const credential = EmailAuthProvider.credential(
+          user.email,
+          currentPassword,
+        );
+        await reauthenticateWithCredential(user, credential);
+        await verifyBeforeUpdateEmail(user, nextEmail);
+        return { ok: true, email: nextEmail, needsVerification: true };
+      } catch (error) {
+        return {
+          ok: false,
+          message: authMessage(
+            error,
+            "The email address could not be changed.",
+          ),
+        };
+      }
+    },
+    [],
+  );
+
+  const changePassword = useCallback(
+    async (currentPassword, nextPassword, expectedUid) => {
+      const user = firebaseAuth?.currentUser;
+      if (
+        !user ||
+        (expectedUid && user.uid !== expectedUid) ||
+        !isEmailPasswordOnlyUser(user)
+      )
+        return {
+          ok: false,
+          message:
+            "Password changes are available only for email-and-password accounts that are not connected to Google.",
+        };
+      if (typeof currentPassword !== "string" || !currentPassword)
+        return {
+          ok: false,
+          message: "Enter your current password to continue.",
+        };
+      if (typeof nextPassword !== "string" || nextPassword.length < 6)
+        return {
+          ok: false,
+          message: authMessage(
+            { code: "auth/weak-password" },
+            "Choose a stronger password with at least 6 characters.",
+          ),
+        };
+      if (nextPassword === currentPassword)
+        return {
+          ok: false,
+          message: "Choose a different password from your current one.",
+        };
+
+      try {
+        const credential = EmailAuthProvider.credential(
+          user.email,
+          currentPassword,
+        );
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, nextPassword);
+        const refreshedUser = publicUser(user);
+        setState({ ready: true, user: refreshedUser, error: "" });
+        return { ok: true, user: refreshedUser };
+      } catch (error) {
+        return {
+          ok: false,
+          message: authMessage(error, "The password could not be changed."),
+        };
+      }
+    },
+    [],
+  );
+
+  const deleteAccount = useCallback(async (expectedUid) => {
+    const user = firebaseAuth?.currentUser;
+    if (!user || (expectedUid && user.uid !== expectedUid))
+      return {
+        ok: false,
+        message:
+          "The signed-in account changed. Sign in again before deleting it.",
+      };
+    try {
+      await deleteUser(user);
+      setState({ ready: true, user: null, error: "" });
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        message: authMessage(error, "The cloud account could not be deleted."),
+      };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     if (!firebaseAuth) return { ok: true };
     try {
@@ -367,6 +572,11 @@ export function useFirebaseAuth() {
     signInWithGoogle,
     setPassword,
     connectGoogle,
+    reauthenticateWithPassword,
+    reauthenticateWithGoogle,
+    changeEmail,
+    changePassword,
+    deleteAccount,
     signOut,
   };
 }

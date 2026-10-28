@@ -296,6 +296,68 @@
   border-radius: 11px;
   background: color-mix(in srgb, var(--warning) 5%, var(--surface));
 }
+.cloud-account-security,
+.cloud-account-danger {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 82%, var(--hover));
+}
+.cloud-account-security h3,
+.cloud-account-danger h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+.cloud-account-security > p,
+.cloud-account-delete-form > p {
+  margin: 7px 0 0;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.cloud-account-security-form,
+.cloud-account-delete-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 12px;
+}
+.cloud-account-security-form + .cloud-account-security-form {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.cloud-account-security-form > label:first-child,
+.cloud-account-delete-form > label:first-of-type {
+  margin-top: 4px;
+}
+.cloud-account-security-form > .secondary-button {
+  justify-self: start;
+  margin-top: 12px;
+}
+.cloud-account-danger {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+  background: color-mix(in srgb, var(--danger) 2%, var(--surface));
+}
+.cloud-account-danger-toggle {
+  margin-top: 10px;
+  background: var(--surface);
+}
+.cloud-account-delete-form .cloud-account-footnote {
+  margin-top: 9px;
+}
+.cloud-account-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+.cloud-account-delete-actions > button {
+  min-height: 38px;
+  padding: 8px 12px;
+}
 .cloud-password-setup h3 {
   margin: 0;
   color: var(--text);
@@ -469,6 +531,12 @@
   .cloud-account-actions {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .cloud-account-delete-actions {
+    flex-direction: column-reverse;
+  }
+  .cloud-account-delete-actions > button {
+    width: 100%;
   }
   .cloud-save-options {
     grid-template-columns: 1fr;
