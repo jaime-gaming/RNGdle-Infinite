@@ -10,16 +10,18 @@ import { BOOKMARK_LIMIT } from "./history-log.js";
 import { TIERS } from "./history-tally.js";
 import { accountStats, profileHighlights } from "./profile-stats.js";
 import { pathForProfile } from "./router.js";
-import { validAvatar } from "./progress.js";
+import { AVATAR_LIMIT, validAvatar } from "./progress.js";
 
-export const CARD_VERSION = 3;
+const CARD_VERSION = 3;
+const MAX_CARD_OUTPUT_BYTES = AVATAR_LIMIT + 16_384;
+const MAX_CARD_TOKEN_CHARS = 400_000;
 const KNOWN_VERSIONS = new Set([1, 2, CARD_VERSION]);
 // The token carries the card line deflated and base64url'd, tagged "z1".
 // Legacy tokens are base64url of raw text (which always begins A–f), so a
 // leading "z" cannot ever be one of them and the versions never collide.
 const TOKEN_TAG = "z1";
 const NAME_MAX = 20;
-const NUMBER = /^\d{1,6}$/;
+const NUMBER = /^\d{1,7}$/;
 
 // The snapshot the link carries. Everything is derived on the spot from the
 // save and its log, the same way the profile page does it.
@@ -140,22 +142,39 @@ function toBase64Url(bytes) {
 }
 
 function fromBase64Url(token) {
+  if (!/^[A-Za-z0-9_-]*$/.test(token)) throw new Error("Invalid token.");
   const padded = token.replace(/-/g, "+").replace(/_/g, "/");
   const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
+function inflateCard(bytes) {
+  const output = inflateSync(bytes, {
+    out: new Uint8Array(MAX_CARD_OUTPUT_BYTES + 1),
+  });
+  return output.length <= MAX_CARD_OUTPUT_BYTES ? output : null;
+}
+
 // The card named by a link, cleaned field by field, or null when the data
 // is missing, damaged or not a card at all. A bad link is simply ignored.
 export function decodeShareCard(token) {
-  if (typeof token !== "string" || !token) return null;
+  if (
+    typeof token !== "string" ||
+    !token ||
+    token.length > MAX_CARD_TOKEN_CHARS
+  )
+    return null;
   let text;
   try {
-    if (token.startsWith(TOKEN_TAG))
-      text = strFromU8(
-        inflateSync(fromBase64Url(token.slice(TOKEN_TAG.length))),
-      );
-    else text = new TextDecoder().decode(fromBase64Url(token));
+    if (token.startsWith(TOKEN_TAG)) {
+      const bytes = inflateCard(fromBase64Url(token.slice(TOKEN_TAG.length)));
+      if (!bytes) return null;
+      text = strFromU8(bytes);
+    } else {
+      const bytes = fromBase64Url(token);
+      if (bytes.length > MAX_CARD_OUTPUT_BYTES) return null;
+      text = new TextDecoder().decode(bytes);
+    }
   } catch {
     return null;
   }
@@ -190,10 +209,10 @@ export function decodeShareCard(token) {
       avatar: f[15] ?? "",
     };
   }
-  return cleanCard(raw);
+  return sanitizeShareCard(raw);
 }
 
-function cleanCard(raw) {
+export function sanitizeShareCard(raw) {
   if (!raw || typeof raw !== "object" || !KNOWN_VERSIONS.has(raw.v))
     return null;
   const name = typeof raw.name === "string" ? raw.name.trim() : "";
@@ -202,10 +221,16 @@ function cleanCard(raw) {
   if (!at) return null;
   const roll = (value, withDate) => {
     if (!value || typeof value !== "object") return null;
-    if (!NUMBER.test(String(value.number ?? ""))) return null;
+    const number = String(value.number ?? "");
+    if (
+      !NUMBER.test(number) ||
+      !Number.isSafeInteger(Number(number)) ||
+      Number(number) > 1_000_000
+    )
+      return null;
     if (!TIERS.includes(value.tier)) return null;
     const entry = {
-      number: String(value.number),
+      number,
       ep: count(value.ep),
       tier: value.tier,
     };

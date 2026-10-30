@@ -1,5 +1,5 @@
-// KEEP after Nov 4, 2026: the four event auras and Hexbound stay owned forever;
-// this art is permanent. Only the event that handed them out goes away.
+// Retired RNGween cosmetics remain wearable when already owned; only the
+// seasonal gameplay and its interface are removed.
 import React from "react";
 import {
   BatMark,
@@ -16,6 +16,7 @@ const ART = {
   witchfire: { Mark: WitchfireMark, side: WitchfireMark, label: "alchemy" },
   "blood-moon": { Mark: BloodMoonMark, side: BatMark, label: "eclipse" },
   hexbound: { Mark: HexboundMark, side: PhantomMark, label: "hexbound" },
+  "hollow-lantern": { Mark: PumpkinMark, side: PumpkinMark, label: "hollow" },
 };
 
 // Permanent collectible art, shared by previews and live numbers;

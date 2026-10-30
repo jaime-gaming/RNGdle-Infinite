@@ -1,8 +1,43 @@
-// CLEANUP Nov 4, 2026: the "limited action" gating (event actions need a
-// verified website date and the main writer) goes with the event actions.
 import { gameNow } from "./game-clock";
-import { refreshSeasonClock, seasonNow } from "./season-clock.js";
 import { useEffect, useRef, useState } from "react";
+import { drainSerialQueue, enqueueSerial } from "./serial-queue.js";
+import {
+  accountSwitchSnapshot,
+  cacheLocalSaveForUser,
+  cloudAccountOwnsLocalSave,
+  clearCloudDirty,
+  createCloudProfile,
+  deleteCloudSave,
+  markCloudDirty,
+  readCachedSaveForUser,
+  readCloudOwner,
+  reconcileCloudSave,
+  renameCloudProfile,
+  removeCachedSaveForUser,
+  restoreCloudSaveSnapshot,
+  restoredSaveOwner,
+  selectLocalSaveForCloudUser,
+  setCloudProfileVisibility,
+  updateCloudProfileAvatar,
+  writeCloudOwner,
+} from "./cloud-save.js";
+import { firebaseConfigured } from "./firebase.js";
+import { cloudGameAccess } from "./auth-gate.js";
+import {
+  archiveSavedCopy,
+  clearLocalSaveRecovery,
+  getRecoveryCopies,
+  isReadableSave,
+  readCloudRecovery,
+  readVault,
+  writePreRepairOwner,
+  writeVault,
+} from "./save-vault.js";
+import {
+  UNKNOWN_CLOUD_OWNER,
+  isCloudUserDeleted,
+  markCloudUserDeleted,
+} from "./save-owner.js";
 import {
   PROGRESS_KEY,
   GUEST_ROLL_KEY,
@@ -17,20 +52,6 @@ import {
   recoverUnsavedRolls,
 } from "./progress.js";
 import { generateRoll, restoreRoll } from "./roll-client.js";
-import { drawRngweenWorld } from "./rngween-world-client.js";
-import {
-  RNGWEEN_PET,
-  RNGWEEN_TEMP_SKILL_IDS,
-  requireRngweenWorld,
-  requireRngweenValley,
-  retireRngweenLimited,
-} from "./rngween-limited.js";
-import {
-  requireWorldZone,
-  worldState,
-  worldRevealMS,
-} from "./rngween-world-zones.js";
-import { rngweenCalendar } from "./rngween.js";
 import { runDrawPicks } from "./draw-plan.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
@@ -49,16 +70,42 @@ import {
   writePresence,
   clearPresence,
 } from "./offline.js";
-import { broadcastSync, SYNC_EVENT } from "./sync.js";
-// Re-exported for the modules that grew up reading it from here.
-export { GUEST_ROLL_KEY };
-// A repaired save says what was fixed, briefly: the first three notes inline,
-// the rest counted. The full list also goes to the console for support.
+// Keep repair details out of player-facing messages; readable progress stays.
 function repairWarning(repairs) {
-  const shown = repairs.slice(0, 3).join(" ");
-  const suffix =
-    repairs.length > 3 ? ` Plus ${repairs.length - 3} more fixes.` : "";
-  return `Your save was repaired — valid progress was kept. ${shown}${suffix}`;
+  if (!repairs.length) return "";
+  return "Some saved details needed fixing. Your readable progress was kept.";
+}
+function readLocalSave() {
+  try {
+    return localStorage.getItem(PROGRESS_KEY);
+  } catch {
+    return null;
+  }
+}
+function ensureCloudOwner(userId) {
+  return readCloudOwner() === userId || writeCloudOwner(userId);
+}
+function parseStoredSave(raw) {
+  if (!raw) return { progress: emptyProgress(), repairs: [] };
+  return parseAndRepairProgress(raw);
+}
+function readLocalCandidateForCloudUser(userId) {
+  const owner = readCloudOwner();
+  const raw =
+    owner && owner !== userId ? readCachedSaveForUser(userId) : readLocalSave();
+  return raw
+    ? parseStoredSave(raw)
+    : { progress: emptyProgress(), repairs: [] };
+}
+function writeLocalSave(progress, ownerId = readCloudOwner()) {
+  try {
+    const raw = JSON.stringify(progress);
+    localStorage.setItem(PROGRESS_KEY, raw);
+    writeVault(raw, { storage: localStorage, ownerId });
+    return true;
+  } catch {
+    return false;
+  }
 }
 function load() {
   try {
@@ -92,13 +139,25 @@ function load() {
         progress.pendingRoll = null;
       }
     }
+    if (!repairs.length)
+      writeVault(stored, {
+        storage: localStorage,
+        ownerId: readCloudOwner(),
+      });
     if (repairs.length) {
       console.info("[RNGdle] save repaired:", repairs);
       try {
         // Heal the file itself, keeping the exact pre-repair bytes aside so
         // a bad repair can always be undone by hand.
         localStorage.setItem(PRE_REPAIR_BACKUP_KEY, stored);
-        localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+        const saveOwner = readCloudOwner();
+        writePreRepairOwner(saveOwner, localStorage);
+        const repairedRaw = JSON.stringify(progress);
+        localStorage.setItem(PROGRESS_KEY, repairedRaw);
+        writeVault(repairedRaw, {
+          storage: localStorage,
+          ownerId: saveOwner,
+        });
       } catch {
         // Storage unwritable: the repaired save still runs in memory.
       }
@@ -108,22 +167,88 @@ function load() {
     return {
       progress: emptyProgress(),
       warning:
-        "Your saved progress could not be read. Progress is temporary until this browser allows saving.",
+        "Your saved progress could not be opened. You can keep playing in this tab, but changes may not be saved.",
     };
   }
 }
-export function useProgress() {
+export function useProgress({
+  userId = null,
+  authReady = true,
+  passwordRequired = false,
+  cloudEnabled = firebaseConfigured,
+  requireCloudAccount = true,
+  localPlay = false,
+  localProfileRequired = false,
+  online = true,
+  deleteAuthUser = null,
+} = {}) {
   const [initial] = useState(load),
     [progress, setProgress] = useState(initial.progress),
     [warning, setWarning] = useState(initial.warning),
-    [epoch, setEpoch] = useState(0);
+    [epoch, setEpoch] = useState(0),
+    [cloudRetry, setCloudRetry] = useState(0),
+    [cloudWriteRetry, setCloudWriteRetry] = useState(0);
+  const [cloud, setCloudState] = useState(() =>
+    !cloudEnabled
+      ? { status: "unconfigured", ready: true, userId: null, error: "" }
+      : !authReady
+        ? { status: "checking-auth", ready: false, userId: null, error: "" }
+        : userId
+          ? { status: "loading", ready: false, userId, error: "" }
+          : { status: "signed-out", ready: true, userId: null, error: "" },
+  );
   const current = useRef(initial.progress),
     healthy = useRef(!initial.warning),
     // The rolls this tab settled while saving was failing, by id. Only these
     // are owed again when the save recovers (see recoverUnsavedRolls).
     unsaved = useRef(new Set()),
     generation = useRef(0),
-    queue = useRef(Promise.resolve());
+    queue = useRef(Promise.resolve()),
+    cloudGeneration = useRef(0),
+    cloudQueue = useRef(Promise.resolve()),
+    cloudWriteVersion = useRef(0),
+    cloudWriteFailure = useRef({ snapshot: null, userId: null, attempts: 0 }),
+    pendingCloudConflict = useRef(null);
+  const cloudRef = useRef(cloud);
+  cloudRef.current = cloud;
+  const authRef = useRef({
+    userId,
+    authReady,
+    passwordRequired,
+    cloudEnabled,
+    requireCloudAccount,
+    localPlay,
+    localProfileRequired,
+    deleteAuthUser,
+  });
+  authRef.current = {
+    userId,
+    authReady,
+    passwordRequired,
+    cloudEnabled,
+    requireCloudAccount,
+    localPlay,
+    localProfileRequired,
+    deleteAuthUser,
+  };
+  const cloudGate = useRef({
+    userId: null,
+    ready: !cloudEnabled || (authReady && !userId),
+  });
+  function updateCloud(next) {
+    cloudRef.current = next;
+    setCloudState(next);
+  }
+  function markLocalCloudDirty() {
+    const activeUser = authRef.current.userId;
+    const owner =
+      activeUser &&
+      cloudGate.current.ready &&
+      cloudGate.current.userId === activeUser
+        ? activeUser
+        : readCloudOwner();
+    if (typeof owner === "string" && owner) markCloudDirty(owner);
+  }
   function reset(next = emptyProgress()) {
     generation.current++;
     setEpoch(generation.current);
@@ -132,6 +257,99 @@ export function useProgress() {
     healthy.current = true;
     unsaved.current = new Set();
     setWarning("");
+  }
+  function showCloudConflict(result, activeUserId, cacheWarning = "") {
+    const conflict = result.conflict;
+    if (!conflict) return false;
+    pendingCloudConflict.current = {
+      userId: activeUserId,
+      localCandidate: conflict.expectedLocalSource,
+      expectedCloudExists: conflict.expectedCloudExists,
+      expectedCloudSaveData: conflict.expectedCloudSaveData,
+      cacheWarning,
+    };
+    cloudGate.current = { userId: activeUserId, ready: false };
+    updateCloud({
+      status: "needs-choice",
+      ready: false,
+      userId: activeUserId,
+      updatedAt: result.updatedAt ?? null,
+      error: "",
+      notice: result.notice ?? conflict.message,
+      conflict: {
+        reason: conflict.reason,
+        message: conflict.message,
+        canChooseLocal: conflict.canChooseLocal,
+        canChooseCloud: conflict.canChooseCloud,
+        local: conflict.local,
+        cloud: conflict.cloud,
+      },
+      resolving: false,
+    });
+    return true;
+  }
+  function applyCloudReconciliation(result, activeUserId, cacheWarning = "") {
+    const selected = result.progress ?? emptyProgress();
+    try {
+      sessionStorage.removeItem(GUEST_ROLL_KEY);
+    } catch {}
+
+    if (!writeLocalSave(selected, activeUserId)) {
+      const error =
+        "Your online progress loaded, but this device could not save a copy. Free up space and try again before playing.";
+      cloudGate.current = { userId: activeUserId, ready: false };
+      pendingCloudConflict.current = null;
+      updateCloud({
+        status: "error",
+        ready: false,
+        userId: activeUserId,
+        updatedAt: result.updatedAt ?? null,
+        error,
+        notice: result.notice ?? "",
+      });
+      return { ok: false, message: error };
+    }
+
+    reset(selected);
+    if (result.repairs?.length) setWarning(repairWarning(result.repairs));
+    if (cacheWarning) setWarning(cacheWarning);
+    if (!ensureCloudOwner(activeUserId)) {
+      const error =
+        "This device could not remember which account owns this progress. Free up space before playing or switching accounts.";
+      cloudGate.current = { userId: activeUserId, ready: false };
+      pendingCloudConflict.current = null;
+      updateCloud({
+        status: "error",
+        ready: false,
+        userId: activeUserId,
+        updatedAt: result.updatedAt ?? null,
+        error,
+        notice: result.notice ?? "",
+      });
+      return { ok: false, message: error };
+    }
+
+    clearCloudDirty(activeUserId);
+    pendingCloudConflict.current = null;
+    cloudGate.current = { userId: activeUserId, ready: true };
+    updateCloud({
+      status: result.needsCloudName
+        ? "name-required"
+        : selected.profile
+          ? "synced"
+          : "empty",
+      ready: true,
+      userId: activeUserId,
+      updatedAt: result.updatedAt ?? null,
+      error: "",
+      notice: result.notice ?? "",
+      publicProfileAvailable: result.publicProfilePublished ?? false,
+      publicProfileEnabled: result.publicProfileEnabled === true,
+      profileIdentity: result.profileIdentity ?? null,
+      conflict: null,
+      resolving: false,
+    });
+    return { ok: true, progress: selected, notice: result.notice ?? "" };
   }
   useEffect(() => {
     function synchronize(event) {
@@ -143,7 +361,8 @@ export function useProgress() {
           next.profile?.id !== current.current.profile.id ||
           next.rebirths !== current.current.rebirths ||
           next.ultraRebirths !== current.current.ultraRebirths ||
-          next.rollbacks !== current.current.rollbacks
+          next.rollbacks !== current.current.rollbacks ||
+          next.freshStarts !== current.current.freshStarts
         )
           reset(next);
         else {
@@ -154,11 +373,17 @@ export function useProgress() {
           let persisted = merged === next;
           if (merged !== next) {
             try {
-              localStorage.setItem(PROGRESS_KEY, JSON.stringify(merged));
+              const mergedRaw = JSON.stringify(merged);
+              localStorage.setItem(PROGRESS_KEY, mergedRaw);
+              writeVault(mergedRaw, {
+                storage: localStorage,
+                ownerId: readCloudOwner(),
+              });
               persisted = true;
+              markLocalCloudDirty();
             } catch {
               setWarning(
-                "Saved progress could not be synchronized. This tab is keeping its current progress.",
+                "Progress could not be saved on this device. This tab is keeping its current progress.",
               );
             }
           }
@@ -168,86 +393,554 @@ export function useProgress() {
           if (persisted) {
             unsaved.current = new Set();
             setWarning("");
-            if (merged !== next) broadcastSync(merged);
           }
         }
       } catch {
         healthy.current = false;
         setWarning(
-          "Saved progress could not be synchronized. This tab is keeping its current progress.",
+          "Progress could not be saved on this device. This tab is keeping its current progress.",
         );
       }
     }
     window.addEventListener("storage", synchronize);
     return () => window.removeEventListener("storage", synchronize);
   }, []);
-  // A linked device sent a newer save. Same rules as the cross-tab path, plus
-  // one step the storage event never needs: the winning state is written to
-  // this device's own storage first, so the link survives a reload, and a
-  // foreign account is adopted whole — that is exactly what a device link is.
   useEffect(() => {
-    function receiveLinked(event) {
-      try {
-        const next = parseProgress(event.detail);
-        if (!next.profile) {
-          event.preventDefault();
-          return;
-        }
-        const previous = current.current;
-        const sameCycle =
-          previous.profile?.id === next.profile.id &&
-          previous.rebirths === next.rebirths &&
-          previous.ultraRebirths === next.ultraRebirths &&
-          previous.rollbacks === next.rollbacks;
-        // A link can arrive while this tab is holding a result that local
-        // storage could not save. Merge that receipt into the linked head before
-        // replacing this tab; otherwise a perfectly readable remote save would
-        // erase the only copy of the credited roll.
-        const recovered = sameCycle
-          ? recoverUnsavedRolls(next, previous, unsaved.current)
-          : next;
-        const merged = preservePermanentCosmetics(previous, recovered);
-        let persisted = false;
-        try {
-          // Persist the validated canonical save, not the unparsed wire bytes.
-          localStorage.setItem(PROGRESS_KEY, JSON.stringify(merged));
-          event.progressSaved = true;
-          persisted = true;
-        } catch {
-          healthy.current = false;
-          setWarning(
-            "A save from the linked device could not be saved. This tab is keeping its current progress.",
-          );
-          event.preventDefault();
-          // No incoming World rewards or equipment become live without a
-          // durable save. A subsequent link update can retry the same head.
-          return;
-        }
-        if (!sameCycle) {
-          reset(merged);
-          return;
-        }
-        current.current = merged;
-        setProgress(merged);
-        healthy.current = persisted;
-        if (persisted) {
-          unsaved.current = new Set();
-          setWarning("");
-          // A recovered receipt is now durable locally, so publish the merged
-          // head back to the link instead of leaving the other device behind.
-          if (merged !== next) broadcastSync(merged);
-        }
-      } catch {
-        event.preventDefault();
-        healthy.current = false;
-        setWarning(
-          "A save from the linked device could not be read. This device is keeping its current progress.",
-        );
-      }
+    const request = ++cloudGeneration.current;
+    let active = true;
+    const currentRequest = () => active && cloudGeneration.current === request;
+    if (
+      !cloudEnabled ||
+      !userId ||
+      pendingCloudConflict.current?.userId !== userId
+    )
+      pendingCloudConflict.current = null;
+
+    if (!cloudEnabled) {
+      cloudGate.current = { userId: null, ready: true };
+      updateCloud({
+        status: "unconfigured",
+        ready: true,
+        userId: null,
+        error: "",
+      });
+      return () => {
+        active = false;
+      };
     }
-    window.addEventListener(SYNC_EVENT, receiveLinked);
-    return () => window.removeEventListener(SYNC_EVENT, receiveLinked);
-  }, []);
+    if (!authReady) {
+      cloudGate.current = { userId: null, ready: false };
+      updateCloud({
+        status: "checking-auth",
+        ready: false,
+        userId: null,
+        error: "",
+      });
+      return () => {
+        active = false;
+      };
+    }
+    if (!userId) {
+      cloudGate.current = { userId: null, ready: true };
+      updateCloud({
+        status: "signed-out",
+        ready: true,
+        userId: null,
+        error: "",
+      });
+      return () => {
+        active = false;
+      };
+    }
+
+    if (!online) {
+      const localCopyIsOwned =
+        readCloudOwner() === userId &&
+        Boolean(current.current.profile) &&
+        healthy.current;
+      cloudGate.current = { userId, ready: localCopyIsOwned };
+      updateCloud({
+        status: "offline",
+        ready: localCopyIsOwned,
+        userId,
+        error: localCopyIsOwned
+          ? ""
+          : "Cloud progress cannot be checked offline. Reconnect before changing this account.",
+        notice: localCopyIsOwned
+          ? "Changes are saved on this device and will sync when you reconnect."
+          : "",
+      });
+      return () => {
+        active = false;
+      };
+    }
+
+    cloudGate.current = { userId, ready: false };
+    updateCloud({ status: "loading", ready: false, userId, error: "" });
+
+    async function restoreCloudSave() {
+      const localOwner = readCloudOwner();
+      const localRaw = readLocalSave();
+      let localProgress = current.current;
+      let cachedProgress = null;
+      let cacheWarning = "";
+
+      if (localOwner && localOwner !== userId) {
+        const rawToCache = accountSwitchSnapshot({
+          localRaw,
+          progress: localProgress,
+          localSaveHealthy: healthy.current,
+        });
+        if (!cacheLocalSaveForUser(localOwner, rawToCache)) {
+          if (localRaw || localProgress.profile)
+            throw new Error(
+              "A copy of the previous account’s progress could not be kept. Free up space and try again before switching accounts.",
+            );
+          cacheWarning =
+            "This device could not keep a copy of the previous account’s progress.";
+        }
+        // A save marked for another auth user is never a first-sign-in import.
+        // Only this account's own cached save may follow it across a switch.
+        const cached = readCachedSaveForUser(userId);
+        if (cached) {
+          try {
+            cachedProgress = parseStoredSave(cached).progress;
+          } catch {
+            cacheWarning = "A saved copy for this account could not be opened.";
+          }
+        }
+      }
+
+      const localSelection = selectLocalSaveForCloudUser({
+        userId,
+        localOwner,
+        localProgress,
+        cachedProgress,
+        emptyProgress: emptyProgress(),
+      });
+      localProgress = localSelection.progress;
+
+      const reconciliation = await reconcileCloudSave(userId, localProgress, {
+        allowLocal: true,
+        localOwner: localSelection.owner,
+        storage: localStorage,
+      });
+      if (!currentRequest()) return;
+
+      if (reconciliation.choiceRequired) {
+        showCloudConflict(reconciliation, userId, cacheWarning);
+        return;
+      }
+      applyCloudReconciliation(reconciliation, userId, cacheWarning);
+    }
+
+    const loadTask = enqueueSerial(cloudQueue, () => {
+      if (!currentRequest()) return;
+      return restoreCloudSave();
+    });
+    loadTask.catch(() => {
+      if (!currentRequest()) return;
+      cloudGate.current = { userId, ready: false };
+      updateCloud({
+        status: "error",
+        ready: false,
+        userId,
+        error:
+          "Your online progress could not be loaded. Try again before changing anything.",
+      });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [userId, authReady, cloudEnabled, cloudRetry, online]);
+
+  useEffect(() => {
+    if (
+      !cloudEnabled ||
+      !authReady ||
+      !userId ||
+      !progress.profile ||
+      cloudGate.current.userId !== userId ||
+      !cloudGate.current.ready
+    )
+      return undefined;
+
+    if (readCloudOwner() !== userId) {
+      cloudGate.current = { userId, ready: false };
+      updateCloud({
+        ...cloudRef.current,
+        status: "error",
+        ready: false,
+        userId,
+        error:
+          "This device’s saved copy belongs to a different or unverified account. Reload progress before saving online.",
+      });
+      return undefined;
+    }
+
+    if (
+      cloudWriteFailure.current.snapshot !== progress ||
+      cloudWriteFailure.current.userId !== userId
+    )
+      cloudWriteFailure.current = { snapshot: progress, userId, attempts: 0 };
+    const version = ++cloudWriteVersion.current;
+    const snapshot = progress;
+    markCloudDirty(userId);
+    if (!online) {
+      updateCloud({
+        ...cloudRef.current,
+        status: "offline",
+        ready: true,
+        userId,
+        error: "",
+        notice:
+          "Changes are saved on this device and will sync when you reconnect.",
+      });
+      return undefined;
+    }
+    const currentCloud = cloudRef.current;
+    updateCloud({
+      ...currentCloud,
+      status:
+        currentCloud.status === "name-required" ? "name-required" : "saving",
+      ready: true,
+      userId,
+      updatedAt: currentCloud.updatedAt ?? null,
+      error: "",
+      notice: currentCloud.notice ?? "",
+    });
+
+    let active = true;
+    let retryTimer = null;
+    const timer = setTimeout(() => {
+      if (
+        !active ||
+        cloudWriteVersion.current !== version ||
+        cloudGate.current.userId !== userId ||
+        !cloudGate.current.ready
+      )
+        return;
+      const task = enqueueSerial(cloudQueue, () => {
+        if (
+          !active ||
+          cloudWriteVersion.current !== version ||
+          cloudGate.current.userId !== userId ||
+          !cloudGate.current.ready
+        )
+          return null;
+        if (readCloudOwner() !== userId) {
+          const error =
+            "This device’s saved copy belongs to a different or unverified account. Reload progress before saving online.";
+          cloudGate.current = { userId, ready: false };
+          updateCloud({
+            ...cloudRef.current,
+            status: "error",
+            ready: false,
+            userId,
+            error,
+          });
+          return null;
+        }
+        return reconcileCloudSave(userId, snapshot, {
+          allowLocal: true,
+          localOwner: userId,
+          storage: localStorage,
+        });
+      });
+      task
+        .then((result) => {
+          if (
+            !active ||
+            !result ||
+            cloudWriteVersion.current !== version ||
+            authRef.current.userId !== userId
+          )
+            return;
+          cloudWriteFailure.current = { snapshot, userId, attempts: 0 };
+          if (result.choiceRequired) {
+            showCloudConflict(result, userId);
+            return;
+          }
+          const cloudWon =
+            result.winner === "cloud" &&
+            result.progress?.profile &&
+            JSON.stringify(result.progress) !== JSON.stringify(snapshot);
+          if (cloudWon) {
+            if (!writeLocalSave(result.progress, userId)) {
+              updateCloud({
+                status: "error",
+                ready: true,
+                userId,
+                updatedAt:
+                  result.updatedAt ?? cloudRef.current.updatedAt ?? null,
+                error:
+                  "Your online progress was kept, but this device could not update its copy. Your previous progress is available in Settings → Restore save.",
+                notice: result.notice || cloudRef.current.notice || "",
+              });
+              return;
+            }
+            reset(result.progress);
+            if (result.repairs.length)
+              setWarning(repairWarning(result.repairs));
+          }
+          if (!ensureCloudOwner(userId)) {
+            const error =
+              "This device could not remember which account owns this progress. Free up space before switching accounts.";
+            cloudGate.current = { userId, ready: false };
+            updateCloud({
+              status: "error",
+              ready: false,
+              userId,
+              updatedAt: result.updatedAt ?? cloudRef.current.updatedAt ?? null,
+              error,
+              notice: result.notice || cloudRef.current.notice || "",
+            });
+            return;
+          }
+          clearCloudDirty(userId);
+          updateCloud({
+            status: result.needsCloudName ? "name-required" : "synced",
+            ready: true,
+            userId,
+            updatedAt: result.updatedAt ?? cloudRef.current.updatedAt ?? null,
+            error: "",
+            notice: result.notice || "",
+            publicProfileAvailable: result.publicProfilePublished ?? false,
+            publicProfileEnabled: result.publicProfileEnabled === true,
+            profileIdentity: result.profileIdentity ?? null,
+          });
+        })
+        .catch((failure) => {
+          if (
+            !active ||
+            cloudWriteVersion.current !== version ||
+            authRef.current.userId !== userId
+          )
+            return;
+          const code = String(failure?.code ?? "")
+            .split("/")
+            .at(-1);
+          const message = String(failure?.message ?? "");
+          const retryable =
+            [
+              "aborted",
+              "deadline-exceeded",
+              "network-request-failed",
+              "resource-exhausted",
+              "unavailable",
+            ].includes(code) ||
+            /wait a couple of seconds|temporarily unavailable/i.test(message);
+          if (retryable) {
+            const previous = cloudWriteFailure.current;
+            const attempts =
+              previous.snapshot === snapshot && previous.userId === userId
+                ? previous.attempts + 1
+                : 1;
+            cloudWriteFailure.current = { snapshot, userId, attempts };
+            if (attempts <= 3) {
+              updateCloud({
+                status: "error",
+                ready: true,
+                userId,
+                updatedAt: cloudRef.current.updatedAt ?? null,
+                error: "",
+                notice:
+                  "Your device copy is saved. Cloud sync hit a temporary connection or write limit; the game will try again automatically.",
+              });
+              const delay = Math.min(10_000, 2_500 * 2 ** (attempts - 1));
+              retryTimer = setTimeout(() => {
+                if (
+                  !active ||
+                  cloudWriteVersion.current !== version ||
+                  authRef.current.userId !== userId ||
+                  !authRef.current.authReady ||
+                  !authRef.current.cloudEnabled ||
+                  cloudGate.current.userId !== userId ||
+                  !cloudGate.current.ready ||
+                  !online
+                )
+                  return;
+                setCloudWriteRetry((retry) => retry + 1);
+              }, delay);
+              return;
+            }
+          }
+          updateCloud({
+            status: "error",
+            ready: true,
+            userId,
+            updatedAt: cloudRef.current.updatedAt ?? null,
+            error:
+              "Your progress could not be backed up online. The copy on this device is safe. Try again.",
+            notice: "",
+          });
+        });
+    }, 2_100);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [progress, userId, authReady, cloudEnabled, online, cloudWriteRetry]);
+
+  function retryCloudLoad() {
+    if (cloudEnabled && authReady && userId) {
+      cloudWriteFailure.current = { snapshot: progress, userId, attempts: 0 };
+      setCloudWriteRetry((retry) => retry + 1);
+      setCloudRetry((retry) => retry + 1);
+    }
+  }
+
+  async function setPublicProfileVisibility(enabled) {
+    const activeUserId = authRef.current.userId;
+    if (
+      !activeUserId ||
+      !authRef.current.authReady ||
+      !cloudGate.current.ready ||
+      cloudGate.current.userId !== activeUserId
+    )
+      return {
+        ok: false,
+        message:
+          "Wait until your online progress has loaded before changing profile privacy.",
+      };
+    if (readCloudOwner() !== activeUserId)
+      return {
+        ok: false,
+        message:
+          "This device’s save belongs to a different or unverified account. Reload before changing profile privacy.",
+      };
+
+    try {
+      const publication = await enqueueSerial(cloudQueue, () => {
+        if (
+          authRef.current.userId !== activeUserId ||
+          !cloudGate.current.ready ||
+          cloudGate.current.userId !== activeUserId ||
+          readCloudOwner() !== activeUserId
+        )
+          throw new Error("The signed-in account changed. Try again.");
+        return setCloudProfileVisibility(activeUserId, enabled === true);
+      });
+      if (authRef.current.userId !== activeUserId)
+        return {
+          ok: false,
+          message:
+            "The signed-in account changed. Try again from the active account.",
+        };
+      const notice = publication.conflict
+        ? "Your profile could not be made public because that name is reserved by another Cloud account. Your progress is safe; choose a different profile name before sharing it."
+        : enabled
+          ? "Your profile is public. Anyone who knows the name or link can view its summary."
+          : "Your public profile was removed. Your private cloud save is unchanged.";
+      updateCloud({
+        ...cloudRef.current,
+        publicProfileEnabled: publication.enabled,
+        publicProfileAvailable: publication.published,
+        profileIdentity: publication.profileIdentity ?? null,
+        notice,
+      });
+      return publication.conflict
+        ? { ok: false, message: notice, enabled: publication.enabled }
+        : {
+            ok: true,
+            enabled: publication.enabled,
+            available: publication.published,
+            message: notice,
+          };
+    } catch (error) {
+      return {
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Profile privacy could not be changed. Try again.",
+      };
+    }
+  }
+
+  async function resolveCloudConflict(decision) {
+    const pending = pendingCloudConflict.current;
+    const activeUserId = authRef.current.userId;
+    if (
+      !pending ||
+      !activeUserId ||
+      pending.userId !== activeUserId ||
+      !["local", "cloud"].includes(decision)
+    )
+      return {
+        ok: false,
+        message:
+          "That choice has expired. Review the latest copies and choose again.",
+      };
+
+    cloudWriteVersion.current++;
+    cloudGate.current = { userId: activeUserId, ready: false };
+    updateCloud({
+      ...cloudRef.current,
+      status: "needs-choice",
+      ready: false,
+      userId: activeUserId,
+      error: "",
+      resolving: true,
+    });
+
+    try {
+      const task = enqueueSerial(cloudQueue, () => {
+        const latestLocal =
+          readLocalCandidateForCloudUser(activeUserId).progress;
+        return reconcileCloudSave(activeUserId, latestLocal, {
+          allowLocal: true,
+          localOwner: activeUserId,
+          storage: localStorage,
+          decision,
+          expectedCloudExists: pending.expectedCloudExists,
+          expectedCloudSaveData: pending.expectedCloudSaveData,
+          expectedLocalSource: pending.localCandidate,
+        });
+      });
+      const result = await task;
+      if (authRef.current.userId !== activeUserId)
+        return {
+          ok: false,
+          message:
+            "The signed-in account changed. Review its progress before playing.",
+        };
+      if (result.choiceRequired) {
+        showCloudConflict(result, activeUserId, pending.cacheWarning);
+        return {
+          ok: false,
+          needsChoice: true,
+          message: result.notice,
+        };
+      }
+      return applyCloudReconciliation(
+        result,
+        activeUserId,
+        pending.cacheWarning,
+      );
+    } catch {
+      if (authRef.current.userId !== activeUserId)
+        return {
+          ok: false,
+          message:
+            "The signed-in account changed. Review its progress before playing.",
+        };
+      const message =
+        "We couldn’t apply that choice. Neither copy was removed. Please try again.";
+      updateCloud({
+        ...cloudRef.current,
+        status: "needs-choice",
+        ready: false,
+        userId: activeUserId,
+        error: message,
+        resolving: false,
+      });
+      return { ok: false, message };
+    }
+  }
+
   function dispatch(input) {
     const token = epoch;
     const action = {
@@ -262,49 +955,37 @@ export function useProgress() {
             ok: false,
             message: "This game was reset. The previous action was cancelled.",
           };
-        // The writer stamps calendar eligibility itself. Never accept a device
-        // date (or a linked client's supplied calendar timestamp) for RNGween.
-        const limitedAction = [
-          "exchange-pumpkoins",
-          "buy-rngween-limited",
-          "claim-rngween-coins",
-          "claim-rngween-hourly",
-          "refresh-rngween-hourly",
-          "rngween-world-roll",
-          "rngween-world-reveal",
-          "buy-rngween-world",
-          "forge-rngween-key",
-          "retire-rngween-limited",
-        ].includes(action.type);
-        const limitedEquipment =
-          (action.type === "equip-pet" && action.id === RNGWEEN_PET.id) ||
-          (action.type === "equip-skill" &&
-            RNGWEEN_TEMP_SKILL_IDS.includes(action.id));
-        const limitedDraw =
-          action.type === "draw" &&
-          (current.current.activePet === RNGWEEN_PET.id ||
-            (current.current.equippedSkills ?? []).some((id) =>
-              RNGWEEN_TEMP_SKILL_IDS.includes(id),
-            ));
+        const auth = authRef.current;
+        const deletingCloudAccount =
+          action.type === "delete" && action.deleteCloudAccount === true;
+        const accountAccess = cloudGameAccess({
+          required: auth.requireCloudAccount,
+          configured: auth.cloudEnabled,
+          authReady: auth.authReady,
+          userId: auth.userId,
+          passwordRequired: auth.passwordRequired,
+          localPlay: auth.localPlay,
+          localProfileRequired:
+            auth.localProfileRequired &&
+            !current.current.profile &&
+            action.type !== "register",
+        });
+        if (!deletingCloudAccount && !accountAccess.allowed)
+          return { ok: false, message: accountAccess.message };
         if (
-          action.type === "claim-rngween-aura" ||
-          (limitedAction && action.type !== "retire-rngween-limited") ||
-          limitedEquipment ||
-          limitedDraw
-        ) {
-          const verified = await refreshSeasonClock();
-          if (token !== generation.current)
-            throw new Error(
-              "This game was reset. The previous action was cancelled.",
-            );
-          if (verified === null)
-            throw new Error(
-              "Connect to the website to verify RNGween availability.",
-            );
-        }
-        const calendarTime = seasonNow();
-        action.rngweenAt =
-          calendarTime === null ? null : Math.floor(calendarTime);
+          !deletingCloudAccount &&
+          auth.cloudEnabled &&
+          auth.userId &&
+          (!cloudGate.current.ready ||
+            cloudGate.current.userId !== auth.userId ||
+            readCloudOwner() !== auth.userId)
+        )
+          return {
+            ok: false,
+            message:
+              cloudRef.current.error ||
+              "Your online progress is still loading. Try again before changing anything.",
+          };
         let previous = current.current;
         let readable = true;
         if (previous.profile) {
@@ -316,13 +997,14 @@ export function useProgress() {
               stored.profile?.id !== previous.profile.id ||
               stored.rebirths !== previous.rebirths ||
               stored.ultraRebirths !== previous.ultraRebirths ||
-              stored.rollbacks !== previous.rollbacks
+              stored.rollbacks !== previous.rollbacks ||
+              stored.freshStarts !== previous.freshStarts
             ) {
               reset(stored);
               return {
                 ok: false,
                 message:
-                  "The account or rebirth cycle changed. The previous action was cancelled.",
+                  "Your profile or progress changed in another tab. This action was cancelled.",
               };
             }
             previous = healthy.current
@@ -333,19 +1015,92 @@ export function useProgress() {
             healthy.current = false;
           }
         }
-        if ((limitedAction || limitedEquipment) && !navigator.locks?.request)
-          throw new Error(
-            "Limited purchases and world rolls require Web Locks support.",
-          );
+        const cloudProfileMutation = ["rename-profile", "avatar"].includes(
+          action.type,
+        );
         if (
-          limitedEquipment &&
-          rngweenCalendar(action.rngweenAt).limitedPhase !== "active"
+          cloudProfileMutation &&
+          previous.profile &&
+          (!readable || !navigator.locks?.request)
         )
           throw new Error(
-            "This temporary item has expired or is not available yet.",
+            "This browser can’t safely change the Cloud profile right now. Update it or try another browser.",
           );
+        let renameUserId = null;
+        let avatarUserId = null;
+        let cloudRegistration = false;
+        let renameNotice = "";
+        if (cloudProfileMutation && auth.cloudEnabled && auth.userId) {
+          const activeUserId = auth.userId;
+          const mutationLabel =
+            action.type === "rename-profile" ? "profile name" : "profile logo";
+          if (
+            !cloudGate.current.ready ||
+            cloudGate.current.userId !== activeUserId ||
+            readCloudOwner() !== activeUserId
+          )
+            return {
+              ok: false,
+              message: `Wait until this account’s online progress has loaded before changing the ${mutationLabel}.`,
+            };
+
+          // Drain or invalidate the ordinary debounced backup before changing
+          // identity data. A cosmetic change must never hide a save conflict.
+          cloudWriteVersion.current++;
+          let reconciliation;
+          try {
+            reconciliation = await enqueueSerial(cloudQueue, () => {
+              if (
+                authRef.current.userId !== activeUserId ||
+                !cloudGate.current.ready ||
+                cloudGate.current.userId !== activeUserId ||
+                readCloudOwner() !== activeUserId
+              )
+                throw new Error("The signed-in account changed. Try again.");
+              return reconcileCloudSave(activeUserId, previous, {
+                allowLocal: true,
+                localOwner: activeUserId,
+                storage: localStorage,
+              });
+            });
+          } catch {
+            return {
+              ok: false,
+              message: `Online progress could not be checked. No ${mutationLabel} was changed; try again.`,
+            };
+          }
+          if (
+            authRef.current.userId !== activeUserId ||
+            token !== generation.current
+          )
+            return {
+              ok: false,
+              message: `The signed-in account or active profile changed. No ${mutationLabel} was changed.`,
+            };
+          if (reconciliation?.choiceRequired) {
+            showCloudConflict(reconciliation, activeUserId);
+            return {
+              ok: false,
+              needsChoice: true,
+              message: reconciliation.notice,
+            };
+          }
+          previous = reconciliation?.progress ?? previous;
+          if (!previous.profile)
+            return {
+              ok: false,
+              message: "Create a profile before changing its name or logo.",
+            };
+          if (readCloudOwner() !== activeUserId)
+            return {
+              ok: false,
+              message:
+                "This device’s save belongs to another or unverified account. No profile change was made.",
+            };
+          if (action.type === "rename-profile") renameUserId = activeUserId;
+          else avatarUserId = activeUserId;
+        }
         const actionHead = previous;
-        previous = retireRngweenLimited(previous, action.rngweenAt);
         if (
           ["rebirth", "ultra-rebirth", "rollback", "fresh-start"].includes(
             action.type,
@@ -355,35 +1110,240 @@ export function useProgress() {
         )
           throw new Error(
             action.type === "fresh-start"
-              ? "A fresh start requires working local storage and Web Locks support."
+              ? "This browser can’t safely save a fresh start right now. Update it or try another browser."
               : action.type === "rollback"
-                ? "The Rollback requires working local storage and Web Locks support."
+                ? "This browser can’t safely save a Rollback right now. Update it or try another browser."
                 : action.type === "ultra-rebirth"
-                  ? "Prestige requires working local storage and Web Locks support."
-                  : "Rebirth requires working local storage and Web Locks support.",
+                  ? "This browser can’t safely save a Prestige right now. Update it or try another browser."
+                  : "This browser can’t safely save a Rebirth right now. Update it or try another browser.",
           );
         if (action.type === "delete") {
-          if (!previous.profile || previous.profile.id !== action.profileId)
-            return { ok: false, message: "This account is no longer active." };
-          try {
-            if (!readable) throw new Error("Unreadable storage");
-            sessionStorage.removeItem(GUEST_ROLL_KEY);
-            localStorage.removeItem(PROGRESS_KEY);
-          } catch {
+          if (
+            !deletingCloudAccount &&
+            (!previous.profile || previous.profile.id !== action.profileId)
+          )
+            return { ok: false, message: "This profile is no longer active." };
+          const localOwner = readCloudOwner();
+          const cloudUser = deletingCloudAccount
+            ? auth.cloudEnabled && auth.userId
+              ? auth.userId
+              : null
+            : auth.cloudEnabled &&
+                auth.userId &&
+                cloudGate.current.ready &&
+                cloudGate.current.userId === auth.userId
+              ? auth.userId
+              : null;
+          if (deletingCloudAccount && (!cloudUser || !auth.deleteAuthUser))
             return {
               ok: false,
-              message:
-                "Deletion failed. Your account and progress have not been removed. Allow browser storage and try again.",
+              message: "Sign in to the cloud account before deleting it.",
+            };
+          const deleteLocal =
+            !deletingCloudAccount ||
+            cloudAccountOwnsLocalSave(cloudUser, localOwner);
+          if (!readable && !deletingCloudAccount)
+            return { ok: false, message: "Your progress could not be opened." };
+          if (cloudUser) {
+            // Invalidate an initial cloud load as well as debounced writes; it is
+            // serialized on this queue so deletion can wait for its transaction.
+            if (deletingCloudAccount) cloudGeneration.current += 1;
+            cloudWriteVersion.current += 1;
+            cloudGate.current = { userId: cloudUser, ready: false };
+            updateCloud({
+              ...cloudRef.current,
+              status: "loading",
+              ready: false,
+              userId: cloudUser,
+              error: "",
+              notice: "",
+            });
+            await drainSerialQueue(cloudQueue);
+            if (authRef.current.userId !== cloudUser)
+              return {
+                ok: false,
+                message:
+                  "The signed-in account changed. Nothing was deleted; review the active account and try again.",
+              };
+          }
+
+          let cloudSnapshot = null;
+          let cloudDeleted = false;
+          let authDeleted = false;
+          let localSaveRemoved = !deleteLocal;
+          let localCleanupFailed = false;
+          try {
+            if (cloudUser) {
+              cloudSnapshot = await deleteCloudSave(
+                cloudUser,
+                deleteLocal ? previous : null,
+                { deleteAccount: deletingCloudAccount },
+              );
+              cloudDeleted = true;
+            }
+            if (deletingCloudAccount) {
+              const result = await auth.deleteAuthUser(cloudUser);
+              if (!result?.ok)
+                throw new Error(
+                  result?.message || "The cloud account could not be deleted.",
+                );
+              authDeleted = true;
+              if (!markCloudUserDeleted(cloudUser, localStorage))
+                localCleanupFailed = true;
+            }
+            if (deleteLocal) {
+              try {
+                sessionStorage.removeItem(GUEST_ROLL_KEY);
+              } catch {}
+              try {
+                localStorage.removeItem(PROGRESS_KEY);
+                localSaveRemoved = true;
+              } catch (error) {
+                if (deletingCloudAccount && authDeleted)
+                  localCleanupFailed = true;
+                else throw error;
+              }
+            }
+          } catch (error) {
+            let recoveryFailed = false;
+            if (
+              cloudDeleted &&
+              cloudUser &&
+              !authDeleted &&
+              cloudSnapshot?.envelope?.save_data
+            )
+              try {
+                const restored = await restoreCloudSaveSnapshot(
+                  cloudUser,
+                  cloudSnapshot,
+                );
+                recoveryFailed = !restored.restored;
+              } catch {
+                recoveryFailed = true;
+              }
+            if (
+              cloudUser &&
+              !authDeleted &&
+              authRef.current.userId === cloudUser
+            )
+              setCloudRetry((retry) => retry + 1);
+            const detail = error instanceof Error ? error.message : "";
+            const publicProfileCleanupUnavailable =
+              error?.code === "public-profile-cleanup-unavailable" ||
+              error?.code === "permission-denied" ||
+              error?.code === "firestore/permission-denied";
+            const storageFailure = /quotaexceedederror|securityerror/i.test(
+              error?.name ?? "",
+            );
+            const technical =
+              storageFailure ||
+              /firebase|firestore|permission|quota|localstorage|sessionstorage|transaction/i.test(
+                detail,
+              );
+            return {
+              ok: false,
+              message: recoveryFailed
+                ? "The cloud account could not be deleted and its online save could not be restored. The copy on this device is still safe; try again or contact support."
+                : publicProfileCleanupUnavailable
+                  ? deletingCloudAccount
+                    ? "The cloud data could not be safely checked or removed, so the cloud account was kept. Please contact support before trying again."
+                    : "The cloud data could not be safely checked or removed, so the game save was kept. Please contact support before trying again."
+                  : technical
+                    ? cloudUser
+                      ? "The online save could not be safely removed, so the cloud account was not deleted. Check your connection and try again."
+                      : "The save could not be removed from this device. Free up space and try again."
+                    : detail ||
+                      (cloudUser
+                        ? "The account or its progress could not be deleted. Please try again."
+                        : "Your progress could not be removed from this device. Free up space and try again."),
             };
           }
-          try {
-            clearPresence(previous.profile.id);
-          } catch {}
-          clearAutoRoll(previous.profile.id);
-          reset();
-          return { ok: true };
+
+          let notice = "";
+          if (
+            deleteLocal &&
+            !clearLocalSaveRecovery(
+              localStorage,
+              previous.profile?.id,
+              localOwner,
+            )
+          )
+            localCleanupFailed = true;
+          if (
+            cloudUser &&
+            !clearLocalSaveRecovery(localStorage, null, cloudUser)
+          )
+            localCleanupFailed = true;
+          if (!deletingCloudAccount && localCleanupFailed)
+            notice =
+              "The game save was deleted, but a local recovery copy could not be erased. Clear this site's data to remove it.";
+          if (cloudUser) {
+            removeCachedSaveForUser(cloudUser);
+            clearCloudDirty(cloudUser);
+            if (deletingCloudAccount) {
+              let ownerCleared = true;
+              if (localOwner === cloudUser)
+                ownerCleared =
+                  localSaveRemoved && !localCleanupFailed
+                    ? writeCloudOwner(null)
+                    : false;
+              notice = deleteLocal
+                ? "The cloud account and its online save were deleted."
+                : "The cloud account and its online save were deleted. A local save not owned by this account was kept on this device.";
+              if (localCleanupFailed)
+                notice +=
+                  " Some local save or recovery data could not be erased; its account marker was kept to prevent importing it into another account. Clear this site's data to remove it.";
+              else if (!ownerCleared)
+                notice +=
+                  " This browser could not clear its account marker; clear this site's data if you want to remove every local trace.";
+              cloudGate.current = { userId: null, ready: true };
+              updateCloud({
+                status: "signed-out",
+                ready: true,
+                userId: null,
+                error: "",
+                notice,
+                publicProfileAvailable: false,
+                publicProfileEnabled: false,
+              });
+            } else {
+              writeCloudOwner(cloudUser);
+              cloudGate.current = { userId: cloudUser, ready: true };
+              notice = [
+                "The game save was deleted. Your sign-in remains available.",
+                localCleanupFailed
+                  ? "A local recovery copy could not be erased. Clear this site's data to remove it."
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              updateCloud({
+                status: "empty",
+                ready: true,
+                userId: cloudUser,
+                error: "",
+                notice,
+                publicProfileAvailable: false,
+                publicProfileEnabled: false,
+              });
+            }
+          }
+          if (deleteLocal && previous.profile) {
+            try {
+              clearPresence(previous.profile.id);
+            } catch {}
+            clearAutoRoll(previous.profile.id);
+          }
+          if (deleteLocal) {
+            reset();
+            if (localCleanupFailed) setWarning(notice);
+          } else {
+            current.current = previous;
+            setProgress(previous);
+          }
+          return { ok: true, notice };
         }
-        if (action.type === "register") {
+        if (["register", "register-cloud"].includes(action.type)) {
           try {
             if (
               parseProgress(localStorage.getItem(PROGRESS_KEY)).profile &&
@@ -406,11 +1366,11 @@ export function useProgress() {
         if (action.type.startsWith("offline-")) {
           if (!previous.profile || !previous.owned.includes("offline-roller"))
             throw new Error(
-              "Offline Roller requires a saved local profile and ownership.",
+              "Create a named profile before buying Offline Roller.",
             );
           if (!readable || !navigator.locks?.request)
             throw new Error(
-              "Offline rewards need writable storage and Web Locks support.",
+              "This browser can’t safely save offline rewards yet. Update it or try another browser.",
             );
           const now = Math.ceil(gameNow()),
             offline = previous.offline ?? {
@@ -475,50 +1435,15 @@ export function useProgress() {
               const result = await restoreRoll(
                 currentBatch.numbers[currentBatch.index],
               );
-              next = settleOfflineRoll(next, result, now, action.rngweenAt);
+              next = settleOfflineRoll(next, result, now);
             }
           } else if (action.type === "offline-dismiss")
             next = { ...previous, offline: { ...offline, report: null } };
-          else throw new Error("Unknown offline action");
+          else throw new Error("That action is not available right now.");
           if (token !== generation.current)
             throw new Error(
-              "This account was reset. Offline action cancelled.",
+              "Your game was restarted. This action was cancelled.",
             );
-        } else if (action.type === "rngween-world-roll") {
-          if (!readable || !previous.profile)
-            throw new Error("World rolls require a readable saved profile.");
-          requireRngweenWorld(previous, action.rngweenAt);
-          if (worldState(previous.rngweenLimited).pending) {
-            // Every tab/device resumes the same committed result and deadline.
-            // Never consume a second sample while an animation is in flight.
-            next = previous;
-          } else {
-            const zone = requireWorldZone(action.zone ?? "valley");
-            if (zone.id === "valley")
-              requireRngweenValley(previous, action.rngweenAt);
-            if (
-              action.rngweenAt + worldRevealMS(previous.rngweenLimited) >=
-              rngweenCalendar(action.rngweenAt).limitedEndsAt
-            )
-              throw new Error(
-                "The World closes before this reveal can finish. No roll was started.",
-              );
-            const drawn = previous.rngweenLimited?.drawn ?? [];
-            const number = await drawRngweenWorld(drawn, zone.id);
-            if (token !== generation.current)
-              throw new Error(
-                "This account changed. The world roll was cancelled.",
-              );
-            const verified = seasonNow();
-            action.rngweenAt = verified === null ? null : Math.floor(verified);
-            // Only the writer supplies number, count, time and duration.
-            next = applyProgress(previous, {
-              ...action,
-              zone: zone.id,
-              number,
-              expectedCount: drawn.length,
-            });
-          }
         } else if (action.type === "draw") {
           if (previous.offline?.batch)
             throw new Error(
@@ -526,11 +1451,11 @@ export function useProgress() {
             );
           if (previous.profile && !navigator.locks?.request)
             throw new Error(
-              "This browser cannot safely coordinate account rolls. Use a browser with Web Locks support.",
+              "This browser can’t safely save progress across open tabs. Update it or try another browser.",
             );
           if (!readable)
             throw new Error(
-              "Your saved game cannot be read. No new roll was started.",
+              "Your saved progress could not be opened. No new roll was started.",
             );
           if (previous.pendingRoll) {
             const result = await restoreRoll(previous.pendingRoll.number);
@@ -544,7 +1469,7 @@ export function useProgress() {
             current.current = previous;
             setProgress(previous);
             throw new Error(
-              "Your next roll is not ready yet. The cooldown is shared across account tabs.",
+              "Your next roll is not ready yet. The timer is the same in every open tab.",
             );
           }
           const timing = rollSettings(previous.owned);
@@ -582,7 +1507,9 @@ export function useProgress() {
               previous.profile.id
           ) {
             reset(parseProgress(localStorage.getItem(PROGRESS_KEY)));
-            throw new Error("The account changed. The draw was cancelled.");
+            throw new Error(
+              "Your profile changed in another tab. The draw was cancelled.",
+            );
           }
           const firedPicks = new Set((picks ?? []).map((pick) => pick.skill));
           const fired = armed.filter(
@@ -628,7 +1555,9 @@ export function useProgress() {
           }
           const pending = previous.pendingRoll;
           if (!pending || pending.id !== action.id)
-            throw new Error("No matching committed roll. No EP was credited.");
+            throw new Error(
+              "This roll is no longer available. No EP was added.",
+            );
           // Scores and badges come from the verified index, never from a UI payload.
           const result = await restoreRoll(pending.number);
           if (token !== generation.current)
@@ -661,12 +1590,210 @@ export function useProgress() {
               productById.get(action.id)?.kind === "offline") &&
             !navigator.locks?.request
           )
-            throw new Error("Offline Roller requires Web Locks support.");
-          next = applyProgress(previous, action);
+            throw new Error(
+              "This browser can’t safely save this purchase yet. Update it or try another browser.",
+            );
+          const progressAction =
+            renameUserId && action.type === "rename-profile"
+              ? {
+                  ...action,
+                  username: action.username
+                    .trim()
+                    .normalize("NFKC")
+                    .toLowerCase(),
+                }
+              : action.type === "register-cloud" && auth.userId
+                ? {
+                    ...action,
+                    username: action.username
+                      .trim()
+                      .normalize("NFKC")
+                      .toLowerCase(),
+                  }
+                : action;
+          next = applyProgress(previous, progressAction);
+          if (action.type === "register-cloud" && auth.userId) {
+            const activeUserId = auth.userId;
+            if (
+              !auth.cloudEnabled ||
+              !cloudGate.current.ready ||
+              cloudGate.current.userId !== activeUserId ||
+              readCloudOwner() !== activeUserId
+            )
+              return {
+                ok: false,
+                message:
+                  "Wait until this Cloud account is ready before creating a profile.",
+              };
+            cloudWriteVersion.current++;
+            try {
+              const registration = await enqueueSerial(cloudQueue, () => {
+                if (
+                  authRef.current.userId !== activeUserId ||
+                  !cloudGate.current.ready ||
+                  cloudGate.current.userId !== activeUserId ||
+                  readCloudOwner() !== activeUserId
+                )
+                  throw new Error("The signed-in account changed. Try again.");
+                return createCloudProfile(activeUserId, next);
+              });
+              if (
+                authRef.current.userId !== activeUserId ||
+                token !== generation.current
+              )
+                return {
+                  ok: false,
+                  message:
+                    "The Cloud account changed. Reload before creating a profile.",
+                };
+              next = registration.progress ?? next;
+              cloudRegistration = true;
+              updateCloud({
+                ...cloudRef.current,
+                status: "synced",
+                ready: true,
+                userId: activeUserId,
+                updatedAt: registration.updatedAt,
+                error: "",
+                notice: "Your Cloud profile name is reserved for this account.",
+                publicProfileAvailable: false,
+                publicProfileEnabled: false,
+                profileIdentity: registration.profileIdentity ?? null,
+              });
+            } catch (error) {
+              const accessDenied =
+                error?.code === "permission-denied" ||
+                error?.code === "firestore/permission-denied";
+              return {
+                ok: false,
+                message: accessDenied
+                  ? "That name may already be reserved by another Cloud account, or the reservation rules are unavailable. Your local and guest progress was not changed; choose another name or try again later."
+                  : error instanceof Error
+                    ? error.message
+                    : "The Cloud profile could not be created. Your local and guest progress was not changed.",
+              };
+            }
+          }
+          if (action.type === "rename-profile" && renameUserId) {
+            let publication;
+            try {
+              publication = await enqueueSerial(cloudQueue, () => {
+                if (
+                  authRef.current.userId !== renameUserId ||
+                  !cloudGate.current.ready ||
+                  cloudGate.current.userId !== renameUserId ||
+                  readCloudOwner() !== renameUserId
+                )
+                  throw new Error("The signed-in account changed. Try again.");
+                return renameCloudProfile(renameUserId, previous, next);
+              });
+            } catch (error) {
+              const accessDenied =
+                error?.code === "permission-denied" ||
+                error?.code === "firestore/permission-denied";
+              return {
+                ok: false,
+                message: accessDenied
+                  ? "That name may be reserved by another Cloud account, the 30-day rename cooldown may still be active, or online profile rules are unavailable. Your current profile and public link were not changed."
+                  : error instanceof Error
+                    ? error.message
+                    : "The online profile name could not be safely changed. No change was made; try again.",
+              };
+            }
+            if (
+              authRef.current.userId !== renameUserId ||
+              token !== generation.current
+            )
+              return {
+                ok: false,
+                message:
+                  "The signed-in account or active profile changed. Review online progress before continuing.",
+              };
+            if (!publication.renamed) {
+              const notice =
+                "That name is already reserved by another Cloud account. Your current name and public profile are unchanged; choose a different name.";
+              updateCloud({
+                ...cloudRef.current,
+                status: "synced",
+                ready: true,
+                userId: renameUserId,
+                error: "",
+                publicProfileEnabled: publication.enabled,
+                publicProfileAvailable: publication.published,
+                profileIdentity: publication.profileIdentity ?? null,
+                notice,
+              });
+              return { ok: false, message: notice };
+            }
+            next = publication.progress ?? next;
+            renameNotice = publication.enabled
+              ? "Profile name updated and public profile moved to the new name."
+              : "Profile name updated. Public sharing remains off.";
+            updateCloud({
+              ...cloudRef.current,
+              status: "synced",
+              ready: true,
+              userId: renameUserId,
+              updatedAt: new Date().toISOString(),
+              error: "",
+              publicProfileEnabled: publication.enabled,
+              publicProfileAvailable: publication.published,
+              profileIdentity: publication.profileIdentity ?? null,
+              notice: renameNotice,
+            });
+          }
+          if (action.type === "avatar" && avatarUserId) {
+            let avatarChange;
+            try {
+              avatarChange = await enqueueSerial(cloudQueue, () => {
+                if (
+                  authRef.current.userId !== avatarUserId ||
+                  !cloudGate.current.ready ||
+                  cloudGate.current.userId !== avatarUserId ||
+                  readCloudOwner() !== avatarUserId
+                )
+                  throw new Error("The signed-in account changed. Try again.");
+                return updateCloudProfileAvatar(avatarUserId, previous, next);
+              });
+            } catch (error) {
+              const accessDenied =
+                error?.code === "permission-denied" ||
+                error?.code === "firestore/permission-denied";
+              return {
+                ok: false,
+                message: accessDenied
+                  ? "The Cloud logo update was blocked by the seven-day cooldown, a save-rate limit, or unavailable profile rules. Your current logo was not changed."
+                  : error instanceof Error
+                    ? error.message
+                    : "The Cloud logo could not be safely changed. Your current logo was not changed.",
+              };
+            }
+            if (
+              authRef.current.userId !== avatarUserId ||
+              token !== generation.current
+            )
+              return {
+                ok: false,
+                message:
+                  "The signed-in account or active profile changed. Reload before continuing.",
+              };
+            updateCloud({
+              ...cloudRef.current,
+              status: "synced",
+              ready: true,
+              userId: avatarUserId,
+              updatedAt: new Date().toISOString(),
+              error: "",
+              profileIdentity: avatarChange.profileIdentity ?? null,
+              notice:
+                "Cloud logo updated. The public summary shows it only while your profile is public.",
+            });
+          }
         }
         if (next !== actionHead && next.profile) {
           try {
-            if (!readable) throw new Error("Unreadable storage");
+            if (!readable)
+              throw new Error("Your progress could not be opened.");
             if (previous.profile) {
               const latest = parseProgress(localStorage.getItem(PROGRESS_KEY));
               if (
@@ -679,21 +1806,47 @@ export function useProgress() {
                 return {
                   ok: false,
                   message:
-                    "The account changed. The previous action was cancelled.",
+                    "Your profile changed in another tab. The previous action was cancelled.",
                 };
               }
             }
-            localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
+            const saved = JSON.stringify(next);
+            const localRegistration =
+              action.type === "register" && !authRef.current.userId;
+            const previousCloudOwner = readCloudOwner();
+            if (localRegistration && !writeCloudOwner(null))
+              throw new Error(
+                "The local save owner could not be cleared safely.",
+              );
+            localStorage.setItem(PROGRESS_KEY, saved);
+            writeVault(saved, {
+              storage: localStorage,
+              ownerId: localRegistration ? null : readCloudOwner(),
+            });
+            if (localRegistration) {
+              if (typeof previousCloudOwner === "string" && previousCloudOwner)
+                clearCloudDirty(previousCloudOwner);
+            } else markLocalCloudDirty();
             healthy.current = true;
             unsaved.current = new Set();
             setWarning("");
-            // Live to the other device the moment this one saves.
-            broadcastSync(next);
           } catch {
             healthy.current = false;
             setWarning(
-              "Local saving is unavailable or full. New draws and purchases require saving. A committed result may be temporarily credited in this tab until saving works again; no saved history has been deleted.",
+              "Saving on this device is unavailable or full. New draws and purchases need a saved copy. A completed roll may be credited in this tab until saving works again; saved history has not been deleted.",
             );
+            if (action.type === "register-cloud" && cloudRegistration) {
+              current.current = next;
+              setProgress(next);
+              try {
+                sessionStorage.removeItem(GUEST_ROLL_KEY);
+              } catch {}
+              return {
+                ok: true,
+                message:
+                  "Your Cloud profile and progress are safe online, but this device could not save a local copy. Free up space before continuing here.",
+              };
+            }
             if (action.type === "complete") {
               // The settled roll is kept in memory only, so remember exactly
               // which rolls those are: they are the only ones owed on recovery.
@@ -711,25 +1864,24 @@ export function useProgress() {
                 ok: false,
                 message:
                   action.type === "rebirth" || action.type === "fresh-start"
-                    ? "Rebirth could not be saved. Your progress has not been reset."
+                    ? "Rebirth could not be saved. Your progress was not reset. Free up space and try again."
                     : action.type === "ultra-rebirth"
-                      ? "Prestige could not be saved. Your progress has not been reset."
+                      ? "Prestige could not be saved. Your progress was not reset. Free up space and try again."
                       : action.type === "rollback"
-                        ? "The Rollback could not be saved. Your progress has not been reset."
+                        ? "The Rollback could not be saved. Your progress was not reset. Free up space and try again."
                         : action.type.startsWith("offline-")
-                          ? "Offline rewards could not be saved. Committed rolls are retained; allow storage and retry."
-                          : action.type === "register"
-                            ? "Sign-up could not be saved. Your guest progress is still available in this tab."
+                          ? "Offline rewards could not be saved. Your completed rolls are safe. Free up space and try again."
+                          : ["register", "register-cloud"].includes(action.type)
+                            ? "Sign-up could not be saved. Your current progress is still available in this tab."
                             : action.type === "draw"
-                              ? "The roll could not be committed. No number was revealed or EP awarded. Allow browser storage and retry."
-                              : [
-                                    "rngween-world-roll",
-                                    "rngween-world-reveal",
-                                  ].includes(action.type)
-                                ? "World result not saved. Your run, fragments and number pool are unchanged. Allow storage and retry."
-                                : action.type === "goal"
-                                  ? "Your goal could not be saved. Your previous goal and EP are unchanged."
-                                  : "Purchase or equipment change not saved. Your EP has not been spent.",
+                              ? "The roll could not be saved. No number was revealed and no EP was awarded. Free up space and try again."
+                              : action.type === "goal"
+                                ? "Your goal could not be saved. Your previous goal and EP are unchanged."
+                                : action.type === "rename-profile"
+                                  ? renameUserId
+                                    ? "The online profile name changed, but this device could not save its matching copy. The previous copy is available in Settings → Restore save; free up space and reload before continuing."
+                                    : "The profile name could not be saved. Your previous name and progress are unchanged."
+                                  : "Your purchase or equipment change could not be saved. No EP was spent.",
               };
           }
         }
@@ -760,15 +1912,15 @@ export function useProgress() {
                 ok: false,
                 message:
                   action.type === "rebirth"
-                    ? "Rebirth could not update session storage. Your progress has not been reset."
-                    : "Temporary roll storage is unavailable. No number was revealed. Allow browser storage to roll.",
+                    ? "Rebirth could not be saved for this session. Your progress was not reset. Please try again."
+                    : "The game could not remember this roll. No number was revealed. Free up space and try again.",
               };
             setWarning(
-              "The temporary roll guard could not be updated. Keep this tab open until the cooldown finishes.",
+              "The game could not remember this roll across a refresh. Keep this tab open until the countdown ends.",
             );
           }
         }
-        if (action.type === "register") {
+        if (["register", "register-cloud"].includes(action.type)) {
           try {
             sessionStorage.removeItem(GUEST_ROLL_KEY);
           } catch {}
@@ -799,38 +1951,29 @@ export function useProgress() {
           } catch {}
         return {
           ok: true,
+          ...(renameNotice ? { message: renameNotice } : {}),
           offlineRemaining: next.offline?.batch
             ? next.offline.batch.numbers.length - next.offline.batch.index
             : 0,
           ...(committed ? { run: committed } : {}),
-          ...((next.rngweenLimited?.hourly?.completed ?? 0) >
-          (previous.rngweenLimited?.hourly?.completed ?? 0)
-            ? {
-                hourlyRewards: next.history
-                  .slice(-4)
-                  .filter(
-                    (entry) =>
-                      entry.type === "rngween-hourly" &&
-                      !previous.history.some((old) => old.id === entry.id),
-                  ),
-              }
-            : {}),
-          ...(["rngween-world-roll", "rngween-world-reveal"].includes(
-            action.type,
-          )
-            ? {
-                worldPending: next.rngweenLimited?.world?.pending ?? null,
-                worldNumber: next.rngweenLimited?.world?.last?.number ?? null,
-                skinEarned: next.rngweenLimited?.skinEarned === true,
-              }
-            : {}),
           // Bulk delete reports how many entries it actually removed.
           ...(action.type === "history-prune"
             ? { removed: previous.history.length - next.history.length }
             : {}),
         };
       } catch (error) {
-        return { ok: false, message: error.message };
+        const message = error instanceof Error ? error.message : "";
+        const technical =
+          /firebase|firestore|web locks|localstorage|sessionstorage|permission-denied|decompress|snapshot|transaction|quotaexceeded|typeerror/i.test(
+            message,
+          );
+        return {
+          ok: false,
+          message:
+            message && !technical
+              ? message
+              : "This action could not be completed. Please try again.",
+        };
       }
     };
     const task = queue.current.then(() =>
@@ -844,5 +1987,132 @@ export function useProgress() {
       message: "Progress could not be updated. Please try again.",
     }));
   }
-  return { progress, warning, dispatch, epoch };
+  function restoreLocalCopy(copy) {
+    if (!copy?.raw)
+      return { ok: false, message: "There is no saved copy to restore yet." };
+    const auth = authRef.current;
+    const owner = restoredSaveOwner({
+      copyOwner: copy.ownerId,
+      userId: auth.userId,
+      authReady: auth.authReady,
+      cloudReady: cloudGate.current.ready,
+      cloudUserId: cloudGate.current.userId,
+      cloudStatus: cloudRef.current.status,
+    });
+    if (!owner.ok)
+      return {
+        ok: false,
+        message:
+          owner.reason === "different-account"
+            ? "This recovery copy belongs to a different or unverified account. Sign out to restore it locally; it will not be imported into this account."
+            : "Wait until the active account’s progress has loaded before restoring a copy.",
+      };
+    if (
+      (typeof copy.ownerId === "string" && isCloudUserDeleted(copy.ownerId)) ||
+      (typeof owner.ownerId === "string" && isCloudUserDeleted(owner.ownerId))
+    )
+      return {
+        ok: false,
+        message:
+          "This copy belongs to a cloud account that was deleted and cannot be restored.",
+      };
+
+    let restored;
+    try {
+      restored = parseAndRepairProgress(copy.raw).progress;
+    } catch {
+      return {
+        ok: false,
+        message: "This saved copy could not be opened and was not restored.",
+      };
+    }
+    let activeRaw = null;
+    try {
+      activeRaw = localStorage.getItem(PROGRESS_KEY);
+    } catch {}
+    if (
+      isReadableSave(activeRaw) &&
+      !archiveSavedCopy(activeRaw, {
+        ownerId: readCloudOwner(),
+        reason: "Progress saved before manual restore",
+        source: "manual-restore",
+      })
+    )
+      return {
+        ok: false,
+        message:
+          "The current save could not be preserved safely, so the selected copy was not restored. Free some device storage and try again.",
+      };
+    if (!writeCloudOwner(owner.ownerId))
+      return {
+        ok: false,
+        message:
+          "The copy could not be safely associated with its account on this device. Free up space and try again.",
+      };
+    try {
+      localStorage.setItem(PROGRESS_KEY, copy.raw);
+    } catch {
+      // Fail closed if the primary write failed after the marker changed.
+      writeCloudOwner(UNKNOWN_CLOUD_OWNER);
+      return {
+        ok: false,
+        message:
+          "The saved copy could not be restored. Free up space on this device and try again.",
+      };
+    }
+    // Do not replace the rolling vault: it still protects the progress that was
+    // active before this explicit restore. The next normal save refreshes it.
+    reset(restored);
+    return { ok: true, at: copy.at };
+  }
+
+  const vault = {
+    get: () => readVault(),
+    getRecovery: () => readCloudRecovery(),
+    getCopies: () => getRecoveryCopies(),
+    restoreCopy: (id) => {
+      const copy = getRecoveryCopies().find((candidate) => candidate.id === id);
+      if (!copy)
+        return {
+          ok: false,
+          message: "That saved copy is no longer available.",
+        };
+      if (!copy.valid || !copy.raw)
+        return {
+          ok: false,
+          message: "This saved copy is damaged and cannot be restored.",
+        };
+      const result = restoreLocalCopy(copy);
+      return result.ok
+        ? { ...result, source: copy.label, reason: copy.reason }
+        : result;
+    },
+    restore: () => {
+      const copy = readVault();
+      if (!copy)
+        return { ok: false, message: "There is no backup to restore yet." };
+      return restoreLocalCopy(copy);
+    },
+    restoreRecovery: () => {
+      const copy = readCloudRecovery();
+      if (!copy)
+        return {
+          ok: false,
+          message: "There is no other saved copy to restore yet.",
+        };
+      const result = restoreLocalCopy(copy);
+      return result.ok ? { ...result, reason: copy.reason } : result;
+    },
+  };
+  return {
+    progress,
+    warning,
+    dispatch,
+    epoch,
+    cloud,
+    retryCloudLoad,
+    resolveCloudConflict,
+    setPublicProfileVisibility,
+    vault,
+  };
 }

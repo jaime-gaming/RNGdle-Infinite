@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import {
   emptyProgress,
   parseProgress,
@@ -41,6 +42,19 @@ const ids = allBadgeMetadata.map((b) => b.id);
 const auraIds = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
 const saved = (p) =>
   p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+// A save that has stopped changing: the event stamps a "seen" receipt and
+// deals its hourly board just after load, and comparing a snapshot taken
+// mid-write would credit the rebirth button with those writes.
+async function settledSave(page) {
+  let last = JSON.stringify(await saved(page));
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await page.waitForTimeout(100);
+    const next = JSON.stringify(await saved(page));
+    if (next === last) return JSON.parse(next);
+    last = next;
+  }
+  return JSON.parse(last);
+}
 const nav = (p, name) =>
   p.getByRole("navigation").getByRole("button", { name, exact: true }).click();
 const state = (extra = {}) => ({
@@ -85,7 +99,7 @@ const scale = (p) =>
 async function start(p, extra = {}) {
   await seedProgress(p, extra);
   await mockRandom(p, [604827]);
-  await p.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(p, new Date(Date.now() + 1000));
   await p.goto("/");
   await p.locator(".generate").click();
   await expect.poll(async () => !!(await saved(p)).pendingRoll).toBe(true);
@@ -843,7 +857,7 @@ test("a failed rebirth save leaves all progress intact and allows retry", async 
   await expect
     .poll(async () => (await saved(page)).offline?.lastSeenAt)
     .toBeTruthy();
-  const before = await saved(page);
+  const before = await settledSave(page);
   await page.evaluate((k) => {
     const write = Storage.prototype.setItem;
     window.failRebirth = true;
@@ -858,7 +872,7 @@ test("a failed rebirth save leaves all progress intact and allows retry", async 
     .getByRole("button", { name: "Confirm rebirth", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText(
-    "progress has not been reset",
+    "Your progress was not reset.",
   );
   expect(await saved(page)).toEqual(before);
   await page.evaluate(() => {
@@ -944,7 +958,7 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
 test("rebirth waits for cooldown and remains usable on mobile without motion", async ({
   page,
 }) => {
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   const now = await page.evaluate(() => Date.now());
   await seedProgress(page, {
     ...funded(),
@@ -1121,7 +1135,9 @@ test("registered rebirth fails closed without Web Locks", async ({ page }) => {
   await page
     .getByRole("button", { name: "Confirm rebirth", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("Web Locks");
+  await expect(page.getByRole("dialog")).toContainText(
+    "Update it or try another browser.",
+  );
   expect((await saved(page)).rebirths).toBe(0);
   expect((await saved(page)).discovered).toHaveLength(235);
 });
@@ -1145,7 +1161,7 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
     .getByRole("button", { name: "Confirm rebirth", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText(
-    "progress has not been reset",
+    "Your progress was not reset.",
   );
   // The ladder still points at rung one: nothing was reset in memory.
   await expect(

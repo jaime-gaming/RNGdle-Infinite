@@ -4,7 +4,7 @@ import { BOOKMARK_LIMIT } from "../progress.js";
 import { prestigeShown } from "../rebirth.js";
 import NumberBox from "./NumberBox.jsx";
 
-export function formatStatEP(value) {
+function formatStatEP(value) {
   return `${Math.round(value).toLocaleString("en-US")} EP`;
 }
 
@@ -21,7 +21,11 @@ export function when(at) {
 // The record block: best roll, key figures, pinned rolls and what the profile
 // wears. It draws from a card (see profile-card.js), so the owner's profile
 // page and a shared link render the exact same thing from the same data.
-export default function ProfileRecord({ record, shared = false }) {
+export default function ProfileRecord({
+  record,
+  shared = false,
+  live = false,
+}) {
   const best = record.best;
   const items = [
     ["Rolls completed", record.rolls.toLocaleString("en-US")],
@@ -125,8 +129,10 @@ export default function ProfileRecord({ record, shared = false }) {
       </p>
       <p className="profile-history-note">
         {shared
-          ? `Snapshot taken ${when(record.at)}. Cards are read-only and unverified: they show what the link says, not a live save.`
-          : "Read from your activity log and your save. The log keeps every cycle, and clearing history never lowers these figures."}
+          ? live
+            ? `Latest public profile from ${when(record.at)}. Your full progress and email are private.`
+            : `Saved copy from ${when(record.at)}. It may not include more recent progress.`
+          : "These figures come from your progress. Clearing history does not change them."}
       </p>
     </section>
   );

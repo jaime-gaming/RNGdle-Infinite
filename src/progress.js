@@ -1,10 +1,5 @@
-// CLEANUP Nov 4, 2026: event reducer actions — buy-rngween-limited,
-// exchange-pumpkoins, claim-rngween-aura, claim-rngween-coins,
-// claim-rngween-hourly, refresh-rngween-hourly, buy-rngween-world,
-// forge-rngween-key, rngween-world-roll, rngween-world-reveal and
-// retire-rngween-limited — plus the `rngweenLimited` save slot and the
-// `tasks.rngween` tally. KEEP: parsing a retired `rngweenLimited` (owned auras,
-// `skinEarned`), the `rngween-*` history row shapes and `events` attendance.
+// Legacy compatibility: keep owned RNGween aura receipts, attendance data,
+// and historical `rngween-*` activity rows. Seasonal actions are retired.
 import { allTimeTally } from "./profile-stats.js";
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import {
@@ -101,58 +96,18 @@ import {
   waitText,
 } from "./tasks.js";
 import {
-  claimRngweenAura,
+  parseRngween,
   rngweenAuraIds,
-  recordRngweenTally,
+  RNGWEEN_ID,
+  RNGWEEN_AURAS,
+  RNGWEEN_FINALE_SKIN,
+  RNGWEEN_WORLD_SKIN,
 } from "./rngween.js";
 import {
-  EP_PER_PUMPKOIN,
-  RNGWEEN_PET,
-  RNGWEEN_SKILL,
-  RNGWEEN_WORLD_KEY,
-  RNGWEEN_TEMP_SKILL_IDS,
-  RNGWEEN_WORLD_TARGET,
   emptyRngweenLimited,
-  grantRngweenMissionPumpkoins,
-  rngweenWorldUnlocked,
-  limitedItemById,
   limitedRewardIds,
   parseRngweenLimited,
-  requireRngweenLimited,
-  requireRngweenWorld,
-  requireRngweenValley,
-  retireRngweenLimited,
 } from "./rngween-limited.js";
-import {
-  RNGWEEN_AURAS,
-  RNGWEEN_ID,
-  RNGWEEN_WORLD_SKIN,
-  rngweenCalendar,
-} from "./rngween.js";
-import {
-  hourlyTaskById,
-  mainHourlyTally,
-  worldHourlyTally,
-  claimRngweenHourly,
-  recordRngweenHourly,
-  refreshRngweenHourly,
-} from "./rngween-hourly.js";
-import { WORLD_MINI_RULES } from "./rngween-world-badges.js";
-import {
-  worldState,
-  worldRevealMS,
-  worldSpeedLevel,
-  worldSpeedById,
-  requireWorldZone,
-  requireOpenWorldZone,
-  WORLD_POINT_EXCHANGE,
-  recordWorldOutcome,
-  rngweenValleyUnlocked,
-  worldFragmentsComplete,
-  worldPointsAvailable,
-  worldPointsSpent,
-  KEEP_ROLLING_COST,
-} from "./rngween-world-zones.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 // Guests have no saved account, so the one thing worth protecting — the roll
@@ -290,15 +245,12 @@ export function emptyProgress() {
     bookmarks: [],
     tasks: emptyTasks(),
     rngweenLimited: emptyRngweenLimited(),
-    // Events this account has been to: { [eventId]: { at } }, stamped the
-    // first time the account opens the game while the event is on. It
-    // belongs to the account, not the run: rebirths, prestiges, rollbacks and
-    // fresh starts all keep it. Only deleting the account removes it.
+    // Historical attendance belongs to the account, not the run.
     events: {},
   };
 }
 
-export const KNOWN_EVENTS = new Set([RNGWEEN_ID]);
+const KNOWN_EVENTS = new Set([RNGWEEN_ID]);
 // Only known events, each with one valid first-visit time.
 function parseEvents(value) {
   const events = {};
@@ -547,49 +499,22 @@ export function parseAndRepairProgress(raw) {
       )
         owned.push(id);
   }
+  const legacyRngween = parseRngween(p.tasks?.rngween);
   const tasksRead = parseTasks(p.tasks);
   if (tasksRead.repaired)
     note("task progress was unreadable, so it was reset.");
   const limitedRead = parseRngweenLimited(p.rngweenLimited, {
     owned,
     history,
-    earnedAuras: rngweenAuraIds(tasksRead.tasks),
+    earnedAuras: rngweenAuraIds(legacyRngween.rngween),
   });
   const rngweenLimited = limitedRead.limited;
-  // A surviving coin-reward receipt also repairs a missing paid-mission flag.
-  // History deletion is safe in the other direction: the explicit flag stays.
-  if (!rngweenLimited.retired) {
-    const paid = rngweenLimited.rewardedMissions;
-    for (const entry of history)
-      if (entry.type === "rngween-mission" && !paid.includes(entry.productId)) {
-        paid.push(entry.productId);
-        limitedRead.repaired = true;
-      }
-  }
   if (limitedRead.repaired)
     note(
-      "some limited-shop or world progress was repaired; valid unseen-number receipts were kept.",
+      "retired RNGween progress was discarded; valid permanent aura receipts were kept.",
     );
   for (const id of limitedRewardIds(rngweenLimited))
     if (!owned.includes(id)) owned.push(id);
-  if (rngweenLimited.bought?.includes(RNGWEEN_SKILL.id)) {
-    if (!owned.includes(RNGWEEN_SKILL.id)) owned.push(RNGWEEN_SKILL.id);
-  } else {
-    const index = owned.indexOf(RNGWEEN_SKILL.id);
-    if (index >= 0) owned.splice(index, 1);
-  }
-  for (const id of RNGWEEN_TEMP_SKILL_IDS)
-    if (
-      !(rngweenLimited.bought ?? []).includes(
-        id === RNGWEEN_SKILL.id ? id : RNGWEEN_PET.id,
-      )
-    )
-      delete skillCharge[id];
-  // Collected Halloween mission receipts preserve these cosmetics, including
-  // after the season ends or a save loses an owned-list entry.
-  for (const id of rngweenAuraIds(tasksRead.tasks))
-    if (productById.get(id)?.kind === "aura" && !owned.includes(id))
-      owned.push(id);
   // Lists that the rest of the save can vouch for are rebuilt from it: the
   // activity log remembers every companion found or bought, and purchases
   // plus rebirths re-unlock every skill. Nothing else can vouch for a wallet
@@ -604,14 +529,7 @@ export function parseAndRepairProgress(raw) {
     ];
   }
   const pets = [
-    ...new Set([
-      ...(petsInput ?? []).filter(
-        (id) => petById.has(id) && !petById.get(id).eventOnly,
-      ),
-      ...(rngweenLimited.bought?.includes(RNGWEEN_PET.id)
-        ? [RNGWEEN_PET.id]
-        : []),
-    ]),
+    ...new Set([...(petsInput ?? []).filter((id) => petById.has(id))]),
   ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
   // Only an owned pet can be active; anything else falls back to no pet.
   const activePet = pets.includes(p.activePet) ? p.activePet : "none";
@@ -629,18 +547,12 @@ export function parseAndRepairProgress(raw) {
     ];
   }
   const skills = parseUnlockedSkills(
-    [
-      ...(Array.isArray(skillsInput) ? skillsInput : []),
-      ...(rngweenLimited.bought?.includes(RNGWEEN_SKILL.id)
-        ? [RNGWEEN_SKILL.id]
-        : []),
-    ],
-    { owned, rngweenLimited },
+    Array.isArray(skillsInput) ? skillsInput : [],
+    { owned },
   );
   if (p.equippedSkills != null && !Array.isArray(p.equippedSkills))
     note("skill rack was unreadable, so it was emptied.");
   const equippedSkills = parseEquippedSkills(p.equippedSkills, {
-    rngweenLimited,
     owned,
     skills,
     pets,
@@ -670,7 +582,7 @@ export function parseAndRepairProgress(raw) {
       typeof stored.id === "string" && stored.id ? stored.id : freshProfileId();
     if (id !== stored.id)
       note(
-        "profile id was unreadable, so a new one was issued — device links need re-creating.",
+        "profile id was unreadable, so a new local identity was issued; the rest of the save was kept.",
       );
     const username = validUsername(stored.username)
       ? stored.username
@@ -791,6 +703,7 @@ export function preservePermanentCosmetics(previous, next) {
   const rngweenPermanent = new Set([
     ...RNGWEEN_AURAS.map((aura) => aura.id),
     RNGWEEN_WORLD_SKIN.id,
+    RNGWEEN_FINALE_SKIN.id,
   ]);
   const known = [
     ...new Set([
@@ -820,12 +733,14 @@ export function preservePermanentCosmetics(previous, next) {
         ]),
       ],
       skinEarned: limited.skinEarned || known.includes(RNGWEEN_WORLD_SKIN.id),
+      finaleEarned:
+        limited.finaleEarned || known.includes(RNGWEEN_FINALE_SKIN.id),
     },
   };
 }
 // One committed offline number, its wallet credit and its batch pointer move
 // together. The caller persists a bounded chunk under the account writer lock.
-export function settleOfflineRoll(state, result, reportAt, calendarAt = null) {
+export function settleOfflineRoll(state, result, reportAt) {
   const batch = state.offline?.batch;
   if (!state.profile || !state.owned.includes("offline-roller") || !batch)
     throw new Error("No saved offline batch is waiting to settle.");
@@ -836,7 +751,6 @@ export function settleOfflineRoll(state, result, reportAt, calendarAt = null) {
     result,
     at:
       batch.since + (batch.index + 1) * (batch.intervalMS ?? OFFLINE_INTERVAL),
-    rngweenAt: calendarAt,
     cooldownUntil: state.cooldownUntil,
   };
   if (
@@ -875,12 +789,12 @@ export function validUsername(value) {
   return typeof value === "string" && /^[\p{L}\p{N}_-]{3,20}$/u.test(value);
 }
 
-// The profile picture is an optional logo the player uploads. It travels inside
-// the save — which is exactly what makes it follow a device link — so it is
-// kept small, inline, and strictly validated: one image data URL, no markup,
-// no remote address, and a hard ceiling on how much of the save it may take.
+// The profile picture is an optional logo the player uploads. It travels with
+// the game save, including when that save syncs across devices, so it is kept
+// small, inline, and strictly validated: one image data URL, no markup, no
+// remote address, and a hard ceiling on how much of the save it may take.
 export const AVATAR_LIMIT = 240000;
-export const AVATAR_MIME = ["image/png", "image/jpeg", "image/webp"];
+const AVATAR_MIME = ["image/png", "image/jpeg", "image/webp"];
 const AVATAR_RE = new RegExp(
   `^data:(?:${AVATAR_MIME.map((mime) => mime.replace("/", "\\/")).join("|")});base64,[A-Za-z0-9+/]+={0,2}$`,
 );
@@ -920,9 +834,7 @@ function startNewCycle(
   { granted = null, starter = 0, resetLadder = false } = {},
 ) {
   const owned = [...new Set(state.owned ?? [])].filter(
-    (id) =>
-      productById.get(id)?.kind === "aura" ||
-      (id === RNGWEEN_SKILL.id && state.rngweenLimited?.bought?.includes(id)),
+    (id) => productById.get(id)?.kind === "aura",
   );
   // Shop skills are purchases: they go back on the stall. Ladder skills were
   // paid for by the rebirths the cycle keeps, so they stay unlocked — unless
@@ -936,14 +848,8 @@ function startNewCycle(
   const base = {
     ...state,
     owned,
-    pets: state.rngweenLimited?.bought?.includes(RNGWEEN_PET.id)
-      ? [RNGWEEN_PET.id]
-      : [],
-    activePet:
-      state.activePet === RNGWEEN_PET.id &&
-      state.rngweenLimited?.bought?.includes(RNGWEEN_PET.id)
-        ? RNGWEEN_PET.id
-        : "none",
+    pets: [],
+    activePet: "none",
     skills,
   };
   // The rack is rebuilt rather than repaired: the skill this rebirth pays goes
@@ -1029,70 +935,32 @@ function buyTaskSkip(state, item, action) {
   };
 }
 
-// Collected event missions unlock their matching aura as an ordinary wardrobe
-// item. The mission receipt restores that owned-list entry after a save repair.
-function grantRngweenAuras(state, tasks) {
-  const earned = rngweenAuraIds(tasks).filter(
-    (id) => productById.get(id)?.kind === "aura",
-  );
-  const current = state.owned ?? [];
-  const additions = earned.filter((id) => !current.includes(id));
-  return {
-    ...state,
-    tasks,
-    rngweenLimited: {
-      ...state.rngweenLimited,
-      auras: [...new Set([...(state.rngweenLimited?.auras ?? []), ...earned])],
-    },
-    ...(additions.length
-      ? {
-          owned: [...current, ...additions],
-          // Match a normal aura purchase: the first one is shown straight away,
-          // while later mission rewards never replace a player's choice.
-          equipped:
-            (state.equipped ?? "none") === "none"
-              ? additions[0]
-              : state.equipped,
-          goalId: additions.includes(state.goalId)
-            ? null
-            : (state.goalId ?? null),
-        }
-      : {}),
-  };
-}
-
 // Pays one finished task of a cadence into the wallet, logged as income with the
 // name it had when paid, like any other task reward. The list bonus is not paid
 // here: finishing the list only unlocks it, and collectBonus pays it.
-function payTask(state, task, at, eventId = null, rngweenAt = at) {
-  let tasks = claimTask(state.tasks ?? emptyTasks(), task, at);
-  tasks = {
-    ...tasks,
-    rngween: recordRngweenTally(tasks, { taskClaims: 1 }, rngweenAt),
-  };
+function payTask(state, task, at, eventId = null) {
+  const tasks = claimTask(state.tasks ?? emptyTasks(), task, at);
   const balance = state.balance + task.reward;
   const totalEarned = state.totalEarned + task.reward;
   if (!validAmount(balance) || !validAmount(totalEarned))
     throw new Error("EP balance limit reached.");
-  return grantRngweenAuras(
-    {
-      ...state,
-      balance,
-      totalEarned,
-      history: appendHistory(state.history, [
-        {
-          id: eventId ?? `task:${task.id}:${periodKey(task.cadence, at)}`,
-          type: "task",
-          at,
-          taskId: task.id,
-          cadence: task.cadence,
-          name: task.title,
-          ep: task.reward,
-        },
-      ]),
-    },
+  return {
+    ...state,
+    balance,
+    totalEarned,
     tasks,
-  );
+    history: appendHistory(state.history, [
+      {
+        id: eventId ?? `task:${task.id}:${periodKey(task.cadence, at)}`,
+        type: "task",
+        at,
+        taskId: task.id,
+        cadence: task.cadence,
+        name: task.title,
+        ep: task.reward,
+      },
+    ]),
+  };
 }
 
 // Pays the list bonus of one cadence once every task on its list is claimed. It
@@ -1124,9 +992,7 @@ function collectBonus(state, cadence, at, eventId = null) {
 }
 
 export function applyProgress(state, action) {
-  const verifiedAt =
-    action.rngweenAt === undefined ? action.at : action.rngweenAt;
-  const next = applyEvent(retireRngweenLimited(state, verifiedAt), action);
+  const next = applyEvent(state, action);
   if (next === state || !Array.isArray(next.history)) return next;
   if (next.history.length <= HISTORY_LIMIT) return next;
   // What the cap trims out of the log is kept in the profile's totals.
@@ -1143,395 +1009,6 @@ export function applyProgress(state, action) {
 }
 
 function applyEvent(state, action) {
-  if (action.type === "retire-rngween-limited") return state;
-  if (action.type === "refresh-rngween-hourly") {
-    const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
-    requireRngweenLimited(state, at);
-    return refreshRngweenHourly(
-      state,
-      at,
-      rngweenWorldUnlocked(state.tasks, state.rngweenLimited),
-    );
-  }
-  if (action.type === "claim-rngween-coins") {
-    const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
-    requireRngweenLimited(state, at);
-    return grantRngweenMissionPumpkoins(state, at);
-  }
-  if (action.type === "claim-rngween-hourly") {
-    const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
-    requireRngweenLimited(state, at);
-    return claimRngweenHourly(
-      state,
-      action.serial,
-      at,
-      rngweenWorldUnlocked(state.tasks, state.rngweenLimited),
-    );
-  }
-  if (
-    ["buy-rngween-world", "forge-rngween-key", "rngween-world-reveal"].includes(
-      action.type,
-    )
-  ) {
-    const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
-    if (action.type === "rngween-world-reveal" && state.rngweenLimited?.retired)
-      return state;
-    requireRngweenLimited(state, at);
-    const limited = state.rngweenLimited;
-    const world = worldState(limited);
-    if (action.type === "buy-rngween-world") {
-      const item = worldSpeedById.get(action.id);
-      if (!item) throw new Error("That World upgrade is not for sale.");
-      if (world.upgrades.includes(item.id))
-        throw new Error("You already own this World upgrade.");
-      if (world.upgrades.length !== item.level - 1)
-        throw new Error("Buy the previous World speed upgrade first.");
-      if (worldPointsAvailable(limited) < item.pointPrice)
-        throw new Error(
-          "Not enough World points for this upgrade. Keep rolling in the World.",
-        );
-      return {
-        ...state,
-        rngweenLimited: {
-          ...limited,
-          world: {
-            ...world,
-            spent: worldPointsSpent(world) + item.pointPrice,
-            upgrades: [...world.upgrades, item.id],
-          },
-        },
-        history: appendHistory(state.history, [
-          {
-            id: action.eventId ?? `world-upgrade:${item.id}`,
-            type: "rngween-world-purchase",
-            at,
-            productId: item.id,
-            name: item.name,
-            points: item.pointPrice,
-          },
-        ]),
-      };
-    }
-    if (action.type === "forge-rngween-key") {
-      if (rngweenValleyUnlocked(limited))
-        throw new Error(
-          "Your Valley challenge is already unlocked. Keep your Pumpkoins.",
-        );
-      if (!worldFragmentsComplete(world))
-        throw new Error(
-          "Clear the objectives in all four fragment zones first: Pumpkin Patch, Graveyard, Blood Moon Ridge and Haunted House.",
-        );
-      return {
-        ...state,
-        rngweenLimited: { ...limited, world: { ...world, keyForged: true } },
-        history: appendHistory(state.history, [
-          {
-            id: `rngween-forged-key:${RNGWEEN_ID}`,
-            type: "rngween-forged-key",
-            at,
-            name: "Valley Challenge Key",
-          },
-        ]),
-      };
-    }
-    const pending = world.pending;
-    if (!pending) return state;
-    if (action.id !== pending.id)
-      throw new Error("This reveal belongs to a different saved World roll.");
-    if (at < pending.revealsAt)
-      throw new Error(
-        "The World result is still revealing. Speed upgrades apply to future rolls only.",
-      );
-    if (
-      pending.zone === "valley" &&
-      (limited.drawn.length !== pending.expectedCount ||
-        limited.drawn.includes(pending.number))
-    )
-      throw new Error(
-        "The Valley pool changed. No duplicate number was rewarded.",
-      );
-    const earned =
-      limited.skinEarned ||
-      (pending.zone === "valley" && pending.number === RNGWEEN_WORLD_TARGET);
-    const next = {
-      ...state,
-      rngweenLimited: {
-        ...limited,
-        drawn:
-          pending.zone === "valley"
-            ? [...limited.drawn, pending.number]
-            : limited.drawn,
-        skinEarned: earned,
-        world: recordWorldOutcome(limited, pending),
-      },
-      ...(earned && !state.owned.includes(RNGWEEN_WORLD_SKIN.id)
-        ? {
-            owned: [...state.owned, RNGWEEN_WORLD_SKIN.id],
-            equipped:
-              state.equipped === "none"
-                ? RNGWEEN_WORLD_SKIN.id
-                : state.equipped,
-          }
-        : {}),
-    };
-    return recordRngweenHourly(
-      next,
-      "world",
-      worldHourlyTally(
-        limited,
-        next.rngweenLimited,
-        pending.number,
-        pending.zone,
-      ),
-      at,
-      true,
-      pending.startedAt,
-    );
-  }
-
-  if (
-    [
-      "exchange-pumpkoins",
-      "exchange-world-points",
-      "buy-rngween-limited",
-      "rngween-world-roll",
-    ].includes(action.type)
-  ) {
-    const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
-    requireRngweenLimited(state, at);
-    const limited = state.rngweenLimited ?? emptyRngweenLimited();
-    if (action.type === "exchange-pumpkoins") {
-      const quantity = action.amount;
-      const cost = quantity * EP_PER_PUMPKOIN;
-      if (!validAmount(quantity) || quantity < 1 || !validAmount(cost))
-        throw new Error("Choose a whole, positive number of Pumpkoins.");
-      if (state.balance < cost)
-        throw new Error("Not enough EP for this exchange.");
-      if (!validAmount(limited.pumpkoins + quantity))
-        throw new Error("Pumpkoin balance limit reached.");
-      if (
-        action.eventId &&
-        state.history.some((entry) => entry.id === action.eventId)
-      )
-        return state;
-      return {
-        ...state,
-        balance: state.balance - cost,
-        rngweenLimited: { ...limited, pumpkoins: limited.pumpkoins + quantity },
-        history: appendHistory(state.history, [
-          {
-            id: action.eventId ?? `pumpkoins:${at}:${quantity}`,
-            type: "rngween-exchange",
-            at,
-            name: "Pumpkoin exchange",
-            ep: cost,
-            pumpkoins: quantity,
-          },
-        ]),
-      };
-    }
-    if (action.type === "exchange-world-points") {
-      // World points → Pumpkoins or EP, one fixed block per action. Spending
-      // goes through `world.spent`, so no zone record or badge is touched.
-      requireRngweenWorld(state, at);
-      const to = action.to === "ep" ? "ep" : "pumpkoins";
-      const blocks = action.blocks ?? 1;
-      if (!validAmount(blocks) || blocks < 1)
-        throw new Error("Choose how many blocks of World points to trade.");
-      const points = blocks * WORLD_POINT_EXCHANGE.points;
-      const amount = blocks * WORLD_POINT_EXCHANGE[to];
-      if (!validAmount(points) || !validAmount(amount))
-        throw new Error("That trade is too large.");
-      if (worldPointsAvailable(limited) < points)
-        throw new Error("Not enough World points for this trade.");
-      const world = worldState(limited);
-      if (
-        action.eventId &&
-        state.history.some((entry) => entry.id === action.eventId)
-      )
-        return state;
-      const next = {
-        ...state,
-        rngweenLimited: {
-          ...limited,
-          world: { ...world, spent: worldPointsSpent(world) + points },
-        },
-        history: appendHistory(state.history, [
-          {
-            id: action.eventId ?? `world-exchange:${at}:${to}:${blocks}`,
-            type: "rngween-world-exchange",
-            at,
-            name:
-              to === "ep"
-                ? "World points for EP"
-                : "World points for Pumpkoins",
-            points,
-            [to]: amount,
-          },
-        ]),
-      };
-      if (to === "ep") {
-        // Counts as earned EP, like a task reward, so the wallet survives
-        // the load-time balance check against the all-time total.
-        if (
-          !validAmount(state.balance + amount) ||
-          !validAmount(state.totalEarned + amount)
-        )
-          throw new Error("EP balance limit reached.");
-        next.balance = state.balance + amount;
-        next.totalEarned = state.totalEarned + amount;
-      } else {
-        if (!validAmount(limited.pumpkoins + amount))
-          throw new Error("Pumpkoin balance limit reached.");
-        next.rngweenLimited.pumpkoins = limited.pumpkoins + amount;
-      }
-      return next;
-    }
-    if (action.type === "buy-rngween-limited") {
-      const item = limitedItemById.get(action.id);
-      if (!item) throw new Error("That limited item is not for sale.");
-      if (item.kind === "aura" && !rngweenCalendar(at).aurasBuyable)
-        throw new Error(
-          "Aura purchases open November 1, 2026 (UTC). Earn them from Halloween tasks until October 31.",
-        );
-      if (item.id === RNGWEEN_WORLD_KEY.id && rngweenValleyUnlocked(limited))
-        throw new Error(
-          "Your Valley challenge is already unlocked. No key or Pumpkoins are needed.",
-        );
-      if (
-        item.id === RNGWEEN_WORLD_KEY.id &&
-        worldFragmentsComplete(worldState(limited))
-      )
-        throw new Error(
-          "All four fragments are ready. Forge your Valley key for free inside the World.",
-        );
-      if (
-        state.owned.includes(item.id) ||
-        limited.bought.includes(item.id) ||
-        limited.auras.includes(item.id)
-      )
-        throw new Error("You already own this limited item.");
-      if (limited.pumpkoins < item.pumpkoinPrice)
-        throw new Error("Not enough Pumpkoins. Exchange EP first.");
-      let next = {
-        ...state,
-        rngweenLimited: {
-          ...limited,
-          pumpkoins: limited.pumpkoins - item.pumpkoinPrice,
-          ...(item.kind === "aura"
-            ? { auras: [...limited.auras, item.id] }
-            : { bought: [...limited.bought, item.id] }),
-        },
-        history: appendHistory(state.history, [
-          {
-            id: action.eventId ?? `limited:${item.id}:${at}`,
-            type: "rngween-purchase",
-            at,
-            productId: item.id,
-            name: item.name,
-            pumpkoins: item.pumpkoinPrice,
-          },
-        ]),
-      };
-      if (item.kind === "world-key") return next;
-      if (item.kind === "companion") {
-        const leaving = skillForPet(state.activePet);
-        next = {
-          ...next,
-          pets: [...(state.pets ?? []), item.id],
-          activePet: item.id,
-          equippedSkills: (state.equippedSkills ?? []).filter(
-            (id) => id !== leaving?.id,
-          ),
-        };
-        next.equippedSkills = autoEquip(
-          next.equippedSkills,
-          next,
-          skillForPet(item.id)?.id,
-        );
-      } else {
-        next.owned = [...state.owned, item.id];
-        if (item.kind === "skill") {
-          next.skills = [...(state.skills ?? []), item.id];
-          next.equippedSkills = autoEquip(
-            state.equippedSkills ?? [],
-            next,
-            item.id,
-          );
-        } else if (state.equipped === "none") next.equipped = item.id;
-      }
-      return next;
-    }
-    requireRngweenWorld(state, at);
-    const world = worldState(limited);
-    if (world.pending) return state;
-    const zone = requireWorldZone(action.zone ?? "valley");
-    const max = zone.max;
-    if (zone.id === "valley") requireRngweenValley(state, at);
-    else requireOpenWorldZone(limited, zone.id);
-    // Keep rolling spends a small fixed block of World points per chained roll.
-    if (action.type === "rngween-world-keep-rolling") {
-      const pointsAvailable = worldPointsAvailable(limited);
-      if (pointsAvailable < KEEP_ROLLING_COST.points) {
-        throw new Error(
-          `Not enough World points to keep rolling. Need ${KEEP_ROLLING_COST.points}, have ${pointsAvailable}.`,
-        );
-      }
-    }
-    const duration = worldRevealMS(limited);
-    if (at + duration >= rngweenCalendar(at).limitedEndsAt)
-      throw new Error(
-        "The World closes before this reveal can finish. No roll was started.",
-      );
-    const number = action.number;
-    if (
-      !Number.isInteger(number) ||
-      number < 1 ||
-      number > max ||
-      (zone.id === "valley" && limited.drawn.includes(number))
-    )
-      throw new Error(
-        "This zone only accepts a valid secure result; the Valley requires unseen numbers from 1 to 9999.",
-      );
-    if (zone.id === "valley" && action.expectedCount !== limited.drawn.length)
-      throw new Error(
-        "The Valley's pool changed. Retry with the current saved pool.",
-      );
-    if (!validAmount(world.nextSerial + 1))
-      throw new Error("The World roll limit has been reached.");
-    const pending = {
-      id: `${RNGWEEN_ID}:world:${world.nextSerial}`,
-      serial: world.nextSerial,
-      zone: zone.id,
-      rules: WORLD_MINI_RULES,
-      choice: null,
-      number,
-      startedAt: at,
-      revealsAt: at + duration,
-      speedLevel: worldSpeedLevel(limited),
-      expectedCount: zone.id === "valley" ? limited.drawn.length : 0,
-    };
-    // Commit the result and its full duration before animation. No fragments,
-    // Pumpkoins, pool entries or skin are paid until the saved reveal settles.
-    const { adventure: _legacyExpedition, ...currentLimited } = limited;
-    const nextLimited = {
-      ...currentLimited,
-      world: { ...world, nextSerial: world.nextSerial + 1, pending },
-    };
-    // Keep rolling spends World points at commit time, so the cost is charged
-    // before the reveal settles and can be refunded on a failed reveal.
-    if (action.type === "rngween-world-keep-rolling") {
-      nextLimited.world = {
-        ...nextLimited.world,
-        spent: (nextLimited.world.spent ?? 0) + KEEP_ROLLING_COST.points,
-      };
-    }
-    return {
-      ...state,
-      rngweenLimited: nextLimited,
-    };
-  }
-
   if (action.type === "rebirth") {
     const count = state.rebirths ?? 0;
     if (action.expectedRebirths !== count)
@@ -1667,9 +1144,8 @@ function applyEvent(state, action) {
       ]),
     };
   }
-  // A fresh start is for accounts that have seen everything: three prestiges
-  // or more. It wipes the run, the ladder and the history, and keeps only the
-  // profile, event cosmetics, event entitlements and one keepsake row.
+  // A fresh start wipes the run and history, retaining the profile,
+  // permanent aura collection, attendance data and one keepsake row.
   if (action.type === "fresh-start") {
     if (!freshStartEligible(state))
       throw new Error("A fresh start opens after three prestiges.");
@@ -1693,39 +1169,25 @@ function applyEvent(state, action) {
         rolls: allTimeTally(state).rolls,
       },
     };
-    // Cosmetics are the one thing a fresh start keeps: every aura, bought or
-    // earned, plus event-only items that never return to the shop.
-    const cosmetics = [...new Set(state.owned ?? [])].filter((id) => {
-      const product = productById.get(id);
-      return product?.eventOnly || product?.kind === "aura";
-    });
+    // Auras are permanent account cosmetics; all run-bound items go back.
+    const cosmetics = [...new Set(state.owned ?? [])].filter(
+      (id) => productById.get(id)?.kind === "aura",
+    );
     const next = {
       ...emptyProgress(),
       profile: state.profile,
       owned: cosmetics,
       equipped: cosmetics.includes(state.equipped) ? state.equipped : "none",
       freshStarts: count,
-      tasks: { ...emptyTasks(), rngween: state.tasks?.rngween },
+      tasks: emptyTasks(),
       rngweenLimited: state.rngweenLimited,
       events: state.events ?? {},
       history: [keepsake],
     };
     return preservePermanentCosmetics(state, next);
   }
-  // The account was here for an event. Stamped once, on the first visit
-  // while the event is on; later visits and every reset leave it alone.
-  if (action.type === "attend-event") {
-    if (!state.profile) throw new Error("Only accounts attend events.");
-    if (!KNOWN_EVENTS.has(action.id)) throw new Error("Unknown event.");
-    const at = action.at;
-    if (!validAmount(at) || at <= 0 || at > 8640000000000000)
-      throw new Error("Invalid event time");
-    if (state.events?.[action.id]) return state;
-    return {
-      ...state,
-      events: { ...(state.events ?? {}), [action.id]: { at } },
-    };
-  }
+  // Historical attendance is parse-only: retired events remain in old saves,
+  // but gameplay no longer creates new attendance records.
   if (action.type === "goal") {
     if (action.id !== null && !validGoal(action.id, state.owned, state.pets))
       throw new Error(
@@ -1753,30 +1215,12 @@ function applyEvent(state, action) {
   // The token was bought in the Shop; using it costs no EP and is not logged,
   // because it changes what you are asked to do, not what you have paid.
   if (action.type === "skip-task") {
-    if (hourlyTaskById.has(action.id))
-      throw new Error("Hourly commissions cannot be skipped.");
     const task = taskById(action.id);
     if (!task) throw new Error("That task does not exist.");
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid task time");
     return { ...state, tasks: skipTask(state.tasks, task, at) };
-  }
-  // New Halloween rewards can only be collected while this one-off event is live.
-  if (action.type === "claim-rngween-aura") {
-    const at =
-      action.rngweenAt === undefined
-        ? (action.at ?? Math.ceil(Date.now()))
-        : action.rngweenAt;
-    if (!validAmount(at) || at > 8640000000000000)
-      throw new Error("Invalid event claim time");
-    const tasks = claimRngweenAura(
-      state.tasks ?? emptyTasks(),
-      action.id,
-      at,
-      state.rngweenLimited,
-    );
-    return grantRngweenMissionPumpkoins(grantRngweenAuras(state, tasks), at);
   }
   // A task pays its reward into the wallet once per reset. It is a reward for
   // play, not a sale, so it is logged as income and never counts towards the
@@ -1788,13 +1232,7 @@ function applyEvent(state, action) {
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid task time");
-    return payTask(
-      state,
-      task,
-      at,
-      action.eventId,
-      action.rngweenAt === undefined ? at : action.rngweenAt,
-    );
+    return payTask(state, task, at, action.eventId);
   }
   // The list bonus of a finished list, collected on its own from the Tasks page.
   // It pays once per reset, and only when every task on the list is claimed.
@@ -1837,6 +1275,17 @@ function applyEvent(state, action) {
       removedTotals: archiveRemoved(state.removedTotals, history, cut.removed),
     };
   }
+  if (action.type === "rename-profile") {
+    if (!state.profile) throw new Error("Create a local profile first.");
+    const username =
+      typeof action.username === "string"
+        ? action.username.trim().normalize("NFKC")
+        : "";
+    if (!validUsername(username))
+      throw new Error("Use 3–20 letters, numbers, underscores, or hyphens.");
+    if (state.profile.username === username) return state;
+    return { ...state, profile: { ...state.profile, username } };
+  }
   if (action.type === "avatar") {
     if (!state.profile) throw new Error("Create a local profile first.");
     const avatar = typeof action.avatar === "string" ? action.avatar : "";
@@ -1851,9 +1300,9 @@ function applyEvent(state, action) {
     const { avatar: _removed, ...profile } = state.profile;
     return { ...state, profile };
   }
-  if (action.type === "register") {
+  if (action.type === "register" || action.type === "register-cloud") {
     if (state.profile)
-      throw new Error("A local profile already exists on this browser.");
+      throw new Error("A saved profile already exists on this browser.");
     const username =
       typeof action.username === "string"
         ? action.username.trim().normalize("NFKC")
@@ -1866,16 +1315,15 @@ function applyEvent(state, action) {
       !validAmount(action.createdAt)
     )
       throw new Error("Invalid profile");
-    // Guest play is a demo, not a save file. Signing up starts a genuinely
-    // fresh account: nothing rolled, earned, discovered or bought beforehand
-    // carries over, so an account's history always matches what it did. The one
-    // exception is the tracked goal — a preference, like the theme, not a
-    // reward — which survives so the player keeps the target they picked.
-    return {
-      ...emptyProgress(),
-      goalId: state.goalId ?? null,
-      profile: { id: action.id, username, createdAt: action.createdAt },
-    };
+    const profile = { id: action.id, username, createdAt: action.createdAt };
+    if (action.type === "register-cloud" || action.preserveGuest) {
+      // A player who explicitly chose local play can name that guest session
+      // without losing it. Cloud registration also keeps the current session.
+      return { ...state, profile };
+    }
+    // Unchosen guest progress is not claimed by a new local profile. The goal
+    // is a preference, not a reward, so it carries over.
+    return { ...emptyProgress(), goalId: state.goalId ?? null, profile };
   }
   // A scored roll, checked the same way wherever it comes from: the committed
   // number, or one of the numbers a draw skill kept alongside it.
@@ -1951,13 +1399,7 @@ function applyEvent(state, action) {
     // result.totalEP — the scored value shown, ranked and recorded — is never
     // modified.
     const fired = firedSkills(state, id, action.source);
-    const calendarAt =
-      action.rngweenAt === undefined ? action.at : action.rngweenAt;
-    const petFactor =
-      state.activePet === RNGWEEN_PET.id &&
-      rngweenCalendar(calendarAt).limitedPhase !== "active"
-        ? 1
-        : petMultiplier(state.activePet);
+    const petFactor = petMultiplier(state.activePet);
     const baseMultiplier =
       petFactor *
       rebirthMultiplier(state.rebirths ?? 0) *
@@ -2045,9 +1487,6 @@ function applyEvent(state, action) {
             id: first ? id : `${id}:draw${key}`,
             type: "roll",
             at,
-            // Keep verified UTC for failed-write recovery. A device timestamp
-            // in `at` must never reopen, retire or credit a seasonal board.
-            ...(first ? { rngweenAt: action.rngweenAt ?? null } : {}),
             number: scored.number,
             tier: scored.tier,
             ep: scored.totalEP,
@@ -2101,7 +1540,6 @@ function applyEvent(state, action) {
     const droppedPet =
       typeof action.petDrop === "string" &&
       petById.has(action.petDrop) &&
-      !petById.get(action.petDrop).eventOnly &&
       !(state.pets ?? []).includes(action.petDrop)
         ? action.petDrop
         : null;
@@ -2140,7 +1578,6 @@ function applyEvent(state, action) {
               ),
             },
             at,
-            action.rngweenAt === undefined ? at : action.rngweenAt,
           );
     if (droppedPet)
       events.push({
@@ -2150,75 +1587,55 @@ function applyEvent(state, action) {
         productId: droppedPet,
         name: petById.get(droppedPet).name,
       });
-    const next = grantRngweenAuras(
-      {
-        ...state,
-        history: appendHistory(state.history, events),
-        tasks,
-        pendingRoll: null,
-        // Turbo makes the settled roll count more than once towards Flywheel.
-        flywheelCharge: flywheelAfterSettlement(
-          state,
-          id,
-          action.source,
-          skillChargeFactor(fired),
-        ),
-        skillCharge: chargeAfterSettlement(state, id, action.source),
-        balance,
-        totalEarned,
-        cycleEarnedEP: cycleEP,
-        discovered: [...discovered],
-        cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
-        receipts: [...state.receipts, id].slice(-RECEIPT_LIMIT),
-        receiptFloor:
-          state.receipts.length >= RECEIPT_LIMIT && validAmount(action.at)
-            ? Math.max(receiptFloor, action.at)
-            : receiptFloor,
-        ...(droppedPet
-          ? {
-              pets: [...new Set([...(state.pets ?? []), droppedPet])].sort(
-                (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
-              ),
-              // A first pet is worn immediately; later drops never swap your choice.
-              activePet:
-                (state.activePet ?? "none") === "none"
-                  ? droppedPet
-                  : state.activePet,
-              // The worn companion's signature docks when a slot is free,
-              // the same as when it is equipped by hand.
-              equippedSkills:
-                (state.activePet ?? "none") === "none"
-                  ? autoEquip(
-                      state.equippedSkills ?? [],
-                      state,
-                      skillForPet(droppedPet)?.id,
-                    )
-                  : state.equippedSkills,
-              // A companion you were saving for turns up on its own: met.
-              goalId:
-                state.goalId === droppedPet ? null : (state.goalId ?? null),
-            }
-          : {}),
-      },
+    return {
+      ...state,
+      history: appendHistory(state.history, events),
       tasks,
-    );
-    return action.source === "offline"
-      ? next
-      : recordRngweenHourly(
-          next,
-          "main",
-          mainHourlyTally(committed.scored, { banked: credited }),
-          action.rngweenAt === undefined ? at : action.rngweenAt,
-          rngweenWorldUnlocked(next.tasks, next.rngweenLimited),
-        );
+      pendingRoll: null,
+      flywheelCharge: flywheelAfterSettlement(
+        state,
+        id,
+        action.source,
+        skillChargeFactor(fired),
+      ),
+      skillCharge: chargeAfterSettlement(state, id, action.source),
+      balance,
+      totalEarned,
+      cycleEarnedEP: cycleEP,
+      discovered: [...discovered],
+      cooldownUntil: Math.max(state.cooldownUntil, cooldownUntil),
+      receipts: [...state.receipts, id].slice(-RECEIPT_LIMIT),
+      receiptFloor:
+        state.receipts.length >= RECEIPT_LIMIT && validAmount(action.at)
+          ? Math.max(receiptFloor, action.at)
+          : receiptFloor,
+      ...(droppedPet
+        ? {
+            pets: [...new Set([...(state.pets ?? []), droppedPet])].sort(
+              (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
+            ),
+            activePet:
+              (state.activePet ?? "none") === "none"
+                ? droppedPet
+                : state.activePet,
+            equippedSkills:
+              (state.activePet ?? "none") === "none"
+                ? autoEquip(
+                    state.equippedSkills ?? [],
+                    state,
+                    skillForPet(droppedPet)?.id,
+                  )
+                : state.equippedSkills,
+            goalId: state.goalId === droppedPet ? null : (state.goalId ?? null),
+          }
+        : {}),
+    };
   }
   if (action.type === "buy") {
     const item = productById.get(action.id);
     if (!item) throw new Error("That item is not available.");
     if (item.eventOnly)
-      throw new Error(
-        "RNGween items are never for sale for EP. Use Pumpkoins in the Limited Shop; the world skin cannot be bought.",
-      );
+      throw new Error("This permanent aura is not available for purchase.");
     if (item.repeatable) return buyTaskSkip(state, item, action);
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
@@ -2306,8 +1723,6 @@ function applyEvent(state, action) {
   if (action.type === "buy-pet") {
     const pet = petById.get(action.id);
     if (!pet) throw new Error("That companion is not available.");
-    if (pet.eventOnly)
-      throw new Error("This limited companion is only sold for Pumpkoins.");
     if ((state.pets ?? []).includes(pet.id))
       throw new Error("You already have this companion.");
     if (state.balance < pet.price)
@@ -2578,21 +1993,24 @@ function parseHistory(value) {
         };
       }
     } else if (e.type === "rngween-hourly") {
-      const task = hourlyTaskById.get(e.taskId);
+      // The old rotating-board receipt remains readable without its calendar.
       const match = /^rngween-hourly:(opening|farewell):([1-9]\d*)$/.exec(e.id);
       if (
-        !task ||
-        e.pumpkoins !== task.pumpkoins ||
         !match ||
         !validAmount(Number(match[2])) ||
-        rngweenCalendar(e.at).hourlyWindow !== match[1]
+        typeof e.taskId !== "string" ||
+        e.taskId.length > 100 ||
+        typeof e.name !== "string" ||
+        e.name.length > 100 ||
+        !validAmount(e.pumpkoins) ||
+        e.pumpkoins < 1
       )
         return [];
       next = {
         ...base,
-        taskId: task.id,
-        name: task.title,
-        pumpkoins: task.pumpkoins,
+        taskId: e.taskId,
+        name: e.name,
+        pumpkoins: e.pumpkoins,
       };
     } else if (e.type === "rebirth") {
       if (!validAmount(e.count) || e.count < 1) return [];
@@ -2692,9 +2110,9 @@ function parseHistory(value) {
         next = { ...base, name: e.name, ep: e.ep, pumpkoins: e.pumpkoins };
       } else {
         if (
-          !limitedItemById.has(e.productId) ||
-          (e.type === "rngween-mission" &&
-            !RNGWEEN_AURAS.some((aura) => aura.id === e.productId))
+          typeof e.productId !== "string" ||
+          !e.productId ||
+          e.productId.length > 100
         )
           return [];
         next = {
@@ -2705,14 +2123,21 @@ function parseHistory(value) {
         };
       }
     } else if (e.type === "rngween-world-purchase") {
-      const item = worldSpeedById.get(e.productId);
-      if (!item || !validAmount(e.points) || e.points !== item.pointPrice)
+      if (
+        typeof e.productId !== "string" ||
+        !e.productId ||
+        e.productId.length > 100 ||
+        typeof e.name !== "string" ||
+        e.name.length > 100 ||
+        !validAmount(e.points) ||
+        e.points < 1
+      )
         return [];
       next = {
         ...base,
-        productId: item.id,
-        name: item.name,
-        points: item.pointPrice,
+        productId: e.productId,
+        name: e.name,
+        points: e.points,
       };
     } else if (e.type === "rngween-world-exchange") {
       // A World points trade: the points given and exactly one thing received.
@@ -2734,6 +2159,25 @@ function parseHistory(value) {
     } else if (e.type === "rngween-forged-key") {
       if (e.id !== `rngween-forged-key:${RNGWEEN_ID}`) return [];
       next = { ...base, name: "Valley Challenge Key" };
+    } else if (e.type === "rngween-farewell") {
+      // A one-time retirement receipt, kept as historical EP rather than live currency.
+      if (
+        e.id !== `rngween-farewell:${RNGWEEN_ID}` ||
+        !validAmount(e.ep) ||
+        !validAmount(e.pumpkoins)
+      )
+        return [];
+      next = { ...base, ep: e.ep, pumpkoins: e.pumpkoins };
+    } else if (e.type === "rngween-finale") {
+      // The finale skin remains owned and its earning receipt remains readable.
+      if (
+        e.id !== `rngween-finale:${RNGWEEN_ID}` ||
+        e.productId !== RNGWEEN_FINALE_SKIN.id ||
+        typeof e.name !== "string" ||
+        e.name.length > 100
+      )
+        return [];
+      next = { ...base, name: e.name, productId: e.productId };
     } else if (e.type === "task") {
       // A claimed task: the reward it paid, with the name it had when claimed.
       if (
@@ -3003,8 +2447,6 @@ export function recoverUnsavedRolls(stored, temporary, unsaved = null) {
       id,
       source: event.source,
       at: event.at,
-      // Legacy receipts lack proof. Recover their EP, never use `at` as UTC.
-      rngweenAt: event.rngweenAt ?? null,
       result: {
         number: event.number,
         totalEP: event.ep,

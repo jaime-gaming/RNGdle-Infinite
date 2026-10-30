@@ -17,7 +17,6 @@ import {
   drawPlanFor,
   parseEquippedSkills,
   petSkills,
-  eventSkills,
   rebirthSkill,
   skillArmed,
   skillById,
@@ -73,15 +72,13 @@ const roll = (id, skills = [], extra = {}) => ({
 });
 
 test("every skill states one effect, one charge cost and where it comes from", () => {
-  expect(SKILLS.length).toBe(
-    shopSkills.length + petSkills.length + eventSkills.length + 6,
-  );
+  expect(SKILLS.length).toBe(shopSkills.length + petSkills.length + 6);
   expect(new Set(SKILL_IDS).size).toBe(SKILLS.length);
   for (const skill of SKILLS) {
     expect(skill.charges).toBeGreaterThan(0);
     expect(typeof skill.name).toBe("string");
     expect(skill.description.length).toBeGreaterThan(20);
-    expect(["shop", "pet", "rebirth", "event"]).toContain(skill.source);
+    expect(["shop", "pet", "rebirth"]).toContain(skill.source);
     if (skill.source === "shop")
       expect(productById.get(skill.id)?.price).toBe(skill.price);
     if (skill.source === "pet") expect(petById.has(skill.petId)).toBe(true);

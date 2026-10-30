@@ -36,13 +36,10 @@ import {
   waitText,
 } from "../tasks.js";
 import { formatEP } from "../roll-data.js";
-import RngweenTasks from "./RngweenTasks.jsx";
-import RngweenHourly from "./RngweenHourly.jsx";
-import { rngweenCalendar } from "../rngween.js";
 import "../tasks.css";
 
 // How long until a reset, in words short enough for a card header.
-export function resetCountdown(ms) {
+function resetCountdown(ms) {
   return waitText(ms);
 }
 
@@ -72,13 +69,11 @@ const count = (n) => n.toLocaleString("en-US");
 
 export default function Tasks({
   progress,
+  cloudUser = false,
   now,
-  eventNow,
   onAction,
   notify,
   openSignup,
-  openAuraFamily,
-  openWorld,
 }) {
   // The one action in flight, and the one card asking to be confirmed.
   const [pending, setPending] = useState("");
@@ -110,6 +105,12 @@ export default function Tasks({
       reset: nextReset(cadence, now) - now,
     };
   });
+  const guestHasTaskProgress = lists.some(
+    (list) =>
+      list.views.some((view) => view.count > 0 || view.state !== "open") ||
+      list.bonus.done > 0 ||
+      list.bonus.state !== "open",
+  );
   const readyEP = lists.reduce(
     (sum, list) =>
       sum +
@@ -191,72 +192,15 @@ export default function Tasks({
     return "Swap this task for another from its pool.";
   }
 
-  const eventCalendar = rngweenCalendar(eventNow);
-  const eventActive = eventCalendar.limitedPhase === "active";
-  const [eventTab, setEventTab] = useState("commissions");
-
   return (
     <>
-      {!progress.profile && (
+      {!cloudUser && !progress.profile && guestHasTaskProgress && (
         <div className="guest-save-notice">
-          <p>
-            Guest play is not saved, so tasks claimed here are gone when you
-            leave. Signing up starts a saved account.
-          </p>
+          <p>Guest task progress is temporary. Name a profile to keep it.</p>
           <button className="secondary-button" onClick={openSignup}>
-            Sign up to save
+            Name profile
           </button>
         </div>
-      )}
-      {/* RNGween event panel: auras and hourly commissions under one tabbed roof. */}
-      {eventActive && progress.profile && (
-        <section className="rngween-event-panel">
-          <div className="rngween-event-tabs" role="tablist" aria-label="RNGween event sections">
-            <button
-              role="tab"
-              id="event-tab-auras"
-              aria-selected={eventTab === "auras"}
-              className={eventTab === "auras" ? "is-selected" : ""}
-              onClick={() => setEventTab("auras")}
-            >
-              Auras
-            </button>
-            <button
-              role="tab"
-              id="event-tab-commissions"
-              aria-selected={eventTab === "commissions"}
-              className={eventTab === "commissions" ? "is-selected" : ""}
-              onClick={() => setEventTab("commissions")}
-            >
-              Commissions
-            </button>
-          </div>
-          <div className="rngween-event-content">
-            {eventTab === "auras" ? (
-              <RngweenTasks
-                {...{ progress, onAction, notify, openAuraFamily, openWorld }}
-                now={eventNow}
-              />
-            ) : (
-              <RngweenHourly
-                progress={progress}
-                now={eventNow}
-                openWorld={openWorld}
-                openSignup={openSignup}
-                onAction={onAction}
-                notify={notify}
-              />
-            )}
-          </div>
-        </section>
-      )}
-      {!progress.rngweenLimited?.retired && eventActive && (
-        <button
-          className="secondary-button rngween-world-launch"
-          onClick={openWorld}
-        >
-          <Sparkles size={17} /> Enter RNGween World
-        </button>
       )}
       <section className="tasks-summary" aria-label="Task summary">
         <div className="tasks-stat">
@@ -318,9 +262,12 @@ export default function Tasks({
                     />
                   ))}
                 </span>
-                <span className="task-reset" title="Lists reset at 00:00 UTC">
+                <span
+                  className="task-reset"
+                  title="Tasks refresh at the same time worldwide."
+                >
                   <Timer size={13} aria-hidden="true" />
-                  Resets in {resetCountdown(list.reset)} · UTC
+                  Resets in {resetCountdown(list.reset)}
                 </span>
               </div>
             </header>

@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import {
   offlinePlan,
   parseOffline,
@@ -203,7 +204,7 @@ test("a hidden tab earns on return but a visible Shop page does not count as off
   await expect
     .poll(async () => (await saved(page)).offline.lastSeenAt)
     .toBeGreaterThan(Date.now() - 5000);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
@@ -360,16 +361,22 @@ test("deletion removes offline earnings, commitments and presence without later 
   await away(page);
   await page.goto("/");
   await collected(page, 6);
-  await page.getByRole("button", { name: "Your profile", exact: true }).click();
+  await page.getByRole("button", { name: /^Local profile,/ }).click();
   await page
-    .getByRole("button", { name: "Delete account & progress", exact: true })
+    .getByRole("button", { name: "Delete profile & game save", exact: true })
     .click();
   await page.getByLabel("Type DELETE to confirm").fill("DELETE");
   await page
-    .getByRole("button", { name: "Permanently delete", exact: true })
+    .getByRole("button", {
+      name: "Permanently delete game save",
+      exact: true,
+    })
     .click();
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", {
+      name: "Choose a local profile name",
+      exact: true,
+    }),
   ).toBeVisible();
   expect(await saved(page)).toBeNull();
   expect(

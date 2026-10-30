@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { mockRandom, showRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import {
@@ -147,7 +148,7 @@ test("an Epic badge found while the roll is off the roll page posts a notice tha
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   // The reveal keeps running on the clock while the player is on the Shop.
   await page.getByRole("button", { name: "Shop", exact: true }).click();
@@ -178,7 +179,7 @@ test("an Epic badge found on the roll page itself posts no notice, since the res
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   for (let step = 0; step < 300; step++) {
     const done = await page.evaluate(
@@ -201,8 +202,7 @@ test("an Epic badge found on the roll page itself posts no notice, since the res
 test("a repeated error notice revives the card instead of inheriting its exit timer", async ({
   page,
 }) => {
-  const message =
-    "Clipboard isn’t available. Try copying from a secure browser window.";
+  const message = "The result could not be copied. Please try again.";
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -241,7 +241,7 @@ test("a failure shows its own mark and alert role, and never the tick of a finis
   await showRoll(page, 1337);
   await page.getByRole("button", { name: "Share", exact: true }).click();
   const failure = page.locator('.toast[data-kind="error"]');
-  await expect(failure).toContainText("Clipboard isn");
+  await expect(failure).toContainText("The result could not be copied");
   await expect(failure).toHaveAttribute("role", "alert");
   await expect(failure.locator(".toast-mark svg")).toHaveClass(
     /lucide-circle-alert/,

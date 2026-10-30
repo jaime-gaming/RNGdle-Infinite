@@ -233,6 +233,7 @@ test("the changelog lists every release and flags an unseen version", () => {
   // v0.3 was the shop wave, and v0.4 carries the rebirth rework together with
   // the shelves it regrouped afterwards.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.5.2",
     "v0.5.1",
     "v0.5",
     "v0.4.1",
@@ -241,11 +242,11 @@ test("the changelog lists every release and flags an unseen version", () => {
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.5.1");
+  expect(LATEST_VERSION).toBe("v0.5.2");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
-  expect(launch.body[0]).toContain("RNGdle Infinite is live");
+  expect(launch.body[0]).toContain("the game is live");
   // Every entry carries its changes in the body, one line per change.
   for (const entry of CHANGELOG) {
     expect(entry.body.length).toBeGreaterThan(0);
@@ -291,25 +292,29 @@ test("the changelog reads like release notes, not like a chat log", () => {
   for (const entry of CHANGELOG) {
     expect(entry.version).toMatch(/^v\d+\.\d+(\.\d+)?$/);
     expect(entry.title.length).toBeGreaterThan(5);
+    expect(entry.title[0]).toBe(entry.title[0].toLowerCase());
     for (const line of entry.body) {
-      // v0.4.1 is the author's own note, not a release-notes sentence:
-      // pinned verbatim instead of styled.
+      expect(line[0]).toBe(line[0].toLowerCase());
+      // v0.4.1 is the author's own note; its wording is preserved while the
+      // opening letter follows the lowercase changelog style.
       if (entry.version === "v0.4.1") {
-        expect(line).toBe("QoL, like basic UI changes :D");
+        expect(line).toBe("qol, like basic UI changes :D");
         continue;
       }
       // One short line per change, always a finished sentence.
       expect(line.length).toBeLessThanOrEqual(140);
-      // House style: a line opens lowercase unless it opens with a name or a
-      // figure ("13 companions…", "RNGdle Infinite is live…").
-      expect(line).toMatch(/^([a-z0-9]|RNGdle |RNGween |Auto-Roll )/);
+      // Every release note begins with a lowercase letter or a figure.
+      expect(line).toMatch(/^[a-z0-9]/);
       expect(line.trim().endsWith(".")).toBe(true);
       // No placeholder chat register anywhere in the notes.
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
     }
   }
-  // Every release, v0.4's ladder rework and v0.3's shop wave included, fits
-  // the same compact budget: eight lines at most.
+  // Keep the current release note especially compact; older entries remain
+  // archived at their original length.
+  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(3);
+  // Every archived release, v0.4's ladder rework and v0.3's shop wave
+  // included, still fits the historical budget of eight lines.
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);
   // The two Infinite-only badges are announced in v0.2, as plain text.
@@ -402,8 +407,13 @@ test("sign-up validates the name live and states what is and is not kept", () =>
   expect(source).toContain("disabled={pending || !ready}");
   expect(source).toContain("validUsername");
   expect(source).toContain("aria-invalid");
-  expect(source).toContain("Not carried over:");
-  expect(source).toContain("Saved from here on:");
+  expect(source).toContain("Choose a name to save progress on this device.");
+  expect(source).toContain("Your current guest progress will be kept.");
+  expect(source).toContain(
+    "Guest progress from this session will not carry over.",
+  );
+  expect(source).toContain("This profile stays on this device.");
+  expect(source).not.toContain("A fresh start:");
   // The same validator guards the reducer, so UI and rules cannot disagree.
   for (const good of ["abc", "Lucky_Otter-12", "Zoë99"])
     expect(validUsername(good)).toBe(true);

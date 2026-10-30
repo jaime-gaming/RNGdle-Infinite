@@ -1,5 +1,4 @@
 import { test, expect } from "./helpers/clock.js";
-import fs from "node:fs";
 import {
   applyProgress,
   emptyProgress,
@@ -36,7 +35,7 @@ async function buy(page, id) {
 }
 async function signup(page, name = "Lucky_Player") {
   // Profile is a page: the button navigates to /profile.
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("textbox", { name: "Username", exact: true }).fill(name);
   await page
     .getByRole("button", { name: "Start saving my progress", exact: true })
@@ -133,6 +132,8 @@ test("guest rewards and purchases stay in memory and disappear on reload", async
 test("signup names a clean account and never invents guest earnings", async ({
   page,
 }) => {
+  // A fresh account saves exactly what it has, with no seasonal state mixed
+  // into the first write.
   await showRoll(page, 1337);
   await nav(page, "Shop");
   await buy(page, "quickwind-1");
@@ -162,36 +163,35 @@ test("signup names a clean account and never invents guest earnings", async ({
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
   await expect(page.getByTestId("roll-duration")).toHaveText("45s");
   await expect(
-    page.getByRole("button", { name: "Your profile", exact: true }),
+    page.getByRole("button", {
+      name: "Local profile, Lucky_Player",
+      exact: true,
+    }),
   ).toBeVisible();
   await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
 });
 
-test("sign up offers linking an existing account instead of starting over", async ({
+test("an unconfigured deployment keeps local profiles available and never pretends cloud login is active", async ({
   page,
 }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
-  // The form is not the only way in: an account on another device joins
-  // through the device link.
-  const link = page.locator(".signup-link");
-  await expect(link).toContainText("Already play on another device?");
-  await link.getByRole("button", { name: "Link an existing account" }).click();
-  await expect(page).toHaveURL(/\/settings\/link$/);
-});
-
-test("the sign-up form carries the link-existing-account door", () => {
-  const profile = fs.readFileSync("src/components/LocalProfile.jsx", "utf8");
-  expect(profile).toContain("Link an existing account");
-  expect(profile).toContain('navigate?.("settings", "link")');
+  await page.goto("/profile");
+  await expect(page.locator(".cloud-account")).toContainText(
+    "Online sign-in isn’t available here.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Continue locally" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start saving my progress" }),
+  ).toBeVisible();
 });
 
 test("invalid or failed signup never creates a profile or discards guest progress; retry saves it", async ({
   page,
 }) => {
   await showRoll(page, 604827);
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("textbox", { name: "Username" }).fill("bad name");
   // Live validation keeps submit disabled until the name is usable.
   await expect(
@@ -212,11 +212,11 @@ test("invalid or failed signup never creates a profile or discards guest progres
   await page.getByRole("button", { name: "Start saving my progress" }).click();
   // The error is page-level now: profile is a page, not a dialog.
   await expect(page.getByRole("alert")).toContainText(
-    "guest progress is still available",
+    "current progress is still available",
   );
   expect(await saved(page)).toBeNull();
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   // The failed save left the guest session untouched.
   await page.getByRole("button", { name: "Back to rolling" }).click();
@@ -225,7 +225,7 @@ test("invalid or failed signup never creates a profile or discards guest progres
   await page.evaluate(() => {
     Storage.prototype.setItem = window.restoreStorage;
   });
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("textbox", { name: "Username" }).fill("Lucky_Retry");
   await page.getByRole("button", { name: "Start saving my progress" }).click();
   await expect(

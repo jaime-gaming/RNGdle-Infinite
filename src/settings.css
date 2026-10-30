@@ -151,7 +151,7 @@
   min-height: 38px;
 }
 .settings-update .is-spinning {
-  animation: sync-spin 900ms linear infinite;
+  animation: settings-spin 900ms linear infinite;
 }
 .settings-update p {
   max-width: 62ch;
@@ -173,398 +173,10 @@
     width: 100%;
   }
 }
-
-/* ---- Device links -------------------------------------------------------- */
-/* The pill is the whole story of the link: a dot that breathes while the
-   relay is being reached, a glow once both devices answer, and one expanding
-   ring every time a save really crosses the wire. */
-.sync-status {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  flex-shrink: 0;
-  padding: 5px 11px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  font: 500 11px/1.5 var(--roll-font);
-  color: var(--muted);
-  transition:
-    border-color 0.3s ease,
-    background 0.3s ease,
-    color 0.3s ease;
-}
-.sync-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  flex-shrink: 0;
-}
-.sync-status.is-connecting .sync-dot,
-.sync-status.is-waiting .sync-dot {
-  animation: sync-breathe 1.5s ease-in-out infinite;
-}
-.sync-status.is-live .sync-dot {
-  animation: sync-breathe 2.4s ease-in-out infinite;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent);
-}
-.sync-ping {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  width: 7px;
-  height: 7px;
-  margin-top: -3.5px;
-  border-radius: 50%;
-  border: 1px solid currentColor;
-  pointer-events: none;
-  animation: sync-ping 900ms ease-out 1 both;
-}
-@keyframes sync-breathe {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.45;
-    transform: scale(0.72);
-  }
-}
-@keyframes sync-ping {
-  0% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(3.4);
-  }
-}
-.sync-status.is-live {
-  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
-  background: var(--green-bg);
-  color: var(--green);
-}
-.sync-status.is-waiting,
-.sync-status.is-connecting {
-  border-color: color-mix(in srgb, #d9a441 45%, var(--border));
-  color: #b8862f;
-}
-.sync-status.is-error {
-  border-color: color-mix(in srgb, #d9534f 45%, var(--border));
-  color: #c0524f;
-  animation: sync-refuse 400ms ease-out 1;
-}
-@keyframes sync-refuse {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-3px);
-  }
-  60% {
-    transform: translateX(2px);
-  }
-}
-.sync-link-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  animation: sync-row-in 300ms ease-out both;
-}
-@keyframes sync-row-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.sync-link-field {
-  flex: 1 1 300px;
-  min-width: 0;
-  padding: 8px 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--secondary);
-  font: 500 11px var(--roll-font);
-  text-overflow: ellipsis;
-  transition: border-color 0.2s ease;
-}
-.sync-link-field:hover,
-.sync-link-field:focus {
-  border-color: var(--muted);
-}
-.sync-action {
-  transition:
-    color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.12s ease;
-}
-.sync-action:active:not(:disabled) {
-  transform: translateY(1px);
-}
-.sync-action .is-spinning {
-  animation: sync-spin 900ms linear infinite;
-}
-@keyframes sync-spin {
+@keyframes settings-spin {
   to {
     transform: rotate(360deg);
   }
-}
-.sync-note {
-  margin: 8px 0 0;
-  font-size: 11.5px;
-  line-height: 1.7;
-  color: var(--muted);
-  animation: sync-note-in 260ms ease-out both;
-}
-.device-link-qr {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  animation: sync-note-in 260ms ease-out both;
-}
-.device-link-qr svg {
-  display: block;
-  flex: 0 0 auto;
-  width: 184px;
-  height: 184px;
-  border-radius: 5px;
-  background: #fff;
-}
-.device-link-qr strong {
-  display: block;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--text);
-}
-.device-link-qr p {
-  max-width: 44ch;
-  margin: 6px 0 0;
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--muted);
-}
-@keyframes sync-note-in {
-  from {
-    opacity: 0;
-    transform: translateY(-3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.sync-create {
-  animation: sync-row-in 300ms ease-out both;
-}
-.sync-hint {
-  margin: 0;
-  font-size: 11.5px;
-  line-height: 1.7;
-  color: var(--muted);
-}
-.sync-hand {
-  margin-top: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: var(--hover);
-}
-.sync-hand summary {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--secondary);
-  cursor: pointer;
-  list-style: none;
-}
-.sync-hand summary::-webkit-details-marker {
-  display: none;
-}
-.sync-hand summary::after {
-  content: "▾";
-  margin-left: auto;
-  font-size: 10px;
-  color: var(--muted);
-  transition: transform 0.2s ease;
-}
-.sync-hand[open] summary::after {
-  transform: rotate(180deg);
-}
-.sync-hand-note {
-  margin: 8px 0 10px;
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--muted);
-}
-.sync-hand-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.sync-hand[open] .sync-hand-row,
-.sync-hand[open] .sync-code-field {
-  animation: sync-note-in 260ms ease-out both;
-}
-.sync-code-field {
-  display: block;
-  width: 100%;
-  min-height: 64px;
-  resize: vertical;
-  padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--secondary);
-  font: 500 10.5px/1.6 var(--roll-font);
-  word-break: break-all;
-}
-.sync-code-field:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--green) 18%, transparent);
-}
-/* The relay row stacks: the note explains, the field and buttons sit under it
-   at full width, so a long address never squeezes the sentence beside it. */
-.sync-relay-row {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-}
-.sync-relay-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.sync-relay-field {
-  flex: 1 1 260px;
-  min-width: 0;
-  padding: 8px 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-  font: 500 11px var(--roll-font);
-}
-.sync-relay-field:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--green) 18%, transparent);
-}
-@media (max-width: 560px) {
-  .sync-relay-field {
-    flex-basis: 100%;
-  }
-}
-
-/* ---- The device-link page ------------------------------------------------ */
-/* Settings carries the summary; everything technical lives one click away. */
-.sync-open {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-}
-.sync-pending {
-  padding: 0 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, currentColor 16%, transparent);
-  font: 600 9px/1.6 var(--roll-font);
-  font-style: normal;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  animation: sync-breathe 1.8s ease-in-out infinite;
-}
-.sync-status.is-offline {
-  border-color: color-mix(in srgb, #d9a441 55%, var(--border));
-  color: #b8862f;
-}
-.device-link {
-  width: min(100%, 720px);
-  text-align: left;
-}
-.device-link-lede {
-  margin: 0 0 10px;
-  font-size: 12.5px;
-  line-height: 1.8;
-  color: var(--secondary);
-  max-width: 68ch;
-}
-.device-link-heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 26px 0 10px;
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--secondary);
-}
-.device-link-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 1px;
-  margin: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--border);
-  animation: sync-note-in 260ms ease-out both;
-}
-.device-link-details > div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 11px 13px;
-  background: var(--surface);
-}
-.device-link-details dt {
-  font: 500 9.5px var(--roll-font);
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.device-link-details dd {
-  margin: 0;
-  font: 500 11.5px/1.5 var(--roll-font);
-  color: var(--text);
-  word-break: break-all;
-}
-.device-link-note {
-  margin: 12px 0 0;
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--muted);
-}
-.device-link-footer {
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
-}
-.back-to-settings {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 /* ---- Phone-only "More" group ------------------------------------------------
@@ -572,12 +184,6 @@
    install entry) live here instead. Desktop keeps the footer. */
 .settings-mobile-only {
   display: none;
-}
-@media (max-width: 560px) {
-  .device-link-qr {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 @media (max-width: 760px) {
   .settings-mobile-only {
@@ -592,5 +198,164 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
+  }
+}
+
+/* The save block: what this browser keeps, and the way back to it. */
+.settings-save {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 18px 0 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.settings-save h2 {
+  margin: 0;
+  font-size: 14px;
+}
+.settings-save p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.settings-save small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.settings-save button {
+  min-height: 40px;
+}
+.recovery-copy-list {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+  margin: 4px 0;
+}
+.recovery-copy-option {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--hover);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+.recovery-copy-option:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: var(--secondary);
+}
+.recovery-copy-option:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.recovery-copy-option.is-selected {
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+.recovery-copy-option.is-damaged {
+  border-color: color-mix(in srgb, var(--border), #f59e0b 42%);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.recovery-copy-option:disabled {
+  opacity: 0.75;
+}
+.recovery-copy-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.recovery-copy-heading strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+.recovery-copy-status {
+  flex-shrink: 0;
+  color: var(--secondary);
+  font-size: 10px;
+  font-weight: 600;
+}
+.recovery-copy-option.is-selected .recovery-copy-status {
+  color: var(--green);
+}
+.recovery-copy-option.is-damaged .recovery-copy-status {
+  color: #d97706;
+}
+.recovery-copy-option small,
+.recovery-copy-empty {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.recovery-copy-reason {
+  overflow-wrap: anywhere;
+}
+.recovery-copy-details {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.recovery-copy-details h3 {
+  margin: 0 0 9px;
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.recovery-copy-details dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.recovery-copy-details dl > div {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--hover);
+}
+.recovery-copy-details dt {
+  color: var(--muted);
+  font-size: 10px;
+}
+.recovery-copy-details dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+}
+.recovery-copy-restore-note {
+  margin: 10px 0 0 !important;
+  font-size: 11px !important;
+}
+@media (max-width: 480px) {
+  .recovery-copy-details dl {
+    grid-template-columns: 1fr;
+  }
+  .recovery-copy-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
   }
 }

@@ -45,37 +45,48 @@ test("every companion has its own drawing, and no companion borrows another", ()
   }
 });
 
-test("the README is a short player guide whose images really exist", () => {
+test("the README is a short, player-friendly guide with current screenshots", () => {
   const readme = fs.readFileSync("README.md", "utf8");
   const images = [...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(
     (match) => match[1],
   );
-  expect(images.length).toBeGreaterThanOrEqual(4);
+  expect(images.length).toBeGreaterThanOrEqual(5);
   for (const image of images) {
     expect(fs.existsSync(image), `README points at a missing image: ${image}`);
   }
-  // Friendly, not exhaustive: the player guide stays short and skimmable.
-  expect(readme.split("\n").length).toBeLessThanOrEqual(150);
+  expect(readme.split("\n").length).toBeLessThanOrEqual(100);
   for (const section of [
     "## How to play",
-    "## Ways to grow",
-    "## Your progress",
+    "## What you can discover",
+    "## Keep your progress",
     "## FAQ",
+    "## Privacy & contact",
     "## Credits",
   ])
     expect(readme).toContain(section);
   expect(readme).toContain("https://jaime-gaming.github.io/RNGdle-Infinite/");
+  expect(readme).toContain("https://rngdle-infinite.jaime-gaming.com/");
+  expect(readme).toContain("Settings → Restore save");
+  expect(readme).toContain("jaimegamingpro@gmail.com");
+  expect(readme).toContain("November 3, 2026");
   expect(readme).not.toMatch(/^## (Main files|Tests)$/m);
-  // Anything that looks like a source path belongs in the agent notes only.
-  expect(readme).not.toMatch(/src\/[\w-]+\.jsx?/);
+  for (const implementationDetail of [
+    "VITE_",
+    "rngdle-infinite-jg",
+    "Firestore",
+    "Firebase Console",
+    "service-account",
+    "npm run",
+    "src/",
+  ])
+    expect(readme).not.toContain(implementationDetail);
 });
 
 test("the shop hub links match the shelf pages it renders", () => {
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
   const data = fs.readFileSync("src/shop-data.js", "utf8");
   const companion = fs.readFileSync("src/components/PetShelf.jsx", "utf8");
-  const limited = fs.readFileSync("src/components/RngweenShop.jsx", "utf8");
-  const source = `${shop}\n${companion}\n${limited}`;
+  const source = `${shop}\n${companion}`;
   // The sections are catalogue data: routing, the hub and the featured picks
   // all read the one list.
   // A shelf section carries an icon; the aura families that group a shelf's
@@ -99,14 +110,6 @@ test("the shop hub links match the shelf pages it renders", () => {
     expect(shop).toContain('id="shop-hub"');
   }
   expect(seen).toEqual(
-    new Set([
-      "limited",
-      "skills",
-      "pace",
-      "companions",
-      "auras",
-      "offline",
-      "tools",
-    ]),
+    new Set(["skills", "pace", "companions", "auras", "offline", "tools"]),
   );
 });

@@ -121,7 +121,7 @@ test("branding, ordered navigation and collection progress fit mobile and both t
       ).toBe(width);
       const header = await page.locator(".header").boundingBox();
       const button = await page
-        .getByRole("button", { name: "Your profile", exact: true })
+        .getByRole("button", { name: /^Local profile,/ })
         .boundingBox();
       expect(button.x + button.width).toBeLessThanOrEqual(header.width);
     }

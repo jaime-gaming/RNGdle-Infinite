@@ -3,10 +3,8 @@ import { seedProgress } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { AVATAR_LIMIT } from "../src/progress.js";
 
-// The account's face. A logo is a picture the player uploads: it is squared,
-// shrunk and stored inside the save — never uploaded anywhere — which is what
-// makes it show up on the profile, in the header and on the export card, and
-// what makes a device link carry it to the other browser.
+// The account's face. A logo is squared, shrunk and stored in the save; it
+// appears on the profile, in the header and on the one-way export card.
 
 const avatar = (page) =>
   page.evaluate(
@@ -41,7 +39,7 @@ test("a guest has no logo, and sign-up is the way to get one", async ({
   await expect(page.locator(".profile-title .avatar-mark")).toHaveCount(0);
   await expect(page.locator(".sign-in")).toHaveAttribute(
     "aria-label",
-    "Sign up",
+    "Sign in",
   );
 
   // The first profile a browser creates starts with the neutral icon.
@@ -72,7 +70,7 @@ test("an uploaded logo lands in the save, the header and the profile", async ({
     "Replace logo",
   );
   await expect(page.locator(".profile-logo-line [role=status]")).toContainText(
-    /travels with your account/,
+    /Logo saved\./,
   );
 
   // The save holds a small image data URL, not the original file.
@@ -135,51 +133,7 @@ test("a huge picture is shrunk instead of refused, and rubbish is refused", asyn
     buffer: Buffer.from("just some text"),
   });
   await expect(page.locator(".profile-logo-line [role=status]")).toContainText(
-    /PNG, JPEG, WebP or GIF/,
+    /That image could not be used/,
   );
   expect(await avatar(page)).toBe(stored);
-});
-
-test("the logo rides the device link to the other browser", async ({
-  browser,
-}) => {
-  const contextA = await browser.newContext();
-  const pageA = await contextA.newPage();
-  await seedProgress(pageA, { balance: 5000000, totalEarned: 5000000 });
-  await pageA.goto("/profile");
-  await pageA.setInputFiles('[data-testid="avatar-input"]', {
-    name: "logo.png",
-    mimeType: "image/png",
-    buffer: await draw(pageA, 256, "#22d3ee"),
-  });
-  await expect(pageA.getByTestId("avatar-remove")).toBeVisible();
-  const stored = await avatar(pageA);
-
-  // Hand-link, because it needs no relay at all: the code carries the save,
-  // logo included.
-  await pageA.goto("/settings/link");
-  await pageA.locator(".sync-hand summary").click();
-  await pageA.getByTestId("peer-code-copy").click();
-  const code = await pageA.getByTestId("peer-code-field").inputValue();
-
-  const contextB = await browser.newContext();
-  const pageB = await contextB.newPage();
-  await pageB.goto("/settings/link");
-  await pageB.locator(".sync-hand summary").click();
-  await pageB.getByTestId("peer-code-field").fill(code);
-  await pageB.getByTestId("peer-code-adopt").click();
-  await expect
-    .poll(async () => (await avatar(pageB)).length, { timeout: 10000 })
-    .toBe(stored.length);
-  expect(await avatar(pageB)).toBe(stored);
-
-  await pageB.goto("/profile");
-  await expect(pageB.locator(".sign-in")).toHaveAttribute(
-    "data-avatar",
-    "logo",
-  );
-  await expect(pageB.locator(".page-icon")).toHaveClass(/has-logo/);
-
-  await contextB.close();
-  await contextA.close();
 });

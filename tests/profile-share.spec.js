@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { deflateSync, strToU8 } from "fflate";
 import { seedProgress, testProfile } from "./helpers/progress.js";
-import { emptyProgress } from "../src/progress.js";
+import { AVATAR_LIMIT, emptyProgress } from "../src/progress.js";
 import {
   decodeShareCard,
   encodeShareCard,
@@ -15,6 +16,15 @@ const iso = (day) => new Date(at(day)).toISOString();
 // A logo that satisfies the save's avatar validation: one png data URL.
 const LOGO =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+function base64Url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "");
+}
 
 function played() {
   return {
@@ -161,6 +171,15 @@ test("a profile card survives the trip through the address and rejects damage", 
   expect(forged.best).toBeNull();
   expect(forged.pins).toHaveLength(2);
   expect(forged.rolls).toBe(0);
+  const outOfRange = decodeShareCard(
+    encodeShareCard({
+      ...card,
+      best: { number: "9999999", tier: "godly", ep: 1, at: iso(5) },
+      pins: [{ number: "9999999", tier: "godly", ep: 1 }],
+    }),
+  );
+  expect(outOfRange.best).toBeNull();
+  expect(outOfRange.pins).toEqual([]);
   expect(forged.aura).toHaveLength(40);
   // The link points at the named profile on the given origin and base.
   const url = new URL(
@@ -174,6 +193,24 @@ test("a profile card survives the trip through the address and rejects damage", 
   expect(decodeShareCard(url.searchParams.get("card")).name).toBe(
     "LuckyOtter41",
   );
+});
+
+test("share-card tokens and expanded data stay within fixed limits", () => {
+  const bomb = `z1${base64Url(deflateSync(strToU8("X".repeat(1_000_000))))}`;
+  expect(decodeShareCard(bomb)).toBeNull();
+  expect(decodeShareCard("A".repeat(400_001))).toBeNull();
+
+  const prefix = "data:image/png;base64,";
+  const avatar = `${prefix}${"A".repeat(AVATAR_LIMIT - prefix.length)}`;
+  const card = {
+    ...shareCardData(played(), new Date(at(6))),
+    avatar,
+    best: { number: "1000000", ep: 1, tier: "godly", at: iso(5) },
+  };
+  const token = encodeShareCard(card);
+  const decoded = decodeShareCard(token);
+  expect(decoded.avatar).toBe(avatar);
+  expect(decoded.best.number).toBe("1000000");
 });
 
 test("the profile link opens as a read-only card anywhere, and never touches the game there", async ({
@@ -201,7 +238,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   await page.goto("/profile");
   await page.getByTestId("profile-share").click();
   await expect(page.locator(".profile-share-note")).toContainText(
-    "Link copied",
+    "Progress card link copied.",
   );
   const link = await page.evaluate(() => navigator.clipboard.readText());
   expect(link).toMatch(new RegExp(`/profile/${testProfile.username}\\?card=`));
@@ -213,7 +250,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   await expect(
     visitor.getByRole("heading", { level: 2, name: testProfile.username }),
   ).toBeVisible();
-  await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();
+  await expect(visitor.getByText("A saved profile card.")).toBeVisible();
   // The logo came along: the shared profile wears the same face.
   await expect(
     visitor.locator(".profile-title .avatar-mark img"),
@@ -229,7 +266,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   await expect(visitor.getByText("Delete account")).toHaveCount(0);
   // The address keeps the card, so a reload shows the same thing.
   await visitor.reload();
-  await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();
+  await expect(visitor.getByText("A saved profile card.")).toBeVisible();
   // The visitor's own game is untouched: still a guest with nothing saved.
   expect(
     await visitor.evaluate(() =>
@@ -301,7 +338,7 @@ test("a heavy logo is shrunk to link size before it travels", async ({
   const other = await browser.newContext();
   const visitor = await other.newPage();
   await visitor.goto(link);
-  await expect(visitor.getByText("A shared card, read-only.")).toBeVisible();
+  await expect(visitor.getByText("A saved profile card.")).toBeVisible();
   const src = await visitor
     .locator(".profile-title .avatar-mark img")
     .getAttribute("src");

@@ -259,7 +259,9 @@ test("corrupt delivery awards nothing; retry loads the text-safe scoring data", 
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByRole("alert")).toContainText("integrity check");
+  await expect(page.getByRole("alert")).toContainText(
+    "game data could not be loaded",
+  );
   await expect(page.locator(".history-numbers button")).toHaveCount(0);
   await expect(page.locator(".roll-ep")).toHaveCount(0);
   corrupt = false;
@@ -303,7 +305,9 @@ test("loading disables generation without blocking help, and badge odds explain 
   await expect(
     page.getByRole("heading", { name: "How to play", level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText("Both include ties")).toBeVisible();
+  await expect(page.locator(".about-fair")).toContainText(
+    "Nothing you buy changes the odds.",
+  );
   release();
   await page.getByRole("button", { name: "Back to rolling" }).click();
   await expect(

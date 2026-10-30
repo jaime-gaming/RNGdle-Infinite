@@ -1,7 +1,3 @@
-// CLEANUP Nov 4, 2026: remove the `rngween` tally slot and its parse/record
-// calls. Old saves may still carry the slot; ignore it rather than repair it.
-import { emptyRngween, parseRngween, recordRngweenTally } from "./rngween.js";
-
 // Tasks: small daily and weekly goals that pay EP once per reset.
 //
 // Progress is kept on the save rather than read back from the activity log, so
@@ -59,7 +55,7 @@ export const MYTHIC_OR_BETTER = ["mythic", "godly"];
 export const ACTIVE_PER_PERIOD = { daily: 3, weekly: 4 };
 // A Task Skip can be bought once a day, and no more than SKIP_WINDOW_LIMIT in
 // any SKIP_WINDOW_MS. A save holds at most SKIP_HOLD_LIMIT unused ones.
-export const SKIP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const SKIP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 export const SKIP_WINDOW_MS = 5 * 24 * 60 * 60 * 1000;
 export const SKIP_WINDOW_LIMIT = 3;
 export const SKIP_HOLD_LIMIT = 3;
@@ -611,7 +607,6 @@ export function emptyTasks() {
     daily: emptySlot(),
     weekly: emptySlot(),
     skip: emptySkip(),
-    rngween: emptyRngween(),
   };
 }
 
@@ -787,7 +782,7 @@ export function waitText(ms) {
 // What one settled online roll adds to each cadence. A settlement from an
 // earlier period (a roll replayed after a failed save) never reopens that
 // period, because the stored one is already further along.
-export function recordTally(tasks, tally, at, rngweenAt = at) {
+export function recordTally(tasks, tally, at) {
   const next = {};
   for (const cadence of TASK_CADENCES) {
     const stored = tasks?.[cadence];
@@ -816,7 +811,6 @@ export function recordTally(tasks, tally, at, rngweenAt = at) {
     ...emptyTasks(),
     ...tasks,
     ...next,
-    rngween: recordRngweenTally(tasks, tally, rngweenAt),
   };
 }
 
@@ -998,8 +992,7 @@ export function parseTasks(value) {
     else repaired = true;
   }
   tasks.skip = skip;
-  const seasonal = parseRngween(value.rngween);
-  tasks.rngween = seasonal.rngween;
-  repaired ||= seasonal.repaired;
+  // The retired `rngween` save slot is ignored; its earned auras are repaired
+  // independently from the profile's permanent cosmetic receipts.
   return { tasks, repaired };
 }

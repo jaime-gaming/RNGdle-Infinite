@@ -9,6 +9,7 @@ import {
   pathForPage,
   pathForSubpage,
   subpageFromLocation,
+  settingsSubpageFromLocation,
   familyFromLocation,
   pathForShelfFamily,
   pathForProfile,
@@ -27,10 +28,9 @@ import { emptyProgress } from "../src/progress.js";
 import { shopProducts, AURA_FAMILIES } from "../src/shop-data.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 
-test("every top navigation destination is a real path, not a hash fragment", () => {
+test("every app page has a direct path, not a hash fragment", () => {
   expect(PAGES).toEqual([
     "roll",
-    "rngween-world",
     "tasks",
     "shop",
     "badges",
@@ -39,14 +39,13 @@ test("every top navigation destination is a real path, not a hash fragment", () 
     "changelog",
     "about",
     "profile",
+    "privacy",
+    "tos",
     "rebirth",
   ]);
   expect(pathForPage("roll")).toBe("/");
   for (const page of PAGES.filter((p) => p !== HOME))
-    // The World is served from its own folder on Pages, so it keeps a slash.
-    expect(pathForPage(page)).toBe(
-      page === "rngween-world" ? `/${page}/` : `/${page}`,
-    );
+    expect(pathForPage(page)).toBe(`/${page}`);
   // A repository subpath deployment keeps the same routes under its base.
   expect(basePath("/RNGdle-Infinite/")).toBe("/RNGdle-Infinite");
   expect(pathForPage("shop", "/RNGdle-Infinite/")).toBe(
@@ -113,6 +112,25 @@ test("a shelf is a real sub-page of the shop, on every host", () => {
   expect(pathForSubpage("shop", "  Auras!../")).toBe("/shop/auras");
 });
 
+test("save recovery is a distinct Settings subpage with a direct link", () => {
+  const local = { pathname: "/settings/save-recovery", hash: "" };
+  expect(pageFromLocation(local)).toBe("settings");
+  expect(settingsSubpageFromLocation(local)).toBe("save-recovery");
+  expect(pathForSubpage("settings", "save-recovery")).toBe(
+    "/settings/save-recovery",
+  );
+  const pages = {
+    pathname: "/RNGdle-Infinite/settings/save-recovery",
+    hash: "",
+  };
+  expect(settingsSubpageFromLocation(pages, "/RNGdle-Infinite/")).toBe(
+    "save-recovery",
+  );
+  expect(settingsSubpageFromLocation({ pathname: "/settings/unknown" })).toBe(
+    "",
+  );
+});
+
 test("the profile address names the account: /profile/<username>", () => {
   expect(pathForProfile("LuckyOtter41")).toBe("/profile/LuckyOtter41");
   // Guests have no name yet, so they land on the bare page.
@@ -138,9 +156,13 @@ test("the profile address names the account: /profile/<username>", () => {
   expect(isCurrentPath("shop", { pathname: "/shop/x", hash: "" })).toBe(false);
 });
 
-test("static hosting ships a 404 fallback so real URLs survive a direct load", () => {
-  const config = fs.readFileSync("vite.config.js", "utf8");
-  expect(config).toContain("404.html");
+test("static hosting ships a 404 fallback and Workers serve deep links as an SPA", () => {
+  const vite = fs.readFileSync("vite.config.js", "utf8");
+  expect(vite).toContain("404.html");
+  const workers = fs.readFileSync("wrangler.jsonc", "utf8");
+  expect(workers).toMatch(
+    /"not_found_handling"\s*:\s*"single-page-application"/,
+  );
 });
 
 test("the rebirth ladder depends on the collection alone, never on auras or tools", () => {

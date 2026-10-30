@@ -1,4 +1,5 @@
 import { chooseTheme } from "./helpers/appearance.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import { test, expect } from "./helpers/clock.js";
 import {
   availableGoals,
@@ -122,7 +123,7 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
 }) => {
   await seedProgress(page);
   await mockRandom(page, [604827]);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
@@ -298,7 +299,7 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
 }) => {
   await seedProgress(page, { balance: 1000000, totalEarned: 1000000 });
   await mockRandom(page, [604827]);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
@@ -335,7 +336,7 @@ test("Auto-Roll pauses for badge inspection and resumes without replacing its co
   await seedProgress(page, { owned: ["auto-roll"] });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
   await expect(page.locator(".generate")).toBeEnabled();
   await page.getByRole("switch", { name: "Auto-Roll" }).click();
@@ -383,7 +384,7 @@ test("guest goals are temporary until signup; signup preserves the choice withou
     .click();
   await page.locator('[data-product="flywheel"] .shop-card-desc').click();
   await expect(page.locator(".toast")).toContainText("Goal updated");
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Username", exact: true })
     .fill("GoalKeeper");

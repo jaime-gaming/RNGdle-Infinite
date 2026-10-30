@@ -1,5 +1,5 @@
-// CLEANUP Nov 4, 2026: the Reaper key, pumpkin and Halloween skill marks go
-// with their features. KEEP HexboundMark (permanent aura).
+// Product marks and collectible illustrations. Legacy cosmetic marks stay so
+// permanent aura rewards from retired seasons remain wearable.
 import React from "react";
 
 // Hand-drawn game marks.
@@ -34,18 +34,6 @@ function Mark({ children, size = 20, className = "", title, ...rest }) {
 
 // ---- Product marks --------------------------------------------------------
 // Used for page headings, the catalogue strip and the shop shelves.
-// The Reaper's skull key, shared by its seasonal Shop card and passage art.
-export const WorldKeyMark = (props) => (
-  <Mark {...props}>
-    <path
-      className="tone"
-      d="M9.4 3.8a5.1 5.1 0 0 1 4.6 7.3l-1.7 1.6H7.8l-1.7-1.6A5.1 5.1 0 0 1 9.4 3.8Z"
-    />
-    <path d="M9.6 12.8v7.4h3.2v-2.8h2.7v-2.3h-2.7v-2.3M7.8 9.2h.1M11.4 9.2h.1M9.6 10.7v1.8" />
-    <path d="m18.5 3.5.8 1.6 1.7.5-1.7.5-.8 1.6-.7-1.6-1.8-.5 1.8-.5Z" />
-  </Mark>
-);
-
 export const RollMark = (props) => (
   <Mark {...props}>
     <rect x="3.6" y="3.6" width="16.8" height="16.8" rx="4.6" />
@@ -93,14 +81,6 @@ export const CompanionMark = (props) => (
   </Mark>
 );
 
-export const WalletMark = (props) => (
-  <Mark {...props}>
-    <path d="M20.6 10.9V8.6a2.6 2.6 0 0 0-2.6-2.6H6A2.6 2.6 0 0 0 3.4 8.6v7.8A2.6 2.6 0 0 0 6 19h12a2.6 2.6 0 0 0 2.6-2.6v-2.2" />
-    <path d="M3.4 9.6h14.2a2.6 2.6 0 0 1 0 5.2H3.4" />
-    <circle className="tone" cx="16.4" cy="12.2" r="1.05" />
-  </Mark>
-);
-
 export const PaceMark = (props) => (
   <Mark {...props}>
     <path d="M4.2 17.2a8.8 8.8 0 1 1 15.6 0" />
@@ -145,24 +125,6 @@ export const OfflineMark = (props) => (
   <Mark {...props}>
     <path d="M19.8 14.6A8.2 8.2 0 0 1 9.4 4.2a7.8 7.8 0 1 0 10.4 10.4Z" />
     <path d="M15.9 7.1v4.2M18.4 7.1v4.2" />
-  </Mark>
-);
-
-export const StreakMark = (props) => (
-  <Mark {...props}>
-    <path d="M13 3.4c1.4 2.6 5.4 5.4 5.4 9.1a6.4 6.4 0 1 1-12.8 0c0-1.8.7-3.2 1.8-4.4" />
-    <path
-      className="tone"
-      d="M12 19.2a3.2 3.2 0 0 0 3.2-3.2c0-1.6-1.4-2.6-2.3-4-1 1.4-2.4 2.4-2.4 4a3.2 3.2 0 0 0 1.5 3.2Z"
-    />
-  </Mark>
-);
-
-export const TimerMark = (props) => (
-  <Mark {...props}>
-    <circle cx="12" cy="13.4" r="6.8" />
-    <path d="M12 9.8v3.6l2.4 1.7M9.6 3.8h4.8M12 3.8v2.8" />
-    <circle className="tone" cx="12" cy="13.4" r="1.1" />
   </Mark>
 );
 
@@ -305,31 +267,10 @@ export const BayMark = (props) => (
   </Mark>
 );
 
-// Halloween-only skill marks: the familiar's soul-lantern and a four-star scythe.
-export const LanternGlowMark = (props) => (
-  <Mark {...props}>
-    <path d="M9 6V4a3 3 0 0 1 6 0v2M7 7h10l2 3-2 11H7L5 10l2-3ZM5 10h14M7 18h10" />
-    <path className="tone" d="M10 16c-3-3 1-5 2-7 4 4 4 6 2 8-2 1-3 0-4-1Z" />
-    <path d="m2 7 1-1m18 0 1 1M2 14H1m22 0h-1" />
-  </Mark>
-);
-export const HarvestMark = (props) => (
-  <Mark {...props}>
-    <path d="M16 6v15M16 7C12 2 6 3 3 7c5-1 8 0 11 3l2-3Z" />
-    <path
-      className="tone"
-      d="m6 12 1.3 2.5L10 16l-2.7 1.2L6 20l-1.2-2.8L2 16l2.8-1.5L6 12Z"
-    />
-    <path d="m20 3 .7 1.3L22 5l-1.3.7L20 7l-.7-1.3L18 5l1.3-.7L20 3Zm0 7v2m-1-1h2m0 6v2m-1-1h2" />
-  </Mark>
-);
-
 // Every `icon` a skill can carry, mapped to its mark. The shop card, the
 // corner rack and a companion's signature chip all read this one map, so the
 // same skill is the same drawing everywhere — no stock icons, no lookalikes.
-export const SKILL_MARKS = {
-  lantern: LanternGlowMark,
-  harvest: HarvestMark,
+const SKILL_MARKS = {
   surge: SurgeMark,
   trail: TrailMark,
   bounce: BounceMark,
@@ -342,12 +283,7 @@ export const SKILL_MARKS = {
 };
 
 export function SkillIcon({ icon, ...props }) {
-  const Glyph =
-    (icon === "pumpkin"
-      ? PumpkinMark
-      : icon === "witchfire"
-        ? WitchfireMark
-        : SKILL_MARKS[icon]) ?? SparkMark;
+  const Glyph = SKILL_MARKS[icon] ?? SparkMark;
   return <Glyph {...props} />;
 }
 
@@ -588,7 +524,7 @@ export const HexDumpMark = (props) => (
   </Mark>
 );
 
-// Halloween marks share the same grid as the permanent collection.
+// Legacy aura marks share the same grid as the permanent collection.
 export const PumpkinMark = (props) => (
   <Mark {...props}>
     <path d="M12 6.5c-8-3.5-10.6 2-9 8.3C4.3 20.3 9 21 12 19.5c3 1.5 7.7.8 9-4.7 1.6-6.3-1-11.8-9-8.3Z" />
@@ -825,20 +761,6 @@ const CREATURES = {
       <circle cx="13.6" cy="5.9" r=".9" className="cut" />
     </>
   ),
-  // Pumpkin Familiar: crowned lantern, little feet and its own guardian wisps.
-  "pumpkin-familiar": (
-    <>
-      <path
-        className="tone"
-        d="M4 13c0-4.2 3.1-7 8-7s8 2.8 8 7-3.1 6.4-8 6.4S4 17.2 4 13Z"
-      />
-      <path d="m8 5-1-3 4 1 2-2 2 2 3-1-1 3M7.8 19.2l-1.4 2M16.2 19.2l1.4 2M8 7.2c-2 3.2-2 7.8 0 11M16 7.2c2 3.2 2 7.8 0 11M3 9l-1 3 1 3m18-6 1 3-1 3" />
-      <path
-        className="cut-line"
-        d="m7.8 11.8 1.3-1.2 1.3 1.2M13.6 11.8l1.3-1.2 1.3 1.2M8.4 15.2l2.4 1.3 1.2-1 1.2 1 2.4-1.3"
-      />
-    </>
-  ),
   // Ember Dragonet: small, smug, faintly on fire, and the largest ordinary bonus.
   dragonet: (
     <>
@@ -865,7 +787,4 @@ export function CreatureIcon({ pet, size = 22, className = "", ...rest }) {
   );
 }
 
-export const CREATURE_IDS = Object.keys(CREATURES).filter(
-  (id) => id !== "pumpkin-familiar",
-);
-export const LIMITED_CREATURE_IDS = ["pumpkin-familiar"];
+export const CREATURE_IDS = Object.keys(CREATURES);

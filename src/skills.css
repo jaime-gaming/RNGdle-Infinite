@@ -1,4 +1,3 @@
-/* CLEANUP Nov 4, 2026: remove the .is-rngween-skill rules with the event skill. */
 /* The skill rack: a corner of icons with filling circles and no text at all.
    Everything a player needs to read lives in the tooltip, which opens on hover
    or keyboard focus. */
@@ -716,22 +715,4 @@
   .rack-panel-row > span:last-child {
     text-align: right;
   }
-}
-
-/* Limited skills keep their own visual seal even with Halloween mode off. */
-.is-rngween-skill .skill-ring,
-.is-rngween-stack .skill-stack-ring {
-  background: radial-gradient(circle, #ad69db23, transparent 72%);
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 1px #ac76c648,
-    0 0 15px #be86311a;
-}
-.is-rngween-skill .skill-ring-icon,
-.is-rngween-stack .skill-stack-icon {
-  color: #b78958;
-}
-:root[data-theme="dark"] .is-rngween-skill .skill-ring-icon,
-:root[data-theme="dark"] .is-rngween-stack .skill-stack-icon {
-  color: #fbc48b;
 }

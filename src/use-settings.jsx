@@ -27,7 +27,7 @@ export function SettingsProvider({ children }) {
     setSaveError(
       saveSettings(next)
         ? ""
-        : "Settings could not be saved in this browser. They apply until you reload.",
+        : "Your settings could not be saved on this device. They will reset when you reload the game.",
     );
   };
   return (
@@ -48,9 +48,8 @@ export function useSettings() {
   return useContext(SettingsContext);
 }
 
-// One place decides motion: the system preference, or an explicit override.
+// All motion follows the system accessibility preference.
 export function useMotionPreference() {
-  const { settings } = useSettings();
   const [systemReduced, setSystemReduced] = useState(
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -60,8 +59,6 @@ export function useMotionPreference() {
     media.addEventListener("change", change);
     return () => media.removeEventListener("change", change);
   }, []);
-  if (settings.reduceMotion === "on") return true;
-  if (settings.reduceMotion === "off") return false;
   return systemReduced;
 }
 

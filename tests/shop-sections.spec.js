@@ -17,7 +17,7 @@ import { seedProgress, testProfile } from "./helpers/progress.js";
 // live on the Skills shelf because Flywheel is a skill, and the shop skills
 // themselves are a rotating stall — three on sale, refreshed every five
 // minutes.
-// Every shelf reads from the cheapest item upwards.
+// Every shelf reads from the cheapest item upwards; the street has six doors.
 
 const funded = {
   ...emptyProgress(),
@@ -93,6 +93,11 @@ test("deep links and legacy shelf hashes land on the right shelf", async ({
   await page.goBack();
   await expect(page).toHaveURL(/\/shop$/);
   await expect(page.locator(".shop-hub")).toBeVisible();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/shop\/pace$/);
+  await expect(page.locator("#shop-pace")).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/shop$/);
 
   // The other five shelves are one click away from any shelf.
   await page.getByRole("link", { name: "Auras", exact: true }).click();
@@ -587,11 +592,33 @@ test("an aura family is a page of its own, reached from its banner", async ({
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(
     shopProducts.filter((p) => p.family === "celestial").length,
   );
+  // A bookmark/reload renders the same family, and browser history restores
+  // the shelf in both directions.
+  await page.reload();
+  await expect(page).toHaveURL(/\/shop\/auras\/celestial$/);
+  await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText(
+    "Spaaaaaace",
+  );
   await page.goBack();
   await expect(page).toHaveURL(/\/shop\/auras$/);
+  await expect(page.locator(".aura-family-banner")).toHaveCount(
+    AURA_FAMILIES.length,
+  );
+  await page.goForward();
+  await expect(page).toHaveURL(/\/shop\/auras\/celestial$/);
+  await expect(page.locator("#shop-auras")).toBeVisible();
+  // Choosing the top-level Shop route clears any stale family state.
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Shop", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/shop$/);
+  await expect(page.locator(".shop-hub")).toBeVisible();
+  await page.reload();
+  await expect(page.locator(".shop-hub")).toBeVisible();
 });
 
-test("the retired aura offer is gone and permanent auras keep regular prices throughout October", async ({
+test("the retired aura offer is gone and permanent auras keep regular prices", async ({
   page,
 }) => {
   await page.clock.install();
@@ -621,6 +648,40 @@ test("the retired aura offer is gone and permanent auras keep regular prices thr
       page.getByRole("button", { name: "Get free auras on Tasks" }),
     ).toHaveCount(0);
   }
+});
+
+test("owned retired cosmetics remain in the Legacy collection and can still be equipped", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    ...funded,
+    owned: ["offline-roller", "jack-o-glow", "hexbound", "hollow-lantern"],
+    equipped: "hollow-lantern",
+  });
+  await page.goto("/shop/auras");
+
+  const legacy = page.locator('.aura-family-banner[data-family="special"]');
+  await expect(legacy).toBeVisible();
+  await expect(legacy).toContainText("Legacy collection");
+  await legacy.click();
+  await expect(page).toHaveURL(/\/shop\/auras\/special$/);
+
+  const collection = page.locator('.aura-family-banner[data-family="legacy"]');
+  await expect(collection).toBeVisible();
+  await collection.click();
+  await expect(page).toHaveURL(/\/shop\/auras\/legacy$/);
+  const cards = page.locator(".shop-card[data-product]");
+  await expect(cards).toHaveCount(3);
+  for (const id of ["jack-o-glow", "hexbound", "hollow-lantern"]) {
+    const card = page.locator(`[data-product="${id}"]`);
+    await expect(card).toHaveClass(/is-owned/);
+    await expect(card).toContainText(
+      "Legacy cosmetic · Permanently owned · Not for sale",
+    );
+  }
+  await expect(
+    page.locator('[data-product="hollow-lantern"] button'),
+  ).toContainText("Equipped");
 });
 
 test("nothing on a shelf waits behind a purchase you have not made", async ({

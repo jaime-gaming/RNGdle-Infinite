@@ -1,17 +1,27 @@
-// KEEP after Nov 4, 2026: release notes are history; the RNGween entry stays.
+// Release notes remain part of the archive, including retired events.
 // Release notes, newest first. `version` doubles as the "seen" marker: the
 // header badge appears while the newest entry has not been acknowledged.
 // `date` is the day the version reached the main branch (UTC), shown on the
 // Changelog page.
 export const CHANGELOG = [
   {
+    version: "v0.5.2",
+    date: "2026-11-03",
+    title: "cloud accounts and easier save recovery",
+    body: [
+      "name a local profile to keep your progress on this device, or use a Cloud Account to carry it across devices.",
+      "restore an earlier local save from Settings → Restore save, with a preview before you choose.",
+      "retired seasonal event screens are gone; cosmetics already earned and older activity remain in your save.",
+    ],
+  },
+  {
     version: "v0.5.1",
     date: "2026-10-20",
-    title: "RNGween update",
+    title: "the RNGween update",
     body: [
-      "RNGween brings Halloween decorations, the Limited Shop with Pumpkoins and the Reaper's World, Oct 21 – Nov 3, 2026.",
-      "four aura tasks unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon, October 25–31, 2026. Buy them Nov 1–3; they never return.",
-      "under the hood: roll settle, animations, shop, tasks and a few more things changed. You will notice.",
+      "the RNGween update added Halloween decorations, the Limited Shop with Pumpkoins and the Reaper's World, Oct 21 – Nov 3, 2026.",
+      "four aura tasks unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon, October 25–31, 2026; they never return.",
+      "october 31 doubled Pumpkoins and awarded the Hollow Lantern; leftover coins became a small EP farewell.",
     ],
   },
   {
@@ -33,7 +43,7 @@ export const CHANGELOG = [
     version: "v0.4.1",
     date: "2026-10-06",
     title: "tiny update",
-    body: ["QoL, like basic UI changes :D"],
+    body: ["qol, like basic UI changes :D"],
   },
   {
     version: "v0.4",
@@ -61,20 +71,20 @@ export const CHANGELOG = [
       "skills charge in the corner rack. A full circle fires on your next roll, and Flywheel sits beside them.",
       "13 companions, one worn at a time. When its signature skill fires, it pins itself to your number until the roll settles.",
       "rebirth has its own page: a six-step ladder where every rung grants a skill and a permanent +2% on banked EP. Ultra adds +10%.",
-      "Auto-Roll is a rack ability, and any archived roll can be shared from History with what it really earned.",
+      "the Auto-Roll tool is in the rack, and any archived roll can be shared from History with what it really earned.",
       "the whole interface uses one hand-drawn icon set, and the aura ladder grows to eighteen.",
     ],
   },
   {
     version: "v0.2",
     date: "2026-09-19",
-    title: "companions, cheaper upgrades and real URLs",
+    title: "companions, cheaper upgrades and bookmarkable pages",
     body: [
       "companions multiply the EP you bank, never your odds. Buy one, or find one at roughly 1 in 250 rolls.",
       "rebirth moved to the top bar, with a ring that fills as your collection grows.",
       "shop prices dropped about 40%. The late game was a wall.",
       "light mode is fixed.",
-      "pages have real URLs, so a shelf or a page can be bookmarked.",
+      "you can bookmark a shelf or page and open it again later.",
       "sharing a result copies the link as well as the text.",
       "guest play is not saved, and the interface now says so plainly.",
       "new badges: ↕️ Pendulum (anomaly) and ⏳ Last Second (mythic).",
@@ -87,13 +97,13 @@ export const CHANGELOG = [
     date: "2026-09-18",
     title: "launch",
     body: [
-      "RNGdle Infinite is live: roll a number from 0 to 1,000,000 and find out what makes it special.",
+      "the game is live: roll a number from 0 to 1,000,000 and find out what makes it special.",
     ],
   },
 ];
 
 export const LATEST_VERSION = CHANGELOG[0].version;
-export const SEEN_KEY = "rng-infinite-changelog-seen-v1";
+const SEEN_KEY = "rng-infinite-changelog-seen-v1";
 
 export function readSeenVersion(storage = globalThis.localStorage) {
   try {

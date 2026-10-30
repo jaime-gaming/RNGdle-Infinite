@@ -19,7 +19,12 @@ const nav = (page, name) =>
     .click();
 async function register(page) {
   // Profile is a page now: the button navigates to /profile.
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.locator(".sign-in").click();
+  const continueLocally = page.getByRole("button", {
+    name: "Continue locally",
+    exact: true,
+  });
+  if (await continueLocally.isVisible()) await continueLocally.click();
   await page.getByRole("textbox", { name: "Username" }).fill("ActivityPlayer");
   await page.getByRole("button", { name: "Start saving my progress" }).click();
   await expect(
@@ -28,15 +33,15 @@ async function register(page) {
   await page.getByRole("button", { name: "Continue playing" }).click();
 }
 async function openDelete(page) {
-  await page.getByRole("button", { name: "Your profile", exact: true }).click();
+  await page.getByRole("button", { name: /^Local profile,/ }).click();
   await page
-    .getByRole("button", { name: "Delete account & progress", exact: true })
+    .getByRole("button", { name: "Delete profile & game save", exact: true })
     .click();
 }
 async function confirmDelete(page) {
   await page.getByLabel("Type DELETE to confirm").fill("DELETE");
   await page
-    .getByRole("button", { name: "Permanently delete", exact: true })
+    .getByRole("button", { name: "Permanently delete game save", exact: true })
     .click();
 }
 async function buy(page, id) {
@@ -156,7 +161,7 @@ test("legacy companion-drop history survives reload and is shown as a found pet"
   await expect(event).not.toContainText("Equipped Pebble");
 });
 
-test("guest feed, filters, badge details and shop transactions stay a demo; signup starts a clean feed", async ({
+test("guest activity is temporary until local play keeps the session", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -195,34 +200,20 @@ test("guest feed, filters, badge details and shop transactions stay a demo; sign
   );
   await register(page);
   const before = await saved(page);
-  // Signing up starts a clean account: nothing the guest did above is carried
-  // into the save file, so the feed begins empty.
-  expect(before.history).toEqual([]);
-  expect(before.balance).toBe(0);
-  expect(before.owned).toEqual([]);
+  // Choosing local play gives the guest session a name without discarding its
+  // roll, badges, purchase, or equipment change.
+  expect(before.history).toHaveLength(4);
+  expect(before.balance).toBeGreaterThan(0);
+  expect(before.owned).toContain("starfall");
   await page.reload();
-  expect((await saved(page)).history).toEqual([]);
-  // The saved account starts from a clean slate: no pending roll, no cooldown,
-  // so skipping ahead on the clock is neither needed nor safe while the
-  // scoring data is still loading.
-  await page.goto("/");
-  await page.getByRole("button", { name: "GENERATE", exact: true }).click();
-  await expect(page.locator(".roll-experience")).toHaveAttribute(
-    "data-phase",
-    "complete",
-  );
+  expect((await saved(page)).history).toHaveLength(4);
+  // The existing history is present again after the page reload.
   await nav(page, "History");
-  // Only the account's own first roll is in its feed.
+  await expect(page.locator(".activity-event")).toHaveCount(4);
   await expect(page.locator('[data-event-type="roll"]')).toHaveCount(1);
   await expect(page.locator('[data-event-type="unlock"]')).toHaveCount(1);
-  // The account's own roll is the one it earned, not the guest's number.
-  await expect(page.locator(".activity-roll .number-box")).toHaveText("1337");
-  await page.getByRole("button", { name: "Rolls", exact: true }).click();
-  await expect(page.locator(".activity-event")).toHaveCount(1);
-  await page.locator("summary").first().click();
-  await expect(
-    page.locator(".activity-event").first().locator(".badge-pill"),
-  ).toHaveCount(17);
+  await expect(page.locator('[data-event-type="purchase"]')).toHaveCount(1);
+  await expect(page.locator('[data-event-type="equip"]')).toHaveCount(1);
 });
 
 test("the entire feed is accessible through pagination and works on mobile", async ({
@@ -262,13 +253,12 @@ test("the entire feed is accessible through pagination and works on mobile", asy
   expect((await saved(page)).history).toHaveLength(123);
 });
 
-test("deletion requires confirmation, supports cancellation, clears every game field and permits fresh signup", async ({
+test("deleting a local profile requires confirmation and permits a fresh start", async ({
   page,
 }) => {
   await page.goto("/");
   await register(page);
-  // Roll on the saved account: signing up starts clean, so the deletion below
-  // has real earned fields (wallet, discoveries, a purchase) to clear.
+  // The local save has real earned fields to remove.
   await showRoll(page, 1337);
   await nav(page, "Shop");
   await buy(page, "starfall");
@@ -284,15 +274,34 @@ test("deletion requires confirmation, supports cancellation, clears every game f
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(await saved(page)).toEqual(before);
   await page
-    .getByRole("button", { name: "Delete account & progress", exact: true })
+    .getByRole("button", { name: "Delete profile & game save", exact: true })
     .click();
   await confirmDelete(page);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", {
+      name: "Choose a local profile name",
+      exact: true,
+    }),
   ).toBeVisible();
+  await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
   expect(await saved(page)).toBeNull();
-  // The wallet lives in the shop: after the account is gone it reads empty.
+
+  // Deleting a profile returns to name setup; it does not reveal the old save.
+  await page.reload();
+  expect(await saved(page)).toBeNull();
+  await register(page);
+  const fresh = await saved(page);
+  expect(fresh).toMatchObject({
+    balance: 0,
+    totalEarned: 0,
+    owned: [],
+    discovered: [],
+    history: [],
+    receipts: [],
+    cooldownUntil: 0,
+    equipped: "none",
+  });
   await nav(page, "Shop");
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
   await openShelfFor(page, "starfall");
@@ -304,18 +313,7 @@ test("deletion requires confirmation, supports cancellation, clears every game f
   await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
   await page.reload();
-  expect(await saved(page)).toBeNull();
-  await register(page);
-  expect(await saved(page)).toMatchObject({
-    balance: 0,
-    totalEarned: 0,
-    owned: [],
-    discovered: [],
-    history: [],
-    receipts: [],
-    cooldownUntil: 0,
-    equipped: "none",
-  });
+  expect(await saved(page)).toEqual(fresh);
   await page.goto("/");
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
@@ -338,17 +336,22 @@ test("failed deletion leaves the account and complete history intact and support
   await openDelete(page);
   await confirmDelete(page);
   // The error is page-level now: profile is a page, not a dialog.
-  await expect(page.getByRole("alert")).toContainText("Deletion failed");
+  await expect(page.getByRole("alert")).toContainText(
+    "could not be removed from this device",
+  );
   expect(await saved(page)).toEqual(before);
   await expect(
-    page.getByRole("button", { name: "Your profile", exact: true }),
+    page.getByRole("button", { name: /^Local profile,/ }),
   ).toBeVisible();
   await page.evaluate(() => {
     Storage.prototype.removeItem = window.restoreRemove;
   });
   await page.getByRole("button", { name: "Permanently delete" }).click();
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", {
+      name: "Choose a local profile name",
+      exact: true,
+    }),
   ).toBeVisible();
   expect(await saved(page)).toBeNull();
 });
@@ -366,12 +369,16 @@ test("deleting in another tab cancels an active reveal and clears its temporary 
   await openDelete(other);
   await confirmDelete(other);
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", {
+      name: "Choose a local profile name",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.locator(".number-artifact")).toHaveCount(0);
+  // The deleted local profile must be named again before play can continue.
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
-  ).toBeEnabled();
+  ).toHaveCount(0);
   await page.clock.fastForward(60000);
   expect(await saved(page)).toBeNull();
   await nav(page, "History");
@@ -399,7 +406,10 @@ test("a stale tab missing the deletion storage event cannot resurrect the accoun
   await confirmDelete(other);
   await page.clock.fastForward(45010);
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", {
+      name: "Choose a local profile name",
+      exact: true,
+    }),
   ).toBeVisible();
   expect(await saved(page)).toBeNull();
   await expect(page.locator(".number-artifact")).toHaveCount(0);
@@ -445,7 +455,7 @@ test("failed purchases add no transactions; failed draw commits reveal no new nu
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "has not been spent",
+    "No EP was spent.",
   );
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(await saved(page)).toEqual(before);
@@ -513,11 +523,14 @@ test("a draw queued behind account deletion cannot recreate progress or leave a 
     .toBe(2);
   await page.evaluate(() => window.releaseDeletionLock());
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", {
+      name: "Choose a local profile name",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
-  ).toBeEnabled();
+  ).toHaveCount(0);
   expect(await saved(page)).toBeNull();
   await nav(page, "History");
   await expect(page.locator(".activity-event")).toHaveCount(0);

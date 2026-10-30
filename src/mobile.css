@@ -1,4 +1,3 @@
-/* CLEANUP Nov 4, 2026: the .rngween-* selectors in this file go with their components. */
 /* Phone pass. Loaded last on purpose so it wins the cascade: the desktop
    families set their own tiny sizes and this sheet only raises the floor.
    Three ideas: text you can read at arm's length, targets you can hit with a
@@ -9,11 +8,8 @@
   .page-heading > div > p:last-child,
   .info-box,
   .signup-note,
-  .rngween-event-note,
-  .rngween-limited-footnote,
   .changelog-note,
-  .source-note,
-  .world-aura-source-note {
+  .source-note {
     font-size: 12px;
     line-height: 1.65;
   }
@@ -23,19 +19,10 @@
   .tasks-stat-label,
   .shop-tile-stat,
   .spotlight-price,
-  .spotlight-open,
-  .rngween-limited-time,
-  .rngween-exchange-cost,
-  .world-tab-when,
-  .world-zone-footer {
+  .spotlight-open {
     font-size: 11px;
   }
   .eyebrow,
-  .rngween-eyebrow,
-  .rngween-limited-kicker,
-  .rngween-limited-kind,
-  .world-eyebrow,
-  .world-event-date,
   .page-heading .eyebrow {
     font-size: 9.5px;
     letter-spacing: 0.06em;
@@ -55,15 +42,6 @@
   .roll-progress-links a,
   .roll-progress-links button {
     padding: 6px 2px;
-  }
-  .world-back,
-  .world-talk-button {
-    min-height: 40px;
-    font-size: 12px;
-  }
-  .world-zone-footer button {
-    min-height: 36px;
-    font-size: 11px;
   }
 
   /* iOS zooms into any field under 16px; keep the page where the player

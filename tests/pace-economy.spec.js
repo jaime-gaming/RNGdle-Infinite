@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { pauseClockAt } from "./helpers/clock.js";
 import {
   emptyProgress,
   applyProgress,
@@ -218,7 +219,7 @@ test("four online completions charge a full-length fifth reveal with no cooldown
   test.setTimeout(60000);
   await seedProgress(page, { owned: ["flywheel"] });
   await mockRandom(page, [604827]);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
   for (let n = 0; n < 6; n++) {
     await expect(page.locator(".generate")).toBeEnabled();
@@ -272,8 +273,8 @@ test("concurrent tabs restore one boosted commitment, consume one charge and set
 }) => {
   await seedProgress(page, { owned: ["flywheel"], flywheelCharge: 4 });
   const other = await context.newPage();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
-  await other.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
+  await pauseClockAt(other, new Date(Date.now() + 1000));
   await page.goto("/");
   await other.goto("/");
   await expect(page.locator(".generate")).toBeEnabled();
@@ -322,7 +323,7 @@ test("a failed boosted commit exposes nothing and retains all four charges for r
   }, PROGRESS_KEY);
   await page.locator(".generate").click();
   await expect(page.locator(".roll-load-error")).toContainText(
-    "could not be committed",
+    "No number was revealed and no EP was awarded.",
   );
   expect((await saved(page)).flywheelCharge).toBe(4);
   expect((await saved(page)).pendingRoll).toBeNull();
@@ -368,7 +369,7 @@ test("Auto-Roll uses Flywheel but reduced motion still reserves the full reveal 
   });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
   await expect(page.locator(".generate")).toBeEnabled();
   await page.getByRole("switch", { name: /Auto-Roll/ }).click();
@@ -463,7 +464,7 @@ test("a boosted reveal survives reload with its committed number and fifteen-sec
     flywheelCharge: 4,
   });
   await mockRandom(page, [604827]);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
@@ -506,7 +507,7 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
 }) => {
   await seedProgress(page, { balance: 1000000, totalEarned: 1000000 });
   await mockRandom(page, [604827]);
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);

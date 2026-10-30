@@ -1,6 +1,6 @@
 // Presentation-only contributor animation plans. Rules and scoring remain outside
 // the UI. Timing and palette values were measured against RNGdle Tools.
-export const CHIP_PALETTES = {
+const CHIP_PALETTES = {
   trash: { primary: "#C8A87C", secondary: "#F0E6D8", border: "#7C5A2E" },
   common: { primary: "#D1D5DB", secondary: "#F3F4F6", border: "#6B7280" },
   uncommon: { primary: "#6EE7B7", secondary: "#D1FAE5", border: "#059669" },

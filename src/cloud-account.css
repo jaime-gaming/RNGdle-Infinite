@@ -1,0 +1,692 @@
+.cloud-account {
+  margin: 0 0 22px;
+  padding: 17px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--hover));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.035);
+}
+.cloud-security-overview {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 11px;
+  margin: 14px 0 4px;
+  padding: 13px;
+  border: 1px solid color-mix(in srgb, var(--green) 30%, var(--border));
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--green) 6%, var(--surface)),
+    var(--surface) 70%
+  );
+}
+.cloud-security-overview-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid color-mix(in srgb, var(--green) 32%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--green) 9%, var(--surface));
+  color: var(--green);
+}
+.cloud-security-overview-copy {
+  min-width: 0;
+}
+.cloud-security-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+}
+.cloud-security-overview-heading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.cloud-security-overview-heading > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+  font-size: 9.5px;
+  font-weight: 650;
+}
+.cloud-security-overview ul {
+  display: grid;
+  gap: 5px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cloud-security-overview li {
+  position: relative;
+  padding-left: 13px;
+  color: var(--secondary);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+.cloud-security-overview li::before {
+  position: absolute;
+  top: 0.55em;
+  left: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  content: "";
+}
+.cloud-app-check-note,
+.cloud-security-availability {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+.cloud-app-check-note {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--green) 20%, var(--border));
+}
+.cloud-app-check-note strong {
+  color: var(--secondary);
+}
+.cloud-account-heading {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.cloud-account-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+}
+.cloud-account-heading h2 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: -0.2px;
+}
+.cloud-account-heading p {
+  margin: 4px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.cloud-account-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 600 10px var(--roll-font);
+  white-space: nowrap;
+}
+.cloud-account-status[data-status="synced"] {
+  border-color: color-mix(in srgb, var(--green) 40%, var(--border));
+  color: var(--green);
+}
+.cloud-account-status[data-status="error"] {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+.cloud-account-note,
+.cloud-account-footnote {
+  margin: 12px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+.cloud-migration-note {
+  margin: 14px 0 2px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 3%, var(--surface));
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.cloud-local-option {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 16px;
+}
+.cloud-local-option p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.cloud-legal-links {
+  margin: 16px 0 0;
+  color: var(--secondary);
+  text-align: center;
+  font-size: 10.5px;
+}
+.cloud-legal-links a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+.cloud-legal-links a:hover {
+  color: var(--text);
+}
+.cloud-login-form,
+.cloud-profile-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.cloud-account label {
+  display: block;
+  margin: 13px 0 6px;
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+.cloud-account input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 500 12px var(--body-font, inherit);
+}
+.cloud-account input:focus-visible {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 10%, transparent);
+}
+.cloud-account input:disabled {
+  opacity: 0.65;
+}
+.cloud-login-providers {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.google-sign-in-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  background: #fff;
+  color: #3c4043;
+  font:
+    600 12px Arial,
+    sans-serif;
+  cursor: pointer;
+  transition:
+    box-shadow 120ms ease,
+    background 120ms ease;
+}
+.google-sign-in-button:hover:not(:disabled) {
+  background: #f8faff;
+  box-shadow: 0 1px 3px rgb(60 64 67 / 0.28);
+}
+.google-sign-in-button:focus-visible {
+  outline: 2px solid #4285f4;
+  outline-offset: 2px;
+}
+.google-sign-in-button:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+.google-mark {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+.cloud-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font: 500 10px var(--roll-font);
+  text-align: center;
+}
+.cloud-login-divider::before,
+.cloud-login-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+  content: "";
+}
+.cloud-login-form > .primary-button,
+.cloud-profile-form > .primary-button,
+.cloud-password-form > .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.cloud-profile-form > p {
+  margin: 13px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+.cloud-profile-form > label {
+  margin-top: 10px;
+}
+.cloud-profile-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--muted);
+}
+.cloud-profile-input input {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.cloud-profile-input:focus-within {
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 10%, transparent);
+}
+.cloud-profile-input input:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+}
+.cloud-account-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+.cloud-account-actions .google-connect-button {
+  background: var(--surface);
+  color: var(--text);
+}
+.cloud-provider-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--secondary);
+  font-size: 11.5px;
+}
+.cloud-provider-status .google-mark {
+  width: 15px;
+  height: 15px;
+}
+.cloud-account-actions p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.cloud-account-actions .secondary-button,
+.cloud-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+.cloud-account-switch {
+  margin: 12px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+}
+.cloud-account .text-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.cloud-account .text-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.cloud-account-footnote {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.cloud-password-setup {
+  margin-top: 14px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--warning) 5%, var(--surface));
+}
+.cloud-account-security,
+.cloud-account-danger {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 82%, var(--hover));
+}
+.cloud-account-security h3,
+.cloud-account-danger h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+.cloud-account-security > p,
+.cloud-account-delete-form > p {
+  margin: 7px 0 0;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.cloud-account-security-form,
+.cloud-account-delete-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 12px;
+}
+.cloud-account-security-form + .cloud-account-security-form {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.cloud-account-security-form > label:first-child,
+.cloud-account-delete-form > label:first-of-type {
+  margin-top: 4px;
+}
+.cloud-account-security-form > .secondary-button {
+  justify-self: start;
+  margin-top: 12px;
+}
+.cloud-account-danger {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+  background: color-mix(in srgb, var(--danger) 2%, var(--surface));
+}
+.cloud-account-danger-toggle {
+  margin-top: 10px;
+  background: var(--surface);
+}
+.cloud-account-delete-form .cloud-account-footnote {
+  margin-top: 9px;
+}
+.cloud-account-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+.cloud-account-delete-actions > button {
+  min-height: 38px;
+  padding: 8px 12px;
+}
+.cloud-password-setup h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+}
+.cloud-password-setup > p:not(.profile-error) {
+  margin: 7px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.cloud-password-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 10px;
+}
+.cloud-password-form > label:first-child {
+  margin-top: 5px;
+}
+.cloud-password-hint {
+  margin: 7px 0 0;
+  color: var(--warning);
+  font-size: 11px;
+}
+.cloud-password-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 10px;
+}
+.cloud-retry {
+  margin-top: 10px;
+}
+.cloud-save-conflict {
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+.cloud-save-conflict-copy h3,
+.cloud-save-option h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+.cloud-save-conflict-copy p,
+.cloud-save-option-name {
+  margin: 5px 0 0;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.cloud-save-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 11px;
+}
+.cloud-save-option {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.cloud-save-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 10px 0 0;
+}
+.cloud-save-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  color: var(--secondary);
+  font-size: 10px;
+}
+.cloud-save-summary dt,
+.cloud-save-summary dd {
+  margin: 0;
+}
+.cloud-save-summary dd {
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-save-choice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.cloud-save-choice-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 180px;
+}
+.cloud-save-choice-actions .secondary-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.cloud-save-conflict > .cloud-account-note {
+  margin-top: 9px;
+}
+.cloud-choice-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px auto;
+  padding: 10px 14px;
+  width: min(100% - 28px, 980px);
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  color: var(--text);
+  font-size: 12px;
+}
+.offline-save-banner,
+.device-link-migration-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(100% - 28px, 980px);
+  box-sizing: border-box;
+  margin: 10px auto;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warning) 5%, var(--surface));
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.offline-save-banner strong,
+.device-link-migration-banner strong {
+  color: var(--text);
+}
+.device-link-migration-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+.device-link-migration-actions button {
+  min-height: 32px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.device-link-migration-actions .device-link-migration-dismiss {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  padding: 0;
+}
+.cloud-choice-banner button,
+.auth-password-banner button {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.auth-password-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px auto;
+  padding: 10px 14px;
+  width: min(100% - 28px, 980px);
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+  color: var(--text);
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .cloud-account {
+    padding: 14px;
+  }
+  .cloud-account-heading {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 9px;
+  }
+  .cloud-account-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .cloud-account-status {
+    grid-column: 2;
+    justify-self: start;
+    white-space: normal;
+  }
+  .cloud-account-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .cloud-account-delete-actions {
+    flex-direction: column-reverse;
+  }
+  .cloud-account-delete-actions > button {
+    width: 100%;
+  }
+  .cloud-save-options {
+    grid-template-columns: 1fr;
+  }
+  .cloud-save-choice-actions {
+    flex-direction: column;
+  }
+  .cloud-save-choice-actions .secondary-button {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+  .cloud-choice-banner,
+  .auth-password-banner,
+  .offline-save-banner,
+  .device-link-migration-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .device-link-migration-actions {
+    justify-content: flex-start;
+  }
+}

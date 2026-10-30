@@ -9,7 +9,6 @@ import {
 import { rollSettings, shopProducts } from "../src/shop-data.js";
 import { cooldownLabel, displayedCooldownSeconds } from "../src/cooldown.js";
 import { POPULATION } from "../src/probability.js";
-import { BADGE_TOTAL } from "../src/rebirth.js";
 import { PETS } from "../src/pets.js";
 import { gameNow } from "../src/game-clock.js";
 
@@ -40,8 +39,26 @@ test("the help icon opens a real About page that is not a top navigation entry",
   expect(navSource).not.toContain('"about"');
 });
 
-test("About is grouped content whose figures come from the game modules", () => {
-  // Structure: numbered steps plus topic cards, not one wall of prose.
+test("the home screen has no generic account banner; account choices stay on the profile page", () => {
+  const cloudStyles = fs.readFileSync("src/cloud-account.css", "utf8");
+  const cloudAccount = fs.readFileSync(
+    "src/components/CloudAccount.jsx",
+    "utf8",
+  );
+  expect(main).not.toContain('className="play-choice-banner"');
+  expect(cloudStyles).not.toContain(".play-choice-banner");
+  // Cloud/local choices remain available from the header's profile route.
+  expect(main).toContain('page === "profile" && (');
+  expect(main).toContain("<CloudAccount");
+  expect(cloudAccount).toContain('data-testid="continue-locally"');
+  expect(cloudAccount).toContain("Create an account");
+  // The contextual alerts are still present for unresolved save conflicts and
+  // Google accounts that must finish password setup.
+  expect(main).toContain('className="cloud-choice-banner"');
+  expect(main).toContain('className="auth-password-banner"');
+});
+
+test("About is concise, current, and uses figures from the game", () => {
   for (const cls of [
     "about-intro",
     "about-steps",
@@ -51,25 +68,23 @@ test("About is grouped content whose figures come from the game modules", () => 
     "about-footnote",
   ])
     expect(about).toContain(cls);
-  expect(about.match(/^\s+title: "/gm)?.length ?? 0).toBeGreaterThanOrEqual(7);
-  // Figures are interpolated from the modules, never typed as literals that
-  // could drift from the rules they describe.
-  for (const symbol of [
-    "POPULATION",
-    "BADGE_TOTAL",
-    "PETS.length",
-    "PET_DROP_CHANCE",
-    "BASE_ROLL_MS",
-    "BASE_COOLDOWN_MS",
-    "GAME_URL",
-  ])
+  // Three short steps and two topic cards keep the page easy to scan.
+  expect(about.match(/^\s+title: "/gm)?.length ?? 0).toBe(5);
+  for (const symbol of ["POPULATION", "PETS.length", "gameUrlForLocation"])
     expect(about).toContain(symbol);
   expect(about).not.toContain(String(POPULATION));
-  expect(about).not.toMatch(new RegExp(`\\b${BADGE_TOTAL} badges`));
   expect(about).not.toMatch(/\b45 seconds|\b60 seconds/);
+  expect(about).toContain(
+    "Give your local profile a name and your progress stays on this device.",
+  );
+  expect(about).toContain(
+    "A Cloud Account is optional if you want to continue on another device.",
+  );
+  expect(about).toContain("Settings → Restore save");
   expect(PETS.length).toBeGreaterThan(0);
-  // The fairness promise must state what purchases cannot do.
-  expect(about.toLowerCase()).toContain("no purchase");
+  expect(about.toLowerCase().replace(/\s+/g, " ")).toContain(
+    "nothing you buy changes the odds",
+  );
 });
 
 const pending = (overrides) => ({

@@ -185,6 +185,7 @@ export default function RollExperience({
   openBadge,
   notify,
   session,
+  cloudSaved = false,
   onComplete,
   onDraw,
   active = true,
@@ -814,7 +815,7 @@ export default function RollExperience({
     } catch {
       notify({
         kind: "error",
-        text: "Clipboard isn’t available. Try copying from a secure browser window.",
+        text: "The result could not be copied. Please try again.",
       });
     }
   }
@@ -1056,16 +1057,20 @@ export default function RollExperience({
               </>
             )}
           </p>
-          <p className="signup-note">
-            {session.profile ? (
-              `Saved locally as ${session.profile.username}.`
-            ) : (
-              <>
-                Guest rolls are not saved.{" "}
-                <button onClick={openSignup}>Sign up to start saving</button>
-              </>
-            )}
-          </p>
+          {cloudSaved ? (
+            <p className="signup-note">Backed up to your online account.</p>
+          ) : session.profile ? (
+            <p className="signup-note">
+              Saved locally as {session.profile.username}.
+            </p>
+          ) : (
+            (session.history?.length ?? 0) > 0 && (
+              <p className="signup-note">
+                Guest progress is temporary.{" "}
+                <button onClick={openSignup}>Name a profile to keep it</button>
+              </p>
+            )
+          )}
         </section>
       ) : (
         <>
