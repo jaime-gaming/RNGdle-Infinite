@@ -2155,45 +2155,6 @@ export async function reconcileCloudSave(
   return outcome;
 }
 
-async function deleteOrphanedPublicProfile(userId, profileId) {
-  const database = requireFirestore();
-  const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
-  const profileReference = doc(database, PUBLIC_PROFILE_COLLECTION, profileId);
-  const ownerReference = doc(
-    database,
-    PUBLIC_PROFILE_OWNER_COLLECTION,
-    profileId,
-  );
-  let deletedProfile = null;
-
-  await runCloudTransaction(database, async (transaction) => {
-    // Another tab may have recreated the save after its removal. Never remove
-    // an alias while a fresh private envelope could still consent to it.
-    const saveSnapshot = await transaction.get(saveReference);
-    if (saveSnapshot.exists()) return;
-
-    const [ownerSnapshot, profileSnapshot] = await Promise.all([
-      transaction.get(ownerReference),
-      transaction.get(profileReference),
-    ]);
-    const ownerData = ownerSnapshot.exists() ? ownerSnapshot.data() : null;
-    const mapOwned =
-      ownerData?.owner_uid === userId && ownerData?.profile_id === profileId;
-    const legacyOwned =
-      profileSnapshot.exists() && profileSnapshot.data()?.owner_uid === userId;
-    const ownershipProven = ownerSnapshot.exists() ? mapOwned : legacyOwned;
-    if (!ownershipProven) return;
-
-    if (profileSnapshot.exists()) {
-      deletedProfile = { id: profileId, data: profileSnapshot.data() };
-      transaction.delete(profileReference);
-    }
-    if (mapOwned) transaction.delete(ownerReference);
-  });
-
-  return deletedProfile;
-}
-
 export async function deleteCloudSave(
   userId,
   progress = null,
@@ -2221,7 +2182,6 @@ export async function deleteCloudSave(
   let deletedWriteLimit = null;
   let deletedPublicWriteLimit = null;
   let deletedPublicProfiles = [];
-  let requestedPublicIds = new Set();
   let nameClaimIdToRelease = null;
   try {
     const settingsSnapshot = await getDoc(settingsReference);
@@ -2246,14 +2206,13 @@ export async function deleteCloudSave(
   }
   // Delete the private save and every verifiably owned alias in one
   // transaction. A foreign legacy alias is deliberately left untouched.
-  const runDeleteTransaction = (skipPublicArtifactCleanup = false) =>
+  const runDeleteTransaction = () =>
     runCloudTransaction(database, async (transaction) => {
       deletedEnvelope = null;
       deletedSettings = null;
       deletedWriteLimit = null;
       deletedPublicWriteLimit = null;
       deletedPublicProfiles = [];
-      requestedPublicIds = new Set();
       const [
         saveSnapshot,
         settingsSnapshot,
@@ -2284,6 +2243,7 @@ export async function deleteCloudSave(
       };
       addPublicId(envelope?.public_profile_id);
       addPublicId(settings?.username_key);
+      addPublicId(progress?.profile?.username);
       let savedProgress = null;
       if (envelope?.save_data) {
         try {
@@ -2305,11 +2265,20 @@ export async function deleteCloudSave(
         }
       }
       const publicIdsList = [...publicIds];
-      requestedPublicIds = new Set(publicIdsList);
-      const publicReferences = [];
-      const ownerReferences = [];
-      let publicSnapshots = [];
-      let ownerSnapshots = [];
+      const publicReferences = publicIdsList.map((id) =>
+        doc(database, PUBLIC_PROFILE_COLLECTION, id),
+      );
+      const ownerReferences = publicIdsList.map((id) =>
+        doc(database, PUBLIC_PROFILE_OWNER_COLLECTION, id),
+      );
+      const [publicSnapshots, ownerSnapshots] = await Promise.all([
+        Promise.all(
+          publicReferences.map((reference) => transaction.get(reference)),
+        ),
+        Promise.all(
+          ownerReferences.map((reference) => transaction.get(reference)),
+        ),
+      ]);
       const ownershipAt = (index) => {
         const publicSnapshot = publicSnapshots[index];
         const ownerSnapshot = ownerSnapshots[index];
@@ -2334,31 +2303,11 @@ export async function deleteCloudSave(
           ownerOwned: Boolean(ownerSnapshot?.exists() && mapOwned),
         };
       };
-      if (!skipPublicArtifactCleanup) {
-        publicReferences.push(
-          ...publicIdsList.map((id) =>
-            doc(database, PUBLIC_PROFILE_COLLECTION, id),
-          ),
-        );
-        ownerReferences.push(
-          ...publicIdsList.map((id) =>
-            doc(database, PUBLIC_PROFILE_OWNER_COLLECTION, id),
-          ),
-        );
-        [publicSnapshots, ownerSnapshots] = await Promise.all([
-          Promise.all(
-            publicReferences.map((reference) => transaction.get(reference)),
-          ),
-          Promise.all(
-            ownerReferences.map((reference) => transaction.get(reference)),
-          ),
-        ]);
-        deletedPublicProfiles = publicSnapshots.flatMap((snapshot, index) =>
-          ownershipAt(index).publicOwned && snapshot.exists()
-            ? [{ id: publicReferences[index].id, data: snapshot.data() }]
-            : [],
-        );
-      }
+      deletedPublicProfiles = publicSnapshots.flatMap((snapshot, index) =>
+        ownershipAt(index).publicOwned && snapshot.exists()
+          ? [{ id: publicReferences[index].id, data: snapshot.data() }]
+          : [],
+      );
       transaction.delete(saveReference);
       if (
         settings?.username_key &&
@@ -2372,105 +2321,17 @@ export async function deleteCloudSave(
         if (publicWriteLimitSnapshot.exists())
           transaction.delete(publicWriteLimitReference);
       }
-      if (!skipPublicArtifactCleanup)
-        publicSnapshots.forEach((snapshot, index) => {
-          const ownership = ownershipAt(index);
-          if (ownership.publicOwned && snapshot.exists())
-            transaction.delete(publicReferences[index]);
-          if (ownership.ownerOwned) transaction.delete(ownerReferences[index]);
-        });
+      publicSnapshots.forEach((snapshot, index) => {
+        const ownership = ownershipAt(index);
+        if (ownership.publicOwned && snapshot.exists())
+          transaction.delete(publicReferences[index]);
+        if (ownership.ownerOwned) transaction.delete(ownerReferences[index]);
+      });
     });
-  let recoveryPublicProfile = null;
-  try {
-    await runDeleteTransaction(false);
-  } catch (error) {
-    if (
-      error?.code !== "permission-denied" &&
-      error?.code !== "firestore/permission-denied"
-    )
-      throw error;
-    recoveryPublicProfile =
-      deletedEnvelope?.public_profile_enabled === true
-        ? {
-            enabled: true,
-            id: publicProfileIdFromEnvelope(deletedEnvelope),
-          }
-        : null;
-    // A private alias belonging to another UID is intentionally unreadable.
-    // If this save was public, first unlink it through the rules-checked
-    // fallback; the public summary remains untouched when it belongs elsewhere.
-    if (deletedEnvelope?.public_profile_enabled === true) {
-      try {
-        const unlinked = await publishPublicProfile(userId, null, {
-          enable: false,
-        });
-        recoveryPublicProfile =
-          unlinked.previousPublicProfile ?? recoveryPublicProfile;
-      } catch (unlinkError) {
-        if (unlinkError?.message?.includes("Wait a couple of seconds")) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, CLOUD_SAVE_WRITE_INTERVAL_MS + 50),
-          );
-          try {
-            const unlinked = await publishPublicProfile(userId, null, {
-              enable: false,
-            });
-            recoveryPublicProfile =
-              unlinked.previousPublicProfile ?? recoveryPublicProfile;
-          } catch {
-            // Continue only if Firestore rules allow safe deletion without
-            // deleting any alias that cannot be proven to belong to this UID.
-          }
-        }
-      }
-    }
-    // Unpublishing may initialize missing legacy settings. Re-read their
-    // private name claim so the retry releases only a claim still owned here.
-    try {
-      const currentSettings = await getDoc(settingsReference);
-      const currentNameKey = currentSettings.exists()
-        ? currentSettings.data()?.username_key
-        : null;
-      if (typeof currentNameKey === "string") {
-        const currentClaim = await getDoc(
-          profileNameRef(database, currentNameKey),
-        );
-        nameClaimIdToRelease =
-          currentClaim.exists() && currentClaim.data()?.owner_uid === userId
-            ? currentNameKey
-            : null;
-      } else nameClaimIdToRelease = null;
-    } catch {
-      // The retry's Rules check still prevents deleting a foreign name claim.
-    }
-    // This retry omits public artifacts. Firestore rules allow deletion only
-    // after an unlink or when remaining aliases are proven foreign/private.
-    await runDeleteTransaction(true);
-  }
-  const orphanCandidates = new Set(requestedPublicIds);
-  if (recoveryPublicProfile?.id) orphanCandidates.add(recoveryPublicProfile.id);
-  if (!deletedEnvelope?.save_data && progress?.profile) {
-    const candidateId = publicProfileId(progress.profile.username);
-    if (candidateId) orphanCandidates.add(candidateId);
-  }
-  for (const profileId of orphanCandidates) {
-    try {
-      const orphaned = await deleteOrphanedPublicProfile(userId, profileId);
-      if (orphaned) deletedPublicProfiles.push(orphaned);
-    } catch {
-      // A same-name profile may belong to a different UID, and a missing
-      // owner map gives no authority to delete it. Never block account
-      // deletion or cross an ownership boundary for best-effort cleanup.
-    }
-  }
-  const envelopeForRecovery =
-    deletedEnvelope && recoveryPublicProfile?.enabled === true
-      ? {
-          ...deletedEnvelope,
-          public_profile_enabled: true,
-          public_profile_id: null,
-        }
-      : deletedEnvelope;
+  // Keep account data and public-profile cleanup atomic. If Firestore denies
+  // any required read or write, the transaction aborts and nothing is removed.
+  await runDeleteTransaction();
+  const envelopeForRecovery = deletedEnvelope;
   return {
     exists: Boolean(
       deletedEnvelope ||

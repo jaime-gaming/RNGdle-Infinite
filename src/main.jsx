@@ -1053,8 +1053,8 @@ function App() {
                 <ScrollText size={25} />
               </div>
               <div>
-                <h1>Changelog</h1>
-                <p>What changed, and when.</p>
+                <h1>changelog</h1>
+                <p>what changed, and when.</p>
               </div>
             </div>
             <Changelog
@@ -1446,7 +1446,7 @@ function App() {
           >
             Real game <ArrowUpRight size={12} />
           </a>
-          <button onClick={() => navigate("changelog")}>Changelog</button>
+          <button onClick={() => navigate("changelog")}>changelog</button>
           <button onClick={() => navigate("settings")}>Settings</button>
           <button onClick={() => navigate("about")}>How to play</button>
         </div>

@@ -69,7 +69,7 @@ export const CHANGELOG = [
       "the shop opens as six shelves, cheapest first: skills, pace, companions, auras, offline and tools. Each has its own page.",
       "the skills shelf is a stall: two on sale, new stock every five minutes, the rest waiting dimmed behind a green glow.",
       "skills charge in the corner rack. A full circle fires on your next roll, and Flywheel sits beside them.",
-      "13 companions, one worn at a time. When its signature skill fires, it pins itself to your number until the roll settles.",
+      "thirteen companions, one worn at a time. When its signature skill fires, it pins itself to your number until the roll settles.",
       "rebirth has its own page: a six-step ladder where every rung grants a skill and a permanent +2% on banked EP. Ultra adds +10%.",
       "the Auto-Roll tool is in the rack, and any archived roll can be shared from History with what it really earned.",
       "the whole interface uses one hand-drawn icon set, and the aura ladder grows to eighteen.",

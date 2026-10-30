@@ -292,9 +292,9 @@ test("the changelog reads like release notes, not like a chat log", () => {
   for (const entry of CHANGELOG) {
     expect(entry.version).toMatch(/^v\d+\.\d+(\.\d+)?$/);
     expect(entry.title.length).toBeGreaterThan(5);
-    expect(entry.title[0]).toBe(entry.title[0].toLowerCase());
+    expect(entry.title).toMatch(/^[a-z]/);
     for (const line of entry.body) {
-      expect(line[0]).toBe(line[0].toLowerCase());
+      expect(line).toMatch(/^[a-z]/);
       // v0.4.1 is the author's own note; its wording is preserved while the
       // opening letter follows the lowercase changelog style.
       if (entry.version === "v0.4.1") {
@@ -303,8 +303,7 @@ test("the changelog reads like release notes, not like a chat log", () => {
       }
       // One short line per change, always a finished sentence.
       expect(line.length).toBeLessThanOrEqual(140);
-      // Every release note begins with a lowercase letter or a figure.
-      expect(line).toMatch(/^[a-z0-9]/);
+      // Release-note lines begin with a lowercase letter, never a digit.
       expect(line.trim().endsWith(".")).toBe(true);
       // No placeholder chat register anywhere in the notes.
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
@@ -330,6 +329,10 @@ test("the badge names in the v0.2 note are links that open the badge window", as
   page,
 }) => {
   await page.goto("/changelog");
+  await expect(
+    page.getByRole("heading", { name: "changelog", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("what changed, and when.")).toBeVisible();
   const links = page.locator(".changelog-badge-link");
   await expect(links).toHaveCount(2);
   await expect(links.nth(0)).toHaveText("Pendulum");
