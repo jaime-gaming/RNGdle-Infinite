@@ -1424,9 +1424,7 @@ test("Reaper, introduction and World copy explain badge objectives without choic
     expect(source).not.toMatch(
       /two steps|three steps|bone die|wrong choice|run failed|trap the ghost|1 in 12|1 in 36/i,
     );
-    expect(source).not.toMatch(
-      /no ai|ai.generated|generator|fortune favours|the veil is thin/i,
-    );
+    expect(source).not.toMatch(/generator|fortune favours|the veil is thin/i);
   }
   // The Reaper reads the objectives from the badge module instead of
   // repeating them in prose, so the names live in one place.

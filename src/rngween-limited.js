@@ -1,3 +1,4 @@
+import { reaperAct } from "./rngween-finale.js";
 import {
   RNGWEEN_AURAS,
   RNGWEEN_FINALE_SKIN,
@@ -442,24 +443,19 @@ export function markRngweenFinale(state, at) {
   return { ...state, rngweenLimited: { ...limited, finaleCount: count } };
 }
 
-// Halloween night itself. Taking part once is the whole key: the skin is a
-// thank-you for being there, not a second job.
+// The finale gift is handed out only during the five-minute Eclipse. Existing
+// ownership and receipts remain valid, including those earned by older builds.
 export function claimRngweenFinale(state, at) {
   if (!state.profile)
-    throw new Error("Create a local profile to keep the night's skin.");
-  const calendar = rngweenCalendar(at);
-  if (!calendar.finaleActive)
+    throw new Error("Create a local profile to keep the Hollow Lantern.");
+  if (reaperAct(at)?.id !== "eclipse")
     throw new Error(
-      "The Hollow Lantern is only handed out on Halloween night, October 31, 2026 (UTC).",
+      "The Hollow Lantern is only given during the Final Eclipse, October 31, 20:25–20:30 UTC.",
     );
   const limited = state.rngweenLimited ?? emptyRngweenLimited();
   if (limited.retired) throw new Error("The RNGween event is over.");
   if (limited.finaleEarned || state.owned?.includes(RNGWEEN_FINALE_SKIN.id))
     throw new Error("The Hollow Lantern is already yours.");
-  if (!(limited.finaleCount > 0))
-    throw new Error(
-      "Take part first: claim a commission, collect an aura or roll in the World.",
-    );
   return {
     ...state,
     owned: [...new Set([...(state.owned ?? []), RNGWEEN_FINALE_SKIN.id])],

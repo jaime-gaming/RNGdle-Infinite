@@ -34,7 +34,7 @@ function appBuildVersion() {
   const { version } = JSON.parse(
     fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
   );
-  const internalVersion = "RNGdle-Infinitev0.5.1fix4";
+  const internalVersion = "RNGdle-Infinitev0.5.1fix5";
   const buildId = `${version}-${Date.now().toString(36)}-${process.pid.toString(36)}`;
   const payload = JSON.stringify({ version, buildId, internalVersion });
   let outDir = path.resolve("dist");
@@ -47,7 +47,10 @@ function appBuildVersion() {
     transformIndexHtml(html) {
       const buildTag = `<meta name="rngdle-build-id" content="${buildId}" />`;
       const internalTag = `<meta name="rngdle-internal-version" content="${internalVersion}" />`;
-      return html.replace("</head>", `  ${buildTag}\n  ${internalTag}\n  </head>`);
+      return html.replace(
+        "</head>",
+        `  ${buildTag}\n  ${internalTag}\n  </head>`,
+      );
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
@@ -89,7 +92,16 @@ function deviceSync() {
   };
 }
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode, command }) => ({
+  // Each Vite process needs its own optimizer output: concurrent sandboxes
+  // otherwise overwrite the same React chunks with different version hashes,
+  // leaving the browser with two React instances and invalid hook calls.
+  // Cache under node_modules so it remains disposable and out of source control.
+  cacheDir:
+    command === "serve"
+      ? path.resolve("node_modules/.vite-servers", String(process.pid))
+      : undefined,
+  resolve: { dedupe: ["react", "react-dom"] },
   plugins: [
     sandboxClock(
       process.env.RNGDLE_SANDBOX_DATE ??

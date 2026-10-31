@@ -25,6 +25,8 @@ import { withAllFragments } from "./helpers/world-roll.js";
 // a banner on the screen, doubled Pumpkoins, and a skin you keep.
 const eve = Date.UTC(2026, 9, 30, 23, 59);
 const night = Date.UTC(2026, 9, 31, 12);
+const eclipse = Date.UTC(2026, 9, 31, 20, 25);
+const eclipseEnd = Date.UTC(2026, 9, 31, 20, 30);
 const lastMinute = Date.UTC(2026, 9, 31, 23, 59);
 const after = Date.UTC(2026, 10, 1, 0, 1);
 const account = (patch = {}) => ({
@@ -46,22 +48,23 @@ test("the calendar opens one day, doubles Pumpkoins, and then closes", () => {
   expect(rngweenCalendar(night).endsAt).toBe(Date.UTC(2026, 10, 1));
 });
 
-test("participation is the key to the skin, and only on the night", () => {
+test("the gift is limited to the exact Eclipse and needs a profile, not participation", () => {
   const idle = account({ rngweenLimited: emptyRngweenLimited() });
-  expect(() => claimRngweenFinale(idle, night)).toThrow("Take part first");
-  expect(() => claimRngweenFinale(idle, eve)).toThrow("Halloween night");
-
-  const took = markRngweenFinale(idle, night);
-  expect(took.rngweenLimited.finaleCount).toBe(1);
-  // Outside the night nothing is counted, so nothing is earned by accident.
+  for (const at of [eve, night, eclipse - 1, eclipseEnd, lastMinute, after])
+    expect(() => claimRngweenFinale(idle, at)).toThrow("Final Eclipse");
+  expect(() => claimRngweenFinale(emptyProgress(), eclipse)).toThrow("profile");
+  expect(markRngweenFinale(idle, night).rngweenLimited.finaleCount).toBe(1);
   expect(markRngweenFinale(idle, eve).rngweenLimited.finaleCount).toBe(0);
 
-  const kept = claimRngweenFinale(took, night);
-  expect(kept.owned).toContain(RNGWEEN_FINALE_SKIN.id);
-  expect(kept.equipped).toBe(RNGWEEN_FINALE_SKIN.id);
-  expect(kept.rngweenLimited.finaleEarned).toBe(true);
-  expect(kept.history.at(-1).type).toBe("rngween-finale");
-  expect(() => claimRngweenFinale(kept, night)).toThrow("already yours");
+  for (const at of [eclipse, eclipseEnd - 1]) {
+    const kept = claimRngweenFinale(idle, at);
+    expect(kept.owned).toContain(RNGWEEN_FINALE_SKIN.id);
+    expect(kept.equipped).toBe(RNGWEEN_FINALE_SKIN.id);
+    expect(kept.rngweenLimited.finaleEarned).toBe(true);
+    expect(kept.rngweenLimited.finaleCount).toBe(0);
+    expect(kept.history.at(-1).type).toBe("rngween-finale");
+    expect(() => claimRngweenFinale(kept, at)).toThrow("already yours");
+  }
 });
 
 test("the skin survives a repaired save, an older save and retirement", () => {
@@ -70,7 +73,7 @@ test("the skin survives a repaired save, an older save and retirement", () => {
       account({ rngweenLimited: emptyRngweenLimited() }),
       night,
     ),
-    night,
+    eclipse,
   );
   // An older build that never heard of the finale must not lose the skin.
   const older = parseRngweenLimited({
@@ -125,59 +128,128 @@ test("every mission pays twice for the whole night, and its claim counts as taki
   expect(evePay.took).toBe(0);
 });
 
-test("the banner appears only on October 31 and keeps the skin it hands out", async ({
+test("a profile receives the lantern automatically during Eclipse and keeps it on reload", async ({
   page,
 }) => {
-  await mockSeasonClock(page, night);
-  await seedProgress(page, {
-    rngweenLimited: { ...emptyRngweenLimited(), finaleCount: 1 },
-  });
+  await mockSeasonClock(page, eclipse);
+  await seedProgress(page, { rngweenLimited: emptyRngweenLimited() });
   await page.goto("/");
   const banner = page.getByRole("complementary", { name: "Halloween event" });
-  await expect(banner).toBeVisible();
-  await expect(banner).toContainText("Halloween Event");
-  await expect(banner).toContainText("Pumpkoins ×2");
-  await expect(banner).toContainText(/0[0-9]:[0-5][0-9]:[0-5][0-9]|1[0-2]:/);
-
-  await banner
-    .getByRole("button", { name: `Collect ${RNGWEEN_FINALE_SKIN.name}` })
-    .click();
-  await expect(banner).toContainText("Lantern kept");
+  await expect(banner.locator('[data-reaper-act="eclipse"]')).toBeVisible();
+  await expect(banner).toContainText("Hollow Lantern unlocked");
   await expect
     .poll(async () => (await saved(page))?.owned ?? [])
     .toContain(RNGWEEN_FINALE_SKIN.id);
-  // Reloading proves the night's skin is in the saved account, not the screen.
   await page.reload();
-  await expect(banner).toContainText("Lantern kept");
-  await expect
-    .poll(async () => (await saved(page))?.rngweenLimited?.finaleEarned)
-    .toBe(true);
+  await expect(banner).toContainText("Hollow Lantern unlocked");
+  expect(
+    (await saved(page)).history.filter(
+      (entry) => entry.type === "rngween-finale",
+    ),
+  ).toHaveLength(1);
 });
 
-test("no banner before the night, and the hint explains how to earn the skin", async ({
+for (const [name, at] of [
+  ["before Eclipse", eclipse - 60_000],
+  ["after Eclipse", eclipseEnd],
+]) {
+  test(`the lantern is not delivered ${name}`, async ({ page }) => {
+    await mockSeasonClock(page, at);
+    await seedProgress(page, {
+      rngweenLimited: { ...emptyRngweenLimited(), finaleCount: 1 },
+    });
+    await page.goto("/");
+    await expect(
+      page.getByRole("complementary", { name: "Halloween event" }),
+    ).toBeVisible();
+    await page.waitForTimeout(500);
+    expect((await saved(page)).owned).not.toContain(RNGWEEN_FINALE_SKIN.id);
+  });
+}
+
+test("the gift arrives when Eclipse starts without reloading", async ({
   page,
 }) => {
-  await mockSeasonClock(page, eve);
+  const site = await mockSeasonClock(page, eclipse - 2000);
+  await seedProgress(page, { rngweenLimited: emptyRngweenLimited() });
+  await page.goto("/");
+  const banner = page.getByRole("complementary", { name: "Halloween event" });
+  await expect(banner.locator('[data-reaper-act="reaping"]')).toBeVisible();
+  expect((await saved(page)).owned).not.toContain(RNGWEEN_FINALE_SKIN.id);
+  site.set(eclipse);
+  await page.clock.fastForward(3000);
+  await expect(banner.locator('[data-reaper-act="eclipse"]')).toBeVisible();
+  await expect(banner).toContainText("Hollow Lantern unlocked");
+});
+
+test("the gift waits for a verified website clock", async ({ page }) => {
+  const site = await mockSeasonClock(page, null);
+  await seedProgress(page, { rngweenLimited: emptyRngweenLimited() });
+  await page.goto("/");
+  await page.waitForTimeout(500);
+  expect((await saved(page)).owned).not.toContain(RNGWEEN_FINALE_SKIN.id);
+  site.set(eclipse);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(
+    page.getByRole("complementary", { name: "Halloween event" }),
+  ).toContainText("Hollow Lantern unlocked");
+});
+
+test("guests are invited to create a profile during Eclipse", async ({
+  page,
+}) => {
+  await mockSeasonClock(page, eclipse);
+  await seedProgress(page, { profile: null });
+  await page.goto("/");
+  const banner = page.getByRole("complementary", { name: "Halloween event" });
+  await expect(banner).toContainText(
+    "Create a profile to keep the Hollow Lantern",
+  );
+  await banner.getByRole("button", { name: "Create profile" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Start saving your progress" }),
+  ).toBeVisible();
+  await page.getByRole("textbox", { name: "Username" }).fill("EclipseVisitor");
+  await page.getByRole("button", { name: "Start saving my progress" }).click();
+  await expect(banner).toContainText("Hollow Lantern unlocked");
+  await expect
+    .poll(async () => (await saved(page))?.owned ?? [])
+    .toContain(RNGWEEN_FINALE_SKIN.id);
+});
+
+test("a failed save can be retried during Eclipse", async ({ page }) => {
+  await mockSeasonClock(page, eclipse);
+  await seedProgress(page);
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "locks", {
+      value: undefined,
+      configurable: true,
+    }),
+  );
+  await page.goto("/");
+  const banner = page.getByRole("complementary", { name: "Halloween event" });
+  await expect(banner).toContainText("Web Locks");
+  expect((await saved(page)).owned).not.toContain(RNGWEEN_FINALE_SKIN.id);
+  await page.evaluate(() => delete navigator.locks);
+  await banner.getByRole("button", { name: "Retry" }).click();
+  await expect(banner).toContainText("Hollow Lantern unlocked");
+});
+
+test("the banner appears only on October 31", async ({ page }) => {
+  const site = await mockSeasonClock(page, eve);
   await seedProgress(page);
   await page.goto("/");
   await expect(
     page.getByRole("complementary", { name: "Halloween event" }),
   ).toHaveCount(0);
-
-  await mockSeasonClock(page, night);
-  await seedProgress(page, { rngweenLimited: emptyRngweenLimited() });
-  await page.goto("/");
+  site.set(night);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   const banner = page.getByRole("complementary", { name: "Halloween event" });
-  await expect(banner).toContainText(
-    `Take part tonight for the ${RNGWEEN_FINALE_SKIN.name}`,
-  );
-  await expect(banner.getByRole("button")).toHaveCount(0);
-
-  await mockSeasonClock(page, after);
-  await page.goto("/");
-  await expect(
-    page.getByRole("complementary", { name: "Halloween event" }),
-  ).toHaveCount(0);
+  await expect(banner).toContainText("Pumpkoins ×2");
+  await expect(banner).toContainText("20:00–20:30 UTC");
+  site.set(after);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(banner).toHaveCount(0);
 });
 
 test("the banner stays out of the way on a phone", async ({ page }) => {
@@ -211,10 +283,10 @@ test("the Halloween strip counts down every second and leaves at midnight", asyn
   await page.goto("/");
   const banner = page.getByRole("complementary", { name: "Halloween event" });
   const read = async () =>
-    (await banner.locator(".rngween-finale-clock").innerText()).trim();
+    (await banner.locator(".reaper-schedule-countdown").innerText()).trim();
   await expect(banner).toBeVisible();
   const first = await read();
-  expect(first).toMatch(/^00:00:0[3-6]$/);
+  expect(first).toMatch(/^HALLOWEEN ENDS 00:00:0[3-6]$/);
   await page.clock.runFor(2000);
   const second = await read();
   expect(second).not.toBe(first);
