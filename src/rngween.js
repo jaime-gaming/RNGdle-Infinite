@@ -148,8 +148,7 @@ export const RNGWEEN_WORLD_SKIN = {
   description:
     "Green-violet frame with a ghost and six sigils. Roll 6666 in Valley of Horrors to unlock. Permanent; never sold or returning.",
 };
-// The Halloween night skin: one night only, and only for players who were here
-// for it. Permanent once earned, never sold and never returning.
+// The Eclipse gift is permanent once earned, never sold and never returning.
 export const RNGWEEN_FINALE_SKIN = {
   id: "hollow-lantern",
   kind: "aura",
@@ -160,7 +159,7 @@ export const RNGWEEN_FINALE_SKIN = {
   swatch: ["#fdba74", "#7c2d12"],
   icon: "hollow",
   description:
-    "A carved lantern with a steady flame. Earn it on Halloween night (October 31, UTC) by taking part in the event. Permanent; it never returns.",
+    "A carved lantern with a steady flame. The Reaper gives it during the Final Eclipse on October 31, 20:25–20:30 UTC. Permanent; it never returns.",
 };
 export const RNGWEEN_COSMETICS = [
   ...RNGWEEN_AURAS,
@@ -351,22 +350,22 @@ export function rngweenState(tasks, at, limited) {
   try {
     const calendar = rngweenCalendar(at);
     const rngween = slot(tasks);
-  const collected = new Set(rngween.earned);
-  const missions = RNGWEEN_MISSIONS.map((mission) => {
-    const isCollected = collected.has(mission.id);
-    const countDone = rngween.counts[mission.metric] >= mission.goal;
-    const worldDone = isCollected || missionWorldDone(mission, limited);
-    const complete = isCollected || (countDone && worldDone);
-    return {
-      ...mission,
-      count: Math.min(rngween.counts[mission.metric], mission.goal),
-      countDone: isCollected || countDone,
-      worldDone,
-      complete,
-      collected: isCollected,
-      claimable: calendar.phase === "active" && complete && !isCollected,
-    };
-  });
+    const collected = new Set(rngween.earned);
+    const missions = RNGWEEN_MISSIONS.map((mission) => {
+      const isCollected = collected.has(mission.id);
+      const countDone = rngween.counts[mission.metric] >= mission.goal;
+      const worldDone = isCollected || missionWorldDone(mission, limited);
+      const complete = isCollected || (countDone && worldDone);
+      return {
+        ...mission,
+        count: Math.min(rngween.counts[mission.metric], mission.goal),
+        countDone: isCollected || countDone,
+        worldDone,
+        complete,
+        collected: isCollected,
+        claimable: calendar.phase === "active" && complete && !isCollected,
+      };
+    });
     return {
       ...calendar,
       id: RNGWEEN_ID,

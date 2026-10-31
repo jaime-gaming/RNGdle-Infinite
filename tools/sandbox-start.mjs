@@ -2,18 +2,22 @@
 // Start a RNGween sandbox with a selectable date.
 // Usage: node tools/sandbox-start.mjs [date]
 //   date: ISO timestamp, e.g. 2026-10-26T12:00:00Z
-//   None: today (no override)
+//   None: Halloween show start; "live": no override
 
 import { sandboxClock } from "./sandbox-clock.mjs";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { REAPER_SHOW_START } from "../src/rngween-finale.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 
 const dateArg = process.argv[2];
-const date = dateArg ?? undefined;
+const date =
+  dateArg === "live"
+    ? undefined
+    : (dateArg ?? new Date(REAPER_SHOW_START).toISOString());
 
 const viteArgs = [
   "vite",

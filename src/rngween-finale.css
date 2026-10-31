@@ -1,162 +1,526 @@
-/* Halloween night: one strip above everything, impossible to miss, and only
-   ever on October 31. It sits in the flow and sticks to the top, so it never
-   covers the header or the game — the page simply starts below it. */
+/* Compact in-flow transmission; the atmosphere remains pointer-transparent. */
 .rngween-finale {
-  position: sticky;
-  top: 0;
-  z-index: 31;
+  --reaper-accent: #eaa252;
+  --reaper-glow: rgba(225, 119, 48, 0.22);
+  margin: 0 0 12px;
+  color: #f5e8d8;
+  border: 1px solid rgba(231, 157, 88, 0.24);
+  border-radius: 13px;
+  background: linear-gradient(112deg, #21151b, #15131d 70%);
+  box-shadow: 0 7px 22px rgba(20, 9, 17, 0.15);
+  overflow: hidden;
+}
+.rngween-finale.is-bloodmoon {
+  --reaper-accent: #f17475;
+  --reaper-glow: rgba(214, 54, 72, 0.24);
+}
+.rngween-finale.is-soulstorm {
+  --reaper-accent: #c5a8fb;
+  --reaper-glow: rgba(147, 100, 215, 0.25);
+}
+.rngween-finale.is-eclipse {
+  --reaper-accent: #ecc98a;
+  --reaper-glow: rgba(207, 157, 83, 0.25);
+}
+.reaper-transmission {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 6px 16px calc(6px + 1px);
-  border-bottom: 1px solid #fdba7444;
-  background:
-    radial-gradient(120% 180% at 50% -60%, #f9731633, transparent 70%),
-    #171020f2;
-  color: #fde68a;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  box-shadow: 0 6px 20px #00000030;
-  backdrop-filter: blur(6px);
-  animation: rngween-finale-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  gap: 12px;
+  padding: 10px 12px 3px;
 }
-.rngween-finale::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    100deg,
-    transparent 20%,
-    #fdba7418 45%,
-    transparent 70%
-  );
-  background-size: 220% 100%;
-  animation: rngween-finale-sheen 5s linear infinite;
-  pointer-events: none;
-}
-.rngween-finale > * {
+.reaper-portrait-frame {
   position: relative;
-  z-index: 1;
-}
-.rngween-finale-mark {
+  flex: 0 0 54px;
+  height: 54px;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+}
+.reaper-halo {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--reaper-accent);
   border-radius: 50%;
-  background: #f9731633;
-  color: #fdba74;
+  opacity: 0.48;
+  box-shadow:
+    0 0 18px var(--reaper-glow),
+    inset 0 0 12px var(--reaper-glow);
+  animation: reaper-halo 4s ease-in-out infinite;
 }
-.rngween-finale-title {
-  font-family: var(--font-mono, ui-monospace, monospace);
+.reaper-takeover-portrait {
+  position: relative;
+  width: 48px;
+  height: 53px;
+  filter: drop-shadow(0 3px 6px #0009);
+  animation: reaper-float 4s ease-in-out infinite;
+}
+.reaper-copy {
+  min-width: 0;
+  flex: 1;
+  animation: reaper-appear 0.4s ease both;
+}
+.reaper-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  line-height: 1.2;
+}
+.reaper-on-air {
+  color: var(--reaper-accent);
   font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #fdba74;
+  font-weight: 900;
+  letter-spacing: 0.13em;
   white-space: nowrap;
 }
-.rngween-finale-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: #f9731626;
-  color: #fed7aa;
-  white-space: nowrap;
+.reaper-on-air i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  animation: reaper-pulse 2.6s ease-in-out infinite;
 }
-.rngween-finale-clock {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-variant-numeric: tabular-nums;
-  color: #e7d5c2;
-  white-space: nowrap;
-}
-.rngween-finale-hint,
-.rngween-finale-kept {
-  color: #c9b6a6;
-  font-weight: 600;
-}
-.rngween-finale-kept {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: #fdba74;
-}
-.rngween-finale-claim {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 4px 12px;
-  border: 1px solid #fdba7480;
-  border-radius: 999px;
-  background: #f9731626;
-  color: #fed7aa;
-  font-family: inherit;
+.reaper-act {
+  color: #e7d9cd;
   font-size: 11px;
   font-weight: 700;
-  cursor: pointer;
+}
+.reaper-quote {
+  margin: 5px 0 0;
+  color: #f4e9df;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.reaper-screen-reader {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+  border: 0;
 }
-.rngween-finale-claim:hover,
-.rngween-finale-claim:focus-visible {
-  background: #f9731640;
-  outline: none;
-  box-shadow: 0 0 0 2px #fdba7466;
+.reaper-toggle {
+  align-self: flex-start;
+  flex: 0 0 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #ffffff20;
+  border-radius: 8px;
+  background: #ffffff0a;
+  color: #e4d5c9;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
 }
-.rngween-finale.is-ending {
-  border-bottom-color: #f8717177;
-  animation:
-    rngween-finale-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both,
-    rngween-finale-pulse 1.6s ease-in-out infinite;
+.reaper-toggle:hover,
+.reaper-toggle:focus-visible {
+  color: white;
+  border-color: var(--reaper-accent);
 }
-@keyframes rngween-finale-in {
+.reaper-toggle svg {
+  transition: transform 0.2s ease;
+}
+.reaper-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.reaper-status {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1px 13px 8px 78px;
+  color: #cbb8aa;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+}
+.reaper-decree {
+  color: var(--reaper-accent);
+}
+.reaper-time {
+  white-space: nowrap;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.reaper-time b {
+  color: #f4e8dc;
+  font-variant-numeric: tabular-nums;
+}
+.reaper-timeline {
+  display: flex;
+  gap: 3px;
+  padding: 0 12px 9px;
+}
+.reaper-step {
+  flex: 1;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #ffffff1c;
+}
+.reaper-step i {
+  display: block;
+  height: 100%;
+  background: var(--reaper-accent);
+  transition: width 0.9s linear;
+}
+.reaper-reward {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-top: 1px solid #ffffff12;
+  background: #e7bd6c0c;
+  color: #f2d39a;
+  font-size: 11px;
+  font-weight: 700;
+  animation: reaper-appear 0.5s ease both;
+}
+.reaper-reward button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #ffe1a6;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.reaper-details {
+  padding: 7px 13px 10px;
+  border-top: 1px solid #ffffff12;
+  color: #cdbdb3;
+  font-size: 11px;
+  line-height: 1.4;
+  animation: reaper-appear 0.2s ease both;
+}
+.reaper-details p {
+  margin: 3px 0;
+}
+.reaper-schedule {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 13px;
+  font-size: 11px;
+  color: #d7c6b8;
+}
+.reaper-schedule > svg {
+  flex: none;
+  color: var(--reaper-accent);
+}
+.reaper-schedule-copy {
+  flex: 1;
+  min-width: 0;
+}
+.reaper-schedule-copy strong {
+  color: #f6e6d3;
+}
+.reaper-schedule-countdown {
+  flex: none;
+  color: var(--reaper-accent);
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.reaper-clock-warning {
+  margin: 0 0 12px;
+  padding: 10px 13px;
+  border: 1px solid #b77a42;
+  border-radius: 10px;
+  background: #2a1c20;
+  color: #ffdfba;
+  font-size: 12px;
+}
+@keyframes reaper-float {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes reaper-halo {
+  50% {
+    transform: scale(1.08);
+    opacity: 0.72;
+  }
+}
+@keyframes reaper-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+@keyframes reaper-appear {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-3px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-@keyframes rngween-finale-sheen {
-  to {
-    background-position: -220% 0;
+@media (max-width: 600px) {
+  .reaper-transmission {
+    gap: 9px;
+    padding: 9px 10px 4px;
+  }
+  .reaper-portrait-frame {
+    flex-basis: 42px;
+    height: 46px;
+  }
+  .reaper-takeover-portrait {
+    width: 40px;
+    height: 46px;
+  }
+  .reaper-heading {
+    gap: 3px 7px;
+  }
+  .reaper-quote {
+    font-size: 12px;
+  }
+  .reaper-status {
+    padding-left: 61px;
+    padding-right: 10px;
+  }
+  .reaper-schedule {
+    flex-wrap: wrap;
+    gap: 4px 7px;
+  }
+  .reaper-schedule-countdown {
+    margin-left: 23px;
   }
 }
-@keyframes rngween-finale-pulse {
-  50% {
-    box-shadow:
-      0 6px 20px #00000030,
-      inset 0 -2px 0 #f87171;
-  }
+.rngween-finale.is-still *,
+.rngween-finale.is-still *::before,
+.rngween-finale.is-still *::after {
+  animation: none !important;
+  transition: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  .rngween-finale,
-  .rngween-finale::after,
-  .rngween-finale.is-ending {
-    animation: none;
+  .rngween-finale *,
+  .rngween-finale *::before,
+  .rngween-finale *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
-/* Phones: wrap onto a second line rather than squeeze the words. */
-@media (max-width: 760px) {
-  .rngween-finale {
-    gap: 6px 8px;
-    padding: calc(6px + env(safe-area-inset-top)) 10px 6px;
-    font-size: 11px;
-    text-align: center;
+
+/* The show keeps its weather without adding more panels or blocking play. */
+.reaper-atmosphere {
+  --weather-color: 136, 78, 160;
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+.reaper-atmosphere.is-reckoning {
+  --weather-color: 118, 104, 156;
+}
+.reaper-atmosphere.is-bloodmoon {
+  --weather-color: 198, 47, 66;
+}
+.reaper-atmosphere.is-soulstorm {
+  --weather-color: 127, 91, 221;
+}
+.reaper-atmosphere.is-reaping {
+  --weather-color: 204, 124, 48;
+}
+.reaper-atmosphere.is-eclipse {
+  --weather-color: 199, 149, 72;
+}
+.reaper-atmosphere-haze {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse at 98% 8%,
+      rgba(var(--weather-color), 0.17),
+      transparent 32%
+    ),
+    radial-gradient(
+      ellipse at 0% 94%,
+      rgba(var(--weather-color), 0.13),
+      transparent 35%
+    );
+  transition: background 1.2s ease;
+  animation: reaper-weather-breathe 7s ease-in-out infinite alternate;
+}
+.reaper-atmosphere-fog {
+  position: absolute;
+  left: -25%;
+  right: -25%;
+  bottom: -7%;
+  height: 36%;
+  background:
+    radial-gradient(
+      ellipse at 25% 100%,
+      rgba(var(--weather-color), 0.19),
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 75% 100%,
+      rgba(var(--weather-color), 0.12),
+      transparent 46%
+    );
+  filter: blur(22px);
+  animation: reaper-weather-fog 14s ease-in-out infinite alternate;
+}
+.reaper-atmosphere-moon {
+  position: absolute;
+  top: max(220px, 25%);
+  right: 5%;
+  width: clamp(70px, 10vw, 132px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  transition:
+    opacity 1.5s ease,
+    box-shadow 1.5s ease,
+    background 1.5s ease;
+}
+.is-bloodmoon .reaper-atmosphere-moon {
+  opacity: 0.48;
+  background: radial-gradient(
+    circle at 37% 32%,
+    #ffb0a4,
+    #b62443 48%,
+    #611b37 74%
+  );
+  box-shadow:
+    0 0 26px 8px rgba(194, 40, 65, 0.22),
+    0 0 90px 25px rgba(194, 40, 65, 0.12);
+  animation: reaper-weather-moon 6s ease-in-out infinite alternate;
+}
+.is-eclipse .reaper-atmosphere-moon {
+  opacity: 0.68;
+  background: #171321;
+  border: 2px solid rgba(255, 223, 163, 0.8);
+  box-shadow:
+    0 0 12px 3px rgba(250, 205, 136, 0.65),
+    0 0 50px 16px rgba(207, 132, 55, 0.25);
+  animation: reaper-weather-moon 6s ease-in-out infinite alternate;
+}
+.reaper-atmosphere-embers i {
+  position: absolute;
+  bottom: -12px;
+  left: var(--x);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: rgb(var(--weather-color));
+  opacity: 0;
+  box-shadow: 0 0 9px rgba(var(--weather-color), 0.7);
+  animation: reaper-weather-ember var(--duration) linear infinite;
+  animation-delay: var(--delay);
+}
+.reaper-atmosphere-embers i:nth-child(1) {
+  --x: 3%;
+  --size: 3px;
+  --duration: 11s;
+  --delay: -5s;
+}
+.reaper-atmosphere-embers i:nth-child(2) {
+  --x: 11%;
+  --size: 4px;
+  --duration: 14s;
+  --delay: -9s;
+}
+.reaper-atmosphere-embers i:nth-child(3) {
+  --x: 22%;
+  --size: 2px;
+  --duration: 12s;
+  --delay: -3s;
+}
+.reaper-atmosphere-embers i:nth-child(4) {
+  --x: 84%;
+  --size: 3px;
+  --duration: 15s;
+  --delay: -11s;
+}
+.reaper-atmosphere-embers i:nth-child(5) {
+  --x: 92%;
+  --size: 4px;
+  --duration: 13s;
+  --delay: -7s;
+}
+.reaper-atmosphere-embers i:nth-child(6) {
+  --x: 97%;
+  --size: 2px;
+  --duration: 10s;
+  --delay: -2s;
+}
+.reaper-atmosphere-embers i:nth-child(7) {
+  --x: 74%;
+  --size: 2px;
+  --duration: 16s;
+  --delay: -13s;
+}
+@keyframes reaper-weather-breathe {
+  from {
+    opacity: 0.65;
   }
-  .rngween-finale-title {
-    font-size: 9px;
-    letter-spacing: 0.12em;
+  to {
+    opacity: 1;
   }
-  .rngween-finale-hint {
-    width: 100%;
+}
+@keyframes reaper-weather-moon {
+  from {
+    transform: scale(0.97);
+  }
+  to {
+    transform: scale(1.03);
+  }
+}
+@keyframes reaper-weather-fog {
+  from {
+    transform: translateX(-3%);
+  }
+  to {
+    transform: translateX(3%);
+  }
+}
+@keyframes reaper-weather-ember {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+  15% {
+    opacity: 0.55;
+  }
+  80% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(14px, -70vh, 0);
+  }
+}
+@media (max-width: 600px) {
+  .reaper-atmosphere-moon {
+    width: 64px;
+    top: 220px;
+    right: 3%;
+  }
+  .reaper-atmosphere-embers i:nth-child(2n) {
+    display: none;
+  }
+}
+.reaper-atmosphere.is-still *,
+.reaper-atmosphere.is-still *::before,
+.reaper-atmosphere.is-still *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaper-atmosphere *,
+  .reaper-atmosphere *::before,
+  .reaper-atmosphere *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

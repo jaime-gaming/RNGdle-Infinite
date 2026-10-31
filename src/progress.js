@@ -1,3 +1,4 @@
+import { reaperAct } from "./rngween-finale.js";
 // CLEANUP Nov 4, 2026: event reducer actions — buy-rngween-limited,
 // exchange-pumpkoins, claim-rngween-aura, claim-rngween-coins,
 // claim-rngween-hourly, refresh-rngween-hourly, buy-rngween-world,
@@ -1166,7 +1167,7 @@ function applyEvent(state, action) {
     requireRngweenLimited(state, at);
     return markRngweenFinale(grantRngweenMissionPumpkoins(state, at), at);
   }
-  // Halloween night: taking part is the key, and the skin is collected here.
+  // The verified Final Eclipse delivers the permanent event skin.
   if (action.type === "claim-rngween-finale") {
     const at = action.rngweenAt === undefined ? action.at : action.rngweenAt;
     if (!validAmount(at) || at > 8640000000000000)
@@ -1990,6 +1991,17 @@ function applyEvent(state, action) {
       rollbackMultiplier(state.rollbacks ?? 0) *
       surplusMultiplier(state.surplusBanked ?? 0);
     const skillMultiplier = skillWalletMultiplier(fired);
+    // The temporary EP decree belongs to the committed live roll, not the
+    // settlement clock. Offline batches and old snapshots cannot receive it.
+    const pending =
+      action.source === "offline" || state.pendingRoll?.id !== id
+        ? null
+        : state.pendingRoll;
+    const act = pending ? reaperAct(pending.reaperAt) : null;
+    const reaperMultiplier =
+      act?.epMultiplier > 1 && pending.reaperBonus === act.epMultiplier
+        ? act.epMultiplier
+        : 1;
     // The wallet pays for every number the roll kept, and every one of them
     // counts towards the cycle: a stacked rack is meant to earn more, not the
     // same reward spread over more draws.
@@ -1999,7 +2011,8 @@ function applyEvent(state, action) {
     const paidEvents = paid.map(({ result: scored, skill, key, spent }) => {
       // Every number the roll keeps is a banked roll of its own, so every one
       // of them pays the same multipliers, wallet skills included.
-      const multiplier = baseMultiplier * skillMultiplier;
+      const multiplier =
+        baseMultiplier * skillMultiplier * (key === 0 ? reaperMultiplier : 1);
       const credit =
         multiplier === 1
           ? scored.totalEP
@@ -2230,7 +2243,10 @@ function applyEvent(state, action) {
     return action.source === "offline"
       ? next
       : recordRngweenHourly(
-          next,
+          markRngweenFinale(
+            next,
+            action.rngweenAt === undefined ? at : action.rngweenAt,
+          ),
           "main",
           mainHourlyTally(committed.scored, { banked: credited }),
           action.rngweenAt === undefined ? at : action.rngweenAt,
@@ -2817,6 +2833,26 @@ export function parsePending(p, owned = null) {
   if (skills === null || skills.length !== (p.skills?.length ?? 0))
     throw new Error("Invalid committed roll");
   const plan = drawPlanFor(skills);
+  const reaper = p.reaperAt === undefined ? null : reaperAct(p.reaperAt);
+  if (
+    p.reaperAt !== undefined &&
+    (!validAmount(p.reaperAt) ||
+      !reaper ||
+      reaper.draws < 2 ||
+      plan ||
+      !Array.isArray(p.draws) ||
+      p.draws.length !== reaper.draws)
+  )
+    throw new Error("Invalid committed roll");
+  // Older Reaper snapshots have no bonus. Only a matching, event-issued bonus
+  // survives repair; it is settled even if the show ends before the reveal.
+  if (
+    p.reaperBonus !== undefined &&
+    (!reaper ||
+      reaper.epMultiplier <= 1 ||
+      p.reaperBonus !== reaper.epMultiplier)
+  )
+    throw new Error("Invalid committed roll");
   const waived = skillWaivesCooldown(skills);
   const draws = p.draws == null ? null : p.draws;
   // Which draw skill kept which number: the list the settlement pays, so it is
@@ -2830,7 +2866,9 @@ export function parsePending(p, owned = null) {
   // drawLimit, so no new roll can accept a seventh number during reload/sync.
   const maxDraws = Math.min(
     p.drawLimit === undefined ? 9 : SKILL_MAX_DRAWS,
-    pickDefs.reduce((sum, pick) => sum + pick.attempts, 0) + 1,
+    reaper
+      ? reaper.draws
+      : pickDefs.reduce((sum, pick) => sum + pick.attempts, 0) + 1,
   );
   if (
     picks !== null &&
@@ -2940,7 +2978,7 @@ export function parsePending(p, owned = null) {
     !validAmount(p.startedAt + p.rollMS + p.cooldownMS) ||
     (p.drawLimit !== undefined && p.drawLimit !== SKILL_MAX_DRAWS) ||
     (draws !== null &&
-      (!plan ||
+      ((!plan && !reaper) ||
         !Array.isArray(draws) ||
         draws.length < 1 ||
         // The skills' draws, plus the roll's own ordinary draw when it made one.
@@ -2970,6 +3008,8 @@ export function parsePending(p, owned = null) {
     cooldownMS: p.cooldownMS,
     ...(skills.length ? { skills } : {}),
     ...(draws ? { draws } : {}),
+    ...(reaper ? { reaperAt: p.reaperAt } : {}),
+    ...(p.reaperBonus !== undefined ? { reaperBonus: p.reaperBonus } : {}),
     ...(p.drawLimit !== undefined ? { drawLimit: p.drawLimit } : {}),
     ...(picks
       ? {

@@ -63,6 +63,16 @@ so changing your phone's date does nothing.
   Commissions pay Pumpkoins instead: four small tasks at a time, each with an
   hour on the clock. Finish one, claim it before the hour ends, and a new one
   takes its place.
+- **The Reaper's Takeover (October 31, 20:00–20:30 UTC).** A one-time,
+  six-act scripted show with the Reaper's compact, animated transmissions and phase-specific atmospheric effects.
+  During his decrees, ordinary online rolls draw two or three independent numbers
+  and keep the highest-scoring one. Blood Moon, Harvest and the final Eclipse
+  also temporarily boost banked EP on those rolls; the committed boost survives
+  a reload. The show uses the verified website clock; if it cannot be verified,
+  its powers stop until the connection returns. Draw skills and World rolls
+  keep their own rules. Halloween mission Pumpkoins are still doubled throughout
+  October 31. The permanent Hollow Lantern is delivered automatically to local
+  profiles present during the Final Eclipse, 20:25–20:30 UTC.
 - **RNGween World.** Talk to the Reaper at the foot of the Roll page. Five
   haunted zones with their own badges, fragments that forge a key to the Valley
   of Horrors, and a hidden **Hexbound** aura for rolling 6666. Zone points buy
@@ -70,6 +80,9 @@ so changing your phone's date does nothing.
 - **What stays.** The auras you collected are yours forever, through Rebirth,
   Prestige and Rollback. Everything else retires on November 4, and the auras
   never return.
+
+For a local preview at the start of the show, run `npm run dev:sandbox`.
+Use `npm run dev:sandbox:live` for the real clock.
 
 ## Your progress
 

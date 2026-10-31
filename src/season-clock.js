@@ -8,6 +8,21 @@ const MAX_AGE_MS = 10 * 60 * 1000;
 let anchor = null;
 let pending = null;
 let requests = 0;
+let revision = 0;
+export const SEASON_CLOCK_CHANGED = "rngdle-season-clock-changed";
+function notifyClockChange() {
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new Event(SEASON_CLOCK_CHANGED));
+}
+
+// A hidden or resumed tab must reverify before applying time-gated powers.
+// Invalidate in-flight checks too, so an old response cannot restore a stale clock.
+export function invalidateSeasonClock() {
+  revision++;
+  anchor = null;
+  pending = null;
+  notifyClockChange();
+}
 
 export function seasonNow() {
   if (!anchor || !monotonicNow) return null;
@@ -63,24 +78,28 @@ export function refreshSeasonClock() {
   if (pending) return pending;
   if (!monotonicNow || typeof window === "undefined")
     return Promise.resolve(null);
-  pending = (async () => {
+  const checkRevision = revision;
+  const request = (async () => {
     try {
       const start = monotonicNow();
       const sample = await websiteTime(start);
-      if (!sample) return null;
+      if (!sample || checkRevision !== revision) return null;
       const { at, age } = sample;
       const tick = monotonicNow();
       if (!Number.isFinite(at) || !Number.isFinite(age) || age < 0) return null;
       const verified = at + age * 1000 + Math.max(0, tick - start) / 2;
       anchor = { at: Math.max(verified, seasonNow() ?? verified), tick };
+      notifyClockChange();
       return seasonNow();
     } catch {
       // No device-clock fallback: ordinary play continues, but a calendar
       // reward requires a recently verified website date.
       return null;
     }
-  })().finally(() => {
-    pending = null;
+  })();
+  pending = request;
+  request.finally(() => {
+    if (pending === request) pending = null;
   });
-  return pending;
+  return request;
 }

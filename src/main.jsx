@@ -456,7 +456,8 @@ function App() {
   try {
     readyTasks =
       (taskSummary(session?.tasks, taskNow)?.ready ?? 0) +
-      (rngweenState(session?.tasks, seasonalNow, session?.rngweenLimited)?.ready ?? 0);
+      (rngweenState(session?.tasks, seasonalNow, session?.rngweenLimited)
+        ?.ready ?? 0);
   } catch {
     readyTasks = 0;
   }
@@ -854,7 +855,8 @@ function App() {
   if (!session) {
     return (
       <div style={{ padding: 24, textAlign: "center" }}>
-        Cargando RNGdle Infinite… Si esto no desaparece, recarga la página. Tu progreso está guardado.
+        Cargando RNGdle Infinite… Si esto no desaparece, recarga la página. Tu
+        progreso está guardado.
       </div>
     );
   }
@@ -866,6 +868,7 @@ function App() {
           now={seasonalNow}
           onAction={dispatch}
           notify={notify}
+          openSignup={openAuth}
         />
         <RngweenWorld
           progress={session}
@@ -889,6 +892,7 @@ function App() {
         now={seasonalNow}
         onAction={dispatch}
         notify={notify}
+        openSignup={openAuth}
       />
       <RngweenSeason
         now={seasonalNow}
@@ -1273,25 +1277,25 @@ function App() {
         {page === "shop" && (
           <ErrorBoundary>
             <Shop
-            key={`${epoch}:${shopSection}:${shopFamily}`}
-            progress={session}
-            section={shopSection}
-            seasonNow={seasonalNow}
-            family={shopFamily}
-            onOpenShelf={openShelf}
-            onOpenFamily={openFamily}
-            focusProduct={shopFocus}
-            onReaper={() => {
-              navigate("roll");
-              setReaperOpen(true);
-            }}
-            onAction={dispatch}
-            openSignup={openAuth}
-            navigate={navigate}
-            notify={notify}
-            pickingGoal={pickingGoal}
-            onPickingGoal={setPickingGoal}
-          />
+              key={`${epoch}:${shopSection}:${shopFamily}`}
+              progress={session}
+              section={shopSection}
+              seasonNow={seasonalNow}
+              family={shopFamily}
+              onOpenShelf={openShelf}
+              onOpenFamily={openFamily}
+              focusProduct={shopFocus}
+              onReaper={() => {
+                navigate("roll");
+                setReaperOpen(true);
+              }}
+              onAction={dispatch}
+              openSignup={openAuth}
+              navigate={navigate}
+              notify={notify}
+              pickingGoal={pickingGoal}
+              onPickingGoal={setPickingGoal}
+            />
           </ErrorBoundary>
         )}
         {page === "badges" && (

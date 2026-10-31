@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { gameNow } from "./game-clock.js";
-import { refreshSeasonClock, seasonNow } from "./season-clock.js";
+import {
+  invalidateSeasonClock,
+  refreshSeasonClock,
+  seasonNow,
+} from "./season-clock.js";
 import { rngweenCalendar } from "./rngween.js";
 
 // Regular tasks retain their existing game clock. Halloween has a separate
@@ -16,9 +20,12 @@ export function useSeasonClock() {
     let alive = true;
     const refresh = () => alive && setClock(read());
     const verify = () => refreshSeasonClock().then(refresh);
+    // A suspended tab may have a paused monotonic clock. On resume, stop
+    // displaying/awarding seasonal powers until the website answers again.
     const resume = () => {
+      invalidateSeasonClock();
       refresh();
-      verify();
+      if (document.visibilityState !== "hidden") verify();
     };
     verify();
     const ticks = setInterval(refresh, 30000);

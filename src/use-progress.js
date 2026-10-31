@@ -32,7 +32,8 @@ import {
   worldRevealMS,
 } from "./rngween-world-zones.js";
 import { rngweenCalendar } from "./rngween.js";
-import { runDrawPicks } from "./draw-plan.js";
+import { runDrawPicks, runDrawPlan } from "./draw-plan.js";
+import { reaperAct } from "./rngween-finale.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
 import {
@@ -578,7 +579,18 @@ export function useProgress() {
             picks = null,
             winnerSkill = null,
             winnerIndex = null;
-          if (!plan) result = await generateRoll();
+          // The Reaper changes only unmodified live rolls; draw skills retain
+          // their own six-draw budget and settlement rules. Snapshot verified
+          // time and all candidates before revealing anything.
+          const reaperAt = seasonNow();
+          const act = reaperAct(reaperAt);
+          if (!plan && act?.draws > 1) {
+            ({ draws, result } = await runDrawPlan(
+              { attempts: act.draws },
+              async () => (await generateRoll()).number,
+              restoreRoll,
+            ));
+          } else if (!plan) result = await generateRoll();
           else
             ({ draws, result, picks, winnerSkill, winnerIndex } =
               await runDrawPicks(
@@ -609,6 +621,10 @@ export function useProgress() {
             ...timing,
             ...(fired.length ? { skills: fired } : {}),
             ...(draws ? { draws, drawLimit: SKILL_MAX_DRAWS } : {}),
+            ...(!plan && draws ? { reaperAt: Math.floor(reaperAt) } : {}),
+            ...(!plan && draws && act?.epMultiplier > 1
+              ? { reaperBonus: act.epMultiplier }
+              : {}),
             // Which draw skill kept which number, and which one (or the plain
             // draw) supplied the committed result. The roll pays for every kept
             // number, even when two skills happen to keep the same number.
@@ -834,19 +850,17 @@ export function useProgress() {
                   ),
               }
             : {}),
-          ...(
-            [
-              "rngween-world-roll",
-              "rngween-world-keep-rolling",
-              "rngween-world-reveal",
-            ].includes(action.type)
-              ? {
-                  worldPending: next.rngweenLimited?.world?.pending ?? null,
-                  worldNumber: next.rngweenLimited?.world?.last?.number ?? null,
-                  skinEarned: next.rngweenLimited?.skinEarned === true,
-                }
-              : {}
-          ),
+          ...([
+            "rngween-world-roll",
+            "rngween-world-keep-rolling",
+            "rngween-world-reveal",
+          ].includes(action.type)
+            ? {
+                worldPending: next.rngweenLimited?.world?.pending ?? null,
+                worldNumber: next.rngweenLimited?.world?.last?.number ?? null,
+                skinEarned: next.rngweenLimited?.skinEarned === true,
+              }
+            : {}),
           // Bulk delete reports how many entries it actually removed.
           ...(action.type === "history-prune"
             ? { removed: previous.history.length - next.history.length }

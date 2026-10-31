@@ -11,7 +11,7 @@ export const CHANGELOG = [
     body: [
       "RNGween adds Halloween decorations, the Limited Shop with Pumpkoins and the Reaper's World, Oct 21 – Nov 3, 2026.",
       "four aura tasks unlock Jack-o'-Glow, Phantom Veil, Witchfire and Blood Moon, October 25–31, 2026; they never return.",
-      "tasks splits in two, Oct 31 doubles Pumpkoins and hands out the Hollow Lantern, and leftover coins become a small EP farewell.",
+      "tasks splits in two, Oct 31 doubles Pumpkoins, the Eclipse gives the Hollow Lantern, and leftover coins become a small EP farewell.",
     ],
   },
   {
