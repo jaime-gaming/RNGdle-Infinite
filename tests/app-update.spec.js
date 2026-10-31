@@ -7,6 +7,7 @@ import {
   snapshotSaveForUpdate,
   recoverSaveAfterUpdate,
   clearGameCaches,
+  APP_INTERNAL_VERSION,
   APP_UPDATE_STORAGE_KEY,
   APP_UPDATE_SAVE_KEY,
   APP_UPDATE_QUERY,
@@ -39,7 +40,11 @@ test("build identity is read from the page and version checks use the app base p
       return { ok: true, json: async () => ({ buildId: "release-456" }) };
     },
   });
-  expect(buildId).toBe("release-456");
+  expect(buildId).toEqual({
+    buildId: "release-456",
+    version: "",
+    internalVersion: "",
+  });
   expect(request.url).toBe(
     "https://game.example/RNGdle-Infinite/version.json?_=23",
   );
@@ -64,7 +69,14 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     new URL("/version.json", page.url()).toString(),
   );
   expect(liveVersion.ok()).toBeTruthy();
-  expect((await liveVersion.json()).buildId).toBe(buildId);
+  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinitev0.5.1fix5");
+  expect(await liveVersion.json()).toMatchObject({
+    buildId,
+    internalVersion: APP_INTERNAL_VERSION,
+  });
+  await expect(
+    page.locator('meta[name="rngdle-internal-version"]'),
+  ).toHaveAttribute("content", APP_INTERNAL_VERSION);
 
   // Return the build already in this page after its deliberate cache-busted
   // reload, exercising the successful end of the retry flow deterministically.

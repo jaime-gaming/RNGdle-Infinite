@@ -270,16 +270,36 @@ guessing.
   `rngweenCalendar(at).finaleActive` is true for that day only and
   `pumpkoinMultiplier` is 2, so every aura mission pays double (the history row
   keeps the paid amount plus `multiplier: 2`). `components/RngweenFinale.jsx`
-  draws a sticky strip above the content with the countdown and the ×2 badge;
-  it never covers the header, and it disappears on November 1.
-- **Taking part on the 31st earns `RNGWEEN_FINALE_SKIN` ("Hollow Lantern",
-  `hollow-lantern`)**, a permanent `eventOnly` skin: any mission claim, World
-  rollout or commission claim sets `rngweenLimited.finaleCount`, and the strip's
-  button dispatches `claim-rngween-finale` (`claimRngweenFinale`). The receipt is
-  `{id: "rngween-finale:rngween-2026", type: "rngween-finale"}` plus
+  draws a compact in-flow strip above the content with a countdown;
+  it never covers the header, and it disappears on November 1. The Reaper's
+  scheduled six-act takeover (`rngween-finale.js`) runs once on October 31,
+  20:00–20:30 UTC. The website clock controls the script, compact transmission, ambient weather,
+  and the best-of-two or best-of-three ordinary rolls. Blood Moon, Harvest and
+  Eclipse also multiply banked EP on those ordinary rolls by 1.5, 1.25 and 2.
+  `reaperBonus` is a validated optional committed snapshot, so legacy pending
+  rolls keep their original payout and the bonus survives reload and phase end.
+  It affects live main-game rolls without a draw skill, not offline rolls or
+  World rolls. A multi-draw
+  snapshot stores `reaperAt` and every number before the reveal; `parsePending`
+  validates its act and preserves it across reload and sync. `npm run dev:sandbox`
+  starts the preview clock at the show's start; `dev:sandbox:live` uses real time.
+  Each Vite dev process uses its own disposable optimizer cache under
+  `node_modules/.vite-servers` so simultaneous previews cannot mix React builds.
+  The show uses `useLiveEventClock(..., { verifiedOnly: true })` and never
+  displays powers from a stale fallback clock. Hiding/resuming invalidates the
+  website clock and in-flight requests, and the show waits for a fresh check.
+  The broadcast uses the project's existing Reaper and seasonal SVG marks and
+  CSS effects. Weather is pointer-transparent,
+  changes with each act, ends with the show, and respects reduced motion.
+- **The Final Eclipse gives `RNGWEEN_FINALE_SKIN` ("Hollow Lantern",
+  `hollow-lantern`)** to local profiles present from 20:25 until 20:30 UTC.
+  The transmission dispatches `claim-rngween-finale` automatically; its reducer
+  checks the verified act again, and shows a retry on save/connection failure.
+  Guests need a profile. No previous participation is required. `finaleCount`
+  remains for legacy saves and history, but no longer gates the gift. The receipt
+  is `{id: "rngween-finale:rngween-2026", type: "rngween-finale"}` plus
   `finaleEarned` and the aura in `owned`. Both fields are repaired from
-  ownership, carried through `retireRngweenLimited`, and only written when true,
-  so a retired save stays small. Never make the skin missable by a save repair.
+  ownership and carried through retirement; preserve previously earned skins.
 - The Reaper (`src/rngween-reaper.js`, `components/ReaperDialog.jsx`) is a
   short scripted dialogue with button choices only. There is no free-text
   input; keep his lines to one or two sentences with a bit of dry humour.
@@ -435,7 +455,7 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
   (`progressWeight`, 50% and at least 40 points ahead) is the primary, and the
   other device adopts it whole. Never decide this by timestamp alone: a browser
   opened once must not wipe a played save because its last write is newer. Two
-  devices of the *same* account keep the timestamp order, so a queued change
+  devices of the _same_ account keep the timestamp order, so a queued change
   from either one is never refused. The primary is also declared the **writer**
   (`declareSyncOwner`), so the save that is kept and the device that runs
   actions are always the same one.
@@ -526,12 +546,12 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
 ### Internal version (Reload until updated)
 
 `src/app-update.js` defines `APP_INTERNAL_VERSION`, for example
-`RNGdle-Infinitev0.5.1fix3`. It is only used by the "Reload until updated"
+`RNGdle-Infinitev0.5.1fix5`. It is only used by the "Reload until updated"
 flow, to scope the update intent to the current internal build. It is never
 added to the changelog or shown as a release. Bump the fix number for
 bug-patch rebuilds of the same public version (`fix0 → fix1 → fix2 …`)
 instead of moving the public `0.x(.x)` version. Current:
-`RNGdle-Infinitev0.5.1fix3`.
+`RNGdle-Infinitev0.5.1fix5`.
 
 What the flow is allowed to touch, because the save outranks everything else:
 
