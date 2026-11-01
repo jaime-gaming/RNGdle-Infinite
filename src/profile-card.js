@@ -281,7 +281,7 @@ function isoDate(value) {
 }
 
 // The full link: the profile address plus the card, on whatever origin and
-// base the game is served from (local or GitHub Pages alike).
+// base the game is served from (local or a configured subpath).
 export function shareCardUrl(progress, origin, base) {
   const card = shareCardData(progress);
   const url = new URL(pathForProfile(card.name, base), origin);

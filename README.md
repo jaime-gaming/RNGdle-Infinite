@@ -5,8 +5,7 @@
 RNGdle Infinite is a free browser game about surprising numbers, collectible badges, and building a run at your own pace.
 
 <p align="center">
-  <a href="https://jaime-gaming.github.io/RNGdle-Infinite/"><strong>▶ Play now</strong></a>
-  · <a href="https://rngdle-infinite.jaime-gaming.com/">Open the game</a>
+  <a href="https://rngdle-infinite.jaime-gaming.com/"><strong>▶ Play now</strong></a>
 </p>
 
 ![The game, ready for a roll](media/roll.png)
@@ -54,7 +53,7 @@ You choose whether to share a public profile. A profile logo appears only when t
 
 ## Privacy & contact
 
-Read [Privacy & Rights](https://jaime-gaming.github.io/RNGdle-Infinite/privacy) and the [Terms of Service](https://jaime-gaming.github.io/RNGdle-Infinite/tos). Questions? Email [jaimegamingpro@gmail.com](mailto:jaimegamingpro@gmail.com).
+Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and the [Terms of Service](https://rngdle-infinite.jaime-gaming.com/tos). Questions? Email [jaimegamingpro@gmail.com](mailto:jaimegamingpro@gmail.com).
 
 ## Credits
 

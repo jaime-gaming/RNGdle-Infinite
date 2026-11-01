@@ -1,6 +1,6 @@
 // Real URLs instead of hash fragments: /shop, /badges, /history, /settings.
-// The site is also published to a repository subpath on GitHub Pages, so every
-// route is resolved against the build-time base rather than the domain root.
+// Paths honor Vite's build-time base while the production custom domain uses
+// the root, so direct route loads stay consistent across supported builds.
 export const PAGES = [
   "roll",
   "tasks",
@@ -17,7 +17,7 @@ export const PAGES = [
 ];
 export const HOME = "roll";
 
-// import.meta.env.BASE_URL is "/" locally and "/RNGdle-Infinite/" on Pages.
+// Root deployments use "/"; embedded builds can supply an optional base path.
 export function basePath(base = import.meta.env?.BASE_URL ?? "/") {
   const trimmed = String(base || "/").replace(/\/+$/, "");
   return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;

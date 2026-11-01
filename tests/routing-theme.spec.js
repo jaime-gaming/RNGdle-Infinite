@@ -46,16 +46,11 @@ test("every app page has a direct path, not a hash fragment", () => {
   expect(pathForPage("roll")).toBe("/");
   for (const page of PAGES.filter((p) => p !== HOME))
     expect(pathForPage(page)).toBe(`/${page}`);
-  // A repository subpath deployment keeps the same routes under its base.
-  expect(basePath("/RNGdle-Infinite/")).toBe("/RNGdle-Infinite");
-  expect(pathForPage("shop", "/RNGdle-Infinite/")).toBe(
-    "/RNGdle-Infinite/shop",
-  );
+  // Embedded builds keep the same routes under their optional base.
+  expect(basePath("/preview/")).toBe("/preview");
+  expect(pathForPage("shop", "/preview/")).toBe("/preview/shop");
   expect(
-    pageFromLocation(
-      { pathname: "/RNGdle-Infinite/badges", hash: "" },
-      "/RNGdle-Infinite/",
-    ),
+    pageFromLocation({ pathname: "/preview/badges", hash: "" }, "/preview/"),
   ).toBe("badges");
 });
 
@@ -79,24 +74,22 @@ test("paths, legacy hashes and unknown routes all resolve without a dead end", (
 });
 
 test("a shelf is a real sub-page of the shop, on every host", () => {
-  // Locally (/shop/skills) and on Pages (/RNGdle-Infinite/shop/skills).
+  // Locally (/shop/skills) and under an optional base path (/preview/shop/skills).
   expect(pathForSubpage("shop", "skills")).toBe("/shop/skills");
-  expect(pathForSubpage("shop", "auras", "/RNGdle-Infinite/")).toBe(
-    "/RNGdle-Infinite/shop/auras",
+  expect(pathForSubpage("shop", "auras", "/preview/")).toBe(
+    "/preview/shop/auras",
   );
   // The hub is the page itself, never a trailing slash or an empty segment.
   expect(pathForSubpage("shop", "")).toBe("/shop");
-  expect(pathForSubpage("shop", "", "/RNGdle-Infinite/")).toBe(
-    "/RNGdle-Infinite/shop",
-  );
+  expect(pathForSubpage("shop", "", "/preview/")).toBe("/preview/shop");
   // A sub-segment is read from the path, and only the page's own segment counts.
   expect(subpageFromLocation({ pathname: "/shop/skills", hash: "" })).toBe(
     "skills",
   );
   expect(
     subpageFromLocation(
-      { pathname: "/RNGdle-Infinite/shop/tools", hash: "" },
-      "/RNGdle-Infinite/",
+      { pathname: "/preview/shop/tools", hash: "" },
+      "/preview/",
     ),
   ).toBe("tools");
   expect(subpageFromLocation({ pathname: "/shop", hash: "" })).toBe("");
@@ -104,8 +97,8 @@ test("a shelf is a real sub-page of the shop, on every host", () => {
   expect(pageFromLocation({ pathname: "/shop/skills", hash: "" })).toBe("shop");
   expect(
     pageFromLocation(
-      { pathname: "/RNGdle-Infinite/shop/offline", hash: "" },
-      "/RNGdle-Infinite/",
+      { pathname: "/preview/shop/offline", hash: "" },
+      "/preview/",
     ),
   ).toBe("shop");
   // Slugs use the same alphabet pages do, so a crafted segment cannot break out.
@@ -119,11 +112,11 @@ test("save recovery is a distinct Settings subpage with a direct link", () => {
   expect(pathForSubpage("settings", "save-recovery")).toBe(
     "/settings/save-recovery",
   );
-  const pages = {
-    pathname: "/RNGdle-Infinite/settings/save-recovery",
+  const embeddedBuild = {
+    pathname: "/preview/settings/save-recovery",
     hash: "",
   };
-  expect(settingsSubpageFromLocation(pages, "/RNGdle-Infinite/")).toBe(
+  expect(settingsSubpageFromLocation(embeddedBuild, "/preview/")).toBe(
     "save-recovery",
   );
   expect(settingsSubpageFromLocation({ pathname: "/settings/unknown" })).toBe(
@@ -137,8 +130,8 @@ test("the profile address names the account: /profile/<username>", () => {
   expect(pathForProfile("")).toBe("/profile");
   expect(pathForProfile(undefined)).toBe("/profile");
   // Names keep their case and are only URL-escaped; the base is honoured.
-  expect(pathForProfile("Ñandú_7", "/RNGdle-Infinite/")).toBe(
-    "/RNGdle-Infinite/profile/%C3%91and%C3%BA_7",
+  expect(pathForProfile("Ñandú_7", "/preview/")).toBe(
+    "/preview/profile/%C3%91and%C3%BA_7",
   );
   expect(
     profileNameFromLocation({ pathname: "/profile/%C3%91and%C3%BA_7" }),
@@ -156,13 +149,25 @@ test("the profile address names the account: /profile/<username>", () => {
   expect(isCurrentPath("shop", { pathname: "/shop/x", hash: "" })).toBe(false);
 });
 
-test("static hosting ships a 404 fallback and Workers serve deep links as an SPA", () => {
+test("Cloudflare Pages builds from dist, rewrites app routes and avoids stale updates", () => {
   const vite = fs.readFileSync("vite.config.js", "utf8");
-  expect(vite).toContain("404.html");
-  const workers = fs.readFileSync("wrangler.jsonc", "utf8");
-  expect(workers).toMatch(
-    /"not_found_handling"\s*:\s*"single-page-application"/,
+  expect(vite).not.toContain("404.html");
+
+  const config = fs.readFileSync("wrangler.jsonc", "utf8");
+  expect(config).toMatch(/"pages_build_output_dir"\s*:\s*"\.\/dist"/);
+
+  const redirects = fs.readFileSync("public/_redirects", "utf8").trim();
+  expect(redirects).toBe("/* /index.html 200");
+
+  const headers = fs.readFileSync("public/_headers", "utf8");
+  expect(headers).toMatch(/\n\/\s*\n\s*Cache-Control: no-cache/);
+  expect(headers).toMatch(/\/shop\*\s*\n\s*Cache-Control: no-cache/);
+  expect(headers).toMatch(/\/profile\*\s*\n\s*Cache-Control: no-cache/);
+  expect(headers).toMatch(/\/version\.json\s*\n\s*Cache-Control: no-store/);
+  expect(headers).toMatch(
+    /\/assets\/\*\s*\n\s*Cache-Control: public, max-age=31536000, immutable/,
   );
+  expect(headers).toMatch(/\/index\.html\s*\n\s*Cache-Control: no-cache/);
 });
 
 test("the rebirth ladder depends on the collection alone, never on auras or tools", () => {
@@ -273,17 +278,17 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
 });
 
 test("an aura family is a real sub-page of its shelf, on every host", () => {
-  // /shop/auras/celestial, locally and under a Pages base path.
+  // /shop/auras/celestial, locally and under an optional base path.
   expect(pathForShelfFamily("shop", "auras", "celestial")).toBe(
     "/shop/auras/celestial",
   );
-  expect(
-    pathForShelfFamily("shop", "auras", "element", "/RNGdle-Infinite/"),
-  ).toBe("/RNGdle-Infinite/shop/auras/element");
+  expect(pathForShelfFamily("shop", "auras", "element", "/preview/")).toBe(
+    "/preview/shop/auras/element",
+  );
   // Without a family it is the shelf index, never a dangling slash.
   expect(pathForShelfFamily("shop", "auras", "")).toBe("/shop/auras");
-  expect(pathForShelfFamily("shop", "auras", "", "/RNGdle-Infinite/")).toBe(
-    "/RNGdle-Infinite/shop/auras",
+  expect(pathForShelfFamily("shop", "auras", "", "/preview/")).toBe(
+    "/preview/shop/auras",
   );
   // A family is read from the third segment, and only from the shelf's own
   // path: the shop's other shelves and the site's other pages ignore it.
@@ -292,8 +297,8 @@ test("an aura family is a real sub-page of its shelf, on every host", () => {
   );
   expect(
     familyFromLocation(
-      { pathname: "/RNGdle-Infinite/shop/auras/machine", hash: "" },
-      "/RNGdle-Infinite/",
+      { pathname: "/preview/shop/auras/machine", hash: "" },
+      "/preview/",
     ),
   ).toBe("machine");
   expect(familyFromLocation({ pathname: "/shop/auras", hash: "" })).toBe("");

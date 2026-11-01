@@ -183,13 +183,9 @@ test("a profile card survives the trip through the address and rejects damage", 
   expect(forged.aura).toHaveLength(40);
   // The link points at the named profile on the given origin and base.
   const url = new URL(
-    shareCardUrl(
-      played(),
-      "https://jaime-gaming.github.io",
-      "/RNGdle-Infinite/",
-    ),
+    shareCardUrl(played(), "https://rngdle-infinite.jaime-gaming.com", "/"),
   );
-  expect(url.pathname).toBe("/RNGdle-Infinite/profile/LuckyOtter41");
+  expect(url.pathname).toBe("/profile/LuckyOtter41");
   expect(decodeShareCard(url.searchParams.get("card")).name).toBe(
     "LuckyOtter41",
   );

@@ -7,14 +7,12 @@
     "dev": "vite --host 0.0.0.0",
     "dev:test": "vite --host 0.0.0.0 --mode test",
     "build": "vite build",
-    "build:pages": "vite build --base=/RNGdle-Infinite/",
-    "deploy:workers": "node tools/deploy-workers.mjs",
-    "pages:publish": "node tools/publish-pages.mjs",
-    "test:pages": "node tools/test-pages.mjs",
+    "deploy:pages": "node tools/deploy-pages.mjs",
+    "test:pages": "node tools/test-cloudflare-pages.mjs",
     "screenshots": "node tools/screenshots.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",
-    "format": "prettier --write src tests *.js *.json index.html README.md",
+    "format": "prettier --write src tests *.js *.json *.jsonc public/*.webmanifest index.html README.md",
     "prepare:data": "node tools/prepare-game-data.mjs",
     "vendor:emoji": "node tools/vendor-emoji.mjs",
     "audit:economy": "node tools/audit-economy.mjs"
@@ -34,7 +32,8 @@
     "@twemoji/svg": "^15.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "prettier": "^3.9.6",
-    "vite": "^6.1.0"
+    "vite": "^6.1.0",
+    "wrangler": "^4.156.0"
   },
   "overrides": {
     "@grpc/grpc-js": "^1.13.6",

@@ -64,7 +64,6 @@ test("the README is a short, player-friendly guide with current screenshots", ()
     "## Credits",
   ])
     expect(readme).toContain(section);
-  expect(readme).toContain("https://jaime-gaming.github.io/RNGdle-Infinite/");
   expect(readme).toContain("https://rngdle-infinite.jaime-gaming.com/");
   expect(readme).toContain("Settings → Restore save");
   expect(readme).toContain("jaimegamingpro@gmail.com");
@@ -80,6 +79,28 @@ test("the README is a short, player-friendly guide with current screenshots", ()
     "src/",
   ])
     expect(readme).not.toContain(implementationDetail);
+});
+
+test("the production entry point uses the custom domain and ships every linked icon", () => {
+  const html = fs.readFileSync("index.html", "utf8");
+  const origin = "https://rngdle-infinite.jaime-gaming.com/";
+  expect(html).toContain(`<link rel="canonical" href="${origin}" />`);
+  expect(html).toMatch(
+    /<meta\s+property="og:url"\s+content="https:\/\/rngdle-infinite\.jaime-gaming\.com\/"\s*\/>/,
+  );
+  expect(html).toMatch(
+    /<meta\s+property="og:image"\s+content="https:\/\/rngdle-infinite\.jaime-gaming\.com\/icon-512\.png"\s*\/>/,
+  );
+
+  const publicAssets = new Set(fs.readdirSync("public"));
+  expect(publicAssets.has("icon-512.png")).toBe(true);
+  for (const [, asset] of html.matchAll(/(?:href|src)="\/(?!\/)([^"?#]+)"/g)) {
+    if (asset.startsWith("src/")) continue;
+    expect(
+      publicAssets.has(asset.split("/")[0]),
+      `missing public asset: ${asset}`,
+    ).toBe(true);
+  }
 });
 
 test("the shop hub links match the shelf pages it renders", () => {

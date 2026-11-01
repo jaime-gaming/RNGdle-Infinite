@@ -23,15 +23,15 @@ test("build identity is read from the page and version checks use the app base p
   ).toBe("release-123");
   expect(
     makeVersionUrl({
-      base: "/RNGdle-Infinite/",
+      base: "/preview/",
       origin: "https://game.example",
       now: 17,
     }),
-  ).toBe("https://game.example/RNGdle-Infinite/version.json?_=17");
+  ).toBe("https://game.example/preview/version.json?_=17");
 
   let request;
   const buildId = await fetchPublishedBuild({
-    base: "/RNGdle-Infinite/",
+    base: "/preview/",
     origin: "https://game.example",
     now: 23,
     fetcher: async (url, options) => {
@@ -40,9 +40,7 @@ test("build identity is read from the page and version checks use the app base p
     },
   });
   expect(buildId).toBe("release-456");
-  expect(request.url).toBe(
-    "https://game.example/RNGdle-Infinite/version.json?_=23",
-  );
+  expect(request.url).toBe("https://game.example/preview/version.json?_=23");
   expect(request.options).toMatchObject({ cache: "no-store" });
 });
 

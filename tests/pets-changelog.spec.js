@@ -222,7 +222,7 @@ test("guest play is not saved and signing up starts a clean account", () => {
 });
 
 test("share text ends with the public game link", () => {
-  expect(GAME_URL).toBe("https://jaime-gaming.github.io/RNGdle-Infinite");
+  expect(GAME_URL).toBe("https://rngdle-infinite.jaime-gaming.com");
   const text = buildShareText(evaluate(1337));
   expect(text.trim().endsWith(GAME_URL)).toBe(true);
   expect(text).toContain("RNGdle Infinite");

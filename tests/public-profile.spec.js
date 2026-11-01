@@ -21,13 +21,9 @@ const progress = {
 
 test("direct public-profile URLs use the name path and contain no card token", () => {
   const url = new URL(
-    publicProfileUrl(
-      "LuckyOtter41",
-      "https://game.example",
-      "/RNGdle-Infinite/",
-    ),
+    publicProfileUrl("LuckyOtter41", "https://game.example", "/preview/"),
   );
-  expect(url.pathname).toBe("/RNGdle-Infinite/profile/luckyotter41");
+  expect(url.pathname).toBe("/preview/profile/luckyotter41");
   expect(url.search).toBe("");
   expect(url.hash).toBe("");
 });
