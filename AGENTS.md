@@ -111,6 +111,12 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   custom host; it is separate from the Cloudflare Pages/DNS setup. Create
   Firestore in a European location and publish `firestore.rules` before testing
   cloud saves.
+- The App Check client reads the public
+  `VITE_FIREBASE_APPCHECK_SITE_KEY` from `.env.production` and attaches
+  reCAPTCHA Enterprise attestations. This does not register the provider or
+  enable service enforcement in Firebase Console. Do not claim enforcement is
+  active until it is independently verified; never put the site key in the
+  player-facing README.
 - Saves use one Firestore document per UID at `player_saves/{uid}`. The JSON
   snapshot is compressed with the existing vault codec to stay below Firestore's
   1 MiB document limit. Rules are the security boundary.
