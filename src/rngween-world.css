@@ -2827,44 +2827,95 @@
 }
 
 /* ---- Keep rolling toggle (Valley chain) -------------------------------- */
+.world-reveal-timer:has(+ .world-keep-rolling-wrap) {
+  margin-bottom: 16px;
+}
+.world-keep-rolling-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+.world-reveal-timer + .world-keep-rolling-wrap {
+  padding: 0 24px 27px;
+}
 .world-keep-rolling {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: transparent;
-  color: var(--world-muted);
-  border: 1px solid #463853;
-  border-radius: 8px;
-  padding: 8px 12px;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  background: #1d1428a6;
+  color: var(--world-text);
+  border: 1px solid #5a466b;
+  border-radius: 9px;
+  padding: 8px 15px;
   cursor: pointer;
   font-size: 12px;
-  margin-left: 12px;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
+.world-keep-rolling:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .world-keep-rolling:hover:not(:disabled) {
-  color: var(--world-text);
-  border-color: #a17e99;
+  color: #fff;
+  border-color: #b48dc0;
+  background: #281b37cc;
 }
 .world-keep-rolling.is-active {
   background: #2b1a3a;
   border-color: #8b5cf6;
-  color: #c4b5fd;
+  color: #e9d5ff;
+  box-shadow: 0 0 18px #8b5cf62e;
 }
 .world-keep-rolling.is-active:hover:not(:disabled) {
   background: #3d2652;
   border-color: #a78bfa;
-  color: #ddd6fe;
+  color: #f3e8ff;
+}
+.world-keep-rolling-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  line-height: 1.25;
+}
+.world-keep-rolling-text > strong {
+  font-size: 12px;
+  font-weight: 600;
 }
 .world-keep-rolling-cost {
   display: block;
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--world-muted);
-  margin-top: 3px;
+  margin-top: 2px;
 }
 .world-keep-rolling.is-active .world-keep-rolling-cost {
-  color: #a78bfa;
+  color: #c4b5fd;
 }
 .world-keep-rolling:not(:disabled):hover .world-keep-rolling-cost {
-  color: var(--world-text);
+  color: #d8c7e4;
+}
+.world-keep-rolling-surprise {
+  margin: 0;
+  font-size: 11px;
+  font-style: italic;
+  color: #c9add8;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+@media (max-width: 760px) {
+  .world-reveal-timer:has(+ .world-keep-rolling-wrap) {
+    margin-bottom: 13px;
+  }
+  .world-reveal-timer + .world-keep-rolling-wrap {
+    padding: 0 16px 18px;
+  }
 }

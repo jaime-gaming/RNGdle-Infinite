@@ -35,6 +35,7 @@ import { rngweenCalendar } from "./rngween.js";
 import { runDrawPicks, runDrawPlan } from "./draw-plan.js";
 import { reaperAct } from "./rngween-finale.js";
 import { clearAutoRoll } from "./auto-roll.js";
+import { clearWorldKeepRolling } from "./use-rngween-world.js";
 import { flywheelForDraw } from "./flywheel.js";
 import {
   armedSkills,
@@ -392,6 +393,7 @@ export function useProgress() {
             clearPresence(previous.profile.id);
           } catch {}
           clearAutoRoll(previous.profile.id);
+          clearWorldKeepRolling(previous.profile.id);
           reset();
           return { ok: true };
         }

@@ -69,7 +69,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     new URL("/version.json", page.url()).toString(),
   );
   expect(liveVersion.ok()).toBeTruthy();
-  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinitev0.5.1fix5");
+  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinitev0.5.1fix6");
   expect(await liveVersion.json()).toMatchObject({
     buildId,
     internalVersion: APP_INTERNAL_VERSION,
