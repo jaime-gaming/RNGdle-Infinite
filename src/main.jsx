@@ -722,6 +722,28 @@ function App() {
     session,
     seasonalNow,
     dispatch,
+    {
+      onHexboundFound: () => {
+        if (page !== "rngween-world")
+          notify({
+            kind: "milestone",
+            title: "Hexbound unlocked",
+            text: "6666 turned up in the Valley. Hexbound is yours forever.",
+            action: {
+              label: "Open World",
+              onSelect: () => navigate("rngween-world"),
+            },
+          });
+      },
+      onChainStopped: (message) => {
+        if (page !== "rngween-world" && message)
+          notify({
+            kind: "warning",
+            title: "Valley chain stopped",
+            text: message,
+          });
+      },
+    },
   );
   const pendingMissionCoins = (session.tasks.rngween?.earned ?? []).some(
     (id) => !(session.rngweenLimited?.rewardedMissions ?? []).includes(id),

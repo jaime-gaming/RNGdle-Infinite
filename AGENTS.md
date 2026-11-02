@@ -546,12 +546,12 @@ skinEarned, retired: true}`) and `parseRngween` able to drop the
 ### Internal version (Reload until updated)
 
 `src/app-update.js` defines `APP_INTERNAL_VERSION`, for example
-`RNGdle-Infinitev0.5.1fix5`. It is only used by the "Reload until updated"
+`RNGdle-Infinitev0.5.1fix6`. It is only used by the "Reload until updated"
 flow, to scope the update intent to the current internal build. It is never
 added to the changelog or shown as a release. Bump the fix number for
 bug-patch rebuilds of the same public version (`fix0 → fix1 → fix2 …`)
 instead of moving the public `0.x(.x)` version. Current:
-`RNGdle-Infinitev0.5.1fix5`.
+`RNGdle-Infinitev0.5.1fix6`.
 
 What the flow is allowed to touch, because the save outranks everything else:
 

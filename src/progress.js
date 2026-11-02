@@ -1492,8 +1492,10 @@ function applyEvent(state, action) {
     const max = zone.max;
     if (zone.id === "valley") requireRngweenValley(state, at);
     else requireOpenWorldZone(limited, zone.id);
-    // Keep rolling spends a small fixed block of World points per chained roll.
-    if (action.type === "rngween-world-keep-rolling") {
+    if (
+      action.type === "rngween-world-keep-rolling" &&
+      KEEP_ROLLING_COST.points > 0
+    ) {
       const pointsAvailable = worldPointsAvailable(limited);
       if (pointsAvailable < KEEP_ROLLING_COST.points) {
         throw new Error(
@@ -1541,9 +1543,10 @@ function applyEvent(state, action) {
       ...currentLimited,
       world: { ...world, nextSerial: world.nextSerial + 1, pending },
     };
-    // Keep rolling spends World points at commit time, so the cost is charged
-    // before the reveal settles and can be refunded on a failed reveal.
-    if (action.type === "rngween-world-keep-rolling") {
+    if (
+      action.type === "rngween-world-keep-rolling" &&
+      KEEP_ROLLING_COST.points > 0
+    ) {
       nextLimited.world = {
         ...nextLimited.world,
         spent: (nextLimited.world.spent ?? 0) + KEEP_ROLLING_COST.points,

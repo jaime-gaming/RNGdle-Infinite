@@ -258,10 +258,10 @@ export const WORLD_POINT_EXCHANGE = {
   ep: 10000,
 };
 
-// Keep rolling in the Valley spends a small fixed block of World points per
-// chained roll, so the feature is cheap but never free and never farmable.
+// Final-days surprise before RNGween closes: Keep rolling in the Valley spends
+// no World points and keeps running in the background.
 export const KEEP_ROLLING_COST = {
-  points: 50,
+  points: 0,
 };
 
 export function requireWorldZone(zoneId) {

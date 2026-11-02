@@ -38,8 +38,11 @@ import {
   WORLD_FRAGMENT_ZONES,
   worldFragmentCount,
   worldPointsAvailable,
-  KEEP_ROLLING_COST,
 } from "../rngween-world-zones.js";
+import {
+  readWorldKeepRolling,
+  useWorldKeepRolling,
+} from "../use-rngween-world.js";
 import {
   WORLD_MINI_RULES,
   emptyWorldMini,
@@ -152,7 +155,14 @@ export default function RngweenWorld({
   const { settings } = useSettings();
   useSeasonFavicon(rngweenCalendar(now).decorated && settings.halloweenMode);
   const [selected, setSelected] = useState(
-    () => world.pending?.zone ?? world.last?.zone ?? "pumpkin-patch",
+    () =>
+      world.pending?.zone ??
+      (readWorldKeepRolling(progress.profile?.id) &&
+      rngweenValleyUnlocked(limited)
+        ? "valley"
+        : null) ??
+      world.last?.zone ??
+      "pumpkin-patch",
   );
   const [shopOpen, setShopOpen] = useState(false);
   const [reaperOpen, setReaperOpen] = useState(false);
@@ -180,8 +190,9 @@ export default function RngweenWorld({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [keepRolling, setKeepRolling] = useState(false);
-  const keepRollingInterval = useRef(null);
+  const [keepRolling, setKeepRolling] = useWorldKeepRolling(
+    progress.profile?.id,
+  );
   const sending = useRef(false);
   const shopDialog = useModalDialog(shopOpen);
   const pending = world?.pending ?? null;
@@ -234,105 +245,39 @@ export default function RngweenWorld({
     },
     [onAction],
   );
-  // Track whether the player left the Valley while keep rolling was on.
-  // If they exit and come back, we do not auto-restart the chain.
-  const valleyExited = useRef(false);
-  // Keep rolling: a toggle that chains Valley rolls while the tab stays open.
-  // It stops on 6666, on tab hide, on zone change, or when the player turns it off.
-  // Each chained roll spends a small fixed block of World points.
-  useEffect(() => {
-    if (!keepRolling || zone.id !== "valley" || !key || !progress.profile) {
-      if (keepRollingInterval.current) {
-        clearTimeout(keepRollingInterval.current);
-        keepRollingInterval.current = null;
-      }
-      // Remember if the player left the Valley while keep rolling was active,
-      // so returning does not auto-restart the chain.
-      if (zone.id !== "valley" && keepRolling) {
-        valleyExited.current = true;
-        setKeepRolling(false);
-      }
-      return;
-    }
-    // If the player exited the Valley while keep rolling was on, do not auto-restart.
-    // They can manually toggle it again after returning.
-    if (valleyExited.current) {
-      valleyExited.current = false;
-      setKeepRolling(false);
-      return;
-    }
-    if (pending) return; // wait for the current reveal to settle
-
-    function scheduleNext() {
-      // Re-check at execution time: the toggle may have been turned off
-      // between scheduling and execution, or the zone may have changed.
-      if (!keepRolling || zone.id !== "valley" || !key) {
-        keepRollingInterval.current = null;
-        return;
-      }
-      if (pending) {
-        // Still revealing; reschedule after a short wait.
-        keepRollingInterval.current = setTimeout(scheduleNext, 50);
-        return;
-      }
-      keepRollingInterval.current = setTimeout(() => {
-        // Final check before starting the roll.
-        if (!keepRolling || zone.id !== "valley" || !key || pending) {
-          keepRollingInterval.current = null;
-          return;
-        }
-        run(
-          {
-            type: "rngween-world-keep-rolling",
-            zone: "valley",
-          },
-          undefined,
-        ).catch((error) => {
-          if (
-            error?.message?.includes("World points") ||
-            error?.message?.includes("not enough")
-          ) {
-            setKeepRolling(false);
-            notify({
-              kind: "error",
-              text: "Not enough World points to keep rolling. Buy reveal upgrades or trade points for EP.",
-            });
-          }
-        });
-      }, 50);
-    }
-
-    scheduleNext();
-    return () => {
-      if (keepRollingInterval.current) {
-        clearTimeout(keepRollingInterval.current);
-        keepRollingInterval.current = null;
-      }
-    };
-  }, [keepRolling, zone.id, key, progress.profile, pending, run]);
-
-  // Stop the chain when 6666 appears or the tab goes hidden.
-  useEffect(() => {
-    if (!keepRolling) return;
-    function onVisibilityChange() {
-      if (document.visibilityState === "hidden") {
-        setKeepRolling(false);
-      }
-    }
-    // Stop if 6666 just appeared.
-    if (last?.zone === "valley" && last.number === WORLD_VALLEY_TARGET) {
-      setKeepRolling(false);
-      return;
-    }
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, [keepRolling, last]);
 
   const fragments = worldFragmentCount(world);
   const fragmentTotal = WORLD_FRAGMENT_ZONES.length;
   const exhausted = drawn.length >= RNGWEEN_WORLD_MAX;
+  const valleyKeepRolling =
+    zone.id === "valley" && key && !exhausted ? (
+      <div
+        className="world-keep-rolling-wrap"
+        data-world-keep-rolling={keepRolling ? "active" : "idle"}
+      >
+        <button
+          className={`world-keep-rolling${keepRolling ? " is-active" : ""}`}
+          type="button"
+          aria-pressed={keepRolling}
+          onClick={() => setKeepRolling(!keepRolling)}
+          disabled={!keepRolling && (busy || !live || !progress.profile)}
+          title="Chains Valley rolls for free, even in the background or while you play the rest of the game. Stops on 6666 or when you turn it off."
+        >
+          <Flame size={16} />
+          <span className="world-keep-rolling-text">
+            <strong>{keepRolling ? "Stop chain" : "Keep rolling"}</strong>
+            <small className="world-keep-rolling-cost">
+              {keepRolling
+                ? "Running in background · free"
+                : "Free · runs in background"}
+            </small>
+          </span>
+        </button>
+        <p className="world-keep-rolling-surprise">
+          a last surprise before the event ends...
+        </p>
+      </div>
+    ) : null;
   const duration = pending
     ? pending.revealsAt - pending.startedAt
     : worldRevealMS(limited);
@@ -560,6 +505,7 @@ export default function RngweenWorld({
               aria-pressed={active}
               disabled={!!pending || busy}
               onClick={() => {
+                if (item.id !== "valley" && keepRolling) setKeepRolling(false);
                 setSelected(item.id);
                 setError("");
                 setNotice("");
@@ -733,20 +679,25 @@ export default function RngweenWorld({
           />
         )}
         {pending ? (
-          <div className="world-reveal-timer">
-            <div>
-              <Clock3 size={14} />
-              <span>{remaining > 0 ? "Revealing…" : "Saving the result…"}</span>
-              <strong aria-hidden="true">
-                {(remaining / 1000).toFixed(1)}s
-              </strong>
+          <>
+            <div className="world-reveal-timer">
+              <div>
+                <Clock3 size={14} />
+                <span>
+                  {remaining > 0 ? "Revealing…" : "Saving the result…"}
+                </span>
+                <strong aria-hidden="true">
+                  {(remaining / 1000).toFixed(1)}s
+                </strong>
+              </div>
+              <progress
+                value={elapsed}
+                max={duration}
+                aria-label="World reveal progress"
+              />
             </div>
-            <progress
-              value={elapsed}
-              max={duration}
-              aria-label="World reveal progress"
-            />
-          </div>
+            {valleyKeepRolling}
+          </>
         ) : (
           <div className="world-roll-controls">
             {zone.id !== "valley" && !worldZoneOpen(limited, zone.id) ? (
@@ -801,6 +752,7 @@ export default function RngweenWorld({
                 className="world-roll-button"
                 disabled={
                   busy ||
+                  keepRolling ||
                   !live ||
                   !progress.profile ||
                   (zone.id === "valley" && exhausted)
@@ -823,30 +775,7 @@ export default function RngweenWorld({
                 <span>{duration / 1000}s reveal</span>
               </button>
             )}
-            {zone.id === "valley" && key && !exhausted && !pending && (
-              <button
-                className={`world-keep-rolling${keepRolling ? " is-active" : ""}`}
-                type="button"
-                onClick={() => {
-                  if (keepRolling) {
-                    setKeepRolling(false);
-                  } else {
-                    valleyExited.current = false;
-                    setKeepRolling(true);
-                  }
-                }}
-                disabled={busy || !live || !progress.profile}
-                title="Chain Valley rolls while this tab stays open. Costs 50 World points per roll. Stops on 6666, zone change, or when you close this page."
-              >
-                <Flame size={16} />
-                {keepRolling ? "Stop chain" : "Keep rolling"}
-                <small className="world-keep-rolling-cost">
-                  {worldPointsAvailable(limited) >= KEEP_ROLLING_COST.points
-                    ? `${KEEP_ROLLING_COST.points} pts/roll · ${worldPointsAvailable(limited)} available`
-                    : `Need ${KEEP_ROLLING_COST.points} pts (have ${worldPointsAvailable(limited)})`}
-                </small>
-              </button>
-            )}
+            {valleyKeepRolling}
             <small>
               {zone.id !== "valley"
                 ? `1–${zone.max} · repeats allowed · free rolls`
