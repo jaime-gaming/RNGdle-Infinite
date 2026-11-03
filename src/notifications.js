@@ -2,10 +2,10 @@
 // or change a cooldown deadline; they announce a ready roll or a chosen rank.
 import { NOTIFICATION_RANKS } from "./settings.js";
 
-export const NOTIFICATION_TAG = "rngdle-infinite-ready";
+const NOTIFICATION_TAG = "rngdle-infinite-ready";
 export const RANK_NOTIFICATION_TAG = "rngdle-infinite-rank";
 
-export function notificationsSupported() {
+function notificationsSupported() {
   return typeof Notification !== "undefined";
 }
 

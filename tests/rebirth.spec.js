@@ -872,7 +872,7 @@ test("a failed rebirth save leaves all progress intact and allows retry", async 
     .getByRole("button", { name: "Confirm rebirth", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText(
-    "progress has not been reset",
+    "Your progress was not reset.",
   );
   expect(await saved(page)).toEqual(before);
   await page.evaluate(() => {
@@ -1135,7 +1135,9 @@ test("registered rebirth fails closed without Web Locks", async ({ page }) => {
   await page
     .getByRole("button", { name: "Confirm rebirth", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("Web Locks");
+  await expect(page.getByRole("dialog")).toContainText(
+    "Update it or try another browser.",
+  );
   expect((await saved(page)).rebirths).toBe(0);
   expect((await saved(page)).discovered).toHaveLength(235);
 });
@@ -1159,7 +1161,7 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
     .getByRole("button", { name: "Confirm rebirth", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText(
-    "progress has not been reset",
+    "Your progress was not reset.",
   );
   // The ladder still points at rung one: nothing was reset in memory.
   await expect(

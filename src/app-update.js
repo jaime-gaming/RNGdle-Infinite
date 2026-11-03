@@ -3,84 +3,23 @@ import { PROGRESS_KEY } from "./progress.js";
 export const APP_UPDATE_STORAGE_KEY = "rng-infinite-app-update-v1";
 export const APP_UPDATE_SAVE_KEY = "rng-infinite-app-update-save-v1";
 export const APP_UPDATE_QUERY = "__rngdle_refresh";
-export const APP_BUILD_META = "rngdle-build-id";
-export const APP_INTERNAL_META = "rngdle-internal-version";
-export const APP_UPDATE_POLL_MS = 2500;
+const APP_BUILD_META = "rngdle-build-id";
+const APP_INTERNAL_META = "rngdle-internal-version";
+const APP_UPDATE_POLL_MS = 2500;
 // A browser that keeps handing back the old files cannot be fixed by reloading
 // again; give up after a handful of tries and say so instead of looping.
 export const APP_UPDATE_MAX_RELOADS = 6;
 // A cache or service-worker call that never answers must not stop the refresh.
-export const APP_UPDATE_CACHE_TIMEOUT_MS = 1500;
+const APP_UPDATE_CACHE_TIMEOUT_MS = 1500;
 // The save copy only belongs to the reload that made it.
-export const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
+const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 
-// Internal label for bug-patch rebuilds of the same public version
-// (RNGdle-Infinitev0.5.1fix0, fix1, fix2 …). Bump the fix number for a patch
-// instead of moving the public 0.x(.x) version. Only the "Reload until
-// updated" flow uses it, to scope the update intent to the current internal
-// build. It is never added to the changelog or shown as a release.
-// Current: RNGdle-Infinitev0.5.1fix6 (previous was fix5).
-export const APP_INTERNAL_VERSION = "RNGdle-Infinitev0.5.1fix6";
-
-// --- Version parsing for "Reload until updated" next-version detection ---
-// Handles: 0.5.1, 0.5.1fix3, RNGdle-Infinitev0.5.1fix3, v0.5.1, 0.6, 1.0.0 etc.
-// The reload flow must detect ANY number bump: fix+1, 0.x.+1 (patch), 0.+1 (minor/major).
-function parseInternalVersion(raw) {
-  if (typeof raw !== "string" || !raw.trim()) return null;
-  let s = raw.trim();
-  // Strip prefix up to last 'v' (e.g. RNGdle-Infinitev0.5.1fix3 -> 0.5.1fix3)
-  const vIndex = s.lastIndexOf("v");
-  if (vIndex >= 0) s = s.slice(vIndex + 1);
-  // Separate fix suffix: e.g. 0.5.1fix3 -> base 0.5.1, fix 3
-  let fix = 0;
-  const fixMatch = s.match(/^(.*)fix(\d+)$/i);
-  if (fixMatch) {
-    s = fixMatch[1];
-    fix = Math.max(0, parseInt(fixMatch[2], 10) || 0);
-  }
-  // Remove trailing non-numeric junk (like -beta) for base comparison
-  s = s.split("-")[0].split("+")[0];
-  const parts = s
-    .split(".")
-    .map((p) => parseInt(p, 10))
-    .filter((n) => Number.isFinite(n));
-  if (!parts.length) return null;
-  return { parts, fix, raw: raw.trim() };
-}
-
-function compareParsed(a, b) {
-  const maxLen = Math.max(a.parts.length, b.parts.length);
-  for (let i = 0; i < maxLen; i++) {
-    const av = a.parts[i] ?? 0;
-    const bv = b.parts[i] ?? 0;
-    if (av < bv) return -1;
-    if (av > bv) return 1;
-  }
-  if (a.fix < b.fix) return -1;
-  if (a.fix > b.fix) return 1;
-  return 0;
-}
-
-export function compareVersions(aRaw, bRaw) {
-  const a = parseInternalVersion(aRaw);
-  const b = parseInternalVersion(bRaw);
-  if (!a || !b) {
-    // Fallback to string equality if unparseable
-    if (aRaw === bRaw) return 0;
-    return aRaw < bRaw ? -1 : 1;
-  }
-  return compareParsed(a, b);
-}
-
-export function isNewerVersion(currentRaw, nextRaw) {
-  const cmp = compareVersions(currentRaw, nextRaw);
-  return cmp < 0;
-}
-
-export function isSameOrNewerVersion(currentRaw, nextRaw) {
-  const cmp = compareVersions(currentRaw, nextRaw);
-  return cmp <= 0;
-}
+// Internal label for this bug-patch rebuild. Only the "Reload until updated"
+// flow uses it, to scope the update intent to the current internal build. It
+// is never added to the changelog or shown as a public release. Keep this exact
+// label unchanged until the next session or an explicit user request.
+// Current: RNGdle-Infinite0.5.1fix0.
+export const APP_INTERNAL_VERSION = "RNGdle-Infinite0.5.1fix0";
 
 let pollTimer = null;
 let reloadTimer = null;
@@ -188,7 +127,7 @@ function localStore() {
   }
 }
 
-export function readAppUpdateIntent(storage = sessionStore()) {
+function readAppUpdateIntent(storage = sessionStore()) {
   try {
     const raw = storage?.getItem(APP_UPDATE_STORAGE_KEY);
     if (!raw) return null;
@@ -281,58 +220,13 @@ export function recoverSaveAfterUpdate({
 export function decideUpdateStep({
   currentBuild = "",
   publishedBuild = "",
-  currentVersion = "",
-  publishedVersion = "",
-  currentInternalVersion = "",
-  publishedInternalVersion = "",
   intent = null,
   now = Date.now(),
   pollMs = APP_UPDATE_POLL_MS,
   maxReloads = APP_UPDATE_MAX_RELOADS,
 } = {}) {
-  // Support both old callers (buildId strings) and new object callers
-  // Normalize publishedBuild/currentBuild if they are objects
-  if (typeof currentBuild === "object" && currentBuild !== null) {
-    const obj = currentBuild;
-    currentBuild = obj.buildId ?? currentBuild;
-    currentVersion = obj.version ?? currentVersion;
-    currentInternalVersion = obj.internalVersion ?? currentInternalVersion;
-  }
-  if (typeof publishedBuild === "object" && publishedBuild !== null) {
-    const obj = publishedBuild;
-    publishedBuild = obj.buildId ?? publishedBuild;
-    publishedVersion = obj.version ?? publishedVersion;
-    publishedInternalVersion = obj.internalVersion ?? publishedInternalVersion;
-  }
-
   if (!currentBuild) return { kind: "unreadable", reloads: 0 };
-
-  // Determine if published is actually newer via version comparison
-  // This handles fix+1, 0.x.+1, 0.+1 as requested
-  let versionIsNewer = false;
-  try {
-    if (publishedInternalVersion && currentInternalVersion) {
-      versionIsNewer = isNewerVersion(
-        currentInternalVersion,
-        publishedInternalVersion,
-      );
-    } else if (publishedVersion && currentVersion) {
-      versionIsNewer = isNewerVersion(currentVersion, publishedVersion);
-    }
-  } catch {
-    versionIsNewer = false;
-  }
-
-  const buildIsDifferent =
-    !!publishedBuild && !!currentBuild && publishedBuild !== currentBuild;
-
-  // If neither build nor version indicates newer, we're done
-  // But if versionIsNewer is true, we must reload even if buildId matches (edge case)
-  // If buildIsDifferent is true, also reload (new build)
-  const needsUpdate = buildIsDifferent || versionIsNewer;
-
-  if (!needsUpdate) return { kind: "done", reloads: 0 };
-
+  if (publishedBuild === currentBuild) return { kind: "done", reloads: 0 };
   const reloads = Math.max(0, Math.trunc(Number(intent?.reloads ?? 0)) || 0);
   if (reloads >= maxReloads) return { kind: "stuck", reloads };
   const elapsed = now - Number(intent?.lastReloadAt ?? 0);
@@ -475,7 +369,7 @@ function finishUpdateCheck() {
     active: false,
     completed: true,
     message:
-      "This device has the latest version. Cached files were refreshed; your saved progress, profile and settings were kept.",
+      "This device has the latest version. The game was refreshed; your progress, profile and settings are safe.",
   });
 }
 
@@ -487,7 +381,7 @@ function giveUpUpdateCheck() {
     active: false,
     completed: false,
     message:
-      "This browser keeps handing back an old copy of the game. Your progress is safe. Close the tab completely, open the game again, then try once more.",
+      "This device keeps opening an older version of the game. Your progress is safe. Close and reopen the game, then try once more.",
   });
 }
 
@@ -542,7 +436,7 @@ async function checkForCurrentBuild() {
         active: true,
         completed: false,
         message:
-          "Clearing this browser's copy of the game, then reloading. Your progress, profile and settings are stored separately and stay exactly as they are.",
+          "Refreshing the game, then reloading. Your progress, profile and settings stay saved.",
       });
       queueReload();
       return;
@@ -553,23 +447,14 @@ async function checkForCurrentBuild() {
       fetchPublishedBuild().catch(() => null),
     ]);
     if (!publishedData) throw new Error("Version check failed");
-    const currentInternal = getAppInternalVersion();
     const publishedBuild = publishedData.buildId;
-    const publishedInternal = publishedData.internalVersion || "";
-    const publishedVersion = publishedData.version || "";
 
     intent = readAppUpdateIntent();
     if (!intent) return;
 
-    // Also handle case where published internal version is newer than current
-    // This covers fix+1, 0.x.+1, 0.+1 as requested
     const step = decideUpdateStep({
       currentBuild,
       publishedBuild,
-      currentVersion: "",
-      publishedVersion,
-      currentInternalVersion: currentInternal,
-      publishedInternalVersion: publishedInternal,
       intent,
       now: Date.now(),
     });
@@ -653,7 +538,7 @@ export function startAppUpdate() {
       active: false,
       completed: false,
       message:
-        "The browser could not keep the update check across a reload. Your progress is safe; allow session storage and try again.",
+        "The game could not check for an update after reloading. Your progress is safe; please try again.",
     });
     return false;
   }
@@ -665,7 +550,7 @@ export function startAppUpdate() {
     active: true,
     completed: false,
     message:
-      "Clearing this browser's copy of the game, then reloading. Your progress, profile and settings are stored separately and stay exactly as they are.",
+      "Refreshing the game, then reloading. Your progress, profile and settings stay saved.",
   });
   return resumeAppUpdate();
 }

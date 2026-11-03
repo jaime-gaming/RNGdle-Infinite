@@ -1,11 +1,12 @@
 import { productById } from "./shop-data.js";
 export function flywheelRequired(owned = []) {
   return owned.reduce(
-    (count, id) => Math.min(count, productById.get(id)?.charges ?? 4),
-    4,
+    (count, id) =>
+      Math.min(count, productById.get(id)?.charges ?? FLYWHEEL_CHARGES),
+    FLYWHEEL_CHARGES,
   );
 }
-export const FLYWHEEL_CHARGES = 4;
+const FLYWHEEL_CHARGES = 4;
 // A committed flag snapshots ownership and the boost. Purchasing mid-reveal
 // never charges old rolls, and offline completions cannot fill the flywheel.
 export function flywheelForDraw(progress) {

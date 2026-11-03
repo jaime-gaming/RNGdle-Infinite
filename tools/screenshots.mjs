@@ -2,7 +2,7 @@
 // running game (no mockups), taken from a seeded local save so the collection,
 // the shop and the profile have something to show.
 //
-//   npm run dev            # or any server on 127.0.0.1:5173
+//   npm run dev:test -- --port 5174 # local-only mode on 127.0.0.1:5174
 //   CHROMIUM_PATH=/path/to/chrome node tools/screenshots.mjs
 //
 // Any Chromium/Chrome binary works; the screenshots land in media/.
@@ -10,10 +10,11 @@ import fs from "node:fs/promises";
 import { chromium } from "@playwright/test";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { AUTO_ROLL_KEY } from "../src/auto-roll.js";
+import { SAVE_HISTORY_KEY, SAVE_VAULT_KEY } from "../src/save-vault.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { PETS } from "../src/pets.js";
 
-const BASE = process.env.SCREENSHOT_BASE ?? "http://127.0.0.1:5173";
+const BASE = process.env.SCREENSHOT_BASE ?? "http://127.0.0.1:5174";
 const OUT = new URL("../media/", import.meta.url);
 const ids = allBadgeMetadata.map((badge) => badge.id);
 const owned = [
@@ -35,7 +36,7 @@ const owned = [
 ];
 
 function seededSave(logo) {
-  const at = Date.UTC(2026, 6, 4, 18, 30, 0);
+  const at = Date.UTC(2026, 10, 3, 18, 30, 0);
   const history = [];
   const numbers = [812044, 40219, 999999, 1337, 656565, 480123, 771912, 200001];
   numbers.forEach((number, index) => {
@@ -111,17 +112,59 @@ function seededSave(logo) {
 
 async function seed(page, logo) {
   const save = seededSave(logo);
+  const earlierSave = {
+    ...save,
+    balance: 1962500,
+    totalEarned: 7810000,
+    history: save.history.slice(0, 6),
+  };
+  const savedCopies = JSON.stringify({
+    version: 1,
+    copies: [
+      {
+        id: "screenshot-daily-copy",
+        at: Date.UTC(2026, 10, 3, 16, 30, 0),
+        profileId: save.profile.id,
+        owner: null,
+        reason: "Earlier saved progress",
+        source: "daily",
+        raw: JSON.stringify(earlierSave),
+      },
+    ],
+  });
   await page.addInitScript(
-    ([key, value, autoRollPrefix]) => {
+    ([
+      key,
+      value,
+      autoRollPrefix,
+      historyKey,
+      historyValue,
+      vaultKey,
+      vaultValue,
+    ]) => {
       localStorage.setItem(key, value);
+      localStorage.setItem(historyKey, historyValue);
+      localStorage.setItem(vaultKey, vaultValue);
       // Auto-Roll is deliberately left off and its switch is hidden, so the
-      // pictures show the roll itself rather than a settings card.
+      // pictures show the game rather than a settings card.
       localStorage.removeItem(
         `${autoRollPrefix}:${JSON.parse(value).profile.id}`,
       );
       window.__hideAutoRoll = true;
     },
-    [PROGRESS_KEY, JSON.stringify(save), AUTO_ROLL_KEY],
+    [
+      PROGRESS_KEY,
+      JSON.stringify(save),
+      AUTO_ROLL_KEY,
+      SAVE_HISTORY_KEY,
+      savedCopies,
+      SAVE_VAULT_KEY,
+      JSON.stringify({
+        at: save.profile.createdAt,
+        raw: JSON.stringify(save),
+        owner: null,
+      }),
+    ],
   );
 }
 
@@ -260,25 +303,20 @@ try {
   await shot(page, "profile", { fullPage: false });
   await page.setViewportSize({ width: 1280, height: 900 });
 
-  // 7. The changelog.
+  // 7. The changelog and its November 3 release date.
   await page.goto(`${BASE}/changelog`);
   await page.waitForTimeout(700);
   await shot(page, "changelog");
 
-  // 8. The device link page: a live link waiting for its second device, the
-  //    technical readout, the hand-link fallback and the relay field.
-  await page.setViewportSize({ width: 1280, height: 1500 });
-  await page.goto(`${BASE}/settings/link`);
-  const linkPage = page.locator(".device-link");
-  await linkPage.waitFor({ state: "visible" });
-  await page.getByTestId("sync-create").click();
-  await page.getByTestId("sync-link").waitFor({ state: "visible" });
-  await page.getByTestId("link-details").waitFor({ state: "visible" });
-  await page.locator(".sync-hand summary").click();
-  await page.setViewportSize({ width: 1280, height: 900 });
-  // Let the toast retire so the page is the only thing in the frame.
-  await page.waitForTimeout(4200);
-  await shot(page, "devices", { fullPage: true });
+  // 8. Save recovery is a separate, bookmarkable page in Settings.
+  await page.setViewportSize({ width: 1280, height: 1050 });
+  await page.goto(`${BASE}/settings/save-recovery`);
+  await page.waitForSelector('[data-testid="settings-recovery"]');
+  await page.getByTestId("recovery-copy-history:screenshot-daily-copy").click();
+  await page.waitForSelector('[data-testid="settings-recovery-details"]');
+  await page.waitForTimeout(600);
+  await shot(page, "save-recovery");
+
   await page.close();
 } finally {
   await browser.close();

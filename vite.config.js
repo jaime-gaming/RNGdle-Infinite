@@ -2,30 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
-import { createSyncRelay } from "./tools/sync-relay.mjs";
-import { sandboxClock } from "./tools/sandbox-clock.mjs";
-import { sandboxProgress } from "./tools/sandbox-progress.mjs";
-
-// Real routes (/shop, /badges…) are client-side, and static hosts do not rewrite
-// unknown paths. GitHub Pages serves 404.html for them, so ship the app there
-// too: a direct link or reload lands on the right page instead of an error.
-function spaFallback() {
-  return {
-    name: "spa-404-fallback",
-    closeBundle() {
-      const outDir = this.environment?.config?.build?.outDir ?? "dist";
-      const index = path.resolve(outDir, "index.html");
-      if (fs.existsSync(index)) {
-        fs.copyFileSync(index, path.resolve(outDir, "404.html"));
-        // A real directory entry gives World a 200 response on GitHub Pages,
-        // not just the global 404 SPA fallback. Built asset URLs share the base.
-        const worldDir = path.resolve(outDir, "rngween-world");
-        fs.mkdirSync(worldDir, { recursive: true });
-        fs.copyFileSync(index, path.join(worldDir, "index.html"));
-      }
-    },
-  };
-}
 
 // Give each built app a unique identity and publish the same identity in both
 // index.html and version.json. The Settings update loop compares these values,
@@ -34,7 +10,7 @@ function appBuildVersion() {
   const { version } = JSON.parse(
     fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
   );
-  const internalVersion = "RNGdle-Infinitev0.5.1fix6";
+  const internalVersion = "RNGdle-Infinite0.5.1fix0";
   const buildId = `${version}-${Date.now().toString(36)}-${process.pid.toString(36)}`;
   const payload = JSON.stringify({ version, buildId, internalVersion });
   let outDir = path.resolve("dist");
@@ -74,46 +50,7 @@ function appBuildVersion() {
   };
 }
 
-// Live device linking rides the dev server itself: /__sync/* is handled by a
-// memory-only relay, so two devices (or two browsers) share one account with
-// no database and no second process. A dev relay that forgets rooms on restart
-// is the right default — it leaves nothing behind on disk, and a durable relay
-// is what `npm run relay` stands up for production.
-function deviceSync() {
-  let relay = null;
-  const attach = (server) => {
-    relay = createSyncRelay({ storeDir: null });
-    server.middlewares.use((req, res, next) => relay.handle(req, res, next));
-  };
-  return {
-    name: "device-sync-relay",
-    configureServer: attach,
-    configurePreviewServer: attach,
-  };
-}
-
-export default defineConfig(({ mode, command }) => ({
-  // Each Vite process needs its own optimizer output: concurrent sandboxes
-  // otherwise overwrite the same React chunks with different version hashes,
-  // leaving the browser with two React instances and invalid hook calls.
-  // Cache under node_modules so it remains disposable and out of source control.
-  cacheDir:
-    command === "serve"
-      ? path.resolve("node_modules/.vite-servers", String(process.pid))
-      : undefined,
-  resolve: { dedupe: ["react", "react-dom"] },
-  plugins: [
-    sandboxClock(
-      process.env.RNGDLE_SANDBOX_DATE ??
-        (["rngween-preview", "rngween-unlocked"].includes(mode)
-          ? "2026-10-26T12:00:00Z"
-          : undefined),
-    ),
-    sandboxProgress(mode === "rngween-unlocked"),
-    react(),
-    appBuildVersion(),
-    spaFallback(),
-    deviceSync(),
-  ],
+export default defineConfig({
+  plugins: [react(), appBuildVersion()],
   server: { host: "0.0.0.0", allowedHosts: [".e2b.app"] },
-}));
+});

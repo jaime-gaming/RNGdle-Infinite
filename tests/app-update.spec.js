@@ -1,13 +1,14 @@
 import { test, expect } from "@playwright/test";
 import {
+  APP_INTERNAL_VERSION,
   getAppBuildId,
+  getAppInternalVersion,
   makeVersionUrl,
   fetchPublishedBuild,
   decideUpdateStep,
   snapshotSaveForUpdate,
   recoverSaveAfterUpdate,
   clearGameCaches,
-  APP_INTERNAL_VERSION,
   APP_UPDATE_STORAGE_KEY,
   APP_UPDATE_SAVE_KEY,
   APP_UPDATE_QUERY,
@@ -23,31 +24,41 @@ test("build identity is read from the page and version checks use the app base p
     }),
   ).toBe("release-123");
   expect(
+    getAppInternalVersion({
+      querySelector: () => ({ content: APP_INTERNAL_VERSION }),
+    }),
+  ).toBe("RNGdle-Infinite0.5.1fix0");
+  expect(
     makeVersionUrl({
-      base: "/RNGdle-Infinite/",
+      base: "/preview/",
       origin: "https://game.example",
       now: 17,
     }),
-  ).toBe("https://game.example/RNGdle-Infinite/version.json?_=17");
+  ).toBe("https://game.example/preview/version.json?_=17");
 
   let request;
-  const buildId = await fetchPublishedBuild({
-    base: "/RNGdle-Infinite/",
+  const published = await fetchPublishedBuild({
+    base: "/preview/",
     origin: "https://game.example",
     now: 23,
     fetcher: async (url, options) => {
       request = { url: String(url), options };
-      return { ok: true, json: async () => ({ buildId: "release-456" }) };
+      return {
+        ok: true,
+        json: async () => ({
+          version: "0.5.2",
+          buildId: "release-456",
+          internalVersion: APP_INTERNAL_VERSION,
+        }),
+      };
     },
   });
-  expect(buildId).toEqual({
+  expect(published).toEqual({
+    version: "0.5.2",
     buildId: "release-456",
-    version: "",
-    internalVersion: "",
+    internalVersion: APP_INTERNAL_VERSION,
   });
-  expect(request.url).toBe(
-    "https://game.example/RNGdle-Infinite/version.json?_=23",
-  );
+  expect(request.url).toBe("https://game.example/preview/version.json?_=23");
   expect(request.options).toMatchObject({ cache: "no-store" });
 });
 
@@ -69,7 +80,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     new URL("/version.json", page.url()).toString(),
   );
   expect(liveVersion.ok()).toBeTruthy();
-  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinitev0.5.1fix6");
+  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinite0.5.1fix0");
   expect(await liveVersion.json()).toMatchObject({
     buildId,
     internalVersion: APP_INTERNAL_VERSION,
@@ -92,9 +103,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     "latest version",
     { timeout: 10000 },
   );
-  await expect(page.getByTestId("settings-update")).toHaveText(
-    "Reload until updated",
-  );
+  await expect(page.getByTestId("settings-update")).toHaveText("Refresh game");
 
   const saved = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)),

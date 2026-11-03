@@ -1,5 +1,5 @@
-// KEEP after Nov 4, 2026: the four event auras and Hexbound stay owned forever;
-// this art is permanent. Only the event that handed them out goes away.
+// Retired RNGween cosmetics remain wearable when already owned; only the
+// seasonal gameplay and its interface are removed.
 import React from "react";
 import {
   BatMark,

@@ -1,6 +1,7 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
 import { formatPercentile } from "./probability.js";
-export { formatPercentile } from "./probability.js";
+import { gameUrlForLocation } from "./site-links.js";
+export { GAME_URL, gameUrlForLocation } from "./site-links.js";
 export const badgeMetadata = new Map(metadata.map((b) => [b.id, b]));
 
 export function groupResultBadges(badges) {
@@ -42,7 +43,6 @@ export function formatEPCompact(value) {
     }
   return formatEP(rounded);
 }
-export const GAME_URL = "https://jaime-gaming.github.io/RNGdle-Infinite";
 // One palette for every shared roll, so a result shared live and the same roll
 // shared later from History read identically.
 const TIER_SQUARES = {
@@ -72,7 +72,7 @@ function shareLines(number, tier, badges, ep, extra = "") {
     "",
     `${formatEP(ep)} EP`,
     "",
-    GAME_URL,
+    gameUrlForLocation(),
   ].join("\n");
 }
 

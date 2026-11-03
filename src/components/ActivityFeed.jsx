@@ -1,6 +1,5 @@
-// KEEP after Nov 4, 2026: `rngween-*` history rows persist in saves after the
-// event, so their icons and labels stay. Only remove them if history parsing
-// drops those types too.
+// Legacy `rngween-*` history rows remain in saves, so keep their labels and
+// icons aligned with the history parser.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -73,6 +72,7 @@ function BadgeList({ ids, openBadge }) {
 }
 export default function ActivityFeed({
   progress,
+  cloudUser = false,
   navigate,
   openSignup,
   openBadge,
@@ -143,7 +143,12 @@ export default function ActivityFeed({
                 "rngween-farewell",
               ].includes(e.type)) ||
             (filter === "Tasks" &&
-              ["task", "rngween-mission", "rngween-hourly"].includes(e.type)),
+              [
+                "task",
+                "rngween-mission",
+                "rngween-hourly",
+                "rngween-finale",
+              ].includes(e.type)),
         )
         .filter(
           (e) =>
@@ -172,7 +177,7 @@ export default function ActivityFeed({
     } catch {
       notify?.({
         kind: "error",
-        text: "Clipboard isn’t available. Try copying from a secure browser window.",
+        text: "The result could not be copied. Please try again.",
       });
     }
   }
@@ -206,22 +211,22 @@ export default function ActivityFeed({
         <div>
           <h1>Your activity</h1>
           <p>
-            Every completed roll, new discovery, companion, and shop
-            transaction.
+            Every completed roll, new discovery, companion, and shop purchase.
           </p>
         </div>
       </div>
-      {!progress.profile && (
-        <div className="guest-save-notice">
-          <p>
-            Guest play is not saved. This feed disappears when you leave, and
-            signing up starts a fresh account rather than keeping it.
-          </p>
-          <button className="secondary-button" onClick={openSignup}>
-            Sign up to save
-          </button>
-        </div>
-      )}
+      {!cloudUser &&
+        !progress.profile &&
+        (progress.history?.length ?? 0) > 0 && (
+          <div className="guest-save-notice">
+            <p>
+              Guest activity is temporary. Name a profile to keep this session.
+            </p>
+            <button className="secondary-button" onClick={openSignup}>
+              Name profile
+            </button>
+          </div>
+        )}
       <div className="activity-summary">
         <span>
           <Coins size={16} /> <strong>{formatEP(progress.balance)} EP</strong>{" "}
@@ -540,9 +545,12 @@ export default function ActivityFeed({
                   ) : event.type === "ultra-rebirth" ||
                     event.type === "rollback" ? (
                     <InfinityIcon size={19} />
-                  ) : ["task", "rngween-mission", "rngween-hourly"].includes(
-                      event.type,
-                    ) ? (
+                  ) : [
+                      "task",
+                      "rngween-mission",
+                      "rngween-hourly",
+                      "rngween-finale",
+                    ].includes(event.type) ? (
                     <ListChecks size={19} />
                   ) : (
                     <Check size={19} />
@@ -587,7 +595,9 @@ export default function ActivityFeed({
                                                   "rngween-hourly",
                                                 ].includes(event.type)
                                               ? `Task claimed · ${event.name}`
-                                              : `Equipped ${event.name}`}
+                                              : event.type === "rngween-finale"
+                                                ? `Event keepsake · ${event.name}`
+                                                : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString("en-US", {
@@ -764,7 +774,12 @@ export default function ActivityFeed({
                     </p>
                   ) : (
                     <p className="activity-transaction">
-                      {event.type === "purchase" ? (
+                      {event.type === "rngween-finale" ? (
+                        <>
+                          <strong>Permanent cosmetic</strong> · Kept in your
+                          legacy collection
+                        </>
+                      ) : event.type === "purchase" ? (
                         <>
                           <strong>−{formatEP(event.ep)} EP</strong> · Kept until
                           your next rebirth
@@ -797,7 +812,7 @@ export default function ActivityFeed({
                       ) : event.type === "rngween-world-purchase" ? (
                         <>
                           <strong>−{count(event.points)} World points</strong> ·{" "}
-                          Expires after November 3 (UTC)
+                          Expires after November 3
                         </>
                       ) : event.type === "rngween-world-exchange" ? (
                         <>
@@ -812,7 +827,7 @@ export default function ActivityFeed({
                           {event.productId === "pumpkin-familiar" ||
                           event.productId === "midnight-harvest" ||
                           event.productId === "rngween-world-key"
-                            ? "Expires after November 3 (UTC)"
+                            ? "Expires after November 3"
                             : "Permanent aura"}
                         </>
                       ) : (

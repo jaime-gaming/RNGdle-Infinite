@@ -1,0 +1,755 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function profileSavePath(uid) {
+      return /databases/$(database)/documents/player_saves/$(uid);
+    }
+
+    function profileSettingsPath(uid) {
+      return /databases/$(database)/documents/cloud_profile_settings/$(uid);
+    }
+
+    function profileNamePath(nameKey) {
+      return /databases/$(database)/documents/cloud_profile_names/$(nameKey);
+    }
+
+    function saveWriteLimitPath(uid) {
+      return /databases/$(database)/documents/cloud_save_write_limits/$(uid);
+    }
+
+    function publicProfileWriteLimitPath(uid) {
+      return /databases/$(database)/documents/cloud_public_profile_write_limits/$(uid);
+    }
+
+    function profileOwnerPath(profileId) {
+      return /databases/$(database)/documents/public_profile_owners/$(profileId);
+    }
+
+    function publicProfilePath(profileId) {
+      return /databases/$(database)/documents/public_profiles/$(profileId);
+    }
+
+    function validCloudNameKey(nameKey) {
+      return nameKey is string
+        && nameKey.size() >= 3
+        && nameKey.size() <= 20
+        && nameKey.matches('^[\\p{Ll}\\p{Lo}\\p{Lm}\\p{N}_-]{3,20}$');
+    }
+
+    function validAvatar(value) {
+      return value == null || (
+        value is string
+        && value.size() <= 240000
+        && value.matches('^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$')
+      );
+    }
+
+    function validCloudProfileSettingsData(data) {
+      return data is map
+        && data.keys().hasAll([
+          'username_key', 'profile_id', 'username_changed_at', 'avatar',
+          'avatar_changed_at', 'updated_at'
+        ])
+        && data.keys().hasOnly([
+          'username_key', 'profile_id', 'username_changed_at', 'avatar',
+          'avatar_changed_at', 'updated_at'
+        ])
+        && (data.username_key == null || validCloudNameKey(data.username_key))
+        && data.profile_id is string
+        && data.profile_id.size() >= 1
+        && data.profile_id.size() <= 128
+        && (data.username_changed_at == null || data.username_changed_at is timestamp)
+        && validAvatar(data.avatar)
+        && (data.avatar_changed_at == null || data.avatar_changed_at is timestamp)
+        && data.updated_at is timestamp;
+    }
+
+    function validProfileNameClaim(nameKey) {
+      let data = request.resource.data;
+      return validCloudNameKey(nameKey)
+        && data is map
+        && data.keys().hasAll(['owner_uid', 'profile_id'])
+        && data.keys().hasOnly(['owner_uid', 'profile_id'])
+        && data.owner_uid == request.auth.uid
+        && data.owner_uid is string
+        && data.owner_uid.size() >= 1
+        && data.owner_uid.size() <= 128
+        && data.profile_id is string
+        && data.profile_id.size() >= 1
+        && data.profile_id.size() <= 128;
+    }
+
+    function profileNameClaimMatchesAfter(uid, nameKey, profileId) {
+      let claimPath = profileNamePath(nameKey);
+      let settingsPath = profileSettingsPath(uid);
+      return validCloudNameKey(nameKey)
+        && existsAfter(claimPath)
+        && getAfter(claimPath).data.owner_uid == uid
+        && getAfter(claimPath).data.profile_id == profileId
+        && existsAfter(settingsPath)
+        && getAfter(settingsPath).data.username_key == nameKey
+        && getAfter(settingsPath).data.profile_id == profileId;
+    }
+
+    function settingsNameClaimMatchesAfter(uid, settings) {
+      return settings.username_key == null
+        || profileNameClaimMatchesAfter(
+          uid,
+          settings.username_key,
+          settings.profile_id
+        );
+    }
+
+    function cloudProfileSettingsReadyAfter(uid, allowUnreserved) {
+      let settingsPath = profileSettingsPath(uid);
+      let settings = getAfter(settingsPath).data;
+      return existsAfter(settingsPath)
+        && validCloudProfileSettingsData(settings)
+        && (settings.username_key is string
+          ? profileNameClaimMatchesAfter(
+              uid,
+              settings.username_key,
+              settings.profile_id
+            )
+          : (allowUnreserved && settings.username_key == null));
+    }
+
+    function saveWriteLimitCurrentAfter(uid) {
+      let path = saveWriteLimitPath(uid);
+      return existsAfter(path)
+        && getAfter(path).data.keys().hasOnly(['last_write_at'])
+        && getAfter(path).data.last_write_at is timestamp
+        && getAfter(path).data.last_write_at == request.time;
+    }
+
+    function saveWriteCooldownPassed(uid) {
+      let path = saveWriteLimitPath(uid);
+      return !exists(path)
+        || (get(path).data.last_write_at is timestamp
+          && request.time >= get(path).data.last_write_at + duration.value(2, 's'));
+    }
+
+    function saveWriteAllowed(uid) {
+      let savePath = profileSavePath(uid);
+      return saveWriteLimitCurrentAfter(uid)
+        && saveWriteCooldownPassed(uid)
+        && existsAfter(savePath)
+        && getAfter(savePath).data.updated_at == request.time;
+    }
+
+    function publicProfileWriteLimitCurrentAfter(uid) {
+      let path = publicProfileWriteLimitPath(uid);
+      return existsAfter(path)
+        && getAfter(path).data.keys().hasAll(['last_write_at'])
+        && getAfter(path).data.keys().hasOnly(['last_write_at'])
+        && getAfter(path).data.last_write_at is timestamp
+        && getAfter(path).data.last_write_at == request.time;
+    }
+
+    function publicProfileWriteCooldownPassed(uid) {
+      let path = publicProfileWriteLimitPath(uid);
+      return !exists(path)
+        || (get(path).data.last_write_at is timestamp
+          && request.time >= get(path).data.last_write_at + duration.value(2, 's'));
+    }
+
+    function publicProfileWriteAllowed(uid) {
+      return publicProfileWriteLimitCurrentAfter(uid)
+        && publicProfileWriteCooldownPassed(uid);
+    }
+
+    function validSaveEnvelope() {
+      let data = request.resource.data;
+      return data is map
+        && data.keys().hasAll([
+          'save_data', 'updated_at', 'public_profile_id', 'public_profile_enabled'
+        ])
+        && data.keys().hasOnly([
+          'save_data', 'updated_at', 'public_profile_id', 'public_profile_enabled'
+        ])
+        && data.save_data is string
+        && data.save_data.size() > 0
+        && data.save_data.size() <= 900000
+        && data.updated_at is timestamp
+        && data.updated_at == request.time
+        && data.public_profile_enabled is bool
+        && (data.public_profile_id == null
+          || validCloudNameKey(data.public_profile_id))
+        && (data.public_profile_enabled == true
+          || data.public_profile_id == null);
+    }
+
+    function validTier(value) {
+      return value in [
+        'trash', 'common', 'uncommon', 'rare', 'epic', 'anomaly', 'mythic', 'godly'
+      ];
+    }
+
+    function validCount(value) {
+      return value is int && value >= 0 && value <= 9007199254740991;
+    }
+
+    function validRollNumber(value) {
+      return value is string && (
+        value.matches('^[0-9]{1,6}$')
+        || value.matches('^0[0-9]{1,6}$')
+        || value == '1000000'
+      );
+    }
+
+    function validBestRoll(roll) {
+      return roll == null || (
+        roll is map
+        && roll.keys().hasAll(['number', 'ep', 'tier', 'at'])
+        && roll.keys().hasOnly(['number', 'ep', 'tier', 'at'])
+        && validRollNumber(roll.number)
+        && validCount(roll.ep)
+        && validTier(roll.tier)
+        && roll.at is string
+        && roll.at.size() >= 20
+        && roll.at.size() <= 40
+      );
+    }
+
+    function validPinnedRoll(roll) {
+      return roll is map
+        && roll.keys().hasAll(['number', 'ep', 'tier'])
+        && roll.keys().hasOnly(['number', 'ep', 'tier'])
+        && validRollNumber(roll.number)
+        && validCount(roll.ep)
+        && validTier(roll.tier);
+    }
+
+    function validPins(pins) {
+      return pins is list
+        && pins.size() <= 10
+        && (pins.size() < 1 || validPinnedRoll(pins[0]))
+        && (pins.size() < 2 || validPinnedRoll(pins[1]))
+        && (pins.size() < 3 || validPinnedRoll(pins[2]))
+        && (pins.size() < 4 || validPinnedRoll(pins[3]))
+        && (pins.size() < 5 || validPinnedRoll(pins[4]))
+        && (pins.size() < 6 || validPinnedRoll(pins[5]))
+        && (pins.size() < 7 || validPinnedRoll(pins[6]))
+        && (pins.size() < 8 || validPinnedRoll(pins[7]))
+        && (pins.size() < 9 || validPinnedRoll(pins[8]))
+        && (pins.size() < 10 || validPinnedRoll(pins[9]));
+    }
+
+    function validOptionalText(value) {
+      return value == null || (value is string && value.size() <= 40);
+    }
+
+    function validProfileRecord(record, username) {
+      return record is map
+        && record.keys().hasAll([
+          'v', 'name', 'at', 'since', 'best', 'rolls', 'earned', 'badges',
+          'badgesTotal', 'rebirths', 'prestiges', 'pins', 'favoriteTier',
+          'aura', 'companion', 'avatar'
+        ])
+        && record.keys().hasOnly([
+          'v', 'name', 'at', 'since', 'best', 'rolls', 'earned', 'badges',
+          'badgesTotal', 'rebirths', 'prestiges', 'pins', 'favoriteTier',
+          'aura', 'companion', 'avatar'
+        ])
+        && record.v is int
+        && record.v == 3
+        && record.name is string
+        && record.name == username
+        && validCloudNameKey(record.name)
+        && record.at is string
+        && record.at.size() >= 20
+        && record.at.size() <= 40
+        && (record.since == null
+          || (record.since is string && record.since.size() <= 40))
+        && validBestRoll(record.best)
+        && validCount(record.rolls)
+        && validCount(record.earned)
+        && validCount(record.badges)
+        && validCount(record.badgesTotal)
+        && validCount(record.rebirths)
+        && validCount(record.prestiges)
+        && validPins(record.pins)
+        && (record.favoriteTier == null || validTier(record.favoriteTier))
+        && validOptionalText(record.aura)
+        && validOptionalText(record.companion)
+        && validAvatar(record.avatar);
+    }
+
+    function validPublicProfile(profileId) {
+      let data = request.resource.data;
+      return validCloudNameKey(profileId)
+        && data is map
+        && data.keys().hasAll(['username', 'username_key', 'record', 'updated_at'])
+        && data.keys().hasOnly(['username', 'username_key', 'record', 'updated_at'])
+        && data.username is string
+        && data.username == profileId
+        && data.username_key == profileId
+        && validProfileRecord(data.record, data.username)
+        && data.updated_at is timestamp
+        && data.updated_at == request.time;
+    }
+
+    function validProfileOwner(profileId) {
+      let data = request.resource.data;
+      return data is map
+        && data.keys().hasAll(['owner_uid', 'profile_id'])
+        && data.keys().hasOnly(['owner_uid', 'profile_id'])
+        && data.owner_uid is string
+        && data.owner_uid.size() >= 1
+        && data.owner_uid.size() <= 128
+        && data.profile_id == profileId;
+    }
+
+    function profileIsPublic(profileId) {
+      let ownerPath = profileOwnerPath(profileId);
+      let profilePath = publicProfilePath(profileId);
+      let claimPath = profileNamePath(profileId);
+      return validCloudNameKey(profileId)
+        && exists(profilePath)
+        && exists(ownerPath)
+        && exists(claimPath)
+        && get(ownerPath).data.owner_uid is string
+        && get(ownerPath).data.profile_id == profileId
+        && get(claimPath).data.owner_uid == get(ownerPath).data.owner_uid
+        && get(claimPath).data.profile_id == get(ownerPath).data.profile_id
+        && exists(profileSettingsPath(get(ownerPath).data.owner_uid))
+        && get(profileSettingsPath(get(ownerPath).data.owner_uid)).data.username_key == profileId
+        && get(profileSettingsPath(get(ownerPath).data.owner_uid)).data.profile_id == get(claimPath).data.profile_id
+        && exists(profileSavePath(get(ownerPath).data.owner_uid))
+        && get(profileSavePath(get(ownerPath).data.owner_uid)).data.get('public_profile_enabled', false) == true
+        && get(profileSavePath(get(ownerPath).data.owner_uid)).data.get('public_profile_id', null) == profileId;
+    }
+
+    function profileIsPublicAfter(profileId, uid) {
+      let ownerPath = profileOwnerPath(profileId);
+      let savePath = profileSavePath(uid);
+      let settingsPath = profileSettingsPath(uid);
+      let claimPath = profileNamePath(profileId);
+      return validCloudNameKey(profileId)
+        && existsAfter(ownerPath)
+        && getAfter(ownerPath).data.owner_uid == uid
+        && getAfter(ownerPath).data.profile_id == profileId
+        && existsAfter(settingsPath)
+        && getAfter(settingsPath).data.username_key == profileId
+        && getAfter(settingsPath).data.profile_id == getAfter(ownerPath).data.profile_id
+        && existsAfter(claimPath)
+        && getAfter(claimPath).data.owner_uid == uid
+        && getAfter(claimPath).data.profile_id == getAfter(settingsPath).data.profile_id
+        && existsAfter(savePath)
+        && getAfter(savePath).data.get('public_profile_enabled', false) == true
+        && getAfter(savePath).data.get('public_profile_id', null) == profileId;
+    }
+
+    function profileSaveClaimsAlias(profileId, uid) {
+      let savePath = profileSavePath(uid);
+      return exists(savePath)
+        && get(savePath).data.get('public_profile_enabled', false) == true
+        && get(savePath).data.get('public_profile_id', null) == profileId;
+    }
+
+    function profileOwnerIsUser(profileId, uid) {
+      let ownerPath = profileOwnerPath(profileId);
+      return exists(ownerPath)
+        && get(ownerPath).data.owner_uid == uid
+        && get(ownerPath).data.profile_id == profileId;
+    }
+
+    function profileNameClaimOwnedByUser(uid, profileId) {
+      let claimPath = profileNamePath(profileId);
+      let settingsPath = profileSettingsPath(uid);
+      return exists(claimPath)
+        && get(claimPath).data.owner_uid == uid
+        && exists(settingsPath)
+        && get(settingsPath).data.username_key == profileId
+        && get(settingsPath).data.profile_id == get(claimPath).data.profile_id;
+    }
+
+    function publicAliasKnownToUser(profileId, uid) {
+      let profilePath = publicProfilePath(profileId);
+      return profileNameClaimOwnedByUser(uid, profileId)
+        || profileSaveClaimsAlias(profileId, uid)
+        || (exists(profilePath)
+          && 'owner_uid' in get(profilePath).data
+          && get(profilePath).data.owner_uid == uid);
+    }
+
+    function legacyPublicProfileIsUser(uid) {
+      return 'owner_uid' in resource.data
+        && resource.data.owner_uid == uid;
+    }
+
+    function publicProfileIsOwnedByUser(profileId, uid) {
+      let ownerPath = profileOwnerPath(profileId);
+      let profilePath = publicProfilePath(profileId);
+      return exists(ownerPath)
+        ? (get(ownerPath).data.owner_uid == uid
+          && get(ownerPath).data.profile_id == profileId)
+        : (legacyPublicProfileIsUser(uid)
+          || (!exists(profilePath)
+            || !('owner_uid' in get(profilePath).data)
+            ? profileSaveClaimsAlias(profileId, uid)
+            : false));
+    }
+
+    function publicProfileCanBeReadByUser(profileId, uid) {
+      let profilePath = publicProfilePath(profileId);
+      return profileIsPublic(profileId)
+        || (request.auth != null
+          && (exists(profilePath)
+            ? publicProfileIsOwnedByUser(profileId, uid)
+            : publicAliasKnownToUser(profileId, uid)));
+    }
+
+    function publicProfileOwnerCanBeReadByUser(profileId, uid) {
+      let ownerPath = profileOwnerPath(profileId);
+      let profilePath = publicProfilePath(profileId);
+      return exists(ownerPath)
+        ? (get(ownerPath).data.owner_uid == uid
+          && get(ownerPath).data.profile_id == profileId)
+        : (profileNameClaimOwnedByUser(uid, profileId)
+          || profileSaveClaimsAlias(profileId, uid)
+          || (exists(profilePath)
+            && 'owner_uid' in get(profilePath).data
+            && get(profilePath).data.owner_uid == uid));
+    }
+
+    // A public summary can be removed only after the private save no longer
+    // advertises its name. This protects profile ownership during unpublish,
+    // rename and account deletion.
+    function profileNoLongerPublicAfter(profileId, uid) {
+      let savePath = profileSavePath(uid);
+      return !existsAfter(savePath)
+        || !('public_profile_enabled' in getAfter(savePath).data)
+        || getAfter(savePath).data.public_profile_enabled != true
+        || !('public_profile_id' in getAfter(savePath).data)
+        || getAfter(savePath).data.public_profile_id != profileId;
+    }
+
+    function profileArtifactsRemovedAfter(profileId) {
+      return !(profileId is string)
+        || profileId.size() == 0
+        || (!existsAfter(publicProfilePath(profileId))
+          && !existsAfter(profileOwnerPath(profileId)));
+    }
+
+    function publicAliasBelongsToOther(profileId, uid) {
+      let ownerPath = profileOwnerPath(profileId);
+      let profilePath = publicProfilePath(profileId);
+      return (exists(ownerPath)
+          && get(ownerPath).data.owner_uid != uid)
+        || (!exists(ownerPath)
+          && exists(profilePath)
+          && 'owner_uid' in get(profilePath).data
+          && get(profilePath).data.owner_uid != uid);
+    }
+
+    function profileArtifactsSafeToLeaveAfter(profileId, uid) {
+      return profileArtifactsRemovedAfter(profileId)
+        || (profileId is string && publicAliasBelongsToOther(profileId, uid));
+    }
+
+    function previousPublicAliasRemovedAfter(uid) {
+      let wasPublic = 'public_profile_enabled' in resource.data
+        && resource.data.public_profile_enabled == true;
+      let previousId = 'public_profile_id' in resource.data
+        ? resource.data.public_profile_id
+        : null;
+      let nextId = 'public_profile_id' in request.resource.data
+        ? request.resource.data.public_profile_id
+        : null;
+      let ownerPath = previousId is string
+        ? profileOwnerPath(previousId)
+        : profileOwnerPath('_');
+      let profilePath = previousId is string
+        ? publicProfilePath(previousId)
+        : publicProfilePath('_');
+      let ownerBelongsToOther = previousId is string
+        && exists(ownerPath)
+        && get(ownerPath).data.owner_uid != uid;
+      let legacyProfileBelongsToOther = previousId is string
+        && !exists(ownerPath)
+        && exists(profilePath)
+        && 'owner_uid' in get(profilePath).data
+        && get(profilePath).data.owner_uid != uid;
+      return !wasPublic
+        || !(previousId is string)
+        || previousId == nextId
+        || ownerBelongsToOther
+        || legacyProfileBelongsToOther
+        || (!existsAfter(publicProfilePath(previousId))
+          && !existsAfter(profileOwnerPath(previousId)));
+    }
+
+    function nameClaimOwnedNow(uid, nameKey) {
+      let path = profileNamePath(nameKey);
+      return exists(path) && get(path).data.owner_uid == uid;
+    }
+
+    function settingsNameChangeAllowed(uid) {
+      let oldName = resource.data.username_key;
+      let newName = request.resource.data.username_key;
+      let oldClaimedByUser = oldName is string && nameClaimOwnedNow(uid, oldName);
+      let oldClaimPath = oldName is string ? profileNamePath(oldName) : profileNamePath('_');
+      let cooldownPassed = !(resource.data.username_changed_at is timestamp)
+        || request.time >= resource.data.username_changed_at + duration.value(30, 'd');
+      let oldClaimReleased = !oldClaimedByUser
+        || (!existsAfter(oldClaimPath)
+          && profileNoLongerPublicAfter(oldName, uid));
+      let privateRecoveryRelease = newName == null
+        && oldName is string
+        && request.resource.data.username_changed_at == resource.data.username_changed_at
+        && !oldClaimedByUser
+        && !exists(profileSavePath(uid))
+        && profileNoLongerPublicAfter(oldName, uid);
+      return oldName == newName
+        ? request.resource.data.username_changed_at == resource.data.username_changed_at
+        : (privateRecoveryRelease
+          || (newName is string
+            && request.resource.data.username_changed_at == request.time
+            && cooldownPassed
+            && oldClaimReleased));
+    }
+
+    function settingsAvatarChangeAllowed() {
+      let oldAvatar = resource.data.avatar;
+      let newAvatar = request.resource.data.avatar;
+      return oldAvatar == newAvatar
+        ? request.resource.data.avatar_changed_at == resource.data.avatar_changed_at
+        : (request.resource.data.avatar_changed_at == request.time
+          && (!(resource.data.avatar_changed_at is timestamp)
+            || request.time >= resource.data.avatar_changed_at + duration.value(7, 'd')));
+    }
+
+    function settingsSaveWriteMatches(uid) {
+      let savePath = profileSavePath(uid);
+      return existsAfter(savePath)
+        && getAfter(savePath).data.updated_at == request.time
+        && saveWriteAllowed(uid);
+    }
+
+    function settingsNameReservationOnlyUpdate(uid) {
+      let oldName = resource.data.username_key;
+      let newName = request.resource.data.username_key;
+      return oldName == null
+        && newName is string
+        && resource.data.profile_id == request.resource.data.profile_id
+        && resource.data.avatar == request.resource.data.avatar
+        && resource.data.avatar_changed_at == request.resource.data.avatar_changed_at
+        && request.resource.data.username_changed_at == request.time
+        && request.resource.data.updated_at == request.time
+        && existsAfter(profileSavePath(uid));
+    }
+
+    function settingsProfileIdOnlyUpdate(uid) {
+      return (resource.data.username_key == null
+          || validCloudNameKey(resource.data.username_key))
+        && request.resource.data.username_key == resource.data.username_key
+        && request.resource.data.profile_id is string
+        && request.resource.data.profile_id != resource.data.profile_id
+        && request.resource.data.username_changed_at == resource.data.username_changed_at
+        && request.resource.data.avatar == resource.data.avatar
+        && request.resource.data.avatar_changed_at == resource.data.avatar_changed_at
+        && request.resource.data.updated_at == request.time
+        && existsAfter(profileSavePath(uid));
+    }
+
+    function settingsSaveLinkedUpdate(uid) {
+      return settingsSaveWriteMatches(uid)
+        && request.resource.data.updated_at == request.time;
+    }
+
+    function validSavePublicLinkAfter(uid) {
+      let data = request.resource.data;
+      return data.public_profile_id == null
+        || (data.public_profile_enabled == true
+          && profileIsPublicAfter(data.public_profile_id, uid));
+    }
+
+    function nameClaimMayBeDeletedAfter(nameKey, uid) {
+      let settingsPath = profileSettingsPath(uid);
+      let savePath = profileSavePath(uid);
+      return !existsAfter(settingsPath)
+        || getAfter(settingsPath).data.username_key != nameKey
+        || !existsAfter(savePath);
+    }
+
+    match /player_saves/{uid} {
+      allow get: if signedInAs(uid);
+      allow list: if false;
+      allow create: if signedInAs(uid)
+        && validSaveEnvelope()
+        && cloudProfileSettingsReadyAfter(uid, true)
+        && validSavePublicLinkAfter(uid)
+        && saveWriteAllowed(uid);
+      allow update: if signedInAs(uid)
+        && validSaveEnvelope()
+        && cloudProfileSettingsReadyAfter(uid, true)
+        && validSavePublicLinkAfter(uid)
+        && previousPublicAliasRemovedAfter(uid)
+        && saveWriteAllowed(uid);
+      allow delete: if signedInAs(uid)
+        && (!exists(profileSavePath(uid))
+          || !('public_profile_enabled' in resource.data)
+          || resource.data.public_profile_enabled != true
+          || profileArtifactsSafeToLeaveAfter(
+              resource.data.get('public_profile_id', null),
+              uid
+            ))
+        && (!exists(profileSettingsPath(uid))
+          || get(profileSettingsPath(uid)).data.username_key == null
+          || nameClaimMayBeDeletedAfter(
+              get(profileSettingsPath(uid)).data.username_key,
+              uid
+            ));
+    }
+
+    match /cloud_profile_settings/{uid} {
+      allow get: if signedInAs(uid);
+      allow list: if false;
+      allow create: if signedInAs(uid)
+        && validCloudProfileSettingsData(request.resource.data)
+        && request.resource.data.updated_at == request.time
+        && existsAfter(profileSavePath(uid))
+        && settingsNameClaimMatchesAfter(uid, request.resource.data)
+        && (request.resource.data.username_key == null
+          ? (request.resource.data.username_changed_at == null
+            || request.resource.data.username_changed_at == request.time)
+          : request.resource.data.username_changed_at == request.time)
+        && (request.resource.data.avatar == null
+          ? request.resource.data.avatar_changed_at == null
+          : request.resource.data.avatar_changed_at == request.time);
+      allow update: if signedInAs(uid)
+        && validCloudProfileSettingsData(request.resource.data)
+        && request.resource.data.updated_at == request.time
+        && existsAfter(profileSavePath(uid))
+        && settingsNameClaimMatchesAfter(uid, request.resource.data)
+        && settingsNameChangeAllowed(uid)
+        && settingsAvatarChangeAllowed()
+        && (settingsNameReservationOnlyUpdate(uid)
+          || settingsProfileIdOnlyUpdate(uid)
+          || settingsSaveLinkedUpdate(uid));
+      allow delete: if signedInAs(uid)
+        && !existsAfter(profileSavePath(uid))
+        && (resource.data.username_key == null
+          || nameClaimMayBeDeletedAfter(resource.data.username_key, uid));
+    }
+
+    // A username claim is intentionally private and cannot be enumerated or
+    // preflighted. An owner can read its own claim; other owners learn only
+    // that a transactional reservation failed.
+    match /cloud_profile_names/{nameKey} {
+      allow get: if request.auth != null
+        && resource.data.owner_uid == request.auth.uid;
+      allow list: if false;
+      allow create: if request.auth != null
+        && validProfileNameClaim(nameKey)
+        && profileNameClaimMatchesAfter(
+          request.auth.uid,
+          nameKey,
+          request.resource.data.profile_id
+        );
+      allow update: if request.auth != null
+        && resource.data.owner_uid == request.auth.uid
+        && validProfileNameClaim(nameKey)
+        && profileNameClaimMatchesAfter(
+          request.auth.uid,
+          nameKey,
+          request.resource.data.profile_id
+        );
+      allow delete: if request.auth != null
+        && resource.data.owner_uid == request.auth.uid
+        && nameClaimMayBeDeletedAfter(nameKey, request.auth.uid)
+        && profileNoLongerPublicAfter(nameKey, request.auth.uid);
+    }
+
+    match /cloud_save_write_limits/{uid} {
+      allow get: if signedInAs(uid);
+      allow list: if false;
+      allow create: if signedInAs(uid)
+        && request.resource.data.keys().hasOnly(['last_write_at'])
+        && request.resource.data.last_write_at == request.time
+        && saveWriteAllowed(uid);
+      allow update: if signedInAs(uid)
+        && request.resource.data.keys().hasOnly(['last_write_at'])
+        && request.resource.data.last_write_at == request.time
+        && saveWriteAllowed(uid)
+        && resource.data.last_write_at is timestamp
+        && request.time >= resource.data.last_write_at + duration.value(2, 's');
+      allow delete: if signedInAs(uid)
+        && !existsAfter(profileSavePath(uid))
+        && !existsAfter(profileSettingsPath(uid));
+    }
+
+    match /cloud_public_profile_write_limits/{uid} {
+      allow get: if signedInAs(uid);
+      allow list: if false;
+      allow create: if signedInAs(uid)
+        && request.resource.data.keys().hasAll(['last_write_at'])
+        && request.resource.data.keys().hasOnly(['last_write_at'])
+        && request.resource.data.last_write_at == request.time
+        && publicProfileWriteAllowed(uid);
+      allow update: if signedInAs(uid)
+        && request.resource.data.keys().hasAll(['last_write_at'])
+        && request.resource.data.keys().hasOnly(['last_write_at'])
+        && request.resource.data.last_write_at == request.time
+        && publicProfileWriteAllowed(uid)
+        && resource.data.last_write_at is timestamp
+        && request.time >= resource.data.last_write_at + duration.value(2, 's');
+      allow delete: if signedInAs(uid)
+        && !existsAfter(profileSavePath(uid))
+        && !existsAfter(profileSettingsPath(uid));
+    }
+
+    // Public profile documents contain a strictly validated summary only.
+    // Missing and private aliases are both denied, so guesses cannot enumerate
+    // private name reservations or legacy profile documents.
+    // The name claim, owner's private pointer and opt-in flag must all agree.
+    match /public_profiles/{profileId} {
+      allow get: if publicProfileCanBeReadByUser(
+        profileId,
+        request.auth == null ? null : request.auth.uid
+      );
+      allow list: if false;
+      allow create: if request.auth != null
+        && validPublicProfile(profileId)
+        && profileIsPublicAfter(profileId, request.auth.uid)
+        && publicProfileWriteAllowed(request.auth.uid);
+      allow update: if request.auth != null
+        && publicProfileIsOwnedByUser(profileId, request.auth.uid)
+        && validPublicProfile(profileId)
+        && profileIsPublicAfter(profileId, request.auth.uid)
+        && publicProfileWriteAllowed(request.auth.uid);
+      allow delete: if request.auth != null
+        && exists(publicProfilePath(profileId))
+        && publicProfileIsOwnedByUser(profileId, request.auth.uid)
+        && profileNoLongerPublicAfter(profileId, request.auth.uid);
+    }
+
+    match /public_profile_owners/{profileId} {
+      allow get: if request.auth != null
+        && publicProfileOwnerCanBeReadByUser(profileId, request.auth.uid);
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.owner_uid == request.auth.uid
+        && validProfileOwner(profileId)
+        && profileIsPublicAfter(profileId, request.auth.uid)
+        && publicProfileWriteAllowed(request.auth.uid);
+      allow update: if request.auth != null
+        && resource.data.owner_uid == request.auth.uid
+        && resource.data.profile_id == profileId
+        && request.resource.data.owner_uid == request.auth.uid
+        && validProfileOwner(profileId)
+        && profileIsPublicAfter(profileId, request.auth.uid)
+        && publicProfileWriteAllowed(request.auth.uid);
+      allow delete: if request.auth != null
+        && exists(profileOwnerPath(profileId))
+        && resource.data.owner_uid == request.auth.uid
+        && resource.data.profile_id == profileId
+        && profileNoLongerPublicAfter(profileId, request.auth.uid);
+    }
+  }
+}

@@ -1585,7 +1585,7 @@
 }
 
 /* The Limited & Special hub is a celestial card: ivory and gold, a soft halo,
-   no family gradient. It only exists while the player owns an event aura. */
+   no family gradient. It only exists while the player owns a legacy cosmetic. */
 .aura-family-banner[data-family="special"] {
   border-color: #e9d79a;
   background:

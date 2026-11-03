@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rngdle-infinite",
+  "compatibility_date": "2026-10-30",
+  "previews": {},
+  "pages_build_output_dir": "./dist",
+}

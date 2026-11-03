@@ -77,14 +77,22 @@ test("navigation, themes, help and local signup", async ({ page }) => {
     page.getByRole("heading", { name: "How to play", level: 1 }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Back to rolling" }).click();
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.locator(".profile-page")).toBeVisible();
   await page.getByRole("textbox", { name: "Username" }).fill("LuckyPlayer");
   await page.getByRole("button", { name: "Start saving my progress" }).click();
   await expect(
     page.getByRole("heading", { name: "Your profile, LuckyPlayer" }),
   ).toBeVisible();
-  await expect(page.getByText("not an online account")).toBeVisible();
+  await page.getByRole("button", { name: "Change profile name" }).click();
+  await page.locator("#profile-rename-input").fill("LuckyRenamed");
+  await page.getByRole("button", { name: "Save name" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your profile, LuckyRenamed" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("cloud-migration-note")).toContainText(
+    "saved on this device",
+  );
   await page.getByRole("button", { name: "Continue playing" }).click();
   await expect(
     page.getByRole("navigation").getByRole("button", { name: "Leaderboard" }),

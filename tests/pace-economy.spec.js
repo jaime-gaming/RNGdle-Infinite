@@ -323,7 +323,7 @@ test("a failed boosted commit exposes nothing and retains all four charges for r
   }, PROGRESS_KEY);
   await page.locator(".generate").click();
   await expect(page.locator(".roll-load-error")).toContainText(
-    "could not be committed",
+    "No number was revealed and no EP was awarded.",
   );
   expect((await saved(page)).flywheelCharge).toBe(4);
   expect((await saved(page)).pendingRoll).toBeNull();

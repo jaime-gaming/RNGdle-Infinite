@@ -1,6 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
 import { pauseClockAt } from "./helpers/clock.js";
-import { mockSeasonClock } from "./helpers/season-clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
@@ -152,7 +151,6 @@ test("overflow charge survives settlement and reload, then fires on the followin
   test.setTimeout(60000);
   const words = [...LOW, 139598, 861456, 375660, 577281];
   await mockRandom(page, words);
-  await mockSeasonClock(page, Date.parse("2026-10-26T12:00:00Z"));
   await seedProgress(page, {
     owned: [...PACE, "triptych", "quarry"],
     skills: ["triptych", "quarry"],

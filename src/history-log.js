@@ -26,7 +26,7 @@ export function isCycleMarker(entry) {
 }
 
 // True for an entry that no removal may touch.
-export function isKeptEntry(entry, bookmarks = []) {
+function isKeptEntry(entry, bookmarks = []) {
   return (
     isCycleMarker(entry) ||
     (entry?.type === "roll" && bookmarks.includes(entry.id))

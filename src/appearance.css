@@ -1,9 +1,7 @@
-/* CLEANUP Nov 4, 2026: remove the .appearance-halloween rules with the menu option. */
 .appearance-control {
   position: relative;
 }
 .appearance-trigger {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,16 +16,6 @@
 .appearance-trigger:hover,
 .appearance-trigger[aria-expanded="true"] {
   background: var(--hover);
-}
-.appearance-season-dot {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #dd7835;
-  box-shadow: 0 0 0 2px var(--bg);
 }
 .appearance-menu {
   position: absolute;
@@ -75,46 +63,6 @@
   color: var(--text);
   background: var(--green-bg);
 }
-.appearance-option:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-.appearance-season {
-  margin-top: 7px;
-  padding-top: 7px;
-  border-top: 1px solid var(--border);
-}
-.appearance-season p {
-  margin: 7px 9px 5px;
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.6;
-}
-.appearance-mini-switch {
-  position: relative;
-  width: 26px;
-  height: 15px;
-  border-radius: 999px;
-  background: var(--border);
-}
-.appearance-mini-switch::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--surface);
-  transition: transform 0.18s;
-}
-.appearance-halloween[aria-checked="true"] .appearance-mini-switch {
-  background: #ae531f;
-}
-.appearance-halloween[aria-checked="true"] .appearance-mini-switch::after {
-  transform: translateX(11px);
-  background: #fff7eb;
-}
 @media (max-width: 760px) {
   .appearance-trigger {
     width: 37px;
@@ -122,8 +70,6 @@
     gap: 2px;
   }
 }
-/* On phones the sticky header is its own stack. Its open menu must also sit
-   above the installation tip, not merely above siblings inside the header. */
 .header:has(.appearance-trigger[aria-expanded="true"]) {
   z-index: 80;
 }
