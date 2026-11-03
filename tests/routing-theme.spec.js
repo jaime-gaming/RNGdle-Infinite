@@ -52,6 +52,19 @@ test("every app page has a direct path, not a hash fragment", () => {
   expect(
     pageFromLocation({ pathname: "/preview/badges", hash: "" }, "/preview/"),
   ).toBe("badges");
+
+  const githubPagesBase = "/RNGdle-Infinite/";
+  expect(basePath(githubPagesBase)).toBe("/RNGdle-Infinite");
+  expect(pathForPage("roll", githubPagesBase)).toBe("/RNGdle-Infinite/");
+  expect(pathForSubpage("settings", "save-recovery", githubPagesBase)).toBe(
+    "/RNGdle-Infinite/settings/save-recovery",
+  );
+  expect(
+    settingsSubpageFromLocation(
+      { pathname: "/RNGdle-Infinite/settings/save-recovery", hash: "" },
+      githubPagesBase,
+    ),
+  ).toBe("save-recovery");
 });
 
 test("paths, legacy hashes and unknown routes all resolve without a dead end", () => {
