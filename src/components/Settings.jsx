@@ -9,6 +9,7 @@ import {
   Download,
   Eye,
   Gamepad2,
+  History,
   RotateCcw,
   RefreshCw,
   ScrollText,
@@ -64,9 +65,13 @@ export default function Settings({
   appUpdate,
   onStartUpdate,
   onStopUpdate,
+  vault,
 }) {
   const { settings, update, reset, saveError } = useSettings();
   const [permission, setPermission] = useState(notificationPermission);
+  // The backup copy this browser keeps, read once when the page opens.
+  const [backup, setBackup] = useState(() => vault?.get?.() ?? null);
+  const [restoring, setRestoring] = useState(false);
   useEffect(() => {
     const refresh = () => setPermission(notificationPermission());
     refresh();

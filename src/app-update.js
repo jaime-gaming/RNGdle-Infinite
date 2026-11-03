@@ -4,6 +4,7 @@ export const APP_UPDATE_STORAGE_KEY = "rng-infinite-app-update-v1";
 export const APP_UPDATE_SAVE_KEY = "rng-infinite-app-update-save-v1";
 export const APP_UPDATE_QUERY = "__rngdle_refresh";
 const APP_BUILD_META = "rngdle-build-id";
+const APP_INTERNAL_META = "rngdle-internal-version";
 const APP_UPDATE_POLL_MS = 2500;
 // A browser that keeps handing back the old files cannot be fixed by reloading
 // again; give up after a handful of tries and say so instead of looping.
@@ -18,7 +19,7 @@ const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 // is never added to the changelog or shown as a public release. Keep this exact
 // label unchanged until the next session or an explicit user request.
 // Current: RNGdle-Infinite0.5.1fix0.
-const APP_INTERNAL_VERSION = "RNGdle-Infinite0.5.1fix0";
+export const APP_INTERNAL_VERSION = "RNGdle-Infinite0.5.1fix0";
 
 let pollTimer = null;
 let reloadTimer = null;
@@ -48,11 +49,27 @@ export function subscribeAppUpdate(listener) {
 }
 
 export function getAppBuildId(documentRef = globalThis.document) {
-  return (
-    documentRef
-      ?.querySelector?.(`meta[name="${APP_BUILD_META}"]`)
-      ?.content?.trim() ?? ""
-  );
+  try {
+    return (
+      documentRef
+        ?.querySelector?.(`meta[name="${APP_BUILD_META}"]`)
+        ?.content?.trim() ?? ""
+    );
+  } catch {
+    return "";
+  }
+}
+
+export function getAppInternalVersion(documentRef = globalThis.document) {
+  try {
+    return (
+      documentRef
+        ?.querySelector?.(`meta[name="${APP_INTERNAL_META}"]`)
+        ?.content?.trim() ?? APP_INTERNAL_VERSION
+    );
+  } catch {
+    return APP_INTERNAL_VERSION;
+  }
 }
 
 export function makeVersionUrl({
@@ -82,7 +99,16 @@ export async function fetchPublishedBuild({
   const payload = await response.json();
   if (typeof payload?.buildId !== "string" || !payload.buildId.trim())
     throw new Error("The version check returned no build identifier.");
-  return payload.buildId;
+  return {
+    buildId: payload.buildId.trim(),
+    version: typeof payload.version === "string" ? payload.version.trim() : "",
+    internalVersion:
+      typeof payload.internalVersion === "string"
+        ? payload.internalVersion.trim()
+        : typeof payload.internal_version === "string"
+          ? payload.internal_version.trim()
+          : "",
+  };
 }
 
 function sessionStore() {
@@ -366,11 +392,35 @@ async function checkForCurrentBuild() {
     clearTimers();
     return;
   }
-  if (intent.internalVersion !== APP_INTERNAL_VERSION) {
-    // Intent left by an older internal build: this page is already current.
-    removeAppUpdateIntent();
-    clearTimers();
-    return;
+  // Handle intents from older internal builds: if current internal version is newer than intent's,
+  // this page is already updated - clear intent and finish. If current is older or equal, keep polling
+  // for the next version (fix+1 etc.) instead of immediately aborting.
+  if (
+    intent.internalVersion &&
+    intent.internalVersion !== APP_INTERNAL_VERSION
+  ) {
+    try {
+      if (isNewerVersion(intent.internalVersion, APP_INTERNAL_VERSION)) {
+        // Current page is newer than intent - we already have next version
+        removeAppUpdateIntent();
+        clearTimers();
+        clearRefreshQuery();
+        publish({
+          active: false,
+          completed: true,
+          message:
+            "This device already has a newer version than requested. Your progress is safe.",
+        });
+        return;
+      }
+      // If current is not newer (intent is same or newer), keep intent and continue polling
+      // Don't return - fall through to version check
+    } catch {
+      // If version parsing fails, fallback to old behavior: clear if mismatch
+      removeAppUpdateIntent();
+      clearTimers();
+      return;
+    }
   }
   checking = true;
   try {
@@ -392,10 +442,13 @@ async function checkForCurrentBuild() {
       return;
     }
 
-    const [currentBuild, publishedBuild] = await Promise.all([
+    const [currentBuild, publishedData] = await Promise.all([
       Promise.resolve(getAppBuildId()),
-      fetchPublishedBuild(),
+      fetchPublishedBuild().catch(() => null),
     ]);
+    if (!publishedData) throw new Error("Version check failed");
+    const publishedBuild = publishedData.buildId;
+
     intent = readAppUpdateIntent();
     if (!intent) return;
 

@@ -94,6 +94,7 @@ import {
   subscribeAppUpdate,
 } from "./app-update.js";
 import { restoreVaultIfNeeded } from "./save-vault.js";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import RebirthNav from "./components/RebirthNav";
 import MobileTabBar from "./components/MobileTabBar";
 import InstallApp from "./components/InstallApp";
@@ -120,11 +121,6 @@ import {
 import { SHOP_SECTIONS, auraFamilyById, shelfOfProduct } from "./shop-data.js";
 // Last on purpose: the phone sheet must come after every component sheet.
 import "./mobile.css";
-
-// Recover a save before useProgress reads localStorage. A readable current save
-// always wins; these copies are only used after a missing or corrupt write.
-const updateSaveRecovery = recoverSaveAfterUpdate();
-const vaultRecovery = restoreVaultIfNeeded();
 
 // A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
 // Anything else under /shop is not a shelf and falls back to the hub.
@@ -685,7 +681,7 @@ function App() {
     if (page === "rebirth" && !rebirthVisible) navigate("roll");
   }, [page, rebirthVisible]);
   const discoveredBadges = badges.filter((b) =>
-    session.discovered.includes(b.canonicalId),
+    (session.discovered ?? []).includes(b.canonicalId),
   );
   const discoveredGroups = [
     ...new Set(discoveredBadges.flatMap((b) => b.groups)),
@@ -1016,6 +1012,7 @@ function App() {
                 onAction={dispatch}
                 onOpenRecovery={openSaveRecovery}
                 navigate={navigate}
+                vault={vault}
                 appUpdate={appUpdate}
                 onStartUpdate={startAppUpdate}
                 onStopUpdate={stopAppUpdate}
@@ -1200,7 +1197,7 @@ function App() {
           </>
         )}
         {page === "tasks" && (
-          <>
+          <ErrorBoundary>
             <button className="back-link" onClick={() => navigate("roll")}>
               <ArrowLeft size={14} /> Back to rolling
             </button>
@@ -1225,7 +1222,7 @@ function App() {
               notify={notify}
               openSignup={openAuth}
             />
-          </>
+          </ErrorBoundary>
         )}
         {page === "shop" && (
           <Shop
@@ -1247,7 +1244,7 @@ function App() {
           />
         )}
         {page === "badges" && (
-          <>
+          <ErrorBoundary>
             <button className="back-link" onClick={() => navigate("roll")}>
               <ArrowLeft size={14} /> Back to rolling
             </button>
@@ -1427,7 +1424,7 @@ function App() {
                     ? "Guest collection is temporary. Name a local profile to keep it."
                     : null}
             </p>
-          </>
+          </ErrorBoundary>
         )}
       </main>
       <footer>
@@ -1629,8 +1626,35 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(
-  <SettingsProvider>
-    <App />
-  </SettingsProvider>,
-);
+// A reload during "Reload until updated" leaves a copy of the save behind. If
+// the build that landed cannot read its own save, the copy is put back before
+// the app ever reads storage, so an update can never cost a player their game.
+const updateSaveRecovery = recoverSaveAfterUpdate();
+// The second safety net: if the stored save is missing or unreadable, the last
+// good compressed copy this browser kept is put back before anything reads it.
+const vaultRecovery = updateSaveRecovery?.recovered
+  ? { restored: false }
+  : restoreVaultIfNeeded();
+
+// Global error handlers to avoid white-screen on unhandled errors
+try {
+  window.addEventListener("error", (e) => {
+    console.error("[RNGdle] window error:", e.message, e.error);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    console.error("[RNGdle] unhandled rejection:", e.reason);
+  });
+} catch {}
+
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  console.error("[RNGdle] #root not found - blank page prevented");
+} else {
+  createRoot(rootEl).render(
+    <ErrorBoundary>
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    </ErrorBoundary>,
+  );
+}

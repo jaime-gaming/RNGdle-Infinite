@@ -54,10 +54,23 @@ export function useMotionPreference() {
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   useEffect(() => {
-    const media = matchMedia("(prefers-reduced-motion: reduce)");
-    const change = () => setSystemReduced(media.matches);
-    media.addEventListener("change", change);
-    return () => media.removeEventListener("change", change);
+    try {
+      if (typeof matchMedia !== "function") return;
+      const media = matchMedia("(prefers-reduced-motion: reduce)");
+      const change = () => {
+        try {
+          setSystemReduced(media.matches);
+        } catch {}
+      };
+      media.addEventListener("change", change);
+      return () => {
+        try {
+          media.removeEventListener("change", change);
+        } catch {}
+      };
+    } catch {
+      return;
+    }
   }, []);
   return systemReduced;
 }

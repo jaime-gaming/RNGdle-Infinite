@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import {
+  APP_INTERNAL_VERSION,
   getAppBuildId,
+  getAppInternalVersion,
   makeVersionUrl,
   fetchPublishedBuild,
   decideUpdateStep,
@@ -22,6 +24,11 @@ test("build identity is read from the page and version checks use the app base p
     }),
   ).toBe("release-123");
   expect(
+    getAppInternalVersion({
+      querySelector: () => ({ content: APP_INTERNAL_VERSION }),
+    }),
+  ).toBe("RNGdle-Infinite0.5.1fix0");
+  expect(
     makeVersionUrl({
       base: "/preview/",
       origin: "https://game.example",
@@ -30,16 +37,27 @@ test("build identity is read from the page and version checks use the app base p
   ).toBe("https://game.example/preview/version.json?_=17");
 
   let request;
-  const buildId = await fetchPublishedBuild({
+  const published = await fetchPublishedBuild({
     base: "/preview/",
     origin: "https://game.example",
     now: 23,
     fetcher: async (url, options) => {
       request = { url: String(url), options };
-      return { ok: true, json: async () => ({ buildId: "release-456" }) };
+      return {
+        ok: true,
+        json: async () => ({
+          version: "0.5.2",
+          buildId: "release-456",
+          internalVersion: APP_INTERNAL_VERSION,
+        }),
+      };
     },
   });
-  expect(buildId).toBe("release-456");
+  expect(published).toEqual({
+    version: "0.5.2",
+    buildId: "release-456",
+    internalVersion: APP_INTERNAL_VERSION,
+  });
   expect(request.url).toBe("https://game.example/preview/version.json?_=23");
   expect(request.options).toMatchObject({ cache: "no-store" });
 });
@@ -62,7 +80,14 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     new URL("/version.json", page.url()).toString(),
   );
   expect(liveVersion.ok()).toBeTruthy();
-  expect((await liveVersion.json()).buildId).toBe(buildId);
+  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinite0.5.1fix0");
+  expect(await liveVersion.json()).toMatchObject({
+    buildId,
+    internalVersion: APP_INTERNAL_VERSION,
+  });
+  await expect(
+    page.locator('meta[name="rngdle-internal-version"]'),
+  ).toHaveAttribute("content", APP_INTERNAL_VERSION);
 
   // Return the build already in this page after its deliberate cache-busted
   // reload, exercising the successful end of the retry flow deterministically.
