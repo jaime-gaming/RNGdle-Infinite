@@ -24,17 +24,23 @@ test("profile and rebirth are routed pages, not dialogs", () => {
   expect(main).not.toContain('modal === "auth"');
 });
 
-test("profile page keeps the signup contract: same headings, button and copy", () => {
+test("profile page lets players name and save a local profile", () => {
   const profile = read("components/LocalProfile.jsx");
   expect(profile).toContain("validUsername");
   expect(profile).toContain("aria-invalid");
   expect(profile).toContain("disabled={pending || !ready}");
   expect(profile).toContain("Start saving my progress");
   expect(profile).toContain("Your profile, ");
-  expect(profile).toContain("not an online account");
+  expect(profile).toContain("Choose a name to save progress on this device.");
+  expect(profile).toContain("Your current guest progress will be kept.");
+  expect(profile).toContain(
+    "Guest progress from this session will not carry over.",
+  );
+  expect(profile).toContain(
+    "An online backup is optional and can be added later.",
+  );
   expect(profile).toContain("Continue playing");
-  expect(profile).toContain("Not carried over:");
-  expect(profile).toContain("Saved from here on:");
+  expect(profile).toContain("This profile stays on this device.");
 });
 
 test("only the equipped companion walks the roll screen", () => {

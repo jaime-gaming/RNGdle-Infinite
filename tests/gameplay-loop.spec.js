@@ -384,7 +384,7 @@ test("guest goals are temporary until signup; signup preserves the choice withou
     .click();
   await page.locator('[data-product="flywheel"] .shop-card-desc').click();
   await expect(page.locator(".toast")).toContainText("Goal updated");
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Username", exact: true })
     .fill("GoalKeeper");

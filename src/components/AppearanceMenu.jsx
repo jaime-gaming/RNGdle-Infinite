@@ -1,8 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown, Monitor, Moon, Sun } from "lucide-react";
-import { useSettings } from "../use-settings.jsx";
-import { rngweenCalendar } from "../rngween.js";
-import { PumpkinMark } from "./game-icons.jsx";
 import "../appearance.css";
 
 const THEMES = [
@@ -11,13 +8,7 @@ const THEMES = [
   ["dark", "Dark", Moon],
 ];
 
-export default function AppearanceMenu({
-  theme,
-  appliedTheme,
-  onTheme,
-  seasonNow,
-}) {
-  const { settings, update } = useSettings();
+export default function AppearanceMenu({ theme, onTheme }) {
   const [open, setOpen] = useState(false);
   const host = useRef(null);
   const trigger = useRef(null);
@@ -25,14 +16,12 @@ export default function AppearanceMenu({
   const id = useId();
   const [, label, Icon] =
     THEMES.find(([value]) => value === theme) ?? THEMES[0];
-  const calendar = rngweenCalendar(seasonNow);
-  const dark = appliedTheme === "dark";
-  const haunted = calendar.decorated && dark && settings.halloweenMode;
 
   const close = (restore = false) => {
     setOpen(false);
     if (restore) trigger.current?.focus();
   };
+
   useEffect(() => {
     if (!open) return;
     menu.current?.querySelector('[aria-checked="true"]')?.focus();
@@ -80,7 +69,7 @@ export default function AppearanceMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
-        title={`${label} theme${haunted ? " · Halloween on" : ""}`}
+        title={`${label} theme`}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
           if (["ArrowDown", "ArrowUp"].includes(event.key)) {
@@ -91,9 +80,6 @@ export default function AppearanceMenu({
       >
         <Icon size={16} aria-hidden="true" />
         <ChevronDown size={11} aria-hidden="true" />
-        {haunted && (
-          <span className="appearance-season-dot" aria-hidden="true" />
-        )}
       </button>
       {open && (
         <div
@@ -125,36 +111,6 @@ export default function AppearanceMenu({
               {theme === value && <Check size={14} aria-hidden="true" />}
             </button>
           ))}
-          {/* CLEANUP Nov 4, 2026: remove this seasonal option/calendar gate and
-              halloweenMode preference. Keep the ordinary theme menu. */}
-          {calendar.phase !== "ended" && (
-            <div className="appearance-season">
-              <button
-                type="button"
-                role="menuitemcheckbox"
-                aria-checked={haunted}
-                aria-describedby={`${id}-season-note`}
-                disabled={!calendar.decorated || !dark}
-                className="appearance-option appearance-halloween"
-                onClick={() =>
-                  update({ halloweenMode: !settings.halloweenMode })
-                }
-              >
-                <PumpkinMark size={19} />
-                <span>Halloween mode</span>
-                <span className="appearance-mini-switch" aria-hidden="true" />
-              </button>
-              <p id={`${id}-season-note`}>
-                {calendar.decorated
-                  ? dark
-                    ? "Decorations only. Tasks and the shop stay active."
-                    : "A dark theme is required. Tasks and the shop stay active."
-                  : calendar.phase === "unavailable"
-                    ? "Checking the website calendar…"
-                    : "Seasonal look · Oct 21–Nov 3 (UTC)."}
-              </p>
-            </div>
-          )}
         </div>
       )}
     </div>

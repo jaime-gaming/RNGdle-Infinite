@@ -86,7 +86,7 @@ export function cycleStarterEp(rebirths = 0, ultraRebirths = 0) {
 
 // The final stage opens after three prestiges and is repeatable. Each
 // Rollback starts from 0 EP and adds a permanent wallet-only bonus.
-export const PRESTIGE_LIMIT = 3;
+const PRESTIGE_LIMIT = 3;
 export const ROLLBACK_AFTER_PRESTIGES = PRESTIGE_LIMIT;
 export const ROLLBACK_BONUS = 0.25;
 // The Rollback asks for more than a prestige does: 65% of the collection
@@ -184,7 +184,7 @@ export function rollbackBenefits(progress = {}) {
 // surplus into the next wallet.
 export const SURPLUS_START_SHARE = 0.5;
 export const SURPLUS_BANKED_EP_STEP = 2_000_000;
-export const SURPLUS_BANKED_PER_STEP = 0.01;
+const SURPLUS_BANKED_PER_STEP = 0.01;
 export const SURPLUS_BANKED_CAP = 0.1;
 
 export function rebirthSurplus(earned = 0, gate = 0) {

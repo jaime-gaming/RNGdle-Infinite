@@ -1,18 +1,16 @@
-// CLEANUP Nov 4, 2026: drop the RNGWEEN_PET special cases (companion count
-// and lookup) once the pet is out of the catalogue.
 import {
   BADGE_TOTAL,
   cycleEarnedEp,
   discoveredCount,
   prestigeShown,
 } from "./rebirth.js";
-import { RNGWEEN_PET } from "./rngween-limited.js";
 import { PETS } from "./pets.js";
 import { SKILLS, skillSlots } from "./skills.js";
 import { LATEST_VERSION } from "./changelog.js";
 import { BOOKMARK_LIMIT, isCycleMarker } from "./history-log.js";
 import { favoriteTier, mergeTallies, tallyEntries } from "./history-tally.js";
 import { productById } from "./shop-data.js";
+import { gameUrlForLocation } from "./site-links.js";
 
 // How far you have come, in numbers.
 //
@@ -37,8 +35,7 @@ export function accountStats(progress = {}) {
     badgesTotal: BADGE_TOTAL,
     companions: (progress.pets ?? []).length,
     companionsFound: total.companions,
-    companionsTotal:
-      PETS.length + ((progress.pets ?? []).includes(RNGWEEN_PET.id) ? 1 : 0),
+    companionsTotal: PETS.length,
     skills: (progress.skills ?? []).length,
     skillsTotal: SKILLS.length,
     skillSlots: skillSlots(progress.owned),
@@ -108,9 +105,7 @@ export function profileHighlights(progress = {}) {
     progress.activePet && progress.activePet !== "none"
       ? progress.activePet
       : null;
-  const pet = petId
-    ? ([...PETS, RNGWEEN_PET].find((item) => item.id === petId) ?? null)
-    : null;
+  const pet = petId ? (PETS.find((item) => item.id === petId) ?? null) : null;
   return {
     bestRoll: stats.bestRoll,
     pinned,
@@ -348,7 +343,7 @@ function drawNumberBox(ctx, roll, x, y, w, h, { label = "" } = {}) {
   ctx.textBaseline = "alphabetic";
 }
 
-export const EXPORT_CARD_SIZE = { width: 1200, height: 760, scale: 2 };
+const EXPORT_CARD_SIZE = { width: 1200, height: 760, scale: 2 };
 
 export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   const payload = exportPayload(progress);
@@ -580,7 +575,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   ctx.fillText("RNGdle Infinite · Read-only PNG account card", 54, height - 34);
   ctx.textAlign = "right";
   ctx.fillText(
-    "jaime-gaming.github.io/RNGdle-Infinite",
+    gameUrlForLocation().replace(/^https?:\/\//, ""),
     width - 54,
     height - 34,
   );

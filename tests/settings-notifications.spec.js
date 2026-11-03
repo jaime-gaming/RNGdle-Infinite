@@ -48,9 +48,7 @@ test("settings default to a quiet, unchanged game and are keyed separately from 
     notifySound: false,
     notifyRankEnabled: false,
     notifyRank: null,
-    reduceMotion: "system",
     compactNumbers: false,
-    halloweenMode: true,
     showSkillBar: true,
     skillBarCollapsed: false,
     showGoalRecap: true,
@@ -58,6 +56,15 @@ test("settings default to a quiet, unchanged game and are keyed separately from 
     autoRollDefault: false,
   });
   expect(parseSettings(null)).toEqual(defaultSettings);
+  // Retired seasonal presentation preferences are ignored, not restored.
+  expect(parseSettings(JSON.stringify({ halloweenMode: false }))).toEqual(
+    defaultSettings,
+  );
+  // Manual Reveal Motion overrides are ignored; accessibility still follows
+  // the operating system's prefers-reduced-motion setting.
+  expect(parseSettings(JSON.stringify({ reduceMotion: "on" }))).toEqual(
+    defaultSettings,
+  );
 });
 
 test("rank alerts accept only known ranks and use the chosen rank as a minimum", () => {
@@ -134,16 +141,11 @@ test("stored settings are validated field by field and never throw on junk", () 
       JSON.stringify({
         notifyReady: "yes",
         notifySound: true,
-        reduceMotion: "always",
         compactNumbers: 1,
         unknownField: "ignored",
       }),
     ),
   ).toEqual({ ...defaultSettings, notifySound: true });
-  for (const reduceMotion of ["system", "on", "off"])
-    expect(parseSettings(JSON.stringify({ reduceMotion })).reduceMotion).toBe(
-      reduceMotion,
-    );
 });
 
 test("compact EP is presentation only and never rounds a spendable amount", () => {

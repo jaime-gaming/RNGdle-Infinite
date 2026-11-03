@@ -28,20 +28,6 @@
   font-weight: 650;
   letter-spacing: -0.01em;
 }
-.about-intro p:last-child {
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.7;
-  color: var(--secondary);
-}
-.about-intro p.about-glance {
-  margin: 12px 0 0;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 .about-steps {
   display: grid;
   gap: 14px;
@@ -131,29 +117,15 @@
   color: var(--secondary);
 }
 .about-fair {
-  padding: 16px 18px;
+  margin: 0 0 26px;
+  padding: 13px 16px;
   border: 1px solid var(--green);
   border-radius: 11px;
   background: var(--green-bg);
-  margin-bottom: 26px;
-}
-.about-fair h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 640;
-  color: var(--green);
-}
-.about-fair h3 svg {
-  color: var(--green);
-}
-.about-fair p {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.75;
   color: var(--secondary);
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.65;
 }
 .about-actions {
   display: flex;

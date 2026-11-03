@@ -62,12 +62,3 @@ export const rarities = [
   "Anomaly",
   "Mythic",
 ];
-export const featuredBadges = [
-  "Exact Leet",
-  "Leet",
-  "Framed Pair",
-  "Steps",
-  "Four Digits",
-  "Flush",
-  "Feather",
-].map((name) => catalogue.get(name));

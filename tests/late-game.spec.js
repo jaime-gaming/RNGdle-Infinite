@@ -654,9 +654,7 @@ test("failed late-tier saves leave wallet, charge and offline rate unchanged unt
     await page
       .getByRole("button", { name: "Confirm purchase", exact: true })
       .click();
-    await expect(page.getByRole("dialog")).toContainText(
-      "Your EP has not been spent",
-    );
+    await expect(page.getByRole("dialog")).toContainText("No EP was spent.");
     const p = await saved(page);
     expect(p.balance).toBe(200000000);
     expect(p.owned).toEqual(["flywheel", "offline-roller"]);

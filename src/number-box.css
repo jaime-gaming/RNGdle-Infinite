@@ -1,4 +1,4 @@
-/* KEEP after Nov 4, 2026: the compact-box rule for .rngween-aura is permanent aura art. */
+/* Legacy aura geometry remains available for cosmetics the player already owns. */
 /* Shared, independently implemented scoring-box geometry and effect layers. */
 .number-box.number-box {
   position: relative;
@@ -524,10 +524,6 @@ button.number-box.number-box:hover {
     transform: scale(1.03);
   }
 }
-.number-box[data-motion="reduced"] .box-finish::before,
-.number-box[data-motion="reduced"] .box-finish::after {
-  animation: none;
-}
 
 /* A worn aura also tints the digits: a two-tone gradient in the aura's own
    swatch, mixed with the rarity ink so the tier still reads at a glance, with
@@ -605,9 +601,6 @@ button.number-box.number-box:hover {
 .number-box[data-cosmetic]:not([data-cosmetic="none"]) .artifact-digits,
 .number-box[data-cosmetic]:not([data-cosmetic="none"]) .artifact-digit {
   text-shadow: none;
-}
-.number-box[data-motion="reduced"] .number-box-content {
-  animation: none;
 }
 @keyframes box-ink-sheen {
   0%,
@@ -2002,12 +1995,6 @@ button.number-box.number-box:hover {
       inset 0 2px 4px 0 rgba(100, 225, 225, 0.5);
     transform: scale(1.012);
   }
-}
-.number-box[data-motion="reduced"][data-deja-vu="true"],
-.number-box[data-motion="reduced"][data-deja-vu="true"]::before,
-.number-box[data-motion="reduced"][data-deja-vu="true"]::after,
-.number-box[data-motion="reduced"] .deja-vu-particles i {
-  animation: none;
 }
 .number-box[data-deja-vu="true"][data-cosmetic] .number-box-content,
 :root[data-theme="dark"]

@@ -177,6 +177,51 @@
   gap: 10px;
   margin-top: 16px;
 }
+.profile-rename {
+  margin: 12px 0;
+}
+.profile-rename-form {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.profile-rename-form > label {
+  margin: 0 !important;
+}
+.profile-rename-form > input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 500 13px var(--body-font, inherit);
+}
+.profile-rename-form > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.profile-rename-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.profile-rename-note {
+  margin: 8px 0 0;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
 /* The sign-up form's single action owns the width of the form it submits. */
 .profile-page form > .primary-button {
   width: 100%;
@@ -448,4 +493,56 @@
   .profile-history dl {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+.profile-lock-note {
+  flex: 1 1 220px;
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--border));
+  border-radius: 9px;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.cloud-profile-state {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--hover));
+}
+.cloud-profile-state .profile-title {
+  margin-bottom: 12px;
+}
+.cloud-profile-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.cloud-profile-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+  color: var(--danger);
+}
+.cloud-profile-error svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.cloud-profile-error strong {
+  font-size: 12px;
+}
+.cloud-profile-error p {
+  margin: 4px 0 0;
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 1.6;
 }

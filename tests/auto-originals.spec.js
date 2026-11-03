@@ -364,16 +364,22 @@ test("deleting the account cancels a queued automatic start and removes its swit
 }) => {
   await readyAuto(page);
   await auto(page).click();
-  await page.getByRole("button", { name: "Your profile", exact: true }).click();
+  await page.getByRole("button", { name: /^Local profile,/ }).click();
   await page
-    .getByRole("button", { name: "Delete account & progress", exact: true })
+    .getByRole("button", { name: "Delete profile & game save", exact: true })
     .click();
   await page.getByLabel("Type DELETE to confirm").fill("DELETE");
   await page
-    .getByRole("button", { name: "Permanently delete", exact: true })
+    .getByRole("button", {
+      name: "Permanently delete game save",
+      exact: true,
+    })
     .click();
   await expect(
-    page.getByRole("button", { name: "Sign up", exact: true }),
+    page.getByRole("button", {
+      name: "Choose a local profile name",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(auto(page)).toHaveCount(0);
   await page.clock.fastForward(106000);

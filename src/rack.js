@@ -39,7 +39,7 @@ const times = (value) => `×${Number(value.toFixed(2))}`;
 
 // The effects of one skill, short enough for a chip: "×2 wallet EP",
 // "2 draws, best kept", "floor 25,000 EP".
-export function skillEffectChip(skill) {
+function skillEffectChip(skill) {
   return skillEffectChips(skill)[0] ?? skillEffectSummary(skill);
 }
 

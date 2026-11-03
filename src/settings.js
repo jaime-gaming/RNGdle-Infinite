@@ -20,10 +20,7 @@ export const defaultSettings = {
   notifyRankEnabled: false,
   notifyRank: null,
   // Presentation
-  reduceMotion: "system", // "system" | "on" | "off"
   compactNumbers: false,
-  // CLEANUP Nov 4, 2026: retire the seasonal appearance option, not earned auras.
-  halloweenMode: true,
   showSkillBar: true,
   skillBarCollapsed: false,
   showGoalRecap: true,
@@ -37,7 +34,6 @@ const booleans = [
   "notifySound",
   "notifyRankEnabled",
   "compactNumbers",
-  "halloweenMode",
   "showSkillBar",
   "skillBarCollapsed",
   "showGoalRecap",
@@ -66,8 +62,6 @@ export function parseSettings(raw) {
     value.showSkillBar == null
   )
     next.showSkillBar = value.showFlywheelMeter;
-  if (["system", "on", "off"].includes(value.reduceMotion))
-    next.reduceMotion = value.reduceMotion;
   return next;
 }
 

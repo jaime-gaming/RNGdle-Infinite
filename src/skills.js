@@ -1,7 +1,3 @@
-// CLEANUP Nov 4, 2026: remove RNGWEEN_SKILL / RNGWEEN_SIGNATURE and the
-// `source === "event"` branches. Keep parsers dropping their ids silently.
-import { RNGWEEN_SKILL, RNGWEEN_SIGNATURE } from "./rngween-limited.js";
-
 // Skills are charged, one-shot effects that fire on the next completed roll.
 //
 // Deliberate boundary: a skill may change how a number is *drawn* (extra
@@ -54,8 +50,6 @@ export const SKILL_SLOTS = [
 //   pet-luck   multiplies the chance of a companion appearing on that roll
 //   overdrive  that roll counts N times towards Flywheel and skill charge
 export const SKILLS = [
-  RNGWEEN_SKILL,
-  RNGWEEN_SIGNATURE,
   // ---- Bought in the shop -------------------------------------------------
   {
     id: "surge",
@@ -429,7 +423,6 @@ export const SKILLS = [
 
 export const skillById = new Map(SKILLS.map((skill) => [skill.id, skill]));
 export const shopSkills = SKILLS.filter((skill) => skill.source === "shop");
-export const eventSkills = SKILLS.filter((skill) => skill.source === "event");
 export const petSkills = SKILLS.filter((skill) => skill.source === "pet");
 export const rebirthSkills = SKILLS.filter(
   (skill) => skill.source === "rebirth",
@@ -458,14 +451,6 @@ export function skillSlots(owned = []) {
 export function skillUnlocked(id, progress) {
   const skill = skillById.get(id);
   if (!skill) return false;
-  if (
-    skill.eventOnly &&
-    (progress.rngweenLimited?.retired ||
-      !(progress.rngweenLimited?.bought ?? []).includes(
-        skill.petId ?? skill.id,
-      ))
-  )
-    return false;
   if (skill.source === "pet") return progress.activePet === skill.petId;
   return (progress.skills ?? []).includes(id);
 }
@@ -493,10 +478,6 @@ export function armedSkills(progress) {
   return (progress.equippedSkills ?? []).filter((id) =>
     skillArmed(progress, id),
   );
-}
-
-export function armedSkillDefs(progress) {
-  return armedSkills(progress).map((id) => skillById.get(id));
 }
 
 // ---- Draw plan ------------------------------------------------------------
@@ -563,10 +544,6 @@ export function skillChargeFactor(ids = []) {
   }, 1);
 }
 
-export function skillWalletMultiplierOf(progress) {
-  return skillWalletMultiplier(progress.pendingRoll?.skills);
-}
-
 // ---- Charge bookkeeping ---------------------------------------------------
 // Only a settled, committed, online roll moves a circle. The skills that fired
 // empty; every other equipped skill gains one charge (or the overdrive factor).
@@ -588,19 +565,6 @@ export function chargeAfterSettlement(progress, id, source) {
 }
 
 // ---- Save validation ------------------------------------------------------
-export function validSkillCharge(skillCharge) {
-  if (skillCharge == null) return true;
-  if (typeof skillCharge !== "object" || Array.isArray(skillCharge))
-    return false;
-  return Object.entries(skillCharge).every(([id, value]) => {
-    const skill = skillById.get(id);
-    // An unknown key is not a value to trust or to punish: it is dropped on
-    // parse, exactly like an unknown badge or companion id.
-    if (!skill) return true;
-    return Number.isSafeInteger(value) && value >= 0 && value <= skill.charges;
-  });
-}
-
 export function parseSkillCharge(value) {
   const next = {};
   for (const [id, charge] of Object.entries(value ?? {}))
@@ -614,7 +578,7 @@ export function parseSkillCharge(value) {
 // on earnings.
 export function skillTakesSlot(id) {
   const source = skillById.get(id)?.source;
-  return source === "shop" || source === "pet" || source === "event";
+  return source === "shop" || source === "pet";
 }
 
 // Trim an equipped list to the rack: free skills always stay, slot-taking skills keep
@@ -660,25 +624,11 @@ export function parseUnlockedSkills(value, progress) {
       // A skill bought in the shop must also be owned, so a save cannot grant
       // a purchase it never paid for.
       (skillById.get(id).source !== "shop" ||
-        (progress.owned ?? []).includes(id)) &&
-      (skillById.get(id).source !== "event" ||
-        (!progress.rngweenLimited?.retired &&
-          (progress.rngweenLimited?.bought ?? []).includes(id))),
+        (progress.owned ?? []).includes(id)),
   );
 }
 
 // ---- Presentation ---------------------------------------------------------
-export function chargeLabel(progress, id) {
-  const skill = skillById.get(id);
-  if (!skill) return "";
-  return `${skillChargeOf(progress, id)} / ${skill.charges}`;
-}
-
-export function skillState(progress, id) {
-  if (!skillUnlocked(id, progress)) return "locked";
-  return skillArmed(progress, id) ? "armed" : "charging";
-}
-
 export function skillEffectSummary(skill) {
   switch (skill.kind) {
     case "wallet":
@@ -726,6 +676,5 @@ export function skillEffectChips(skill) {
 export function skillSourceLabel(skill, petName = "") {
   if (skill.source === "pet") return `${petName || "Companion"} signature`;
   if (skill.source === "rebirth") return `Rebirth ${skill.rebirth} reward`;
-  if (skill.source === "event") return "RNGween 2026 · until Nov 3 (UTC)";
   return "Shop purchase";
 }

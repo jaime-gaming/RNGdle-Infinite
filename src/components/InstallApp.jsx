@@ -70,8 +70,8 @@ export default function InstallApp({ notify }) {
           {help
             ? ios
               ? "Tap Share, then “Add to Home Screen” — the game opens full-screen like an app."
-              : "Open your browser menu and choose “Install app” / “Add to Home screen”."
-            : "RNGdle on your home screen: one tap, full screen, no browser chrome."}
+              : "Open the menu and choose “Install app” or “Add to Home screen”."
+            : "Play RNGdle from your home screen, full screen with one tap."}
         </span>
       </span>
       <button type="button" className="install-app-action" onClick={install}>

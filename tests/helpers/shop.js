@@ -10,13 +10,13 @@ import {
 // that buys something therefore has to be on that product's shelf, and these
 // helpers are the one place that knows how to get there.
 
-export const shelfLabel = (id) =>
+const shelfLabel = (id) =>
   SHOP_SECTIONS.find((section) => section.id === id)?.label ?? "";
 
-export const shelfForProduct = (id) => shelfOfProduct(productById.get(id));
+const shelfForProduct = (id) => shelfOfProduct(productById.get(id));
 
 // A direct visit, the way a shared link or a reload reaches a shelf.
-export async function gotoShelf(page, shelf) {
+async function gotoShelf(page, shelf) {
   await page.goto(shelf ? `/shop/${shelf}` : "/shop");
   await expect(
     page.locator(shelf ? `#shop-${shelf}` : ".shop-hub"),

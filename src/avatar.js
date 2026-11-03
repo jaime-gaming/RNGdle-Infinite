@@ -7,7 +7,7 @@
 
 import { AVATAR_LIMIT } from "./progress.js";
 
-export const AVATAR_SIZE = 256;
+const AVATAR_SIZE = 256;
 export const AVATAR_ACCEPT =
   "image/png,image/jpeg,image/webp,image/gif,image/svg+xml";
 

@@ -1,7 +1,3 @@
-// CLEANUP Nov 4, 2026: remove RNGWEEN_PET from the catalogue. Retired saves no
-// longer hold it; keep the parser tolerant of its id for one more version.
-import { RNGWEEN_PET } from "./rngween-limited.js";
-
 // Companions are collectable friends that carry a wallet multiplier and one
 // exclusive skill.
 //
@@ -153,10 +149,8 @@ export const PETS = [
   },
 ];
 
-export const petById = new Map(
-  [...PETS, RNGWEEN_PET].map((pet) => [pet.id, pet]),
-);
-export const PET_IDS = [...PETS, RNGWEEN_PET].map((pet) => pet.id);
+export const petById = new Map(PETS.map((pet) => [pet.id, pet]));
+export const PET_IDS = PETS.map((pet) => pet.id);
 
 // A rare chance for a pet to show up on its own, so they are not purely a
 // shopping list. Rolled independently of the number, after it is drawn, so it

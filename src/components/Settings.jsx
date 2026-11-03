@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   Bell,
+  Cloud,
+  UserRound,
   BellOff,
   BookOpen,
   Download,
@@ -23,7 +25,6 @@ import {
   requestNotificationPermission,
   showReadyNotification,
 } from "../notifications.js";
-import { DeviceLinkSummary } from "./DeviceLink.jsx";
 import { openInstallBanner } from "./InstallApp.jsx";
 import "../settings.css";
 
@@ -59,6 +60,7 @@ export default function Settings({
   notify,
   progress,
   onAction,
+  onOpenRecovery,
   navigate,
   appUpdate,
   onStartUpdate,
@@ -72,8 +74,13 @@ export default function Settings({
   const [restoring, setRestoring] = useState(false);
   useEffect(() => {
     const refresh = () => setPermission(notificationPermission());
+    refresh();
     document.addEventListener("visibilitychange", refresh);
-    return () => document.removeEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
   const unsupported = permission === "unsupported";
   const denied = permission === "denied";
@@ -99,8 +106,8 @@ export default function Settings({
         kind: "warning",
         text:
           result === "unsupported"
-            ? "This browser does not support desktop notifications."
-            : "Your browser blocked notifications. Allow them in site settings and try again.",
+            ? "Desktop alerts are not available on this device."
+            : "Allow notifications for this game in your settings, then try again.",
       });
     }
   }
@@ -125,8 +132,8 @@ export default function Settings({
         kind: "warning",
         text:
           result === "unsupported"
-            ? "This browser does not support desktop notifications."
-            : "Your browser blocked notifications. Allow them in site settings and try again.",
+            ? "Desktop alerts are not available on this device."
+            : "Allow notifications for this game in your settings, then try again.",
       });
     }
   }
@@ -149,8 +156,8 @@ export default function Settings({
             kind: "warning",
             text:
               result === "unsupported"
-                ? "This browser does not support desktop notifications. The chime is on."
-                : "Your browser blocked notifications. Allow them in site settings and try again. The chime is on.",
+                ? "Desktop alerts are not available on this device. The chime is on."
+                : "Allow notifications for this game in your settings, then try again. The chime is on.",
           },
     );
   }
@@ -190,10 +197,10 @@ export default function Settings({
           label="Desktop notification when a roll is ready"
           description={
             unsupported
-              ? "This browser does not support desktop notifications."
+              ? "Desktop alerts are not available on this device."
               : denied
-                ? "Blocked by your browser. Allow notifications for this site, then switch this on."
-                : "Sent only while this tab is in the background, once per cooldown."
+                ? "Allow notifications for this game in your settings, then try again."
+                : "Sent once when your roll is ready, while you are away from the game."
           }
           checked={settings.notifyReady && permission === "granted"}
           disabled={unsupported || denied}
@@ -204,9 +211,9 @@ export default function Settings({
           label="Notify me at this rank or higher"
           description={
             unsupported
-              ? "This browser does not support rank alerts."
+              ? "Rank alerts are not available on this device."
               : denied
-                ? "Blocked by your browser. Allow notifications for this site, then switch this on."
+                ? "Allow notifications for this game in your settings, then try again."
                 : "Rolls at the chosen rank or higher alert you and stop Auto-Roll for review. Independent of the ready-roll notification."
           }
           checked={rankActive}
@@ -288,24 +295,6 @@ export default function Settings({
         <h2>
           <Eye size={16} aria-hidden="true" /> Presentation
         </h2>
-        <div className="setting-row">
-          <div className="setting-copy">
-            <label htmlFor="setting-motion">Reveal motion</label>
-            <p>
-              Reduced motion completes the reveal instantly. It never shortens
-              your cooldown or changes a score.
-            </p>
-          </div>
-          <select
-            id="setting-motion"
-            value={settings.reduceMotion}
-            onChange={(e) => update({ reduceMotion: e.target.value })}
-          >
-            <option value="system">Match system</option>
-            <option value="off">Full animation</option>
-            <option value="on">Reduced motion</option>
-          </select>
-        </div>
         <Toggle
           id="setting-skill-bar"
           label="Show the skill bar"
@@ -349,7 +338,23 @@ export default function Settings({
         />
       </div>
 
-      <DeviceLinkSummary progress={progress} navigate={navigate} />
+      <div className="settings-group">
+        <h2>
+          <Cloud size={16} aria-hidden="true" /> Online account
+        </h2>
+        <p className="settings-group-note">
+          Link a Cloud Account for an online backup. If this device and your
+          online account have different progress, you choose which to keep; the
+          other copy stays safe here.
+        </p>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => navigate("profile")}
+        >
+          <UserRound size={14} aria-hidden="true" /> Open profile &amp; sign-in
+        </button>
+      </div>
 
       {/* The footer never paints on phones, so its destinations live here —
           the group only renders where the footer is gone. */}
@@ -430,49 +435,24 @@ export default function Settings({
           <RotateCcw size={14} /> Restore defaults
         </button>
         <small>
-          Settings are saved in this browser only, separately from your game
-          progress. They are kept when you delete your account.
+          Settings stay on this device, separate from your game progress.
+          Deleting your game profile does not remove them or your sign-in.
         </small>
       </div>
-      <div className="settings-save" data-testid="settings-backup">
-        <h2>Your save</h2>
+      <div className="settings-save" data-testid="settings-recovery-entry">
+        <h2>Restore save</h2>
         <p>
-          {backup
-            ? `A backup copy of your game was kept on ${new Date(backup.at).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" })} UTC. It weighs ${Math.max(1, Math.round(backup.bytes / 1024))} KB once compressed.`
-            : "This browser has not kept a backup copy yet. It writes one as soon as the game saves."}
+          View earlier saved copies, check their progress, and restore one to
+          this device. Saved copies stay on this device.
         </p>
         <button
           type="button"
           className="secondary-button"
-          data-testid="settings-restore-backup"
-          disabled={!backup || restoring}
-          onClick={() => {
-            setRestoring(true);
-            const outcome = vault?.restore?.();
-            setRestoring(false);
-            notify?.(
-              outcome?.ok
-                ? {
-                    kind: "done",
-                    title: "Backup restored",
-                    text: "The last saved copy is back in this browser.",
-                  }
-                : {
-                    kind: "error",
-                    text:
-                      outcome?.message ?? "The backup could not be restored.",
-                  },
-            );
-          }}
+          data-testid="settings-open-recovery"
+          onClick={onOpenRecovery}
         >
-          <History size={14} />{" "}
-          {restoring ? "Restoring…" : "Restore the last backup"}
+          Restore save
         </button>
-        <small>
-          Your game is saved in this browser. Reloading, updating the game or
-          clearing cached files never removes it; only deleting your account
-          does. The backup is a second, compressed copy of the same save.
-        </small>
       </div>
       <div className="settings-update">
         <button
@@ -488,11 +468,11 @@ export default function Settings({
             className={appUpdate?.active ? "is-spinning" : undefined}
             aria-hidden="true"
           />
-          {appUpdate?.active ? "Stop update attempt" : "Reload until updated"}
+          {appUpdate?.active ? "Stop refresh" : "Refresh game"}
         </button>
         <p data-testid="update-status" role="status" aria-live="polite">
           {appUpdate?.message ||
-            "Clears the files this browser cached for the game, then reloads until the newest build arrives. Your progress, profile and settings are stored separately and stay exactly as they are."}
+            "Refreshes the game to get the latest version. Your progress, profile and settings stay saved."}
         </p>
       </div>
     </section>

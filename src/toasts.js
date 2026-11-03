@@ -7,14 +7,7 @@
 // optional title above the text, an optional icon, and an optional action
 // button ("Open History") that also dismisses the notice.
 
-export const TOAST_KINDS = [
-  "info",
-  "done",
-  "reward",
-  "milestone",
-  "warning",
-  "error",
-];
+const TOAST_KINDS = ["info", "done", "reward", "milestone", "warning", "error"];
 
 // Up to this many notices are on screen at once; the oldest makes room.
 export const TOAST_LIMIT = 3;

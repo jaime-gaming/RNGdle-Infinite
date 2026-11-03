@@ -13,7 +13,11 @@ export default class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     // Log for debugging – never blank page silently
     try {
-      console.error("[RNGdle] Render error caught by boundary:", error, errorInfo);
+      console.error(
+        "[RNGdle] Render error caught by boundary:",
+        error,
+        errorInfo,
+      );
     } catch {}
     this.setState({ errorInfo });
   }
@@ -48,8 +52,7 @@ export default class ErrorBoundary extends React.Component {
             padding: "24px",
             textAlign: "center",
             gap: "16px",
-            fontFamily:
-              "Inter, system-ui, -apple-system, sans-serif",
+            fontFamily: "Inter, system-ui, -apple-system, sans-serif",
             color: "var(--text, #1a1a1a)",
             background: "var(--bg, #fff)",
           }}
@@ -58,8 +61,9 @@ export default class ErrorBoundary extends React.Component {
             Algo salió mal
           </h2>
           <p style={{ maxWidth: 520, opacity: 0.8, lineHeight: 1.5 }}>
-            La página encontró un error y no pudo mostrarse. Tu progreso y perfil están
-            guardados en este navegador y no se borran al recargar. Prueba recargar o volver al inicio.
+            La página encontró un error y no pudo mostrarse. Tu progreso y
+            perfil están guardados en este navegador y no se borran al recargar.
+            Prueba recargar o volver al inicio.
           </p>
           <details
             style={{
@@ -85,10 +89,19 @@ export default class ErrorBoundary extends React.Component {
               }}
             >
               {String(message)}
-              {this.state.error?.stack ? `\n\n${this.state.error.stack.slice(0, 2000)}` : ""}
+              {this.state.error?.stack
+                ? `\n\n${this.state.error.stack.slice(0, 2000)}`
+                : ""}
             </pre>
           </details>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
             <button
               className="primary-button"
               onClick={this.handleReload}
@@ -116,7 +129,8 @@ export default class ErrorBoundary extends React.Component {
             </button>
           </div>
           <small style={{ opacity: 0.6 }}>
-            Si esto sigue ocurriendo, prueba borrar caché o abrir en otra pestaña. El backup está en Ajustes.
+            Si esto sigue ocurriendo, prueba borrar caché o abrir en otra
+            pestaña. El backup está en Ajustes.
           </small>
         </div>
       );

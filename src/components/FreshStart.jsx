@@ -9,7 +9,7 @@ import "../fresh-start.css";
 // Once an account has three prestiges, the ladder has nothing left to show.
 // The game says so once, then leaves a small "!" in the header for whenever
 // the player feels like taking it up on the offer.
-export const FRESH_START_SEEN_KEY = "rng-infinite-fresh-start-seen-v1";
+const FRESH_START_SEEN_KEY = "rng-infinite-fresh-start-seen-v1";
 
 function seenFor(profileId) {
   try {
