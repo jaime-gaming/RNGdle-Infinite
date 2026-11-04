@@ -1,0 +1,163 @@
+/* Incident banner: sits under the header on every page, in the normal flow so
+   it never covers the rack, game controls or tab bar. The severity class sets
+   the accent color: critical = danger red, major = warning amber,
+   minor/maintenance = neutral. */
+.status-banner {
+  --status-accent: var(--warning);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 12px 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--status-accent) 45%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--status-accent) 10%, var(--surface));
+  color: var(--text);
+  animation: status-banner-in 320ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.status-banner.is-critical {
+  --status-accent: var(--danger);
+}
+.status-banner.is-major {
+  --status-accent: var(--warning);
+}
+.status-banner.is-minor,
+.status-banner.is-maintenance {
+  --status-accent: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, var(--surface));
+}
+.status-banner-icon {
+  flex-shrink: 0;
+  color: var(--status-accent);
+}
+.status-banner-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.status-banner-copy strong {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.status-banner-tag {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--status-accent);
+  border: 1px solid color-mix(in srgb, var(--status-accent) 45%, transparent);
+}
+.status-banner-copy span {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.status-banner-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--status-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.status-banner-link:hover {
+  text-decoration: underline;
+}
+.status-banner-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.status-banner-close:hover {
+  background: var(--border);
+  color: var(--text);
+}
+@keyframes status-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 760px) {
+  .status-banner {
+    margin: 8px 10px 0;
+  }
+  .status-banner-copy span {
+    font-size: 10.5px;
+  }
+}
+
+/* Header indicator: stays while any RNGdle Infinite incident/maintenance is
+   active, even when the banner is dismissed. */
+.status-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid
+    color-mix(in srgb, var(--status-accent, var(--warning)) 45%, var(--border));
+  border-radius: 10px;
+  background: color-mix(
+    in srgb,
+    var(--status-accent, var(--warning)) 10%,
+    var(--surface)
+  );
+  color: var(--status-accent, var(--warning));
+  cursor: pointer;
+}
+.status-indicator.is-critical {
+  --status-accent: var(--danger);
+}
+.status-indicator.is-major {
+  --status-accent: var(--warning);
+}
+.status-indicator.is-minor,
+.status-indicator.is-maintenance {
+  --status-accent: var(--text);
+}
+.status-indicator-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-accent, var(--warning));
+  animation: status-indicator-pulse 1.6s ease-in-out infinite;
+}
+@keyframes status-indicator-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}

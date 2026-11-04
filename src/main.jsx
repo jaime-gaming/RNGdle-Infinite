@@ -98,6 +98,10 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import RebirthNav from "./components/RebirthNav";
 import MobileTabBar from "./components/MobileTabBar";
 import InstallApp from "./components/InstallApp";
+import StatusBanner from "./components/StatusBanner.jsx";
+import StatusIndicator from "./components/StatusIndicator.jsx";
+import { maintenanceActiveFor, useStatusIssue } from "./use-status-issue.js";
+import { useTwoFactor } from "./use-two-factor.js";
 import About from "./components/About";
 import {
   LATEST_VERSION,
@@ -160,6 +164,7 @@ const CLOUD_STATUS_COPY = {
   error: "Online backup needs attention",
   "signed-out": "Not signed in",
   unconfigured: "Online sign-in unavailable",
+  maintenance: "Paused for maintenance",
 };
 
 function App() {
@@ -297,6 +302,9 @@ function App() {
     if (retireLegacyDeviceLink() && localProfileAtLaunch.current)
       setLegacyDeviceLinkNotice(true);
   }, []);
+  const statusIssue = useStatusIssue();
+  const maintenanceActive = maintenanceActiveFor(statusIssue);
+  const twoFactor = useTwoFactor(auth);
   const playAccess = cloudGameAccess({
     required: cloudAccountRequired,
     configured: auth.configured,
@@ -305,6 +313,8 @@ function App() {
     passwordRequired: auth.user?.passwordRequired ?? false,
     localPlay,
     localProfileRequired: localPlay && !auth.user && !session.profile,
+    maintenance: maintenanceActive,
+    twoFactorPending: twoFactor.pending,
   });
   useEffect(() => {
     if (localPlay && !auth.user && !session.profile && page !== "profile")
@@ -641,10 +651,10 @@ function App() {
     });
     setModal("badge");
   }
-  // Profile is a page (/profile), not a window: every profile prompt in the
-  // game simply navigates there, and the page remembers itself in the URL.
+  // The Cloud Account lives in Settings now, so every account prompt in the
+  // game navigates there instead of to the Profile page.
   function openAuth() {
-    navigate("profile");
+    navigate("settings");
   }
   function continueLocally() {
     chooseLocalPlay(true);
@@ -748,6 +758,7 @@ function App() {
           </nav>
         </div>
         <div className="header-right">
+          <StatusIndicator />
           <FreshStartFlag progress={session} onOpen={openFreshStart} />
           {showVersionFlag && (
             <button
@@ -834,6 +845,7 @@ function App() {
           </button>
         </div>
       </header>
+      <StatusBanner />
       {!isOnline && (
         <div
           className="offline-save-banner"
@@ -866,7 +878,7 @@ function App() {
             which full save to keep.
           </div>
           <div className="device-link-migration-actions">
-            <button type="button" onClick={() => navigate("profile")}>
+            <button type="button" onClick={() => navigate("settings")}>
               Open Cloud Account
             </button>
             <button
@@ -880,24 +892,24 @@ function App() {
           </div>
         </div>
       )}
-      {auth.user && cloud.status === "needs-choice" && page !== "profile" && (
+      {auth.user && cloud.status === "needs-choice" && page !== "settings" && (
         <div className="cloud-choice-banner" role="alert">
           <span>
             This device and your online progress differ. Choose which copy to
             keep before playing online.
           </span>
-          <button type="button" onClick={() => navigate("profile")}>
+          <button type="button" onClick={() => navigate("settings")}>
             Review saves
           </button>
         </div>
       )}
-      {auth.user?.passwordRequired && (page !== "profile" || sharedCard) && (
+      {auth.user?.passwordRequired && (page !== "settings" || sharedCard) && (
         <div className="auth-password-banner" role="alert">
           <span>
             Finish Google sign-in by adding a password. Game actions and online
             backup stay paused until you do.
           </span>
-          <button type="button" onClick={() => navigate("profile")}>
+          <button type="button" onClick={() => navigate("settings")}>
             Set password
           </button>
         </div>
@@ -1006,17 +1018,30 @@ function App() {
             {settingsSubpage === "save-recovery" ? (
               <SaveRecovery vault={vault} notify={notify} />
             ) : (
-              <Settings
-                notify={notify}
-                progress={session}
-                onAction={dispatch}
-                onOpenRecovery={openSaveRecovery}
-                navigate={navigate}
-                vault={vault}
-                appUpdate={appUpdate}
-                onStartUpdate={startAppUpdate}
-                onStopUpdate={stopAppUpdate}
-              />
+              <>
+                <CloudAccount
+                  auth={auth}
+                  cloud={cloud}
+                  profile={session.profile}
+                  localPlay={localPlay}
+                  twoFactor={twoFactor}
+                  onContinueLocal={continueLocally}
+                  onAction={dispatch}
+                  onRetryCloud={retryCloudLoad}
+                  onResolveCloudConflict={resolveCloudConflict}
+                />
+                <Settings
+                  notify={notify}
+                  progress={session}
+                  onAction={dispatch}
+                  onOpenRecovery={openSaveRecovery}
+                  navigate={navigate}
+                  vault={vault}
+                  appUpdate={appUpdate}
+                  onStartUpdate={startAppUpdate}
+                  onStopUpdate={stopAppUpdate}
+                />
+              </>
             )}
           </>
         )}
@@ -1091,7 +1116,7 @@ function App() {
                     : viewingOtherProfile
                       ? `Viewing ${profileName}'s public profile.`
                       : auth.user
-                        ? "Your online account and game progress."
+                        ? "Your game profile and progress on this device."
                         : session.profile
                           ? "Your profile, saved on this device."
                           : localPlay
@@ -1119,16 +1144,6 @@ function App() {
                 />
               ) : (
                 <>
-                  <CloudAccount
-                    auth={auth}
-                    cloud={cloud}
-                    profile={session.profile}
-                    localPlay={localPlay}
-                    onContinueLocal={continueLocally}
-                    onAction={dispatch}
-                    onRetryCloud={retryCloudLoad}
-                    onResolveCloudConflict={resolveCloudConflict}
-                  />
                   {(!cloudAccountRequired ||
                     session.profile ||
                     (localPlay && !auth.user)) &&
@@ -1157,6 +1172,24 @@ function App() {
                         onSetPublicProfile={setPublicProfileVisibility}
                       />
                     )}
+                  {(auth.user?.passwordRequired ||
+                    (cloudAccountRequired && !session.profile)) && (
+                    <section className="panel cloud-account-pointer">
+                      <h2>Cloud Account</h2>
+                      <p>
+                        {auth.user?.passwordRequired
+                          ? "Finish setting up your Cloud Account to resume online backup."
+                          : "Sign in or create your Cloud Account to back up this progress online."}
+                      </p>
+                      <button
+                        type="button"
+                        className="primary-button"
+                        onClick={() => navigate("settings")}
+                      >
+                        Open Cloud Account in Settings
+                      </button>
+                    </section>
+                  )}
                 </>
               )}
             </div>

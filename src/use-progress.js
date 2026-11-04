@@ -23,6 +23,7 @@ import {
 } from "./cloud-save.js";
 import { firebaseConfigured } from "./firebase.js";
 import { cloudGameAccess } from "./auth-gate.js";
+import { getStatusIssue, maintenanceActiveFor } from "./use-status-issue.js";
 import {
   archiveSavedCopy,
   clearLocalSaveRecovery,
@@ -475,6 +476,27 @@ export function useProgress({
       };
     }
 
+    // A running maintenance pauses cloud sync: keep the local copy usable and
+    // wait for the maintenance to end instead of hammering Firestore.
+    if (maintenanceActiveFor(getStatusIssue())) {
+      const localCopyIsOwned =
+        readCloudOwner() === userId &&
+        Boolean(current.current.profile) &&
+        healthy.current;
+      cloudGate.current = { userId, ready: localCopyIsOwned };
+      updateCloud({
+        status: "maintenance",
+        ready: localCopyIsOwned,
+        userId,
+        error: "",
+        notice:
+          "Online backup is paused during scheduled maintenance. Changes stay on this device until it ends.",
+      });
+      return () => {
+        active = false;
+      };
+    }
+
     cloudGate.current = { userId, ready: false };
     updateCloud({ status: "loading", ready: false, userId, error: "" });
 
@@ -538,15 +560,22 @@ export function useProgress({
       if (!currentRequest()) return;
       return restoreCloudSave();
     });
-    loadTask.catch(() => {
+    loadTask.catch((loadError) => {
       if (!currentRequest()) return;
       cloudGate.current = { userId, ready: false };
+      // Surface the underlying Firebase error code (e.g. permission-denied,
+      // unavailable) so the real cause is visible without a console.
+      const detail =
+        typeof loadError?.code === "string" && loadError.code
+          ? ` (${loadError.code})`
+          : "";
       updateCloud({
         status: "error",
         ready: false,
         userId,
         error:
-          "Your online progress could not be loaded. Try again before changing anything.",
+          "Your online progress could not be loaded. Try again before changing anything." +
+          detail,
       });
     });
 
@@ -565,6 +594,19 @@ export function useProgress({
       !cloudGate.current.ready
     )
       return undefined;
+
+    if (maintenanceActiveFor(getStatusIssue())) {
+      updateCloud({
+        ...cloudRef.current,
+        status: "maintenance",
+        ready: true,
+        userId,
+        error: "",
+        notice:
+          "Cloud sync is paused during scheduled maintenance; changes stay on this device.",
+      });
+      return undefined;
+    }
 
     if (readCloudOwner() !== userId) {
       cloudGate.current = { userId, ready: false };
@@ -772,7 +814,8 @@ export function useProgress({
             userId,
             updatedAt: cloudRef.current.updatedAt ?? null,
             error:
-              "Your progress could not be backed up online. The copy on this device is safe. Try again.",
+              "Your progress could not be backed up online. The copy on this device is safe. Try again." +
+              (code ? ` (${code})` : ""),
             notice: "",
           });
         });
@@ -969,6 +1012,7 @@ export function useProgress({
             auth.localProfileRequired &&
             !current.current.profile &&
             action.type !== "register",
+          maintenance: maintenanceActiveFor(getStatusIssue()),
         });
         if (!deletingCloudAccount && !accountAccess.allowed)
           return { ok: false, message: accountAccess.message };

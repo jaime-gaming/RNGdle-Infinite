@@ -48,6 +48,22 @@ service cloud.firestore {
       );
     }
 
+    // Two-factor sign-in preferences are stored in their own document, so the
+    // strictly whitelisted profile settings document stays untouched.
+    function validAccountSecurityData(data) {
+      return data is map
+        && data.keys().hasOnly([
+          'two_factor_enabled', 'trusted_devices', 'updated_at'
+        ])
+        && data.updated_at is timestamp
+        && (!data.keys().hasAny(['two_factor_enabled'])
+          || data.two_factor_enabled is bool)
+        && (!data.keys().hasAny(['trusted_devices'])
+          || (data.trusted_devices is list
+            && data.trusted_devices.size() <= 12
+            && data.trusted_devices.join(',').size() <= 12 * 128));
+    }
+
     function validCloudProfileSettingsData(data) {
       return data is map
         && data.keys().hasAll([
@@ -605,6 +621,20 @@ service cloud.firestore {
               get(profileSettingsPath(uid)).data.username_key,
               uid
             ));
+    }
+
+    // Only the account owner can read or change its own two-factor settings,
+    // and trusted devices can never be listed or enumerated by anyone else.
+    match /account_security/{uid} {
+      allow get: if signedInAs(uid);
+      allow list: if false;
+      allow create: if signedInAs(uid)
+        && validAccountSecurityData(request.resource.data)
+        && request.resource.data.updated_at == request.time;
+      allow update: if signedInAs(uid)
+        && validAccountSecurityData(request.resource.data)
+        && request.resource.data.updated_at == request.time;
+      allow delete: if signedInAs(uid);
     }
 
     match /cloud_profile_settings/{uid} {

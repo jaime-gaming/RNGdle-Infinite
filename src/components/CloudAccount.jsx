@@ -58,6 +58,7 @@ const STATUS_LABELS = {
   error: "Online backup needs attention",
   "signed-out": "Not signed in",
   unconfigured: "Online sign-in unavailable",
+  maintenance: "Paused for maintenance",
 };
 
 const APPCHECK_STATUS_COPY = {
@@ -117,6 +118,7 @@ export default function CloudAccount({
   cloud,
   profile,
   localPlay = false,
+  twoFactor = null,
   onContinueLocal,
   onAction,
   onRetryCloud,
@@ -137,6 +139,7 @@ export default function CloudAccount({
   const [deleteAccountConfirmation, setDeleteAccountConfirmation] =
     useState("");
   const [pending, setPending] = useState(false);
+  const [linkEmail, setLinkEmail] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const busy = useRef(false);
@@ -990,6 +993,95 @@ export default function CloudAccount({
               )}
             </>
           )}
+          {twoFactor && (
+            <section
+              className="cloud-account-security"
+              aria-labelledby="cloud-account-security-title"
+              data-testid="cloud-account-security"
+            >
+              <h3 id="cloud-account-security-title">Security</h3>
+              {twoFactor.emailUnverified && (
+                <div className="cloud-account-security-row">
+                  <div>
+                    <strong>Confirm your email address</strong>
+                    <p>
+                      A confirmation email was sent to {auth.user?.email}.
+                      Confirm it so the account can be recovered.
+                    </p>
+                  </div>
+                  <div className="cloud-account-security-actions">
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={pending || twoFactor.busy}
+                      onClick={async () => {
+                        const result = await twoFactor.resendVerification();
+                        if (result.ok)
+                          setNotice("A new confirmation email is on its way.");
+                        else setError(result.message ?? "");
+                      }}
+                    >
+                      Send again
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={pending || twoFactor.busy}
+                      onClick={async () => {
+                        const result = await twoFactor.recheckVerification();
+                        if (!result.verified)
+                          setNotice(
+                            "Still not confirmed. Open the link in the email, then press this again.",
+                          );
+                      }}
+                    >
+                      I have confirmed it
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="cloud-account-security-row">
+                <div>
+                  <strong>Two-factor sign-in</strong>
+                  <p>
+                    New devices receive an emailed sign-in link and must open it
+                    before the account can be used there.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={pending || twoFactor.busy || twoFactor.loading}
+                  onClick={async () => {
+                    const result = await twoFactor.setEnabled(
+                      !twoFactor.enabled,
+                    );
+                    if (!result.ok) setError(result.message ?? "");
+                  }}
+                >
+                  {twoFactor.busy
+                    ? "Working…"
+                    : twoFactor.enabled
+                      ? "Turn off"
+                      : "Turn on"}
+                </button>
+              </div>
+              <p className="cloud-account-note">
+                {twoFactor.enabled
+                  ? `Two-factor is on. ${twoFactor.devices.length} device${
+                      twoFactor.devices.length === 1 ? "" : "s"
+                    } remembered.`
+                  : "Two-factor is off: any device can sign in with the password alone."}{" "}
+                This device is{" "}
+                {twoFactor.trusted ? "remembered" : "not remembered yet"}.
+              </p>
+              {twoFactor.message && (
+                <p className="cloud-account-note" role="status">
+                  {twoFactor.message}
+                </p>
+              )}
+            </section>
+          )}
           <section
             className="cloud-account-danger"
             aria-labelledby="cloud-account-delete-title"
@@ -1108,6 +1200,61 @@ export default function CloudAccount({
             <p className="profile-error" role="alert">
               {auth.error}
             </p>
+          )}
+          {auth.pendingEmailLink && (
+            <form
+              className="cloud-account-two-factor-pending"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (pending || !linkEmail.trim()) return;
+                setPending(true);
+                setError("");
+                const result = await auth.completeEmailLinkSignIn(linkEmail);
+                setPending(false);
+                if (!result.ok) setError(result.message ?? "");
+              }}
+            >
+              <strong>Finish the emailed sign-in</strong>
+              <p>
+                This device opened a sign-in link but does not know which
+                address it was sent to. Enter that address to continue.
+              </p>
+              <label htmlFor="email-link-address">Email address</label>
+              <input
+                id="email-link-address"
+                type="email"
+                autoComplete="email"
+                required
+                value={linkEmail}
+                onChange={(event) => setLinkEmail(event.target.value)}
+                disabled={pending}
+              />
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={pending || !linkEmail.trim()}
+              >
+                {pending ? "Checking…" : "Finish sign-in"}
+              </button>
+            </form>
+          )}
+          {twoFactor?.pending && !auth.pendingEmailLink && (
+            <div className="cloud-account-two-factor-pending" role="status">
+              <strong>Check your email to finish signing in</strong>
+              <p>
+                {twoFactor.pendingEmail
+                  ? `We sent a sign-in link to ${twoFactor.pendingEmail}. Open it on this device to continue.`
+                  : "We sent a sign-in link to your account email. Open it on this device to continue."}
+              </p>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={twoFactor.busy}
+                onClick={twoFactor.requestLink}
+              >
+                {twoFactor.busy ? "Sending…" : "Send the link again"}
+              </button>
+            </div>
           )}
           {notice && (
             <p className="cloud-account-note" role="status">

@@ -40,7 +40,8 @@ const CLOUD_PUBLIC_PROFILE_WRITE_LIMIT_COLLECTION =
   "cloud_public_profile_write_limits";
 const PUBLIC_PROFILE_OWNER_COLLECTION = "public_profile_owners";
 const CLOUD_SAVE_WRITE_INTERVAL_MS = 2_000;
-const CLOUD_PROFILE_RENAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1_000;
+// Players can rename their Cloud profile once a week.
+const CLOUD_PROFILE_RENAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1_000;
 const CLOUD_PROFILE_AVATAR_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1_000;
 const CLOUD_DIRTY_KEY = "rng-infinite-cloud-dirty-v1";
 const CLOUD_DIRTY_USER_PREFIX = `${CLOUD_DIRTY_KEY}:`;
@@ -1311,7 +1312,7 @@ export async function renameCloudProfile(
       lastNameChange + CLOUD_PROFILE_RENAME_COOLDOWN_MS,
     ).toLocaleString();
     throw new Error(
-      `Cloud profile names can be changed once every 30 days. Try again after ${nextDate}.`,
+      `Cloud profile names can be changed once every 7 days. Try again after ${nextDate}.`,
     );
   }
 

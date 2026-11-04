@@ -9,6 +9,8 @@
     "build": "vite build",
     "build:github-pages": "node tools/build-github-pages.mjs",
     "deploy:pages": "node tools/deploy-pages.mjs",
+    "deploy:rules": "npx --yes firebase-tools deploy --only firestore:rules",
+    "check:firebase": "node tools/check-firebase-config.mjs",
     "test:pages": "node tools/test-cloudflare-pages.mjs",
     "test:github-pages": "node tools/test-github-pages.mjs",
     "screenshots": "node tools/screenshots.mjs",
