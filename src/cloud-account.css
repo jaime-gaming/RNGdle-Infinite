@@ -690,3 +690,48 @@
     justify-content: flex-start;
   }
 }
+
+/* Profile page pointer to the Cloud Account, which now lives in Settings. */
+.cloud-account-pointer {
+  display: grid;
+  gap: 8px;
+}
+.cloud-account-pointer .primary-button {
+  justify-self: start;
+}
+
+/* Security: two-factor sign-in and email confirmation. */
+.cloud-account-security {
+  display: grid;
+  gap: 12px;
+}
+.cloud-account-security-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cloud-account-security-row p {
+  margin: 4px 0 0;
+  opacity: 0.72;
+}
+.cloud-account-security-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cloud-account-two-factor-pending {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+.cloud-account-two-factor-pending p {
+  margin: 0;
+}
+.cloud-account-two-factor-pending .secondary-button {
+  justify-self: start;
+}

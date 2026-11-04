@@ -15,16 +15,17 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 await build({ mode: "test", build: { outDir, emptyOutDir: true } });
 const html = await fs.readFile(path.join(outDir, "index.html"), "utf8");
-const redirects = (
-  await fs.readFile(path.join(outDir, "_redirects"), "utf8")
-).trim();
 const headers = await fs.readFile(path.join(outDir, "_headers"), "utf8");
 assert.ok(html.includes("rngdle-build-id"), "Missing app build identity");
 assert.ok(
   html.includes("https://rngdle-infinite.jaime-gaming.com/"),
   "The production page metadata does not use the custom domain",
 );
-assert.equal(redirects, "/* /index.html 200", "Missing Pages SPA rewrite");
+// The Worker serves SPA fallback via assets.not_found_handling, so a
+// _redirects rewrite would loop (/index.html matches /* again) and is banned.
+await assert.rejects(fs.access(path.join(outDir, "_redirects")), {
+  code: "ENOENT",
+});
 assert.match(headers, /\n\/\s*\n\s*Cache-Control: no-cache/);
 assert.match(headers, /\/shop\*\s*\n\s*Cache-Control: no-cache/);
 assert.match(headers, /\/profile\*\s*\n\s*Cache-Control: no-cache/);
@@ -100,7 +101,7 @@ try {
   let ready = false;
   for (let attempt = 0; attempt < 80; attempt++) {
     if (pagesServer.exitCode !== null)
-      throw new Error(`Wrangler Pages failed to start:\n${serverLogs}`);
+      throw new Error(`Wrangler dev failed to start:\n${serverLogs}`);
     try {
       const response = await fetch(`${origin}/`);
       if (response.ok) {
@@ -108,11 +109,11 @@ try {
         break;
       }
     } catch {
-      // The local Pages runtime is still binding its port.
+      // The local Worker runtime is still binding its port.
     }
     await delay(250);
   }
-  assert.ok(ready, `Wrangler Pages did not become ready:\n${serverLogs}`);
+  assert.ok(ready, `Wrangler dev did not become ready:\n${serverLogs}`);
 
   const rootResponse = await fetch(`${origin}/`);
   const rootHtml = await rootResponse.text();
@@ -205,7 +206,7 @@ try {
       page.locator(".rngween-event-panel, .device-link"),
     ).toHaveCount(0);
 
-    // A committed roll must survive a direct refresh on the Pages artifact.
+    // A committed roll must survive a direct refresh on the Worker assets artifact.
     await page.getByRole("button", { name: "GENERATE", exact: true }).click();
     await expect
       .poll(async () => (await saved())?.pendingRoll?.number)
