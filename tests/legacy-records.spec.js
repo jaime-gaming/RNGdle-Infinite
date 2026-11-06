@@ -177,6 +177,15 @@ test("legacy permanent cosmetics survive same-account save reconciliation", () =
   );
 });
 
+test("a first sync with no displaced copy needs no previous save", () => {
+  // A second device adopts the online copy: there is no earlier device copy to
+  // carry cosmetics over from, and reconciliation must not throw.
+  const cloud = parseProgress(JSON.stringify(retiredEventSave()));
+  expect(() => preservePermanentCosmetics(null, cloud)).not.toThrow();
+  expect(preservePermanentCosmetics(null, cloud)).toBe(cloud);
+  expect(preservePermanentCosmetics(undefined, cloud)).toBe(cloud);
+});
+
 test("retired events remain parseable but cannot create fresh attendance", () => {
   const clean = emptyProgress();
   expect(clean.events[RNGWEEN_ID]).toBeUndefined();

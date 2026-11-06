@@ -73,6 +73,12 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   - **An explicit restore is authoritative.** Restoring a copy from Settings
     writes `authoritative` into the sync mark so the next sync uploads it
     instead of undoing it.
+  - **`profile_id` has two scopes.** The owner pointer (`public_profile_owners`)
+    and the name claim are keyed by the public name, and the owner's
+    `profile_id` repeats that key; the settings document and the claim's
+    `profile_id` hold the game profile id. Rules tie the two scopes together by
+    comparing the claim with the settings, never with the owner. Comparing them
+    made every public publish and public read fail with `permission-denied`.
   - **Rebinding a profile unpublishes its alias.** Rules require the private
     save, the name claim and the owner pointer to describe one game profile, so
     a resolution that switches the account to a different profile must clear
@@ -205,6 +211,7 @@ npx playwright test tests/roll.spec.js
 npm run build            # production build into dist/ for Cloudflare Workers
 npm run build:github-pages # production build into docs/ for legacy GitHub Pages
 npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
+npm run verify:cloud     # two-device Cloud Accounts simulation against firestore.rules
 npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
 npm run deploy:worker    # build and deploy the Worker (production is guarded)
 npm run audit:economy    # price ladder and roll-distribution audit
@@ -214,6 +221,15 @@ npm run format           # Prettier over src, tests, root configs and README
 For local cloud development, copy `.env.example` to `.env.local`. Local
 gameplay and tests should also work with no Firebase development variables;
 the checked-in `.env.production` is used only for production builds.
+
+`npm run verify:cloud` needs no Firebase: it runs real app sessions on simulated
+devices that share a fake Firestore which evaluates every commit against a model
+of `firestore.rules`, so a client write the real rules would reject fails there.
+It covers the first upload, a second device adopting the online save, both-way
+sync, a stale device never overwriting newer progress, publishing, unpublishing
+and the two-profile conflict. Re-run it after changing `src/cloud-save.js`,
+`src/use-progress.js` or `firestore.rules`; it is the only automated check of the
+rules/contract pair, because Firebase itself is never reached from CI.
 
 Playwright uses `CHROMIUM_PATH` when provided. Some environments need
 `--no-sandbox`; `playwright.config.js` already passes the flag for a supplied
@@ -296,6 +312,16 @@ rather than guessing.
   notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
+- **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
+  name the squashed commit after the release it publishes: `v0.5.2 bug fix 1`
+  when the merge carries bug fixes (the number matches the internal `fixN`
+  label), otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
+  when the branch is verified: `npm run build`, `npm run test:worker`,
+  `npm run verify:cloud`, the Playwright suite and `prettier --check`.
+- A change to `firestore.rules` only takes effect after
+  `npm run deploy:rules`. Say so explicitly in the merge summary; the app cannot
+  deploy rules for the user, and the client must stay compatible with the rules
+  that are actually deployed.
 
 ## Style
 

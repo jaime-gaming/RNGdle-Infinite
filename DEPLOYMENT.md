@@ -50,6 +50,7 @@ GitHub Pages (`docs/`, base path `/RNGdle-Infinite/`) is a legacy mirror and is
 
 ```bash
 npm run build && npm run test:worker   # local Worker runtime, assets + routing
+npm run verify:cloud                   # two-device Cloud Accounts simulation (no Firebase)
 curl -sI  https://rngdle-infinite.jaime-gaming.com/            # 200, no-cache
 curl -s   https://rngdle-infinite.jaime-gaming.com/version.json # buildId + internalVersion
 curl -sI  https://rngdle-infinite.jaime-gaming.com/shop/auras  # 200, app shell

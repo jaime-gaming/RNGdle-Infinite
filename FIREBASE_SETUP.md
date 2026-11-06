@@ -45,6 +45,11 @@ names exactly what is missing.
 Hosting lives on a Cloudflare Worker; see [`DEPLOYMENT.md`](DEPLOYMENT.md) for
 the deploy, the custom-domain attachment and the checks to run afterwards.
 
+The rules are the only Firebase change this release needs:
+`npm run deploy:rules` publishes `firestore.rules`. Until it runs, public
+profiles stay broken, because the previous rules compared the game profile id
+with the public name key inside `profileIsPublic` / `profileIsPublicAfter`.
+
 ## 4. App Check (optional but recommended)
 
 The app sends a reCAPTCHA Enterprise attestation when

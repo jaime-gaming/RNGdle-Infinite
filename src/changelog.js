@@ -9,7 +9,7 @@ export const CHANGELOG = [
     date: "2026-11-03",
     title: "cloud accounts and easier save recovery",
     body: [
-      "name a local profile to keep your progress on this device, or use a Cloud Account to carry it across devices.",
+      "name a local profile to keep progress on this device, or sign in to a Cloud Account and keep it in step on every device.",
       "restore an earlier local save from Settings → Restore save, with a preview before you choose.",
       "retired seasonal event screens are gone; cosmetics already earned and older activity remain in your save.",
     ],
