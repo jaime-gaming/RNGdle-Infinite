@@ -6,7 +6,10 @@ import {
   cloudAccountOwnsLocalSave,
   cloudProfileIdentity,
   cloudSaveWriteWaitMs,
+  cloudConflictCloudChanged,
   cloudConflictVersionChanged,
+  cloudSaveFingerprint,
+  cloudSyncTrust,
   compareSaveEpoch,
   compareSaveRichness,
   decodeCloudSave,
@@ -16,9 +19,13 @@ import {
   markCloudDirty,
   mayUseLocalSaveForCloudUser,
   readCloudDirtyOwner,
+  readCloudSyncMark,
   restoredSaveOwner,
+  saveHasProgress,
   selectLocalSaveForCloudUser,
   summarizeSaveProgress,
+  writeCloudSyncMark,
+  clearCloudSyncMark,
 } from "../src/cloud-save.js";
 import { UNKNOWN_CLOUD_OWNER } from "../src/save-owner.js";
 import { applyProgress, emptyProgress } from "../src/progress.js";
@@ -143,7 +150,7 @@ test("same-profile local progress wins only by strict dominance", () => {
   });
 });
 
-test("ties and mixed same-generation progress require a player choice", () => {
+test("a tie keeps this device's copy while mixed progress asks the player", () => {
   const cloud = progress({ balance: 100, totalEarned: 200 });
   const tie = progress({
     profile: { id: "profile-a", username: "another-name", createdAt: 1 },
@@ -157,9 +164,10 @@ test("ties and mixed same-generation progress require a player choice", () => {
     totalEarned: 1000,
   });
 
+  // Same durable progress: no question worth interrupting the player for.
   expect(chooseSaveWinner(tie, cloud)).toMatchObject({
-    winner: "choice",
-    choiceReason: "tie",
+    winner: "local",
+    preferencesOnly: true,
   });
   expect(compareSaveRichness(incomparable, cloud)).toBe("incomparable");
   expect(chooseSaveWinner(incomparable, cloud)).toMatchObject({
@@ -255,9 +263,11 @@ test("settings and log volume do not count as game progress", () => {
   });
 
   expect(compareSaveRichness(local, cloud)).toBe("equal");
+  // Preferences, log notes and auxiliary records are never progress: equal
+  // copies resolve here instead of asking which one to keep.
   expect(chooseSaveWinner(local, cloud)).toMatchObject({
-    winner: "choice",
-    choiceReason: "tie",
+    winner: "local",
+    preferencesOnly: true,
   });
 });
 
@@ -369,6 +379,167 @@ test("an actual fresh-start result triggers a choice against its older cloud era
     winner: "choice",
     choiceReason: "generation",
   });
+});
+
+test("a named but never played profile never blocks the copy that has progress", () => {
+  const shell = progress({ balance: 0, totalEarned: 0 });
+  const playedHere = {
+    ...progress({
+      profile: { id: "profile-b", username: "player-b", createdAt: 2 },
+      balance: 250,
+      totalEarned: 400,
+    }),
+    history: [{ id: "roll-1", type: "roll", at: 3, number: 7, ep: 400 }],
+  };
+
+  expect(saveHasProgress(shell)).toBe(false);
+  expect(saveHasProgress(playedHere)).toBe(true);
+  expect(saveHasProgress(empty)).toBe(false);
+
+  // Different profile IDs, but nothing is lost by keeping the populated copy.
+  expect(chooseSaveWinner(playedHere, shell)).toMatchObject({
+    winner: "local",
+    comparison: "local-only-progress",
+  });
+  expect(chooseSaveWinner(shell, playedHere)).toMatchObject({
+    winner: "cloud",
+    comparison: "cloud-only-progress",
+  });
+});
+
+test("a settled roll is newer than the online copy that still holds it pending", () => {
+  const pendingRoll = {
+    id: "roll-pending",
+    number: 1234,
+    at: 10,
+    startedAt: 10,
+    rollMS: 2_000,
+    cooldownMS: 1_000,
+  };
+  const settled = {
+    ...progress({ balance: 400, totalEarned: 400 }),
+    history: [
+      { id: "roll-pending", type: "roll", at: 12, number: 1234, ep: 400 },
+    ],
+  };
+  const cloudWithPending = progress({ pendingRoll });
+  expect(saveHasProgress(cloudWithPending)).toBe(true);
+
+  expect(compareSaveRichness(settled, cloudWithPending)).toBe("local");
+  expect(chooseSaveWinner(settled, cloudWithPending)).toMatchObject({
+    winner: "local",
+  });
+  // Two different committed rolls really are two different copies.
+  const otherPending = progress({
+    pendingRoll: { ...pendingRoll, id: "roll-other", number: 99 },
+  });
+  expect(compareSaveRichness(otherPending, cloudWithPending)).toBe(
+    "incomparable",
+  );
+});
+
+test("this device's own synced lineage continues without asking", () => {
+  const cloud = progress({ balance: 9_000, totalEarned: 12_000, rebirths: 2 });
+  const afterRebirth = progress({
+    balance: 500,
+    totalEarned: 12_500,
+    cycleEarnedEP: 0,
+    rebirths: 3,
+  });
+  const behind = progress({ balance: 100, totalEarned: 1_000, rebirths: 1 });
+
+  // Untrusted, a rebirth asks: another device could own that older era.
+  expect(chooseSaveWinner(afterRebirth, cloud)).toMatchObject({
+    winner: "choice",
+    choiceReason: "generation",
+  });
+  // Trusted, the same device simply moved its own save forward.
+  expect(
+    chooseSaveWinner(afterRebirth, cloud, { trusted: true }),
+  ).toMatchObject({ winner: "local", trusted: true });
+  expect(chooseSaveWinner(behind, cloud, { trusted: true })).toMatchObject({
+    winner: "cloud",
+    trusted: true,
+  });
+});
+
+test("an explicit restore wins over the online copy of the same profile", () => {
+  const cloud = progress({ balance: 9_000, totalEarned: 9_000, rebirths: 2 });
+  const restoredOlder = progress({
+    balance: 100,
+    totalEarned: 1_000,
+    rebirths: 1,
+  });
+
+  expect(
+    chooseSaveWinner(restoredOlder, cloud, { localAuthoritative: true }),
+  ).toMatchObject({ winner: "local", authoritativeRestore: true });
+  // A different profile is still never overwritten by a restore.
+  const otherProfile = progress({
+    profile: { id: "profile-b", username: "player-b", createdAt: 2 },
+    balance: 100,
+  });
+  expect(
+    chooseSaveWinner(otherProfile, cloud, { localAuthoritative: true }),
+  ).toMatchObject({ winner: "choice", choiceReason: "profile" });
+});
+
+test("a local change during the review keeps the choice, a remote change does not", () => {
+  const expected = {
+    expectedCloudExists: true,
+    expectedCloudSaveData: "cloud-v1",
+  };
+  expect(
+    cloudConflictCloudChanged({
+      ...expected,
+      cloudExists: true,
+      cloudSaveData: "cloud-v1",
+    }),
+  ).toBe(false);
+  expect(
+    cloudConflictCloudChanged({
+      ...expected,
+      cloudExists: true,
+      cloudSaveData: "cloud-v2",
+    }),
+  ).toBe(true);
+  expect(
+    cloudConflictCloudChanged({
+      ...expected,
+      cloudExists: false,
+      cloudSaveData: null,
+    }),
+  ).toBe(true);
+});
+
+test("the sync mark remembers the exact online document, per account", () => {
+  const storage = memoryStorage();
+  const document = "packed-save-bytes";
+  expect(cloudSaveFingerprint(document)).toBe(cloudSaveFingerprint(document));
+  expect(cloudSaveFingerprint(document)).not.toBe(
+    cloudSaveFingerprint(`${document}x`),
+  );
+  expect(readCloudSyncMark("user-a", storage)).toBe(null);
+  expect(
+    writeCloudSyncMark(
+      "user-a",
+      {
+        saveHash: cloudSaveFingerprint(document),
+        profileId: "profile-a",
+        usernameKey: "player-a",
+      },
+      storage,
+    ),
+  ).toBe(true);
+  expect(readCloudSyncMark("user-a", storage)).toMatchObject({
+    saveHash: cloudSaveFingerprint(document),
+    profileId: "profile-a",
+    usernameKey: "player-a",
+    authoritative: false,
+  });
+  expect(readCloudSyncMark("user-b", storage)).toBe(null);
+  expect(clearCloudSyncMark("user-a", storage)).toBe(true);
+  expect(readCloudSyncMark("user-a", storage)).toBe(null);
 });
 
 test("an unowned local save remains eligible only when the cloud account is empty", () => {
@@ -558,4 +729,56 @@ test("corrupt Firestore save strings fail closed", () => {
   expect(() => decodeCloudSave("rngvault1:not-valid-gzip")).toThrow(
     "could not be opened",
   );
+});
+
+test("sync trust needs this device's exact document and the same game profile", () => {
+  const document = "packed-save-bytes";
+  const mark = {
+    saveHash: cloudSaveFingerprint(document),
+    profileId: "profile-a",
+    usernameKey: "player-a",
+    authoritative: false,
+  };
+  expect(
+    cloudSyncTrust({
+      mark,
+      cloudExists: true,
+      cloudSaveData: document,
+      cloudProfileId: "profile-a",
+    }),
+  ).toEqual({ trusted: true, localAuthoritative: false });
+  // Another device wrote the online copy: fall back to the comparison rules.
+  expect(
+    cloudSyncTrust({
+      mark,
+      cloudExists: true,
+      cloudSaveData: `${document}-other`,
+      cloudProfileId: "profile-a",
+    }),
+  ).toEqual({ trusted: false, localAuthoritative: false });
+  // A different game profile is never continued from this device's memory.
+  expect(
+    cloudSyncTrust({
+      mark,
+      cloudExists: true,
+      cloudSaveData: document,
+      cloudProfileId: "profile-b",
+    }),
+  ).toEqual({ trusted: false, localAuthoritative: false });
+  expect(
+    cloudSyncTrust({
+      mark,
+      cloudExists: false,
+      cloudSaveData: null,
+      cloudProfileId: "profile-a",
+    }),
+  ).toEqual({ trusted: false, localAuthoritative: false });
+  expect(
+    cloudSyncTrust({
+      mark: { ...mark, authoritative: true },
+      cloudExists: true,
+      cloudSaveData: `${document}-older`,
+      cloudProfileId: "profile-a",
+    }),
+  ).toEqual({ trusted: false, localAuthoritative: true });
 });

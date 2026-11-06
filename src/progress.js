@@ -704,7 +704,8 @@ export function parseProgress(raw) {
 // loses a redundant ownership field must not erase a known permanent reward.
 // A different profile is adopted separately, never given this account's skins.
 export function preservePermanentCosmetics(previous, next) {
-  if (!previous.profile || previous.profile.id !== next.profile?.id)
+  // A first sync on a second device has no displaced copy to preserve from.
+  if (!previous?.profile || previous.profile.id !== next.profile?.id)
     return next;
   const rngweenPermanent = new Set([
     ...RNGWEEN_AURAS.map((aura) => aura.id),

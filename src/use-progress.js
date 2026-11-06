@@ -12,6 +12,7 @@ import {
   readCachedSaveForUser,
   readCloudOwner,
   reconcileCloudSave,
+  writeCloudSyncMark,
   renameCloudProfile,
   removeCachedSaveForUser,
   restoreCloudSaveSnapshot,
@@ -2104,6 +2105,15 @@ export function useProgress({
           "The saved copy could not be restored. Free up space on this device and try again.",
       };
     }
+    // An explicit restore is a decision about which copy is real. Tell the next
+    // sync that this local save wins over the online copy it may replace, so
+    // the restore is backed up instead of being undone as "older progress".
+    if (typeof owner.ownerId === "string" && owner.ownerId)
+      writeCloudSyncMark(
+        owner.ownerId,
+        { profileId: restored.profile?.id ?? null, authoritative: true },
+        localStorage,
+      );
     // Do not replace the rolling vault: it still protects the progress that was
     // active before this explicit restore. The next normal save refreshes it.
     reset(restored);

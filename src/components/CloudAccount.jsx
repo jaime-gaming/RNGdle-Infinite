@@ -771,8 +771,9 @@ export default function CloudAccount({
                       </button>
                     )}
                   <p className="cloud-account-note">
-                    The copy you don’t choose stays on this device. Find it
-                    later in Settings → Restore save.
+                    This only appears when both copies hold real progress of
+                    their own. The copy you don’t choose stays on this device;
+                    find it later in Settings → Restore save.
                   </p>
                 </div>
               )}

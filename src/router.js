@@ -42,7 +42,7 @@ export function pageFromLocation(location, base) {
 
 // A page can own sub-pages: /shop/skills, /shop/auras and so on. The
 // sub-segment is read from the address bar and resolved against the same
-// build-time base, so a shelf link works locally and on Pages alike.
+// build-time base, so a shelf link works locally and on every host alike.
 export function subpageFromLocation(location, base) {
   const prefix = basePath(base);
   let path = String(location.pathname || "/");
