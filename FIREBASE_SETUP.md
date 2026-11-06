@@ -42,6 +42,9 @@ Toolkit config endpoint and reports the authorised domains and enabled
 sign-in options. Exit code `0` means the two-factor flow is ready; otherwise it
 names exactly what is missing.
 
+Hosting lives on a Cloudflare Worker; see [`DEPLOYMENT.md`](DEPLOYMENT.md) for
+the deploy, the custom-domain attachment and the checks to run afterwards.
+
 ## 4. App Check (optional but recommended)
 
 The app sends a reCAPTCHA Enterprise attestation when

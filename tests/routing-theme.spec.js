@@ -162,15 +162,23 @@ test("the profile address names the account: /profile/<username>", () => {
   expect(isCurrentPath("shop", { pathname: "/shop/x", hash: "" })).toBe(false);
 });
 
-test("Cloudflare Pages builds from dist, rewrites app routes and avoids stale updates", () => {
+test("the Cloudflare Worker serves dist, falls back to the app shell and avoids stale updates", () => {
   const vite = fs.readFileSync("vite.config.js", "utf8");
   expect(vite).not.toContain("404.html");
 
+  // Workers static assets, not Pages: the SPA fallback replaces _redirects,
+  // and the custom domain is claimed by the deploy itself.
   const config = fs.readFileSync("wrangler.jsonc", "utf8");
-  expect(config).toMatch(/"pages_build_output_dir"\s*:\s*"\.\/dist"/);
+  expect(config).toMatch(/"directory"\s*:\s*"\.\/dist"/);
+  expect(config).toMatch(
+    /"not_found_handling"\s*:\s*"single-page-application"/,
+  );
+  expect(config).toContain("rngdle-infinite.jaime-gaming.com");
+  expect(config).toMatch(/"custom_domain"\s*:\s*true/);
+  expect(config).not.toMatch(/pages_build_output_dir/);
 
-  const redirects = fs.readFileSync("public/_redirects", "utf8").trim();
-  expect(redirects).toBe("/* /index.html 200");
+  // A catch-all rewrite would loop against the built-in SPA fallback.
+  expect(fs.existsSync("public/_redirects")).toBe(false);
 
   const headers = fs.readFileSync("public/_headers", "utf8");
   expect(headers).toMatch(/\n\/\s*\n\s*Cache-Control: no-cache/);

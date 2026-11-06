@@ -1,0 +1,7 @@
+# RNGdle Infinite is a public game. Public profiles exist only when their
+# owner opts in, so nothing here needs to be hidden from crawlers.
+User-agent: *
+Allow: /
+
+# Firebase sign-in and the private cloud API are not pages.
+Disallow: /__/auth/
