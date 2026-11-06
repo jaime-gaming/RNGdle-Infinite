@@ -8,10 +8,10 @@
     "dev:test": "vite --host 0.0.0.0 --mode test",
     "build": "vite build",
     "build:github-pages": "node tools/build-github-pages.mjs",
-    "deploy:pages": "node tools/deploy-pages.mjs",
+    "deploy:worker": "node tools/deploy-worker.mjs",
     "deploy:rules": "npx --yes firebase-tools deploy --only firestore:rules",
     "check:firebase": "node tools/check-firebase-config.mjs",
-    "test:pages": "node tools/test-cloudflare-pages.mjs",
+    "test:worker": "node tools/test-cloudflare-worker.mjs",
     "test:github-pages": "node tools/test-github-pages.mjs",
     "screenshots": "node tools/screenshots.mjs",
     "preview": "vite preview --host 0.0.0.0",
@@ -19,7 +19,8 @@
     "format": "prettier --write src tests *.js *.json *.jsonc public/*.webmanifest index.html README.md",
     "prepare:data": "node tools/prepare-game-data.mjs",
     "vendor:emoji": "node tools/vendor-emoji.mjs",
-    "audit:economy": "node tools/audit-economy.mjs"
+    "audit:economy": "node tools/audit-economy.mjs",
+    "verify:cloud": "node tools/cloud-sync-sim/run.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

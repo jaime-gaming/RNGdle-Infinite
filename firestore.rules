@@ -320,6 +320,10 @@ service cloud.firestore {
         && data.profile_id == profileId;
     }
 
+    // `profile_id` has two scopes on purpose: the owner pointer (`profile_id`
+    // == the public name key) is keyed by the alias, while the settings document
+    // and the name claim record the game profile id. The two scopes are tied
+    // together by comparing the claim with the settings, never with the owner.
     function profileIsPublic(profileId) {
       let ownerPath = profileOwnerPath(profileId);
       let profilePath = publicProfilePath(profileId);
@@ -331,7 +335,6 @@ service cloud.firestore {
         && get(ownerPath).data.owner_uid is string
         && get(ownerPath).data.profile_id == profileId
         && get(claimPath).data.owner_uid == get(ownerPath).data.owner_uid
-        && get(claimPath).data.profile_id == get(ownerPath).data.profile_id
         && exists(profileSettingsPath(get(ownerPath).data.owner_uid))
         && get(profileSettingsPath(get(ownerPath).data.owner_uid)).data.username_key == profileId
         && get(profileSettingsPath(get(ownerPath).data.owner_uid)).data.profile_id == get(claimPath).data.profile_id
@@ -340,6 +343,7 @@ service cloud.firestore {
         && get(profileSavePath(get(ownerPath).data.owner_uid)).data.get('public_profile_id', null) == profileId;
     }
 
+    // Same two-scope rule as profileIsPublic, evaluated after the commit.
     function profileIsPublicAfter(profileId, uid) {
       let ownerPath = profileOwnerPath(profileId);
       let savePath = profileSavePath(uid);
@@ -351,7 +355,6 @@ service cloud.firestore {
         && getAfter(ownerPath).data.profile_id == profileId
         && existsAfter(settingsPath)
         && getAfter(settingsPath).data.username_key == profileId
-        && getAfter(settingsPath).data.profile_id == getAfter(ownerPath).data.profile_id
         && existsAfter(claimPath)
         && getAfter(claimPath).data.owner_uid == uid
         && getAfter(claimPath).data.profile_id == getAfter(settingsPath).data.profile_id

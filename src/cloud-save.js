@@ -40,8 +40,9 @@ const CLOUD_PUBLIC_PROFILE_WRITE_LIMIT_COLLECTION =
   "cloud_public_profile_write_limits";
 const PUBLIC_PROFILE_OWNER_COLLECTION = "public_profile_owners";
 const CLOUD_SAVE_WRITE_INTERVAL_MS = 2_000;
-// Players can rename their Cloud profile once a week.
-const CLOUD_PROFILE_RENAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1_000;
+// Players can rename their Cloud profile once every 30 days; the interface,
+// this constant and firestore.rules must all agree on that window.
+const CLOUD_PROFILE_RENAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1_000;
 const CLOUD_PROFILE_AVATAR_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1_000;
 const CLOUD_DIRTY_KEY = "rng-infinite-cloud-dirty-v1";
 const CLOUD_DIRTY_USER_PREFIX = `${CLOUD_DIRTY_KEY}:`;
@@ -225,6 +226,115 @@ export function removeCachedSaveForUser(userId, storage) {
   }
 }
 
+const CLOUD_MARK_PREFIX = "rng-infinite-cloud-mark-v1:";
+
+function cloudMarkKey(userId) {
+  return `${CLOUD_MARK_PREFIX}${encodeURIComponent(userId)}`;
+}
+
+/**
+ * A short, stable fingerprint of the compressed online document. This device
+ * keeps only this string, never a second copy of the save, so it can recognise
+ * the exact online copy it last agreed on.
+ */
+export function cloudSaveFingerprint(raw) {
+  const text =
+    typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
+  if (!text) return "";
+  let high = 0x811c9dc5;
+  let low = 0xc2b2ae35;
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+    high = Math.imul(high ^ code, 0x01000193) >>> 0;
+    low = Math.imul(low ^ code, 0x85ebca6b) >>> 0;
+  }
+  return `${text.length.toString(36)}:${high.toString(36)}${low.toString(36)}`;
+}
+
+/**
+ * What this device knows about the last online copy it reconciled:
+ *   - `saveHash` and `profileId` identify the exact snapshot stored online, so
+ *     a later sync can tell "nobody else touched it since" from a real change;
+ *   - `usernameKey` names the profile that snapshot belongs to;
+ *   - `authoritative` marks an explicit "Restore save" the player made here, so
+ *     the very next sync uploads that copy instead of undoing the restore.
+ * Without a trustworthy memory the game falls back to the conservative
+ * comparison rules.
+ */
+export function readCloudSyncMark(userId, storage) {
+  if (typeof userId !== "string" || !userId) return null;
+  try {
+    const raw = storageRef(storage)?.getItem(cloudMarkKey(userId));
+    if (typeof raw !== "string" || !raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return null;
+    return {
+      saveHash: typeof parsed.saveHash === "string" ? parsed.saveHash : "",
+      profileId: typeof parsed.profileId === "string" ? parsed.profileId : null,
+      usernameKey:
+        typeof parsed.usernameKey === "string" ? parsed.usernameKey : null,
+      authoritative: parsed.authoritative === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function writeCloudSyncMark(userId, mark, storage) {
+  if (typeof userId !== "string" || !userId || !mark) return false;
+  try {
+    const target = storageRef(storage);
+    if (!target) return false;
+    target.setItem(
+      cloudMarkKey(userId),
+      JSON.stringify({
+        saveHash: typeof mark.saveHash === "string" ? mark.saveHash : "",
+        profileId: typeof mark.profileId === "string" ? mark.profileId : null,
+        usernameKey:
+          typeof mark.usernameKey === "string" ? mark.usernameKey : null,
+        authoritative: mark.authoritative === true,
+      }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether the online document is still exactly the one this device synced, so
+ * the local copy is this save's continuation instead of a competing copy.
+ * `localAuthoritative` repeats that for an explicit restore of the same profile.
+ */
+export function cloudSyncTrust({
+  mark,
+  cloudExists,
+  cloudSaveData,
+  cloudProfileId = null,
+}) {
+  if (!mark || !cloudExists || !cloudProfileId)
+    return { trusted: false, localAuthoritative: false };
+  const sameDocument = Boolean(
+    mark.saveHash && mark.saveHash === cloudSaveFingerprint(cloudSaveData),
+  );
+  const sameGameProfile = mark.profileId === cloudProfileId;
+  return {
+    trusted: sameDocument && sameGameProfile,
+    localAuthoritative: Boolean(mark.authoritative && sameGameProfile),
+  };
+}
+
+export function clearCloudSyncMark(userId, storage) {
+  if (typeof userId !== "string" || !userId) return false;
+  try {
+    storageRef(storage)?.removeItem(cloudMarkKey(userId));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function safeAmount(value) {
   return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
@@ -262,6 +372,37 @@ export function compareSaveEpoch(local, cloud) {
     if (a < b) return "cloud";
   }
   return "same";
+}
+
+/**
+ * Whether a copy holds anything a player could miss. A profile that was named
+ * but never played (no rolls, earnings, badges, purchases, companions, skills
+ * or resets) is an empty shell: keeping the other copy cannot cost anything, so
+ * the game never stops to ask about it.
+ */
+export function saveHasProgress(progress) {
+  if (!progress?.profile) return false;
+  if (progress.pendingRoll) return true;
+  if (safeAmount(progress.balance) > 0) return true;
+  for (const key of [
+    "totalEarned",
+    "cycleEarnedEP",
+    "rebirths",
+    "ultraRebirths",
+    "rollbacks",
+    "freshStarts",
+    "surplusBanked",
+  ])
+    if (safeAmount(progress[key]) > 0) return true;
+  for (const key of ["owned", "discovered", "pets", "skills"])
+    if (uniqueIds(progress[key]).size > 0) return true;
+  if (uniqueIds(progress.rngweenLimited?.auras).size > 0) return true;
+  if (progress.rngweenLimited?.skinEarned) return true;
+  if (progress.rngweenLimited?.finaleEarned) return true;
+  if (Array.isArray(progress.history) && progress.history.length > 0)
+    return true;
+  const tally = allTimeTally(progress);
+  return tally.rolls > 0 || tally.spent > 0;
 }
 
 /**
@@ -331,15 +472,22 @@ export function compareSaveRichness(local, cloud) {
 
   const localPending = local.pendingRoll;
   const cloudPending = cloud.pendingRoll;
-  if (!localPending && cloudPending) cloudAhead = true;
-  else if (localPending && !cloudPending) localAhead = true;
-  else if (
-    localPending &&
-    cloudPending &&
-    (localPending.id !== cloudPending.id ||
-      localPending.number !== cloudPending.number)
-  ) {
+  if (localPending && cloudPending) {
+    if (
+      localPending.id !== cloudPending.id ||
+      localPending.number !== cloudPending.number
+    ) {
+      localAhead = true;
+      cloudAhead = true;
+    }
+  } else if (localPending) {
+    // A roll committed here has not reached the online copy yet. It is newer
+    // work, not missing progress.
     localAhead = true;
+  } else if (cloudPending && !(localTally.rolls > cloudTally.rolls)) {
+    // An unsettled roll only counts against a copy that has not already moved
+    // past it: settling the same roll leaves this log longer than the online
+    // one, and asking the player then would be a false alarm on every reveal.
     cloudAhead = true;
   }
 
@@ -381,7 +529,7 @@ function choiceMessage(reason) {
   if (reason === "tie")
     return "These copies contain the same progress but differ in other details. Choose one; the other stays saved in Settings.";
   if (reason === "changed")
-    return "Your progress changed while you were choosing. Review the latest copies and choose again; the other stays saved in Settings.";
+    return "Your online copy changed while you were choosing, probably from another device. Review the latest copies and choose again; the other stays saved in Settings.";
   return "Each copy has different progress. Choose one; the other stays saved in Settings.";
 }
 
@@ -421,10 +569,24 @@ function choiceRequiredOutcome({
   };
 }
 
+/**
+ * Pick the copy to keep.
+ *
+ * `trusted` means this device already reconciled the exact online snapshot that
+ * is stored right now (see readCloudSyncMark): no other device has touched it
+ * since, so whatever happened locally is simply the continuation of that save
+ * and does not need a question. `localAuthoritative` is the stronger statement
+ * the player makes by restoring a copy from Settings: that copy is uploaded.
+ */
 export function chooseSaveWinner(
   local,
   cloud,
-  { allowLocal = true, decision = null } = {},
+  {
+    allowLocal = true,
+    decision = null,
+    trusted = false,
+    localAuthoritative = false,
+  } = {},
 ) {
   if (!cloud) {
     return {
@@ -436,27 +598,75 @@ export function chooseSaveWinner(
   const comparison = compareSaveRichness(local, cloud);
   if (!allowLocal || !local?.profile || !cloud?.profile)
     return { progress: cloud, winner: "cloud", comparison };
-  // Different profile IDs are not mergeable, but the player may explicitly
-  // choose either complete save after reviewing the conflict.
-  if (
-    local.profile.id !== cloud.profile.id &&
-    decision !== "local" &&
-    decision !== "cloud"
-  )
-    return {
-      progress: null,
-      winner: "choice",
-      comparison: "incomparable",
-      choiceReason: "profile",
-    };
-  if (decision === "local" || decision === "cloud")
+
+  const decided = decision === "local" || decision === "cloud";
+  if (decided)
     return {
       progress: decision === "local" ? local : cloud,
       winner: decision,
       comparison,
       selectedByUser: true,
     };
+
+  const sameLineage = local.profile.id === cloud.profile.id;
+  if (!sameLineage) {
+    // A named-but-never-played profile is not progress. Two different profiles
+    // only need a question when both hold something the player could miss.
+    const localHoldsProgress = saveHasProgress(local);
+    const cloudHoldsProgress = saveHasProgress(cloud);
+    if (localHoldsProgress !== cloudHoldsProgress)
+      return localHoldsProgress
+        ? {
+            progress: local,
+            winner: "local",
+            comparison: "local-only-progress",
+          }
+        : {
+            progress: cloud,
+            winner: "cloud",
+            comparison: "cloud-only-progress",
+          };
+    // Different profile IDs are never merged. The player may still keep either
+    // complete save, but only after reviewing them.
+    return {
+      progress: null,
+      winner: "choice",
+      comparison: "incomparable",
+      choiceReason: "profile",
+    };
+  }
+
   const epoch = compareSaveEpoch(local, cloud);
+  if (localAuthoritative)
+    return {
+      progress: local,
+      winner: "local",
+      comparison,
+      authoritativeRestore: true,
+    };
+  if (trusted) {
+    // This device's own lineage: the newest reset generation continues here,
+    // and within one generation the dominant copy wins. Equal or mixed
+    // non-progress details keep this device's copy, whose other half is
+    // already in the recovery slot when anything is replaced.
+    if (epoch === "cloud")
+      return {
+        progress: cloud,
+        winner: "cloud",
+        comparison,
+        trusted: true,
+      };
+    if (epoch === "local")
+      return { progress: local, winner: "local", comparison, trusted: true };
+    if (comparison === "cloud")
+      return {
+        progress: cloud,
+        winner: "cloud",
+        comparison,
+        trusted: true,
+      };
+    return { progress: local, winner: "local", comparison, trusted: true };
+  }
   if (epoch !== "same")
     return {
       progress: null,
@@ -473,11 +683,20 @@ export function chooseSaveWinner(
     };
   if (comparison === "equal" && sameSave(local, cloud))
     return { progress: cloud, winner: "cloud", comparison };
+  // Equal durable progress that only differs in preferences or the activity
+  // log: keeping this device's copy costs no progress, so never interrupt.
+  if (comparison === "equal")
+    return {
+      progress: local,
+      winner: "local",
+      comparison,
+      preferencesOnly: true,
+    };
   return {
     progress: null,
     winner: "choice",
     comparison,
-    choiceReason: comparison === "equal" ? "tie" : "incomparable",
+    choiceReason: "incomparable",
   };
 }
 
@@ -489,6 +708,37 @@ function sameSave(left, right) {
   }
 }
 
+// Which profile a stored copy belongs to, or null when it has none. Used to
+// recognise the same device copy after it moved on, so a fresh roll or a
+// claimed task does not invalidate a choice the player already made.
+function profileIdOfSource(source) {
+  if (source == null) return null;
+  try {
+    const raw = typeof source === "string" ? source : JSON.stringify(source);
+    if (!raw) return null;
+    return parseAndRepairProgress(raw).progress?.profile?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The online copy moved since the player was shown the conflict. That is a real
+ * concurrent change (another device, another tab) and needs a fresh look.
+ */
+export function cloudConflictCloudChanged({
+  expectedCloudExists,
+  expectedCloudSaveData,
+  cloudExists,
+  cloudSaveData,
+}) {
+  return (
+    typeof expectedCloudExists === "boolean" &&
+    (cloudExists !== expectedCloudExists ||
+      !sameSave(cloudSaveData ?? null, expectedCloudSaveData ?? null))
+  );
+}
+
 export function cloudConflictVersionChanged({
   expectedCloudExists,
   expectedCloudSaveData,
@@ -497,10 +747,12 @@ export function cloudConflictVersionChanged({
   cloudSaveData,
   localSource,
 }) {
-  const cloudChanged =
-    typeof expectedCloudExists === "boolean" &&
-    (cloudExists !== expectedCloudExists ||
-      !sameSave(cloudSaveData ?? null, expectedCloudSaveData ?? null));
+  const cloudChanged = cloudConflictCloudChanged({
+    expectedCloudExists,
+    expectedCloudSaveData,
+    cloudExists,
+    cloudSaveData,
+  });
   const localChanged =
     typeof expectedLocalSource === "string" &&
     localSource !== expectedLocalSource;
@@ -700,6 +952,7 @@ export async function createCloudProfile(userId, progress) {
   const nameReference = profileNameRef(database, usernameKey);
   const writeLimitReference = saveWriteLimitRef(database, userId);
   let savedProgress = null;
+  let savedSaveData = null;
 
   await runCloudTransaction(database, async (transaction) => {
     const [saveSnapshot, settingsSnapshot, writeLimitSnapshot] =
@@ -763,8 +1016,9 @@ export async function createCloudProfile(userId, progress) {
       }),
     );
     transaction.set(writeLimitReference, cloudSaveWriteLimitDocument());
+    savedSaveData = encodeCloudSave(savedProgress);
     transaction.set(saveReference, {
-      save_data: encodeCloudSave(savedProgress),
+      save_data: savedSaveData,
       updated_at: serverTimestamp(),
       public_profile_id: null,
       public_profile_enabled: false,
@@ -774,6 +1028,7 @@ export async function createCloudProfile(userId, progress) {
   const settingsSnapshot = await getDoc(settingsReference);
   return {
     progress: savedProgress ?? progress,
+    saveData: savedSaveData,
     updatedAt: new Date().toISOString(),
     profileIdentity: cloudProfileIdentity(
       settingsSnapshot.exists() ? settingsSnapshot.data() : null,
@@ -1312,7 +1567,7 @@ export async function renameCloudProfile(
       lastNameChange + CLOUD_PROFILE_RENAME_COOLDOWN_MS,
     ).toLocaleString();
     throw new Error(
-      `Cloud profile names can be changed once every 7 days. Try again after ${nextDate}.`,
+      `Cloud profile names can be changed once every 30 days. Try again after ${nextDate}.`,
     );
   }
 
@@ -1749,10 +2004,14 @@ export function restoredSaveOwner({
 }
 
 /**
- * Read and reconcile both snapshots in one Firestore transaction. A clear
- * same-generation progress winner is automatic; generation conflicts, ties,
- * and incomparable progress wait for the player's choice. The displaced save
- * is backed up before either the browser or Firestore copy is replaced.
+ * Read and reconcile both snapshots in one Firestore transaction.
+ *
+ * The player is only asked when the two copies really compete: different game
+ * profiles that both hold progress, or same-profile progress that moved in
+ * different directions. A copy this device already synced (see readCloudSyncMark)
+ * is its own lineage, so rebirths, rolls settled while online and preference
+ * changes continue automatically; equal copies and empty profiles never ask.
+ * The displaced save is backed up before either copy is replaced.
  */
 export async function reconcileCloudSave(
   userId,
@@ -1812,7 +2071,17 @@ export async function reconcileCloudSave(
           }
         }
       }
-      if (created)
+      if (created) {
+        if (created.saveData)
+          writeCloudSyncMark(
+            userId,
+            {
+              saveHash: cloudSaveFingerprint(created.saveData),
+              profileId: created.progress.profile.id,
+              usernameKey: publicProfileId(created.progress.profile.username),
+            },
+            storage,
+          );
         return {
           progress: created.progress,
           winner: "local",
@@ -1826,6 +2095,7 @@ export async function reconcileCloudSave(
           notice:
             "Your existing progress on this device was added to this online account. Public sharing remains off.",
         };
+      }
       if (
         creationError?.message?.includes(
           "This Cloud account already has a game profile",
@@ -1882,6 +2152,10 @@ export async function reconcileCloudSave(
   }
 
   let outcome = null;
+  // The exact document both sides agree on once the transaction commits. It is
+  // remembered after the commit so the next sync can recognise its own copy.
+  let servedCloudSaveData = null;
+  let servedProfileId = null;
 
   await runCloudTransaction(database, async (transaction) => {
     const [snapshot, writeLimitSnapshot, settingsSnapshot] = await Promise.all([
@@ -1930,16 +2204,28 @@ export async function reconcileCloudSave(
         localOwner,
       );
     }
+    const cloudSaveDataString =
+      typeof cloudSaveData === "string"
+        ? cloudSaveData
+        : cloudSaveData == null
+          ? ""
+          : JSON.stringify(cloudSaveData);
     const expectedWasProvided = typeof expectedCloudExists === "boolean";
-    const versionChanged = cloudConflictVersionChanged({
+    // The online copy moving is a real change made somewhere else. The device
+    // copy moving between the review and the click is not: the player kept
+    // playing here (a settled roll, a claimed task), and the choice still
+    // applies to the same profile, only fresher.
+    const cloudMoved = cloudConflictCloudChanged({
       expectedCloudExists,
       expectedCloudSaveData,
-      expectedLocalSource,
       cloudExists,
       cloudSaveData,
-      localSource,
     });
-    if (expectedWasProvided && versionChanged) {
+    const localStillSameProfile =
+      typeof expectedLocalSource !== "string" ||
+      profileIdOfSource(expectedLocalSource) ===
+        (localProgress?.profile?.id ?? null);
+    if (expectedWasProvided && (cloudMoved || !localStillSameProfile)) {
       outcome = choiceRequiredOutcome({
         localProgress,
         cloudProgress: remoteProgress,
@@ -1953,9 +2239,24 @@ export async function reconcileCloudSave(
       return;
     }
 
+    // Trust only when this device remembers exactly this online document: no
+    // other device has written it since the last successful sync, so the local
+    // copy is this save's own continuation. `authoritative` is an explicit
+    // "Restore save" and wins once, then the mark is rewritten by this sync.
+    const { trusted, localAuthoritative } = cloudSyncTrust({
+      mark: cloudAccountOwnsLocalSave(userId, localOwner)
+        ? readCloudSyncMark(userId, storage)
+        : null,
+      cloudExists,
+      cloudSaveData: cloudSaveDataString,
+      cloudProfileId: remoteProgress?.profile?.id ?? null,
+    });
+
     const choice = chooseSaveWinner(localProgress, remoteProgress, {
       allowLocal,
       decision,
+      trusted,
+      localAuthoritative,
     });
     if (choice.winner === "choice") {
       outcome = choiceRequiredOutcome({
@@ -2010,7 +2311,15 @@ export async function reconcileCloudSave(
         "This copy does not include a game profile. Choose another copy.",
       );
 
-    if (choice.winner === "local" && remoteRaw) {
+    // A trusted upload replaces a copy this device already synced, so the
+    // online document is an earlier version of the very save going up: there is
+    // nothing to set aside and nothing worth interrupting the player for. Mixed
+    // progress is still set aside, because it means something was left behind.
+    if (
+      choice.winner === "local" &&
+      remoteRaw &&
+      !(choice.trusted && choice.comparison !== "incomparable")
+    ) {
       writeRecoveryCopy(
         remoteRaw,
         storage,
@@ -2049,6 +2358,63 @@ export async function reconcileCloudSave(
     const settingsNeedProfileIdUpdate = Boolean(
       accountSettings && accountSettings.profile_id !== selected.profile.id,
     );
+    // A public alias describes exactly one game profile: the private save, the
+    // name claim and the owner pointer must agree. Rebinding the account to a
+    // different profile therefore cannot keep advertising the old alias (the
+    // rules refuse it), so the alias is unpublished in this same transaction.
+    const previousPublicId =
+      remoteEnvelope?.public_profile_enabled === true &&
+      typeof remoteEnvelope.public_profile_id === "string"
+        ? remoteEnvelope.public_profile_id
+        : null;
+    // The save itself must be written for the link to disappear, so a rebind
+    // only unpublishes when this transaction uploads the chosen save.
+    const unpublishOnRebind = Boolean(
+      shouldUpload && settingsNeedProfileIdUpdate && previousPublicId,
+    );
+    let previousPublicArtifacts = [null, null];
+    if (unpublishOnRebind)
+      previousPublicArtifacts = await Promise.all([
+        transaction.get(
+          doc(database, PUBLIC_PROFILE_COLLECTION, previousPublicId),
+        ),
+        transaction.get(
+          doc(database, PUBLIC_PROFILE_OWNER_COLLECTION, previousPublicId),
+        ),
+      ]);
+    const nextPublicProfileId = unpublishOnRebind
+      ? null
+      : (remoteEnvelope?.public_profile_id ?? null);
+    const nextPublicProfileEnabled = unpublishOnRebind
+      ? false
+      : remoteEnvelope?.public_profile_enabled === true;
+    if (unpublishOnRebind) {
+      const [publicSnapshot, ownerSnapshot] = previousPublicArtifacts;
+      const ownerData = ownerSnapshot?.exists() ? ownerSnapshot.data() : null;
+      const publicData = publicSnapshot?.exists()
+        ? publicSnapshot.data()
+        : null;
+      const ownsAlias = isPublicAliasOwnedByUser({
+        userId,
+        profile: publicData,
+        owner: ownerData,
+        profileId: previousPublicId,
+        linkedToThisSave:
+          remoteEnvelope?.public_profile_id === previousPublicId,
+      });
+      if ((publicData || ownerData) && !ownsAlias)
+        throw new Error(
+          "This Cloud profile’s public link belongs to another account. Nothing was changed; turn public sharing off there first.",
+        );
+      if (publicSnapshot?.exists())
+        transaction.delete(
+          doc(database, PUBLIC_PROFILE_COLLECTION, previousPublicId),
+        );
+      if (ownerSnapshot?.exists())
+        transaction.delete(
+          doc(database, PUBLIC_PROFILE_OWNER_COLLECTION, previousPublicId),
+        );
+    }
     if (settingsNeedProfileIdUpdate) {
       if (typeof accountSettings.username_key === "string")
         transaction.set(
@@ -2064,6 +2430,7 @@ export async function reconcileCloudSave(
         updated_at: serverTimestamp(),
       });
     }
+    let uploadedSaveData = null;
     if (shouldUpload) {
       const waitMs = cloudSaveWriteWaitMs(
         writeLimitSnapshot.exists() ? writeLimitSnapshot.data() : null,
@@ -2072,16 +2439,23 @@ export async function reconcileCloudSave(
         throw new Error(
           "Wait a couple of seconds before saving Cloud progress again.",
         );
+      uploadedSaveData = encodeCloudSave(selected);
       transaction.set(reference, {
-        save_data: encodeCloudSave(selected),
+        save_data: uploadedSaveData,
         updated_at: serverTimestamp(),
         // Keep consent state with the private save. The publication transaction
         // changes the alias only after a profile has been explicitly enabled.
-        public_profile_id: remoteEnvelope?.public_profile_id ?? null,
-        public_profile_enabled: remoteEnvelope?.public_profile_enabled === true,
+        // Rebinding a different game profile has already cleared it above.
+        public_profile_id: nextPublicProfileId,
+        public_profile_enabled: nextPublicProfileEnabled,
       });
       transaction.set(writeLimitReference, cloudSaveWriteLimitDocument());
     }
+    // The document this device and Firestore now agree on, remembered after the
+    // transaction so the next sync can tell "nobody else moved it" apart from a
+    // genuine concurrent change.
+    servedCloudSaveData = uploadedSaveData ?? cloudSaveDataString;
+    servedProfileId = selected.profile?.id ?? null;
 
     let notice = "";
     if (
@@ -2093,6 +2467,16 @@ export async function reconcileCloudSave(
         choice.winner === "local"
           ? "You chose progress from this device. The online copy is saved in Settings."
           : "You chose the online progress. The device copy is saved in Settings.";
+    } else if (choice.trusted || choice.preferencesOnly) {
+      // The routine case: this device is simply ahead of the copy it already
+      // synced, or both copies hold the same progress. Say nothing.
+      notice =
+        choice.trusted &&
+        choice.winner === "cloud" &&
+        localProgress?.profile &&
+        !sameSave(localProgress, remoteProgress)
+          ? "The online copy had newer progress, so it was loaded. This device's previous copy is saved in Settings."
+          : "";
     } else if (choice.winner === "local" && remoteProgress) {
       notice =
         "This device had more progress, so it was backed up online. The previous online copy is saved in Settings.";
@@ -2107,6 +2491,13 @@ export async function reconcileCloudSave(
       notice =
         "Your existing progress on this device was added to this online account.";
     }
+    if (unpublishOnRebind)
+      notice = [
+        notice,
+        "Public sharing was turned off because the two copies came from different game profiles. You can turn it on again from your profile.",
+      ]
+        .filter(Boolean)
+        .join(" ");
     outcome = {
       progress: selected,
       winner: choice.winner,
@@ -2120,7 +2511,7 @@ export async function reconcileCloudSave(
         : timestampToIso(remoteEnvelope?.updated_at),
       uploaded: shouldUpload,
       publicProfilePublished: false,
-      publicProfileEnabled: remoteEnvelope?.public_profile_enabled === true,
+      publicProfileEnabled: nextPublicProfileEnabled,
       notice,
     };
   });
@@ -2129,6 +2520,18 @@ export async function reconcileCloudSave(
     throw new Error(
       "Your online progress could not be updated. Try again before playing.",
     );
+
+  if (outcome.progress?.profile && servedCloudSaveData != null) {
+    writeCloudSyncMark(
+      userId,
+      {
+        saveHash: cloudSaveFingerprint(servedCloudSaveData),
+        profileId: servedProfileId ?? outcome.progress.profile.id ?? null,
+        usernameKey: publicProfileId(outcome.progress.profile.username),
+      },
+      storage,
+    );
+  }
 
   if (outcome.progress?.profile) {
     try {
@@ -2332,6 +2735,8 @@ export async function deleteCloudSave(
   // Keep account data and public-profile cleanup atomic. If Firestore denies
   // any required read or write, the transaction aborts and nothing is removed.
   await runDeleteTransaction();
+  // The deleted document can never be the copy this device agreed on again.
+  clearCloudSyncMark(userId);
   const envelopeForRecovery = deletedEnvelope;
   return {
     exists: Boolean(

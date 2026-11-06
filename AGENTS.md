@@ -7,15 +7,15 @@ anything. The player-facing overview and cloud setup are in `README.md`.
 
 A React + Vite browser game. Players roll a uniformly random whole number from
 0 to 1,000,000, score EP from its digit patterns, collect badges, and spend EP
-on companions, skills, tasks, rebirths and cosmetics. Cloudflare Pages serves
-the Vite build from `dist/` at the custom-domain root.
+on companions, skills, tasks, rebirths and cosmetics. A Cloudflare Worker with
+static assets serves the Vite build from `dist/` at the custom-domain root.
 
 Gameplay remains available without an online account. Local profiles live in
 browser storage. When a build is configured, Firebase Authentication provides
 Google and email/password sign-in, and Cloud Firestore stores one compressed
-progress snapshot at `player_saves/{uid}`. Cloudflare Pages serves the root-domain
-build from `dist/`; legacy GitHub Pages serves the repository-path build from
-`docs/`. The configured Firebase project is
+progress snapshot at `player_saves/{uid}`. The Cloudflare Worker serves the
+root-domain build from `dist/`; legacy GitHub Pages serves the repository-path
+build from `docs/`. The configured Firebase project is
 `rngdle-infinite-jg`; its public Web config is in `.env.production` for
 production builds and `.env.example` for local setup. Firestore rules—not API-key
 secrecy—protect each user's save. The old Supabase project and
@@ -42,23 +42,55 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
 - **Repair saves instead of losing them.** `parseAndRepairProgress` keeps valid
   data, records repairs and backs up original bytes. New fields need a default
   in `emptyProgress()`, defensive parsing, and a malformed-save test.
-- **Cloud save precedence is deliberate.** On first Firebase sign-in, import
-  an unowned local save only when that user's Firestore document is missing.
-  Never copy a save marked as belonging to another auth user. For two saves
-  with the same game profile, a different reset generation (fresh start,
-  rollback, prestige or rebirth) always requires the player's choice; generation
-  order never chooses a winner. Within one generation, automatically use a save
-  only when it clearly dominates on every measured game-progress dimension and
-  is ahead in at least one. Ties and mixed/incomparable progress require an
-  explicit player choice. Compare durable game progress, not file size, log
-  length, timestamps, preferences, or auxiliary records. Different game
-  profile IDs are never merged; when both eligible copies differ, show them as
-  incomparable and let the player choose one complete save. Reconcile in a
-  Firestore transaction and persist the displaced snapshot to the separate
-  local cloud-recovery slot before
-  replacing either copy. The rolling local save and vault remain active. Signing
-  out keeps local progress; deleting the game save removes its Firestore
-  document, not the Firebase auth identity.
+- **Cloud save precedence is deliberate, and asks as rarely as possible.** On
+  first Firebase sign-in, import an unowned local save only when that user's
+  Firestore document is missing. Never copy a save marked as belonging to
+  another auth user. Compare durable game progress, not file size, log length,
+  timestamps, preferences, or auxiliary records, and compare the current reset
+  generation before that. The player is interrupted only when the copies really
+  compete:
+  - **A copy this device already synced continues automatically.** After every
+    successful reconciliation, `writeCloudSyncMark` stores that account's
+    document fingerprint, profile ID and alias in local storage. If the online
+    document still matches that mark, no other device changed it, so the local
+    copy is this save's own continuation: a rebirth, a settled roll or a
+    preference change simply uploads, and a local copy behind the mark is simply
+    replaced by the online one. Keep using the mark rather than adding new
+    heuristics; without it, fall back to the conservative rules below.
+  - **Never ask about copies with nothing at stake.** Equal durable progress
+    (only preferences, log notes or auxiliary records differ) keeps this
+    device's copy silently; a named-but-never-played profile never blocks a
+    copy that holds progress, whatever its profile ID.
+  - **An unsettled roll is not missing progress.** A roll still pending online
+    that this device has already settled must not count as the online copy
+    being ahead.
+  - **Still ask for real competition.** Different profile IDs that both hold
+    progress are never merged; same-profile copies with an untrusted different
+    reset generation or mixed/incomparable progress still require one explicit
+    choice, and a changed _online_ copy invalidates a pending choice. A local
+    copy that merely advanced between the review and the click does not: the
+    choice applies to the same profile, only fresher.
+  - **An explicit restore is authoritative.** Restoring a copy from Settings
+    writes `authoritative` into the sync mark so the next sync uploads it
+    instead of undoing it.
+  - **`profile_id` has two scopes.** The owner pointer (`public_profile_owners`)
+    and the name claim are keyed by the public name, and the owner's
+    `profile_id` repeats that key; the settings document and the claim's
+    `profile_id` hold the game profile id. Rules tie the two scopes together by
+    comparing the claim with the settings, never with the owner. Comparing them
+    made every public publish and public read fail with `permission-denied`.
+  - **Rebinding a profile unpublishes its alias.** Rules require the private
+    save, the name claim and the owner pointer to describe one game profile, so
+    a resolution that switches the account to a different profile must clear
+    `public_profile_id`/`public_profile_enabled` and delete the alias documents
+    in the same transaction. Never point an existing public alias at different
+    progress.
+
+  Reconcile in a Firestore transaction and persist the displaced snapshot to the
+  separate local cloud-recovery slot before replacing either copy. The rolling
+  local save and vault remain active. Signing out keeps local progress; deleting
+  the game save removes its Firestore document, not the Firebase auth identity.
+
 - **Link sign-in providers, don't fork saves.** Email/password users can sign
   in directly. Google users must add a password after Google authentication;
   link Email/Password to the same Firebase UID before enabling gameplay or cloud
@@ -81,10 +113,9 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   `src/game-clock.js`; `Date.now()` is for non-gating timestamps. There is no
   seasonal clock or event-gated reward system.
 - **Routes are client paths.** `src/router.js` owns paths such as `/shop/auras`
-  and `/profile/<username>`. Cloudflare Pages serves the app at the domain root;
-  `public/_redirects` rewrites direct route loads to `index.html`, and
-  `public/_headers` keeps HTML and the update manifest fresh while allowing
-  long-lived caching for hashed bundles.
+  and `/profile/<username>`. The Worker serves the app at the domain root; its `assets.not_found_handling: single-page-application` serves
+  `index.html` for direct route loads, and `public/_headers` keeps HTML and the
+  update manifest fresh while allowing long-lived caching for hashed bundles.
 
 ## Legacy save data that must remain readable
 
@@ -110,7 +141,7 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   already enabled for `rngdle-infinite-jg`. Add
   `rngdle-infinite.jaime-gaming.com` and `localhost` to authorized domains.
   This Firebase Console change is required before cloud sign-in works on the
-  custom host; it is separate from the Cloudflare Pages/DNS setup. Create
+  custom host; it is separate from the Cloudflare Worker/DNS setup. Create
   Firestore in a European location and publish `firestore.rules` before testing
   cloud saves.
 - The App Check client reads the public
@@ -134,38 +165,40 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   Never replace a conflicted version unless its recovery copy was persisted.
 - The app starts with Firebase as a new provider; it does not migrate accounts
   or saves from the archived Supabase project. Never merge different game
-  profile IDs; if both candidates are eligible, surface the mismatch and let
-  the player choose one complete save. For the same profile, compare durable
-  game progress—not file size, timestamps, history length or preferences.
-  Different reset generations and same-generation ties/mixed progress require
-  the player's choice; only clear same-generation dominance can resolve
-  automatically. Unowned local progress may be imported when the cloud document
-  is missing, and a save owned by another auth user is never a candidate.
+  profile IDs that both hold progress; surface the mismatch and let the player
+  choose one complete save. For the same profile, compare durable game
+  progress—not file size, timestamps, history length or preferences. A device's
+  own already-synced copy continues automatically (see the sync mark), and
+  equal or empty copies never ask; an untrusted different reset generation or
+  mixed progress still requires the player's choice. Unowned local progress may
+  be imported when the cloud document is missing, and a save owned by another
+  auth user is never a candidate.
 
 ## Source map
 
-| Path                                             | Responsibility                                                               |
-| ------------------------------------------------ | ---------------------------------------------------------------------------- |
-| `src/main.jsx`                                   | App shell, routes, roll wiring and account/profile presentation.             |
-| `src/progress.js`                                | Save format, migrations, repair, reducer and legacy receipt parsing.         |
-| `src/use-progress.js`                            | Local persistence and transactional cloud reconciliation.                    |
-| `src/firebase.js`, `src/use-firebase-auth.js`    | Firebase clients, email/Google auth and provider linking.                    |
-| `src/cloud-save.js`                              | Firestore CRUD, save comparison and browser ownership/cache/recovery.        |
-| `firestore.rules`                                | Per-UID Firestore access policy.                                             |
-| `archive/supabase/migrations/`                   | Archived Supabase schema; not used by the current app.                       |
-| `src/roll.worker.js`, `src/random.js`            | Worker-based roll scoring and random source.                                 |
-| `src/badges.js`, `src/infinite-badges.js`        | Badge definitions, families and metadata.                                    |
-| `src/pets.js`, `src/skills.js`, `src/rebirth.js` | Companions, skills, rebirth, prestige and rollback rules.                    |
-| `src/tasks.js`, `src/history-tally.js`           | Daily/weekly tasks and historical profile totals.                            |
-| `src/shop-data.js`                               | Products, shelves, aura families and timing upgrades.                        |
-| `src/changelog.js`, `src/app-update.js`          | Release notes, unseen-version marker and update identity.                    |
-| `src/components/`                                | Game, account and profile UI.                                                |
-| `src/*.css`                                      | Feature styles; `src/mobile.css` is loaded last.                             |
-| `tests/`                                         | Playwright specs; `tests/helpers/` contains shared test setup.               |
-| `tools/`                                         | Cloudflare/GitHub Pages builds and smoke tests, data preparation and audits. |
-| `wrangler.jsonc`                                 | Cloudflare Pages project name and `dist/` build output.                      |
-| `public/_redirects`, `public/_headers`           | Client-route fallback and update-safe static caching on Pages.               |
-| `media/`                                         | README screenshots generated by `tools/screenshots.mjs`.                     |
+| Path                                             | Responsibility                                                              |
+| ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `src/main.jsx`                                   | App shell, routes, roll wiring and account/profile presentation.            |
+| `src/progress.js`                                | Save format, migrations, repair, reducer and legacy receipt parsing.        |
+| `src/use-progress.js`                            | Local persistence and transactional cloud reconciliation.                   |
+| `src/firebase.js`, `src/use-firebase-auth.js`    | Firebase clients, email/Google auth and provider linking.                   |
+| `src/cloud-save.js`                              | Firestore CRUD, save comparison and browser ownership/cache/recovery.       |
+| `firestore.rules`                                | Per-UID Firestore access policy.                                            |
+| `archive/supabase/migrations/`                   | Archived Supabase schema; not used by the current app.                      |
+| `src/roll.worker.js`, `src/random.js`            | Worker-based roll scoring and random source.                                |
+| `src/badges.js`, `src/infinite-badges.js`        | Badge definitions, families and metadata.                                   |
+| `src/pets.js`, `src/skills.js`, `src/rebirth.js` | Companions, skills, rebirth, prestige and rollback rules.                   |
+| `src/tasks.js`, `src/history-tally.js`           | Daily/weekly tasks and historical profile totals.                           |
+| `src/shop-data.js`                               | Products, shelves, aura families and timing upgrades.                       |
+| `src/changelog.js`, `src/app-update.js`          | Release notes, unseen-version marker and update identity.                   |
+| `src/components/`                                | Game, account and profile UI.                                               |
+| `src/*.css`                                      | Feature styles; `src/mobile.css` is loaded last.                            |
+| `tests/`                                         | Playwright specs; `tests/helpers/` contains shared test setup.              |
+| `tools/`                                         | Worker/GitHub Pages builds and smoke tests, data preparation and audits.    |
+| `wrangler.jsonc`                                 | Cloudflare Worker name, `dist/` static assets, SPA fallback, custom domain. |
+| `public/_headers`                                | Update-safe static caching and security headers on the Worker.              |
+| `DEPLOYMENT.md`                                  | Worker deploy, custom-domain setup, verification and rollback.              |
+| `media/`                                         | README screenshots generated by `tools/screenshots.mjs`.                    |
 
 ## Commands
 
@@ -175,11 +208,12 @@ npm run dev              # configured Firebase dev build on 0.0.0.0:5173
 npm run dev:test -- --port 5174 # local-only mode for tests/screenshots
 npm test                 # Playwright suite (starts dev:test on port 5174)
 npx playwright test tests/roll.spec.js
-npm run build            # production build into dist/ for Cloudflare Pages
+npm run build            # production build into dist/ for Cloudflare Workers
 npm run build:github-pages # production build into docs/ for legacy GitHub Pages
-npm run test:pages       # smoke-test the Cloudflare Pages artifact and SPA routes
+npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
+npm run verify:cloud     # two-device Cloud Accounts simulation against firestore.rules
 npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
-npm run deploy:pages     # build and deploy the current branch (production is guarded)
+npm run deploy:worker    # build and deploy the Worker (production is guarded)
 npm run audit:economy    # price ladder and roll-distribution audit
 npm run format           # Prettier over src, tests, root configs and README
 ```
@@ -187,6 +221,15 @@ npm run format           # Prettier over src, tests, root configs and README
 For local cloud development, copy `.env.example` to `.env.local`. Local
 gameplay and tests should also work with no Firebase development variables;
 the checked-in `.env.production` is used only for production builds.
+
+`npm run verify:cloud` needs no Firebase: it runs real app sessions on simulated
+devices that share a fake Firestore which evaluates every commit against a model
+of `firestore.rules`, so a client write the real rules would reject fails there.
+It covers the first upload, a second device adopting the online save, both-way
+sync, a stale device never overwriting newer progress, publishing, unpublishing
+and the two-profile conflict. Re-run it after changing `src/cloud-save.js`,
+`src/use-progress.js` or `firestore.rules`; it is the only automated check of the
+rules/contract pair, because Firebase itself is never reached from CI.
 
 Playwright uses `CHROMIUM_PATH` when provided. Some environments need
 `--no-sandbox`; `playwright.config.js` already passes the flag for a supplied
@@ -238,32 +281,47 @@ rather than guessing.
 
 ## Publishing and versioning
 
-- Cloudflare Pages serves the root-domain Vite build from `dist/`. Its build
-  command is `npm install && npm run build`; set the output directory to `dist`.
-  `wrangler.jsonc` records the Pages project/output config, while the custom
-  domain and DNS are configured in Cloudflare. Never claim the live domain is
-  updated until the Pages deploy and DNS/HTTPS are verified independently.
+- Cloudflare **Workers** (static assets, no script) serves the root-domain Vite
+  build from `dist/`. `wrangler.jsonc` holds the Worker name, the assets
+  directory, the `single-page-application` fallback and the
+  `rngdle-infinite.jaime-gaming.com` custom domain; `npm run deploy:worker`
+  builds and deploys it. A hostname can belong to only one Cloudflare service,
+  so the old Pages project must not keep that custom domain. Never claim the
+  live domain is updated until the deploy, DNS and HTTPS are verified
+  independently; see `DEPLOYMENT.md`.
 - GitHub Pages currently uses the legacy `main` branch `/docs` source at
   `jaime-gaming.github.io/RNGdle-Infinite`. Run
   `npm run build:github-pages` before the release PR so `docs/` contains the
   `/RNGdle-Infinite/` base-path build, SPA `404.html`, and `.nojekyll` file.
-  A squash-merge to `main` causes GitHub Pages to publish those committed files;
-  Cloudflare separately builds `dist/` from the same `main` update.
-- `npm run deploy:pages` builds and deploys the checked-out branch to the Pages
-  project `rngdle-infinite`. Non-production branches publish previews; deploying
-  the configured production branch requires the explicit
-  `CF_PAGES_ALLOW_PRODUCTION=true` opt-in. Do not run production deploys without
-  the user's instruction.
-- After a hosting change, run `npm run build` and `npm run test:pages`. The Pages
-  smoke test exercises root assets, direct client routes and local gameplay; it
-  does not verify Cloudflare settings, DNS, Firebase authorized domains, or a
-  production deployment.
+  A squash-merge to `main` causes GitHub Pages to publish those committed files.
+  GitHub Pages is a mirror whose base path is `/RNGdle-Infinite/`; it is not the
+  custom domain.
+- `npm run deploy:worker` builds and deploys the Worker `rngdle-infinite` with
+  `wrangler deploy`, which also claims the custom domain. Deploying the
+  production branch `main` requires the explicit `CF_ALLOW_PRODUCTION=true`
+  opt-in. `-- --dry-run` builds and validates without uploading. Do not run a
+  live deploy without the user's instruction.
+- After a hosting change, run `npm run build` and `npm run test:worker`. The
+  Worker smoke test exercises root assets, headers, direct client routes, the
+  version manifest and (when Chromium is available) local gameplay; it does not
+  verify Cloudflare settings, DNS, Firebase authorized domains, or a production
+  deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `RNGdle-Infinite0.5.1fix0`; do not change it
+  flow. The current label is exactly `RNGdle-Infinite0.5.2fix1`; do not change it
   again until the next session or an explicit user request. Public release
   notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
+- **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
+  name the squashed commit after the release it publishes: `v0.5.2 bug fix 1`
+  when the merge carries bug fixes (the number matches the internal `fixN`
+  label), otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
+  when the branch is verified: `npm run build`, `npm run test:worker`,
+  `npm run verify:cloud`, the Playwright suite and `prettier --check`.
+- A change to `firestore.rules` only takes effect after
+  `npm run deploy:rules`. Say so explicitly in the merge summary; the app cannot
+  deploy rules for the user, and the client must stay compatible with the rules
+  that are actually deployed.
 
 ## Style
 

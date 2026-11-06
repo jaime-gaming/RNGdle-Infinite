@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { expect, test } from "./helpers/clock.js";
 import { emptyProgress } from "../src/progress.js";
 import {
@@ -122,4 +123,38 @@ test("public profile reads reject mismatched names and sanitize card fields", ()
       "LuckyOtter41",
     ),
   ).toBeNull();
+});
+
+test("rules keep the two profile_id scopes apart", () => {
+  // The owner pointer is keyed by the public name; the settings document and
+  // the name claim record the game profile id. Comparing a settings or claim id
+  // with the owner's made every public publish and public read fail.
+  const rules = fs.readFileSync("firestore.rules", "utf8");
+  const block = (name) => {
+    const start = rules.indexOf(`function ${name}(`);
+    expect(start).toBeGreaterThan(-1);
+    return rules.slice(start, rules.indexOf("\n    }", start));
+  };
+  for (const name of ["profileIsPublic", "profileIsPublicAfter"]) {
+    const body = block(name);
+    // The owner id must still be the alias this document is keyed by.
+    expect(body).toMatch(/ownerPath\)\.data\.profile_id == profileId/);
+    // But the game profile ids must never be compared with the alias field.
+    expect(body).not.toMatch(
+      /(?:get|getAfter)\((?:settingsPath|claimPath)\)\.data\.profile_id\s*==\s*(?:get|getAfter)\(ownerPath\)/,
+    );
+    expect(body).not.toMatch(
+      /ownerPath\)\.data\.profile_id\s*==\s*(?:get|getAfter)\((?:settingsPath|claimPath)\)/,
+    );
+    // The settings and the name claim must describe one game profile.
+    const linked = body
+      .split("\n")
+      .some(
+        (line) =>
+          line.includes("profile_id") &&
+          /settingspath/i.test(line) &&
+          line.includes("claimPath"),
+      );
+    expect(linked).toBe(true);
+  }
 });
