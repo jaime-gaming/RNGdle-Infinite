@@ -9,6 +9,8 @@ import {
 } from "../pets.js";
 import { skillForPet, skillEffectSummary } from "../skills.js";
 import { validGoal } from "../gameplay-loop.js";
+import { saleCompanionPrice, saleDiscountForId } from "../black-friday.js";
+import { useSaleStatus } from "../use-black-friday.js";
 import { useFormatEP } from "../use-settings.jsx";
 import PetIcon from "./PetIcon.jsx";
 import { CompanionMark, SkillIcon } from "./game-icons.jsx";
@@ -34,6 +36,10 @@ export default function PetShelf({
   onPickingGoal = () => {},
 }) {
   const formatEP = useFormatEP();
+  // The sale covers the whole shop, companions included, so the price a cage
+  // shows is the day's price while the day is on.
+  const sale = useSaleStatus();
+  const priceOf = (pet) => saleCompanionPrice(pet, sale.now);
   const [pending, setPending] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
   const [index, setIndex] = useState(0);
@@ -206,7 +212,9 @@ export default function PetShelf({
                 const isOwned = owned.includes(pet.id);
                 const isActive = active === pet.id;
                 const isGoal = tracked === pet.id;
-                const affordable = progress.balance >= pet.price;
+                const price = priceOf(pet);
+                const discount = sale.active ? saleDiscountForId(pet.id) : 0;
+                const affordable = progress.balance >= price;
                 const signature = skillForPet(pet.id);
                 const current = i === at;
                 // Pick mode: an unfound companion is the goal when tapped, and
@@ -309,8 +317,13 @@ export default function PetShelf({
                               )
                             }
                           >
-                            <Coins size={13} /> {formatEP(pet.price)} EP
+                            <Coins size={13} /> {formatEP(price)} EP
                           </button>
+                        )}
+                        {discount > 0 && !isOwned && (
+                          <span className="sale-tag" aria-hidden="true">
+                            −{Math.round(discount * 100)}%
+                          </span>
                         )}
                         {!isOwned && isGoal && (
                           <>
@@ -333,7 +346,7 @@ export default function PetShelf({
                               : "Free to equip; charge is never lost."
                             : affordable
                               ? "Within reach of your wallet."
-                              : `${formatEP(pet.price - progress.balance)} more EP needed`}
+                              : `${formatEP(price - progress.balance)} more EP needed`}
                         </small>
                       </div>
                     </div>

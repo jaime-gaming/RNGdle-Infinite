@@ -23,6 +23,7 @@ import {
   writeCloudRecovery,
 } from "./save-vault.js";
 import { productById } from "./shop-data.js";
+import { RNGWEEN_RESALE_PRICE, isResaleCosmetic } from "./black-friday.js";
 import {
   UNKNOWN_CLOUD_OWNER,
   isCloudUserDeleted,
@@ -350,7 +351,13 @@ function uniqueIds(value) {
 function investedWealth(progress) {
   let wealth = safeAmount(progress.balance);
   for (const id of uniqueIds(progress.owned)) {
-    const price = safeAmount(productById.get(id)?.price);
+    const item = productById.get(id);
+    // A retired look bought back from the sale counter cost real EP, so it
+    // counts what it cost: without it, spending on a permanent cosmetic would
+    // make a save look poorer than the same wallet a moment before.
+    const price =
+      safeAmount(item?.price) ||
+      (isResaleCosmetic(item) ? RNGWEEN_RESALE_PRICE : 0);
     wealth = Math.min(Number.MAX_SAFE_INTEGER, wealth + price);
   }
   return wealth;
@@ -399,6 +406,8 @@ export function saveHasProgress(progress) {
   if (uniqueIds(progress.rngweenLimited?.auras).size > 0) return true;
   if (progress.rngweenLimited?.skinEarned) return true;
   if (progress.rngweenLimited?.finaleEarned) return true;
+  if (safeAmount(progress.blackFriday?.stamps) > 0) return true;
+  if (progress.blackFriday?.skinEarned) return true;
   if (Array.isArray(progress.history) && progress.history.length > 0)
     return true;
   const tally = allTimeTally(progress);
@@ -469,6 +478,10 @@ export function compareSaveRichness(local, cloud) {
     local.rngweenLimited?.finaleEarned,
     cloud.rngweenLimited?.finaleEarned,
   );
+  // Sale stamps are event progress the account earned, so a copy that holds
+  // more of them — or the limited skin they paid — is the richer one.
+  compareNumber(local.blackFriday?.stamps, cloud.blackFriday?.stamps);
+  compareFlag(local.blackFriday?.skinEarned, cloud.blackFriday?.skinEarned);
 
   const localPending = local.pendingRoll;
   const cloudPending = cloud.pendingRoll;

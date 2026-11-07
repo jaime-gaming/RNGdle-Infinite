@@ -1,0 +1,1125 @@
+/* Black Friday 2026: the sale's own chrome, and nothing else.
+   The news bar, the shop's event notice, the stamp card, the two colour themes
+   the day offers, and the permanent art of the limited skin. When retiring the
+   event UI, keep the blackout-2026 rules below for owners of the permanent aura. Every rule here
+   is presentation — prices, stamps and rewards are decided in black-friday.js
+   and written by the reducer. */
+
+/* ---- The day's news bar ----------------------------------------------------
+   One line at the very top of the game, saying SALE from end to end. The strip
+   is laid down twice and moved by exactly half, so the loop has no seam. */
+.sale-ticker {
+  position: relative;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  overflow: hidden;
+  background: #050505;
+  border-bottom: 1px solid #26262b;
+  color: #f4f4f5;
+}
+.sale-ticker-track {
+  display: flex;
+  flex: none;
+  align-items: center;
+  white-space: nowrap;
+  animation: sale-ticker-run 28s linear infinite;
+}
+.sale-ticker-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding-right: 16px;
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.sale-ticker-word i {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0;
+  color: #ff2d2d;
+}
+@keyframes sale-ticker-run {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sale-ticker-track {
+    animation: none;
+  }
+}
+/* The bar is decoration; this is the one honest sentence it stands for. */
+.sale-ticker-say {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The strip fades at both edges so the words slide out of the bar instead of
+   hitting its border, and it holds still while you read it. */
+.sale-ticker::before,
+.sale-ticker::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 34px;
+  pointer-events: none;
+}
+.sale-ticker::before {
+  left: 0;
+  background: linear-gradient(to right, #050505, transparent);
+}
+.sale-ticker::after {
+  right: 0;
+  background: linear-gradient(to left, #050505, transparent);
+}
+.sale-ticker:hover .sale-ticker-track {
+  animation-play-state: paused;
+}
+
+/* ---- The shop's event notice ----------------------------------------------
+   A black object at the top of the shop. It is the same object before and
+   during the day; only the line under the title changes. */
+.sale-flag {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border: 1px solid #26262b;
+  border-radius: 12px;
+  background: #050505;
+  color: #f4f4f5;
+  text-align: left;
+  cursor: pointer;
+}
+.sale-flag {
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.sale-flag:hover {
+  border-color: #4b4b53;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -18px #000000cc;
+}
+.sale-flag:focus-visible {
+  outline: 2px solid #f4f4f5;
+  outline-offset: 2px;
+}
+.sale-flag.is-live {
+  border-color: #7f1d1d;
+  box-shadow: 0 0 0 1px #7f1d1d59;
+}
+.sale-flag-tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f4f4f5;
+  color: #050505;
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.sale-flag.is-live .sale-flag-tag {
+  background: #ff2d2d;
+  color: #12040a;
+}
+.sale-flag-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.sale-flag-copy strong {
+  font-size: 13.5px;
+  letter-spacing: 0.01em;
+}
+.sale-flag-copy small {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #a1a1aa;
+}
+.sale-flag-when {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font: 600 11px/1 var(--font-mono);
+  color: #d4d4d8;
+}
+
+/* ---- The explanation ------------------------------------------------------ */
+.sale-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: calc(100% - 32px);
+  max-width: 520px;
+  max-height: 86svh;
+  overflow: auto;
+  padding: 28px;
+  border: 1px solid #26262b;
+  border-radius: 14px;
+  background: #0a0a0b;
+  color: #f4f4f5;
+  box-shadow: 0 24px 70px #00000080;
+}
+.sale-dialog::backdrop {
+  background: #00000099;
+  backdrop-filter: blur(4px);
+}
+.sale-dialog[open] {
+  animation: sale-dialog-in 0.24s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes sale-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.sale-dialog-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: #a1a1aa;
+}
+.sale-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #ff6b6b;
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.22em;
+}
+.sale-dialog h2 {
+  margin: 10px 0 4px;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+.sale-when {
+  margin: 0 0 18px;
+  font: 600 11.5px/1.6 var(--font-mono);
+  color: #a1a1aa;
+}
+.sale-block {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #1e1e22;
+  border-radius: 12px;
+  background: #0e0e10;
+}
+.sale-block h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+.sale-block h3 svg {
+  color: #ff6b6b;
+}
+.sale-block p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: #c9c9d1;
+}
+.sale-note {
+  margin-top: 8px;
+  font: 600 11px/1.6 var(--font-mono);
+  color: #8b8b93;
+}
+.sale-fine {
+  margin: 0 0 16px;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: #8b8b93;
+}
+.sale-dialog .secondary-button {
+  margin-top: 12px;
+  border-color: #2a2a30;
+  background: #121214;
+  color: #e4e4e7;
+}
+.sale-dialog .primary-button {
+  width: 100%;
+  background: #f4f4f5;
+  color: #0a0a0b;
+}
+
+/* ---- The stamp card ------------------------------------------------------- */
+.sale-stamp-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #26262b;
+  border-radius: 12px;
+  background: #050505;
+}
+.sale-stamp-card.is-earned {
+  border-color: #3f3f46;
+}
+.sale-stamp-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #f4f4f5;
+  color: #050505;
+}
+.sale-stamp-card.is-earned .sale-stamp-icon {
+  background: #18181b;
+  color: #f4f4f5;
+  border: 1px solid #3f3f46;
+}
+.sale-stamp-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.sale-stamp-copy strong {
+  font-size: 12.5px;
+  color: #f4f4f5;
+}
+.sale-stamp-copy > span:not(.sale-stamp-bar) {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #a1a1aa;
+}
+.sale-stamp-bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: #26262b;
+  overflow: hidden;
+}
+.sale-stamp-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #f4f4f5;
+  transition: width 0.4s ease;
+}
+.sale-stamp-card.is-earned .sale-stamp-bar i {
+  background: #ff2d2d;
+}
+
+/* ---- The looks the counter still has -------------------------------------- */
+.sale-missing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sale-missing li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border: 1px solid #1e1e22;
+  border-radius: 9px;
+  background: #0a0a0b;
+  font-size: 12px;
+  color: #e4e4e7;
+}
+.sale-missing li small {
+  margin-left: auto;
+  font: 600 10.5px/1 var(--font-mono);
+  color: #8b8b93;
+}
+
+/* ---- Sale markings on the shelves ----------------------------------------- */
+.sale-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #050505;
+  color: #f4f4f5;
+  font: 700 10px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  border: 1px solid #3f3f46;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sale-tag {
+    animation: sale-tag-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+@keyframes sale-tag-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.85);
+  }
+}
+.sale-tag.is-resale {
+  background: #ff2d2d;
+  border-color: #ff2d2d;
+  color: #1a0308;
+}
+.shop-price-was {
+  margin-right: 6px;
+  font: 600 11px/1 var(--font-mono);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.shop-price.is-sale {
+  color: var(--text);
+}
+
+/* ---- The two looks the day offers -----------------------------------------
+   Both are variants of the dark theme, so every dark rule keeps applying and
+   only the palette changes. */
+:root[data-sale-theme="ultra-black"] {
+  --bg: #000000;
+  --surface: #060607;
+  --text: #f5f5f6;
+  --muted: #9b9ba3;
+  --secondary: #c9c9d1;
+  --border: #1a1a1e;
+  --hover: #0f0f12;
+  --green: #e4e4e7;
+  --green-bg: #0d0d10;
+  --button: #f5f5f6;
+  --scrim: #000c;
+  --scrim-strong: #0009;
+  --shadow: none;
+  --rank-exceptional: #e4e4e7;
+  --rank-excellent: #d4d4d8;
+  --rank-above: #c9c9d1;
+  --rank-below: #a1a1aa;
+  --rank-low: #8b8b93;
+}
+:root[data-sale-theme="red-sale"] {
+  --bg: #0b0406;
+  --surface: #150709;
+  --text: #fff4f4;
+  --muted: #bd979b;
+  --secondary: #ecd2d5;
+  --border: #3a1218;
+  --hover: #1e0a0d;
+  --green: #ff3b30;
+  --green-bg: #2a0a0c;
+  --danger: #ff7a70;
+  --danger-border: #ff7a7066;
+  --warning: #ffb020;
+  --button: #ff3b30;
+  --rank-exceptional: #ffb020;
+  --rank-excellent: #ff6b6b;
+  --rank-above: #ff3b30;
+  --rank-below: #e08a72;
+  --rank-low: #c96a6a;
+}
+/* A red accent needs red-dark ink on the buttons that wear it. */
+:root[data-sale-theme="red-sale"] .primary-button {
+  color: #1a0308;
+}
+:root[data-sale-theme="red-sale"] .sale-flag.is-live {
+  border-color: #ff3b30;
+  box-shadow: 0 0 0 1px #ff3b3040;
+}
+
+/* ---- The sale's own shelf --------------------------------------------------
+   One more door in the hub while the day is on the calendar: the only tile
+   that is black on a light shop, because the day itself is black. */
+.shop-tile.is-sale {
+  background: #050505;
+  border-color: #26262b;
+  color: #f4f4f5;
+}
+.shop-tile.is-sale .shop-tile-icon {
+  background: #131316;
+  color: #ff2d2d;
+}
+.shop-tile.is-sale .shop-tile-body small {
+  color: #a1a1aa;
+}
+.shop-tile.is-sale .shop-tile-stat {
+  color: #ff5c5c;
+}
+.shop-tile.is-sale:hover {
+  border-color: #7f1d1d;
+  transform: translateY(-1px);
+}
+.sale-shelf-fine {
+  margin: 18px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+/* Borrowed themes should feel like the room changing light, not a repaint:
+   the surfaces that carry them ease between colours. */
+:root[data-sale-theme] body,
+:root[data-sale-theme] .header,
+:root[data-sale-theme] .shop-tile {
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    border-color 0.35s ease;
+}
+
+/* Blackout keeps its black base, with a red foil edge and moving sale glint. */
+.number-box[data-cosmetic="blackout-2026"] {
+  --box-background: #080809;
+  --box-border: #c52f39;
+  --box-shadow:
+    0 10px 28px -10px #a80c1b88, inset 0 0 0 1px #ff6a6a22,
+    inset 0 1px 0 #ffffff20;
+  --box-ink: #fafafa;
+  border-width: 2px;
+  border-radius: 12px;
+}
+:root[data-theme="dark"] .number-box[data-cosmetic="blackout-2026"] {
+  --box-background: #080809;
+  --box-border: #e3424d;
+  --box-ink: #fafafa;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-finish::before {
+  background: conic-gradient(
+    from var(--aura-turn),
+    #141416,
+    #e32d3f,
+    #161619,
+    #fff 45%,
+    #121214 65%,
+    #b9001c,
+    #141416
+  );
+  opacity: 0.85;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-finish::after {
+  background: radial-gradient(ellipse, #e7223c55, transparent 70%);
+}
+.number-box[data-cosmetic="blackout-2026"] .box-gloss {
+  background: linear-gradient(
+    125deg,
+    #fff2,
+    transparent 30%,
+    #ff263520 55%,
+    transparent 72%
+  );
+}
+/* A faint foil sweep and red sparks add movement without hiding the digits. */
+.number-box[data-cosmetic="blackout-2026"] .box-gloss::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    110deg,
+    transparent 42%,
+    #ff4d5a22 49%,
+    #ffb5b51c 51%,
+    transparent 58%
+  );
+  transform: translateX(-70%);
+  animation: blackout-foil 7s ease-in-out infinite;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-particles i {
+  background: #ff6872;
+  filter: drop-shadow(0 0 4px #ff1b34);
+  opacity: 0.65;
+}
+@keyframes blackout-foil {
+  0%,
+  32% {
+    transform: translateX(-70%);
+  }
+  70%,
+  100% {
+    transform: translateX(70%);
+  }
+}
+.number-box[data-cosmetic="blackout-2026"] .box-gloss::after {
+  content: "BF";
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #fae9e9;
+  color: #111;
+  font: 800 7px/1 var(--font-mono);
+  box-shadow: 0 0 10px #ff425466;
+}
+.number-box[data-cosmetic="blackout-2026"] .number-box-content {
+  --aura-ink-a: #fff !important;
+  --aura-ink-b: #ffc4c4 !important;
+  filter: drop-shadow(0 0 6px #ff344b88);
+}
+@media (prefers-reduced-motion: reduce) {
+  .number-box[data-cosmetic="blackout-2026"] .box-finish::before,
+  .number-box[data-cosmetic="blackout-2026"] .box-finish::after,
+  .number-box[data-cosmetic="blackout-2026"] .box-gloss::before,
+  .number-box[data-cosmetic="blackout-2026"] .box-particles i {
+    animation: none;
+  }
+}
+
+/* ---- Phones --------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .sale-ticker {
+    height: 24px;
+  }
+  .sale-ticker-word {
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    gap: 12px;
+    padding-right: 12px;
+  }
+  .sale-flag {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 11px 13px;
+  }
+  .sale-flag-when {
+    margin-left: 0;
+  }
+  .sale-dialog {
+    padding: 22px 18px;
+  }
+}
+
+/* Posters scroll with the page and each is a real, keyboard-accessible link. */
+:root {
+  --sale-rail-width: clamp(44px, 10vw, 155px);
+}
+main.sale-ad-layout {
+  position: relative;
+  width: min(1040px, calc(100% - 2 * (var(--sale-rail-width) + 12px)));
+  max-width: calc(100% - 2 * (var(--sale-rail-width) + 12px));
+  margin-inline: auto;
+}
+.sale-ads {
+  position: absolute;
+  top: var(--rail-top, 110px);
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  box-sizing: border-box;
+  padding: 8px 6px 12px;
+  width: var(--sale-rail-width);
+  overflow: hidden;
+}
+.sale-ads-left {
+  right: calc(100% + 8px);
+}
+.sale-ads-right {
+  left: calc(100% + 8px);
+  --rail-top: 250px;
+}
+.sale-ad[hidden] {
+  display: none;
+}
+.sale-ads:not(.is-measured) .sale-ad {
+  visibility: hidden;
+}
+.sale-ad {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  align-self: center;
+  width: 88%;
+  gap: 7px;
+  padding: 8px;
+  transform: rotate(var(--poster-angle, 0deg));
+  overflow: hidden;
+  border: 2px solid #e94848;
+  border-radius: 3px;
+  background: repeating-linear-gradient(
+    135deg,
+    #151517 0 12px,
+    #1d1d20 12px 13px
+  );
+  box-shadow:
+    3px 5px 0 #ac1825,
+    0 10px 22px #0003;
+  color: #fff;
+  text-decoration: none;
+  text-align: center;
+}
+.sale-ad:hover,
+.sale-ad:focus-visible {
+  outline: 2px solid #ffcf72;
+  outline-offset: 3px;
+}
+.sale-ad:nth-child(4n + 1) {
+  --poster-angle: -2deg;
+  width: 92%;
+}
+.sale-ad:nth-child(4n + 2) {
+  --poster-angle: 2.5deg;
+  width: 82%;
+  background: #a91525;
+  border-color: #111;
+  box-shadow: 3px 5px 0 #27272a;
+}
+.sale-ad:nth-child(4n + 3) {
+  --poster-angle: -1deg;
+  width: 88%;
+  background: #f3e8d6;
+  color: #171719;
+  border-color: #202024;
+  box-shadow: 3px 5px 0 #f04a41;
+}
+.sale-ad:nth-child(4n + 4) {
+  --poster-angle: 1.5deg;
+  width: 80%;
+  background: radial-gradient(circle at 50% 35%, #7b1122, #111 70%);
+  border-color: #e7b25a;
+}
+.sale-ad-kicker,
+.sale-ad-bottom {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font: 700 8px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+}
+.sale-ad-bottom {
+  display: block;
+  border-top: 1px dashed currentColor;
+  padding-top: 6px;
+  font-size: 7px;
+}
+.sale-ad-art {
+  display: grid;
+  place-items: center;
+  width: 64%;
+  aspect-ratio: 1;
+  max-width: 76px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: #ff5960;
+  background: #100b0d;
+  box-shadow:
+    0 0 0 5px #e5393525,
+    0 0 25px #f22a3a44;
+}
+.sale-ad-art svg {
+  width: 56%;
+  height: 56%;
+  stroke-width: 1.8;
+}
+.sale-ad b {
+  overflow-wrap: anywhere;
+  font: 800 clamp(8px, 1.15vw, 17px)/1.05 var(--font-mono);
+}
+.sale-ad small {
+  font: 600 clamp(7px, 0.7vw, 10px)/1.3 var(--font-mono);
+}
+@media (max-width: 760px) {
+  main.sale-ad-layout {
+    padding-inline: 8px;
+  }
+  .sale-ads {
+    --rail-top: 95px;
+    gap: 24px;
+  }
+  .sale-ads-right {
+    --rail-top: 190px;
+  }
+  .sale-ad {
+    padding: 4px 2px;
+    gap: 4px;
+  }
+  .sale-ad-kicker {
+    font-size: 6px;
+  }
+  .sale-ad-kicker svg,
+  .sale-ad-bottom,
+  .sale-ad small {
+    display: none;
+  }
+  .sale-ad-art {
+    width: 75%;
+  }
+}
+
+/* ---- The stamp card as a card of stamps ------------------------------------
+   Twenty-five different shapes, each with the milestone it pays.
+   Empty shapes are outlines; filled shapes are stamped in red. */
+.sale-stamp-book {
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.sale-stamp-book-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+.sale-stamp-book-head strong {
+  font: 700 14px/1.3 var(--font-mono);
+}
+.sale-stamp-book-head span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.sale-stamp-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sale-stamp {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 70px;
+  background: #a1a1aa;
+  clip-path: var(--stamp-shape);
+}
+.sale-stamp-face {
+  position: absolute;
+  inset: 2px;
+  background: #f4f4f5;
+  clip-path: var(--stamp-shape);
+}
+:root[data-theme="dark"] .sale-stamp-face {
+  background: #18181b;
+}
+.sale-stamp-label {
+  position: relative;
+  color: #52525b;
+  font: 700 clamp(8px, 1.1vw, 12px)/1 var(--font-mono);
+  white-space: nowrap;
+}
+.sale-stamp-label small {
+  font-size: 0.7em;
+}
+.sale-stamp.is-filled {
+  background: #7f1d1d;
+}
+.sale-stamp.is-filled .sale-stamp-face {
+  background: #db2626;
+}
+.sale-stamp.is-filled .sale-stamp-label {
+  color: #fff;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sale-stamp.is-new.is-imprinting {
+    animation: stamp-imprint 450ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    animation-delay: calc(var(--stamp-index) * 30ms);
+  }
+}
+@keyframes stamp-imprint {
+  from {
+    opacity: 0;
+    transform: scale(1.25) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+.sale-stamp.is-blackout {
+  border-radius: 12px;
+}
+.sale-stamp.is-blackout .sale-stamp-aura {
+  position: absolute;
+  inset: 4px;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 8px;
+  font-size: 0;
+}
+.sale-stamp.is-blackout .sale-stamp-aura .number-box-content {
+  visibility: hidden;
+}
+.sale-stamp.is-blackout.is-filled .sale-stamp-label {
+  z-index: 3;
+  color: white;
+  text-shadow: 0 1px 4px #000;
+}
+.sale-flag {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 90% 0%, #9e243344, transparent 45%), #080809;
+  border: 1px solid #9c323d;
+}
+.sale-flag::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    #e43a48 0 12px,
+    #f2c886 12px 18px,
+    transparent 18px 24px
+  );
+}
+.sale-flag-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border: 1px solid #ff6670;
+  border-radius: 50%;
+  background: #a91d2c;
+  color: white;
+  box-shadow: 0 0 0 5px #d8323a25;
+  transform: rotate(-8deg);
+}
+.sale-flag-art i {
+  font: 700 7px/1 var(--font-mono);
+  font-style: normal;
+}
+.sale-flag-copy strong {
+  font-size: 16px;
+}
+.sale-flag-when {
+  padding: 7px 9px;
+  border: 1px solid #99414a;
+  border-radius: 99px;
+}
+@media (max-width: 760px) {
+  .sale-flag-art {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.sale-ad-art:has(.sale-ad-aura) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  width: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  min-height: 50px;
+}
+.sale-ad-art .sale-ad-aura {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 2px;
+  font-size: clamp(10px, 1.5vw, 19px);
+}
+.sale-ad-art .sale-ad-aura .number-box-content {
+  font-size: clamp(10px, 1.5vw, 19px);
+}
+@media (max-width: 760px) {
+  .sale-ad-art .sale-ad-aura {
+    min-height: 22px;
+    padding: 3px 0;
+  }
+  .sale-ad-art:has(.sale-ad-aura) {
+    min-height: 26px;
+  }
+}
+
+/* Small event affordances remain readable with the ticker and posters present. */
+.sale-flag:hover {
+  border-color: #ff8a8a;
+  box-shadow: 0 8px 24px #b3173433;
+}
+.sale-flag:focus-visible,
+.sale-ad:focus-visible {
+  outline-color: #ef5a62;
+}
+.sale-stamp-book {
+  box-shadow: 0 8px 30px #b9253210;
+}
+.sale-stamp-book-head strong {
+  letter-spacing: 0.02em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sale-flag,
+  .sale-ad {
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .sale-stamp-grid {
+    gap: 6px;
+  }
+  .sale-stamp-label {
+    font-size: 7px;
+    letter-spacing: -0.03em;
+  }
+  .sale-stamp-label small {
+    display: none;
+  }
+}
+
+/* The event briefing puts the essentials up front before the full terms. */
+.sale-dialog {
+  max-width: 580px;
+  border-color: #71313a;
+  background: #0c0b0d;
+  box-shadow:
+    0 24px 80px #000b,
+    0 0 0 1px #e0384520;
+}
+.sale-dialog-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin: -28px -28px 16px;
+  padding: 30px 54px 24px 28px;
+  border-bottom: 1px solid #72313a;
+  background:
+    radial-gradient(circle at 85% 35%, #e1334050, transparent 36%),
+    repeating-linear-gradient(135deg, #141014 0 13px, #1c1216 13px 14px);
+}
+.sale-dialog-hero h2 {
+  margin: 12px 0 5px;
+  font-size: clamp(23px, 3vw, 31px);
+  letter-spacing: -0.03em;
+}
+.sale-dialog-hero h2 span {
+  color: #ff5964;
+}
+.sale-hero-subtitle {
+  margin: 0;
+  color: #d4c9cb;
+  font-size: 12px;
+}
+.sale-hero-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 86px;
+  height: 86px;
+  padding: 8px;
+  border: 1px solid #ff8188;
+  border-radius: 50%;
+  background: #bd2635;
+  color: white;
+  box-shadow:
+    0 0 0 6px #e22e3e25,
+    0 0 28px #e22e3e66;
+  transform: rotate(8deg);
+}
+.sale-hero-art small {
+  font: 800 8px/1.2 var(--font-mono);
+  text-align: center;
+}
+.sale-dialog-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.sale-dialog-highlights span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px 9px;
+  border: 1px solid #54252c;
+  border-radius: 9px;
+  background: #251217;
+}
+.sale-dialog-highlights strong {
+  color: #ff858d;
+  font: 700 13px/1.2 var(--font-mono);
+}
+.sale-dialog-highlights small {
+  color: #ddd1d2;
+  font-size: 10px;
+  line-height: 1.3;
+}
+.sale-block {
+  border-color: #34252a;
+  background: #171215;
+}
+.sale-block h3 {
+  font-size: 14px;
+}
+.sale-block p {
+  color: #e0dadd;
+}
+.sale-dialog-close {
+  z-index: 1;
+}
+@media (max-width: 760px) {
+  .sale-dialog-hero {
+    margin: -22px -18px 16px;
+    padding: 25px 45px 20px 18px;
+    gap: 8px;
+  }
+  .sale-hero-art {
+    width: 62px;
+    height: 62px;
+  }
+  .sale-hero-art svg {
+    width: 24px;
+    height: 24px;
+  }
+  .sale-hero-art small {
+    font-size: 7px;
+  }
+  .sale-dialog-highlights {
+    gap: 5px;
+  }
+  .sale-dialog-highlights span {
+    padding: 8px 6px;
+  }
+  .sale-dialog-highlights strong {
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sale-dialog[open] {
+    animation: none;
+  }
+}

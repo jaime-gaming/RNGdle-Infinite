@@ -83,8 +83,8 @@ export const RNGWEEN_COSMETICS = [
 
 export const RNGWEEN_FAMILY = {
   id: "legacy",
-  label: "Legacy",
-  blurb: "Permanent cosmetics preserved from retired seasonal content.",
+  label: "RNGween 2026",
+  blurb: "The Halloween 2026 event, and the permanent looks it left behind.",
   font: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
   tracking: "0.02em",
   casing: "none",

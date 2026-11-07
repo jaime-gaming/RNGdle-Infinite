@@ -73,3 +73,20 @@
 .header:has(.appearance-trigger[aria-expanded="true"]) {
   z-index: 80;
 }
+
+/* Separates the temporary themes without adding another page banner. */
+.appearance-temporary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 9px;
+  color: var(--muted);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+}
+.appearance-temporary::before,
+.appearance-temporary::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed currentColor;
+}

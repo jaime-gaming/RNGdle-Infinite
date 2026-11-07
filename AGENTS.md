@@ -28,6 +28,36 @@ aura ownership, Hexbound, attendance timestamps and `rngween-*` history are
 still part of the save contract. Do not remove those records or reintroduce
 event progression/UI. The old RNGween changelog entry is historical and stays.
 
+Black Friday 2026 is the single event exception. It is one UTC day — Friday 27
+November 2026, `src/black-friday.js` — during which the whole shop is
+discounted 20–50% per product, every 100,000 EP spent awards one sale stamp
+(`SALE_STAMP_EVERY`), 25 stamps unlock the limited `blackout-2026` skin, and
+the RNGween looks a save missed return to the counter at 10,000,000 EP each.
+While the day is on the calendar the hub grows a `black-friday` shelf
+(`/shop/black-friday`) with the stamp card, the skin and the counter. Its
+interface (sale ticker, event notice, stamp card, the Ultra-Black and Red Sale
+themes, the sale favicon and manifest) exists only while
+`blackFridayStatus(at).active`; the event notice is also shown before the day
+and disappears afterward. `progress.blackFriday` is part of the save contract
+and survives every reset, like permanent cosmetics. Dev builds honour
+`VITE_BLACK_FRIDAY_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the sale
+clock for previews; production ignores that variable, and shipped code never
+pretends today is the event day. Spending accumulates across purchases, rather
+than requiring a single purchase of 100,000 EP. The sale shelf contains a
+25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
+and linked posters occupy the page margins, including on small screens. Posters
+stay in the document as it scrolls; offers rotate every 15 seconds, pausing on
+hover, focus, hidden tabs and reduced motion. Whole posters fit within the main
+area and are hidden rather than cut off at the footer. See
+`archive/qa/black-friday-retirement.md` before retiring event code. The stamp
+book remembers which stamps were seen per local profile and animates only newly
+seen stamps when the book enters view; this presentation marker never affects
+progress or rewards. Special & Limiteds banners and wardrobe filters appear
+only when the save owns an event aura, even during the sale;
+missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
+Moving reveal digits are lighter than landed digits using opacity only, without
+adding backgrounds, borders, underlines or other decorations.
+
 ## Architecture
 
 - **One reducer owns progress.** `applyProgress(state, action)` in
@@ -110,8 +140,9 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
   this app; do not apply it or alter the old project.
 - **UTC for calendar labels.** Daily/weekly task periods use UTC (`Date.UTC`,
   `getUTC*`, `timeZone: "UTC"`). Gameplay timers use `gameNow()` in
-  `src/game-clock.js`; `Date.now()` is for non-gating timestamps. There is no
-  seasonal clock or event-gated reward system.
+  `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The only
+  event-gated system is the one-day Black Friday sale (`src/black-friday.js`),
+  which gates prices and cosmetics for that UTC day and nothing else.
 - **Routes are client paths.** `src/router.js` owns paths such as `/shop/auras`
   and `/profile/<username>`. The Worker serves the app at the domain root; its `assets.not_found_handling: single-page-application` serves
   `index.html` for direct route loads, and `public/_headers` keeps HTML and the
@@ -130,6 +161,13 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
 - `preservePermanentCosmetics` protects owned cosmetics when same-profile
   local/cloud snapshots are reconciled. Different profiles never inherit each
   other's cosmetics.
+- `blackFriday` records (`{ id, spent, stamps, skinEarned }`) keep the sale-day
+  EP total; stamps are always derived from it (`stampsForSpend`), so a
+  hand-edited card cannot invent any. The limited skin also lives in `owned`
+  like any permanent cosmetic. Junk or foreign records are repaired to an
+  empty one.
+- `sale-reward` activity rows stay parseable and visible in history; they carry
+  no EP and never count as spending.
 
 ## Firebase setup and implementation
 
@@ -236,6 +274,13 @@ Playwright uses `CHROMIUM_PATH` when provided. Some environments need
 Chromium binary. Keep realistic reveal/cooldown timing in tests; set a longer
 test timeout rather than changing game timers.
 
+Shop prices are date-gated by the Black Friday sale, so on 27 November (UTC)
+the shelves show discounted prices, the counter and the stamp card. Specs that
+assert exact prices or stock pin the virtual clock — `page.clock.install()`
+with a fixed time away from the sale day, or `pauseClockAt` inside
+`tests/black-friday.spec.js` for the sale day itself — and must never depend on
+the real calendar date.
+
 ## Product rules
 
 - **Honest rolls.** Skills may change draw count or the kept number, but never
@@ -307,7 +352,7 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `RNGdle-Infinitev0.5.2fix2`; do not change it
+  flow. The current label is exactly `RNGdle-Infinitev0.5.2fix3`; do not change it
   again until the next session or an explicit user request. Public release
   notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR

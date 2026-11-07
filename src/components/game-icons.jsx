@@ -575,6 +575,25 @@ export const BatMark = (props) => (
   </Mark>
 );
 
+// The limited Black Friday 2026 skin: the quietest mark in the set — a matte
+// card, a percent sign, one bar. Nothing else, on purpose.
+export const BlackoutMark = (props) => (
+  <Mark {...props}>
+    <rect x="3.4" y="3.4" width="17.2" height="17.2" rx="4.4" />
+    <circle cx="9.3" cy="9" r="1.8" />
+    <circle cx="14.7" cy="13.8" r="1.8" />
+    <path d="M15.4 8.2 8.6 15" />
+    <rect
+      className="tone"
+      x="7.4"
+      y="16.6"
+      width="9.2"
+      height="1.7"
+      rx="0.85"
+    />
+  </Mark>
+);
+
 // The two late skills: a hoard, and three draws.
 export const RackMark = (props) => (
   <Mark {...props}>

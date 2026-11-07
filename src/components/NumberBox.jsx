@@ -50,6 +50,7 @@ const cosmetics = new Set([
   "blood-moon",
   "hexbound",
   "hollow-lantern",
+  "blackout-2026",
 ]);
 // Fixed decorative positions keep previews and live boxes consistent. No game RNG.
 const stars = [

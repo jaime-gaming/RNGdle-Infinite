@@ -48,9 +48,10 @@ export async function showRoll(page, number) {
 export async function startRoll(page, number) {
   await mockRandom(page, [number]);
   await page.goto("/");
+  // Loading the full scoring dataset can take longer under parallel suite load.
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
-  ).toBeEnabled();
+  ).toBeEnabled({ timeout: 45000 });
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(

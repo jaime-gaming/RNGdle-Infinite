@@ -216,11 +216,11 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   const card = page.locator('[data-product="quickwind-1"]');
   await expect(card).toBeFocused();
   expect((await saved(page)).owned).toEqual([]);
-  await card.locator("button:not(.shop-tag)").click();
+  await card.locator("button:not(.shop-tag):not(.shop-look-eye)").click();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect((await saved(page)).goalId).toBe("quickwind-1");
   expect((await saved(page)).balance).toBe(100000);
-  await card.locator("button:not(.shop-tag)").click();
+  await card.locator("button:not(.shop-tag):not(.shop-look-eye)").click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -316,7 +316,9 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
     "Your goal: Aurora Veil",
   );
   await other
-    .locator('[data-product="starfall"] button:not(.shop-tag)')
+    .locator(
+      '[data-product="starfall"] button:not(.shop-tag):not(.shop-look-eye)',
+    )
     .click();
   await other
     .getByRole("button", { name: "Confirm purchase", exact: true })
@@ -483,7 +485,9 @@ test("a funded offline goal still explains the profile requirement instead of cl
     .click();
   await expect(page.locator('[data-product="offline-roller"]')).toBeFocused();
   await page
-    .locator('[data-product="offline-roller"] button:not(.shop-tag)')
+    .locator(
+      '[data-product="offline-roller"] button:not(.shop-tag):not(.shop-look-eye)',
+    )
     .click();
   // No profile: the product button navigates to the profile page.
   await expect(page.locator(".profile-page")).toBeVisible();

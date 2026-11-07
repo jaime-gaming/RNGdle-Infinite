@@ -152,10 +152,14 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   for (const [i, id] of ["starfall", "aurora", "orbit"].entries()) {
     if (i)
       await page
-        .locator(`[data-product="${id}"] button:not(.shop-tag)`)
+        .locator(
+          `[data-product="${id}"] button:not(.shop-tag):not(.shop-look-eye)`,
+        )
         .click();
     await expect(
-      page.locator(`[data-product="${id}"] button:not(.shop-tag)`),
+      page.locator(
+        `[data-product="${id}"] button:not(.shop-tag):not(.shop-look-eye)`,
+      ),
     ).toContainText("Equipped");
     await page.reload();
     const saved = await page.evaluate(

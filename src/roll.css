@@ -237,13 +237,14 @@ nav button.active {
     color 0.5s;
   transform-origin: center;
 }
+/* Moving digits are lighter than those that have landed, without extra marks. */
+.number-artifact.is-spinning .artifact-digit.is-scrambling {
+  opacity: 0.48;
+}
 .artifact-digit.is-blank {
   width: 0;
   opacity: 0;
   overflow: hidden;
-}
-.artifact-digit.is-scrambling {
-  color: #e5e7eb;
 }
 .artifact-digit.is-settling {
   animation: digit-land calc(0.4s * var(--reveal-scale, 1)) ease-out both;
@@ -834,9 +835,6 @@ nav button.active {
   --rarity: #f87171;
   --rarity-bg: #450a0a66;
   --rarity-border: #9d174d99;
-}
-:root[data-theme="dark"] .artifact-digit.is-scrambling {
-  color: #71717a;
 }
 :root[data-theme="dark"] .artifact-digits {
   text-shadow: 0 1px 2px #ffffff33;

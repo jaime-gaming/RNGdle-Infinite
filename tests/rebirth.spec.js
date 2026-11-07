@@ -937,7 +937,9 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
     .click();
   await expect.poll(async () => (await saved(page)).rebirths).toBe(1);
   await other
-    .locator('[data-product="starfall"] button:not(.shop-tag)')
+    .locator(
+      '[data-product="starfall"] button:not(.shop-tag):not(.shop-look-eye)',
+    )
     .click();
   await expect(other.locator(".toast", { hasText: "changed" })).toContainText(
     "changed",
@@ -1010,7 +1012,9 @@ test("the moving bar uses the cooldown only, is smooth between seconds, survives
   await nav(page, "Shop");
   await page.getByRole("link", { name: "Pace", exact: true }).click();
   await page
-    .locator('[data-product="clockwork-1"] button:not(.shop-tag)')
+    .locator(
+      '[data-product="clockwork-1"] button:not(.shop-tag):not(.shop-look-eye)',
+    )
     .click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
