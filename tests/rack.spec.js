@@ -362,7 +362,7 @@ test("a saved rack keeps its free skills when the slots run out", () => {
   expect(narrow.equippedSkills).toEqual(["surge", "trail", "reborn-drive"]);
 });
 
-test("saved racks survive a reload, are repaired when damaged and cleared by a rebirth", () => {
+test("saved racks survive a reload, are repaired when damaged and kept through rebirth", () => {
   const saved = applyProgress(rack(), { type: "save-loadout" });
   // Round trip through the save, junk and all.
   const parsed = parseProgress(
@@ -399,7 +399,7 @@ test("saved racks survive a reload, are repaired when damaged and cleared by a r
   );
   expect(many.loadouts).toHaveLength(LOADOUT_LIMIT);
 
-  // A rebirth clears the run, and the racks were built from the run.
+  // A rebirth clears the run, but saved racks are an account convenience.
   const ladder = {
     ...saved,
     discovered: ids.slice(0, 60),
@@ -414,6 +414,6 @@ test("saved racks survive a reload, are repaired when damaged and cleared by a r
     expectedRebirths: 0,
     at: 1_800_000_000_000,
   });
-  expect(reborn.loadouts).toEqual([]);
+  expect(reborn.loadouts).toEqual(saved.loadouts);
   expect(reborn.skills).toContain("reborn-drive");
 });

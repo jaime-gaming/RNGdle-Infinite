@@ -27,7 +27,9 @@ const nav = (page, name) =>
 async function buy(page, id) {
   // The shop is a street of sub-pages: open the shelf that sells it first.
   await openShelfFor(page, id);
-  await page.locator(`[data-product="${id}"] button:not(.shop-tag)`).click();
+  await page
+    .locator(`[data-product="${id}"] button:not(.shop-tag):not(.shop-look-eye)`)
+    .click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -122,7 +124,9 @@ test("guest rewards and purchases stay in memory and disappear on reload", async
   await expect(page.getByTestId("roll-duration")).toHaveText("45s");
   await gotoShelfFor(page, "starfall");
   await expect(
-    page.locator('[data-product="starfall"] button:not(.shop-tag)'),
+    page.locator(
+      '[data-product="starfall"] button:not(.shop-tag):not(.shop-look-eye)',
+    ),
   ).toBeDisabled();
   await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
@@ -296,10 +300,14 @@ test("the first three tiers produce a fifteen-second reveal and fifteen-second c
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
   await page.goto("/shop/pace");
   await expect(
-    page.locator('[data-product="quickwind-2"] button:not(.shop-tag)'),
+    page.locator(
+      '[data-product="quickwind-2"] button:not(.shop-tag):not(.shop-look-eye)',
+    ),
   ).toHaveCount(0);
   await expect(
-    page.locator('[data-product="clockwork-3"] button:not(.shop-tag)'),
+    page.locator(
+      '[data-product="clockwork-3"] button:not(.shop-tag):not(.shop-look-eye)',
+    ),
   ).toHaveCount(0);
   const tiers = shopProducts.filter(
     (p) => ["roll", "cooldown"].includes(p.kind) && !p.lateGame,

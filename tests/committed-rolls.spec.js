@@ -30,7 +30,9 @@ const nav = (page, name) =>
     .click();
 async function buy(page, id) {
   await openShelfFor(page, id);
-  await page.locator(`[data-product="${id}"] button:not(.shop-tag)`).click();
+  await page
+    .locator(`[data-product="${id}"] button:not(.shop-tag):not(.shop-look-eye)`)
+    .click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -283,7 +285,9 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
     "Maximum level.",
   );
   await expect(
-    page.locator(`[data-product="${maxed}"] button:not(.shop-tag)`),
+    page.locator(
+      `[data-product="${maxed}"] button:not(.shop-tag):not(.shop-look-eye)`,
+    ),
   ).toBeDisabled();
   expect((await saved(page)).owned).toEqual(rollTrack);
 });

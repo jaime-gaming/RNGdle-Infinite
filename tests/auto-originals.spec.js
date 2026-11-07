@@ -57,16 +57,18 @@ test("Auto-Roll is a confirmed purchase that does not equip and persists as an o
   // Auto-Roll is a tool: its shelf is its own page.
   await page.goto("/shop/tools");
   const card = page.locator('[data-product="auto-roll"]');
-  await card.locator("button:not(.shop-tag)").click();
+  await card.locator("button:not(.shop-tag):not(.shop-look-eye)").click();
   await expect(page.getByRole("dialog")).toContainText(`${autoRollPrice} EP`);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect((await saved(page)).owned).toEqual([]);
-  await card.locator("button:not(.shop-tag)").click();
+  await card.locator("button:not(.shop-tag):not(.shop-look-eye)").click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await expect(card.locator("button:not(.shop-tag)")).toBeDisabled();
+  await expect(
+    card.locator("button:not(.shop-tag):not(.shop-look-eye)"),
+  ).toBeDisabled();
   const after = await saved(page);
   expect(after.balance).toBe(0);
   expect(after.equipped).toBe("none");

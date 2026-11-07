@@ -1,0 +1,21 @@
+{
+  "name": "RNGdle Infinite — Black Friday sale",
+  "short_name": "SALE ∞",
+  "description": "Black Friday 2026: the whole shop discounted for one day, sale stamps and a limited skin.",
+  "id": "rngdle-infinite",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    { "src": "icon-192-sale.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512-sale.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "icon-512-sale.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

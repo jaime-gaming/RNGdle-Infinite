@@ -71,7 +71,7 @@ test("Cloud Account opens from its scrollable Settings section and the top Profi
   await expect(page).toHaveURL(/\/profile\/Lucky$/);
 });
 
-test("all aura reveals keep moving and landed digits distinct in both themes", async ({
+test("aura reveals distinguish moving digits by brightness only", async ({
   page,
 }) => {
   await page.goto("/shop/auras/celestial");
@@ -96,7 +96,9 @@ test("all aura reveals keep moving and landed digits distinct in both themes", a
             return [
               style.webkitTextFillColor,
               style.backgroundColor,
-              style.textDecorationStyle,
+              style.textDecorationLine,
+              style.boxShadow,
+              style.opacity,
             ];
           });
           box.remove();
@@ -107,9 +109,11 @@ test("all aura reveals keep moving and landed digits distinct in both themes", a
     );
     expect(results.length).toBeGreaterThan(10);
     for (const { landed, moving } of results) {
-      expect(landed[0]).not.toBe(moving[0]);
-      expect(landed[1]).not.toBe(moving[1]);
-      expect(moving[2]).toBe("dotted");
+      // Only brightness changes; no background, underline or box is added.
+      expect(moving.slice(0, 4)).toEqual(landed.slice(0, 4));
+      expect(Number(moving[4])).toBeLessThan(Number(landed[4]));
+      expect(moving[1]).toBe("rgba(0, 0, 0, 0)");
+      expect(moving[2]).toBe("none");
     }
   }
 });

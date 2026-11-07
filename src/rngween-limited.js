@@ -91,6 +91,26 @@ export function parseRngweenLimited(value, receipts = {}) {
   };
 }
 
+// A retired look bought back from the sale counter writes the same permanent
+// receipt an event reward wrote, so a later sync still recognises it as this
+// account's own cosmetic instead of an unexplained ownership entry.
+export function grantRngweenCosmetic(limited, id) {
+  const base = limited ?? emptyRngweenLimited();
+  if (id === RNGWEEN_WORLD_SKIN.id)
+    return base.skinEarned ? base : { ...base, skinEarned: true };
+  if (!AURA_IDS.has(id)) return base;
+  const finale = id === RNGWEEN_FINALE_SKIN.id;
+  if ((base.auras ?? []).includes(id))
+    return finale && !base.finaleEarned
+      ? { ...base, finaleEarned: true }
+      : base;
+  return {
+    ...base,
+    auras: [...(base.auras ?? []), id],
+    ...(finale ? { finaleEarned: true } : {}),
+  };
+}
+
 export function limitedRewardIds(limited) {
   return [
     ...(limited?.auras ?? []).filter((id) => AURA_IDS.has(id)),

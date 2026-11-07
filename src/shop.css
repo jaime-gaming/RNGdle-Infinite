@@ -966,6 +966,16 @@
 .aura-preview .number-box {
   transform: scale(0.88);
 }
+/* The limited sale skin previews as what it is: matte black, one hairline of
+   light, the mark in quiet grey. */
+.aura-preview.aura-blackout-2026 {
+  background:
+    radial-gradient(ellipse at 50% 42%, #ffffff0a, transparent 68%), #08080a;
+  border-bottom-color: #26262b;
+}
+.aura-preview.aura-blackout-2026 > svg {
+  color: #71717a;
+}
 .aura-preview.aura-eclipse {
   background: radial-gradient(ellipse at center, #f59e0b15, var(--hover) 75%);
 }
@@ -1710,4 +1720,75 @@
   display: inline-flex;
   gap: 7px;
   align-items: center;
+}
+
+/* The little eye on an aura card: peek at the look on a sample roll. */
+.shop-look-eye {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.shop-look-eye:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+.shop-preview-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  max-width: 420px;
+  width: calc(100% - 32px);
+  padding: 26px 24px 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+}
+.shop-preview-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+.shop-preview-dialog h2 {
+  margin: 4px 0 0;
+  font-size: 17px;
+}
+.shop-preview-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 12px;
+}
+.shop-preview-tier {
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 11px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.shop-preview-tier.is-on {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--surface);
+}
+.shop-preview-dialog .number-box {
+  margin: 2px auto 12px;
+}
+.shop-preview-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
 }
