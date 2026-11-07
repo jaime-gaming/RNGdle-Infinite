@@ -64,4 +64,4 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
-_Released November 3, 2026 · documentation updated November 7, 2026._
+_Documentation updated November 7, 2026._
