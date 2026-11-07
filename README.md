@@ -33,7 +33,7 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 
 ## Keep your progress
 
-Give your local profile a name and your progress stays on this device. A Cloud Account is optional if you want to continue on another device. If you play offline, progress is saved locally and a Cloud Account syncs again when you reconnect.
+Open **Profile → Continue locally**, then give your local profile a name to keep your progress on this device. A Cloud Account is optional if you want to continue on another device. If you play offline, progress is saved locally and a Cloud Account syncs again when you reconnect.
 
 You choose whether to share a public profile. A profile logo appears only when that profile is shared. To go back to an earlier saved copy, open **Settings → Restore save**; you can check the copy's progress before choosing it.
 

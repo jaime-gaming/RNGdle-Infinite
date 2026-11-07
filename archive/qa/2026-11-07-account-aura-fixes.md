@@ -22,3 +22,23 @@
 ## Deployment requirement
 
 No production deployment, merge or rule publication was performed. Deploy `firestore.rules` with `npm run deploy:rules` before verifying publication and Déjà Vu summaries against real Firebase. Verify owner publish, anonymous direct read, opt-out, denied anonymous read, and foreign-owner rejection. Offline simulation is not proof of deployed rules or Firebase configuration.
+
+## Continuation — all regression checks green
+
+The subsequent continuation fixed the remaining local-profile flow and test assumptions:
+
+- Restored an explicit Continue locally choice on Profile, preserving temporary progress when a local player names their profile. Cloud controls remain exclusively in Settings → Cloud Account.
+- Added a local-save location note and a discoverable Cloud Account link on local profiles.
+- Profile-gated shop purchases open Profile rather than cloud sign-in.
+- Auto-Roll schedules from the committed deadline instead of waiting for the rendered cooldown tick. Existing cancellation, background, commitment and cadence tests remain in place.
+- Hosting/UI smoke tests stub only the external status summary. The Worker smoke ignores only `net::ERR_ABORTED` navigation cancellations; genuine transport and HTTP failures still fail. Updated its Cloud Account route assertions.
+
+Final checks after these changes:
+
+- Complete Playwright suite: **574 passed**, zero retries.
+- Cloudflare Worker HTTP and browser smoke: passed.
+- GitHub Pages build and direct-route/browser smoke: passed.
+- Cloud sync simulation including orphan-summary recovery: passed.
+- Production build, GitHub Pages artifact generation, economy audit, refreshed screenshots and changed-file formatting: passed.
+
+These results supersede the initial failing checks above. Production deployment and Firebase rules publication are still pending; no merge or live deployment was performed.

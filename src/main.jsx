@@ -1185,6 +1185,24 @@ function App() {
                 />
               ) : (
                 <>
+                  {!auth.user && !session.profile && !localPlay && (
+                    <section
+                      className="panel"
+                      aria-label="Choose where to save"
+                    >
+                      <h2>Play on this device</h2>
+                      <p>
+                        Keep your progress locally, or open Cloud Account for an
+                        online backup.
+                      </p>
+                      <button
+                        className="secondary-button"
+                        onClick={continueLocally}
+                      >
+                        Continue locally
+                      </button>
+                    </section>
+                  )}
                   {(!cloudAccountRequired ||
                     session.profile ||
                     (localPlay && !auth.user)) &&
@@ -1213,8 +1231,7 @@ function App() {
                         onSetPublicProfile={setPublicProfileVisibility}
                       />
                     )}
-                  {(auth.user?.passwordRequired ||
-                    (cloudAccountRequired && !session.profile)) && (
+                  {(auth.user?.passwordRequired || !auth.user) && (
                     <section className="panel cloud-account-pointer">
                       <h2>Cloud Account</h2>
                       <p>
@@ -1310,7 +1327,9 @@ function App() {
             onOpenFamily={openFamily}
             focusProduct={shopFocus}
             onAction={dispatch}
-            openSignup={openAuth}
+            openSignup={() =>
+              session.profile ? openAuth() : navigate("profile")
+            }
             navigate={navigate}
             notify={notify}
             pickingGoal={pickingGoal}

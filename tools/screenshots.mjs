@@ -1,3 +1,4 @@
+import { mockOperationalStatus } from "../tests/helpers/status.js";
 // Regenerate the images used by README.md. They are real screenshots of the
 // running game (no mockups), taken from a seeded local save so the collection,
 // the shop and the profile have something to show.
@@ -220,6 +221,8 @@ try {
     viewport: { width: 1280, height: 900 },
     deviceScaleFactor: 1,
   });
+
+  await mockOperationalStatus(page);
 
   // 1. The roll screen, as it loads, with a charged circle explaining itself
   //    on hover (the rack has no text of its own).
