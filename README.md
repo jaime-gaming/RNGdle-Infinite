@@ -39,6 +39,8 @@ You choose whether to share a public profile. A profile logo appears only when t
 
 ![Choose a saved copy to restore](media/save-recovery.png)
 
+Local saving retries with lossless compression if this browser runs out of storage, without deleting your history or recovery copies. If saving still fails, keep your site data and free space before trying again.
+
 ## FAQ
 
 **Does anything change the odds?** No. Every number has the same chance, and companions or upgrades never improve your luck.
@@ -63,16 +65,3 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
 _Released November 3, 2026 · documentation updated November 7, 2026._
-
-### Account and presentation fixes
-
-- Scroll to **Cloud Account** in Settings to open its dedicated sign-in, backups and security page (`/settings/cloud-account`). The top **Profile** button opens your profile.
-- Pinned repeated rolls retain the Déjà Vu appearance in local profiles, public summaries, shared links and exported cards. Older shared cards remain readable.
-- During reveals, moving digits use amber ink and a dotted underline; landed digits use white ink on navy with a solid green marker. This remains distinct across auras and both themes.
-- Surplus banks up to **10% per Rebirth, 20% per Prestige, and 30% per Rollback** (one percent per 2,000,000 surplus EP). Prestige still carries half the surplus into the new wallet; Rollback still starts at zero. Accumulated surplus is no longer truncated to 100% on reload.
-
-![Cloud Account settings](media/cloud-account.png)
-
-![Light-mode auras](media/light-auras.png)
-
-Local saving automatically retries with lossless compression if this browser runs out of storage. Your history and recovery copies are not deleted to make room. If storage is blocked or even the compressed save will not fit, the game keeps the previous saved copy and warns you.
