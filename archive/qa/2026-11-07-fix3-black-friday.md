@@ -24,9 +24,14 @@ Date: 2026-11-07 · Branch: `arena/be488ed9-rngdle-infinite` · Internal label:
    - every shop product discounted 20–50% per product (stable FNV-1a hash),
      companions included; prices floor to whole hundreds so the real discount
      never undercuts the tag;
-   - one sale stamp per purchase (`progress.blackFriday.stamps`, cap 99);
+   - one sale stamp per 100,000 EP spent (`SALE_STAMP_EVERY`), recorded as a
+     running `spent` total in `progress.blackFriday` (cap 99 stamps); stamps
+     are always derived from that total;
    - 25 stamps unlock the limited skin `blackout-2026` ("Blackout 2026",
-     matte-black NumberBox art), kept through every reset;
+     matte-black NumberBox art, matte-black card preview), kept through every
+     reset;
+   - a `Black Friday 2026` door in the shop hub opens `/shop/black-friday`,
+     one shelf with the stamp card, the limited skin and the counter;
    - the RNGween looks a save missed return to the counter at 10,000,000 EP
      each for the day (`resalePrice`, receipt in `rngweenLimited`);
    - UI: `SALE SALE SALE` ticker above the header, black "Event" flag at the

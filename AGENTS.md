@@ -30,12 +30,14 @@ event progression/UI. The old RNGween changelog entry is historical and stays.
 
 Black Friday 2026 is the single event exception. It is one UTC day — Friday 27
 November 2026, `src/black-friday.js` — during which the whole shop is
-discounted 20–50% per product, every purchase awards one sale stamp, 25 stamps
-unlock the limited `blackout-2026` skin, and the RNGween looks a save missed
-return to the counter at 10,000,000 EP each. Its interface (sale ticker, event
-notice, stamp card, the Ultra-Black and Red Sale themes, the sale favicon and
-manifest) exists only while `blackFridayStatus(at).active`; every other day the
-game shows none of it. `progress.blackFriday` is part of the save contract and
+discounted 20–50% per product, every 100,000 EP spent awards one sale stamp
+(`SALE_STAMP_EVERY`), 25 stamps unlock the limited `blackout-2026` skin, and
+the RNGween looks a save missed return to the counter at 10,000,000 EP each.
+While the day is on the calendar the hub grows a `black-friday` shelf
+(`/shop/black-friday`) with the stamp card, the skin and the counter. Its
+interface (sale ticker, event notice, stamp card, the Ultra-Black and Red Sale
+themes, the sale favicon and manifest) exists only while
+`blackFridayStatus(at).active`; every other day the game shows none of it. `progress.blackFriday` is part of the save contract and
 survives every reset, like permanent cosmetics. Dev builds honour
 `VITE_BLACK_FRIDAY_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the sale
 clock for previews; production ignores that variable, and shipped code never
@@ -144,9 +146,11 @@ pretends today is the event day.
 - `preservePermanentCosmetics` protects owned cosmetics when same-profile
   local/cloud snapshots are reconciled. Different profiles never inherit each
   other's cosmetics.
-- `blackFriday` records (`{ id, stamps, skinEarned }`) keep the sale-day stamp
-  count and the limited-skin receipt; the skin also lives in `owned` like any
-  permanent cosmetic. Junk or foreign records are repaired to an empty one.
+- `blackFriday` records (`{ id, spent, stamps, skinEarned }`) keep the sale-day
+  EP total; stamps are always derived from it (`stampsForSpend`), so a
+  hand-edited card cannot invent any. The limited skin also lives in `owned`
+  like any permanent cosmetic. Junk or foreign records are repaired to an
+  empty one.
 - `sale-reward` activity rows stay parseable and visible in history; they carry
   no EP and never count as spending.
 

@@ -966,6 +966,16 @@
 .aura-preview .number-box {
   transform: scale(0.88);
 }
+/* The limited sale skin previews as what it is: matte black, one hairline of
+   light, the mark in quiet grey. */
+.aura-preview.aura-blackout-2026 {
+  background:
+    radial-gradient(ellipse at 50% 42%, #ffffff0a, transparent 68%), #08080a;
+  border-bottom-color: #26262b;
+}
+.aura-preview.aura-blackout-2026 > svg {
+  color: #71717a;
+}
 .aura-preview.aura-eclipse {
   background: radial-gradient(ellipse at center, #f59e0b15, var(--hover) 75%);
 }

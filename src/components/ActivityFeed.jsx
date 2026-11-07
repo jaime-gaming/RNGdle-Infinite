@@ -789,7 +789,7 @@ export default function ActivityFeed({
                       ) : (
                         <>
                           <strong>Sale stamp {event.stamps} of 25</strong> · one
-                          per purchase while the sale day is on
+                          per 100,000 EP spent while the sale day is on
                         </>
                       )}
                     </p>

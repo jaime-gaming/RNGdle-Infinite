@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Coins,
   LayoutGrid,
+  Percent,
   Repeat,
   ShoppingBag,
   Target,
@@ -51,6 +52,8 @@ import { useSaleStatus } from "../use-black-friday.js";
 import {
   BLACK_FRIDAY_SKIN,
   BLACK_FRIDAY_STAMPS,
+  blackFridayDayLabel,
+  resaleMissing,
   resalePrice,
   saleDiscountFor,
   stampsLeft,
@@ -221,6 +224,12 @@ export default function Shop({
   // top, the discount every card wears, and the counter of missed looks.
   const sale = useSaleStatus();
   const saleRecord = progress.blackFriday ?? null;
+  // The sale's own shelf: one door in the hub while the day is on the calendar,
+  // and behind it everything the day puts on the counter.
+  const saleShelf = section === "black-friday";
+  const saleItems = sale.shown
+    ? [BLACK_FRIDAY_SKIN, ...resaleMissing(progress.owned)]
+    : [];
   const hasGuestProgress =
     (progress.history?.length ?? 0) > 0 ||
     progress.balance > 0 ||
@@ -756,6 +765,8 @@ export default function Shop({
               ) : (
                 `${stampsLeft(saleRecord)} sale stamps to go`
               )
+            ) : item.eventOnly && !state.owned && !onCounter ? (
+              "Not for sale"
             ) : item.repeatable && state.blocked ? (
               state.repeat.waitMs > 0 ? (
                 `Next in ${waitText(state.repeat.waitMs)}`
@@ -1354,7 +1365,7 @@ export default function Shop({
           link to a real sub-page, each carrying the number that tells you
           whether it is worth opening. The shelves themselves live on their
           own pages. */}
-      {!shelf && (
+      {!shelf && !saleShelf && (
         <>
           <section className="shop-hub" id="shop-hub" aria-label="Shop shelves">
             <div className="shop-section-heading">
@@ -1376,6 +1387,37 @@ export default function Shop({
             </div>
             <nav className="shop-jump" aria-label="Shop sections">
               {visibleShelves.map(shelfTile)}
+              {sale.shown && (
+                <a
+                  href={pathForSubpage("shop", "black-friday")}
+                  aria-label="Black Friday 2026"
+                  className="shop-tile is-sale"
+                  data-shelf="black-friday"
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey)
+                      return;
+                    event.preventDefault();
+                    onOpenShelf("black-friday");
+                  }}
+                >
+                  <span className="shop-tile-icon" aria-hidden="true">
+                    <Percent size={20} />
+                  </span>
+                  <span className="shop-tile-body">
+                    <strong>Black Friday 2026</strong>
+                    <small>
+                      {sale.active
+                        ? "The whole shop, down for the day."
+                        : "One day of discounts and a limited skin."}
+                    </small>
+                  </span>
+                  <span className="shop-tile-stat">
+                    {sale.active
+                      ? `${saleRecord?.stamps ?? 0} / ${BLACK_FRIDAY_STAMPS} stamps`
+                      : blackFridayDayLabel()}
+                  </span>
+                </a>
+              )}
             </nav>
           </section>
           {/* A shop window, not a second catalogue: three picks that link into the
@@ -1463,7 +1505,7 @@ export default function Shop({
       )}
       {/* One sticky bar per shelf: the way back and the count. Every shelf
           shows everything it has — nothing to search, nothing to filter. */}
-      {shelf && (
+      {(shelf || saleShelf) && (
         <div className="shop-controls">
           <div className="shop-bar">
             <button
@@ -1474,23 +1516,69 @@ export default function Shop({
               <LayoutGrid size={14} /> All shelves
             </button>
             <span className="shop-count" role="status">
-              {shelf.id === "companions"
-                ? `${PETS.filter((pet) => progress.pets?.includes(pet.id)).length} / ${PETS.length} found`
-                : shelf.id === "auras" && auraFamily?.legacyHub
-                  ? `${legacyFamilies.length} event group${legacyFamilies.length === 1 ? "" : "s"} · ${auraProducts.filter((item) => item.eventOnly && progress.owned.includes(item.id)).length} owned`
-                  : shelf.id === "auras" && !auraFamily
-                    ? // The index has no cards to count — its five banners are
-                      // the shelf, so it counts sets instead of calling itself
-                      // locked.
-                      `${auraFamilies.length} sets · ${auraFamilies.reduce((total, entry) => total + aurasInFamily(entry.id, progress.owned, clock).length, 0)} looks`
-                    : !shelfItemsNow.length
-                      ? // A locked shelf has nothing to count; its own panel says
-                        // why, and a second "0 of 0" would only be noise.
-                        "Locked"
-                      : `${shelfItemsNow.length} on this shelf`}
+              {saleShelf
+                ? sale.active
+                  ? `${saleRecord?.stamps ?? 0} of ${BLACK_FRIDAY_STAMPS} stamps · ${waitText(sale.endsInMs)} left`
+                  : `Opens ${blackFridayDayLabel()}`
+                : shelf.id === "companions"
+                  ? `${PETS.filter((pet) => progress.pets?.includes(pet.id)).length} / ${PETS.length} found`
+                  : shelf.id === "auras" && auraFamily?.legacyHub
+                    ? `${legacyFamilies.length} event group${legacyFamilies.length === 1 ? "" : "s"} · ${auraProducts.filter((item) => item.eventOnly && progress.owned.includes(item.id)).length} owned`
+                    : shelf.id === "auras" && !auraFamily
+                      ? // The index has no cards to count — its five banners are
+                        // the shelf, so it counts sets instead of calling itself
+                        // locked.
+                        `${auraFamilies.length} sets · ${auraFamilies.reduce((total, entry) => total + aurasInFamily(entry.id, progress.owned, clock).length, 0)} looks`
+                      : !shelfItemsNow.length
+                        ? // A locked shelf has nothing to count; its own panel says
+                          // why, and a second "0 of 0" would only be noise.
+                          "Locked"
+                        : `${shelfItemsNow.length} on this shelf`}
             </span>
           </div>
         </div>
+      )}
+      {saleShelf && (
+        <section
+          className="shop-category sale-shelf"
+          id="shop-black-friday"
+          tabIndex={-1}
+        >
+          <div className="shop-section-heading">
+            <div>
+              <h2>
+                <Percent size={16} /> Black Friday 2026
+              </h2>
+              <p>
+                {sale.active
+                  ? "The whole shop is down for the day, and every stamp below is EP you actually spent."
+                  : `One day only — ${blackFridayDayLabel()}. This is everything the day puts on the counter.`}
+              </p>
+            </div>
+            <span className="shop-section-stat">
+              {sale.active
+                ? `ends in ${waitText(sale.endsInMs)}`
+                : `starts in ${waitText(sale.startsInMs)}`}
+            </span>
+          </div>
+          {sale.shown ? (
+            <>
+              <SaleStampCard record={saleRecord} previewTier={previewTier} />
+              <div className="shop-grid shop-grid-rows">
+                {saleItems.map((item, index) => card(item, index))}
+              </div>
+              <p className="sale-shelf-fine">
+                Stamps, counter prices and the limited skin exist only while the
+                day is on. Whatever you keep, you keep forever.
+              </p>
+            </>
+          ) : (
+            <p className="sale-shelf-fine">
+              The counter is closed. Black Friday 2026 ran for one day; what it
+              sold lives on in Special &amp; Limiteds.
+            </p>
+          )}
+        </section>
       )}
       {shelf?.id === "skills" && (
         <section

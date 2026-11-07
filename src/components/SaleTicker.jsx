@@ -14,7 +14,7 @@ export default function SaleTicker({ status }) {
       {WORDS.map((index) => (
         <span key={index} className="sale-ticker-word">
           SALE
-          <i aria-hidden="true">✷</i>
+          <i aria-hidden="true">•</i>
         </span>
       ))}
     </>
@@ -27,7 +27,7 @@ export default function SaleTicker({ status }) {
       </span>
       <p className="sale-ticker-say">
         Black Friday sale live today: every shelf is discounted, and every
-        purchase earns a sale stamp.
+        100,000 EP you spend earns a sale stamp.
       </p>
     </div>
   );

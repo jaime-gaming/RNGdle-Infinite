@@ -15,6 +15,9 @@ export const BLACK_FRIDAY_START = Date.UTC(2026, 10, 27, 0, 0, 0);
 export const BLACK_FRIDAY_END = Date.UTC(2026, 10, 28, 0, 0, 0);
 // Sale stamps: one per purchase made while the sale is on.
 export const BLACK_FRIDAY_STAMPS = 25;
+// One stamp per 100,000 EP spent while the sale is on: the card fills with
+// what the day actually cost you, not with the number of taps.
+export const SALE_STAMP_EVERY = 100000;
 // Stamps keep counting past the reward only up to a bound the save can trust.
 export const SALE_STAMP_CAP = 99;
 // The RNGween looks that were never earned come back for the day, and only for
@@ -33,7 +36,7 @@ export const BLACK_FRIDAY_SKIN = {
   eventOnly: true,
   limited: true,
   stampReward: true,
-  swatch: ["#0a0a0b", "#52525b"],
+  swatch: ["#050505", "#26262b"],
   icon: "blackout",
   description:
     "The limited Black Friday 2026 skin: matte black, one white tag, nothing else. Paid by 25 sale stamps, kept forever, never sold.",
@@ -182,8 +185,20 @@ export function resaleOpen(at = Date.now()) {
 // Stamps are event progress, not run progress: they belong to the account, so
 // no reset of the run clears them, and the skin they pay is a permanent aura.
 
+// How many stamps a spend total is worth, and how far the next one is.
+export function stampsForSpend(spent) {
+  const value = Number.isFinite(spent) && spent > 0 ? spent : 0;
+  return Math.min(SALE_STAMP_CAP, Math.floor(value / SALE_STAMP_EVERY));
+}
+
+export function epToNextStamp(record) {
+  const spent = record?.spent ?? 0;
+  if (stampsForSpend(spent) >= SALE_STAMP_CAP) return 0;
+  return SALE_STAMP_EVERY - (spent % SALE_STAMP_EVERY);
+}
+
 export function emptyBlackFriday() {
-  return { id: BLACK_FRIDAY_ID, stamps: 0, skinEarned: false };
+  return { id: BLACK_FRIDAY_ID, spent: 0, stamps: 0, skinEarned: false };
 }
 
 const validAmount = (value) => Number.isSafeInteger(value) && value >= 0;
@@ -193,28 +208,38 @@ const validAmount = (value) => Number.isSafeInteger(value) && value >= 0;
 export function parseBlackFriday(value, receipts = {}) {
   const owned = Array.isArray(receipts.owned) ? receipts.owned : [];
   const stored = !!value && typeof value === "object" && !Array.isArray(value);
-  const stamps = stored && validAmount(value.stamps) ? value.stamps : 0;
+  // The spend total is the only source of truth: stamps are always what the
+  // recorded EP bought, so a hand-edited card can never invent any.
+  const spent =
+    stored && validAmount(value.spent) ? Math.floor(value.spent) : 0;
   const skinEarned =
     (stored && value.skinEarned === true) ||
     owned.includes(BLACK_FRIDAY_SKIN.id);
   return {
     id: BLACK_FRIDAY_ID,
-    stamps: Math.min(stamps, SALE_STAMP_CAP),
+    spent,
+    stamps: stampsForSpend(spent),
     skinEarned,
   };
 }
 
-// One purchase during the sale: one more stamp, and the limited skin the moment
-// the card is full. `awarded` is true only on the purchase that paid it, so the
-// reward is announced once and can never be granted twice.
-export function stampForPurchase(record, at = Date.now()) {
+// One purchase during the sale adds what its price bought: a stamp per whole
+// 100,000 EP, and the limited skin the moment the card fills. `newStamps`
+// counts only the stamps this purchase paid for, and `skinUnlocked` is true on
+// the single purchase that completed the card, so the reward is announced
+// once and can never be granted twice.
+export function stampForPurchase(record, ep, at = Date.now()) {
   const base = record ?? emptyBlackFriday();
-  if (!blackFridayActive(at)) return { record: base, awarded: false };
-  const stamps = Math.min(base.stamps + 1, SALE_STAMP_CAP);
+  const price = Number.isFinite(ep) && ep > 0 ? Math.floor(ep) : 0;
+  if (!blackFridayActive(at) || price <= 0)
+    return { record: base, newStamps: 0, skinUnlocked: false };
+  const spent = base.spent + price;
+  const stamps = stampsForSpend(spent);
   const skinEarned = base.skinEarned || stamps >= BLACK_FRIDAY_STAMPS;
   return {
-    record: { id: BLACK_FRIDAY_ID, stamps, skinEarned },
-    awarded: skinEarned && !base.skinEarned,
+    record: { id: BLACK_FRIDAY_ID, spent, stamps, skinEarned },
+    newStamps: Math.max(0, stamps - base.stamps),
+    skinUnlocked: skinEarned && !base.skinEarned,
   };
 }
 
@@ -222,8 +247,10 @@ export function stampsLeft(record) {
   return Math.max(0, BLACK_FRIDAY_STAMPS - (record?.stamps ?? 0));
 }
 
+// The bar under the stamp card: the whole road to 25, spend-wise.
 export function stampFraction(record) {
-  return Math.min(1, (record?.stamps ?? 0) / BLACK_FRIDAY_STAMPS);
+  const spent = record?.spent ?? 0;
+  return Math.min(1, spent / (BLACK_FRIDAY_STAMPS * SALE_STAMP_EVERY));
 }
 
 // Which of the retired event's looks are still missing, and so on the counter.

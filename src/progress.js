@@ -931,21 +931,32 @@ function startNewCycle(
 }
 // Every action goes through here, so the log is capped the same way for all of
 // them. Only an action that actually changed the save can grow the log.
-// One purchase made while the sale is on earns one stamp, and the stamp that
-// fills the card pays the limited skin. The stamp is written by the same action
-// as the purchase that earned it, so a reload or a repeated receipt can never
-// hand the reward out twice, and a purchase outside the day earns nothing.
-function withSaleStamp(state, at) {
+// Every 100,000 EP spent while the sale is on earns one stamp, and the stamp
+// that fills the card pays the limited skin. The stamps are written by the same
+// action as the purchase that paid for them — reading the price off the
+// purchase row that action just appended — so a reload or a repeated receipt
+// can never hand a stamp or the reward out twice, and spending outside the day
+// earns nothing.
+function withSaleStamp(state, at, ep = null) {
   if (!blackFridayActive(at)) return state;
-  const { record, awarded } = stampForPurchase(state.blackFriday, at);
-  if (!awarded) return { ...state, blackFriday: record };
+  const last = state.history?.[state.history.length - 1];
+  const spent =
+    ep ??
+    (last && last.type === "purchase" && validAmount(last.ep) ? last.ep : 0);
+  const { record, newStamps, skinUnlocked } = stampForPurchase(
+    state.blackFriday,
+    spent,
+    at,
+  );
+  if (!newStamps && !skinUnlocked) return { ...state, blackFriday: record };
   const skin = BLACK_FRIDAY_SKIN;
   return {
     ...state,
     blackFriday: record,
-    owned: state.owned.includes(skin.id)
-      ? state.owned
-      : [...state.owned, skin.id],
+    owned:
+      skinUnlocked && !state.owned.includes(skin.id)
+        ? [...state.owned, skin.id]
+        : state.owned,
     history: appendHistory(state.history, [
       {
         id: `sale-reward:${skin.id}:${record.stamps}`,

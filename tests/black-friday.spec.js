@@ -5,6 +5,7 @@ import {
   BLACK_FRIDAY_SKIN,
   BLACK_FRIDAY_STAMPS,
   RNGWEEN_RESALE_PRICE,
+  SALE_STAMP_EVERY,
   salePrice,
 } from "../src/black-friday.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -64,7 +65,8 @@ test("the sale day dresses the page: ticker, event notice and sale branding", as
   const dialog = page.locator('[data-testid="sale-event-dialog"]');
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("Black Friday");
-  await expect(dialog).toContainText(`${BLACK_FRIDAY_STAMPS} sale stamps`);
+  await expect(dialog).toContainText(`${BLACK_FRIDAY_STAMPS} stamps`);
+  await expect(dialog).toContainText("100,000 EP");
   await expect(dialog).toContainText("10,000,000 EP");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
@@ -73,29 +75,59 @@ test("the sale day dresses the page: ticker, event notice and sale branding", as
   await expect(page.locator('[data-testid="sale-stamp-card"]')).toBeVisible();
 });
 
-test("every product carries its own discount and every purchase adds a stamp", async ({
+test("every product carries its own discount, and stamps follow EP spent", async ({
   page,
 }) => {
   await seedProgress(page, funded);
   await pauseClockAt(page, SALE_DAY);
   await page.goto("/shop/roll");
 
-  const item = productById.get("quickwind-1");
+  const cheap = productById.get("quickwind-1");
   const card = page.locator('[data-product="quickwind-1"]');
   await expect(card.locator(".sale-tag")).toContainText("−30%");
   await expect(card.locator(".shop-price-was")).toContainText("30,000");
   await expect(card.locator(".shop-price")).toContainText(
-    `${salePrice(item, SALE_DAY).toLocaleString("en-US")} EP`,
+    `${salePrice(cheap, SALE_DAY).toLocaleString("en-US")} EP`,
   );
 
+  // A 21,000 EP upgrade is under one stamp's worth of spending: the card
+  // records the EP but hands out nothing yet.
   await buy(page, "quickwind-1");
-  await expect(page.locator('[data-testid="sale-stamp-card"]')).toContainText(
-    "1",
-  );
+  const stampCard = page.locator('[data-testid="sale-stamp-card"]');
+  await expect(stampCard).toContainText("0 of 25");
 
-  // The activity feed records the stamp.
+  const dear = productById.get("static");
+  const paid = salePrice(dear, SALE_DAY);
+  await page.goto("/shop/auras/randomness");
+  await buy(page, "static");
+  const stamps = Math.floor(
+    (salePrice(cheap, SALE_DAY) + paid) / SALE_STAMP_EVERY,
+  );
+  expect(stamps).toBeGreaterThan(0);
+  await expect(stampCard).toContainText(`${stamps} of 25`);
+
+  // The activity feed records the stamp that the spend paid for.
   await page.goto("/");
-  await expect(page.getByText("Sale stamp 1 of 25")).toBeVisible();
+  await expect(page.getByText(`Sale stamp ${stamps} of 25`)).toBeVisible();
+});
+
+test("the hub grows a Black Friday door while the day is on", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  await page.goto("/shop");
+
+  const tile = page.locator('[data-shelf="black-friday"]');
+  await expect(tile).toBeVisible();
+  await tile.click();
+  await expect(page).toHaveURL(/\/shop\/black-friday$/);
+  const shelf = page.locator("#shop-black-friday");
+  await expect(shelf).toBeVisible();
+  await expect(shelf.locator('[data-testid="sale-stamp-card"]')).toBeVisible();
+  // The limited skin plus every RNGween look this save missed.
+  await expect(shelf.locator(".shop-card[data-product]")).toHaveCount(7);
+  await expect(shelf.locator('[data-product="jack-o-glow"]')).toBeVisible();
 });
 
 test("25 stamps unlock the limited skin, kept like every permanent cosmetic", async ({
@@ -103,14 +135,20 @@ test("25 stamps unlock the limited skin, kept like every permanent cosmetic", as
 }) => {
   await seedProgress(page, {
     ...funded,
-    blackFriday: { id: "black-friday-2026", stamps: 24, skinEarned: false },
+    blackFriday: {
+      id: "black-friday-2026",
+      spent: 2400000,
+      stamps: 24,
+      skinEarned: false,
+    },
   });
   await pauseClockAt(page, SALE_DAY);
-  await page.goto("/shop/roll");
+  await page.goto("/shop/auras/randomness");
 
-  await buy(page, "quickwind-1");
+  // 2,400,000 EP already spent plus this aura crosses the 25th stamp.
+  await buy(page, "static");
   await expect(page.locator('[data-testid="sale-stamp-card"]')).toContainText(
-    "25",
+    "unlocked",
   );
 
   await page.goto("/shop/auras/black-friday");
@@ -155,6 +193,9 @@ test("outside the day the sale leaves no trace", async ({ page }) => {
 
   await page.goto("/shop");
   await expect(page.locator('[data-testid="sale-stamp-card"]')).toHaveCount(0);
+  await expect(page.locator('[data-shelf="black-friday"]')).toHaveCount(0);
+  await page.goto("/shop/black-friday");
+  await expect(page.getByText("The counter is closed")).toBeVisible();
   const flag = page.locator('[data-testid="sale-event-button"]');
   await expect(flag).toBeVisible();
   await expect(flag).toContainText("in");

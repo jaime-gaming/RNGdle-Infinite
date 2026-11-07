@@ -15,6 +15,8 @@ import {
   resaleMissing,
   stampFraction,
   stampsLeft,
+  epToNextStamp,
+  SALE_STAMP_EVERY,
 } from "../black-friday.js";
 import { formatEP } from "../roll-data.js";
 import { waitText } from "../tasks.js";
@@ -53,7 +55,11 @@ export function SaleStampCard({ record, previewTier = "rare" }) {
         <span>
           {earned
             ? "Paid by your stamps, kept forever. Equip it from Special & Limiteds."
-            : `One stamp per purchase today · ${stampsLeft(record)} to go for the limited skin`}
+            : `One stamp per ${formatEP(SALE_STAMP_EVERY)} EP spent today · ${
+                epToNextStamp(record)
+                  ? `${formatEP(epToNextStamp(record))} EP to the next · `
+                  : ""
+              }${stampsLeft(record)} to go for the limited skin`}
         </span>
         <span
           className="sale-stamp-bar"
@@ -163,11 +169,12 @@ export default function SaleEventNotice({
             <Tag size={14} aria-hidden="true" /> Stamps pay a limited skin
           </h3>
           <p>
-            Every purchase made while the sale is on earns one sale stamp. Fill{" "}
-            {BLACK_FRIDAY_STAMPS} stamps and {BLACK_FRIDAY_SKIN.name} is yours:
-            matte black, one white tag, nothing else. It is a permanent aura, so
-            a rebirth, a prestige, a Rollback or a fresh start can never take it
-            away — and it is never sold.
+            Every {formatEP(SALE_STAMP_EVERY)} EP you spend while the sale is on
+            adds one sale stamp, whatever the shelf. Fill {BLACK_FRIDAY_STAMPS}{" "}
+            stamps and {BLACK_FRIDAY_SKIN.name} is yours: matte black, one white
+            tag, nothing else. It is a permanent aura, so a rebirth, a prestige,
+            a Rollback or a fresh start can never take it away — and it is never
+            sold.
           </p>
           {status.active && (
             <SaleStampCard record={record} previewTier={previewTier} />

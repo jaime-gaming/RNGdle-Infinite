@@ -66,6 +66,30 @@
   border: 0;
 }
 
+/* The strip fades at both edges so the words slide out of the bar instead of
+   hitting its border, and it holds still while you read it. */
+.sale-ticker::before,
+.sale-ticker::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 34px;
+  pointer-events: none;
+}
+.sale-ticker::before {
+  left: 0;
+  background: linear-gradient(to right, #050505, transparent);
+}
+.sale-ticker::after {
+  right: 0;
+  background: linear-gradient(to left, #050505, transparent);
+}
+.sale-ticker:hover .sale-ticker-track {
+  animation-play-state: paused;
+}
+
 /* ---- The shop's event notice ----------------------------------------------
    A black object at the top of the shop. It is the same object before and
    during the day; only the line under the title changes. */
@@ -83,8 +107,16 @@
   text-align: left;
   cursor: pointer;
 }
+.sale-flag {
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
 .sale-flag:hover {
   border-color: #4b4b53;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -18px #000000cc;
 }
 .sale-flag:focus-visible {
   outline: 2px solid #f4f4f5;
@@ -345,6 +377,17 @@
   letter-spacing: 0.08em;
   border: 1px solid #3f3f46;
 }
+@media (prefers-reduced-motion: no-preference) {
+  .sale-tag {
+    animation: sale-tag-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+@keyframes sale-tag-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.85);
+  }
+}
 .sale-tag.is-resale {
   background: #ff2d2d;
   border-color: #ff2d2d;
@@ -410,6 +453,45 @@
 :root[data-sale-theme="red-sale"] .sale-flag.is-live {
   border-color: #ff3b30;
   box-shadow: 0 0 0 1px #ff3b3040;
+}
+
+/* ---- The sale's own shelf --------------------------------------------------
+   One more door in the hub while the day is on the calendar: the only tile
+   that is black on a light shop, because the day itself is black. */
+.shop-tile.is-sale {
+  background: #050505;
+  border-color: #26262b;
+  color: #f4f4f5;
+}
+.shop-tile.is-sale .shop-tile-icon {
+  background: #131316;
+  color: #ff2d2d;
+}
+.shop-tile.is-sale .shop-tile-body small {
+  color: #a1a1aa;
+}
+.shop-tile.is-sale .shop-tile-stat {
+  color: #ff5c5c;
+}
+.shop-tile.is-sale:hover {
+  border-color: #7f1d1d;
+  transform: translateY(-1px);
+}
+.sale-shelf-fine {
+  margin: 18px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+/* Borrowed themes should feel like the room changing light, not a repaint:
+   the surfaces that carry them ease between colours. */
+:root[data-sale-theme] body,
+:root[data-sale-theme] .header,
+:root[data-sale-theme] .shop-tile {
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    border-color 0.35s ease;
 }
 
 /* ---- The limited skin: matte black, one tag, no noise --------------------- */

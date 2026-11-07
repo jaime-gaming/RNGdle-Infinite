@@ -38,8 +38,15 @@ export default function AppearanceMenu({ theme, onTheme }) {
         ])
       : []),
   ];
+  // A saved sale look out of season reads as the dark theme it borrows its
+  // surface from, so the button never shows a look the game is not wearing.
+  const effective = options.some(([value]) => value === theme)
+    ? theme
+    : SALE_THEMES.some((entry) => entry.id === theme)
+      ? "dark"
+      : theme;
   const [, label, Icon] =
-    options.find(([value]) => value === theme) ?? options[0];
+    options.find(([value]) => value === effective) ?? options[0];
 
   const close = (restore = false) => {
     setOpen(false);
