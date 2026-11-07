@@ -326,18 +326,6 @@ button.draw-pick:focus-visible {
   opacity: 0;
   overflow: hidden;
 }
-.draw-digit.is-scrambling {
-  /* The headline number's own ink: grey and white, or the worn aura's colour.
-     A digit that has not landed yet never gets a box of its own. */
-  --scramble-ink: color-mix(
-    in srgb,
-    var(--aura-a, #8b909c) 42%,
-    var(--box-ink, #4b5563)
-  );
-  color: var(--scramble-ink);
-  -webkit-text-fill-color: var(--scramble-ink);
-  opacity: 0.85;
-}
 .draw-ep {
   font: 700 12px var(--roll-font);
   color: var(--muted);

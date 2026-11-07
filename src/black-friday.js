@@ -13,7 +13,7 @@ export const BLACK_FRIDAY_ID = "black-friday-2026";
 // One day, on the UTC calendar the rest of the game's periods use.
 export const BLACK_FRIDAY_START = Date.UTC(2026, 10, 27, 0, 0, 0);
 export const BLACK_FRIDAY_END = Date.UTC(2026, 10, 28, 0, 0, 0);
-// Sale stamps: one per purchase made while the sale is on.
+// Sale stamps: one per 100,000 EP accumulated across purchases during the sale.
 export const BLACK_FRIDAY_STAMPS = 25;
 // One stamp per 100,000 EP spent while the sale is on: the card fills with
 // what the day actually cost you, not with the number of taps.

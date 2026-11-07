@@ -1,5 +1,4 @@
 import { test, expect } from "./helpers/clock.js";
-import { emptyProgress } from "../src/progress.js";
 import { productById } from "../src/shop-data.js";
 import {
   BLACK_FRIDAY_SKIN,
@@ -13,7 +12,7 @@ import { pauseClockAt } from "./helpers/clock.js";
 
 // Black Friday 2026 is one day — Friday 27 November, UTC — and the whole shop
 // wears it: a ticker above the header, an event notice at the top of the shop,
-// a discount on every product, one sale stamp per purchase, a limited skin at
+// a discount on every product, one sale stamp per 100,000 EP accumulated across purchases, a limited skin at
 // 25 stamps, the retired RNGween looks back on the counter at a fixed price,
 // two borrowed themes and the sale's own favicon. Every test below pins the
 // clock to that day (or to the day before it) and reads the real UI.
@@ -22,17 +21,20 @@ const SALE_DAY = Date.UTC(2026, 10, 27, 12);
 const DAY_BEFORE = Date.UTC(2026, 10, 26, 12);
 
 const funded = {
-  ...emptyProgress(),
   balance: 60000000,
   totalEarned: 60000000,
   owned: ["offline-roller"],
 };
 
 async function buy(page, id) {
-  await page.locator(`[data-product="${id}"] button`).first().click();
+  await page
+    .locator(`[data-product="${id}"] button:not(.shop-look-eye)`)
+    .first()
+    .click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
+  await expect(page.locator(".shop-confirm")).not.toBeVisible();
 }
 
 test("the sale day dresses the page: ticker, event notice and sale branding", async ({
@@ -56,6 +58,11 @@ test("the sale day dresses the page: ticker, event notice and sale branding", as
     /manifest-sale\.webmanifest$/,
   );
 
+  // The margins wear the day's flyers.
+  await expect(page.locator(".sale-ads-left .sale-ad")).toHaveCount(4);
+  await expect(page.locator(".sale-ads-right .sale-ad")).toHaveCount(4);
+  await expect(page.locator(".sale-ads-left").first()).toContainText("OFF");
+
   // The shop's event object opens the whole explanation.
   await page.goto("/shop");
   const flag = page.locator('[data-testid="sale-event-button"]');
@@ -69,10 +76,12 @@ test("the sale day dresses the page: ticker, event notice and sale branding", as
   await expect(dialog).toContainText("100,000 EP");
   await expect(dialog).toContainText("10,000,000 EP");
   await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
+  await expect(dialog).not.toBeVisible();
 
   // The stamp card sits on the hub while the day is on.
-  await expect(page.locator('[data-testid="sale-stamp-card"]')).toBeVisible();
+  await expect(
+    page.locator('[data-testid="sale-stamp-card"]:visible'),
+  ).toBeVisible();
 });
 
 test("every product carries its own discount, and stamps follow EP spent", async ({
@@ -80,7 +89,7 @@ test("every product carries its own discount, and stamps follow EP spent", async
 }) => {
   await seedProgress(page, funded);
   await pauseClockAt(page, SALE_DAY);
-  await page.goto("/shop/roll");
+  await page.goto("/shop/pace");
 
   const cheap = productById.get("quickwind-1");
   const card = page.locator('[data-product="quickwind-1"]');
@@ -93,7 +102,8 @@ test("every product carries its own discount, and stamps follow EP spent", async
   // A 21,000 EP upgrade is under one stamp's worth of spending: the card
   // records the EP but hands out nothing yet.
   await buy(page, "quickwind-1");
-  const stampCard = page.locator('[data-testid="sale-stamp-card"]');
+  const stampCard = page.locator('[data-testid="sale-stamp-card"]:visible');
+  await page.goto("/shop");
   await expect(stampCard).toContainText("0 of 25");
 
   const dear = productById.get("static");
@@ -104,11 +114,17 @@ test("every product carries its own discount, and stamps follow EP spent", async
     (salePrice(cheap, SALE_DAY) + paid) / SALE_STAMP_EVERY,
   );
   expect(stamps).toBeGreaterThan(0);
+  await page.goto("/shop");
   await expect(stampCard).toContainText(`${stamps} of 25`);
 
-  // The activity feed records the stamp that the spend paid for.
-  await page.goto("/");
-  await expect(page.getByText(`Sale stamp ${stamps} of 25`)).toBeVisible();
+  // The stamp receipt is saved along with the purchase.
+  const receipts = await page.evaluate(async () => {
+    const { parseProgress, PROGRESS_KEY } = await import("/src/progress.js");
+    return parseProgress(localStorage.getItem(PROGRESS_KEY)).history.filter(
+      (entry) => entry.type === "sale-reward",
+    );
+  });
+  expect(receipts.some((entry) => entry.stamps === stamps)).toBe(true);
 });
 
 test("the hub grows a Black Friday door while the day is on", async ({
@@ -124,10 +140,24 @@ test("the hub grows a Black Friday door while the day is on", async ({
   await expect(page).toHaveURL(/\/shop\/black-friday$/);
   const shelf = page.locator("#shop-black-friday");
   await expect(shelf).toBeVisible();
-  await expect(shelf.locator('[data-testid="sale-stamp-card"]')).toBeVisible();
+  // The card of stamps: 25 holes, none filled yet on a fresh save.
+  const book = shelf.locator('[data-testid="sale-stamp-book"]');
+  await expect(book).toBeVisible();
+  await expect(book.locator(".sale-stamp")).toHaveCount(25);
+  await expect(book.locator(".sale-stamp.is-filled")).toHaveCount(0);
   // The limited skin plus every RNGween look this save missed.
   await expect(shelf.locator(".shop-card[data-product]")).toHaveCount(7);
   await expect(shelf.locator('[data-product="jack-o-glow"]')).toBeVisible();
+  await page.reload();
+  await expect(page.locator("#shop-black-friday")).toBeVisible();
+  await page.goto("/shop/auras");
+  await expect(
+    page.locator('.aura-family-banner[data-family="special"]'),
+  ).toHaveCount(0);
+  await page.goto("/settings");
+  await expect(
+    page.getByRole("button", { name: "Special & Limiteds" }),
+  ).toHaveCount(0);
 });
 
 test("25 stamps unlock the limited skin, kept like every permanent cosmetic", async ({
@@ -147,21 +177,31 @@ test("25 stamps unlock the limited skin, kept like every permanent cosmetic", as
 
   // 2,400,000 EP already spent plus this aura crosses the 25th stamp.
   await buy(page, "static");
-  await expect(page.locator('[data-testid="sale-stamp-card"]')).toContainText(
-    "unlocked",
-  );
+  await page.goto("/shop");
+  await expect(
+    page.locator('[data-testid="sale-stamp-card"]:visible'),
+  ).toContainText("unlocked");
+  // The book on the sale shelf shows a full card of ink.
+  await page.goto("/shop/black-friday");
+  await expect(
+    page.locator('[data-testid="sale-stamp-book"] .sale-stamp.is-filled'),
+  ).toHaveCount(25);
 
   await page.goto("/shop/auras/black-friday");
   const skin = page.locator(`[data-product="${BLACK_FRIDAY_SKIN.id}"]`);
   await expect(skin).toHaveClass(/is-owned/);
-  await expect(skin.locator("button")).toContainText("Equip");
+  await expect(skin.getByRole("button", { name: /equip/i })).toBeVisible();
 
   // The wardrobe lists it with the special collection.
-  await page.goto("/wardrobe");
+  await page.goto("/settings");
   await page
     .getByRole("button", { name: "Special & Limiteds", exact: true })
     .click();
-  await expect(page.getByText(BLACK_FRIDAY_SKIN.name)).toBeVisible();
+  await expect(
+    page
+      .locator(".wardrobe")
+      .getByText(BLACK_FRIDAY_SKIN.name, { exact: true }),
+  ).toBeVisible();
 });
 
 test("the counter sells the retired looks the save missed, at a fixed price", async ({
@@ -169,8 +209,7 @@ test("the counter sells the retired looks the save missed, at a fixed price", as
 }) => {
   await seedProgress(page, { ...funded, owned: [] });
   await pauseClockAt(page, SALE_DAY);
-  await page.goto("/shop/auras/special");
-  await page.locator('.aura-family-banner[data-family="legacy"]').click();
+  await page.goto("/shop/black-friday");
 
   const card = page.locator('[data-product="jack-o-glow"]');
   await expect(card.locator(".sale-tag")).toContainText("COUNTER");
@@ -178,7 +217,11 @@ test("the counter sells the retired looks the save missed, at a fixed price", as
     `${RNGWEEN_RESALE_PRICE.toLocaleString("en-US")} EP`,
   );
   await buy(page, "jack-o-glow");
-  await expect(card).toHaveClass(/is-owned/);
+  await page.goto("/shop/auras/legacy");
+  await expect(page.locator('[data-product="jack-o-glow"]')).toHaveClass(
+    /is-owned/,
+  );
+  await expect(page.locator(".shop-card[data-product]")).toHaveCount(1);
 });
 
 test("outside the day the sale leaves no trace", async ({ page }) => {
@@ -186,6 +229,7 @@ test("outside the day the sale leaves no trace", async ({ page }) => {
   await pauseClockAt(page, DAY_BEFORE);
   await page.goto("/");
   await expect(page.locator('[data-testid="sale-ticker"]')).toHaveCount(0);
+  await expect(page.locator(".sale-ads")).toHaveCount(0);
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
     "href",
     /favicon\.svg$/,
@@ -200,20 +244,23 @@ test("outside the day the sale leaves no trace", async ({ page }) => {
   await expect(flag).toBeVisible();
   await expect(flag).toContainText("in");
 
-  await page.goto("/shop/roll");
+  await page.goto("/shop/pace");
   const card = page.locator('[data-product="quickwind-1"]');
   await expect(card.locator(".sale-tag")).toHaveCount(0);
   await expect(card.locator(".shop-price")).toContainText("30,000 EP");
 
-  // The retired looks are not for sale, and the skin's family is not live.
+  // A save that owns nothing special sees nothing special: no groups, no
+  // filter, no counter.
+  await page.goto("/shop/auras");
+  await expect(page.locator(".aura-family-banner")).toHaveCount(5);
   await page.goto("/shop/auras/special");
   await expect(
-    page.locator('.aura-family-banner[data-family="black-friday"]'),
-  ).toHaveCount(0);
-  await page.locator('.aura-family-banner[data-family="legacy"]').click();
+    page.getByText("No special or limited auras in this save"),
+  ).toBeVisible();
+  await page.goto("/settings");
   await expect(
-    page.locator('[data-product="jack-o-glow"] .shop-source'),
-  ).toContainText("Not for sale");
+    page.getByRole("button", { name: "Special & Limiteds" }),
+  ).toHaveCount(0);
 
   // The two borrowed themes are not in the menu.
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
@@ -241,6 +288,9 @@ test("the sale lends the game two themes, and takes them back", async ({
     "ultra-black",
   );
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator('[data-testid="sale-theme-line"]')).toContainText(
+    "Temporary",
+  );
 
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
   await page
@@ -256,4 +306,21 @@ test("the sale lends the game two themes, and takes them back", async ({
   await expect(page.locator("html")).not.toHaveAttribute("data-sale-theme");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator('[data-testid="sale-ticker"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="sale-theme-line"]')).toHaveCount(0);
+});
+
+test("the eye on an aura card previews the look on a sample roll", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  await pauseClockAt(page, DAY_BEFORE);
+  await page.goto("/shop/auras/celestial");
+  await page.locator('[data-product="eclipse"] .shop-look-eye').click();
+  const dialog = page.locator(".shop-preview-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("on a roll");
+  await dialog.getByRole("button", { name: "godly" }).click();
+  await expect(dialog.locator(".number-box")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
 });

@@ -1,11 +1,9 @@
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
 import {
-  BLACK_FRIDAY_END,
   BLACK_FRIDAY_FAMILY,
   BLACK_FRIDAY_SKIN,
   resalePrice,
-  saleNow,
   salePrice,
 } from "./black-friday.js";
 
@@ -841,34 +839,23 @@ export function auraFamilyById(id) {
 }
 
 // Which event groups the Special & Limiteds hub shows, one banner each. A
-// retired event's group appears while this save owns one of its looks, or while
-// the sale counter has the looks it missed on offer. The Black Friday group
-// appears from the moment its day is on the calendar, and stays while its
-// limited skin is owned.
-export function visibleAuraFamilies(owned = [], at = Date.now()) {
+// group exists here only once the save owns one of its looks: nothing owned,
+// nothing advertised. While the sale day is on, the looks it puts on the
+// counter live on the sale's own shelf instead of borrowing this hub.
+export function visibleAuraFamilies(owned = []) {
   const families = [...AURA_FAMILIES];
-  if (
-    RNGWEEN_COSMETICS.some(
-      (aura) => owned.includes(aura.id) || resalePrice(aura, at) !== null,
-    )
-  )
+  if (RNGWEEN_COSMETICS.some((aura) => owned.includes(aura.id)))
     families.push(RNGWEEN_FAMILY);
-  if (owned.includes(BLACK_FRIDAY_SKIN.id) || saleNow(at) < BLACK_FRIDAY_END)
-    families.push(BLACK_FRIDAY_FAMILY);
+  if (owned.includes(BLACK_FRIDAY_SKIN.id)) families.push(BLACK_FRIDAY_FAMILY);
   return families;
 }
 
-// What a family page lists: every look for sale, the event looks this save
-// owns, the retired looks the counter has back for the day, and the limited
-// skin the stamp card pays while its own event is still on the calendar.
-export function aurasInFamily(id, owned = [], at = Date.now()) {
+// Event family pages show owned looks only. Unowned event looks offered during
+// the sale belong on its dedicated counter, not in an owned collection.
+export function aurasInFamily(id, owned = []) {
   return auraProducts.filter(
     (aura) =>
-      aura.family === id &&
-      (!aura.eventOnly ||
-        owned.includes(aura.id) ||
-        resalePrice(aura, at) !== null ||
-        (aura.id === BLACK_FRIDAY_SKIN.id && saleNow(at) < BLACK_FRIDAY_END)),
+      aura.family === id && (!aura.eventOnly || owned.includes(aura.id)),
   );
 }
 

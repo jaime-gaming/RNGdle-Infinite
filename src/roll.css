@@ -242,17 +242,6 @@ nav button.active {
   opacity: 0;
   overflow: hidden;
 }
-.artifact-digit.is-scrambling {
-  /* Grey and white, or the worn aura's own colour: the ink of the box it sits
-     on keeps it readable in both themes, with no box of its own behind it. */
-  --scramble-ink: color-mix(
-    in srgb,
-    var(--aura-a, #8b909c) 42%,
-    var(--box-ink, #4b5563)
-  );
-  color: var(--scramble-ink);
-  -webkit-text-fill-color: var(--scramble-ink);
-}
 .artifact-digit.is-settling {
   animation: digit-land calc(0.4s * var(--reveal-scale, 1)) ease-out both;
 }

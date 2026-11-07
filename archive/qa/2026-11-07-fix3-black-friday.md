@@ -61,12 +61,23 @@ Date: 2026-11-07 · Branch: `arena/be488ed9-rngdle-infinite` · Internal label:
 
 ## Not verified here
 
-- The Playwright suite could not run in this sandbox: no Chromium binary is
-  present and the browser download host is outside the sandbox's network
-  allowlist (`npx playwright install` fails). New coverage lives in
-  `tests/black-friday.spec.js` (ticker/branding, discounts + stamp, skin at 25,
-  counter purchase, off-day absence, borrowed themes) and
-  `tests/shop-sections.spec.js` was updated for the renamed collection. Run
-  `npm test` where a Chromium is available (or with `CHROMIUM_PATH` set).
+- The complete Playwright suite has not been verified here. Focused coverage is
+  in `tests/black-friday.spec.js`, `tests/shop-sections.spec.js`, and
+  `tests/account-aura-fixes.spec.js`.
 - `npm run deploy:rules` remains pending from earlier sessions; Firestore
   rules were not changed by this work.
+
+## Follow-up: display and shelf fixes
+
+- Restored the pre-fix2 digit presentation; moving and landed digits have no
+  separate ink or background.
+- Both the route parser and shop navigation accept `/shop/black-friday`. The
+  day-only shelf has a 25-slot stamp book, and EP spent accumulates across
+  purchases. Special & Limiteds banners and wardrobe filters only appear for
+  owned event looks.
+- Added an aura eye preview with rarity selection, temporary-theme notice, and
+  decorative side flyers on wide screens.
+- Focused Playwright coverage now runs using a temporary Chromium from npm and
+  its bundled libraries; no browser binary is included in the repository.
+- Focused Playwright: 29 tests passed across the Black Friday, account/aura and
+  shop-section specs. The Worker smoke test also passed its browser checks.

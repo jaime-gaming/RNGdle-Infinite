@@ -55,7 +55,9 @@ export function SaleStampCard({ record, previewTier = "rare" }) {
         <span>
           {earned
             ? "Paid by your stamps, kept forever. Equip it from Special & Limiteds."
-            : `One stamp per ${formatEP(SALE_STAMP_EVERY)} EP spent today · ${
+            : `Your EP adds up across the day: one stamp per ${formatEP(
+                SALE_STAMP_EVERY,
+              )} EP spent · ${
                 epToNextStamp(record)
                   ? `${formatEP(epToNextStamp(record))} EP to the next · `
                   : ""
@@ -76,6 +78,99 @@ export function SaleStampCard({ record, previewTier = "rare" }) {
         compact
         aria-hidden="true"
       />
+    </div>
+  );
+}
+
+// A borrowed look says so. While one of the sale's themes is wearing the game,
+// a thin line under the header reminds you it leaves with the day.
+export function SaleThemeLine({ active }) {
+  if (!active) return null;
+  return (
+    <p className="sale-theme-line" data-testid="sale-theme-line">
+      <Palette size={12} aria-hidden="true" /> Temporary look · Black Friday
+      2026 · it leaves when the day ends
+    </p>
+  );
+}
+
+// The day's flyers, pinned to both margins of every page: loud, paper-thin and
+// purely decorative. Narrow screens keep the game, not the margins.
+const SALE_ADS_LEFT = [
+  "UP TO 50% OFF!!!",
+  "ONE DAY ONLY",
+  "1 STAMP PER 100,000 EP",
+  "25 STAMPS = BLACKOUT 2026",
+];
+const SALE_ADS_RIGHT = [
+  "FROM 20% OFF!!!",
+  "THE WHOLE SHOP ON SALE",
+  "MISSED LOOKS BACK ON THE COUNTER",
+  "10,000,000 EP FLAT",
+];
+
+export function SaleSideAds({ status }) {
+  if (!status?.active) return null;
+  const rail = (lines, side) => (
+    <aside className={`sale-ads sale-ads-${side}`} aria-hidden="true">
+      {lines.map((line) => (
+        <span className="sale-ad" key={line}>
+          <b>{line}</b>
+          <small>Black Friday 2026</small>
+        </span>
+      ))}
+    </aside>
+  );
+  return (
+    <>
+      {rail(SALE_ADS_LEFT, "left")}
+      {rail(SALE_ADS_RIGHT, "right")}
+    </>
+  );
+}
+
+// The stamp card as an object: 25 holes, each a stamp of its own shape and its
+// own milestone, filled with ink once the spend has paid for it.
+function stampLabel(index) {
+  const hundreds = index + 1;
+  if (hundreds < 10) return `${hundreds * 100}K`;
+  const millions = hundreds / 10;
+  return `${millions.toFixed(1).replace(".0", "")}M`;
+}
+
+export function SaleStampBook({ record }) {
+  const stamps = record?.stamps ?? 0;
+  const earned = record?.skinEarned === true;
+  return (
+    <div className="sale-stamp-book" data-testid="sale-stamp-book">
+      <div className="sale-stamp-book-head">
+        <strong>
+          {earned
+            ? `${BLACK_FRIDAY_SKIN.name} unlocked`
+            : `${stamps} of ${BLACK_FRIDAY_STAMPS} stamps`}
+        </strong>
+        <span>
+          {earned
+            ? "The card is full and the skin is yours forever."
+            : `One stamp per ${formatEP(SALE_STAMP_EVERY)} EP spent · ${formatEP(
+                epToNextStamp(record),
+              )} EP to the next`}
+        </span>
+      </div>
+      <ol className="sale-stamp-grid" aria-label="Sale stamps earned">
+        {Array.from({ length: BLACK_FRIDAY_STAMPS }, (_, index) => (
+          <li
+            key={index}
+            className={`sale-stamp ${index < stamps ? "is-filled" : ""}`}
+            aria-label={`Stamp ${index + 1} of ${BLACK_FRIDAY_STAMPS}: ${
+              index < stamps ? "earned" : "empty"
+            }`}
+          >
+            <i aria-hidden="true" />
+            <span>{stampLabel(index)}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -169,12 +264,14 @@ export default function SaleEventNotice({
             <Tag size={14} aria-hidden="true" /> Stamps pay a limited skin
           </h3>
           <p>
-            Every {formatEP(SALE_STAMP_EVERY)} EP you spend while the sale is on
-            adds one sale stamp, whatever the shelf. Fill {BLACK_FRIDAY_STAMPS}{" "}
-            stamps and {BLACK_FRIDAY_SKIN.name} is yours: matte black, one white
-            tag, nothing else. It is a permanent aura, so a rebirth, a prestige,
-            a Rollback or a fresh start can never take it away — and it is never
-            sold.
+            Spending adds up across purchases: every{" "}
+            {formatEP(SALE_STAMP_EVERY)} EP you spend while the sale is on pays
+            one sale stamp, whatever the shelf — a {formatEP(21000)} EP tool and
+            a {formatEP(169000)} EP aura together pay one and keep counting.
+            Fill {BLACK_FRIDAY_STAMPS} stamps and {BLACK_FRIDAY_SKIN.name} is
+            yours: matte black, one white tag, nothing else. It is a permanent
+            aura, so a rebirth, a prestige, a Rollback or a fresh start can
+            never take it away — and it is never sold.
           </p>
           {status.active && (
             <SaleStampCard record={record} previewTier={previewTier} />

@@ -41,7 +41,14 @@ themes, the sale favicon and manifest) exists only while
 survives every reset, like permanent cosmetics. Dev builds honour
 `VITE_BLACK_FRIDAY_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the sale
 clock for previews; production ignores that variable, and shipped code never
-pretends today is the event day.
+pretends today is the event day. Spending accumulates across purchases, rather
+than requiring a single purchase of 100,000 EP. The sale shelf contains a
+25-slot graphical stamp book; sale themes say they are temporary and decorative
+flyers occupy wide-screen margins. Special & Limiteds banners and wardrobe
+filters appear only when the save owns an event aura, even during the sale;
+missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
+Do not style moving and landed reveal digits differently: preserve the original
+pre-fix2 appearance.
 
 ## Architecture
 

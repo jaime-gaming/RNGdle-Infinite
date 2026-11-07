@@ -22,10 +22,13 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
   const [collection, setCollection] = useState("all");
   const [pending, setPending] = useState(false);
   const auras = auraProducts.filter((item) => progress.owned.includes(item.id));
+  const hasSpecial = auras.some((item) => item.eventOnly);
+  const visibleCollection =
+    collection === "legacy" && !hasSpecial ? "all" : collection;
   const shownAuras = auras.filter(
     (item) =>
-      collection === "all" ||
-      (collection === "legacy" ? item.eventOnly : !item.eventOnly),
+      visibleCollection === "all" ||
+      (visibleCollection === "legacy" ? item.eventOnly : !item.eventOnly),
   );
   const equipped = progress.equipped ?? "none";
   const total = auraProducts.filter(
@@ -87,18 +90,20 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
             {[
               ["all", "All"],
               ["regular", "Regular"],
-              ["legacy", "Special & Limiteds"],
+              // The special collection only earns its filter once this save
+              // actually holds one of its looks.
+              ...(hasSpecial ? [["legacy", "Special & Limiteds"]] : []),
             ].map(([id, label]) => (
               <button
                 key={id}
-                aria-pressed={collection === id}
+                aria-pressed={visibleCollection === id}
                 onClick={() => setCollection(id)}
               >
                 {label}
               </button>
             ))}
           </div>
-          {collection === "legacy" && (
+          {visibleCollection === "legacy" && (
             <h3 className="wardrobe-collection-title">
               {shownAuras.length
                 ? "Special & Limiteds collection"

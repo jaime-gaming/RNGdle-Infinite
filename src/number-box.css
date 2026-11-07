@@ -2002,37 +2002,3 @@ button.number-box.number-box:hover {
   .number-box-content {
   text-shadow: none;
 }
-
-/* A digit that has landed keeps its own opaque ink and backing, so an inherited
-   clipped gradient can never hide it (including Godly and Déjà Vu). The digits
-   that have not landed yet wear no box of their own: they stay the plain ink
-   they always were, grey and white, and take the worn aura's colour when there
-   is one. --box-ink is the readable ink of the box a digit sits on, so mixing
-   the aura into it keeps the contrast the box already guarantees. */
-.number-box.number-artifact.is-spinning
-  .artifact-digits
-  .artifact-digit:not(.is-blank) {
-  background: #102b46;
-  background-clip: border-box;
-  -webkit-background-clip: border-box;
-  color: #ffffff;
-  -webkit-text-fill-color: #ffffff;
-  text-shadow: none;
-  border-radius: 0.12em;
-  box-shadow: inset 0 -0.055em #34d399;
-}
-.number-box.number-artifact.is-spinning
-  .artifact-digits
-  .artifact-digit.is-scrambling:not(.is-blank) {
-  --scramble-ink: color-mix(
-    in srgb,
-    var(--aura-a, #8b909c) 42%,
-    var(--box-ink, #4b5563)
-  );
-  background: none;
-  box-shadow: none;
-  border-radius: 0;
-  text-decoration: none;
-  color: var(--scramble-ink);
-  -webkit-text-fill-color: var(--scramble-ink);
-}

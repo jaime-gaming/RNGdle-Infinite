@@ -680,7 +680,7 @@ test("owned retired cosmetics remain in the Legacy collection and can still be e
     );
   }
   await expect(
-    page.locator('[data-product="hollow-lantern"] button'),
+    page.locator('[data-product="hollow-lantern"] button:not(.shop-look-eye)'),
   ).toContainText("Equipped");
 });
 

@@ -5,6 +5,7 @@ import {
   Check,
   ChevronRight,
   Coins,
+  Eye,
   LayoutGrid,
   Percent,
   Repeat,
@@ -47,7 +48,11 @@ import { currentGoal, validGoal } from "../gameplay-loop.js";
 import { rackReport } from "../rack.js";
 import "../progress-links.css";
 import PetShelf from "./PetShelf";
-import SaleEventNotice, { SaleStampCard } from "./BlackFriday.jsx";
+import { TIERS } from "../history-tally.js";
+import SaleEventNotice, {
+  SaleStampBook,
+  SaleStampCard,
+} from "./BlackFriday.jsx";
 import { useSaleStatus } from "../use-black-friday.js";
 import {
   BLACK_FRIDAY_SKIN,
@@ -198,6 +203,19 @@ const shelfIcons = {
   offline: OfflineMark,
   automation: AutomationMark,
 };
+// One honest sample number per rarity for the look preview: six digits, no
+// promises, just something for the box to wear.
+const LOOK_SAMPLES = {
+  trash: "100481",
+  common: "245831",
+  uncommon: "387264",
+  rare: "529148",
+  epic: "664925",
+  anomaly: "718364",
+  mythic: "852719",
+  godly: "993399",
+};
+
 export default function Shop({
   progress,
   cloudUser = false,
@@ -227,7 +245,7 @@ export default function Shop({
   // The sale's own shelf: one door in the hub while the day is on the calendar,
   // and behind it everything the day puts on the counter.
   const saleShelf = section === "black-friday";
-  const saleItems = sale.shown
+  const saleItems = sale.active
     ? [BLACK_FRIDAY_SKIN, ...resaleMissing(progress.owned)]
     : [];
   const hasGuestProgress =
@@ -237,6 +255,11 @@ export default function Shop({
   const { settings: preferences } = useSettings();
   const [previewTier, setPreviewTier] = useState("rare");
   const [lastPurchase, setLastPurchase] = useState(null);
+  // The little eye on every aura card: a sample roll of a chosen rarity,
+  // wearing the look before you commit to it.
+  const [lookPreview, setLookPreview] = useState(null);
+  const [lookTier, setLookTier] = useState("rare");
+  const lookDialog = useRef(null);
   const [selected, setSelected] = useState(null),
     [pending, setPending] = useState(false),
     [purchaseError, setPurchaseError] = useState("");
@@ -345,6 +368,10 @@ export default function Shop({
         )?.focus();
     }
   }, [selected]);
+  useEffect(() => {
+    if (lookPreview) lookDialog.current?.showModal();
+    else lookDialog.current?.close();
+  }, [lookPreview]);
   async function perform(type, id, extra = null) {
     if (busy.current) return;
     busy.current = true;
@@ -606,6 +633,21 @@ export default function Shop({
           >
             {onCounter ? "COUNTER" : `−${Math.round(discount * 100)}%`}
           </span>
+        )}
+        {aura && (
+          <button
+            type="button"
+            className="shop-look-eye icon-button"
+            aria-label={`Preview ${item.name} on a roll`}
+            title="Preview on a roll"
+            onClick={(event) => {
+              event.stopPropagation();
+              setLookTier("rare");
+              setLookPreview(item);
+            }}
+          >
+            <Eye size={14} />
+          </button>
         )}
         <div
           className={
@@ -1387,7 +1429,7 @@ export default function Shop({
             </div>
             <nav className="shop-jump" aria-label="Shop sections">
               {visibleShelves.map(shelfTile)}
-              {sale.shown && (
+              {sale.active && (
                 <a
                   href={pathForSubpage("shop", "black-friday")}
                   aria-label="Black Friday 2026"
@@ -1561,9 +1603,9 @@ export default function Shop({
                 : `starts in ${waitText(sale.startsInMs)}`}
             </span>
           </div>
-          {sale.shown ? (
+          {sale.active ? (
             <>
-              <SaleStampCard record={saleRecord} previewTier={previewTier} />
+              <SaleStampBook record={saleRecord} />
               <div className="shop-grid shop-grid-rows">
                 {saleItems.map((item, index) => card(item, index))}
               </div>
@@ -1574,8 +1616,9 @@ export default function Shop({
             </>
           ) : (
             <p className="sale-shelf-fine">
-              The counter is closed. Black Friday 2026 ran for one day; what it
-              sold lives on in Special &amp; Limiteds.
+              {sale.upcoming
+                ? "The counter is closed until Black Friday begins."
+                : "The counter is closed. Black Friday 2026 has ended."}
             </p>
           )}
         </section>
@@ -1826,8 +1869,8 @@ export default function Shop({
                 <div className="aura-special-empty">
                   <h3>No special or limited auras in this save</h3>
                   <p>
-                    An event's group appears here while its day is live, or once
-                    one of its looks is included in this save.
+                    An event's group appears here once one of its looks is
+                    included in this save.
                   </p>
                 </div>
               )}
@@ -2095,6 +2138,55 @@ export default function Shop({
             </div>
           </>
         )}
+      </dialog>
+      {/* The eye on an aura card opens this: a sample roll of any rarity,
+          wearing the look, so a purchase is never a guess. */}
+      <dialog
+        className="shop-preview-dialog"
+        ref={lookDialog}
+        aria-labelledby="shop-look-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          setLookPreview(null);
+        }}
+      >
+        <button
+          type="button"
+          className="shop-confirm-close icon-button"
+          aria-label="Close the preview"
+          onClick={() => setLookPreview(null)}
+        >
+          <X size={18} />
+        </button>
+        <p className="eyebrow">Preview · cosmetic only</p>
+        <h2 id="shop-look-title">{lookPreview?.name} on a roll</h2>
+        <div
+          className="shop-preview-tiers"
+          role="group"
+          aria-label="Sample roll rarity"
+        >
+          {TIERS.map((tier) => (
+            <button
+              key={tier}
+              type="button"
+              className={`shop-preview-tier ${lookTier === tier ? "is-on" : ""}`}
+              aria-pressed={lookTier === tier}
+              onClick={() => setLookTier(tier)}
+            >
+              {tier}
+            </button>
+          ))}
+        </div>
+        <NumberBox
+          value={LOOK_SAMPLES[lookTier] ?? "482913"}
+          tier={lookTier}
+          aura={lookPreview?.id ?? "none"}
+          aria-label={`Sample ${lookTier} roll wearing ${lookPreview?.name ?? "no aura"}`}
+        />
+        <p className="shop-preview-note">
+          A sample roll of the chosen rarity wearing the look. Looks never touch
+          odds, EP or rank.
+        </p>
       </dialog>
     </>
   );

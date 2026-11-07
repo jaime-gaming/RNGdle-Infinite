@@ -57,6 +57,7 @@ import { useGameClock } from "./use-game-clock.js";
 import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
 import AppearanceMenu from "./components/AppearanceMenu.jsx";
 import SaleTicker from "./components/SaleTicker.jsx";
+import { SaleSideAds, SaleThemeLine } from "./components/BlackFriday.jsx";
 import { useSaleStatus } from "./use-black-friday.js";
 import { applySaleBranding } from "./sale-branding.js";
 import { SALE_THEMES } from "./black-friday.js";
@@ -143,8 +144,13 @@ function shopSectionFromLocation(target) {
   if (pageFromLocation(target) !== "shop") return "";
   // A legacy "#auras" bookmark names the shelf itself; a real sub-page carries
   // it in the path. Anything else lands on the hub.
+  // The sale's own shelf is not one of the permanent SHOP_SECTIONS: it only
+  // exists while the day is on the calendar, but its address is real.
   const named = (name) =>
-    SHOP_SECTIONS.some((section) => section.id === name) ? name : "";
+    SHOP_SECTIONS.some((section) => section.id === name) ||
+    name === "black-friday"
+      ? name
+      : "";
   const hash = String(target.hash || "").replace(/^#/, "");
   return named(hash) || named(subpageFromLocation(target));
 }
@@ -524,7 +530,10 @@ function App() {
     );
   };
   const openShelf = (id, focus = null) => {
-    const section = SHOP_SECTIONS.some((entry) => entry.id === id) ? id : "";
+    const section =
+      id === "black-friday" || SHOP_SECTIONS.some((entry) => entry.id === id)
+        ? id
+        : "";
     setShopFocus(focus);
     setShopSection(section);
     setShopFamily("");
@@ -768,6 +777,7 @@ function App() {
     <>
       {/* Above everything else on the page, for exactly one day. */}
       <SaleTicker status={sale} />
+      <SaleSideAds status={sale} />
       <header className="header">
         <div className="header-left">
           <button
@@ -898,6 +908,9 @@ function App() {
           </button>
         </div>
       </header>
+      <SaleThemeLine
+        active={sale.active && SALE_THEMES.some((entry) => entry.id === theme)}
+      />
       <StatusBanner />
       {!isOnline && (
         <div

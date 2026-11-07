@@ -565,3 +565,223 @@
     padding: 22px 18px;
   }
 }
+
+/* ---- The borrowed look admits it ------------------------------------------
+   While a sale theme wears the game, one thin line says it is temporary. */
+.sale-theme-line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  padding: 4px 14px;
+  background: #0b0406;
+  border-bottom: 1px dashed #7f1d1d;
+  color: #ff8f8f;
+  font: 600 10px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- The day's flyers ------------------------------------------------------
+   Loud paper in both margins of every page while the sale is on. Decoration
+   only: no pointer, no meaning, and no margins on narrow screens. */
+.sale-ads {
+  position: fixed;
+  top: 96px;
+  bottom: 20px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 152px;
+  pointer-events: none;
+}
+.sale-ads-left {
+  left: 12px;
+}
+.sale-ads-right {
+  right: 12px;
+}
+.sale-ad {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 10px;
+  border: 2px dashed #ff2d2d;
+  background: #050505;
+  color: #f4f4f5;
+  text-align: center;
+  transform: rotate(var(--tilt, -2deg));
+}
+.sale-ad:nth-child(1) {
+  --tilt: -2.4deg;
+}
+.sale-ad:nth-child(2) {
+  --tilt: 1.8deg;
+}
+.sale-ad:nth-child(3) {
+  --tilt: -1.2deg;
+}
+.sale-ad:nth-child(4) {
+  --tilt: 2.6deg;
+}
+.sale-ads-right .sale-ad:nth-child(1) {
+  --tilt: 2.2deg;
+}
+.sale-ads-right .sale-ad:nth-child(2) {
+  --tilt: -1.6deg;
+}
+.sale-ads-right .sale-ad:nth-child(3) {
+  --tilt: 2.8deg;
+}
+.sale-ads-right .sale-ad:nth-child(4) {
+  --tilt: -2.2deg;
+}
+.sale-ad b {
+  color: #ff5c5c;
+  font: 800 15px/1.15 var(--font-mono);
+}
+.sale-ad small {
+  color: #a1a1aa;
+  font: 600 9px/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sale-ad {
+    animation: sale-ad-sway 7s ease-in-out infinite alternate;
+  }
+  .sale-ad:nth-child(2n) {
+    animation-delay: -3.5s;
+  }
+}
+@keyframes sale-ad-sway {
+  from {
+    transform: rotate(var(--tilt, -2deg)) translateY(0);
+  }
+  to {
+    transform: rotate(var(--tilt, -2deg)) translateY(7px);
+  }
+}
+@media (max-width: 1399px) {
+  .sale-ads {
+    display: none;
+  }
+}
+
+/* ---- The stamp card as a card of stamps ------------------------------------
+   Twenty-five holes, five shapes cycling, each with the milestone it pays.
+   An empty hole is a dashed promise; a filled one is ink. */
+.sale-stamp-book {
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.sale-stamp-book-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+.sale-stamp-book-head strong {
+  font: 700 14px/1.3 var(--font-mono);
+}
+.sale-stamp-book-head span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.sale-stamp-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sale-stamp {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  min-height: 76px;
+  padding: 8px 4px 7px;
+  border: 1px dashed #3f3f46;
+  border-radius: 6px;
+  background: #0c0c0e;
+}
+:root[data-theme="light"] .sale-stamp {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+.sale-stamp i {
+  display: block;
+  width: 26px;
+  height: 26px;
+  background: #26262b;
+}
+:root[data-theme="light"] .sale-stamp i {
+  background: #d4d4d8;
+}
+/* Five shapes, cycling: a seal, a diamond, a hex, a star, a ticket. */
+.sale-stamp:nth-child(5n + 1) i {
+  border-radius: 50%;
+}
+.sale-stamp:nth-child(5n + 2) i {
+  width: 22px;
+  height: 22px;
+  transform: rotate(45deg);
+}
+.sale-stamp:nth-child(5n + 3) i {
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.sale-stamp:nth-child(5n + 4) i {
+  clip-path: polygon(
+    50% 0,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+}
+.sale-stamp:nth-child(5n + 5) i {
+  border-radius: 4px;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 38%,
+    88% 50%,
+    100% 62%,
+    100% 100%,
+    0 100%,
+    0 62%,
+    12% 50%,
+    0 38%
+  );
+}
+.sale-stamp span {
+  color: #71717a;
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+}
+:root[data-theme="light"] .sale-stamp span {
+  color: #71717a;
+}
+.sale-stamp.is-filled {
+  border: 1px solid #7f1d1d;
+  background: #050505;
+}
+.sale-stamp.is-filled i {
+  background: #ff2d2d;
+}
+.sale-stamp.is-filled span {
+  color: #f4f4f5;
+}
