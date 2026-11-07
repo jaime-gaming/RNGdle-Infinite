@@ -218,7 +218,7 @@ await fs.mkdir(OUT, { recursive: true });
 try {
   const page = await browser.newPage({
     viewport: { width: 1280, height: 900 },
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
   });
 
   // 1. The roll screen, as it loads, with a charged circle explaining itself
@@ -316,6 +316,20 @@ try {
   await page.waitForSelector('[data-testid="settings-recovery-details"]');
   await page.waitForTimeout(600);
   await shot(page, "save-recovery");
+
+  // Both settings sections and the light palette are documented separately.
+  await page.goto(`${BASE}/settings`);
+  await page.waitForSelector(".settings-submenu");
+  await shot(page, "settings");
+  await page.goto(`${BASE}/settings/cloud-account`);
+  await page.waitForSelector(".cloud-account");
+  await shot(page, "cloud-account");
+  await page.goto(`${BASE}/shop/auras/celestial`);
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "light";
+  });
+  await page.waitForTimeout(300);
+  await shot(page, "light-auras");
 
   await page.close();
 } finally {

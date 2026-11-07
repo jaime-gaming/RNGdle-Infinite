@@ -328,3 +328,8 @@ rather than guessing.
 - Prettier is the formatter. Format files changed by a task.
 - Keep code comments about why, not narration of what the next line does.
 - Player-facing copy should be plain and friendly; English only.
+
+## Required Git workflow
+
+- Always finish completed changes with a commit and push to the session branch.
+- After a requested merge succeeds, delete the merged remote branch (use `gh pr merge <number> --squash --delete-branch`). Never switch branches or delete the active checkout; respect session branch restrictions.

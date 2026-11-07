@@ -44,6 +44,7 @@ export function shareCardData(progress = {}, now = new Date()) {
     rebirths: stats.rebirths,
     prestiges: stats.ultraRebirths,
     pins: highlights.pinned.slice(0, BOOKMARK_LIMIT).map((roll) => ({
+      ...(roll.dejaVu ? { dejaVu: true } : {}),
       number: roll.number,
       ep: roll.ep,
       tier: roll.tier,
@@ -93,12 +94,15 @@ const packRoll = (roll, withDate) =>
         b36(roll.ep),
         tierIndex(roll.tier),
         ...(withDate ? [seconds(roll.at)] : []),
+        ...(roll.dejaVu ? ["dv"] : []),
       ].join(PART)
     : "";
 const unpackRoll = (text, withDate) => {
   if (!text) return null;
-  const [number, ep, tier, at] = text.split(PART);
+  const [number, ep, tier, ...rest] = text.split(PART);
+  const at = withDate ? rest[0] : null;
   return {
+    ...(rest.includes("dv") ? { dejaVu: true } : {}),
     number,
     ep: fromB36(ep ?? ""),
     tier: tierAt(tier ?? ""),
@@ -230,6 +234,7 @@ export function sanitizeShareCard(raw) {
       return null;
     if (!TIERS.includes(value.tier)) return null;
     const entry = {
+      ...(value.dejaVu === true ? { dejaVu: true } : {}),
       number,
       ep: count(value.ep),
       tier: value.tier,

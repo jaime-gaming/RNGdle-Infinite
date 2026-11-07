@@ -425,7 +425,7 @@ export function parseAndRepairProgress(raw) {
     note(
       `fresh start count was ${describeStored(p.freshStarts)}, so it was set to ${freshStarts}.`,
     );
-  const surplusBanked = Math.min(repairAmount(p.surplusBanked ?? 0), 100);
+  const surplusBanked = repairAmount(p.surplusBanked ?? 0);
   if ((p.surplusBanked ?? 0) !== surplusBanked)
     note(
       `surplus dividend was ${describeStored(p.surplusBanked)}, so it was set to ${surplusBanked}.`,
@@ -1083,7 +1083,11 @@ function applyEvent(state, action) {
     // so the next prestige is earned the long way too.
     // The same overshoot dividend as a rung: the ultra gate is a floor too.
     const ultraCost = ultraRebirthRequirement();
-    const surplus = rebirthSurplus(cycleEarnedEp(state), ultraCost.ep);
+    const surplus = rebirthSurplus(
+      cycleEarnedEp(state),
+      ultraCost.ep,
+      "prestige",
+    );
     const ladder = state.rebirths ?? 0;
     const starter = cycleStarterEp(0, count + 1) + surplus.starterBonus;
     const cost = ultraCost;
@@ -1125,7 +1129,11 @@ function applyEvent(state, action) {
     // prestiges — with their +10% each — have to be earned again before the
     // next Rollback. Existing saved balances are not revalued retroactively.
     const rollbackCost = rollbackRequirement();
-    const surplus = rebirthSurplus(cycleEarnedEp(state), rollbackCost.ep);
+    const surplus = rebirthSurplus(
+      cycleEarnedEp(state),
+      rollbackCost.ep,
+      "rollback",
+    );
     const ladder = state.rebirths ?? 0;
     const prestiges = state.ultraRebirths ?? 0;
     const starter = 0;

@@ -897,9 +897,12 @@ export function useProgress({
       return {
         ok: false,
         message:
-          error instanceof Error
-            ? error.message
-            : "Profile privacy could not be changed. Try again.",
+          error?.code === "permission-denied" ||
+          error?.code === "firestore/permission-denied"
+            ? "Public sharing could not be authorized. Your private save is safe. The service may need its profile rules updated; retry after the update or contact support."
+            : error instanceof Error
+              ? error.message
+              : "Profile privacy could not be changed. Try again.",
       };
     }
   }

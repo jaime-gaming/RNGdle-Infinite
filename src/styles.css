@@ -9,13 +9,14 @@
   --bg: #fafafa;
   --surface: #fff;
   --text: #20212a;
-  --muted: #6f7078;
+  color-scheme: light;
+  --muted: #60616c;
   --secondary: #676873;
-  --border: #e8e8ec;
+  --border: #d9dbe3;
   --hover: #f0f0f3;
   --green: #2f6b57;
   --green-bg: #edf5f0;
-  --shadow: 0 4px 20px #20212a03;
+  --shadow: 0 4px 20px #20212a0a;
   --button: #1b1c24;
   /* Semantic colours, themed in one place so light mode stays legible.
      Light values are chosen to clear WCAG AA (4.5:1) against --bg/--surface. */

@@ -1363,9 +1363,12 @@ async function publishPublicProfile(
           profileSnapshot: publicSnapshot,
           ownerSnapshot: currentOwnerSnapshot,
           profileId: publicId,
+          // A reserved name can repair an orphaned, UID-free summary even
+          // when consent was disabled. Explicit owner pointers still win.
           linkedToThisSave:
-            envelope.public_profile_enabled === true &&
-            envelope.public_profile_id === publicId,
+            identityMatches ||
+            (envelope.public_profile_enabled === true &&
+              envelope.public_profile_id === publicId),
         });
 
       published = enabled && (!targetHasArtifacts || ownsCurrent);

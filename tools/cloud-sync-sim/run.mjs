@@ -13,7 +13,7 @@
 // public profile publishing and unpublishing, a byte-identical round trip, and
 // two different profile ids still asking the player to choose.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -34,13 +34,27 @@ const plan = [
   ["A", "roundtrip"],
   ["A", "keep-playing"],
   ["A", "unpublish"],
+  ["A", "repair-orphan"],
+  ["A", "unpublish"],
   ["C", "conflict-profile"],
   ["B", "cloud-state"],
 ];
 
 console.log(`Cloud sync simulation (device state in ${stateDir})\n`);
-for (const [device, step] of plan) {
+for (let [device, step] of plan) {
   console.log(`### device ${device} · ${step}`);
+  if (step === "repair-orphan") {
+    // A stale UID-free summary without an owner pointer must not prevent the
+    // verified name claimant from opting back in. No other owner is displaced.
+    const store = JSON.parse(readFileSync(storeFile, "utf8"));
+    store["public_profiles/luckyotter"] = {
+      username: "luckyotter",
+      username_key: "luckyotter",
+      record: {},
+    };
+    writeFileSync(storeFile, JSON.stringify(store));
+    step = "publish";
+  }
   const result = spawnSync(
     process.execPath,
     ["--import", registerPath, sessionPath, device, step],

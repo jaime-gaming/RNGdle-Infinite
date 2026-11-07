@@ -2002,3 +2002,29 @@ button.number-box.number-box:hover {
   .number-box-content {
   text-shadow: none;
 }
+
+/* A reveal state is functional information, not an aura colour. Give every
+   digit its own opaque ink and backing so inherited clipped gradients cannot
+   make moving and landed digits identical (including Godly and Déjà Vu). */
+.number-box.number-artifact.is-spinning
+  .artifact-digits
+  .artifact-digit:not(.is-blank) {
+  background: #102b46;
+  background-clip: border-box;
+  -webkit-background-clip: border-box;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  text-shadow: none;
+  border-radius: 0.12em;
+  box-shadow: inset 0 -0.055em #34d399;
+}
+.number-box.number-artifact.is-spinning
+  .artifact-digits
+  .artifact-digit.is-scrambling:not(.is-blank) {
+  background: #fff0ca;
+  color: #754000;
+  -webkit-text-fill-color: #754000;
+  box-shadow: inset 0 -0.055em #b77900;
+  text-decoration: underline dotted;
+  text-underline-offset: 0.09em;
+}

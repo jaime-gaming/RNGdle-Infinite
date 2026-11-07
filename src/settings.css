@@ -359,3 +359,15 @@
     gap: 3px;
   }
 }
+
+.settings-submenu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.settings-submenu [aria-current="page"] {
+  background: var(--green-bg);
+  border-color: var(--green);
+  color: var(--green);
+}

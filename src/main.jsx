@@ -651,10 +651,20 @@ function App() {
     });
     setModal("badge");
   }
-  // The Cloud Account lives in Settings now, so every account prompt in the
-  // game navigates there instead of to the Profile page.
   function openAuth() {
-    navigate("settings");
+    setPage("settings");
+    setPickingGoal(false);
+    setSharedCard(null);
+    setProfileName("");
+    setShopFocus(null);
+    setShopSection("");
+    setShopFamily("");
+    setSettingsSubpage("cloud-account");
+    push(
+      "settings",
+      pathForSubpage("settings", "cloud-account"),
+      "cloud-account",
+    );
   }
   function continueLocally() {
     chooseLocalPlay(true);
@@ -804,7 +814,7 @@ function App() {
                     : "Sign in"
             }
             data-avatar={session.profile?.avatar ? "logo" : "icon"}
-            onClick={() => openAuth()}
+            onClick={() => navigate("profile")}
           >
             {session.profile ? (
               <AvatarMark
@@ -835,7 +845,7 @@ function App() {
             )}
             <span>
               {auth.user
-                ? "Account"
+                ? "Profile"
                 : session.profile
                   ? "Profile"
                   : localPlay
@@ -988,15 +998,11 @@ function App() {
             <button
               className="back-link"
               onClick={() =>
-                settingsSubpage === "save-recovery"
-                  ? navigate("settings")
-                  : navigate("roll")
+                settingsSubpage ? navigate("settings") : navigate("roll")
               }
             >
               <ArrowLeft size={14} aria-hidden="true" />
-              {settingsSubpage === "save-recovery"
-                ? "Back to Settings"
-                : "Back to rolling"}
+              {settingsSubpage ? "Back to Settings" : "Back to rolling"}
             </button>
             <div className="page-heading">
               <div className="page-icon">
@@ -1006,41 +1012,76 @@ function App() {
                 <h1>
                   {settingsSubpage === "save-recovery"
                     ? "Restore save"
-                    : "Settings"}
+                    : settingsSubpage === "cloud-account"
+                      ? "Cloud Account"
+                      : "Settings"}
                 </h1>
                 <p>
                   {settingsSubpage === "save-recovery"
                     ? "Choose an earlier saved copy for this device."
-                    : "Alerts, presentation and gameplay conveniences."}
+                    : settingsSubpage === "cloud-account"
+                      ? "Sign-in, online backup and account security."
+                      : "Alerts, presentation and gameplay conveniences."}
                 </p>
               </div>
             </div>
+            <nav className="settings-submenu" aria-label="Settings sections">
+              <button
+                className="secondary-button"
+                aria-current={!settingsSubpage ? "page" : undefined}
+                onClick={() => navigate("settings")}
+              >
+                General
+              </button>
+              <button
+                className="secondary-button"
+                aria-current={
+                  settingsSubpage === "cloud-account" ? "page" : undefined
+                }
+                onClick={openAuth}
+              >
+                Cloud Account
+              </button>
+              <button
+                className="secondary-button"
+                aria-current={
+                  settingsSubpage === "save-recovery" ? "page" : undefined
+                }
+                onClick={openSaveRecovery}
+              >
+                Save recovery
+              </button>
+            </nav>
             {settingsSubpage === "save-recovery" ? (
               <SaveRecovery vault={vault} notify={notify} />
             ) : (
               <>
-                <CloudAccount
-                  auth={auth}
-                  cloud={cloud}
-                  profile={session.profile}
-                  localPlay={localPlay}
-                  twoFactor={twoFactor}
-                  onContinueLocal={continueLocally}
-                  onAction={dispatch}
-                  onRetryCloud={retryCloudLoad}
-                  onResolveCloudConflict={resolveCloudConflict}
-                />
-                <Settings
-                  notify={notify}
-                  progress={session}
-                  onAction={dispatch}
-                  onOpenRecovery={openSaveRecovery}
-                  navigate={navigate}
-                  vault={vault}
-                  appUpdate={appUpdate}
-                  onStartUpdate={startAppUpdate}
-                  onStopUpdate={stopAppUpdate}
-                />
+                {settingsSubpage === "cloud-account" ? (
+                  <CloudAccount
+                    auth={auth}
+                    cloud={cloud}
+                    profile={session.profile}
+                    localPlay={localPlay}
+                    twoFactor={twoFactor}
+                    onContinueLocal={continueLocally}
+                    onAction={dispatch}
+                    onRetryCloud={retryCloudLoad}
+                    onResolveCloudConflict={resolveCloudConflict}
+                  />
+                ) : (
+                  <Settings
+                    notify={notify}
+                    progress={session}
+                    onAction={dispatch}
+                    onOpenRecovery={openSaveRecovery}
+                    navigate={navigate}
+                    vault={vault}
+                    appUpdate={appUpdate}
+                    onStartUpdate={startAppUpdate}
+                    onStopUpdate={stopAppUpdate}
+                    onOpenAccount={openAuth}
+                  />
+                )}
               </>
             )}
           </>
@@ -1184,9 +1225,9 @@ function App() {
                       <button
                         type="button"
                         className="primary-button"
-                        onClick={() => navigate("settings")}
+                        onClick={openAuth}
                       >
-                        Open Cloud Account in Settings
+                        Open Cloud Account
                       </button>
                     </section>
                   )}
