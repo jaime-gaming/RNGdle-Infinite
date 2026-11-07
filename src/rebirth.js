@@ -179,15 +179,15 @@ export function rollbackBenefits(progress = {}) {
 // every roll past the gate is dead weight. Two dividends on the surplus:
 // half of it joins the starting sum of the new cycle, and every full
 // 2,000,000 surplus EP adds a permanent +1% to the banked wallet, capped at
-// +10% on any single rebirth (or ultra-rebirth). The example the player asked
-// for: a gate of 100,000 with 1,000,000 in the cycle carries 450,000 EP of
+// +10% per rebirth, +20% per Prestige, +30% per Rollback. The example
+// is: a gate of 100,000 with 1,000,000 in the cycle carries 450,000 EP of
 // surplus into the next wallet.
 export const SURPLUS_START_SHARE = 0.5;
 export const SURPLUS_BANKED_EP_STEP = 2_000_000;
 const SURPLUS_BANKED_PER_STEP = 0.01;
 export const SURPLUS_BANKED_CAP = 0.1;
 
-export function rebirthSurplus(earned = 0, gate = 0) {
+export function rebirthSurplus(earned = 0, gate = 0, stage = "rebirth") {
   const above = Number.isFinite(earned) ? earned : 0;
   const surplus = Math.max(0, above - Math.max(0, gate));
   if (!surplus) return { surplus: 0, starterBonus: 0, bankedBonus: 0 };
@@ -195,7 +195,8 @@ export function rebirthSurplus(earned = 0, gate = 0) {
     surplus,
     starterBonus: Math.floor(surplus * SURPLUS_START_SHARE),
     bankedBonus: Math.min(
-      SURPLUS_BANKED_CAP,
+      SURPLUS_BANKED_CAP *
+        (stage === "rollback" ? 3 : stage === "prestige" ? 2 : 1),
       Math.floor(surplus / SURPLUS_BANKED_EP_STEP) * SURPLUS_BANKED_PER_STEP,
     ),
   };

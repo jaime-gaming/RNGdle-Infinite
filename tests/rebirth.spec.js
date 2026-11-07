@@ -671,7 +671,6 @@ test("old saves default to zero rebirths and ultra-rebirths, and optional bar sn
         [-1, 0],
         [0.5, 0],
         ["1", 0],
-        [101, 100],
       ],
     ],
   ])

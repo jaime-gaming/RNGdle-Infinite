@@ -548,13 +548,14 @@ export default function RollExperience({
       loading ||
       drawing ||
       busy ||
-      cooldown > 0 ||
       awaitingSettlement ||
       splitClose ||
       session.offline?.batch ||
       session.pendingRoll
     )
       return;
+    // Schedule from the durable deadline, not the displayed cooldown tick.
+    // This also wakes correctly after timer throttling or a skipped UI tick.
     // Use the same serialized, persisted draw path as the manual button. Cleanup
     // cancels a queued auto-start when switching it off or leaving the page.
     // Never queue a start inside the window this roll is still reserving: the
@@ -577,7 +578,7 @@ export default function RollExperience({
     loading,
     drawing,
     busy,
-    cooldown,
+    session.cooldownUntil,
     awaitingSettlement,
     splitClose,
     session.pendingRoll,

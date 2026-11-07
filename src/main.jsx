@@ -571,22 +571,32 @@ function App() {
       window.removeEventListener("hashchange", update);
     };
   }, []);
+  const previousProfileRoute = useRef(null);
   // A bare profile URL is canonicalized to this browser's own profile once it
   // exists. A named path for somebody else is deliberately left alone so it
   // can load that player's public cloud profile.
   useEffect(() => {
+    const previous = previousProfileRoute.current;
+    previousProfileRoute.current = session.profile;
     if (page !== "profile" || sharedCard) return;
     const requested = profileNameFromLocation(location);
+    const renamedOwnRoute =
+      previous?.id === session.profile?.id &&
+      previous?.username !== session.profile?.username &&
+      normalizedProfileName(requested) ===
+        normalizedProfileName(previous?.username);
     const requestedIsOwn =
       Boolean(requested) &&
       Boolean(session.profile) &&
       normalizedProfileName(requested) ===
         normalizedProfileName(session.profile.username);
-    if (requested && session.profile && !requestedIsOwn) return;
+    if (requested && session.profile && !requestedIsOwn && !renamedOwnRoute)
+      return;
     if (requested && !session.profile) return;
     const canonical = pathForProfile(session.profile?.username);
     if (location.pathname !== canonical)
       history.replaceState(history.state, "", canonical);
+    if (renamedOwnRoute) setProfileName(session.profile.username);
   }, [page, sharedCard, profileName, session.profile?.username]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
@@ -651,10 +661,20 @@ function App() {
     });
     setModal("badge");
   }
-  // The Cloud Account lives in Settings now, so every account prompt in the
-  // game navigates there instead of to the Profile page.
   function openAuth() {
-    navigate("settings");
+    setPage("settings");
+    setPickingGoal(false);
+    setSharedCard(null);
+    setProfileName("");
+    setShopFocus(null);
+    setShopSection("");
+    setShopFamily("");
+    setSettingsSubpage("cloud-account");
+    push(
+      "settings",
+      pathForSubpage("settings", "cloud-account"),
+      "cloud-account",
+    );
   }
   function continueLocally() {
     chooseLocalPlay(true);
@@ -804,7 +824,7 @@ function App() {
                     : "Sign in"
             }
             data-avatar={session.profile?.avatar ? "logo" : "icon"}
-            onClick={() => openAuth()}
+            onClick={() => navigate("profile")}
           >
             {session.profile ? (
               <AvatarMark
@@ -835,7 +855,7 @@ function App() {
             )}
             <span>
               {auth.user
-                ? "Account"
+                ? "Profile"
                 : session.profile
                   ? "Profile"
                   : localPlay
@@ -988,15 +1008,11 @@ function App() {
             <button
               className="back-link"
               onClick={() =>
-                settingsSubpage === "save-recovery"
-                  ? navigate("settings")
-                  : navigate("roll")
+                settingsSubpage ? navigate("settings") : navigate("roll")
               }
             >
               <ArrowLeft size={14} aria-hidden="true" />
-              {settingsSubpage === "save-recovery"
-                ? "Back to Settings"
-                : "Back to rolling"}
+              {settingsSubpage ? "Back to Settings" : "Back to rolling"}
             </button>
             <div className="page-heading">
               <div className="page-icon">
@@ -1006,12 +1022,16 @@ function App() {
                 <h1>
                   {settingsSubpage === "save-recovery"
                     ? "Restore save"
-                    : "Settings"}
+                    : settingsSubpage === "cloud-account"
+                      ? "Cloud Account"
+                      : "Settings"}
                 </h1>
                 <p>
                   {settingsSubpage === "save-recovery"
                     ? "Choose an earlier saved copy for this device."
-                    : "Alerts, presentation and gameplay conveniences."}
+                    : settingsSubpage === "cloud-account"
+                      ? "Sign-in, online backup and account security."
+                      : "Alerts, presentation and gameplay conveniences."}
                 </p>
               </div>
             </div>
@@ -1019,28 +1039,32 @@ function App() {
               <SaveRecovery vault={vault} notify={notify} />
             ) : (
               <>
-                <CloudAccount
-                  auth={auth}
-                  cloud={cloud}
-                  profile={session.profile}
-                  localPlay={localPlay}
-                  twoFactor={twoFactor}
-                  onContinueLocal={continueLocally}
-                  onAction={dispatch}
-                  onRetryCloud={retryCloudLoad}
-                  onResolveCloudConflict={resolveCloudConflict}
-                />
-                <Settings
-                  notify={notify}
-                  progress={session}
-                  onAction={dispatch}
-                  onOpenRecovery={openSaveRecovery}
-                  navigate={navigate}
-                  vault={vault}
-                  appUpdate={appUpdate}
-                  onStartUpdate={startAppUpdate}
-                  onStopUpdate={stopAppUpdate}
-                />
+                {settingsSubpage === "cloud-account" ? (
+                  <CloudAccount
+                    auth={auth}
+                    cloud={cloud}
+                    profile={session.profile}
+                    localPlay={localPlay}
+                    twoFactor={twoFactor}
+                    onContinueLocal={continueLocally}
+                    onAction={dispatch}
+                    onRetryCloud={retryCloudLoad}
+                    onResolveCloudConflict={resolveCloudConflict}
+                  />
+                ) : (
+                  <Settings
+                    notify={notify}
+                    progress={session}
+                    onAction={dispatch}
+                    onOpenRecovery={openSaveRecovery}
+                    navigate={navigate}
+                    vault={vault}
+                    appUpdate={appUpdate}
+                    onStartUpdate={startAppUpdate}
+                    onStopUpdate={stopAppUpdate}
+                    onOpenAccount={openAuth}
+                  />
+                )}
               </>
             )}
           </>
@@ -1075,8 +1099,8 @@ function App() {
                 <ScrollText size={25} />
               </div>
               <div>
-                <h1>changelog</h1>
-                <p>what changed, and when.</p>
+                <h1>Changelog</h1>
+                <p>What changed, and when.</p>
               </div>
             </div>
             <Changelog
@@ -1144,6 +1168,24 @@ function App() {
                 />
               ) : (
                 <>
+                  {!auth.user && !session.profile && !localPlay && (
+                    <section
+                      className="panel"
+                      aria-label="Choose where to save"
+                    >
+                      <h2>Play on this device</h2>
+                      <p>
+                        Keep your progress locally, or open Cloud Account for an
+                        online backup.
+                      </p>
+                      <button
+                        className="secondary-button"
+                        onClick={continueLocally}
+                      >
+                        Continue locally
+                      </button>
+                    </section>
+                  )}
                   {(!cloudAccountRequired ||
                     session.profile ||
                     (localPlay && !auth.user)) &&
@@ -1172,8 +1214,7 @@ function App() {
                         onSetPublicProfile={setPublicProfileVisibility}
                       />
                     )}
-                  {(auth.user?.passwordRequired ||
-                    (cloudAccountRequired && !session.profile)) && (
+                  {(auth.user?.passwordRequired || !auth.user) && (
                     <section className="panel cloud-account-pointer">
                       <h2>Cloud Account</h2>
                       <p>
@@ -1184,9 +1225,9 @@ function App() {
                       <button
                         type="button"
                         className="primary-button"
-                        onClick={() => navigate("settings")}
+                        onClick={openAuth}
                       >
-                        Open Cloud Account in Settings
+                        Open Cloud Account
                       </button>
                     </section>
                   )}
@@ -1269,7 +1310,9 @@ function App() {
             onOpenFamily={openFamily}
             focusProduct={shopFocus}
             onAction={dispatch}
-            openSignup={openAuth}
+            openSignup={() =>
+              session.profile ? openAuth() : navigate("profile")
+            }
             navigate={navigate}
             notify={notify}
             pickingGoal={pickingGoal}

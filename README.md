@@ -33,11 +33,13 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 
 ## Keep your progress
 
-Give your local profile a name and your progress stays on this device. A Cloud Account is optional if you want to continue on another device. If you play offline, progress is saved locally and a Cloud Account syncs again when you reconnect.
+Open **Profile → Continue locally**, then give your local profile a name to keep your progress on this device. A Cloud Account is optional if you want to continue on another device. If you play offline, progress is saved locally and a Cloud Account syncs again when you reconnect.
 
 You choose whether to share a public profile. A profile logo appears only when that profile is shared. To go back to an earlier saved copy, open **Settings → Restore save**; you can check the copy's progress before choosing it.
 
 ![Choose a saved copy to restore](media/save-recovery.png)
+
+Local saving retries with lossless compression if this browser runs out of storage, without deleting your history or recovery copies. If saving still fails, keep your site data and free space before trying again.
 
 ## FAQ
 
@@ -62,4 +64,4 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
-_Updated November 3, 2026._
+_Documentation updated November 7, 2026._

@@ -1,3 +1,4 @@
+import { mockOperationalStatus } from "../tests/helpers/status.js";
 import assert from "node:assert/strict";
 import { copyFile, readFile, stat, writeFile } from "node:fs/promises";
 import http from "node:http";
@@ -109,6 +110,7 @@ try {
   );
   const context = await browser.newContext();
   const page = await context.newPage();
+  await mockOperationalStatus(page);
   const pageErrors = [];
   const failedRequests = [];
   const appAssetRequests = [];

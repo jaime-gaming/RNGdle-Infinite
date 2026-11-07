@@ -92,3 +92,9 @@ Firebase completes the password sign-in before the link check, so a modified
 client could skip the email step. This is genuine protection against phishing
 and password reuse, not cryptographic two-factor. Closing that gap needs a
 backend (Cloud Functions or a Worker route issuing custom tokens).
+
+## Public profile fixes (November 7, 2026)
+
+Publish the updated `firestore.rules` with `npm run deploy:rules` before testing public sharing. Owner reads are evaluated before public-consent checks, reducing rule evaluation for transactional publication. Pinned-roll summaries now permit an optional boolean `dejaVu`; older documents without it remain valid. Name claims, consent, ownership, listing denial and transactional cleanup remain enforced. No production Firebase deployment was performed by this code change. Verify publish, signed-out direct read, unpublish and denied direct read against the deployed project.
+
+A verified name claim can also repair an orphaned UID-free public summary when its owner pointer is absent. An explicit pointer or legacy UID belonging to someone else always takes priority; the claimant must match the current settings and game profile ID. The cloud simulation includes a private-to-public recovery of this state.

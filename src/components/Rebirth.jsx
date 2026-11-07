@@ -214,7 +214,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   // shows what the surplus would pay right now — in the preview, in the
   // dialog, and again in the result message after the rebirth lands.
   const previewGate = epTarget;
-  const rawPreviewSurplus = rebirthSurplus(cycleEp, previewGate);
+  const rawPreviewSurplus = rebirthSurplus(
+    cycleEp,
+    previewGate,
+    lastStage ? "rollback" : ladderComplete ? "prestige" : "rebirth",
+  );
   const previewSurplus = lastStage
     ? { ...rawPreviewSurplus, starterBonus: 0 }
     : rawPreviewSurplus;
@@ -224,7 +228,15 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
       : open === "ultra"
         ? ultraRebirthRequirement().ep
         : epTarget;
-  const rawDialogSurplus = rebirthSurplus(cycleEp, dialogGate);
+  const rawDialogSurplus = rebirthSurplus(
+    cycleEp,
+    dialogGate,
+    open === "rollback"
+      ? "rollback"
+      : open === "ultra"
+        ? "prestige"
+        : "rebirth",
+  );
   const dialogSurplus =
     open === "rollback"
       ? { ...rawDialogSurplus, starterBonus: 0 }
@@ -713,7 +725,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             surplus: {Math.round(SURPLUS_START_SHARE * 100)}% joins the new
             wallet, and every {formatEP(SURPLUS_BANKED_EP_STEP)} of it banks +1%
             EP forever, up to +{Math.round(SURPLUS_BANKED_CAP * 100)}% on a
-            single rebirth.
+            single rebirth. {ladderComplete && "Prestige banks up to +20%."}{" "}
+            {rollbackShown &&
+              "Rollback banks up to +30% while still starting its wallet at zero."}{" "}
+            There is no lifetime cap.
           </p>
         </header>
         <ol className="rebirth-ladder">

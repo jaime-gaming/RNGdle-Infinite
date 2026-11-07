@@ -1,3 +1,4 @@
+import { mockOperationalStatus } from "./helpers/status.js";
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import { PAGES } from "../src/router.js";
@@ -5,6 +6,10 @@ import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { rebirthUnlocked, REBIRTH_VISIBLE_AT } from "../src/rebirth.js";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+
+test.beforeEach(async ({ page }) => {
+  await mockOperationalStatus(page);
+});
 
 const badgeIds = allBadgeMetadata.map((b) => b.id);
 

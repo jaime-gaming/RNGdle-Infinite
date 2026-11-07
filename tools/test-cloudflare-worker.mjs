@@ -1,3 +1,4 @@
+import { mockOperationalStatus } from "../tests/helpers/status.js";
 // Build the production app and exercise the Cloudflare Workers deployment
 // locally with Wrangler. This checks the artifact, the static-asset routing and
 // the SPA fallback that the custom domain will serve; it does not validate DNS,
@@ -183,11 +184,18 @@ try {
     });
     try {
       const page = await context.newPage();
+      await mockOperationalStatus(page);
       const errors = [];
       const failures = [];
       const requests = [];
       page.on("pageerror", (error) => errors.push(error.message));
-      page.on("requestfailed", (request) => failures.push(request.url()));
+      page.on("requestfailed", (request) => {
+        // Direct SPA navigation tears down the previous document's worker and
+        // status fetch. Only navigation cancellations are expected here;
+        // real network failures and HTTP errors still fail the smoke test.
+        if (request.failure()?.errorText !== "net::ERR_ABORTED")
+          failures.push(`${request.failure()?.errorText}: ${request.url()}`);
+      });
       page.on("request", (request) => {
         const requested = new URL(request.url());
         if (requested.origin === origin) requests.push(requested.pathname);
@@ -248,10 +256,12 @@ try {
         page.getByRole("heading", { name: "Auras", exact: true }),
       ).toBeVisible();
 
-      await visit("profile");
+      await visit("settings/cloud-account");
       await expect(page.locator(".cloud-account")).toContainText(
         "Online sign-in isn’t available here.",
       );
+      await visit("profile");
+      await expect(page.locator(".cloud-account")).toHaveCount(0);
       await expect(
         page.getByRole("heading", { name: "Your profile, WorkerTester" }),
       ).toBeVisible();

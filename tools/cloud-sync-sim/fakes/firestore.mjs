@@ -340,10 +340,15 @@ function makeCommit(staged) {
     const profile = raw(publicPath(key));
     if (profile && "owner_uid" in profile) return profile.owner_uid === uid;
     const save = raw(savePath(uid));
+    const claim = raw(claimPath(key));
+    const settings = raw(settingsPath(uid));
     return Boolean(
-      save &&
-      save.public_profile_enabled === true &&
-      save.public_profile_id === key,
+      (save &&
+        save.public_profile_enabled === true &&
+        save.public_profile_id === key) ||
+      (claim?.owner_uid === uid &&
+        settings?.username_key === key &&
+        settings?.profile_id === claim.profile_id),
     );
   }
 
