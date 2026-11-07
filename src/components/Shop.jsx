@@ -1669,7 +1669,7 @@ export default function Shop({
           </div>
           {sale.active ? (
             <>
-              <SaleStampBook record={saleRecord} />
+              <SaleStampBook record={saleRecord} profile={progress.profile} />
               <div className="shop-grid shop-grid-rows">
                 {saleItems.map((item, index) => card(item, index))}
               </div>

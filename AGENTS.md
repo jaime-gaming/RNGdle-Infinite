@@ -44,7 +44,10 @@ clock for previews; production ignores that variable, and shipped code never
 pretends today is the event day. Spending accumulates across purchases, rather
 than requiring a single purchase of 100,000 EP. The sale shelf contains a
 25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
-and decorative flyers occupy the page margins, including on small screens. Special & Limiteds banners and wardrobe
+and linked posters occupy the page margins, including on small screens. Posters
+stay in the document as it scrolls. The stamp book remembers which stamps were
+seen per local profile and animates only newly seen stamps when the book enters
+view; this presentation marker never affects progress or rewards. Special & Limiteds banners and wardrobe
 filters appear only when the save owns an event aura, even during the sale;
 missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
 Moving reveal digits are lighter than landed digits using opacity only, without

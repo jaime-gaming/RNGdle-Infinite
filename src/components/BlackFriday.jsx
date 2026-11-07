@@ -4,8 +4,24 @@
 // Everything here is presentation. The window, the discounts, the stamps and the
 // limited skin are decided in black-friday.js and written by the reducer, so no
 // component in this file can hand out a reward or change a price on its own.
-import React, { useState } from "react";
-import { Clock3, Palette, Percent, Sparkles, Tag, X } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Clock3,
+  Palette,
+  Percent,
+  Sparkles,
+  Tag,
+  X,
+  Zap,
+  Gift,
+  Eye,
+  Ticket,
+  ShoppingBag,
+  Gauge,
+  PawPrint,
+  Star,
+  ArrowUpRight,
+} from "lucide-react";
 import {
   BLACK_FRIDAY_SKIN,
   BLACK_FRIDAY_STAMPS,
@@ -23,6 +39,7 @@ import { waitText } from "../tasks.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import { useSaleStatus } from "../use-black-friday.js";
 import NumberBox from "./NumberBox";
+import { pathForSubpage } from "../router.js";
 import "../black-friday.css";
 
 // One line for the countdown, whichever side of the day it is read from.
@@ -82,39 +99,220 @@ export function SaleStampCard({ record, previewTier = "rare" }) {
   );
 }
 
-// The day's flyers, pinned to both margins of every page: loud, paper-thin and
-// purely decorative. Narrow screens keep the game, not the margins.
-const SALE_ADS_LEFT = [
-  "UP TO 50% OFF!!!",
-  "ONE DAY ONLY",
-  "1 STAMP PER 100,000 EP",
-  "25 STAMPS = BLACKOUT 2026",
-];
-const SALE_ADS_RIGHT = [
-  "FROM 20% OFF!!!",
-  "THE WHOLE SHOP ON SALE",
-  "MISSED LOOKS BACK ON THE COUNTER",
-  "10,000,000 EP FLAT",
+// Posters belong to the document, so they stay where they were as the page
+// scrolls. Each one is a real link and also uses the app's normal navigation.
+const SALE_ADS = [
+  {
+    title: "UP TO 50% OFF",
+    note: "Every shelf",
+    icon: Percent,
+    shelf: "",
+    art: "percent",
+  },
+  {
+    title: "ONE DAY ONLY",
+    note: "The sale counter",
+    icon: Clock3,
+    shelf: "black-friday",
+    art: "clock",
+  },
+  {
+    title: "100K EP = 1 STAMP",
+    note: "Fill your card",
+    icon: Ticket,
+    shelf: "black-friday",
+    art: "ticket",
+  },
+  {
+    title: "BLACKOUT 2026",
+    note: "25 stamps to unlock",
+    icon: Star,
+    shelf: "black-friday",
+    art: "blackout",
+  },
+  {
+    title: "FASTER REVEALS",
+    note: "Explore pace",
+    icon: Gauge,
+    shelf: "pace",
+    art: "pace",
+  },
+  {
+    title: "POWER UP",
+    note: "Explore skills",
+    icon: Zap,
+    shelf: "skills",
+    art: "skills",
+  },
+  {
+    title: "LOOKS FOR LESS",
+    note: "Explore auras",
+    icon: Eye,
+    shelf: "auras",
+    art: "auras",
+  },
+  {
+    title: "FIND A FRIEND",
+    note: "Explore companions",
+    icon: PawPrint,
+    shelf: "companions",
+    art: "companions",
+  },
+  {
+    title: "FROM 20% OFF",
+    note: "Browse the shop",
+    icon: ShoppingBag,
+    shelf: "",
+    art: "bag",
+  },
+  {
+    title: "MISSED RNGWEEN?",
+    note: "Looks back today",
+    icon: Sparkles,
+    shelf: "black-friday",
+    art: "rngween",
+  },
+  {
+    title: "10M EP EACH",
+    note: "The missed-looks counter",
+    icon: Tag,
+    shelf: "black-friday",
+    art: "price",
+  },
+  {
+    title: "COLLECT THE CARD",
+    note: "Every purchase adds up",
+    icon: Gift,
+    shelf: "black-friday",
+    art: "gift",
+  },
+  {
+    title: "YOUR NEXT LOOK",
+    note: "Try an aura",
+    icon: Eye,
+    shelf: "auras",
+    art: "auras",
+  },
+  {
+    title: "THE SKILL STALL",
+    note: "Three in stock",
+    icon: Zap,
+    shelf: "skills",
+    art: "skills",
+  },
+  {
+    title: "KEEP IT MOVING",
+    note: "Explore tools",
+    icon: Gauge,
+    shelf: "tools",
+    art: "pace",
+  },
+  {
+    title: "SALE ENDS TODAY",
+    note: "Shop the event",
+    icon: Clock3,
+    shelf: "black-friday",
+    art: "clock",
+  },
 ];
 
-export function SaleSideAds({ status }) {
+export function SaleSideAds({ status, onOpenShelf }) {
   if (!status?.active) return null;
-  const rail = (lines, side) => (
-    <aside className={`sale-ads sale-ads-${side}`} aria-hidden="true">
-      {lines.map((line) => (
-        <span className="sale-ad" key={line}>
-          <b>{line}</b>
-          <small>Black Friday 2026</small>
-        </span>
+  const rail = (ads, side) => (
+    <aside
+      className={`sale-ads sale-ads-${side}`}
+      aria-label={`${side} Black Friday offers`}
+    >
+      {ads.map(({ title, note, icon: Icon, shelf, art }, index) => (
+        <a
+          className={`sale-ad sale-ad-${art}`}
+          key={`${title}-${index}`}
+          href={pathForSubpage("shop", shelf)}
+          aria-label={`${title}: ${note}`}
+          onClick={(event) => {
+            if (
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey ||
+              event.button !== 0
+            )
+              return;
+            event.preventDefault();
+            onOpenShelf(shelf);
+          }}
+        >
+          <span className="sale-ad-kicker">
+            BF / 26 <ArrowUpRight size={11} />
+          </span>
+          <div className="sale-ad-art" aria-hidden="true">
+            {art === "auras" || art === "rngween" || art === "blackout" ? (
+              <NumberBox
+                value="777"
+                tier="rare"
+                aura={
+                  art === "blackout"
+                    ? "blackout-2026"
+                    : art === "rngween"
+                      ? "jack-o-glow"
+                      : "aurora"
+                }
+                compact
+                className="sale-ad-aura"
+              />
+            ) : (
+              <Icon />
+            )}
+          </div>
+          <b>{title}</b>
+          <small>{note}</small>
+          <span className="sale-ad-bottom" aria-hidden="true">
+            ONE DAY ONLY · UTC
+          </span>
+        </a>
       ))}
     </aside>
   );
   return (
     <>
-      {rail(SALE_ADS_LEFT, "left")}
-      {rail(SALE_ADS_RIGHT, "right")}
+      {rail(SALE_ADS.slice(0, 8), "left")}
+      {rail(SALE_ADS.slice(8), "right")}
     </>
   );
+}
+
+// A different outline for each milestone. The last is the rounded silhouette
+// of Blackout's number box, rather than another generic stamp.
+function stampShape(index) {
+  const outlines = [
+    "circle(48% at 50% 50%)",
+    "ellipse(49% 40% at 50% 50%)",
+    "polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%)",
+    "polygon(24% 3%, 76% 3%, 99% 50%, 76% 97%, 24% 97%, 1% 50%)",
+    "polygon(50% 1%, 64% 31%, 98% 35%, 73% 59%, 80% 95%, 50% 77%, 20% 95%, 27% 59%, 2% 35%, 36% 31%)",
+    "inset(4% 3% round 20px)",
+    "polygon(4% 7%, 96% 7%, 96% 35%, 88% 50%, 96% 65%, 96% 93%, 4% 93%, 4% 65%, 12% 50%, 4% 35%)",
+    "polygon(50% 2%, 97% 32%, 80% 96%, 20% 96%, 3% 32%)",
+    "polygon(20% 3%, 80% 3%, 97% 20%, 97% 80%, 80% 97%, 20% 97%, 3% 80%, 3% 20%)",
+    "polygon(2% 20%, 20% 20%, 20% 2%, 80% 2%, 80% 20%, 98% 20%, 98% 80%, 80% 80%, 80% 98%, 20% 98%, 20% 80%, 2% 80%)",
+    "polygon(3% 5%, 97% 5%, 85% 50%, 97% 95%, 3% 95%, 15% 50%)",
+    "polygon(50% 2%, 98% 22%, 91% 70%, 50% 98%, 9% 70%, 2% 22%)",
+    "polygon(3% 10%, 82% 10%, 98% 50%, 82% 90%, 3% 90%, 18% 50%)",
+    "polygon(3% 50%, 24% 5%, 76% 5%, 97% 50%, 76% 95%, 24% 95%, 35% 50%)",
+    "polygon(5% 8%, 95% 8%, 95% 92%, 5% 92%, 15% 50%)",
+    "polygon(2% 25%, 15% 25%, 15% 5%, 85% 5%, 85% 25%, 98% 25%, 98% 75%, 85% 75%, 85% 95%, 15% 95%, 15% 75%, 2% 75%)",
+    "polygon(4% 16%, 50% 2%, 96% 16%, 85% 50%, 96% 84%, 50% 98%, 4% 84%, 15% 50%)",
+    "polygon(5% 6%, 50% 18%, 95% 6%, 84% 50%, 95% 94%, 50% 82%, 5% 94%, 16% 50%)",
+  ];
+  if (index === 24) return "inset(4% 2% round 12px)";
+  if (index < outlines.length) return outlines[index];
+  const points = 6 + index - outlines.length;
+  const vertices = Array.from({ length: points * 2 }, (_, i) => {
+    const angle = -Math.PI / 2 + (i * Math.PI) / points;
+    const radius = i % 2 ? 0.72 : 0.98;
+    return `${(50 + 49 * radius * Math.cos(angle)).toFixed(2)}% ${(50 + 49 * radius * Math.sin(angle)).toFixed(2)}%`;
+  });
+  return `polygon(${vertices.join(",")})`;
 }
 
 // The stamp card as an object: 25 holes, each a stamp of its own shape and its
@@ -126,11 +324,61 @@ function stampLabel(index) {
   return `${millions.toFixed(1).replace(".0", "")}M`;
 }
 
-export function SaleStampBook({ record }) {
+export function SaleStampBook({ record, profile }) {
   const stamps = record?.stamps ?? 0;
   const earned = record?.skinEarned === true;
+  // A local presentation marker, scoped to the profile, never changes rewards.
+  // Guest progress is session-only, so its marker is session-only too.
+  const storageKey = `rng-sale-stamps-seen-2026:${profile?.id ?? "guest"}`;
+  const bookRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+  const [seen] = useState(() => {
+    try {
+      const storage = profile?.id ? localStorage : sessionStorage;
+      return Math.min(
+        stamps,
+        Math.max(0, Number(storage.getItem(storageKey)) || 0),
+      );
+    } catch {
+      return 0;
+    }
+  });
+  useEffect(() => {
+    if (!bookRef.current) return undefined;
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(bookRef.current);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!visible) return;
+    try {
+      const storage = profile?.id ? localStorage : sessionStorage;
+      storage.setItem(
+        storageKey,
+        String(Math.min(BLACK_FRIDAY_STAMPS, stamps)),
+      );
+    } catch {
+      /* The book still works when browser storage is unavailable. */
+    }
+  }, [stamps, storageKey, profile?.id, visible]);
   return (
-    <div className="sale-stamp-book" data-testid="sale-stamp-book">
+    <div
+      ref={bookRef}
+      className="sale-stamp-book"
+      data-testid="sale-stamp-book"
+    >
       <div className="sale-stamp-book-head">
         <strong>
           {earned
@@ -149,13 +397,26 @@ export function SaleStampBook({ record }) {
         {Array.from({ length: BLACK_FRIDAY_STAMPS }, (_, index) => (
           <li
             key={index}
-            style={{ "--stamp-index": index }}
-            className={`sale-stamp ${index < stamps ? "is-filled" : ""}`}
+            style={{
+              "--stamp-index": index - seen,
+              "--stamp-shape": stampShape(index),
+            }}
+            className={`sale-stamp ${index < stamps ? "is-filled" : ""} ${index >= seen && index < stamps ? "is-new" : ""} ${visible ? "is-imprinting" : ""} ${index === 24 ? "is-blackout" : ""}`}
             aria-label={`Stamp ${index + 1} of ${BLACK_FRIDAY_STAMPS}: ${
               index < stamps ? "earned" : "empty"
             }`}
           >
             <span className="sale-stamp-face" aria-hidden="true" />
+            {index === 24 && index < stamps && (
+              <NumberBox
+                value="25"
+                tier="rare"
+                aura={BLACK_FRIDAY_SKIN.id}
+                compact
+                className="sale-stamp-aura"
+                aria-hidden="true"
+              />
+            )}
             <span className="sale-stamp-label">
               {stampLabel(index)}
               <small> EP</small>
@@ -191,6 +452,10 @@ export default function SaleEventNotice({
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
+        <span className="sale-flag-art" aria-hidden="true">
+          <Percent size={24} />
+          <i>2026</i>
+        </span>
         <span className="sale-flag-tag">
           <Percent size={13} aria-hidden="true" />
           Event
@@ -261,9 +526,9 @@ export default function SaleEventNotice({
             one sale stamp, whatever the shelf — a {formatEP(21000)} EP tool and
             a {formatEP(169000)} EP aura together pay one and keep counting.
             Fill {BLACK_FRIDAY_STAMPS} stamps and {BLACK_FRIDAY_SKIN.name} is
-            yours: matte black, one white tag, nothing else. It is a permanent
-            aura, so a rebirth, a prestige, a Rollback or a fresh start can
-            never take it away — and it is never sold.
+            yours: an exclusive black aura with a red sale glow. It is a
+            permanent aura, so a rebirth, a prestige, a Rollback or a fresh
+            start can never take it away — and it is never sold.
           </p>
           {status.active && (
             <SaleStampCard record={record} previewTier={previewTier} />

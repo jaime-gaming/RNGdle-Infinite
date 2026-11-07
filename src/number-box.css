@@ -2002,3 +2002,32 @@ button.number-box.number-box:hover {
   .number-box-content {
   text-shadow: none;
 }
+
+/* A gradient clipped on the entire line masks each child's opacity. During a
+   reveal, clip it per digit instead, so aura ink still shows which digits move. */
+.number-box[data-cosmetic]:not([data-cosmetic="none"]):has(.is-scrambling)
+  .number-box-content {
+  background: none;
+  filter: none;
+  animation: none;
+}
+.number-box[data-cosmetic]:not([data-cosmetic="none"]):has(.is-scrambling)
+  :is(.artifact-digit, .draw-digit) {
+  background: linear-gradient(
+    110deg,
+    var(--aura-ink-a, var(--box-ink)),
+    var(--aura-ink-b, var(--box-ink))
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.number-box.tier-godly:has(.is-scrambling) .artifact-digits {
+  background: none;
+}
+.number-box.tier-godly:has(.is-scrambling) :is(.artifact-digit, .draw-digit) {
+  background: linear-gradient(180deg, #78350f, #b45309 55%, #78350f);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

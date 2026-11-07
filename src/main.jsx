@@ -777,7 +777,6 @@ function App() {
     <>
       {/* Above everything else on the page, for exactly one day. */}
       <SaleTicker status={sale} />
-      <SaleSideAds status={sale} />
       <header className="header">
         <div className="header-left">
           <button
@@ -985,6 +984,7 @@ function App() {
       <main
         className={`${page === "roll" ? "home-main" : "content-main"} ${sale.active ? "sale-ad-layout" : ""}`}
       >
+        <SaleSideAds status={sale} onOpenShelf={openShelf} />
         <OfflineRewards
           progress={session}
           status={offlineState}

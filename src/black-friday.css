@@ -494,52 +494,69 @@
     border-color 0.35s ease;
 }
 
-/* ---- The limited skin: matte black, one tag, no noise --------------------- */
+/* Blackout keeps its black base, with a red foil edge and moving sale glint. */
 .number-box[data-cosmetic="blackout-2026"] {
-  --box-background: #050506;
-  --box-border: #26262b;
-  --box-shadow: 0 12px 26px -12px #00000099, inset 0 1px 0 #ffffff0f;
-  --box-ink: #f4f4f5;
-  border-width: 1px;
-  border-radius: 10px;
+  --box-background: #080809;
+  --box-border: #c52f39;
+  --box-shadow:
+    0 10px 28px -10px #a80c1b88, inset 0 0 0 1px #ff6a6a22,
+    inset 0 1px 0 #ffffff20;
+  --box-ink: #fafafa;
+  border-width: 2px;
+  border-radius: 12px;
 }
 :root[data-theme="dark"] .number-box[data-cosmetic="blackout-2026"] {
-  --box-background: #000000;
-  --box-border: #3f3f46;
+  --box-background: #080809;
+  --box-border: #e3424d;
   --box-ink: #fafafa;
 }
-/* The shared finish keeps a single hairline sweep; every other decorative
-   layer stays off, because the skin is the quiet one. */
 .number-box[data-cosmetic="blackout-2026"] .box-finish::before {
-  opacity: 0.28;
-  animation-duration: 18s;
+  background: conic-gradient(
+    from var(--aura-turn),
+    #141416,
+    #e32d3f,
+    #161619,
+    #fff 45%,
+    #121214 65%,
+    #b9001c,
+    #141416
+  );
+  opacity: 0.85;
 }
-.number-box[data-cosmetic="blackout-2026"] .box-finish::after,
-.number-box[data-cosmetic="blackout-2026"] .box-halo,
-.number-box[data-cosmetic="blackout-2026"] .box-ribbon,
-.number-box[data-cosmetic="blackout-2026"] .box-comet,
-.number-box[data-cosmetic="blackout-2026"] .box-particles,
-.number-box[data-cosmetic="blackout-2026"] .box-shimmer,
-.number-box[data-cosmetic="blackout-2026"] .box-ornament {
-  display: none;
+.number-box[data-cosmetic="blackout-2026"] .box-finish::after {
+  background: radial-gradient(ellipse, #e7223c55, transparent 70%);
 }
-/* The one detail it does carry: a small white price tag in the corner. */
 .number-box[data-cosmetic="blackout-2026"] .box-gloss {
-  background: none;
+  background: linear-gradient(
+    125deg,
+    #fff2,
+    transparent 30%,
+    #ff263520 55%,
+    transparent 72%
+  );
 }
 .number-box[data-cosmetic="blackout-2026"] .box-gloss::after {
-  content: "";
+  content: "BF";
   position: absolute;
   top: 7px;
   right: 8px;
-  width: 14px;
-  height: 8px;
-  border-radius: 2px;
-  background: #f4f4f5;
-  box-shadow: 0 0 8px #ffffff26;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #fae9e9;
+  color: #111;
+  font: 800 7px/1 var(--font-mono);
+  box-shadow: 0 0 10px #ff425466;
 }
 .number-box[data-cosmetic="blackout-2026"] .number-box-content {
-  filter: none;
+  --aura-ink-a: #fff !important;
+  --aura-ink-b: #ffc4c4 !important;
+  filter: drop-shadow(0 0 6px #ff344b88);
+}
+@media (prefers-reduced-motion: reduce) {
+  .number-box[data-cosmetic="blackout-2026"] .box-finish::before,
+  .number-box[data-cosmetic="blackout-2026"] .box-finish::after {
+    animation: none;
+  }
 }
 
 /* ---- Phones --------------------------------------------------------------- */
@@ -566,110 +583,140 @@
   }
 }
 
-/* ---- The day's flyers ------------------------------------------------------
-   Loud paper in both margins of every page while the sale is on. Decoration
-   only: no pointer events, with narrower rails on small screens. */
-.sale-ads {
-  position: fixed;
-  top: 96px;
-  bottom: 20px;
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: var(--sale-rail-width);
-  pointer-events: none;
-}
-.sale-ads-left {
-  left: 4px;
-}
-.sale-ads-right {
-  right: 4px;
-}
-.sale-ad {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 10px 4px;
-  border: 2px dashed #ff2d2d;
-  background: #050505;
-  color: #f4f4f5;
-  text-align: center;
-  transform: rotate(var(--tilt, -2deg));
-}
-.sale-ad:nth-child(1) {
-  --tilt: -2.4deg;
-}
-.sale-ad:nth-child(2) {
-  --tilt: 1.8deg;
-}
-.sale-ad:nth-child(3) {
-  --tilt: -1.2deg;
-}
-.sale-ad:nth-child(4) {
-  --tilt: 2.6deg;
-}
-.sale-ads-right .sale-ad:nth-child(1) {
-  --tilt: 2.2deg;
-}
-.sale-ads-right .sale-ad:nth-child(2) {
-  --tilt: -1.6deg;
-}
-.sale-ads-right .sale-ad:nth-child(3) {
-  --tilt: 2.8deg;
-}
-.sale-ads-right .sale-ad:nth-child(4) {
-  --tilt: -2.2deg;
-}
-.sale-ad b {
-  color: #ff5c5c;
-  overflow-wrap: anywhere;
-  font: 800 clamp(7px, 1.1vw, 15px)/1.15 var(--font-mono);
-}
-.sale-ad small {
-  color: #a1a1aa;
-  font: 600 clamp(6px, 0.7vw, 9px)/1.2 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .sale-ad {
-    animation: sale-ad-sway 7s ease-in-out infinite alternate;
-  }
-  .sale-ad:nth-child(2n) {
-    animation-delay: -3.5s;
-  }
-}
-@keyframes sale-ad-sway {
-  from {
-    transform: rotate(var(--tilt, -2deg)) translateY(0);
-  }
-  to {
-    transform: rotate(var(--tilt, -2deg)) translateY(7px);
-  }
-}
-/* Keep flyers visible on small screens without covering the game. */
+/* Posters scroll with the page and each is a real, keyboard-accessible link. */
 :root {
-  --sale-rail-width: clamp(38px, 9vw, 152px);
+  --sale-rail-width: clamp(44px, 10vw, 155px);
 }
 main.sale-ad-layout {
-  width: min(1040px, calc(100% - 2 * (var(--sale-rail-width) + 8px)));
-  max-width: calc(100% - 2 * (var(--sale-rail-width) + 8px));
+  position: relative;
+  width: min(1040px, calc(100% - 2 * (var(--sale-rail-width) + 12px)));
+  max-width: calc(100% - 2 * (var(--sale-rail-width) + 12px));
   margin-inline: auto;
 }
+.sale-ads {
+  position: absolute;
+  top: 110px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(90px, 17vw, 220px);
+  width: var(--sale-rail-width);
+}
+.sale-ads-left {
+  right: calc(100% + 8px);
+}
+.sale-ads-right {
+  left: calc(100% + 8px);
+  top: 250px;
+}
+.sale-ad {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  overflow: hidden;
+  border: 2px solid #e94848;
+  border-radius: 3px;
+  background: repeating-linear-gradient(
+    135deg,
+    #151517 0 12px,
+    #1d1d20 12px 13px
+  );
+  box-shadow:
+    3px 5px 0 #ac1825,
+    0 10px 22px #0003;
+  color: #fff;
+  text-decoration: none;
+  text-align: center;
+}
+.sale-ad:hover,
+.sale-ad:focus-visible {
+  outline: 2px solid #ffcf72;
+  outline-offset: 3px;
+}
+.sale-ad:nth-child(4n + 2) {
+  background: #a91525;
+  border-color: #111;
+  box-shadow: 3px 5px 0 #27272a;
+}
+.sale-ad:nth-child(4n + 3) {
+  background: #f3e8d6;
+  color: #171719;
+  border-color: #202024;
+  box-shadow: 3px 5px 0 #f04a41;
+}
+.sale-ad:nth-child(4n + 4) {
+  background: radial-gradient(circle at 50% 35%, #7b1122, #111 70%);
+  border-color: #e7b25a;
+}
+.sale-ad-kicker,
+.sale-ad-bottom {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font: 700 8px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+}
+.sale-ad-bottom {
+  display: block;
+  border-top: 1px dashed currentColor;
+  padding-top: 6px;
+  font-size: 7px;
+}
+.sale-ad-art {
+  display: grid;
+  place-items: center;
+  width: 64%;
+  aspect-ratio: 1;
+  max-width: 76px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: #ff5960;
+  background: #100b0d;
+  box-shadow:
+    0 0 0 5px #e5393525,
+    0 0 25px #f22a3a44;
+}
+.sale-ad-art svg {
+  width: 56%;
+  height: 56%;
+  stroke-width: 1.8;
+}
+.sale-ad b {
+  overflow-wrap: anywhere;
+  font: 800 clamp(8px, 1.15vw, 17px)/1.05 var(--font-mono);
+}
+.sale-ad small {
+  font: 600 clamp(7px, 0.7vw, 10px)/1.3 var(--font-mono);
+}
 @media (max-width: 760px) {
+  main.sale-ad-layout {
+    padding-inline: 8px;
+  }
   .sale-ads {
-    top: 82px;
-    gap: 6px;
+    top: 95px;
+    gap: 110px;
+  }
+  .sale-ads-right {
+    top: 190px;
   }
   .sale-ad {
-    padding: 6px 2px;
+    padding: 4px 2px;
+    gap: 4px;
   }
+  .sale-ad-kicker {
+    font-size: 6px;
+  }
+  .sale-ad-kicker svg,
+  .sale-ad-bottom,
   .sale-ad small {
     display: none;
   }
-  main.sale-ad-layout {
-    padding-inline: 8px;
+  .sale-ad-art {
+    width: 75%;
   }
 }
 
@@ -714,49 +761,6 @@ main.sale-ad-layout {
   background: #a1a1aa;
   clip-path: var(--stamp-shape);
 }
-.sale-stamp:nth-child(5n + 1) {
-  --stamp-shape: circle(48% at 50% 50%);
-}
-.sale-stamp:nth-child(5n + 2) {
-  --stamp-shape: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-.sale-stamp:nth-child(5n + 3) {
-  --stamp-shape: polygon(23% 3%, 77% 3%, 100% 50%, 77% 97%, 23% 97%, 0 50%);
-}
-.sale-stamp:nth-child(5n + 4) {
-  --stamp-shape: polygon(
-    50% 0,
-    63% 15%,
-    83% 9%,
-    86% 29%,
-    100% 50%,
-    86% 71%,
-    83% 91%,
-    63% 85%,
-    50% 100%,
-    37% 85%,
-    17% 91%,
-    14% 71%,
-    0 50%,
-    14% 29%,
-    17% 9%,
-    37% 15%
-  );
-}
-.sale-stamp:nth-child(5n + 5) {
-  --stamp-shape: polygon(
-    0 8%,
-    100% 8%,
-    100% 32%,
-    90% 50%,
-    100% 68%,
-    100% 92%,
-    0 92%,
-    0 68%,
-    10% 50%,
-    0 32%
-  );
-}
 .sale-stamp-face {
   position: absolute;
   inset: 2px;
@@ -785,7 +789,7 @@ main.sale-ad-layout {
   color: #fff;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .sale-stamp.is-filled {
+  .sale-stamp.is-new.is-imprinting {
     animation: stamp-imprint 450ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
     animation-delay: calc(var(--stamp-index) * 30ms);
   }
@@ -798,5 +802,106 @@ main.sale-ad-layout {
   to {
     opacity: 1;
     transform: scale(1) rotate(0);
+  }
+}
+
+.sale-stamp.is-blackout {
+  border-radius: 12px;
+}
+.sale-stamp.is-blackout .sale-stamp-aura {
+  position: absolute;
+  inset: 4px;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 8px;
+  font-size: 0;
+}
+.sale-stamp.is-blackout .sale-stamp-aura .number-box-content {
+  visibility: hidden;
+}
+.sale-stamp.is-blackout.is-filled .sale-stamp-label {
+  z-index: 3;
+  color: white;
+  text-shadow: 0 1px 4px #000;
+}
+.sale-flag {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 90% 0%, #9e243344, transparent 45%), #080809;
+  border: 1px solid #9c323d;
+}
+.sale-flag::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    #e43a48 0 12px,
+    #f2c886 12px 18px,
+    transparent 18px 24px
+  );
+}
+.sale-flag-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border: 1px solid #ff6670;
+  border-radius: 50%;
+  background: #a91d2c;
+  color: white;
+  box-shadow: 0 0 0 5px #d8323a25;
+  transform: rotate(-8deg);
+}
+.sale-flag-art i {
+  font: 700 7px/1 var(--font-mono);
+  font-style: normal;
+}
+.sale-flag-copy strong {
+  font-size: 16px;
+}
+.sale-flag-when {
+  padding: 7px 9px;
+  border: 1px solid #99414a;
+  border-radius: 99px;
+}
+@media (max-width: 760px) {
+  .sale-flag-art {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.sale-ad-art:has(.sale-ad-aura) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  width: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  min-height: 50px;
+}
+.sale-ad-art .sale-ad-aura {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 2px;
+  font-size: clamp(10px, 1.5vw, 19px);
+}
+.sale-ad-art .sale-ad-aura .number-box-content {
+  font-size: clamp(10px, 1.5vw, 19px);
+}
+@media (max-width: 760px) {
+  .sale-ad-art .sale-ad-aura {
+    min-height: 22px;
+    padding: 3px 0;
+  }
+  .sale-ad-art:has(.sale-ad-aura) {
+    min-height: 26px;
   }
 }

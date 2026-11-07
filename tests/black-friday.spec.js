@@ -59,8 +59,8 @@ test("the sale day dresses the page: ticker, event notice and sale branding", as
   );
 
   // The margins wear the day's flyers.
-  await expect(page.locator(".sale-ads-left .sale-ad")).toHaveCount(4);
-  await expect(page.locator(".sale-ads-right .sale-ad")).toHaveCount(4);
+  await expect(page.locator(".sale-ads-left .sale-ad")).toHaveCount(8);
+  await expect(page.locator(".sale-ads-right .sale-ad")).toHaveCount(8);
   await expect(page.locator(".sale-ads-left").first()).toContainText("OFF");
 
   // The shop's event object opens the whole explanation.
@@ -147,6 +147,12 @@ test("the hub grows a Black Friday door while the day is on", async ({
   await expect(book.locator(".sale-stamp.is-filled")).toHaveCount(0);
   await expect(book.locator(".sale-stamp-label")).toHaveCount(25);
   await expect(book.locator(".sale-stamp-label").first()).toHaveText("100K EP");
+  const shapes = await book
+    .locator(".sale-stamp")
+    .evaluateAll((slots) =>
+      slots.map((slot) => getComputedStyle(slot).clipPath),
+    );
+  expect(new Set(shapes).size).toBe(25);
   // The limited skin plus every RNGween look this save missed.
   await expect(shelf.locator(".shop-card[data-product]")).toHaveCount(7);
   await expect(shelf.locator('[data-product="jack-o-glow"]')).toBeVisible();
@@ -185,9 +191,21 @@ test("25 stamps unlock the limited skin, kept like every permanent cosmetic", as
   ).toContainText("unlocked");
   // The book on the sale shelf shows a full card of ink.
   await page.goto("/shop/black-friday");
+  await page
+    .locator('[data-testid="sale-stamp-book"]')
+    .scrollIntoViewIfNeeded();
+  await expect(
+    page.locator(".sale-stamp.is-imprinting").first(),
+  ).toBeAttached();
   await expect(
     page.locator('[data-testid="sale-stamp-book"] .sale-stamp.is-filled'),
   ).toHaveCount(25);
+  await expect(
+    page.locator('.sale-stamp.is-blackout [data-cosmetic="blackout-2026"]'),
+  ).toBeVisible();
+  await expect(page.locator(".sale-stamp.is-new")).toHaveCount(25);
+  await page.reload();
+  await expect(page.locator(".sale-stamp.is-new")).toHaveCount(0);
 
   await page.goto("/shop/auras/black-friday");
   const skin = page.locator(`[data-product="${BLACK_FRIDAY_SKIN.id}"]`);
@@ -357,4 +375,49 @@ test("sale flyers remain visible beside the game on desktop and mobile", async (
     expect(leftBox.x + leftBox.width).toBeLessThanOrEqual(mainBox.x);
     expect(mainBox.x + mainBox.width).toBeLessThanOrEqual(rightBox.x);
   }
+});
+
+test("posters stay in the document and link to their advertised shelves", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  const poster = page.getByRole("link", {
+    name: "FASTER REVEALS: Explore pace",
+  });
+  await expect(poster).toHaveAttribute("href", "/shop/pace");
+  const position = await poster.evaluate(
+    (el) => getComputedStyle(el.closest(".sale-ads")).position,
+  );
+  expect(position).toBe("absolute");
+  await poster.click();
+  await expect(page).toHaveURL(/\/shop\/pace$/);
+  await page.getByRole("link", { name: "YOUR NEXT LOOK: Try an aura" }).click();
+  await expect(page).toHaveURL(/\/shop\/auras$/);
+});
+
+test("only newly earned stamps animate on returning to the book", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  await page.goto("/shop/black-friday");
+  await expect(page.locator(".sale-stamp.is-new")).toHaveCount(0);
+  await page.goto("/shop/auras/randomness");
+  await buy(page, "static");
+  await page.goto("/shop/black-friday");
+  await page
+    .locator('[data-testid="sale-stamp-book"]')
+    .scrollIntoViewIfNeeded();
+  await expect(page.locator(".sale-stamp.is-new.is-imprinting")).toHaveCount(1);
+  await expect(page.locator(".sale-stamp.is-new")).toHaveCount(1);
+  await expect(page.locator(".sale-stamp.is-new")).toHaveCSS(
+    "animation-name",
+    "stamp-imprint",
+  );
+  await page.reload();
+  await expect(page.locator(".sale-stamp.is-filled")).toHaveCount(1);
+  await expect(page.locator(".sale-stamp.is-new")).toHaveCount(0);
 });
