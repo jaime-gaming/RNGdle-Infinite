@@ -1,9 +1,15 @@
 // The vault: one compressed copy of the last save this browser managed to
-// write. The canonical save stays plain JSON (readable, hand-editable, what
-// everything else reads and writes); this is the second copy that only exists
-// so a damaged, half-written or quota-squeezed save can never be the end of an
+// write. The primary save is JSON or a quota-saving gzip envelope. This second
+// copy exists so a damaged, half-written or quota-squeezed save cannot end an
 // account. A 6,000-roll save is about 800 KB of JSON and about 46 KB here.
-import { gzipSync, gunzipSync, strToU8, strFromU8 } from "fflate";
+import { packVaultSave, unpackVaultSave } from "./save-codec.js";
+export {
+  packVaultSave,
+  unpackVaultSave,
+  SAVE_VAULT_TAG,
+  MAX_SAVE_OUTPUT_BYTES,
+} from "./save-codec.js";
+import { writeDeviceSave } from "./local-save.js";
 import { PRE_REPAIR_BACKUP_KEY, PROGRESS_KEY } from "./progress.js";
 import {
   UNKNOWN_CLOUD_OWNER,
@@ -20,70 +26,15 @@ export const SAVE_HISTORY_KEY = "rng-infinite-progress-history-v1";
 export const MAX_SAVE_HISTORY_ENTRIES = 20;
 export const MAX_SAVE_HISTORY_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 export const PRE_REPAIR_OWNER_KEY = "rng-infinite-progress-pre-repair-owner-v1";
-export const SAVE_VAULT_TAG = "rngvault1:";
 const SAVE_HISTORY_VERSION = 1;
 const SAVE_HISTORY_CAPTURE_GAP_MS = 24 * 60 * 60 * 1000;
-// A legitimate 6,000-roll save is well below this ceiling. The extra room
-// covers future schema growth while preventing a tiny gzip bomb from
-// allocating unbounded memory when a local or cloud copy is opened.
-export const MAX_SAVE_OUTPUT_BYTES = 10_000_000;
-const MAX_PACKED_SAVE_CHARS = 2_000_000;
-// One write per minute is plenty: the vault is a safety net, not a log.
 const SAVE_VAULT_MIN_GAP_MS = 60 * 1000;
-
-function toBase64(bytes) {
-  let binary = "";
-  // Chunked so a large save cannot blow the argument list of String.fromCharCode.
-  for (let i = 0; i < bytes.length; i += 0x8000)
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-  return globalThis.btoa(binary);
-}
-
-function fromBase64(text) {
-  const binary = globalThis.atob(text);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-// Plain JSON in, one short string out. Compression is best-effort: a browser
-// without it (or a save too small to gain) still leaves a readable copy.
-export function packVaultSave(raw) {
-  if (typeof raw !== "string" || !raw) return "";
-  try {
-    return `${SAVE_VAULT_TAG}${toBase64(gzipSync(strToU8(raw), { level: 6 }))}`;
-  } catch {
-    return raw;
-  }
-}
-
-export function unpackVaultSave(packed) {
-  if (
-    typeof packed !== "string" ||
-    !packed ||
-    packed.length > MAX_PACKED_SAVE_CHARS
-  )
-    return "";
-  if (!packed.startsWith(SAVE_VAULT_TAG))
-    return packed.length <= MAX_SAVE_OUTPUT_BYTES ? packed : "";
-  try {
-    // One sentinel byte lets us distinguish a complete save at the limit from
-    // a decompressed stream that was truncated by the bounded output buffer.
-    const bytes = gunzipSync(fromBase64(packed.slice(SAVE_VAULT_TAG.length)), {
-      out: new Uint8Array(MAX_SAVE_OUTPUT_BYTES + 1),
-    });
-    if (bytes.length > MAX_SAVE_OUTPUT_BYTES) return "";
-    return strFromU8(bytes);
-  } catch {
-    return "";
-  }
-}
 
 // A save worth restoring: real JSON with an object inside.
 export function isReadableSave(raw) {
   if (typeof raw !== "string" || !raw.trim()) return false;
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(unpackVaultSave(raw));
     return !!parsed && typeof parsed === "object" && !Array.isArray(parsed);
   } catch {
     return false;
@@ -96,7 +47,7 @@ function vaultStore(storage) {
 
 function saveProfileId(raw) {
   try {
-    const profileId = JSON.parse(raw)?.profile?.id;
+    const profileId = JSON.parse(unpackVaultSave(raw))?.profile?.id;
     return typeof profileId === "string" ? profileId : "";
   } catch {
     return "";
@@ -245,6 +196,7 @@ export function archiveSavedCopy(raw, options = {}) {
   const ownerId = Object.prototype.hasOwnProperty.call(settings, "ownerId")
     ? settings.ownerId
     : null;
+  raw = unpackVaultSave(raw);
   if (!isReadableSave(raw)) return false;
   const store = vaultStore(storage);
   if (!store) return false;
@@ -437,6 +389,7 @@ export function writeVault(
     ownerId = null,
   } = {},
 ) {
+  raw = unpackVaultSave(raw);
   if (!isReadableSave(raw)) return false;
   const store = vaultStore(storage);
   if (!store) return false;
@@ -479,6 +432,7 @@ export function writeCloudRecovery(
   raw,
   { storage, now = Date.now(), reason = "", ownerId = null } = {},
 ) {
+  raw = unpackVaultSave(raw);
   if (!isReadableSave(raw)) return false;
   const store = vaultStore(storage);
   if (!store) return false;
@@ -527,7 +481,7 @@ export function readCloudRecovery(storage) {
     );
     const raw = unpackVaultSave(envelope?.raw);
     if (!isReadableSave(raw)) return null;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(unpackVaultSave(raw));
     return {
       at: Number(envelope?.at) || 0,
       bytes: raw.length,
@@ -579,7 +533,7 @@ export function restoreVaultIfNeeded({
       vault.ownerId === undefined ? UNKNOWN_CLOUD_OWNER : vault.ownerId;
     if (!writeCloudOwner(owner, store)) return { restored: false };
     try {
-      store.setItem(PROGRESS_KEY, vault.raw);
+      writeDeviceSave(store, PROGRESS_KEY, vault.raw);
     } catch (error) {
       writeCloudOwner(UNKNOWN_CLOUD_OWNER, store);
       throw error;

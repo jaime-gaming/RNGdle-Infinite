@@ -3,6 +3,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Clock3,
+  BookOpen,
   Dices,
   Medal,
   Save,
@@ -37,10 +38,22 @@ export default function About({ navigate, progress }) {
   ];
   const topics = [
     {
+      icon: BookOpen,
+      title: "Understand a roll",
+      points: [
+        "The number is committed before the reveal begins. Reloading resumes the same draw; it never gives a second chance at the result.",
+        "Each matching badge contributes to the scored EP. Your companions and wallet bonuses can increase what you bank without changing the number or its rarity.",
+        "Wait for the reveal and cooldown before the next draw. Reduced motion reveals the result sooner on screen, but does not shorten that reserved time.",
+        "Auto-Roll follows the same rules as a manual roll. Without Persistence Core, keep the Roll page visible for it to continue.",
+      ],
+    },
+    {
       icon: ShoppingBag,
       title: "Make progress",
       points: [
-        "Daily and weekly tasks reward EP. Claim them before they reset.",
+        "Daily and weekly tasks reward EP. Claim them before they reset; calendar tasks use UTC.",
+        "Set a shop goal to track a purchase without spending EP. Skills charge through play; equip the ones you want for the next draw.",
+        "Bookmark up to ten rolls in History to display them on your profile. Déjà Vu marks a repeated number, not a higher rarity or an extra reward.",
         `${PETS.length} companions boost the EP you bank. Auras are cosmetic, and upgrades never change the odds.`,
         showsRebirth
           ? "Rebirth starts a new run for permanent bonuses; your aura collection stays."
@@ -55,6 +68,8 @@ export default function About({ navigate, progress }) {
         "A Cloud Account is optional if you want to continue on another device. Offline progress syncs again when you reconnect.",
         "You choose whether to share a public profile. Its logo appears only when you share it.",
         "To restore an earlier save, open Settings → Restore save and check its progress before choosing it.",
+        "Local saves belong to this browser and site address. Clearing site data or using a different browser will not carry them over; use a Cloud Account for a copy across devices.",
+        "If device storage is full, the game tries a compressed save without removing history. If saving still fails, avoid clearing site data: free space and try again, or review recovery copies in Settings.",
       ],
     },
   ];
@@ -101,9 +116,12 @@ export default function About({ navigate, progress }) {
       </p>
 
       <nav className="about-legal-links" aria-label="Privacy and terms">
-        <a href={pathForPage("privacy")}>Privacy &amp; Rights</a>
-        <span aria-hidden="true"> · </span>
-        <a href={pathForPage("tos")}>Terms of Service</a>
+        <a className="secondary-button" href={pathForPage("privacy")}>
+          Privacy &amp; Rights
+        </a>
+        <a className="secondary-button" href={pathForPage("tos")}>
+          Terms of Service
+        </a>
       </nav>
 
       <div className="about-actions">

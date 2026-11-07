@@ -1,3 +1,4 @@
+import { mockOperationalStatus } from "../tests/helpers/status.js";
 // Regenerate the images used by README.md. They are real screenshots of the
 // running game (no mockups), taken from a seeded local save so the collection,
 // the shop and the profile have something to show.
@@ -218,8 +219,10 @@ await fs.mkdir(OUT, { recursive: true });
 try {
   const page = await browser.newPage({
     viewport: { width: 1280, height: 900 },
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
   });
+
+  await mockOperationalStatus(page);
 
   // 1. The roll screen, as it loads, with a charged circle explaining itself
   //    on hover (the rack has no text of its own).
@@ -316,6 +319,24 @@ try {
   await page.waitForSelector('[data-testid="settings-recovery-details"]');
   await page.waitForTimeout(600);
   await shot(page, "save-recovery");
+
+  // Both settings sections and the light palette are documented separately.
+  await page.goto(`${BASE}/settings`);
+  await page.waitForSelector(".settings-group");
+  await shot(page, "settings");
+  await page.goto(`${BASE}/settings/cloud-account`);
+  await page.waitForSelector(".cloud-account");
+  await shot(page, "cloud-account");
+  await page.goto(`${BASE}/shop/auras/celestial`);
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "light";
+  });
+  await page.waitForTimeout(300);
+  await shot(page, "light-auras");
+
+  await page.goto(`${BASE}/about`);
+  await page.waitForSelector(".about-topics");
+  await shot(page, "how-to-play");
 
   await page.close();
 } finally {

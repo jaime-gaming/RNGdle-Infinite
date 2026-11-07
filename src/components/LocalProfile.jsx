@@ -446,6 +446,12 @@ export default function LocalProfile({
           ? `Your profile, ${profile.username}`
           : "Start saving your progress"}
       </h2>
+      {profile && !cloudAccount && (
+        <p className="profile-note" data-testid="cloud-migration-note">
+          Your progress is saved on this device. Open Settings → Cloud Account
+          for an optional online backup.
+        </p>
+      )}
       {profile && canEdit && (
         <input
           ref={fileInput}

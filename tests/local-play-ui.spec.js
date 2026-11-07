@@ -141,7 +141,7 @@ test("a local player names their profile before play and keeps existing session 
 test("Cloud Account explains privacy and legal pages are linked from How to Play", async ({
   page,
 }) => {
-  await page.goto("/profile");
+  await page.goto("/settings/cloud-account");
   const securityOverview = page.getByTestId("cloud-security-overview");
   await expect(securityOverview).toContainText("Your account and progress");
   await expect(securityOverview).toContainText("Cloud is optional");
@@ -151,7 +151,7 @@ test("Cloud Account explains privacy and legal pages are linked from How to Play
   );
 
   await seedProgress(page);
-  await page.goto("/profile");
+  await page.goto("/settings/cloud-account");
   await expect(page.getByTestId("cloud-security-overview")).toContainText(
     "Saved on this device",
   );

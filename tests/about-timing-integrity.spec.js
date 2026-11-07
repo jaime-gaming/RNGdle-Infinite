@@ -68,8 +68,8 @@ test("About is concise, current, and uses figures from the game", () => {
     "about-footnote",
   ])
     expect(about).toContain(cls);
-  // Three short steps and two topic cards keep the page easy to scan.
-  expect(about.match(/^\s+title: "/gm)?.length ?? 0).toBe(5);
+  // Three short steps and three topic cards explain the play/save loop.
+  expect(about.match(/^\s+title: "/gm)?.length ?? 0).toBe(6);
   for (const symbol of ["POPULATION", "PETS.length", "gameUrlForLocation"])
     expect(about).toContain(symbol);
   expect(about).not.toContain(String(POPULATION));

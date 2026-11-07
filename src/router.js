@@ -55,7 +55,7 @@ export function subpageFromLocation(location, base) {
 export function settingsSubpageFromLocation(location, base) {
   if (pageFromLocation(location, base) !== "settings") return "";
   const subpage = subpageFromLocation(location, base);
-  return subpage === "save-recovery" ? subpage : "";
+  return ["save-recovery", "cloud-account"].includes(subpage) ? subpage : "";
 }
 
 export function pathForSubpage(page, sub, base) {

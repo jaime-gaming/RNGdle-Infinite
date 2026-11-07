@@ -1,3 +1,4 @@
+import { dejaVuIds } from "./deja-vu.js";
 import {
   BADGE_TOTAL,
   cycleEarnedEp,
@@ -87,11 +88,13 @@ export function profileHighlights(progress = {}) {
       .filter((entry) => entry?.type === "roll")
       .map((entry) => [entry.id, entry]),
   );
+  const repeats = dejaVuIds(history);
   const pinned = (progress.bookmarks ?? [])
     .map((id) => rolls.get(id))
     .filter(Boolean)
     .map((entry) => ({
       id: entry.id,
+      ...(repeats.has(entry.id) ? { dejaVu: true } : {}),
       number: entry.number,
       ep: entry.ep,
       tier: entry.tier,
@@ -299,7 +302,9 @@ function drawRoundedRect(ctx, x, y, w, h, r) {
 // A number box as the game draws it: tier gradient, tier border, the digits
 // in the tier's ink. `scale` sizes the whole box; digits shrink to fit.
 function drawNumberBox(ctx, roll, x, y, w, h, { label = "" } = {}) {
-  const tier = CARD_TIERS[roll?.tier] ?? CARD_TIERS.neutral;
+  const tier = roll?.dejaVu
+    ? { bg: ["#183d4b", "#53334f"], border: "#ffa0ff", ink: "#a0ffff" }
+    : (CARD_TIERS[roll?.tier] ?? CARD_TIERS.neutral);
   const grad = ctx.createLinearGradient(x, y, x + w, y + h);
   tier.bg.forEach((stop, index) =>
     grad.addColorStop(index / (tier.bg.length - 1), stop),

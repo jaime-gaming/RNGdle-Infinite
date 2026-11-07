@@ -93,6 +93,7 @@ export default function ProfileRecord({
                   compact
                   value={roll.number}
                   tier={roll.tier}
+                  dejaVu={roll.dejaVu === true}
                   aria-label={`Pinned roll ${roll.number}`}
                 />
                 <small>+{formatStatEP(roll.ep)}</small>

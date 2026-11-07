@@ -234,7 +234,8 @@ service cloud.firestore {
     function validPinnedRoll(roll) {
       return roll is map
         && roll.keys().hasAll(['number', 'ep', 'tier'])
-        && roll.keys().hasOnly(['number', 'ep', 'tier'])
+        && roll.keys().hasOnly(['number', 'ep', 'tier', 'dejaVu'])
+        && (!('dejaVu' in roll) || roll.dejaVu is bool)
         && validRollNumber(roll.number)
         && validCount(roll.ep)
         && validTier(roll.tier);
@@ -410,17 +411,18 @@ service cloud.firestore {
         : (legacyPublicProfileIsUser(uid)
           || (!exists(profilePath)
             || !('owner_uid' in get(profilePath).data)
-            ? profileSaveClaimsAlias(profileId, uid)
+            ? (profileSaveClaimsAlias(profileId, uid)
+              || profileNameClaimOwnedByUser(uid, profileId))
             : false));
     }
 
     function publicProfileCanBeReadByUser(profileId, uid) {
       let profilePath = publicProfilePath(profileId);
-      return profileIsPublic(profileId)
-        || (request.auth != null
+      return (request.auth != null
           && (exists(profilePath)
             ? publicProfileIsOwnedByUser(profileId, uid)
-            : publicAliasKnownToUser(profileId, uid)));
+            : publicAliasKnownToUser(profileId, uid)))
+        || profileIsPublic(profileId);
     }
 
     function publicProfileOwnerCanBeReadByUser(profileId, uid) {

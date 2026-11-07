@@ -67,7 +67,7 @@ test("the README is a short, player-friendly guide with current screenshots", ()
   expect(readme).toContain("https://rngdle-infinite.jaime-gaming.com/");
   expect(readme).toContain("Settings → Restore save");
   expect(readme).toContain("jaimegamingpro@gmail.com");
-  expect(readme).toContain("November 3, 2026");
+  expect(readme).toMatch(/_Documentation updated [A-Za-z]+ \d{1,2}, \d{4}\._/);
   expect(readme).not.toMatch(/^## (Main files|Tests)$/m);
   for (const implementationDetail of [
     "VITE_",

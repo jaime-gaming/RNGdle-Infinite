@@ -175,13 +175,14 @@ test("signup names a clean account and never invents guest earnings", async ({
 test("an unconfigured deployment keeps local profiles available and never pretends cloud login is active", async ({
   page,
 }) => {
-  await page.goto("/profile");
+  await page.goto("/settings/cloud-account");
   await expect(page.locator(".cloud-account")).toContainText(
     "Online sign-in isn’t available here.",
   );
   await expect(
     page.getByRole("button", { name: "Continue locally" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Continue locally" }).click();
   await expect(
     page.getByRole("button", { name: "Start saving my progress" }),
   ).toBeVisible();

@@ -61,6 +61,7 @@ export default function Settings({
   progress,
   onAction,
   onOpenRecovery,
+  onOpenAccount,
   navigate,
   appUpdate,
   onStartUpdate,
@@ -340,7 +341,7 @@ export default function Settings({
 
       <div className="settings-group">
         <h2>
-          <Cloud size={16} aria-hidden="true" /> Online account
+          <Cloud size={16} aria-hidden="true" /> Cloud Account
         </h2>
         <p className="settings-group-note">
           Link a Cloud Account for an online backup. If this device and your
@@ -350,9 +351,9 @@ export default function Settings({
         <button
           type="button"
           className="secondary-button"
-          onClick={() => navigate("profile")}
+          onClick={onOpenAccount}
         >
-          <UserRound size={14} aria-hidden="true" /> Open profile &amp; sign-in
+          <UserRound size={14} aria-hidden="true" /> Open Cloud Account
         </button>
       </div>
 

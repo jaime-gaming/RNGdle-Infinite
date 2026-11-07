@@ -330,9 +330,9 @@ test("the badge names in the v0.2 note are links that open the badge window", as
 }) => {
   await page.goto("/changelog");
   await expect(
-    page.getByRole("heading", { name: "changelog", exact: true }),
+    page.getByRole("heading", { name: "Changelog", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("what changed, and when.")).toBeVisible();
+  await expect(page.getByText("What changed, and when.")).toBeVisible();
   const links = page.locator(".changelog-badge-link");
   await expect(links).toHaveCount(2);
   await expect(links.nth(0)).toHaveText("Pendulum");
@@ -341,7 +341,7 @@ test("the badge names in the v0.2 note are links that open the badge window", as
   // drawn by the game's emoji renderer, like on the Badges page.
   const line = links.first().locator("xpath=..");
   await expect(line).toContainText(
-    "new badges: Pendulum (anomaly) and Last Second (mythic).",
+    "New badges: Pendulum (anomaly) and Last Second (mythic).",
   );
   await expect(line.locator(".emoji img")).toHaveCount(2);
   await links.nth(1).click();

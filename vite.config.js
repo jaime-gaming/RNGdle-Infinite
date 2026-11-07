@@ -10,7 +10,7 @@ function appBuildVersion() {
   const { version } = JSON.parse(
     fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
   );
-  const internalVersion = "RNGdle-Infinite0.5.2fix1";
+  const internalVersion = "RNGdle-Infinitev0.5.2fix2";
   const buildId = `${version}-${Date.now().toString(36)}-${process.pid.toString(36)}`;
   const payload = JSON.stringify({ version, buildId, internalVersion });
   let outDir = path.resolve("dist");

@@ -307,13 +307,13 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `RNGdle-Infinite0.5.2fix1`; do not change it
+  flow. The current label is exactly `RNGdle-Infinitev0.5.2fix2`; do not change it
   again until the next session or an explicit user request. Public release
   notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
 - **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
-  name the squashed commit after the release it publishes: `v0.5.2 bug fix 1`
+  name the squashed commit after the release it publishes: `v0.5.2 bug fix 2`
   when the merge carries bug fixes (the number matches the internal `fixN`
   label), otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
   when the branch is verified: `npm run build`, `npm run test:worker`,
@@ -328,3 +328,12 @@ rather than guessing.
 - Prettier is the formatter. Format files changed by a task.
 - Keep code comments about why, not narration of what the next line does.
 - Player-facing copy should be plain and friendly; English only.
+
+## Required Git workflow
+
+- Always finish completed changes with a commit and push to the session branch.
+- After a requested merge succeeds, delete the merged remote branch (use `gh pr merge <number> --squash --delete-branch`). Never switch branches or delete the active checkout; respect session branch restrictions.
+
+- **Bug fixes never rewrite release notes.** Preserve all existing `src/changelog.js` entries verbatim during a bug fix. Record implementation/QA notes separately. Presentation-only capitalization is fine; add release notes only for an explicitly requested new release.
+
+- **Quota-safe primary saves.** `writeDeviceSave` keeps JSON normally, retries with the bounded gzip codec only on quota errors, and retains compression once selected. Always read via `parseProgress`/`parseAndRepairProgress` (or decode with `unpackVaultSave` for raw JSON consumers). Never delete history, recovery slots or owner markers to fit a new save.
