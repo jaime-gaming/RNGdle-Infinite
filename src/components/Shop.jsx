@@ -134,7 +134,11 @@ import {
   VaultMark,
   VerdantMark,
 } from "./game-icons.jsx";
-import { useFormatEP, useSettings } from "../use-settings.jsx";
+import {
+  useFormatEP,
+  useMotionPreference,
+  useSettings,
+} from "../use-settings.jsx";
 import "../shop.css";
 // Every product icon is a hand-drawn mark from game-icons.jsx: one grid, one
 // stroke weight, one filled accent. No stock icon sets in the catalogue.
@@ -215,6 +219,66 @@ const LOOK_SAMPLES = {
   mythic: "852719",
   godly: "993399",
 };
+
+// A self-contained demonstration: it never creates a game roll or changes a save.
+function LookRollPreview({ aura, tier }) {
+  const reducedMotion = useMotionPreference();
+  const [replay, setReplay] = useState(0);
+  const [tick, setTick] = useState(0);
+  const [digits, setDigits] = useState("??????");
+  const target = LOOK_SAMPLES[tier] ?? "482913";
+  useEffect(() => {
+    setTick(0);
+    setDigits("??????");
+    if (reducedMotion) return undefined;
+    let step = 0;
+    const timer = setInterval(() => {
+      step += 1;
+      setTick(step);
+      setDigits(
+        Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join(
+          "",
+        ),
+      );
+      if (step >= 24) clearInterval(timer);
+    }, 100);
+    return () => clearInterval(timer);
+  }, [tier, aura, replay, reducedMotion]);
+  const done = reducedMotion ? 6 : Math.min(6, Math.floor(tick / 4));
+  return (
+    <>
+      <NumberBox
+        tier={tier}
+        aura={aura.id}
+        className={`number-artifact ${done < 6 ? "is-spinning" : ""}`}
+        role="img"
+        aria-label={`Sample ${tier} roll wearing ${aura.name}`}
+      >
+        <span
+          className="artifact-digits"
+          aria-hidden="true"
+          style={{ fontSize: "36px" }}
+        >
+          {Array.from({ length: 6 }, (_, index) => (
+            <span
+              key={index}
+              className={`artifact-digit ${index < done ? "" : "is-scrambling"}`}
+            >
+              {index < done ? target[index] : digits[index]}
+            </span>
+          ))}
+        </span>
+      </NumberBox>
+      <button
+        type="button"
+        className="secondary-button"
+        onClick={() => setReplay((value) => value + 1)}
+      >
+        <Repeat size={14} aria-hidden="true" /> Replay preview
+      </button>
+    </>
+  );
+}
 
 export default function Shop({
   progress,
@@ -2177,12 +2241,7 @@ export default function Shop({
             </button>
           ))}
         </div>
-        <NumberBox
-          value={LOOK_SAMPLES[lookTier] ?? "482913"}
-          tier={lookTier}
-          aura={lookPreview?.id ?? "none"}
-          aria-label={`Sample ${lookTier} roll wearing ${lookPreview?.name ?? "no aura"}`}
-        />
+        {lookPreview && <LookRollPreview aura={lookPreview} tier={lookTier} />}
         <p className="shop-preview-note">
           A sample roll of the chosen rarity wearing the look. Looks never touch
           odds, EP or rank.

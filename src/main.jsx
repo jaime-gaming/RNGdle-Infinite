@@ -57,7 +57,7 @@ import { useGameClock } from "./use-game-clock.js";
 import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
 import AppearanceMenu from "./components/AppearanceMenu.jsx";
 import SaleTicker from "./components/SaleTicker.jsx";
-import { SaleSideAds, SaleThemeLine } from "./components/BlackFriday.jsx";
+import { SaleSideAds } from "./components/BlackFriday.jsx";
 import { useSaleStatus } from "./use-black-friday.js";
 import { applySaleBranding } from "./sale-branding.js";
 import { SALE_THEMES } from "./black-friday.js";
@@ -908,9 +908,6 @@ function App() {
           </button>
         </div>
       </header>
-      <SaleThemeLine
-        active={sale.active && SALE_THEMES.some((entry) => entry.id === theme)}
-      />
       <StatusBanner />
       {!isOnline && (
         <div
@@ -985,7 +982,9 @@ function App() {
           {progressWarning}
         </div>
       )}
-      <main className={page === "roll" ? "home-main" : "content-main"}>
+      <main
+        className={`${page === "roll" ? "home-main" : "content-main"} ${sale.active ? "sale-ad-layout" : ""}`}
+      >
         <OfflineRewards
           progress={session}
           status={offlineState}

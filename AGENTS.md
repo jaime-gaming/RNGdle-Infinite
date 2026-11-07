@@ -43,12 +43,12 @@ survives every reset, like permanent cosmetics. Dev builds honour
 clock for previews; production ignores that variable, and shipped code never
 pretends today is the event day. Spending accumulates across purchases, rather
 than requiring a single purchase of 100,000 EP. The sale shelf contains a
-25-slot graphical stamp book; sale themes say they are temporary and decorative
-flyers occupy wide-screen margins. Special & Limiteds banners and wardrobe
+25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
+and decorative flyers occupy the page margins, including on small screens. Special & Limiteds banners and wardrobe
 filters appear only when the save owns an event aura, even during the sale;
 missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
-Do not style moving and landed reveal digits differently: preserve the original
-pre-fix2 appearance.
+Moving reveal digits are lighter than landed digits using opacity only, without
+adding backgrounds, borders, underlines or other decorations.
 
 ## Architecture
 

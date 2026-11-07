@@ -74,11 +74,19 @@
   z-index: 80;
 }
 
-/* The note under the theme list, while the sale lends the game two looks. */
-.appearance-note {
-  margin: 8px 9px 6px;
+/* Separates the temporary themes without adding another page banner. */
+.appearance-temporary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 9px;
   color: var(--muted);
-  font:
-    400 11px/1.55 "Nunito Sans",
-    sans-serif;
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+}
+.appearance-temporary::before,
+.appearance-temporary::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed currentColor;
 }

@@ -82,18 +82,6 @@ export function SaleStampCard({ record, previewTier = "rare" }) {
   );
 }
 
-// A borrowed look says so. While one of the sale's themes is wearing the game,
-// a thin line under the header reminds you it leaves with the day.
-export function SaleThemeLine({ active }) {
-  if (!active) return null;
-  return (
-    <p className="sale-theme-line" data-testid="sale-theme-line">
-      <Palette size={12} aria-hidden="true" /> Temporary look · Black Friday
-      2026 · it leaves when the day ends
-    </p>
-  );
-}
-
 // The day's flyers, pinned to both margins of every page: loud, paper-thin and
 // purely decorative. Narrow screens keep the game, not the margins.
 const SALE_ADS_LEFT = [
@@ -161,13 +149,17 @@ export function SaleStampBook({ record }) {
         {Array.from({ length: BLACK_FRIDAY_STAMPS }, (_, index) => (
           <li
             key={index}
+            style={{ "--stamp-index": index }}
             className={`sale-stamp ${index < stamps ? "is-filled" : ""}`}
             aria-label={`Stamp ${index + 1} of ${BLACK_FRIDAY_STAMPS}: ${
               index < stamps ? "earned" : "empty"
             }`}
           >
-            <i aria-hidden="true" />
-            <span>{stampLabel(index)}</span>
+            <span className="sale-stamp-face" aria-hidden="true" />
+            <span className="sale-stamp-label">
+              {stampLabel(index)}
+              <small> EP</small>
+            </span>
           </li>
         ))}
       </ol>

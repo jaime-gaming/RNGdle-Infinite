@@ -321,6 +321,10 @@ button.draw-pick:focus-visible {
     opacity 0.4s;
   transform-origin: center;
 }
+/* Match the headline reveal: only the moving digits are lighter. */
+.draw-box.is-spinning .draw-digit.is-scrambling {
+  opacity: 0.48;
+}
 .draw-digit.is-blank {
   width: 0;
   opacity: 0;

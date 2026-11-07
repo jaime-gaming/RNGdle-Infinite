@@ -130,27 +130,26 @@ export default function AppearanceMenu({ theme, onTheme }) {
         >
           <p className="appearance-heading">Color theme</p>
           {options.map(([value, name, ThemeIcon]) => (
-            <button
-              key={value}
-              type="button"
-              role="menuitemradio"
-              aria-checked={effective === value}
-              className="appearance-option"
-              onClick={() => {
-                onTheme(value);
-                close(true);
-              }}
-            >
-              <ThemeIcon size={16} aria-hidden="true" />
-              <span>{name} theme</span>
-              {effective === value && <Check size={14} aria-hidden="true" />}
-            </button>
+            <React.Fragment key={value}>
+              {value === SALE_THEMES[0]?.id && (
+                <p className="appearance-temporary">TEMPORAL</p>
+              )}
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={effective === value}
+                className="appearance-option"
+                onClick={() => {
+                  onTheme(value);
+                  close(true);
+                }}
+              >
+                <ThemeIcon size={16} aria-hidden="true" />
+                <span>{name} theme</span>
+                {effective === value && <Check size={14} aria-hidden="true" />}
+              </button>
+            </React.Fragment>
           ))}
-          {sale.active && (
-            <p className="appearance-note">
-              The two sale looks leave this menu when the day ends.
-            </p>
-          )}
         </div>
       )}
     </div>

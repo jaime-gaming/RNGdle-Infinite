@@ -237,6 +237,10 @@ nav button.active {
     color 0.5s;
   transform-origin: center;
 }
+/* Moving digits are lighter than those that have landed, without extra marks. */
+.number-artifact.is-spinning .artifact-digit.is-scrambling {
+  opacity: 0.48;
+}
 .artifact-digit.is-blank {
   width: 0;
   opacity: 0;

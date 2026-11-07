@@ -566,25 +566,9 @@
   }
 }
 
-/* ---- The borrowed look admits it ------------------------------------------
-   While a sale theme wears the game, one thin line says it is temporary. */
-.sale-theme-line {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin: 0;
-  padding: 4px 14px;
-  background: #0b0406;
-  border-bottom: 1px dashed #7f1d1d;
-  color: #ff8f8f;
-  font: 600 10px/1.4 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 /* ---- The day's flyers ------------------------------------------------------
    Loud paper in both margins of every page while the sale is on. Decoration
-   only: no pointer, no meaning, and no margins on narrow screens. */
+   only: no pointer events, with narrower rails on small screens. */
 .sale-ads {
   position: fixed;
   top: 96px;
@@ -593,20 +577,20 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  width: 152px;
+  width: var(--sale-rail-width);
   pointer-events: none;
 }
 .sale-ads-left {
-  left: 12px;
+  left: 4px;
 }
 .sale-ads-right {
-  right: 12px;
+  right: 4px;
 }
 .sale-ad {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 13px 10px;
+  padding: 10px 4px;
   border: 2px dashed #ff2d2d;
   background: #050505;
   color: #f4f4f5;
@@ -639,11 +623,12 @@
 }
 .sale-ad b {
   color: #ff5c5c;
-  font: 800 15px/1.15 var(--font-mono);
+  overflow-wrap: anywhere;
+  font: 800 clamp(7px, 1.1vw, 15px)/1.15 var(--font-mono);
 }
 .sale-ad small {
   color: #a1a1aa;
-  font: 600 9px/1.2 var(--font-mono);
+  font: 600 clamp(6px, 0.7vw, 9px)/1.2 var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -663,15 +648,34 @@
     transform: rotate(var(--tilt, -2deg)) translateY(7px);
   }
 }
-@media (max-width: 1399px) {
+/* Keep flyers visible on small screens without covering the game. */
+:root {
+  --sale-rail-width: clamp(38px, 9vw, 152px);
+}
+main.sale-ad-layout {
+  width: min(1040px, calc(100% - 2 * (var(--sale-rail-width) + 8px)));
+  max-width: calc(100% - 2 * (var(--sale-rail-width) + 8px));
+  margin-inline: auto;
+}
+@media (max-width: 760px) {
   .sale-ads {
+    top: 82px;
+    gap: 6px;
+  }
+  .sale-ad {
+    padding: 6px 2px;
+  }
+  .sale-ad small {
     display: none;
+  }
+  main.sale-ad-layout {
+    padding-inline: 8px;
   }
 }
 
 /* ---- The stamp card as a card of stamps ------------------------------------
    Twenty-five holes, five shapes cycling, each with the milestone it pays.
-   An empty hole is a dashed promise; a filled one is ink. */
+   Empty shapes are outlines; filled shapes are stamped in red. */
 .sale-stamp-book {
   margin: 0 0 18px;
   padding: 16px;
@@ -702,86 +706,97 @@
   list-style: none;
 }
 .sale-stamp {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 5px;
-  min-height: 76px;
-  padding: 8px 4px 7px;
-  border: 1px dashed #3f3f46;
-  border-radius: 6px;
-  background: #0c0c0e;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 70px;
+  background: #a1a1aa;
+  clip-path: var(--stamp-shape);
 }
-:root[data-theme="light"] .sale-stamp {
-  background: #f4f4f5;
-  border-color: #a1a1aa;
+.sale-stamp:nth-child(5n + 1) {
+  --stamp-shape: circle(48% at 50% 50%);
 }
-.sale-stamp i {
-  display: block;
-  width: 26px;
-  height: 26px;
-  background: #26262b;
+.sale-stamp:nth-child(5n + 2) {
+  --stamp-shape: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
 }
-:root[data-theme="light"] .sale-stamp i {
-  background: #d4d4d8;
+.sale-stamp:nth-child(5n + 3) {
+  --stamp-shape: polygon(23% 3%, 77% 3%, 100% 50%, 77% 97%, 23% 97%, 0 50%);
 }
-/* Five shapes, cycling: a seal, a diamond, a hex, a star, a ticket. */
-.sale-stamp:nth-child(5n + 1) i {
-  border-radius: 50%;
-}
-.sale-stamp:nth-child(5n + 2) i {
-  width: 22px;
-  height: 22px;
-  transform: rotate(45deg);
-}
-.sale-stamp:nth-child(5n + 3) i {
-  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-}
-.sale-stamp:nth-child(5n + 4) i {
-  clip-path: polygon(
+.sale-stamp:nth-child(5n + 4) {
+  --stamp-shape: polygon(
     50% 0,
-    61% 35%,
-    98% 35%,
-    68% 57%,
-    79% 91%,
-    50% 70%,
-    21% 91%,
-    32% 57%,
-    2% 35%,
-    39% 35%
+    63% 15%,
+    83% 9%,
+    86% 29%,
+    100% 50%,
+    86% 71%,
+    83% 91%,
+    63% 85%,
+    50% 100%,
+    37% 85%,
+    17% 91%,
+    14% 71%,
+    0 50%,
+    14% 29%,
+    17% 9%,
+    37% 15%
   );
 }
-.sale-stamp:nth-child(5n + 5) i {
-  border-radius: 4px;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 38%,
-    88% 50%,
-    100% 62%,
-    100% 100%,
-    0 100%,
-    0 62%,
-    12% 50%,
-    0 38%
+.sale-stamp:nth-child(5n + 5) {
+  --stamp-shape: polygon(
+    0 8%,
+    100% 8%,
+    100% 32%,
+    90% 50%,
+    100% 68%,
+    100% 92%,
+    0 92%,
+    0 68%,
+    10% 50%,
+    0 32%
   );
 }
-.sale-stamp span {
-  color: #71717a;
-  font: 700 9px/1 var(--font-mono);
-  letter-spacing: 0.06em;
+.sale-stamp-face {
+  position: absolute;
+  inset: 2px;
+  background: #f4f4f5;
+  clip-path: var(--stamp-shape);
 }
-:root[data-theme="light"] .sale-stamp span {
-  color: #71717a;
+:root[data-theme="dark"] .sale-stamp-face {
+  background: #18181b;
+}
+.sale-stamp-label {
+  position: relative;
+  color: #52525b;
+  font: 700 clamp(8px, 1.1vw, 12px)/1 var(--font-mono);
+  white-space: nowrap;
+}
+.sale-stamp-label small {
+  font-size: 0.7em;
 }
 .sale-stamp.is-filled {
-  border: 1px solid #7f1d1d;
-  background: #050505;
+  background: #7f1d1d;
 }
-.sale-stamp.is-filled i {
-  background: #ff2d2d;
+.sale-stamp.is-filled .sale-stamp-face {
+  background: #db2626;
 }
-.sale-stamp.is-filled span {
-  color: #f4f4f5;
+.sale-stamp.is-filled .sale-stamp-label {
+  color: #fff;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sale-stamp.is-filled {
+    animation: stamp-imprint 450ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    animation-delay: calc(var(--stamp-index) * 30ms);
+  }
+}
+@keyframes stamp-imprint {
+  from {
+    opacity: 0;
+    transform: scale(1.25) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
 }

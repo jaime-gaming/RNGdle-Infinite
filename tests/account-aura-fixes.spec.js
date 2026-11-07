@@ -71,7 +71,7 @@ test("Cloud Account opens from its scrollable Settings section and the top Profi
   await expect(page).toHaveURL(/\/profile\/Lucky$/);
 });
 
-test("aura reveals style moving and landed digits exactly alike, as before fix2", async ({
+test("aura reveals distinguish moving digits by brightness only", async ({
   page,
 }) => {
   await page.goto("/shop/auras/celestial");
@@ -98,6 +98,7 @@ test("aura reveals style moving and landed digits exactly alike, as before fix2"
               style.backgroundColor,
               style.textDecorationLine,
               style.boxShadow,
+              style.opacity,
             ];
           });
           box.remove();
@@ -108,9 +109,9 @@ test("aura reveals style moving and landed digits exactly alike, as before fix2"
     );
     expect(results.length).toBeGreaterThan(10);
     for (const { landed, moving } of results) {
-      // Whether a digit has landed is functional state, not a look: both wear
-      // the box's own ink, with no backing, underline or shadow of their own.
-      expect(moving).toEqual(landed);
+      // Only brightness changes; no background, underline or box is added.
+      expect(moving.slice(0, 4)).toEqual(landed.slice(0, 4));
+      expect(Number(moving[4])).toBeLessThan(Number(landed[4]));
       expect(moving[1]).toBe("rgba(0, 0, 0, 0)");
       expect(moving[2]).toBe("none");
     }

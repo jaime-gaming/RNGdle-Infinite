@@ -145,6 +145,8 @@ test("the hub grows a Black Friday door while the day is on", async ({
   await expect(book).toBeVisible();
   await expect(book.locator(".sale-stamp")).toHaveCount(25);
   await expect(book.locator(".sale-stamp.is-filled")).toHaveCount(0);
+  await expect(book.locator(".sale-stamp-label")).toHaveCount(25);
+  await expect(book.locator(".sale-stamp-label").first()).toHaveText("100K EP");
   // The limited skin plus every RNGween look this save missed.
   await expect(shelf.locator(".shop-card[data-product]")).toHaveCount(7);
   await expect(shelf.locator('[data-product="jack-o-glow"]')).toBeVisible();
@@ -282,15 +284,16 @@ test("the sale lends the game two themes, and takes them back", async ({
     exact: true,
   });
   await expect(ultra).toBeVisible();
+  await expect(
+    page.locator(".appearance-menu .appearance-temporary"),
+  ).toHaveText("TEMPORAL");
   await ultra.click();
   await expect(page.locator("html")).toHaveAttribute(
     "data-sale-theme",
     "ultra-black",
   );
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.locator('[data-testid="sale-theme-line"]')).toContainText(
-    "Temporary",
-  );
+  await expect(page.locator('[data-testid="sale-theme-line"]')).toHaveCount(0);
 
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
   await page
@@ -320,7 +323,38 @@ test("the eye on an aura card previews the look on a sample roll", async ({
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("on a roll");
   await dialog.getByRole("button", { name: "godly" }).click();
-  await expect(dialog.locator(".number-box")).toBeVisible();
+  const box = dialog.locator(".number-box");
+  await expect(box).toBeVisible();
+  await expect(box.locator(".artifact-digit.is-scrambling")).toHaveCount(6);
+  await page.clock.runFor(1000);
+  await expect(box.locator(".artifact-digit.is-scrambling")).toHaveCount(4);
+  await page.clock.runFor(1600);
+  await expect(box.locator(".artifact-digit.is-scrambling")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Replay preview" }).click();
+  await expect(box.locator(".artifact-digit.is-scrambling")).toHaveCount(6);
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
+});
+
+test("sale flyers remain visible beside the game on desktop and mobile", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+    const left = page.locator(".sale-ads-left");
+    const right = page.locator(".sale-ads-right");
+    await expect(left).toBeVisible();
+    await expect(right).toBeVisible();
+    await expect(left.locator(".sale-ad").first()).toBeVisible();
+    const [leftBox, mainBox, rightBox] = await Promise.all([
+      left.boundingBox(),
+      page.locator("main").boundingBox(),
+      right.boundingBox(),
+    ]);
+    expect(leftBox.x + leftBox.width).toBeLessThanOrEqual(mainBox.x);
+    expect(mainBox.x + mainBox.width).toBeLessThanOrEqual(rightBox.x);
+  }
 });
