@@ -31,6 +31,21 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 
 ![The Rebirth ladder](media/rebirth.png)
 
+## Black Friday 2026
+
+On **November 27, 2026 (00:00–24:00 UTC)**, the shop offers product-specific
+20–50% discounts. Spending accumulates across purchases: every 100,000 EP spent
+during the event earns a stamp. At 25 stamps, the permanent Blackout 2026 aura
+is unlocked. Missing RNGween looks are also available on the event shelf for
+10,000,000 EP each. The sale does not change roll odds or scoring.
+
+The event shelf, posters, temporary themes and sale branding are available only
+on the day. Event information is shown in advance; earned auras and their
+history remain after the event. For local development only, use
+`VITE_BLACK_FRIDAY_PREVIEW_AT=1795780800000 npm run dev` to preview the day;
+production always follows the real UTC clock. The post-event maintenance
+checklist is in [Black Friday retirement](archive/qa/black-friday-retirement.md).
+
 ## Keep your progress
 
 Open **Profile → Continue locally**, then give your local profile a name to keep your progress on this device. A Cloud Account is optional if you want to continue on another device. If you play offline, progress is saved locally and a Cloud Account syncs again when you reconnect.

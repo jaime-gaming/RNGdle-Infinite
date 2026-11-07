@@ -258,7 +258,8 @@ export function emptyProgress() {
     bookmarks: [],
     tasks: emptyTasks(),
     rngweenLimited: emptyRngweenLimited(),
-    // Sale stamps belong to the account, not to the run in play.
+    // Permanent save contract: keep parsing this record and its reward after
+    // removing sale UI. See archive/qa/black-friday-retirement.md.
     blackFriday: emptyBlackFriday(),
     // Historical attendance belongs to the account, not the run.
     events: {},
@@ -2218,8 +2219,8 @@ function parseHistory(value) {
         next.ep = e.ep;
       }
     } else if (e.type === "sale-reward") {
-      // The limited skin a full sale stamp card paid. It is a permanent
-      // cosmetic, so the row carries no EP: nothing was spent on it.
+      // Historical sale rows must remain readable after event retirement.
+      // The cosmetic is permanent and this reward carries no EP.
       if (
         e.productId !== BLACK_FRIDAY_SKIN.id ||
         typeof e.name !== "string" ||

@@ -984,6 +984,8 @@ function App() {
       <main
         className={`${page === "roll" ? "home-main" : "content-main"} ${sale.active ? "sale-ad-layout" : ""}`}
       >
+        {/* Event-only chrome: safe to remove after the day; save data and
+            Blackout's permanent renderer are not event-only. */}
         <SaleSideAds status={sale} onOpenShelf={openShelf} />
         <OfflineRewards
           progress={session}

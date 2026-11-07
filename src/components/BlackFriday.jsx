@@ -1,10 +1,12 @@
 // The shop's own event notice: the button at the top of the shop, the
 // explanation it opens, and the stamp card the sale day runs on.
 //
+// RETIREMENT: this file owns event-only UI; keep the permanent Blackout renderer,
+// progress and history contracts when removing it. See the retirement checklist.
 // Everything here is presentation. The window, the discounts, the stamps and the
 // limited skin are decided in black-friday.js and written by the reducer, so no
 // component in this file can hand out a reward or change a price on its own.
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Clock3,
   Palette,
@@ -217,10 +219,60 @@ const SALE_ADS = [
 ];
 
 export function SaleSideAds({ status, onOpenShelf }) {
+  const leftRail = useRef(null);
+  const rightRail = useRef(null);
+  useLayoutEffect(() => {
+    if (!status?.active || !leftRail.current || !rightRail.current) return;
+    const rails = [leftRail.current, rightRail.current];
+    const main = leftRail.current.parentElement;
+    let disposed = false;
+    // Measure the natural poster sizes, then fit whole posters only. Hidden
+    // links leave the tab order; the rails cannot make the page taller.
+    function fit() {
+      for (const rail of rails) {
+        const posters = [...rail.querySelectorAll(".sale-ad")];
+        posters.forEach((poster) => {
+          poster.hidden = false;
+        });
+        // Reserve the rail's inner padding, which keeps rotated edges and
+        // shadows inside the main area rather than clipped at the footer.
+        const available = Math.max(0, rail.clientHeight - 20);
+        let used = 0;
+        let count = 0;
+        for (const poster of posters) {
+          const height = poster.getBoundingClientRect().height + 12;
+          if (used + height + (count ? 24 : 0) > available) break;
+          used += height + (count ? 24 : 0);
+          count += 1;
+        }
+        posters.forEach((poster, index) => {
+          poster.hidden = index >= count;
+        });
+        rail.classList.add("is-measured");
+      }
+    }
+    const schedule = () => {
+      if (!disposed) fit();
+    };
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(schedule);
+    observer?.observe(main);
+    window.addEventListener("resize", schedule);
+    document.fonts?.ready.then(schedule);
+    fit();
+    return () => {
+      disposed = true;
+      observer?.disconnect();
+      window.removeEventListener("resize", schedule);
+    };
+  }, [status?.active]);
   if (!status?.active) return null;
   const rail = (ads, side) => (
     <aside
       className={`sale-ads sale-ads-${side}`}
+      ref={side === "left" ? leftRail : rightRail}
       aria-label={`${side} Black Friday offers`}
     >
       {ads.map(({ title, note, icon: Icon, shelf, art }, index) => (
@@ -402,7 +454,7 @@ export function SaleStampBook({ record, profile }) {
               "--stamp-shape": stampShape(index),
             }}
             className={`sale-stamp ${index < stamps ? "is-filled" : ""} ${index >= seen && index < stamps ? "is-new" : ""} ${visible ? "is-imprinting" : ""} ${index === 24 ? "is-blackout" : ""}`}
-            aria-label={`Stamp ${index + 1} of ${BLACK_FRIDAY_STAMPS}: ${
+            aria-label={`Stamp ${index + 1} of ${BLACK_FRIDAY_STAMPS}, ${stampLabel(index)} EP: ${
               index < stamps ? "earned" : "empty"
             }`}
           >

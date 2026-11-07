@@ -7,9 +7,9 @@ Date: 2026-11-07 · Branch: `arena/be488ed9-rngdle-infinite` · Internal label:
 
 1. **Digit box.** The cream "fitting" box and dotted underline around digits
    that are still scrambling were removed; the box that holds the seven digits
-   stays. Scrambling digits now read as muted ink
-   (`--scramble-ink`, a mix of the equipped aura colour and the box ink);
-   revealed digits keep the older high-contrast look. Files:
+   stays. Scrambling digits are lighter via opacity only; revealed digits are
+   darker. Aura gradients are clipped per digit during the reveal so the same
+   distinction remains visible with an equipped aura. Files:
    `src/number-box.css`, `src/roll.css`, `src/draw-stage.css`.
 2. **Prestige never wipes account data.** `startNewCycle` keeps `goalId`
    unconditionally and no longer clears `loadouts`; owned/equipped auras,
@@ -18,7 +18,8 @@ Date: 2026-11-07 · Branch: `arena/be488ed9-rngdle-infinite` · Internal label:
 3. **"Special & Limiteds".** The retired-cosmetics collection is renamed
    everywhere (shop hub, shelf heading, breadcrumb, wardrobe filter, card
    source line) and the hub shows one banner per event group
-   (`EVENT_AURA_FAMILIES`: RNGween 2026 and, on its day, Black Friday 2026).
+   (`EVENT_AURA_FAMILIES`: RNGween 2026 and Black Friday 2026, each visible
+   only when that save owns one of its looks).
 4. **Black Friday 2026** (`src/black-friday.js` + UI files). One UTC day,
    Friday 27 November 2026:
    - every shop product discounted 20–50% per product (stable FNV-1a hash),
@@ -28,7 +29,7 @@ Date: 2026-11-07 · Branch: `arena/be488ed9-rngdle-infinite` · Internal label:
      running `spent` total in `progress.blackFriday` (cap 99 stamps); stamps
      are always derived from that total;
    - 25 stamps unlock the limited skin `blackout-2026` ("Blackout 2026",
-     matte-black NumberBox art, matte-black card preview), kept through every
+     black NumberBox art with a red foil rim and sparks), kept through every
      reset;
    - a `Black Friday 2026` door in the shop hub opens `/shop/black-friday`,
      one shelf with the stamp card, the limited skin and the counter;
@@ -37,7 +38,8 @@ Date: 2026-11-07 · Branch: `arena/be488ed9-rngdle-infinite` · Internal label:
    - UI: `SALE SALE SALE` ticker above the header, black "Event" flag at the
      top of the shop opening an explainer dialog, stamp card on the hub,
      Ultra-Black and Red Sale themes in the appearance menu, sale favicon /
-     touch icon / manifest — all only while the day is on;
+     touch icon / manifest — sale presentation runs only on the day; the event
+     notice also appears before it;
    - history gains parse-only-friendly `sale-reward` rows (no EP, never
      counted as spending) and the activity feed renders them.
 5. **Sandbox date.** Shipped code never fakes today's date; dev builds honour
@@ -69,15 +71,33 @@ Date: 2026-11-07 · Branch: `arena/be488ed9-rngdle-infinite` · Internal label:
 
 ## Follow-up: display and shelf fixes
 
-- Restored the pre-fix2 digit presentation; moving and landed digits have no
-  separate ink or background.
+- Removed the fix2 digit boxes and underlines. The later requested treatment
+  distinguishes moving and landed digits by opacity, without added decoration.
 - Both the route parser and shop navigation accept `/shop/black-friday`. The
   day-only shelf has a 25-slot stamp book, and EP spent accumulates across
   purchases. Special & Limiteds banners and wardrobe filters only appear for
   owned event looks.
-- Added an aura eye preview with rarity selection, temporary-theme notice, and
-  decorative side flyers on wide screens.
+- Added an animated aura eye preview with rarity selection, a TEMPORAL divider
+  in the theme menu, and linked side posters on desktop and mobile.
 - Focused Playwright coverage now runs using a temporary Chromium from npm and
   its bundled libraries; no browser binary is included in the repository.
 - Focused Playwright: 29 tests passed across the Black Friday, account/aura and
   shop-section specs. The Worker smoke test also passed its browser checks.
+
+## Final polish and retirement preparation
+
+- Posters use varied sizes and rotations. Their fit is recalculated as the
+  main content changes; a poster that cannot fit before the footer is hidden,
+  not cut off or focusable. They follow document scrolling and remain links.
+- The 25 stamp shapes are distinct. New stamps animate once the book is in
+  view; a per-profile local presentation marker prevents replays, while guest
+  markers last only for the session. The marker does not grant rewards. The
+  last stamp shows the permanent Blackout aura when earned.
+- Blackout retains its black body and now has red foil, restrained sparks and
+  a slow sweep, with reduced-motion support.
+- See `archive/qa/black-friday-retirement.md` for the post-event removal and
+  save-compatibility checklist.
+- Final verification: 34 focused Playwright tests passed (including poster fit
+  across page resizing, footer bounds, link targets and reduced motion); build,
+  Worker browser smoke, cloud simulation, economy audit and formatting passed.
+  The complete Playwright suite was not run in this pass.

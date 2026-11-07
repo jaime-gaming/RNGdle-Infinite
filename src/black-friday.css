@@ -1,6 +1,7 @@
 /* Black Friday 2026: the sale's own chrome, and nothing else.
    The news bar, the shop's event notice, the stamp card, the two colour themes
-   the day offers, and the quiet matte art of the limited skin. Every rule here
+   the day offers, and the permanent art of the limited skin. When retiring the
+   event UI, keep the blackout-2026 rules below for owners of the permanent aura. Every rule here
    is presentation — prices, stamps and rewards are decided in black-friday.js
    and written by the reducer. */
 
@@ -535,6 +536,36 @@
     transparent 72%
   );
 }
+/* A faint foil sweep and red sparks add movement without hiding the digits. */
+.number-box[data-cosmetic="blackout-2026"] .box-gloss::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    110deg,
+    transparent 42%,
+    #ff4d5a22 49%,
+    #ffb5b51c 51%,
+    transparent 58%
+  );
+  transform: translateX(-70%);
+  animation: blackout-foil 7s ease-in-out infinite;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-particles i {
+  background: #ff6872;
+  filter: drop-shadow(0 0 4px #ff1b34);
+  opacity: 0.65;
+}
+@keyframes blackout-foil {
+  0%,
+  32% {
+    transform: translateX(-70%);
+  }
+  70%,
+  100% {
+    transform: translateX(70%);
+  }
+}
 .number-box[data-cosmetic="blackout-2026"] .box-gloss::after {
   content: "BF";
   position: absolute;
@@ -554,7 +585,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .number-box[data-cosmetic="blackout-2026"] .box-finish::before,
-  .number-box[data-cosmetic="blackout-2026"] .box-finish::after {
+  .number-box[data-cosmetic="blackout-2026"] .box-finish::after,
+  .number-box[data-cosmetic="blackout-2026"] .box-gloss::before,
+  .number-box[data-cosmetic="blackout-2026"] .box-particles i {
     animation: none;
   }
 }
@@ -595,27 +628,42 @@ main.sale-ad-layout {
 }
 .sale-ads {
   position: absolute;
-  top: 110px;
+  top: var(--rail-top, 110px);
+  bottom: 16px;
   z-index: 5;
   display: flex;
   flex-direction: column;
-  gap: clamp(90px, 17vw, 220px);
+  justify-content: space-between;
+  gap: 24px;
+  box-sizing: border-box;
+  padding: 8px 6px 12px;
   width: var(--sale-rail-width);
+  overflow: hidden;
 }
 .sale-ads-left {
   right: calc(100% + 8px);
 }
 .sale-ads-right {
   left: calc(100% + 8px);
-  top: 250px;
+  --rail-top: 250px;
+}
+.sale-ad[hidden] {
+  display: none;
+}
+.sale-ads:not(.is-measured) .sale-ad {
+  visibility: hidden;
 }
 .sale-ad {
   position: relative;
   display: flex;
+  flex: none;
   flex-direction: column;
   align-items: center;
+  align-self: center;
+  width: 88%;
   gap: 7px;
   padding: 8px;
+  transform: rotate(var(--poster-angle, 0deg));
   overflow: hidden;
   border: 2px solid #e94848;
   border-radius: 3px;
@@ -636,18 +684,28 @@ main.sale-ad-layout {
   outline: 2px solid #ffcf72;
   outline-offset: 3px;
 }
+.sale-ad:nth-child(4n + 1) {
+  --poster-angle: -2deg;
+  width: 92%;
+}
 .sale-ad:nth-child(4n + 2) {
+  --poster-angle: 2.5deg;
+  width: 82%;
   background: #a91525;
   border-color: #111;
   box-shadow: 3px 5px 0 #27272a;
 }
 .sale-ad:nth-child(4n + 3) {
+  --poster-angle: -1deg;
+  width: 88%;
   background: #f3e8d6;
   color: #171719;
   border-color: #202024;
   box-shadow: 3px 5px 0 #f04a41;
 }
 .sale-ad:nth-child(4n + 4) {
+  --poster-angle: 1.5deg;
+  width: 80%;
   background: radial-gradient(circle at 50% 35%, #7b1122, #111 70%);
   border-color: #e7b25a;
 }
@@ -697,11 +755,11 @@ main.sale-ad-layout {
     padding-inline: 8px;
   }
   .sale-ads {
-    top: 95px;
-    gap: 110px;
+    --rail-top: 95px;
+    gap: 24px;
   }
   .sale-ads-right {
-    top: 190px;
+    --rail-top: 190px;
   }
   .sale-ad {
     padding: 4px 2px;
@@ -721,7 +779,7 @@ main.sale-ad-layout {
 }
 
 /* ---- The stamp card as a card of stamps ------------------------------------
-   Twenty-five holes, five shapes cycling, each with the milestone it pays.
+   Twenty-five different shapes, each with the milestone it pays.
    Empty shapes are outlines; filled shapes are stamped in red. */
 .sale-stamp-book {
   margin: 0 0 18px;
@@ -903,5 +961,40 @@ main.sale-ad-layout {
   }
   .sale-ad-art:has(.sale-ad-aura) {
     min-height: 26px;
+  }
+}
+
+/* Small event affordances remain readable with the ticker and posters present. */
+.sale-flag:hover {
+  border-color: #ff8a8a;
+  box-shadow: 0 8px 24px #b3173433;
+}
+.sale-flag:focus-visible,
+.sale-ad:focus-visible {
+  outline-color: #ef5a62;
+}
+.sale-stamp-book {
+  box-shadow: 0 8px 30px #b9253210;
+}
+.sale-stamp-book-head strong {
+  letter-spacing: 0.02em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sale-flag,
+  .sale-ad {
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .sale-stamp-grid {
+    gap: 6px;
+  }
+  .sale-stamp-label {
+    font-size: 7px;
+    letter-spacing: -0.03em;
+  }
+  .sale-stamp-label small {
+    display: none;
   }
 }

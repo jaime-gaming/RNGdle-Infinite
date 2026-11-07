@@ -377,25 +377,66 @@ test("sale flyers remain visible beside the game on desktop and mobile", async (
   }
 });
 
-test("posters stay in the document and link to their advertised shelves", async ({
+test("posters stay in the document, fit above the footer and link to their shelves", async ({
   page,
 }) => {
   await seedProgress(page, funded);
   await pauseClockAt(page, SALE_DAY);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
-  const poster = page.getByRole("link", {
-    name: "FASTER REVEALS: Explore pace",
+  const first = page.getByRole("link", { name: "UP TO 50% OFF: Every shelf" });
+  await expect(first).toHaveAttribute("href", "/shop");
+  expect(
+    await first.evaluate(
+      (el) => getComputedStyle(el.closest(".sale-ads")).position,
+    ),
+  ).toBe("absolute");
+  await expect(page.locator(".sale-ad[hidden]").first()).toBeAttached();
+  await first.click();
+  await expect(page).toHaveURL(/\/shop$/);
+  await page.goto("/shop/black-friday");
+  await page.clock.runFor(1000);
+  const bounds = await page.evaluate(() => {
+    const main = document.querySelector("main").getBoundingClientRect();
+    return [...document.querySelectorAll(".sale-ads")].map((rail) => ({
+      rail: {
+        top: rail.getBoundingClientRect().top,
+        bottom: rail.getBoundingClientRect().bottom,
+      },
+      mainBottom: main.bottom,
+      visible: [...rail.querySelectorAll(".sale-ad:not([hidden])")].map(
+        (ad) => {
+          const rect = ad.getBoundingClientRect();
+          return { top: rect.top, bottom: rect.bottom };
+        },
+      ),
+    }));
   });
-  await expect(poster).toHaveAttribute("href", "/shop/pace");
-  const position = await poster.evaluate(
-    (el) => getComputedStyle(el.closest(".sale-ads")).position,
+  for (const { rail, mainBottom, visible } of bounds) {
+    expect(visible.length).toBeGreaterThan(1);
+    for (const ad of visible) {
+      expect(ad.top).toBeGreaterThanOrEqual(rail.top);
+      expect(ad.bottom).toBeLessThanOrEqual(rail.bottom);
+      expect(ad.bottom).toBeLessThan(mainBottom);
+    }
+    expect(mainBottom - visible.at(-1).bottom).toBeLessThan(60);
+  }
+  const styles = await page
+    .locator(".sale-ad:not([hidden])")
+    .evaluateAll((ads) =>
+      ads.map((ad) => ({
+        transform: getComputedStyle(ad).transform,
+        width: ad.offsetWidth,
+      })),
+    );
+  expect(new Set(styles.map((style) => style.transform)).size).toBeGreaterThan(
+    1,
   );
-  expect(position).toBe("absolute");
-  await poster.click();
+  expect(new Set(styles.map((style) => style.width)).size).toBeGreaterThan(1);
+  await page
+    .getByRole("link", { name: "FASTER REVEALS: Explore pace" })
+    .click();
   await expect(page).toHaveURL(/\/shop\/pace$/);
-  await page.getByRole("link", { name: "YOUR NEXT LOOK: Try an aura" }).click();
-  await expect(page).toHaveURL(/\/shop\/auras$/);
 });
 
 test("only newly earned stamps animate on returning to the book", async ({
@@ -420,4 +461,60 @@ test("only newly earned stamps animate on returning to the book", async ({
   await page.reload();
   await expect(page.locator(".sale-stamp.is-filled")).toHaveCount(1);
   await expect(page.locator(".sale-stamp.is-new")).toHaveCount(0);
+});
+
+test("poster fitting updates when a page grows and shrinks", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  const count = () => page.locator(".sale-ad:not([hidden])").count();
+  const before = await count();
+  await page.evaluate(() => {
+    const spacer = document.createElement("div");
+    spacer.id = "poster-fit-test-spacer";
+    spacer.style.height = "1800px";
+    document.querySelector("main").append(spacer);
+  });
+  await page.clock.runFor(200);
+  await expect.poll(count).toBeGreaterThan(before);
+  await page.evaluate(() =>
+    document.getElementById("poster-fit-test-spacer").remove(),
+  );
+  await page.clock.runFor(200);
+  await expect.poll(count).toBe(before);
+  const boxes = await page
+    .locator(".sale-ad:not([hidden])")
+    .evaluateAll((ads) =>
+      ads.map((ad) => ({
+        bottom: ad.getBoundingClientRect().bottom,
+        railBottom: ad.closest(".sale-ads").getBoundingClientRect().bottom,
+        mainBottom: ad.closest("main").getBoundingClientRect().bottom,
+      })),
+    );
+  for (const { bottom, railBottom, mainBottom } of boxes) {
+    expect(bottom).toBeLessThanOrEqual(railBottom);
+    expect(bottom).toBeLessThan(mainBottom);
+  }
+});
+
+test("Blackout keeps bright ink and honors reduced motion", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  await page.goto("/shop/black-friday");
+  const aura = page.locator('[data-product="blackout-2026"] .number-box');
+  const ink = await aura
+    .locator(".number-box-content")
+    .evaluate((node) => getComputedStyle(node).backgroundImage);
+  expect(ink).toContain("255, 255, 255");
+  expect(
+    await aura
+      .locator(".box-gloss")
+      .evaluate((node) => getComputedStyle(node, "::before").animationName),
+  ).toBe("none");
 });

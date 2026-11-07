@@ -37,18 +37,22 @@ While the day is on the calendar the hub grows a `black-friday` shelf
 (`/shop/black-friday`) with the stamp card, the skin and the counter. Its
 interface (sale ticker, event notice, stamp card, the Ultra-Black and Red Sale
 themes, the sale favicon and manifest) exists only while
-`blackFridayStatus(at).active`; every other day the game shows none of it. `progress.blackFriday` is part of the save contract and
-survives every reset, like permanent cosmetics. Dev builds honour
+`blackFridayStatus(at).active`; the event notice is also shown before the day
+and disappears afterward. `progress.blackFriday` is part of the save contract
+and survives every reset, like permanent cosmetics. Dev builds honour
 `VITE_BLACK_FRIDAY_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the sale
 clock for previews; production ignores that variable, and shipped code never
 pretends today is the event day. Spending accumulates across purchases, rather
 than requiring a single purchase of 100,000 EP. The sale shelf contains a
 25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
 and linked posters occupy the page margins, including on small screens. Posters
-stay in the document as it scrolls. The stamp book remembers which stamps were
-seen per local profile and animates only newly seen stamps when the book enters
-view; this presentation marker never affects progress or rewards. Special & Limiteds banners and wardrobe
-filters appear only when the save owns an event aura, even during the sale;
+stay in the document as it scrolls; whole posters fit within the main area and
+are hidden rather than cut off at the footer. See
+`archive/qa/black-friday-retirement.md` before retiring event code. The stamp
+book remembers which stamps were seen per local profile and animates only newly
+seen stamps when the book enters view; this presentation marker never affects
+progress or rewards. Special & Limiteds banners and wardrobe filters appear
+only when the save owns an event aura, even during the sale;
 missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
 Moving reveal digits are lighter than landed digits using opacity only, without
 adding backgrounds, borders, underlines or other decorations.

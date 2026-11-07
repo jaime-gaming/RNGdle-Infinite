@@ -1,3 +1,7 @@
+// RETIREMENT: after the event, remove date-gated UI/branding and sale purchase
+// paths only after the post-event tests pass. Keep the save parser, Blackout
+// product/renderer, owned cosmetics, receipts and sale-reward history forever;
+// see archive/qa/black-friday-retirement.md before removing anything.
 // Black Friday 2026: one UTC day of shop-wide discounts, a stamp card that pays
 // a single limited skin, and a one-day counter for the RNGween looks a player
 // never got.
@@ -26,8 +30,8 @@ export const RNGWEEN_RESALE_PRICE = 10_000_000;
 // Every discount the sale uses, decided per product rather than per shelf.
 export const SALE_DISCOUNTS = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5];
 
-// The limited reward. Black and minimal on purpose: a matte body, one pale
-// price tag, no particles. It is earned, never sold.
+// The permanent reward: black with a red foil rim and restrained sparks.
+// It is earned, never sold; its id and renderer must survive event retirement.
 export const BLACK_FRIDAY_SKIN = {
   id: "blackout-2026",
   kind: "aura",
@@ -39,7 +43,7 @@ export const BLACK_FRIDAY_SKIN = {
   swatch: ["#050505", "#26262b"],
   icon: "blackout",
   description:
-    "The limited Black Friday 2026 skin: matte black, one white tag, nothing else. Paid by 25 sale stamps, kept forever, never sold.",
+    "The limited Black Friday 2026 aura: black, with a red foil rim and a sale tag. Paid by 25 sale stamps, kept forever, never sold.",
 };
 
 // The event's own aura family, so its skin sits beside the other events inside
