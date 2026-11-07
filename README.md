@@ -41,10 +41,7 @@ is unlocked. Missing RNGween looks are also available on the event shelf for
 
 The event shelf, posters, temporary themes and sale branding are available only
 on the day. Event information is shown in advance; earned auras and their
-history remain after the event. For local development only, use
-`VITE_BLACK_FRIDAY_PREVIEW_AT=1795780800000 npm run dev` to preview the day;
-production always follows the real UTC clock. The post-event maintenance
-checklist is in [Black Friday retirement](archive/qa/black-friday-retirement.md).
+history remain after the event.
 
 ## Keep your progress
 

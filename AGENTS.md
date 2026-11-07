@@ -46,8 +46,9 @@ pretends today is the event day. Spending accumulates across purchases, rather
 than requiring a single purchase of 100,000 EP. The sale shelf contains a
 25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
 and linked posters occupy the page margins, including on small screens. Posters
-stay in the document as it scrolls; whole posters fit within the main area and
-are hidden rather than cut off at the footer. See
+stay in the document as it scrolls; offers rotate every 15 seconds, pausing on
+hover, focus, hidden tabs and reduced motion. Whole posters fit within the main
+area and are hidden rather than cut off at the footer. See
 `archive/qa/black-friday-retirement.md` before retiring event code. The stamp
 book remembers which stamps were seen per local profile and animates only newly
 seen stamps when the book enters view; this presentation marker never affects

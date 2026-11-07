@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="RNGdle Infinite, Black Friday sale">
+  <title>RNGdle Infinite — Black Friday sale</title>
+  <rect width="128" height="128" rx="28" fill="#050505" />
+  <rect
+    x="7"
+    y="7"
+    width="114"
+    height="114"
+    rx="22"
+    fill="none"
+    stroke="#3f3f46"
+    stroke-width="3"
+  />
+  <g fill="none" stroke="#f4f4f5" stroke-width="11" stroke-linecap="round">
+    <circle cx="47" cy="45" r="11" />
+    <circle cx="81" cy="79" r="11" />
+    <path d="M85 41 43 83" />
+  </g>
+  <path d="M30 103h68" stroke="#ff2d2d" stroke-width="8" stroke-linecap="round" />
+</svg>

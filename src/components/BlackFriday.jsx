@@ -40,6 +40,7 @@ import { formatEP } from "../roll-data.js";
 import { waitText } from "../tasks.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import { useSaleStatus } from "../use-black-friday.js";
+import { useMotionPreference } from "../use-settings.jsx";
 import NumberBox from "./NumberBox";
 import { pathForSubpage } from "../router.js";
 import "../black-friday.css";
@@ -221,6 +222,19 @@ const SALE_ADS = [
 export function SaleSideAds({ status, onOpenShelf }) {
   const leftRail = useRef(null);
   const rightRail = useRef(null);
+  const reducedMotion = useMotionPreference();
+  const [rotation, setRotation] = useState(0);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  // Do not replace links while someone is reading, hovering or using the keyboard.
+  useEffect(() => {
+    if (!status?.active || reducedMotion || hovered || focused)
+      return undefined;
+    const timer = setInterval(() => {
+      if (!document.hidden) setRotation((value) => (value + 1) % 8);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [status?.active, reducedMotion, hovered, focused]);
   useLayoutEffect(() => {
     if (!status?.active || !leftRail.current || !rightRail.current) return;
     const rails = [leftRail.current, rightRail.current];
@@ -267,18 +281,29 @@ export function SaleSideAds({ status, onOpenShelf }) {
       observer?.disconnect();
       window.removeEventListener("resize", schedule);
     };
-  }, [status?.active]);
+  }, [status?.active, rotation]);
   if (!status?.active) return null;
+  const rotate = (items) => [
+    ...items.slice(rotation),
+    ...items.slice(0, rotation),
+  ];
   const rail = (ads, side) => (
     <aside
       className={`sale-ads sale-ads-${side}`}
       ref={side === "left" ? leftRail : rightRail}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget))
+          setFocused(false);
+      }}
       aria-label={`${side} Black Friday offers`}
     >
-      {ads.map(({ title, note, icon: Icon, shelf, art }, index) => (
+      {ads.map(({ title, note, icon: Icon, shelf, art }) => (
         <a
           className={`sale-ad sale-ad-${art}`}
-          key={`${title}-${index}`}
+          key={title}
           href={pathForSubpage("shop", shelf)}
           aria-label={`${title}: ${note}`}
           onClick={(event) => {
@@ -327,8 +352,8 @@ export function SaleSideAds({ status, onOpenShelf }) {
   );
   return (
     <>
-      {rail(SALE_ADS.slice(0, 8), "left")}
-      {rail(SALE_ADS.slice(8), "right")}
+      {rail(rotate(SALE_ADS.slice(0, 8)), "left")}
+      {rail(rotate(SALE_ADS.slice(8)), "right")}
     </>
   );
 }
@@ -485,6 +510,7 @@ export default function SaleEventNotice({
   progress,
   previewTier = "rare",
   onOpenSpecial,
+  onOpenSaleShelf,
   navigate,
 }) {
   const status = useSaleStatus();
@@ -531,6 +557,7 @@ export default function SaleEventNotice({
         className="sale-dialog"
         ref={dialog}
         aria-labelledby="sale-dialog-title"
+        aria-describedby="sale-dialog-when"
         onCancel={(event) => {
           event.preventDefault();
           setOpen(false);
@@ -545,17 +572,46 @@ export default function SaleEventNotice({
         >
           <X size={18} />
         </button>
-        <p className="eyebrow sale-eyebrow">
-          <Tag size={13} aria-hidden="true" /> ONE DAY ONLY
-        </p>
-        <h2 id="sale-dialog-title">Black Friday 2026</h2>
-        <p className="sale-when">
+        <div className="sale-dialog-hero">
+          <div>
+            <p className="eyebrow sale-eyebrow">
+              <Tag size={13} aria-hidden="true" /> ONE DAY ONLY
+            </p>
+            <h2 id="sale-dialog-title">
+              Black Friday <span>2026</span>
+            </h2>
+            <p className="sale-hero-subtitle">One day. A whole shop on sale.</p>
+          </div>
+          <div className="sale-hero-art" aria-hidden="true">
+            <Percent size={34} />
+            <small>
+              UP TO
+              <br />
+              50% OFF
+            </small>
+          </div>
+        </div>
+        <p className="sale-when" id="sale-dialog-when">
           {blackFridayDayLabel()}, 00:00 to 24:00 UTC ·{" "}
           {status.active
             ? `live now, ${waitText(status.endsInMs)} left`
             : `starts in ${waitText(status.startsInMs)}`}
         </p>
 
+        <div className="sale-dialog-highlights" aria-label="Event highlights">
+          <span>
+            <strong>20–50%</strong>
+            <small>shop discounts</small>
+          </span>
+          <span>
+            <strong>100K EP</strong>
+            <small>per stamp</small>
+          </span>
+          <span>
+            <strong>25 stamps</strong>
+            <small>permanent aura</small>
+          </span>
+        </div>
         <section className="sale-block">
           <h3>
             <Percent size={14} aria-hidden="true" /> The whole shop is cheaper
@@ -564,7 +620,7 @@ export default function SaleEventNotice({
             Every shelf drops for the day — pace, skills, companions, auras,
             offline and tools. Each product carries its own discount, from 20%
             to 50%, and the card shows the price it had before. Nothing else
-            changes: odds, EP, ranks and timings are exactly the same.
+            changes about the draw, scoring, rank or timing rules.
           </p>
         </section>
 
@@ -631,18 +687,32 @@ export default function SaleEventNotice({
               left to offer you.
             </p>
           )}
-          {onOpenSpecial && (
+          {status.active && onOpenSaleShelf && (
             <button
               type="button"
               className="secondary-button"
               onClick={() => {
                 setOpen(false);
-                onOpenSpecial();
+                onOpenSaleShelf();
               }}
             >
-              Open Special &amp; Limiteds
+              Visit the Black Friday shelf
             </button>
           )}
+          {onOpenSpecial &&
+            (progress?.owned?.includes(BLACK_FRIDAY_SKIN.id) ||
+              missing.length < resaleMissing([]).length) && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenSpecial();
+                }}
+              >
+                Open Special &amp; Limiteds
+              </button>
+            )}
         </section>
 
         <section className="sale-block">
@@ -652,8 +722,8 @@ export default function SaleEventNotice({
           <p>
             While the sale is on, the Appearance menu offers two extra colour
             themes: {SALE_THEMES.map((entry) => entry.label).join(" and ")}.
-            They leave the menu when the day ends, and the game returns to the
-            theme you had before.
+            They leave the menu when the day ends; a selected sale theme falls
+            back to the regular dark theme.
           </p>
         </section>
 

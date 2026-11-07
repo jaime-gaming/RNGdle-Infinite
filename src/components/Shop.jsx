@@ -1292,6 +1292,7 @@ export default function Shop({
         progress={progress}
         previewTier={previewTier}
         onOpenSpecial={() => onOpenFamily("special")}
+        onOpenSaleShelf={() => onOpenShelf("black-friday")}
       />
       {/* A shelf is its own page, so it says where it sits in the shop. */}
       {shelf && (

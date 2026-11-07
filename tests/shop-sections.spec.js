@@ -286,13 +286,17 @@ test("the skills shelf is a stall: three skills buyable, the rest under a green 
     await expect(card).toHaveCount(1);
     await expect(card).not.toHaveClass(/is-restocking/);
     await expect(card).toContainText("In stock");
-    await expect(card.locator("button:not(.shop-tag)")).toBeEnabled();
+    await expect(
+      card.locator("button:not(.shop-tag):not(.shop-look-eye)"),
+    ).toBeEnabled();
   }
   for (const id of rest) {
     const card = shelf.locator(`[data-product="${id}"]`);
     await expect(card).toHaveCount(1);
     await expect(card).toHaveClass(/is-restocking/);
-    await expect(card.locator("button:not(.shop-tag)")).toBeDisabled();
+    await expect(
+      card.locator("button:not(.shop-tag):not(.shop-look-eye)"),
+    ).toBeDisabled();
   }
   // The stall states how full it is and when the three restock — and, since
   // the rotation is deterministic, which skills come next.

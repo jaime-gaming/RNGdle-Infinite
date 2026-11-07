@@ -410,7 +410,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   await expect(card).toContainText(
     `${productById.get("flywheel").price.toLocaleString("en-US")} EP`,
   );
-  await card.locator("button:not(.shop-tag)").click();
+  await card.locator("button:not(.shop-tag):not(.shop-look-eye)").click();
   await expect(page.getByRole("dialog")).toContainText(
     "4 online rolls per charge",
   );
@@ -515,7 +515,11 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
   expect(before.pendingRoll.flywheel).toBeUndefined();
   await nav(page, "Shop");
   await openShelfFor(page, "flywheel");
-  await page.locator('[data-product="flywheel"] button:not(.shop-tag)').click();
+  await page
+    .locator(
+      '[data-product="flywheel"] button:not(.shop-tag):not(.shop-look-eye)',
+    )
+    .click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();

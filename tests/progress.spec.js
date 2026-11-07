@@ -337,7 +337,9 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
     card.getByRole("button", { name: "Equipped", exact: true }),
   ).toBeDisabled();
   await expect(
-    page.locator('[data-product="aurora"] button:not(.shop-tag)'),
+    page.locator(
+      '[data-product="aurora"] button:not(.shop-tag):not(.shop-look-eye)',
+    ),
   ).toBeDisabled();
   await page.reload();
   await expect(
@@ -383,10 +385,14 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   const other = await context.newPage();
   await other.goto("/shop/auras/celestial");
   await page
-    .locator(`[data-product="${pair[0].id}"] button:not(.shop-tag)`)
+    .locator(
+      `[data-product="${pair[0].id}"] button:not(.shop-tag):not(.shop-look-eye)`,
+    )
     .click();
   await other
-    .locator(`[data-product="${pair[1].id}"] button:not(.shop-tag)`)
+    .locator(
+      `[data-product="${pair[1].id}"] button:not(.shop-tag):not(.shop-look-eye)`,
+    )
     .click();
   await Promise.all([
     page
@@ -429,7 +435,11 @@ test("a failed save does not spend EP or grant a purchase", async ({
     },
   );
   await page.goto("/shop/auras/celestial");
-  await page.locator('[data-product="starfall"] button:not(.shop-tag)').click();
+  await page
+    .locator(
+      '[data-product="starfall"] button:not(.shop-tag):not(.shop-look-eye)',
+    )
+    .click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();

@@ -998,3 +998,128 @@ main.sale-ad-layout {
     display: none;
   }
 }
+
+/* The event briefing puts the essentials up front before the full terms. */
+.sale-dialog {
+  max-width: 580px;
+  border-color: #71313a;
+  background: #0c0b0d;
+  box-shadow:
+    0 24px 80px #000b,
+    0 0 0 1px #e0384520;
+}
+.sale-dialog-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin: -28px -28px 16px;
+  padding: 30px 54px 24px 28px;
+  border-bottom: 1px solid #72313a;
+  background:
+    radial-gradient(circle at 85% 35%, #e1334050, transparent 36%),
+    repeating-linear-gradient(135deg, #141014 0 13px, #1c1216 13px 14px);
+}
+.sale-dialog-hero h2 {
+  margin: 12px 0 5px;
+  font-size: clamp(23px, 3vw, 31px);
+  letter-spacing: -0.03em;
+}
+.sale-dialog-hero h2 span {
+  color: #ff5964;
+}
+.sale-hero-subtitle {
+  margin: 0;
+  color: #d4c9cb;
+  font-size: 12px;
+}
+.sale-hero-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 86px;
+  height: 86px;
+  padding: 8px;
+  border: 1px solid #ff8188;
+  border-radius: 50%;
+  background: #bd2635;
+  color: white;
+  box-shadow:
+    0 0 0 6px #e22e3e25,
+    0 0 28px #e22e3e66;
+  transform: rotate(8deg);
+}
+.sale-hero-art small {
+  font: 800 8px/1.2 var(--font-mono);
+  text-align: center;
+}
+.sale-dialog-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.sale-dialog-highlights span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px 9px;
+  border: 1px solid #54252c;
+  border-radius: 9px;
+  background: #251217;
+}
+.sale-dialog-highlights strong {
+  color: #ff858d;
+  font: 700 13px/1.2 var(--font-mono);
+}
+.sale-dialog-highlights small {
+  color: #ddd1d2;
+  font-size: 10px;
+  line-height: 1.3;
+}
+.sale-block {
+  border-color: #34252a;
+  background: #171215;
+}
+.sale-block h3 {
+  font-size: 14px;
+}
+.sale-block p {
+  color: #e0dadd;
+}
+.sale-dialog-close {
+  z-index: 1;
+}
+@media (max-width: 760px) {
+  .sale-dialog-hero {
+    margin: -22px -18px 16px;
+    padding: 25px 45px 20px 18px;
+    gap: 8px;
+  }
+  .sale-hero-art {
+    width: 62px;
+    height: 62px;
+  }
+  .sale-hero-art svg {
+    width: 24px;
+    height: 24px;
+  }
+  .sale-hero-art small {
+    font-size: 7px;
+  }
+  .sale-dialog-highlights {
+    gap: 5px;
+  }
+  .sale-dialog-highlights span {
+    padding: 8px 6px;
+  }
+  .sale-dialog-highlights strong {
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sale-dialog[open] {
+    animation: none;
+  }
+}

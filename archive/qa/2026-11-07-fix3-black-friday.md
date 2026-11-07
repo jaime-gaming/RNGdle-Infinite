@@ -101,3 +101,11 @@ Date: 2026-11-07 · Branch: `arena/be488ed9-rngdle-infinite` · Internal label:
   across page resizing, footer bounds, link targets and reduced motion); build,
   Worker browser smoke, cloud simulation, economy audit and formatting passed.
   The complete Playwright suite was not run in this pass.
+
+## Final event briefing and poster rotation
+
+- Posters cycle through offers every 15 seconds, while staying inside the main
+  area. Rotation pauses for hover, keyboard focus, hidden tabs and reduced
+  motion; the displayed offer links to its own shelf.
+- The event dialog leads with the discount, stamp and permanent-aura summary,
+  explains the one-day rules and links directly to the Black Friday shelf.

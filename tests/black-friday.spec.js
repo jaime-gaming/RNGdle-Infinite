@@ -518,3 +518,78 @@ test("Blackout keeps bright ink and honors reduced motion", async ({
       .evaluate((node) => getComputedStyle(node, "::before").animationName),
   ).toBe("none");
 });
+
+test("posters rotate through offers and pause for keyboard interaction", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  await page.goto("/");
+  const first = page.locator(".sale-ads-left .sale-ad:not([hidden])").first();
+  await expect(first).toHaveAttribute(
+    "aria-label",
+    "UP TO 50% OFF: Every shelf",
+  );
+  await page.clock.runFor(15000);
+  await expect(first).toHaveAttribute(
+    "aria-label",
+    "ONE DAY ONLY: The sale counter",
+  );
+  await first.focus();
+  await page.clock.runFor(30000);
+  await expect(first).toHaveAttribute(
+    "aria-label",
+    "ONE DAY ONLY: The sale counter",
+  );
+  await page.locator(".wordmark").focus();
+  await page.clock.runFor(15000);
+  await expect(first).toHaveAttribute(
+    "aria-label",
+    "100K EP = 1 STAMP: Fill your card",
+  );
+});
+
+test("the event briefing highlights the essentials and opens the sale shelf", async ({
+  page,
+}) => {
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  await page.goto("/shop");
+  await page.getByTestId("sale-event-button").click();
+  const dialog = page.getByTestId("sale-event-dialog");
+  await expect(dialog.locator(".sale-dialog-highlights")).toContainText(
+    "20–50%",
+  );
+  await expect(dialog.locator(".sale-dialog-highlights")).toContainText(
+    "100K EP",
+  );
+  await expect(dialog.locator(".sale-dialog-highlights")).toContainText(
+    "25 stamps",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "Open Special & Limiteds" }),
+  ).toHaveCount(0);
+  await dialog
+    .getByRole("button", { name: "Visit the Black Friday shelf" })
+    .click();
+  await expect(page).toHaveURL(/\/shop\/black-friday$/);
+});
+
+test("posters do not rotate when reduced motion is requested", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await seedProgress(page, funded);
+  await pauseClockAt(page, SALE_DAY);
+  await page.goto("/");
+  const first = page.locator(".sale-ads-left .sale-ad:not([hidden])").first();
+  await expect(first).toHaveAttribute(
+    "aria-label",
+    "UP TO 50% OFF: Every shelf",
+  );
+  await page.clock.runFor(30000);
+  await expect(first).toHaveAttribute(
+    "aria-label",
+    "UP TO 50% OFF: Every shelf",
+  );
+});

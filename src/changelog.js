@@ -11,7 +11,7 @@ export const CHANGELOG = [
     body: [
       "name a local profile to keep progress on this device, or sign in to a Cloud Account and keep it in step on every device.",
       "restore an earlier local save from Settings → Restore save, with a preview before you choose.",
-      "Black Friday returns November 27, 2026 (UTC): shop discounts, sale stamps and a limited aura for one day.",
+      "the Black Friday sale arrives November 27, 2026 (UTC): discounts, sale stamps and a limited aura for one day.",
     ],
   },
   {

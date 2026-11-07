@@ -218,6 +218,8 @@ test("share format and actual badge details", async ({ page, context }) => {
 test("all result tiers fit mobile, including a seven-digit result", async ({
   page,
 }) => {
+  // Nine full scoring and settlement cycles need extra time under suite load.
+  test.setTimeout(150000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
   const numbers = [
