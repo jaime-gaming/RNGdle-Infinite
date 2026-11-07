@@ -49,7 +49,7 @@ test("advanced resets reward surplus without cutting accumulated dividends on re
   expect(repaired.progress.surplusBanked).toBe(240);
 });
 
-test("Cloud Account owns its submenu and the top Profile button opens the profile", async ({
+test("Cloud Account opens from its scrollable Settings section and the top Profile button opens the profile", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -57,9 +57,11 @@ test("Cloud Account owns its submenu and the top Profile button opens the profil
   });
   await page.goto("/settings");
   await expect(page.locator(".cloud-account")).toHaveCount(0);
+  await expect(
+    page.getByRole("navigation", { name: "Settings sections" }),
+  ).toHaveCount(0);
   await page
-    .getByRole("navigation", { name: "Settings sections" })
-    .getByRole("button", { name: "Cloud Account", exact: true })
+    .getByRole("button", { name: "Open Cloud Account", exact: true })
     .click();
   await expect(page).toHaveURL(/\/settings\/cloud-account$/);
   await expect(page.locator(".cloud-account")).toBeVisible();

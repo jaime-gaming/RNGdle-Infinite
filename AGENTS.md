@@ -333,3 +333,7 @@ rather than guessing.
 
 - Always finish completed changes with a commit and push to the session branch.
 - After a requested merge succeeds, delete the merged remote branch (use `gh pr merge <number> --squash --delete-branch`). Never switch branches or delete the active checkout; respect session branch restrictions.
+
+- **Bug fixes never rewrite release notes.** Preserve all existing `src/changelog.js` entries verbatim during a bug fix. Record implementation/QA notes separately. Presentation-only capitalization is fine; add release notes only for an explicitly requested new release.
+
+- **Quota-safe primary saves.** `writeDeviceSave` keeps JSON normally, retries with the bounded gzip codec only on quota errors, and retains compression once selected. Always read via `parseProgress`/`parseAndRepairProgress` (or decode with `unpackVaultSave` for raw JSON consumers). Never delete history, recovery slots or owner markers to fit a new save.

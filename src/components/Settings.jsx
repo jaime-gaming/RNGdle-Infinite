@@ -341,7 +341,7 @@ export default function Settings({
 
       <div className="settings-group">
         <h2>
-          <Cloud size={16} aria-hidden="true" /> Online account
+          <Cloud size={16} aria-hidden="true" /> Cloud Account
         </h2>
         <p className="settings-group-note">
           Link a Cloud Account for an online backup. If this device and your

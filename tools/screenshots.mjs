@@ -322,7 +322,7 @@ try {
 
   // Both settings sections and the light palette are documented separately.
   await page.goto(`${BASE}/settings`);
-  await page.waitForSelector(".settings-submenu");
+  await page.waitForSelector(".settings-group");
   await shot(page, "settings");
   await page.goto(`${BASE}/settings/cloud-account`);
   await page.waitForSelector(".cloud-account");
@@ -333,6 +333,10 @@ try {
   });
   await page.waitForTimeout(300);
   await shot(page, "light-auras");
+
+  await page.goto(`${BASE}/about`);
+  await page.waitForSelector(".about-topics");
+  await shot(page, "how-to-play");
 
   await page.close();
 } finally {

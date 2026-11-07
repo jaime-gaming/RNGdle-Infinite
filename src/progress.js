@@ -1,3 +1,4 @@
+import { unpackVaultSave } from "./save-codec.js";
 // Legacy compatibility: keep owned RNGween aura receipts, attendance data,
 // and historical `rngween-*` activity rows. Seasonal actions are retired.
 import { reaperAct } from "./rngween-legacy.js";
@@ -347,7 +348,7 @@ export function parseAndRepairProgress(raw) {
   const note = (message) => repairs.push(message);
   let p;
   try {
-    p = JSON.parse(raw);
+    p = JSON.parse(unpackVaultSave(raw));
   } catch {
     throw new Error("Unrecognized save version");
   }

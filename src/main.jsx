@@ -571,22 +571,32 @@ function App() {
       window.removeEventListener("hashchange", update);
     };
   }, []);
+  const previousProfileRoute = useRef(null);
   // A bare profile URL is canonicalized to this browser's own profile once it
   // exists. A named path for somebody else is deliberately left alone so it
   // can load that player's public cloud profile.
   useEffect(() => {
+    const previous = previousProfileRoute.current;
+    previousProfileRoute.current = session.profile;
     if (page !== "profile" || sharedCard) return;
     const requested = profileNameFromLocation(location);
+    const renamedOwnRoute =
+      previous?.id === session.profile?.id &&
+      previous?.username !== session.profile?.username &&
+      normalizedProfileName(requested) ===
+        normalizedProfileName(previous?.username);
     const requestedIsOwn =
       Boolean(requested) &&
       Boolean(session.profile) &&
       normalizedProfileName(requested) ===
         normalizedProfileName(session.profile.username);
-    if (requested && session.profile && !requestedIsOwn) return;
+    if (requested && session.profile && !requestedIsOwn && !renamedOwnRoute)
+      return;
     if (requested && !session.profile) return;
     const canonical = pathForProfile(session.profile?.username);
     if (location.pathname !== canonical)
       history.replaceState(history.state, "", canonical);
+    if (renamedOwnRoute) setProfileName(session.profile.username);
   }, [page, sharedCard, profileName, session.profile?.username]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
@@ -1025,33 +1035,6 @@ function App() {
                 </p>
               </div>
             </div>
-            <nav className="settings-submenu" aria-label="Settings sections">
-              <button
-                className="secondary-button"
-                aria-current={!settingsSubpage ? "page" : undefined}
-                onClick={() => navigate("settings")}
-              >
-                General
-              </button>
-              <button
-                className="secondary-button"
-                aria-current={
-                  settingsSubpage === "cloud-account" ? "page" : undefined
-                }
-                onClick={openAuth}
-              >
-                Cloud Account
-              </button>
-              <button
-                className="secondary-button"
-                aria-current={
-                  settingsSubpage === "save-recovery" ? "page" : undefined
-                }
-                onClick={openSaveRecovery}
-              >
-                Save recovery
-              </button>
-            </nav>
             {settingsSubpage === "save-recovery" ? (
               <SaveRecovery vault={vault} notify={notify} />
             ) : (
@@ -1116,8 +1099,8 @@ function App() {
                 <ScrollText size={25} />
               </div>
               <div>
-                <h1>changelog</h1>
-                <p>what changed, and when.</p>
+                <h1>Changelog</h1>
+                <p>What changed, and when.</p>
               </div>
             </div>
             <Changelog

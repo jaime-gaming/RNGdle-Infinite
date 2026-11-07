@@ -1,3 +1,5 @@
+import { writeDeviceSave } from "./local-save.js";
+import { unpackVaultSave } from "./save-codec.js";
 import { gameNow } from "./game-clock";
 import { useEffect, useRef, useState } from "react";
 import { drainSerialQueue, enqueueSerial } from "./serial-queue.js";
@@ -79,7 +81,7 @@ function repairWarning(repairs) {
 }
 function readLocalSave() {
   try {
-    return localStorage.getItem(PROGRESS_KEY);
+    return unpackVaultSave(localStorage.getItem(PROGRESS_KEY)) || null;
   } catch {
     return null;
   }
@@ -102,7 +104,7 @@ function readLocalCandidateForCloudUser(userId) {
 function writeLocalSave(progress, ownerId = readCloudOwner()) {
   try {
     const raw = JSON.stringify(progress);
-    localStorage.setItem(PROGRESS_KEY, raw);
+    writeDeviceSave(localStorage, PROGRESS_KEY, raw);
     writeVault(raw, { storage: localStorage, ownerId });
     return true;
   } catch {
@@ -155,7 +157,7 @@ function load() {
         const saveOwner = readCloudOwner();
         writePreRepairOwner(saveOwner, localStorage);
         const repairedRaw = JSON.stringify(progress);
-        localStorage.setItem(PROGRESS_KEY, repairedRaw);
+        writeDeviceSave(localStorage, PROGRESS_KEY, repairedRaw);
         writeVault(repairedRaw, {
           storage: localStorage,
           ownerId: saveOwner,
@@ -376,7 +378,7 @@ export function useProgress({
           if (merged !== next) {
             try {
               const mergedRaw = JSON.stringify(merged);
-              localStorage.setItem(PROGRESS_KEY, mergedRaw);
+              writeDeviceSave(localStorage, PROGRESS_KEY, mergedRaw);
               writeVault(mergedRaw, {
                 storage: localStorage,
                 ownerId: readCloudOwner(),
@@ -1866,7 +1868,7 @@ export function useProgress({
               throw new Error(
                 "The local save owner could not be cleared safely.",
               );
-            localStorage.setItem(PROGRESS_KEY, saved);
+            writeDeviceSave(localStorage, PROGRESS_KEY, saved);
             writeVault(saved, {
               storage: localStorage,
               ownerId: localRegistration ? null : readCloudOwner(),
@@ -2098,7 +2100,7 @@ export function useProgress({
           "The copy could not be safely associated with its account on this device. Free up space and try again.",
       };
     try {
-      localStorage.setItem(PROGRESS_KEY, copy.raw);
+      writeDeviceSave(localStorage, PROGRESS_KEY, copy.raw);
     } catch {
       // Fail closed if the primary write failed after the marker changed.
       writeCloudOwner(UNKNOWN_CLOUD_OWNER);

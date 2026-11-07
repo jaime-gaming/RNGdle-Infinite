@@ -267,7 +267,7 @@ test("Reload until updated clears cached files and keeps the saved game and sess
 
   await page.getByTestId("settings-update").click();
   await expect(page.getByTestId("update-status")).toContainText(
-    "latest version",
+    "This device has the latest version.",
     { timeout: 60000 },
   );
   expect(served).toBeGreaterThan(1);

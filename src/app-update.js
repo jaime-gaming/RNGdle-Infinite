@@ -1,3 +1,5 @@
+import { unpackVaultSave } from "./save-codec.js";
+import { writeDeviceSave } from "./local-save.js";
 import { PROGRESS_KEY } from "./progress.js";
 
 export const APP_UPDATE_STORAGE_KEY = "rng-infinite-app-update-v1";
@@ -199,7 +201,7 @@ export function recoverSaveAfterUpdate({
   const readable = (value) => {
     if (typeof value !== "string" || !value.trim()) return false;
     try {
-      const parsed = JSON.parse(value);
+      const parsed = JSON.parse(unpackVaultSave(value));
       return !!parsed && typeof parsed === "object";
     } catch {
       return false;
@@ -207,7 +209,7 @@ export function recoverSaveAfterUpdate({
   };
   try {
     if (readable(storage?.getItem(PROGRESS_KEY))) return { recovered: false };
-    storage.setItem(PROGRESS_KEY, copy.raw);
+    writeDeviceSave(storage, PROGRESS_KEY, copy.raw);
     return { recovered: true };
   } catch {
     return { recovered: false };

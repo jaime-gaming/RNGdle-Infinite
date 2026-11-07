@@ -9,9 +9,9 @@ export const CHANGELOG = [
     date: "2026-11-03",
     title: "cloud accounts and easier save recovery",
     body: [
-      "cloud accounts and save recovery now have separate Settings pages; the Profile button opens your profile.",
-      "pinned Déjà Vu looks survive sharing; moving and landed digits stay distinct across auras and both themes.",
-      "prestige and Rollback bank more surplus per reset; reloading no longer cuts accumulated surplus to 100%.",
+      "name a local profile to keep progress on this device, or sign in to a Cloud Account and keep it in step on every device.",
+      "restore an earlier local save from Settings → Restore save, with a preview before you choose.",
+      "retired seasonal event screens are gone; cosmetics already earned and older activity remain in your save.",
     ],
   },
   {
