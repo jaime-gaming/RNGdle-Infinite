@@ -307,13 +307,13 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `RNGdle-Infinite0.5.2fix1`; do not change it
+  flow. The current label is exactly `RNGdle-Infinitev0.5.2fix2`; do not change it
   again until the next session or an explicit user request. Public release
   notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
 - **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
-  name the squashed commit after the release it publishes: `v0.5.2 bug fix 1`
+  name the squashed commit after the release it publishes: `v0.5.2 bug fix 2`
   when the merge carries bug fixes (the number matches the internal `fixN`
   label), otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
   when the branch is verified: `npm run build`, `npm run test:worker`,
