@@ -63,14 +63,3 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
 _Released November 3, 2026 · documentation updated November 7, 2026._
-
-### Account and presentation fixes
-
-- Cloud sign-in, backups and security have their own **Settings → Cloud Account** submenu (`/settings/cloud-account`). The top **Profile** button opens your profile.
-- Pinned repeated rolls retain the Déjà Vu appearance in local profiles, public summaries, shared links and exported cards. Older shared cards remain readable.
-- During reveals, moving digits use amber ink and a dotted underline; landed digits use white ink on navy with a solid green marker. This remains distinct across auras and both themes.
-- Surplus banks up to **10% per Rebirth, 20% per Prestige, and 30% per Rollback** (one percent per 2,000,000 surplus EP). Prestige still carries half the surplus into the new wallet; Rollback still starts at zero. Accumulated surplus is no longer truncated to 100% on reload.
-
-![Cloud Account settings](media/cloud-account.png)
-
-![Light-mode auras](media/light-auras.png)
