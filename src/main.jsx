@@ -56,6 +56,10 @@ import { taskSummary } from "./tasks.js";
 import { useGameClock } from "./use-game-clock.js";
 import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
 import AppearanceMenu from "./components/AppearanceMenu.jsx";
+import SaleTicker from "./components/SaleTicker.jsx";
+import { useSaleStatus } from "./use-black-friday.js";
+import { applySaleBranding } from "./sale-branding.js";
+import { SALE_THEMES } from "./black-friday.js";
 import { freshRareBadges, newlyReady } from "./notice-rules.js";
 import { badgeMetadata } from "./roll-data.js";
 import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
@@ -172,10 +176,20 @@ function App() {
   const [settingsSubpage, setSettingsSubpage] = useState(() =>
     settingsSubpageFromLocation(location),
   );
+  // The one-day sale drives the ticker, the two borrowed themes and the
+  // branding swap; every consumer reads the same status.
+  const sale = useSaleStatus();
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem("rng-theme");
-      return ["light", "dark", "system"].includes(saved) ? saved : "light";
+      return [
+        "light",
+        "dark",
+        "system",
+        ...SALE_THEMES.map((entry) => entry.id),
+      ].includes(saved)
+        ? saved
+        : "light";
     } catch {
       return "light";
     }
@@ -600,10 +614,21 @@ function App() {
   }, [page, sharedCard, profileName, session.profile?.username]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
+    const saleTheme = SALE_THEMES.find((entry) => entry.id === theme) ?? null;
     const update = () => {
-      const resolved =
-        theme === "system" ? (media.matches ? "dark" : "light") : theme;
+      // A sale look borrows the dark surface and paints its own tokens over
+      // it; out of season it simply is the dark theme.
+      const resolved = saleTheme
+        ? "dark"
+        : theme === "system"
+          ? media.matches
+            ? "dark"
+            : "light"
+          : theme;
       document.documentElement.dataset.theme = resolved;
+      if (saleTheme && sale.active)
+        document.documentElement.dataset.saleTheme = theme;
+      else delete document.documentElement.dataset.saleTheme;
       setAppliedTheme(resolved);
     };
     update();
@@ -612,7 +637,13 @@ function App() {
     } catch {}
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme]);
+  }, [theme, sale.active]);
+
+  // The tab's identity follows the same day: sale art while it lasts, the
+  // regular set every other day of the year.
+  useEffect(() => {
+    applySaleBranding(sale.active);
+  }, [sale.active]);
   useEffect(
     () => () => {
       clearTimeout(arrivalTimer.current);
@@ -735,6 +766,8 @@ function App() {
     );
   return (
     <>
+      {/* Above everything else on the page, for exactly one day. */}
+      <SaleTicker status={sale} />
       <header className="header">
         <div className="header-left">
           <button

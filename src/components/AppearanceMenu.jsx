@@ -1,5 +1,15 @@
 import React, { useEffect, useId, useRef, useState } from "react";
-import { Check, ChevronDown, Monitor, Moon, Sun } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Monitor,
+  Moon,
+  Square,
+  Sun,
+  Tag,
+} from "lucide-react";
+import { SALE_THEMES } from "../black-friday.js";
+import { useSaleStatus } from "../use-black-friday.js";
 import "../appearance.css";
 
 const THEMES = [
@@ -7,6 +17,9 @@ const THEMES = [
   ["system", "System", Monitor],
   ["dark", "Dark", Moon],
 ];
+// The sale day lends the game two extra looks. They live in the same menu and
+// leave it with the day.
+const SALE_THEME_ICONS = { "ultra-black": Square, "red-sale": Tag };
 
 export default function AppearanceMenu({ theme, onTheme }) {
   const [open, setOpen] = useState(false);
@@ -14,8 +27,19 @@ export default function AppearanceMenu({ theme, onTheme }) {
   const trigger = useRef(null);
   const menu = useRef(null);
   const id = useId();
+  const sale = useSaleStatus();
+  const options = [
+    ...THEMES,
+    ...(sale.active
+      ? SALE_THEMES.map((entry) => [
+          entry.id,
+          entry.label,
+          SALE_THEME_ICONS[entry.id] ?? Moon,
+        ])
+      : []),
+  ];
   const [, label, Icon] =
-    THEMES.find(([value]) => value === theme) ?? THEMES[0];
+    options.find(([value]) => value === theme) ?? options[0];
 
   const close = (restore = false) => {
     setOpen(false);
@@ -48,6 +72,7 @@ export default function AppearanceMenu({ theme, onTheme }) {
     const items = [
       ...menu.current.querySelectorAll('[role^="menuitem"]'),
     ].filter((item) => !item.disabled);
+
     const current = items.indexOf(document.activeElement);
     const index =
       event.key === "Home"
@@ -70,6 +95,9 @@ export default function AppearanceMenu({ theme, onTheme }) {
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         title={`${label} theme`}
+        data-sale-theme-option={
+          SALE_THEMES.some((entry) => entry.id === theme) || undefined
+        }
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
           if (["ArrowDown", "ArrowUp"].includes(event.key)) {
@@ -94,12 +122,12 @@ export default function AppearanceMenu({ theme, onTheme }) {
           }}
         >
           <p className="appearance-heading">Color theme</p>
-          {THEMES.map(([value, name, ThemeIcon]) => (
+          {options.map(([value, name, ThemeIcon]) => (
             <button
               key={value}
               type="button"
               role="menuitemradio"
-              aria-checked={theme === value}
+              aria-checked={effective === value}
               className="appearance-option"
               onClick={() => {
                 onTheme(value);
@@ -108,9 +136,14 @@ export default function AppearanceMenu({ theme, onTheme }) {
             >
               <ThemeIcon size={16} aria-hidden="true" />
               <span>{name} theme</span>
-              {theme === value && <Check size={14} aria-hidden="true" />}
+              {effective === value && <Check size={14} aria-hidden="true" />}
             </button>
           ))}
+          {sale.active && (
+            <p className="appearance-note">
+              The two sale looks leave this menu when the day ends.
+            </p>
+          )}
         </div>
       )}
     </div>

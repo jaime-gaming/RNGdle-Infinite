@@ -243,7 +243,15 @@ nav button.active {
   overflow: hidden;
 }
 .artifact-digit.is-scrambling {
-  color: #e5e7eb;
+  /* Grey and white, or the worn aura's own colour: the ink of the box it sits
+     on keeps it readable in both themes, with no box of its own behind it. */
+  --scramble-ink: color-mix(
+    in srgb,
+    var(--aura-a, #8b909c) 42%,
+    var(--box-ink, #4b5563)
+  );
+  color: var(--scramble-ink);
+  -webkit-text-fill-color: var(--scramble-ink);
 }
 .artifact-digit.is-settling {
   animation: digit-land calc(0.4s * var(--reveal-scale, 1)) ease-out both;
@@ -834,9 +842,6 @@ nav button.active {
   --rarity: #f87171;
   --rarity-bg: #450a0a66;
   --rarity-border: #9d174d99;
-}
-:root[data-theme="dark"] .artifact-digit.is-scrambling {
-  color: #71717a;
 }
 :root[data-theme="dark"] .artifact-digits {
   text-shadow: 0 1px 2px #ffffff33;

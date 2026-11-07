@@ -1,0 +1,485 @@
+/* Black Friday 2026: the sale's own chrome, and nothing else.
+   The news bar, the shop's event notice, the stamp card, the two colour themes
+   the day offers, and the quiet matte art of the limited skin. Every rule here
+   is presentation — prices, stamps and rewards are decided in black-friday.js
+   and written by the reducer. */
+
+/* ---- The day's news bar ----------------------------------------------------
+   One line at the very top of the game, saying SALE from end to end. The strip
+   is laid down twice and moved by exactly half, so the loop has no seam. */
+.sale-ticker {
+  position: relative;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  overflow: hidden;
+  background: #050505;
+  border-bottom: 1px solid #26262b;
+  color: #f4f4f5;
+}
+.sale-ticker-track {
+  display: flex;
+  flex: none;
+  align-items: center;
+  white-space: nowrap;
+  animation: sale-ticker-run 28s linear infinite;
+}
+.sale-ticker-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding-right: 16px;
+  font: 700 11px/1 var(--font-mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.sale-ticker-word i {
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0;
+  color: #ff2d2d;
+}
+@keyframes sale-ticker-run {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sale-ticker-track {
+    animation: none;
+  }
+}
+/* The bar is decoration; this is the one honest sentence it stands for. */
+.sale-ticker-say {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- The shop's event notice ----------------------------------------------
+   A black object at the top of the shop. It is the same object before and
+   during the day; only the line under the title changes. */
+.sale-flag {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border: 1px solid #26262b;
+  border-radius: 12px;
+  background: #050505;
+  color: #f4f4f5;
+  text-align: left;
+  cursor: pointer;
+}
+.sale-flag:hover {
+  border-color: #4b4b53;
+}
+.sale-flag:focus-visible {
+  outline: 2px solid #f4f4f5;
+  outline-offset: 2px;
+}
+.sale-flag.is-live {
+  border-color: #7f1d1d;
+  box-shadow: 0 0 0 1px #7f1d1d59;
+}
+.sale-flag-tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f4f4f5;
+  color: #050505;
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.sale-flag.is-live .sale-flag-tag {
+  background: #ff2d2d;
+  color: #12040a;
+}
+.sale-flag-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.sale-flag-copy strong {
+  font-size: 13.5px;
+  letter-spacing: 0.01em;
+}
+.sale-flag-copy small {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #a1a1aa;
+}
+.sale-flag-when {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font: 600 11px/1 var(--font-mono);
+  color: #d4d4d8;
+}
+
+/* ---- The explanation ------------------------------------------------------ */
+.sale-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: calc(100% - 32px);
+  max-width: 520px;
+  max-height: 86svh;
+  overflow: auto;
+  padding: 28px;
+  border: 1px solid #26262b;
+  border-radius: 14px;
+  background: #0a0a0b;
+  color: #f4f4f5;
+  box-shadow: 0 24px 70px #00000080;
+}
+.sale-dialog::backdrop {
+  background: #00000099;
+  backdrop-filter: blur(4px);
+}
+.sale-dialog[open] {
+  animation: sale-dialog-in 0.24s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes sale-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.sale-dialog-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: #a1a1aa;
+}
+.sale-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #ff6b6b;
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.22em;
+}
+.sale-dialog h2 {
+  margin: 10px 0 4px;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+.sale-when {
+  margin: 0 0 18px;
+  font: 600 11.5px/1.6 var(--font-mono);
+  color: #a1a1aa;
+}
+.sale-block {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #1e1e22;
+  border-radius: 12px;
+  background: #0e0e10;
+}
+.sale-block h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+.sale-block h3 svg {
+  color: #ff6b6b;
+}
+.sale-block p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: #c9c9d1;
+}
+.sale-note {
+  margin-top: 8px;
+  font: 600 11px/1.6 var(--font-mono);
+  color: #8b8b93;
+}
+.sale-fine {
+  margin: 0 0 16px;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: #8b8b93;
+}
+.sale-dialog .secondary-button {
+  margin-top: 12px;
+  border-color: #2a2a30;
+  background: #121214;
+  color: #e4e4e7;
+}
+.sale-dialog .primary-button {
+  width: 100%;
+  background: #f4f4f5;
+  color: #0a0a0b;
+}
+
+/* ---- The stamp card ------------------------------------------------------- */
+.sale-stamp-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #26262b;
+  border-radius: 12px;
+  background: #050505;
+}
+.sale-stamp-card.is-earned {
+  border-color: #3f3f46;
+}
+.sale-stamp-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #f4f4f5;
+  color: #050505;
+}
+.sale-stamp-card.is-earned .sale-stamp-icon {
+  background: #18181b;
+  color: #f4f4f5;
+  border: 1px solid #3f3f46;
+}
+.sale-stamp-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.sale-stamp-copy strong {
+  font-size: 12.5px;
+  color: #f4f4f5;
+}
+.sale-stamp-copy > span:not(.sale-stamp-bar) {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #a1a1aa;
+}
+.sale-stamp-bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: #26262b;
+  overflow: hidden;
+}
+.sale-stamp-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #f4f4f5;
+  transition: width 0.4s ease;
+}
+.sale-stamp-card.is-earned .sale-stamp-bar i {
+  background: #ff2d2d;
+}
+
+/* ---- The looks the counter still has -------------------------------------- */
+.sale-missing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sale-missing li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border: 1px solid #1e1e22;
+  border-radius: 9px;
+  background: #0a0a0b;
+  font-size: 12px;
+  color: #e4e4e7;
+}
+.sale-missing li small {
+  margin-left: auto;
+  font: 600 10.5px/1 var(--font-mono);
+  color: #8b8b93;
+}
+
+/* ---- Sale markings on the shelves ----------------------------------------- */
+.sale-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #050505;
+  color: #f4f4f5;
+  font: 700 10px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  border: 1px solid #3f3f46;
+}
+.sale-tag.is-resale {
+  background: #ff2d2d;
+  border-color: #ff2d2d;
+  color: #1a0308;
+}
+.shop-price-was {
+  margin-right: 6px;
+  font: 600 11px/1 var(--font-mono);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.shop-price.is-sale {
+  color: var(--text);
+}
+
+/* ---- The two looks the day offers -----------------------------------------
+   Both are variants of the dark theme, so every dark rule keeps applying and
+   only the palette changes. */
+:root[data-sale-theme="ultra-black"] {
+  --bg: #000000;
+  --surface: #060607;
+  --text: #f5f5f6;
+  --muted: #9b9ba3;
+  --secondary: #c9c9d1;
+  --border: #1a1a1e;
+  --hover: #0f0f12;
+  --green: #e4e4e7;
+  --green-bg: #0d0d10;
+  --button: #f5f5f6;
+  --scrim: #000c;
+  --scrim-strong: #0009;
+  --shadow: none;
+  --rank-exceptional: #e4e4e7;
+  --rank-excellent: #d4d4d8;
+  --rank-above: #c9c9d1;
+  --rank-below: #a1a1aa;
+  --rank-low: #8b8b93;
+}
+:root[data-sale-theme="red-sale"] {
+  --bg: #0b0406;
+  --surface: #150709;
+  --text: #fff4f4;
+  --muted: #bd979b;
+  --secondary: #ecd2d5;
+  --border: #3a1218;
+  --hover: #1e0a0d;
+  --green: #ff3b30;
+  --green-bg: #2a0a0c;
+  --danger: #ff7a70;
+  --danger-border: #ff7a7066;
+  --warning: #ffb020;
+  --button: #ff3b30;
+  --rank-exceptional: #ffb020;
+  --rank-excellent: #ff6b6b;
+  --rank-above: #ff3b30;
+  --rank-below: #e08a72;
+  --rank-low: #c96a6a;
+}
+/* A red accent needs red-dark ink on the buttons that wear it. */
+:root[data-sale-theme="red-sale"] .primary-button {
+  color: #1a0308;
+}
+:root[data-sale-theme="red-sale"] .sale-flag.is-live {
+  border-color: #ff3b30;
+  box-shadow: 0 0 0 1px #ff3b3040;
+}
+
+/* ---- The limited skin: matte black, one tag, no noise --------------------- */
+.number-box[data-cosmetic="blackout-2026"] {
+  --box-background: #050506;
+  --box-border: #26262b;
+  --box-shadow: 0 12px 26px -12px #00000099, inset 0 1px 0 #ffffff0f;
+  --box-ink: #f4f4f5;
+  border-width: 1px;
+  border-radius: 10px;
+}
+:root[data-theme="dark"] .number-box[data-cosmetic="blackout-2026"] {
+  --box-background: #000000;
+  --box-border: #3f3f46;
+  --box-ink: #fafafa;
+}
+/* The shared finish keeps a single hairline sweep; every other decorative
+   layer stays off, because the skin is the quiet one. */
+.number-box[data-cosmetic="blackout-2026"] .box-finish::before {
+  opacity: 0.28;
+  animation-duration: 18s;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-finish::after,
+.number-box[data-cosmetic="blackout-2026"] .box-halo,
+.number-box[data-cosmetic="blackout-2026"] .box-ribbon,
+.number-box[data-cosmetic="blackout-2026"] .box-comet,
+.number-box[data-cosmetic="blackout-2026"] .box-particles,
+.number-box[data-cosmetic="blackout-2026"] .box-shimmer,
+.number-box[data-cosmetic="blackout-2026"] .box-ornament {
+  display: none;
+}
+/* The one detail it does carry: a small white price tag in the corner. */
+.number-box[data-cosmetic="blackout-2026"] .box-gloss {
+  background: none;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-gloss::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  background: #f4f4f5;
+  box-shadow: 0 0 8px #ffffff26;
+}
+.number-box[data-cosmetic="blackout-2026"] .number-box-content {
+  filter: none;
+}
+
+/* ---- Phones --------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .sale-ticker {
+    height: 24px;
+  }
+  .sale-ticker-word {
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    gap: 12px;
+    padding-right: 12px;
+  }
+  .sale-flag {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 11px 13px;
+  }
+  .sale-flag-when {
+    margin-left: 0;
+  }
+  .sale-dialog {
+    padding: 22px 18px;
+  }
+}

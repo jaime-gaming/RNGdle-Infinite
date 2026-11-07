@@ -27,7 +27,7 @@ test("build identity is read from the page and version checks use the app base p
     getAppInternalVersion({
       querySelector: () => ({ content: APP_INTERNAL_VERSION }),
     }),
-  ).toBe("RNGdle-Infinitev0.5.2fix2");
+  ).toBe("RNGdle-Infinitev0.5.2fix3");
   expect(
     makeVersionUrl({
       base: "/preview/",
@@ -80,7 +80,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     new URL("/version.json", page.url()).toString(),
   );
   expect(liveVersion.ok()).toBeTruthy();
-  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinitev0.5.2fix2");
+  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinitev0.5.2fix3");
   expect(await liveVersion.json()).toMatchObject({
     buildId,
     internalVersion: APP_INTERNAL_VERSION,

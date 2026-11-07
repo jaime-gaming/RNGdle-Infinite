@@ -13,6 +13,7 @@ import {
   Share2,
   Bookmark,
   ListChecks,
+  Tag,
   TriangleAlert,
   Infinity as InfinityIcon,
 } from "lucide-react";
@@ -537,6 +538,8 @@ export default function ActivityFeed({
                       "rngween-world-exchange",
                     ].includes(event.type) ? (
                     <ShoppingBag size={19} />
+                  ) : event.type === "sale-reward" ? (
+                    <Tag size={19} />
                   ) : event.type === "pet" ? (
                     <PawPrint size={19} />
                   ) : event.type === "rebirth" ||
@@ -597,7 +600,11 @@ export default function ActivityFeed({
                                               ? `Task claimed · ${event.name}`
                                               : event.type === "rngween-finale"
                                                 ? `Event keepsake · ${event.name}`
-                                                : `Equipped ${event.name}`}
+                                                : event.type === "sale-reward"
+                                                  ? event.stamps >= 25
+                                                    ? "Sale reward · Blackout 2026 unlocked"
+                                                    : `Sale stamp ${event.stamps} of 25`
+                                                  : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString("en-US", {
@@ -771,6 +778,20 @@ export default function ActivityFeed({
                     <p className="activity-transaction">
                       <strong>+{formatEP(event.ep)} EP</strong> ·{" "}
                       {CADENCE_NAME[event.cadence]} task, paid into your wallet
+                    </p>
+                  ) : event.type === "sale-reward" ? (
+                    <p className="activity-transaction">
+                      {event.stamps >= 25 ? (
+                        <>
+                          <strong>25 of 25 sale stamps</strong> · the limited
+                          skin is yours, kept through every reset
+                        </>
+                      ) : (
+                        <>
+                          <strong>Sale stamp {event.stamps} of 25</strong> · one
+                          per purchase while the sale day is on
+                        </>
+                      )}
                     </p>
                   ) : (
                     <p className="activity-transaction">

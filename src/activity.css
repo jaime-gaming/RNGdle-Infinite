@@ -115,6 +115,10 @@
 .event-equip {
   color: var(--text);
 }
+.event-sale-reward {
+  color: #ff3b30;
+  background: rgb(255 59 48 / 0.12);
+}
 .activity-transaction strong {
   font-family: "Space Mono", monospace;
   color: var(--text);

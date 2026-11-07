@@ -87,7 +87,7 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
             {[
               ["all", "All"],
               ["regular", "Regular"],
-              ["legacy", "Legacy"],
+              ["legacy", "Special & Limiteds"],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -101,8 +101,8 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
           {collection === "legacy" && (
             <h3 className="wardrobe-collection-title">
               {shownAuras.length
-                ? "Legacy aura collection"
-                : "No legacy auras in this save"}
+                ? "Special & Limiteds collection"
+                : "No special or limited auras in this save"}
             </h3>
           )}
           <ul className="wardrobe-grid">

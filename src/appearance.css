@@ -73,3 +73,12 @@
 .header:has(.appearance-trigger[aria-expanded="true"]) {
   z-index: 80;
 }
+
+/* The note under the theme list, while the sale lends the game two looks. */
+.appearance-note {
+  margin: 8px 9px 6px;
+  color: var(--muted);
+  font:
+    400 11px/1.55 "Nunito Sans",
+    sans-serif;
+}

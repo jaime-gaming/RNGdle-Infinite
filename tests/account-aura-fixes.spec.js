@@ -71,7 +71,7 @@ test("Cloud Account opens from its scrollable Settings section and the top Profi
   await expect(page).toHaveURL(/\/profile\/Lucky$/);
 });
 
-test("all aura reveals keep moving and landed digits distinct in both themes", async ({
+test("all aura reveals keep landed digits boxed and moving digits box-free in both themes", async ({
   page,
 }) => {
   await page.goto("/shop/auras/celestial");
@@ -96,7 +96,7 @@ test("all aura reveals keep moving and landed digits distinct in both themes", a
             return [
               style.webkitTextFillColor,
               style.backgroundColor,
-              style.textDecorationStyle,
+              style.textDecorationLine,
             ];
           });
           box.remove();
@@ -107,9 +107,14 @@ test("all aura reveals keep moving and landed digits distinct in both themes", a
     );
     expect(results.length).toBeGreaterThan(10);
     for (const { landed, moving } of results) {
+      // The two states stay distinguishable by their ink…
       expect(landed[0]).not.toBe(moving[0]);
-      expect(landed[1]).not.toBe(moving[1]);
-      expect(moving[2]).toBe("dotted");
+      // …a landed digit keeps its opaque backing box…
+      expect(landed[1]).not.toBe("rgba(0, 0, 0, 0)");
+      // …and a digit that has not landed yet never grows one, and is never
+      // underlined: it is plain grey-and-white or aura-coloured ink.
+      expect(moving[1]).toBe("rgba(0, 0, 0, 0)");
+      expect(moving[2]).toBe("none");
     }
   }
 });

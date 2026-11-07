@@ -2003,9 +2003,12 @@ button.number-box.number-box:hover {
   text-shadow: none;
 }
 
-/* A reveal state is functional information, not an aura colour. Give every
-   digit its own opaque ink and backing so inherited clipped gradients cannot
-   make moving and landed digits identical (including Godly and Déjà Vu). */
+/* A digit that has landed keeps its own opaque ink and backing, so an inherited
+   clipped gradient can never hide it (including Godly and Déjà Vu). The digits
+   that have not landed yet wear no box of their own: they stay the plain ink
+   they always were, grey and white, and take the worn aura's colour when there
+   is one. --box-ink is the readable ink of the box a digit sits on, so mixing
+   the aura into it keeps the contrast the box already guarantees. */
 .number-box.number-artifact.is-spinning
   .artifact-digits
   .artifact-digit:not(.is-blank) {
@@ -2021,10 +2024,15 @@ button.number-box.number-box:hover {
 .number-box.number-artifact.is-spinning
   .artifact-digits
   .artifact-digit.is-scrambling:not(.is-blank) {
-  background: #fff0ca;
-  color: #754000;
-  -webkit-text-fill-color: #754000;
-  box-shadow: inset 0 -0.055em #b77900;
-  text-decoration: underline dotted;
-  text-underline-offset: 0.09em;
+  --scramble-ink: color-mix(
+    in srgb,
+    var(--aura-a, #8b909c) 42%,
+    var(--box-ink, #4b5563)
+  );
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  text-decoration: none;
+  color: var(--scramble-ink);
+  -webkit-text-fill-color: var(--scramble-ink);
 }

@@ -662,7 +662,7 @@ test("owned retired cosmetics remain in the Legacy collection and can still be e
 
   const legacy = page.locator('.aura-family-banner[data-family="special"]');
   await expect(legacy).toBeVisible();
-  await expect(legacy).toContainText("Legacy collection");
+  await expect(legacy).toContainText("Special & Limiteds");
   await legacy.click();
   await expect(page).toHaveURL(/\/shop\/auras\/special$/);
 
@@ -676,7 +676,7 @@ test("owned retired cosmetics remain in the Legacy collection and can still be e
     const card = page.locator(`[data-product="${id}"]`);
     await expect(card).toHaveClass(/is-owned/);
     await expect(card).toContainText(
-      "Legacy cosmetic · Permanently owned · Not for sale",
+      "Special & Limited · Permanently owned · Not for sale",
     );
   }
   await expect(

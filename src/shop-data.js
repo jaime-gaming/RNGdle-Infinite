@@ -1,5 +1,13 @@
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
+import {
+  BLACK_FRIDAY_END,
+  BLACK_FRIDAY_FAMILY,
+  BLACK_FRIDAY_SKIN,
+  resalePrice,
+  saleNow,
+  salePrice,
+} from "./black-friday.js";
 
 // Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
@@ -799,48 +807,78 @@ export function nextUpgrade(owned, kind) {
 export const auraProducts = [
   ...shopProducts.filter((item) => item.kind === "aura"),
   ...RNGWEEN_COSMETICS,
+  BLACK_FRIDAY_SKIN,
 ];
 export const productById = new Map(
-  [...shopProducts, ...RNGWEEN_COSMETICS].map((item) => [item.id, item]),
+  [...shopProducts, ...RNGWEEN_COSMETICS, BLACK_FRIDAY_SKIN].map((item) => [
+    item.id,
+    item,
+  ]),
 );
 
-// The collection can be empty; no unowned special aura becomes equipable.
-export const LEGACY_AURA_COLLECTION = {
+// Special & Limiteds: the hub where every event keeps its own group of auras.
+// The hub can be empty; no unowned special aura becomes equipable, and nothing
+// here is for sale outside the day its own event allows.
+export const SPECIAL_AURA_COLLECTION = {
   id: "special",
-  label: "Legacy collection",
+  label: "Special & Limiteds",
   legacyHub: true,
-  blurb: "Permanent cosmetics preserved from retired seasonal content.",
+  blurb: "One group per event: the limited looks each one left behind.",
   font: "Georgia, serif",
   tracking: "0.02em",
   casing: "none",
   weight: 600,
 };
 
+export const EVENT_AURA_FAMILIES = [RNGWEEN_FAMILY, BLACK_FRIDAY_FAMILY];
+
 export function auraFamilyById(id) {
   return (
-    [...AURA_FAMILIES, RNGWEEN_FAMILY, LEGACY_AURA_COLLECTION].find(
+    [...AURA_FAMILIES, ...EVENT_AURA_FAMILIES, SPECIAL_AURA_COLLECTION].find(
       (family) => family.id === id,
     ) ?? null
   );
 }
 
-// The legacy collection has no empty banner, locked previews or missing-aura
-// count. Only the looks this player owns may appear, even via a direct link.
-export function visibleAuraFamilies(owned = []) {
-  return RNGWEEN_COSMETICS.some((aura) => owned.includes(aura.id))
-    ? [...AURA_FAMILIES, RNGWEEN_FAMILY]
-    : AURA_FAMILIES;
+// Which event groups the Special & Limiteds hub shows, one banner each. A
+// retired event's group appears while this save owns one of its looks, or while
+// the sale counter has the looks it missed on offer. The Black Friday group
+// appears from the moment its day is on the calendar, and stays while its
+// limited skin is owned.
+export function visibleAuraFamilies(owned = [], at = Date.now()) {
+  const families = [...AURA_FAMILIES];
+  if (
+    RNGWEEN_COSMETICS.some(
+      (aura) => owned.includes(aura.id) || resalePrice(aura, at) !== null,
+    )
+  )
+    families.push(RNGWEEN_FAMILY);
+  if (owned.includes(BLACK_FRIDAY_SKIN.id) || saleNow(at) < BLACK_FRIDAY_END)
+    families.push(BLACK_FRIDAY_FAMILY);
+  return families;
 }
 
-export function aurasInFamily(id, owned = []) {
+// What a family page lists: every look for sale, the event looks this save
+// owns, the retired looks the counter has back for the day, and the limited
+// skin the stamp card pays while its own event is still on the calendar.
+export function aurasInFamily(id, owned = [], at = Date.now()) {
   return auraProducts.filter(
     (aura) =>
-      aura.family === id && (!aura.eventOnly || owned.includes(aura.id)),
+      aura.family === id &&
+      (!aura.eventOnly ||
+        owned.includes(aura.id) ||
+        resalePrice(aura, at) !== null ||
+        (aura.id === BLACK_FRIDAY_SKIN.id && saleNow(at) < BLACK_FRIDAY_END)),
   );
 }
 
-export function productPrice(item) {
-  return item?.eventOnly ? null : (item?.price ?? 0);
+// What a product costs right now. The sale day discounts the whole shop product
+// by product; a retired look that is back for the day costs the counter price;
+// a limited skin is earned rather than bought, so it has no price at all.
+export function productPrice(item, at = Date.now()) {
+  if (!item) return 0;
+  if (item.eventOnly) return resalePrice(item, at);
+  return salePrice(item, at);
 }
 
 export function rollSettings(owned = []) {

@@ -31,7 +31,7 @@ import {
   visibleAuraFamilies,
   aurasInFamily,
   auraProducts,
-  LEGACY_AURA_COLLECTION,
+  SPECIAL_AURA_COLLECTION,
 } from "../shop-data";
 import { LOADOUT_LIMIT } from "../progress.js";
 import {
@@ -46,6 +46,15 @@ import { currentGoal, validGoal } from "../gameplay-loop.js";
 import { rackReport } from "../rack.js";
 import "../progress-links.css";
 import PetShelf from "./PetShelf";
+import SaleEventNotice, { SaleStampCard } from "./BlackFriday.jsx";
+import { useSaleStatus } from "../use-black-friday.js";
+import {
+  BLACK_FRIDAY_SKIN,
+  BLACK_FRIDAY_STAMPS,
+  resalePrice,
+  saleDiscountFor,
+  stampsLeft,
+} from "../black-friday.js";
 import { PETS } from "../pets.js";
 import { flywheelRequired } from "../flywheel.js";
 import {
@@ -104,6 +113,7 @@ import {
   WitchfireMark,
   BloodMoonMark,
   HexboundMark,
+  BlackoutMark,
   MiserMark,
   TriptychMark,
   SpeedMark,
@@ -172,6 +182,7 @@ const icons = {
   witchfire: WitchfireMark,
   bloodmoon: BloodMoonMark,
   hexbound: HexboundMark,
+  blackout: BlackoutMark,
   hollow: PumpkinMark,
 };
 // The shelves come from the catalogue, so routing, the hub, the featured picks
@@ -206,6 +217,10 @@ export default function Shop({
   onPickingGoal = () => {},
 }) {
   const formatEP = useFormatEP();
+  // The sale day drives three things on the shelves: the event notice at the
+  // top, the discount every card wears, and the counter of missed looks.
+  const sale = useSaleStatus();
+  const saleRecord = progress.blackFriday ?? null;
   const hasGuestProgress =
     (progress.history?.length ?? 0) > 0 ||
     progress.balance > 0 ||
@@ -223,13 +238,13 @@ export default function Shop({
   const [clock, setClock] = useState(() => gameNow());
   const currentPrice = (item) => productPrice(item, clock);
   const shelf = SHOP_SECTIONS.find((entry) => entry.id === section) ?? null;
-  const auraFamilies = visibleAuraFamilies(progress.owned);
+  const auraFamilies = visibleAuraFamilies(progress.owned, clock);
   const legacyFamilies = auraFamilies.filter((entry) => entry.eventOnly);
   const regularFamilies = auraFamilies.filter((entry) => !entry.eventOnly);
   const auraFamily =
     section === "auras"
       ? family === "special"
-        ? LEGACY_AURA_COLLECTION
+        ? SPECIAL_AURA_COLLECTION
         : (auraFamilies.find((entry) => entry.id === family) ?? null)
       : null;
   const settings = rollSettings(progress.owned);
@@ -360,6 +375,9 @@ export default function Shop({
   function stateOf(item) {
     const owned = progress.owned.includes(item.id);
     const price = currentPrice(item);
+    // A retired look the sale counter has back is for sale for exactly one day,
+    // so on that day its card behaves like any other product on a shelf.
+    const onCounter = resalePrice(item, clock) !== null;
     const requires = !!(
       item.requires && !progress.owned.includes(item.requires)
     );
@@ -380,14 +398,14 @@ export default function Shop({
       price,
       affordable: progress.balance >= price,
       available:
-        !item.eventOnly &&
+        (!item.eventOnly || onCounter) &&
         !owned &&
         !requires &&
         !profileGated &&
         stocked &&
         !blocked,
       affordableNow:
-        !item.eventOnly &&
+        (!item.eventOnly || onCounter) &&
         !owned &&
         !requires &&
         stocked &&
@@ -527,6 +545,12 @@ export default function Shop({
     const restocking = skill && !state.owned && !state.stocked;
     const definition = skill ? skillById.get(item.skillId ?? item.id) : null;
     const Icon = icons[item.icon] ?? ShoppingBag;
+    // What the sale day adds to this one card: a discount tag, or the counter
+    // price of a retired look. The limited skin is neither — it is paid by
+    // stamps, and the card says so instead of showing a price.
+    const discount = sale.active ? saleDiscountFor(item) : 0;
+    const onCounter = resalePrice(item, clock) !== null;
+    const limited = item.id === BLACK_FRIDAY_SKIN.id;
     // A card that is simply for sale says nothing extra: the price and the
     // button are the state. Only real states earn a chip.
     const stateLabel = equipped
@@ -564,6 +588,14 @@ export default function Shop({
         {pickable && (
           <span className="shop-card-pick" aria-hidden="true">
             <Target size={15} />
+          </span>
+        )}
+        {(discount > 0 || onCounter) && (
+          <span
+            className={`sale-tag ${onCounter ? "is-resale" : ""}`}
+            aria-hidden="true"
+          >
+            {onCounter ? "COUNTER" : `−${Math.round(discount * 100)}%`}
           </span>
         )}
         <div
@@ -649,11 +681,26 @@ export default function Shop({
             </div>
           )}
           {item.eventOnly ? (
-            <div className="shop-source">
-              Legacy cosmetic · Permanently owned · Not for sale
-            </div>
+            limited ? (
+              <div className="shop-source">
+                Limited skin · Paid by {BLACK_FRIDAY_STAMPS} sale stamps · Kept
+                forever
+              </div>
+            ) : onCounter ? (
+              <div className="shop-price is-sale">
+                <Coins size={15} />
+                {formatEP(state.price)} EP
+              </div>
+            ) : (
+              <div className="shop-source">
+                Special &amp; Limited · Permanently owned · Not for sale
+              </div>
+            )
           ) : (
-            <div className="shop-price">
+            <div className={`shop-price ${discount ? "is-sale" : ""}`}>
+              {discount > 0 && (
+                <span className="shop-price-was">{formatEP(item.price)}</span>
+              )}
               <Coins size={15} />
               {formatEP(state.price)} EP
             </div>
@@ -664,7 +711,7 @@ export default function Shop({
             }
             disabled={
               pending ||
-              (item.eventOnly && !state.owned) ||
+              (item.eventOnly && !state.owned && !onCounter) ||
               restocking ||
               (equipped && aura) ||
               (state.owned && !aura && !skill) ||
@@ -673,7 +720,7 @@ export default function Shop({
                 (!state.affordable || state.requires || state.blocked))
             }
             onClick={() => {
-              if (item.eventOnly && !state.owned) return;
+              if (item.eventOnly && !state.owned && !onCounter) return;
               if (state.profileGated) return openSignup();
               if (!state.owned)
                 return preferences.confirmPurchases
@@ -702,6 +749,12 @@ export default function Shop({
                 <>
                   <Check size={14} /> Purchased
                 </>
+              )
+            ) : limited && !state.owned ? (
+              saleRecord?.skinEarned ? (
+                "Unlocked · equip it"
+              ) : (
+                `${stampsLeft(saleRecord)} sale stamps to go`
               )
             ) : item.repeatable && state.blocked ? (
               state.repeat.waitMs > 0 ? (
@@ -924,7 +977,7 @@ export default function Shop({
     // The auras shelf is an index of five banners until a family is opened.
     if (shelf.id === "auras")
       return auraFamily
-        ? aurasInFamily(auraFamily.id, progress.owned).sort(byPrice)
+        ? aurasInFamily(auraFamily.id, progress.owned, clock).sort(byPrice)
         : [];
     if (shelf.id === "skills")
       // The whole skill catalogue shows cheap-first; the two the stall stocks
@@ -1014,7 +1067,7 @@ export default function Shop({
         ? auraProducts.filter(
             (item) => item.eventOnly && progress.owned.includes(item.id),
           )
-        : aurasInFamily(entry.id, progress.owned)
+        : aurasInFamily(entry.id, progress.owned, clock)
     )
       .sort((a, b) => currentPrice(b) - currentPrice(a))
       .slice(0, 3);
@@ -1025,7 +1078,7 @@ export default function Shop({
       ? auraProducts.filter(
           (item) => item.eventOnly && progress.owned.includes(item.id),
         )
-      : aurasInFamily(entry.id, progress.owned);
+      : aurasInFamily(entry.id, progress.owned, clock);
     const owned = looks.filter((item) =>
       progress.owned.includes(item.id),
     ).length;
@@ -1055,7 +1108,7 @@ export default function Shop({
           <small>{entry.blurb}</small>
           <span className="aura-family-count">
             {entry.legacyHub
-              ? `${owned} owned looks · ${legacyFamilies.length} legacy sets`
+              ? `${owned} owned looks · ${legacyFamilies.length} event group${legacyFamilies.length === 1 ? "" : "s"}`
               : entry.eventOnly
                 ? `${owned} collected · yours forever`
                 : `${owned} / ${total} yours`}
@@ -1116,6 +1169,13 @@ export default function Shop({
           </p>
         </div>
       </div>
+      {/* The event object: one black button at the top of the shop that opens
+          the whole explanation of the Black Friday sale. */}
+      <SaleEventNotice
+        progress={progress}
+        previewTier={previewTier}
+        onOpenSpecial={() => onOpenFamily("special")}
+      />
       {/* A shelf is its own page, so it says where it sits in the shop. */}
       {shelf && (
         <nav className="shop-crumb" aria-label="Breadcrumb">
@@ -1132,7 +1192,7 @@ export default function Shop({
               {auraFamily.eventOnly && (
                 <>
                   <button type="button" onClick={() => onOpenFamily("special")}>
-                    Special
+                    Special &amp; Limiteds
                   </button>
                   <ChevronRight size={13} aria-hidden="true" />
                 </>
@@ -1287,6 +1347,9 @@ export default function Shop({
           </small>
         )}
       </section>
+      {sale.active && (
+        <SaleStampCard record={saleRecord} previewTier={previewTier} />
+      )}
       {/* The shop's own page is the index: one button per shelf, each a real
           link to a real sub-page, each carrying the number that tells you
           whether it is worth opening. The shelves themselves live on their
@@ -1414,12 +1477,12 @@ export default function Shop({
               {shelf.id === "companions"
                 ? `${PETS.filter((pet) => progress.pets?.includes(pet.id)).length} / ${PETS.length} found`
                 : shelf.id === "auras" && auraFamily?.legacyHub
-                  ? `${legacyFamilies.length} legacy sets · ${auraProducts.filter((item) => item.eventOnly && progress.owned.includes(item.id)).length} owned`
+                  ? `${legacyFamilies.length} event group${legacyFamilies.length === 1 ? "" : "s"} · ${auraProducts.filter((item) => item.eventOnly && progress.owned.includes(item.id)).length} owned`
                   : shelf.id === "auras" && !auraFamily
                     ? // The index has no cards to count — its five banners are
                       // the shelf, so it counts sets instead of calling itself
                       // locked.
-                      `${auraFamilies.length} sets · ${auraFamilies.reduce((total, entry) => total + aurasInFamily(entry.id, progress.owned).length, 0)} looks`
+                      `${auraFamilies.length} sets · ${auraFamilies.reduce((total, entry) => total + aurasInFamily(entry.id, progress.owned, clock).length, 0)} looks`
                     : !shelfItemsNow.length
                       ? // A locked shelf has nothing to count; its own panel says
                         // why, and a second "0 of 0" would only be noise.
@@ -1606,14 +1669,14 @@ export default function Shop({
             <div>
               <h2>
                 <AuraMark size={16} />{" "}
-                {auraFamily?.legacyHub ? "Legacy auras" : "Auras"}
+                {auraFamily?.legacyHub ? "Special & Limiteds" : "Auras"}
               </h2>
               <p>
                 {auraFamily
                   ? auraFamily.legacyHub
-                    ? "Permanent cosmetics preserved in this save. Only owned looks can be equipped."
+                    ? "One group per event: the limited looks each one left behind. Only owned looks can be equipped."
                     : auraFamily.eventOnly
-                      ? "A permanent legacy collection. Owned looks can be equipped at any time."
+                      ? `${auraFamily.label}: a permanent event collection. Owned looks can be equipped at any time.`
                       : `One set of the shelf. ${auraGroups[0]?.items.length ?? 0} looks, cosmetic only.`
                   : `${auraFamilies.length} sets, cosmetic only; wear one at a time.`}
               </p>
@@ -1662,7 +1725,7 @@ export default function Shop({
             <div className="aura-family-banners">
               {regularFamilies.map((entry) => familyBanner(entry))}
               {legacyFamilies.length > 0 &&
-                familyBanner(LEGACY_AURA_COLLECTION)}
+                familyBanner(SPECIAL_AURA_COLLECTION)}
             </div>
           )}
           {/* Inside a family: its banner opens the page, its cards follow. */}
@@ -1673,10 +1736,10 @@ export default function Shop({
               </div>
               {!legacyFamilies.length && (
                 <div className="aura-special-empty">
-                  <h3>No legacy auras in this save</h3>
+                  <h3>No special or limited auras in this save</h3>
                   <p>
-                    Permanent legacy looks appear here when included in this
-                    save.
+                    An event's group appears here while its day is live, or once
+                    one of its looks is included in this save.
                   </p>
                 </div>
               )}
@@ -1690,7 +1753,7 @@ export default function Shop({
                   <div className="shop-family-heading">
                     <h3>
                       {group.family.eventOnly
-                        ? "Your legacy collection"
+                        ? `${group.family.label} · your collection`
                         : `Every ${group.family.label.toLowerCase()} look`}
                     </h3>
                     <p>{group.family.blurb}</p>

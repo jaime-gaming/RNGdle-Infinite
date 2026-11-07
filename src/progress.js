@@ -107,9 +107,20 @@ import {
 } from "./rngween.js";
 import {
   emptyRngweenLimited,
+  grantRngweenCosmetic,
   limitedRewardIds,
   parseRngweenLimited,
 } from "./rngween-limited.js";
+import {
+  BLACK_FRIDAY_SKIN,
+  blackFridayActive,
+  emptyBlackFriday,
+  isResaleCosmetic,
+  parseBlackFriday,
+  resalePrice,
+  saleCompanionPrice,
+  stampForPurchase,
+} from "./black-friday.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 // Guests have no saved account, so the one thing worth protecting — the roll
@@ -247,6 +258,8 @@ export function emptyProgress() {
     bookmarks: [],
     tasks: emptyTasks(),
     rngweenLimited: emptyRngweenLimited(),
+    // Sale stamps belong to the account, not to the run in play.
+    blackFriday: emptyBlackFriday(),
     // Historical attendance belongs to the account, not the run.
     events: {},
   };
@@ -522,6 +535,19 @@ export function parseAndRepairProgress(raw) {
     );
   for (const id of limitedRewardIds(rngweenLimited))
     if (!owned.includes(id)) owned.push(id);
+  // The sale stamp card is event progress, so an unreadable card is reset while
+  // the skin it already paid stays owned: a permanent cosmetic is never lost
+  // because the record that earned it could not be read.
+  const blackFriday = parseBlackFriday(p.blackFriday, { owned });
+  if (
+    p.blackFriday != null &&
+    (typeof p.blackFriday !== "object" || Array.isArray(p.blackFriday))
+  )
+    note("the sale stamp card was unreadable, so it was reset.");
+  if (blackFriday.skinEarned && !owned.includes(BLACK_FRIDAY_SKIN.id)) {
+    owned.push(BLACK_FRIDAY_SKIN.id);
+    note("your limited Black Friday 2026 skin was restored from its stamps.");
+  }
   // Lists that the rest of the save can vouch for are rebuilt from it: the
   // activity log remembers every companion found or bought, and purchases
   // plus rebirths re-unlock every skill. Nothing else can vouch for a wallet
@@ -682,6 +708,7 @@ export function parseAndRepairProgress(raw) {
     events: parseEvents(p.events),
     tasks: tasksRead.tasks,
     rngweenLimited,
+    blackFriday,
     skillCharge,
     cooldownUntil,
     receipts: [
@@ -885,10 +912,11 @@ function startNewCycle(
     totalEarned: state.totalEarned + starter,
     discovered: [],
     equipped: owned.includes(state.equipped) ? state.equipped : "none",
-    // The tracked goal is a preference, not a reward: it survives when it is
-    // still reachable from an empty workshop. Companions go back in the wild
-    // at a rebirth too, so a companion goal is reachable again.
-    goalId: validGoal(state.goalId, owned, []) ? state.goalId : null,
+    // The tracked goal is a preference, not a reward, so a new cycle never
+    // clears it. A goal whose prerequisites went back on the shelf simply
+    // waits: every reader re-validates it against what is owned, and it is
+    // tracked again as soon as the chain can be rebuilt.
+    goalId: state.goalId ?? null,
     flywheelCharge: 0,
     // Offline earnings are a tool, and the tool was handed back.
     offline: null,
@@ -896,13 +924,41 @@ function startNewCycle(
     cooldownUntil: 0,
     cooldownWindow: null,
     cycleEarnedEP: 0,
-    // Saved racks belong to the run: the skills they were built from were
-    // handed back with the rest of the shop.
-    loadouts: [],
+    // Saved racks are an account convenience rather than run progress, so they
+    // survive the cycle: applying one only ever equips skills that are
+    // unlocked again, and it says so when none are.
   };
 }
 // Every action goes through here, so the log is capped the same way for all of
 // them. Only an action that actually changed the save can grow the log.
+// One purchase made while the sale is on earns one stamp, and the stamp that
+// fills the card pays the limited skin. The stamp is written by the same action
+// as the purchase that earned it, so a reload or a repeated receipt can never
+// hand the reward out twice, and a purchase outside the day earns nothing.
+function withSaleStamp(state, at) {
+  if (!blackFridayActive(at)) return state;
+  const { record, awarded } = stampForPurchase(state.blackFriday, at);
+  if (!awarded) return { ...state, blackFriday: record };
+  const skin = BLACK_FRIDAY_SKIN;
+  return {
+    ...state,
+    blackFriday: record,
+    owned: state.owned.includes(skin.id)
+      ? state.owned
+      : [...state.owned, skin.id],
+    history: appendHistory(state.history, [
+      {
+        id: `sale-reward:${skin.id}:${record.stamps}`,
+        type: "sale-reward",
+        at,
+        productId: skin.id,
+        name: skin.name,
+        stamps: record.stamps,
+      },
+    ]),
+  };
+}
+
 // A repeatable product is bought again and again, and every purchase adds a use
 // instead of ownership, so it never enters the owned list. The Task Skip is the
 // only one: one purchase a day, and no more than three in any five days, on the
@@ -923,24 +979,27 @@ function buyTaskSkip(state, item, action) {
     );
   if (state.balance < price) throw new Error("Not enough EP for this item.");
   const tasks = state.tasks ?? emptyTasks();
-  return {
-    ...state,
-    history: appendHistory(state.history, [
-      {
-        id: action.eventId ?? `buy:${item.id}:${at}`,
-        type: "purchase",
-        at,
-        productId: item.id,
-        name: item.name,
-        ep: price,
+  return withSaleStamp(
+    {
+      ...state,
+      history: appendHistory(state.history, [
+        {
+          id: action.eventId ?? `buy:${item.id}:${at}`,
+          type: "purchase",
+          at,
+          productId: item.id,
+          name: item.name,
+          ep: price,
+        },
+      ]),
+      balance: state.balance - price,
+      tasks: {
+        ...tasks,
+        skip: boughtSkip(state.tasks, at),
       },
-    ]),
-    balance: state.balance - price,
-    tasks: {
-      ...tasks,
-      skip: boughtSkip(state.tasks, at),
     },
-  };
+    at,
+  );
 }
 
 // Pays one finished task of a cadence into the wallet, logged as income with the
@@ -1197,6 +1256,11 @@ function applyEvent(state, action) {
       freshStarts: count,
       tasks: emptyTasks(),
       rngweenLimited: state.rngweenLimited,
+      // What the account did and chose is not run progress: the event records,
+      // the saved racks and the tracked goal all outlive a fresh start.
+      blackFriday: state.blackFriday ?? emptyBlackFriday(),
+      loadouts: state.loadouts ?? [],
+      goalId: state.goalId ?? null,
       events: state.events ?? {},
       history: [keepsake],
     };
@@ -1662,12 +1726,19 @@ function applyEvent(state, action) {
   if (action.type === "buy") {
     const item = productById.get(action.id);
     if (!item) throw new Error("That item is not available.");
-    if (item.eventOnly)
-      throw new Error("This permanent aura is not available for purchase.");
-    if (item.repeatable) return buyTaskSkip(state, item, action);
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid purchase time");
+    // A limited skin is earned by its own event and is never sold. The retired
+    // looks the sale counter puts back for one day are the only event
+    // cosmetics with a price, and only for as long as that day lasts.
+    if (item.eventOnly && resalePrice(item, at) === null)
+      throw new Error(
+        item.limited
+          ? "This limited skin is paid by sale stamps, not by EP."
+          : "This permanent aura is not available for purchase.",
+      );
+    if (item.repeatable) return buyTaskSkip(state, item, action);
     const price = productPrice(item, at);
     if (state.owned.includes(item.id))
       throw new Error("You already own this item.");
@@ -1696,64 +1767,82 @@ function applyEvent(state, action) {
         `${item.name} is out of stock. The skill shelf restocks every five minutes; no EP was spent.`,
       );
     if (state.balance < price) throw new Error("Not enough EP for this item.");
-    return {
-      ...state,
-      history: appendHistory(state.history, [
-        {
-          id:
-            action.eventId ??
-            `buy:${item.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
-          type: "purchase",
-          at,
-          productId: item.id,
-          name: item.name,
-          ep: price,
-        },
-      ]),
-      balance: state.balance - price,
-      goalId: state.goalId === item.id ? null : (state.goalId ?? null),
-      ...(item.kind === "pace"
-        ? {
-            flywheelCharge:
-              item.id === "flywheel"
-                ? 0
-                : Math.min(state.flywheelCharge ?? 0, item.charges),
-          }
-        : {}),
-      ...(item.id === "offline-roller" ||
-      ["offline", "offline-cap"].includes(item.kind)
-        ? {
-            offline: {
-              lastSeenAt: action.at ?? Math.ceil(Date.now()),
-              batch: null,
-              report:
-                item.id === "offline-roller"
-                  ? null
-                  : (state.offline?.report ?? null),
-            },
-          }
-        : {}),
-      owned: [...state.owned, item.id],
-      equipped: item.kind === "aura" ? item.id : state.equipped,
-      // A bought skill joins the rack straight away if a slot is free.
-      ...(item.kind === "skill"
-        ? {
-            skills: [...new Set([...(state.skills ?? []), item.id])],
-            equippedSkills: autoEquip(
-              state.equippedSkills ?? [],
-              { ...state, owned: [...state.owned, item.id] },
-              item.id,
-            ),
-          }
-        : {}),
-    };
+    return withSaleStamp(
+      {
+        ...state,
+        history: appendHistory(state.history, [
+          {
+            id:
+              action.eventId ??
+              `buy:${item.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
+            type: "purchase",
+            at,
+            productId: item.id,
+            name: item.name,
+            ep: price,
+          },
+        ]),
+        balance: state.balance - price,
+        goalId: state.goalId === item.id ? null : (state.goalId ?? null),
+        ...(item.kind === "pace"
+          ? {
+              flywheelCharge:
+                item.id === "flywheel"
+                  ? 0
+                  : Math.min(state.flywheelCharge ?? 0, item.charges),
+            }
+          : {}),
+        ...(item.id === "offline-roller" ||
+        ["offline", "offline-cap"].includes(item.kind)
+          ? {
+              offline: {
+                lastSeenAt: at,
+                batch: null,
+                report:
+                  item.id === "offline-roller"
+                    ? null
+                    : (state.offline?.report ?? null),
+              },
+            }
+          : {}),
+        owned: [...state.owned, item.id],
+        equipped: item.kind === "aura" ? item.id : state.equipped,
+        // A retired look bought back from the counter writes the same permanent
+        // receipt its own event would have written.
+        ...(isResaleCosmetic(item)
+          ? {
+              rngweenLimited: grantRngweenCosmetic(
+                state.rngweenLimited,
+                item.id,
+              ),
+            }
+          : {}),
+        // A bought skill joins the rack straight away if a slot is free.
+        ...(item.kind === "skill"
+          ? {
+              skills: [...new Set([...(state.skills ?? []), item.id])],
+              equippedSkills: autoEquip(
+                state.equippedSkills ?? [],
+                { ...state, owned: [...state.owned, item.id] },
+                item.id,
+              ),
+            }
+          : {}),
+      },
+      at,
+    );
   }
   if (action.type === "buy-pet") {
     const pet = petById.get(action.id);
     if (!pet) throw new Error("That companion is not available.");
     if ((state.pets ?? []).includes(pet.id))
       throw new Error("You already have this companion.");
-    if (state.balance < pet.price)
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid purchase time");
+    // The sale covers the whole shop, companions included.
+    const price = saleCompanionPrice(pet, at);
+    if (state.balance < price)
       throw new Error("Not enough EP for this companion.");
     const pets = [...new Set([...(state.pets ?? []), pet.id])].sort(
       (a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b),
@@ -1763,25 +1852,28 @@ function applyEvent(state, action) {
     // docks, exactly as a manual swap would.
     const worn = applyEvent(
       { ...state, pets },
-      { type: "equip-pet", id: pet.id, at: action.at },
+      { type: "equip-pet", id: pet.id, at },
     );
-    return {
-      ...worn,
-      balance: state.balance - pet.price,
-      goalId: state.goalId === pet.id ? null : (state.goalId ?? null),
-      history: appendHistory(state.history, [
-        {
-          id:
-            action.eventId ??
-            `pet:${pet.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
-          type: "purchase",
-          at: action.at ?? Math.ceil(Date.now()),
-          productId: pet.id,
-          name: pet.name,
-          ep: pet.price,
-        },
-      ]),
-    };
+    return withSaleStamp(
+      {
+        ...worn,
+        balance: state.balance - price,
+        goalId: state.goalId === pet.id ? null : (state.goalId ?? null),
+        history: appendHistory(state.history, [
+          {
+            id:
+              action.eventId ??
+              `pet:${pet.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
+            type: "purchase",
+            at,
+            productId: pet.id,
+            name: pet.name,
+            ep: price,
+          },
+        ]),
+      },
+      at,
+    );
   }
   if (action.type === "equip-pet") {
     if (action.id !== "none" && !(state.pets ?? []).includes(action.id))
@@ -2114,6 +2206,24 @@ function parseHistory(value) {
         if (!validAmount(e.ep)) return [];
         next.ep = e.ep;
       }
+    } else if (e.type === "sale-reward") {
+      // The limited skin a full sale stamp card paid. It is a permanent
+      // cosmetic, so the row carries no EP: nothing was spent on it.
+      if (
+        e.productId !== BLACK_FRIDAY_SKIN.id ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.stamps) ||
+        e.stamps < 1
+      )
+        return [];
+      next = {
+        ...base,
+        productId: e.productId,
+        name: e.name,
+        stamps: e.stamps,
+      };
     } else if (
       ["rngween-exchange", "rngween-purchase", "rngween-mission"].includes(
         e.type,
