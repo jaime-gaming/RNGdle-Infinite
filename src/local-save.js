@@ -1,34 +1,20 @@
-import {
-  packVaultSave,
-  unpackVaultSave,
-  SAVE_VAULT_TAG,
-} from "./save-codec.js";
+import { packVaultSave, unpackVaultSave } from "./save-codec.js";
 
 // An atomic replacement only: never remove the current save, recovery copies,
 // account markers or another application's data to make room for a write.
+//
+// The primary save is always the bounded gzip envelope. A 10,000-entry log is a
+// few megabytes of JSON but a fraction of that once packed, so compressing on
+// every write is what lets the larger history fit. Plain JSON remains readable
+// for saves written by older versions; nothing needs a migration.
 export function writeDeviceSave(storage, key, raw) {
   const decoded = unpackVaultSave(raw);
   if (!decoded) throw new Error("The save could not be encoded safely.");
-  const previous = storage.getItem(key);
-  // Once quota pressure selected compression, keep it on subsequent writes.
-  // Small/new saves stay JSON for backwards compatibility and easy inspection.
-  const packed = previous?.startsWith(SAVE_VAULT_TAG)
-    ? packVaultSave(decoded)
-    : decoded;
-  try {
-    storage.setItem(key, packed);
-  } catch (error) {
-    const quota =
-      error?.name === "QuotaExceededError" ||
-      error?.code === 22 ||
-      error?.code === 1014;
-    if (!quota || packed !== decoded) throw error;
-    const compressed = packVaultSave(decoded);
-    if (
-      compressed.length >= decoded.length ||
-      unpackVaultSave(compressed) !== decoded
-    )
-      throw error;
-    storage.setItem(key, compressed);
-  }
+  const packed = packVaultSave(decoded);
+  // Never trust a container that cannot be read back byte for byte.
+  if (packed !== decoded && unpackVaultSave(packed) !== decoded)
+    throw new Error("The save could not be encoded safely.");
+  // A browser without gzip leaves readable JSON. A failed write is left alone:
+  // the envelope is already the smallest form, and setItem is atomic.
+  storage.setItem(key, packed);
 }

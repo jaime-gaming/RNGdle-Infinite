@@ -1,4 +1,6 @@
 import { test, expect } from "./helpers/clock.js";
+import { installPackedSaveDecoder } from "./helpers/packed.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   emptyProgress,
   applyProgress,
@@ -22,6 +24,7 @@ import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom, startRoll } from "./helpers/random-roll.js";
 import { gotoShelfFor, openShelfFor } from "./helpers/shop.js";
+import { readSavedProgress } from "./helpers/save.js";
 const timings = shopProducts
   .filter((p) => ["roll", "cooldown"].includes(p.kind))
   .map((p) => p.id);
@@ -32,8 +35,7 @@ const clocks = [
   "offline-clock-3",
 ];
 const pace = ["flywheel", "flywheel-2", "flywheel-3"];
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+const saved = (p) => readSavedProgress(p);
 const rows = (p) => p.history.filter((e) => e.type === "roll");
 const rich = (extra = {}) => ({
   ...emptyProgress(),
@@ -386,6 +388,7 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
   await page.emulateMedia({ reducedMotion: "reduce" });
   // Each late tier lives on the shelf that tracks it.
   await page.goto("/shop/pace");
+  await waitForApp(page);
   await expect(page.locator('[data-product="clockwork-5"]')).toHaveCount(0);
   await gotoShelfFor(page, "flywheel-3");
   await expect(page.locator('[data-product="flywheel-3"]')).toHaveCount(0);
@@ -406,6 +409,7 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
       upgrades.reduce((sum, id) => sum + productById.get(id).price, 0),
   );
   await page.reload();
+  await waitForApp(page);
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:05");
   await gotoShelfFor(page, "offline-roller");
   await expect(page.locator('[data-product="offline-roller"]')).toContainText(
@@ -459,6 +463,7 @@ test("a late cooldown purchase keeps the current 10-second commitment and uses 5
     .toBe(5000);
   const current = (await saved(page)).pendingRoll;
   await page.reload();
+  await waitForApp(page);
   expect((await saved(page)).pendingRoll).toEqual(current);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(async () => rows(await saved(page)).length).toBe(2);
@@ -486,6 +491,7 @@ for (const owned of [clocks.slice(0, 2), clocks]) {
     });
     await mockRandom(page, [604827]);
     await page.goto("/");
+    await waitForApp(page);
     // Whole rolls only, at the rate the owned clocks actually pay for.
     const intervalMS = offlineSettings(owned).intervalMS;
     await collected(page, count);
@@ -496,6 +502,7 @@ for (const owned of [clocks.slice(0, 2), clocks]) {
       Array.from({ length: count }, (_, i) => since + (i + 1) * intervalMS),
     );
     await page.reload();
+    await waitForApp(page);
     expect(rows(await saved(page))).toHaveLength(count);
   });
 }
@@ -520,6 +527,7 @@ for (const intervalMS of [undefined, 450000])
       offline: { lastSeenAt: now, batch, report: null },
     });
     await page.goto("/");
+    await waitForApp(page);
     await collected(page, 2);
     expect(rows(await saved(page)).map((e) => e.at)).toEqual([
       since + (intervalMS ?? 600000),
@@ -537,9 +545,11 @@ test("final offline clock reaches the same 144-roll cap in 12 hours and cannot d
   });
   await mockRandom(page, [604827]);
   await page.goto("/");
+  await waitForApp(page);
   await collected(page, 144);
   expect((await saved(page)).balance).toBe(144 * 4663);
   await page.reload();
+  await waitForApp(page);
   await expect(
     page.getByRole("region", { name: "Offline rewards" }),
   ).toContainText("144 rolls");
@@ -552,8 +562,10 @@ test("two tabs cannot purchase a late Flywheel tier twice or lose the earned cha
 }) => {
   await seedProgress(page, rich({ owned: ["flywheel"], flywheelCharge: 3 }));
   await page.goto("/shop/skills");
+  await waitForApp(page);
   const other = await context.newPage();
   await other.goto("/shop/skills");
+  await waitForApp(other);
   for (const p of [page, other])
     await p
       .locator(
@@ -602,6 +614,7 @@ test("final Flywheel boost survives reload and reduced motion still reserves the
   });
   expect(before.flywheelCharge).toBe(0);
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
     "digits",
@@ -628,11 +641,13 @@ test("final Flywheel boost survives reload and reduced motion still reserves the
 test("failed late-tier saves leave wallet, charge and offline rate unchanged until a successful retry", async ({
   page,
 }) => {
+  await installPackedSaveDecoder(page);
   await seedProgress(
     page,
     rich({ owned: ["flywheel", "offline-roller"], flywheelCharge: 3 }),
   );
   await page.goto("/shop/skills");
+  await waitForApp(page);
   await expect
     .poll(async () => (await saved(page)).offline?.lastSeenAt)
     .toBeTruthy();
@@ -643,7 +658,7 @@ test("failed late-tier saves leave wallet, charge and offline rate unchanged unt
       if (
         k === key &&
         window.failLate &&
-        JSON.parse(v).owned.some((id) =>
+        JSON.parse(window.decodePackedSave(v)).owned.some((id) =>
           ["flywheel-2", "offline-clock-1"].includes(id),
         )
       )
@@ -682,6 +697,7 @@ test("failed late-tier saves leave wallet, charge and offline rate unchanged unt
   );
   expect((await saved(page)).flywheelCharge).toBe(2);
   await page.reload();
+  await waitForApp(page);
   expect((await saved(page)).owned).toEqual([
     "flywheel",
     "offline-roller",

@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import { seedProgress } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 // Eleven plain rolls, newest first in the feed: 1010 down to 1000.
 const rolls = Array.from({ length: 11 }, (_, i) => ({
@@ -13,14 +15,14 @@ const rolls = Array.from({ length: 11 }, (_, i) => ({
   badges: [],
 }));
 
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 
 test("history bookmarks pin up to ten rolls, persist, and respect the cap", async ({
   page,
 }) => {
   await seedProgress(page, { history: rolls });
   await page.goto("/#history");
+  await waitForApp(page);
 
   const mark = (n) => page.getByRole("button", { name: `Bookmark roll ${n}` });
   const marked = (n) =>
@@ -42,6 +44,7 @@ test("history bookmarks pin up to ten rolls, persist, and respect the cap", asyn
 
   // Bookmarks live on the save, so a reload keeps them.
   await page.reload();
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "Bookmarks (10/10)" }),
   ).toBeVisible();
@@ -69,6 +72,7 @@ test("a repaired save drops bookmarks whose roll is gone", async ({ page }) => {
     bookmarks: ["roll:3", "ghost", 42, "roll:3"],
   });
   await page.goto("/#history");
+  await waitForApp(page);
   // The loader keeps only the mark that matches a real roll, deduped.
   await expect(
     page.getByRole("button", { name: "Bookmarks (1/10)" }),

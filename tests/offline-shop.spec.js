@@ -1,4 +1,6 @@
 import { test, expect } from "./helpers/clock.js";
+import { installPackedSaveDecoder } from "./helpers/packed.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import {
   offlinePlan,
@@ -12,8 +14,8 @@ import { mockRandom } from "./helpers/random-roll.js";
 import { evaluate } from "./helpers/index.js";
 import { shopProducts, AURA_FAMILIES } from "../src/shop-data.js";
 import { openShelfFor } from "./helpers/shop.js";
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+import { readSavedProgress } from "./helpers/save.js";
+const saved = (p) => readSavedProgress(p);
 const rows = async (p) =>
   (await saved(p)).history.filter((e) => e.source === "offline");
 const state = (minutes = 60) => ({
@@ -101,6 +103,7 @@ test("returning credits six real scores, discoveries and an automatic summary wi
 }) => {
   await away(page);
   await page.goto("/");
+  await waitForApp(page);
   await collected(page, 6);
   const result = evaluate(604827);
   expect((await saved(page)).balance).toBe(result.totalEP * 6);
@@ -117,6 +120,7 @@ test("returning credits six real scores, discoveries and an automatic summary wi
   await page.getByRole("button", { name: "Dismiss offline summary" }).click();
   await expect.poll(async () => (await saved(page)).offline.report).toBeNull();
   await page.reload();
+  await waitForApp(page);
   expect(await rows(page)).toHaveLength(6);
   await expect(
     page.getByRole("region", { name: "Offline rewards" }),
@@ -128,6 +132,7 @@ test("a long absence pays at most 144 rolls and refresh cannot award them again"
 }) => {
   await away(page, 7 * 24 * 60);
   await page.goto("/");
+  await waitForApp(page);
   await collected(page, 144);
   const before = await saved(page);
   expect(before.balance).toBe(144 * 4663);
@@ -136,6 +141,7 @@ test("a long absence pays at most 144 rolls and refresh cannot award them again"
     before.history.length,
   );
   await page.reload();
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -159,6 +165,7 @@ test("simultaneous returning tabs share a single offline commitment", async ({
   await mockRandom(a, [604827]);
   await mockRandom(b, [1337]);
   await Promise.all([a.goto("/"), b.goto("/")]);
+  await Promise.all([waitForApp(a), waitForApp(b)]);
   await collected(a, 6);
   await collected(b, 6);
   const result = await saved(a);
@@ -185,6 +192,7 @@ test("an online tab and continuous visible heartbeats never produce offline inco
     PRESENCE_PREFIX + testProfile.id + ":other",
   );
   await page.goto("/");
+  await waitForApp(page);
   await expect
     .poll(async () => (await saved(page)).offline.lastSeenAt)
     .toBeGreaterThan(Date.now() - 60000);
@@ -201,6 +209,7 @@ test("a hidden tab earns on return but a visible Shop page does not count as off
 }) => {
   await away(page, 0);
   await page.goto("/shop");
+  await waitForApp(page);
   await expect
     .poll(async () => (await saved(page)).offline.lastSeenAt)
     .toBeGreaterThan(Date.now() - 5000);
@@ -230,6 +239,7 @@ test("a hidden tab earns on return but a visible Shop page does not count as off
 test("failed settlement retains the exact committed numbers and retries without rerolling or losing a manual commitment", async ({
   page,
 }) => {
+  await installPackedSaveDecoder(page);
   const now = Date.now(),
     pending = {
       id: "manual",
@@ -246,13 +256,16 @@ test("failed settlement retains the exact committed numbers and retries without 
       if (
         window.failOffline &&
         k === key &&
-        JSON.parse(v).history.some((e) => e.source === "offline")
+        JSON.parse(window.decodePackedSave(v)).history.some(
+          (e) => e.source === "offline",
+        )
       )
         throw new DOMException("Full", "QuotaExceededError");
       return write.call(this, k, v);
     };
   }, PROGRESS_KEY);
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "Retry offline rewards" }),
   ).toBeVisible();
@@ -288,12 +301,14 @@ test("an interrupted saved batch resumes its IDs and numbers across reload with 
   await seedProgress(page, data);
   await mockRandom(page, [1337]);
   await page.goto("/");
+  await waitForApp(page);
   await collected(page, 2);
   expect((await rows(page)).map((e) => [e.id, e.number])).toEqual([
     ["retained:0", 121212],
     ["retained:1", 235959],
   ]);
   await page.reload();
+  await waitForApp(page);
   expect(await rows(page)).toHaveLength(2);
   expect((await saved(page)).discovered).toContain("INFINITE_LAST_SECOND");
 });
@@ -308,6 +323,7 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
   let auraCount = 0;
   for (const family of AURA_FAMILIES) {
     await page.goto(`/shop/auras/${family.id}`);
+    await waitForApp(page);
     const inFamily = auras.filter((p) => p.family === family.id).length;
     auraCount += inFamily;
     await expect(page.locator(".aura-preview .number-box")).toHaveCount(
@@ -348,6 +364,7 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
     ["machine", "prism"],
   ]) {
     await page.goto(`/shop/auras/${family}`);
+    await waitForApp(page);
     const box = page.locator(`[data-product="${id}"] .number-box`);
     await expect(box).toHaveAttribute("data-cosmetic", id);
     expect(
@@ -364,6 +381,7 @@ test("deletion removes offline earnings, commitments and presence without later 
 }) => {
   await away(page);
   await page.goto("/");
+  await waitForApp(page);
   await collected(page, 6);
   await page.getByRole("button", { name: /^Local profile,/ }).click();
   await page

@@ -1,0 +1,37 @@
+/* The boot/loader screen: one centred circle over an empty themed page. */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  background: var(--bg, #fafafa);
+}
+
+.loading-circle {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--border, #d9dbe3);
+  border-top-color: var(--green, #2f6b57);
+  border-radius: 50%;
+  animation: loading-circle-turn 900ms linear infinite;
+}
+
+@keyframes loading-circle-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-circle {
+    animation: loading-circle-breathe 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes loading-circle-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}

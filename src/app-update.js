@@ -20,8 +20,8 @@ const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 // flow uses it, to scope the update intent to the current internal build. It
 // is never added to the changelog or shown as a public release. Keep this exact
 // label unchanged until the next session or an explicit user request.
-// Current: RNGdle-Infinitev0.5.2fix3.
-export const APP_INTERNAL_VERSION = "RNGdle-Infinitev0.5.2fix3";
+// Current: RNGdle-Infinitev0.5.2fix4.
+export const APP_INTERNAL_VERSION = "RNGdle-Infinitev0.5.2fix4";
 
 let pollTimer = null;
 let reloadTimer = null;

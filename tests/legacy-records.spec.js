@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import {
   applyProgress,
   emptyProgress,

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import path from "node:path";
 import { PETS } from "../src/pets.js";

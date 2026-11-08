@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import { deflateSync, strToU8 } from "fflate";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { AVATAR_LIMIT, emptyProgress } from "../src/progress.js";
@@ -8,6 +9,7 @@ import {
   shareCardData,
   shareCardUrl,
 } from "../src/profile-card.js";
+import { mutateSavedProgress } from "./helpers/save.js";
 
 // Log times are epoch milliseconds; the card carries them as ISO strings.
 const at = (day) => Date.UTC(2026, 2, day, 10, 0, 0);
@@ -232,6 +234,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
     ],
   });
   await page.goto("/profile");
+  await waitForApp(page);
   await page.getByTestId("profile-share").click();
   await expect(page.locator(".profile-share-note")).toContainText(
     "Progress card link copied.",
@@ -243,6 +246,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   const other = await browser.newContext();
   const visitor = await other.newPage();
   await visitor.goto(link);
+  await waitForApp(visitor);
   await expect(
     visitor.getByRole("heading", { level: 2, name: testProfile.username }),
   ).toBeVisible();
@@ -262,6 +266,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   await expect(visitor.getByText("Delete account")).toHaveCount(0);
   // The address keeps the card, so a reload shows the same thing.
   await visitor.reload();
+  await waitForApp(visitor);
   await expect(visitor.getByText("A saved profile card.")).toBeVisible();
   // The visitor's own game is untouched: still a guest with nothing saved.
   expect(
@@ -278,6 +283,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
 
   // A damaged link is just the owner's own profile page.
   await page.goto(`/profile/${testProfile.username}?card=broken`);
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", {
       name: `Your profile, ${testProfile.username}`,
@@ -292,6 +298,7 @@ test("a heavy logo is shrunk to link size before it travels", async ({
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await seedProgress(page, { balance: 5000, totalEarned: 90000 });
   await page.goto("/profile");
+  await waitForApp(page);
   // A real photo-like logo (random pixels, the compressible kind never
   // shrinks) goes into the save, then the link is copied. It stays under the
   // save's avatar ceiling so it survives the parse on reload.
@@ -316,15 +323,9 @@ test("a heavy logo is shrunk to link size before it travels", async ({
   });
   expect(heavy.length).toBeGreaterThan(50000);
   expect(heavy.length).toBeLessThanOrEqual(240000);
-  await page.evaluate(
-    ([key, avatar]) => {
-      const saved = JSON.parse(localStorage.getItem(key));
-      saved.profile.avatar = avatar;
-      localStorage.setItem(key, JSON.stringify(saved));
-    },
-    ["rng-infinite-progress-v1", heavy],
-  );
+  await mutateSavedProgress(page, { profile: { avatar: heavy } });
   await page.reload();
+  await waitForApp(page);
   await page.getByTestId("profile-share").click();
   const link = await page.evaluate(() => navigator.clipboard.readText());
   // Compact: the logo rides as a small square, not as the whole picture.
@@ -334,6 +335,7 @@ test("a heavy logo is shrunk to link size before it travels", async ({
   const other = await browser.newContext();
   const visitor = await other.newPage();
   await visitor.goto(link);
+  await waitForApp(visitor);
   await expect(visitor.getByText("A saved profile card.")).toBeVisible();
   const src = await visitor
     .locator(".profile-title .avatar-mark img")

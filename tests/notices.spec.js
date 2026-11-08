@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import { mockRandom, showRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -112,6 +113,7 @@ test("a roll that finishes a task posts a notice that opens the Tasks page", asy
   await mockRandom(page, [12345]);
   await seedProgress(page, { tasks });
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -145,6 +147,7 @@ test("an Epic badge found while the roll is off the roll page posts a notice tha
   await mockRandom(page, [13589]);
   await seedProgress(page, {});
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -176,6 +179,7 @@ test("an Epic badge found on the roll page itself posts no notice, since the res
   await mockRandom(page, [13589]);
   await seedProgress(page, {});
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();

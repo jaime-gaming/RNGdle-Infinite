@@ -1015,15 +1015,13 @@ export default function RollExperience({
             }
             onClick={generate}
           >
-            {loading
-              ? "LOADING ROLL DATA…"
-              : drawing
-                ? "DRAWING…"
-                : cooldown || reserving
-                  ? `${waitWord} ${formatDuration(cooldown || reservedSeconds)}`
-                  : error
-                    ? "RETRY & ROLL"
-                    : "GENERATE"}
+            {drawing
+              ? "DRAWING…"
+              : cooldown || reserving
+                ? `${waitWord} ${formatDuration(cooldown || reservedSeconds)}`
+                : error
+                  ? "RETRY & ROLL"
+                  : "GENERATE"}
             {!!cooldown && (
               <CooldownFill
                 window={cooldownWindow}
@@ -1252,11 +1250,9 @@ export default function RollExperience({
         </button>
       )}
 
-      {(loading || drawing) && (
+      {drawing && (
         <span className="sr-only" role="status">
-          {loading
-            ? "Loading full-range scoring data"
-            : "Drawing a random number"}
+          Drawing a random number
         </span>
       )}
       {!run && children}

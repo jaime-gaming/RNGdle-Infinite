@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   applyProgress,
   emptyProgress,
@@ -17,8 +18,8 @@ import {
 import { showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { gotoShelfFor, openShelfFor } from "./helpers/shop.js";
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+import { readSavedProgress } from "./helpers/save.js";
+const saved = (page) => readSavedProgress(page);
 const nav = (page, name) =>
   page
     .getByRole("navigation")
@@ -120,6 +121,7 @@ test("guest rewards and purchases stay in memory and disappear on reload", async
   await expect(page.getByTestId("roll-duration")).toHaveText("35s");
   expect(await saved(page)).toBeNull();
   await page.reload();
+  await waitForApp(page);
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
   await expect(page.getByTestId("roll-duration")).toHaveText("45s");
   await gotoShelfFor(page, "starfall");
@@ -162,6 +164,7 @@ test("signup names a clean account and never invents guest earnings", async ({
   expect(p.receipts).toEqual([]);
   expect(p.cooldownUntil).toBe(0);
   await page.reload();
+  await waitForApp(page);
   expect(await saved(page)).toEqual(p);
   await nav(page, "Shop");
   await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
@@ -180,6 +183,7 @@ test("an unconfigured deployment keeps local profiles available and never preten
   page,
 }) => {
   await page.goto("/settings/cloud-account");
+  await waitForApp(page);
   await expect(page.locator(".cloud-account")).toContainText(
     "Online sign-in isn’t available here.",
   );
@@ -248,6 +252,7 @@ test("another tab signing up neither discards a guest game nor silently saves it
   await nav(page, "Shop");
   const other = await context.newPage();
   await other.goto("/");
+  await waitForApp(other);
   await signup(other, "OtherPlayer");
   await expect(
     other.getByRole("heading", { name: "Your profile, OtherPlayer" }),
@@ -299,6 +304,7 @@ test("the first three tiers produce a fifteen-second reveal and fifteen-second c
 }) => {
   await seedProgress(page, { balance: 15000000, totalEarned: 15000000 });
   await page.goto("/shop/pace");
+  await waitForApp(page);
   await expect(
     page.locator(
       '[data-product="quickwind-2"] button:not(.shop-tag):not(.shop-look-eye)',
@@ -318,6 +324,7 @@ test("the first three tiers produce a fifteen-second reveal and fifteen-second c
   );
   expect((await saved(page)).equipped).toBe("none");
   await page.reload();
+  await waitForApp(page);
   await expect(page.getByTestId("roll-duration")).toHaveText("15s");
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:15");
   await startRoll(page, 1337);

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 
@@ -16,6 +17,7 @@ test("the phone bar orders Shop, Tasks, Roll, Badges and More from left to right
 }) => {
   await seedProgress(page, seeded);
   await page.goto("/");
+  await waitForApp(page);
   const buttons = bar(page).locator("button");
   await expect(buttons).toHaveCount(5);
   expect(
@@ -39,6 +41,7 @@ test("More opens the rest of the destinations; Escape, a tap outside, or a choic
 }) => {
   await seedProgress(page, seeded);
   await page.goto("/");
+  await waitForApp(page);
   const more = bar(page).getByRole("button", { name: "More", exact: true });
   const menu = page.getByRole("menu", { name: "More destinations" });
   await more.click();
@@ -75,6 +78,7 @@ test("Rebirth joins the More menu only once the ladder is in view", async ({
     discovered: badgeIds.slice(0, 10),
   });
   await page.goto("/");
+  await waitForApp(page);
   await bar(page).getByRole("button", { name: "More", exact: true }).click();
   await expect(
     page.getByRole("menu", { name: "More destinations" }).getByRole("menuitem"),

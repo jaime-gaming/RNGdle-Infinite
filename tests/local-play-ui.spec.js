@@ -1,12 +1,15 @@
 import { expect, test } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { LEGACY_DEVICE_LINK_STORAGE_KEYS } from "../src/device-link-migration.js";
 import { seedProgress } from "./helpers/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 test("the home screen has no account banner; a guest can choose local play from their profile", async ({
   page,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".play-choice-banner")).toHaveCount(0);
   await expect(page.getByText(/Choose how to play:/)).toHaveCount(0);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -20,6 +23,7 @@ test("the home screen has no account banner; a guest can choose local play from 
   await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
   await expect(page.locator(".sign-in")).toContainText("Name profile");
   await page.reload();
+  await waitForApp(page);
   await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
 });
 
@@ -44,6 +48,7 @@ test("the retired device-link notice is only shown when a local profile exists",
     },
   );
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.getByText("Device linking has changed.")).toBeVisible();
   await expect(
     page.getByText(/same Cloud Account on each device/),
@@ -68,6 +73,7 @@ test("the retired device-link notice stays hidden without a local profile", asyn
     },
   );
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".device-link-migration-banner")).toHaveCount(0);
 });
 
@@ -76,6 +82,7 @@ test("offline play explains that a local profile stays on this device", async ({
 }) => {
   await seedProgress(page, { balance: 42 });
   await page.goto("/");
+  await waitForApp(page);
   await page.context().setOffline(true);
   const notice = page.getByTestId("offline-save-notice");
   await expect(notice).toContainText(
@@ -88,6 +95,7 @@ test("email credential controls and cloud account deletion require a signed-in a
   page,
 }) => {
   await page.goto("/profile");
+  await waitForApp(page);
   await expect(page.getByTestId("cloud-account-security")).toHaveCount(0);
   await expect(page.getByTestId("cloud-account-delete")).toHaveCount(0);
 });
@@ -116,6 +124,7 @@ test("a local player names their profile before play and keeps existing session 
     { key: PROGRESS_KEY, data: original },
   );
   await page.goto("/profile");
+  await waitForApp(page);
   await page.getByRole("button", { name: "Continue locally" }).click();
   await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
   await expect(
@@ -127,10 +136,7 @@ test("a local player names their profile before play and keeps existing session 
     page.getByRole("heading", { name: "Your profile, LocalPlayer" }),
   ).toBeVisible();
 
-  const saved = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)),
-    PROGRESS_KEY,
-  );
+  const saved = await readSavedProgress(page);
   expect(saved.balance).toBe(2);
   expect(saved.totalEarned).toBe(2);
   expect(saved.profile.username).toBe("LocalPlayer");
@@ -142,6 +148,7 @@ test("Cloud Account explains privacy and legal pages are linked from How to Play
   page,
 }) => {
   await page.goto("/settings/cloud-account");
+  await waitForApp(page);
   const securityOverview = page.getByTestId("cloud-security-overview");
   await expect(securityOverview).toContainText("Your account and progress");
   await expect(securityOverview).toContainText("Cloud is optional");
@@ -152,11 +159,13 @@ test("Cloud Account explains privacy and legal pages are linked from How to Play
 
   await seedProgress(page);
   await page.goto("/settings/cloud-account");
+  await waitForApp(page);
   await expect(page.getByTestId("cloud-security-overview")).toContainText(
     "Saved on this device",
   );
 
   await page.goto("/about");
+  await waitForApp(page);
   await expect(
     page.getByRole("link", { name: "Privacy & Rights" }),
   ).toBeVisible();
@@ -168,6 +177,7 @@ test("Cloud Account explains privacy and legal pages are linked from How to Play
   ).toHaveAttribute("href", "mailto:jaimegamingpro@gmail.com");
 
   await page.goto("/privacy");
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "Privacy & Rights" }),
   ).toBeVisible();
@@ -176,6 +186,7 @@ test("Cloud Account explains privacy and legal pages are linked from How to Play
   ).toHaveCount(0);
 
   await page.goto("/tos");
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "Terms of Service" }),
   ).toBeVisible();

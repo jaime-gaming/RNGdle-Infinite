@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   buildRevealTimeline,
   buildReferenceTimeline,
@@ -125,6 +126,7 @@ test("completed rolls persist EP exactly once and enforce the saved cooldown", a
     page.getByRole("button", { name: /NEXT ROLL IN/ }),
   ).toBeDisabled();
   await page.reload();
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: /NEXT ROLL IN/ }),
   ).toBeDisabled();
@@ -151,6 +153,7 @@ test("random rolls score zero, seven digits, and numbers outside the old sample 
   await mockRandom(page, [0, 1000000, 123457]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -181,6 +184,7 @@ test("reduced motion skips the sequence, including under a changed preference", 
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await waitForApp(page);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
@@ -200,6 +204,7 @@ test("share format and actual badge details", async ({ page, context }) => {
   expect(buildShareText(sample)).toContain("🟨 GODLY • Top <1%");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
+  await waitForApp(page);
   await showRoll(page, 1337);
   await page.getByRole("button", { name: "Share", exact: true }).click();
   await expect(
@@ -227,6 +232,7 @@ test("all result tiers fit mobile, including a seven-digit result", async ({
   ];
   await mockRandom(page, numbers);
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -306,6 +312,7 @@ test("a delayed clipboard response cannot mark a different roll as copied", asyn
   await mockRandom(page, [1337, 604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await waitForApp(page);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
@@ -357,6 +364,7 @@ test("a pending draw survives navigation without creating a duplicate roll", asy
     });
   });
   await page.goto("/");
+  await waitForApp(page);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await requested;
   await expect(

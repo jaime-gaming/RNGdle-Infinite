@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import {
@@ -49,6 +50,7 @@ test("the hub is an index of shelf buttons, and each one is its own page", async
 }) => {
   await seedProgress(page, funded);
   await page.goto("/shop");
+  await waitForApp(page);
   const hub = page.getByRole("navigation", { name: "Shop sections" });
   await expect(hub).toBeVisible();
   await expect(hub.getByRole("link")).toHaveCount(6);
@@ -69,6 +71,7 @@ test("the hub is an index of shelf buttons, and each one is its own page", async
     await openShelf(page, id, label);
     // The shelf's own URL is what a share would use.
     await page.reload();
+    await waitForApp(page);
     await expect(page.locator(`#shop-${id}`)).toBeVisible();
     await page.getByRole("button", { name: "All shelves" }).click();
     await expect(page).toHaveURL(/\/shop$/);
@@ -82,12 +85,14 @@ test("deep links and legacy shelf hashes land on the right shelf", async ({
   await seedProgress(page, funded);
   // A shared legacy link lands on its shelf, normalised to the real path.
   await page.goto("/shop#tools");
+  await waitForApp(page);
   await expect(page).toHaveURL(/\/shop\/tools$/);
   await expect(page.locator("#shop-tools")).toBeVisible();
   await expect(page.getByTestId("cooldown-duration")).toBeVisible();
 
   // A shelf is entered from the hub and left with the browser's own back.
   await page.goto("/shop");
+  await waitForApp(page);
   await page.getByRole("link", { name: "Pace", exact: true }).click();
   await expect(page).toHaveURL(/\/shop\/pace$/);
   await page.goBack();
@@ -108,6 +113,7 @@ test("deep links and legacy shelf hashes land on the right shelf", async ({
 
   // Nonsense under /shop is not a shelf: it normalises back to the hub.
   await page.goto("/shop/not-a-shelf");
+  await waitForApp(page);
   await expect(page).toHaveURL(/\/shop$/);
   await expect(page.locator(".shop-hub")).toBeVisible();
 });
@@ -118,11 +124,13 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
   await seedProgress(page, funded);
   // Pace shows one level per path: two cards, so the line says two, not ten.
   await page.goto("/shop/pace");
+  await waitForApp(page);
   await expect(page.locator(".shop-count")).toHaveText("2 on this shelf");
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(2);
   // The funded fixture owns the roller but no clock: one card, so one is what
   // the line says.
   await page.goto("/shop/offline");
+  await waitForApp(page);
   await expect(page.locator(".shop-count")).toHaveText("1 on this shelf");
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(1);
   // The invariant, on every shelf: the number in the status line is the
@@ -135,6 +143,7 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
     "/shop/tools",
   ]) {
     await page.goto(path);
+    await waitForApp(page);
     const drawn = await page.locator(".shop-card[data-product]").count();
     const [shown] = (await page.locator(".shop-count").innerText()).match(
       /\d+/,
@@ -143,6 +152,7 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
   }
   // Companions are drawn by their own component and counted their own way.
   await page.goto("/shop/companions");
+  await waitForApp(page);
   await expect(page.locator(".shop-count")).toHaveText(/^\d+ \/ 13 found$/);
 });
 
@@ -152,6 +162,7 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   // No Offline Roller: nothing on that shelf can be bought yet.
   await seedProgress(page, { ...funded, owned: [] });
   await page.goto("/shop/offline");
+  await waitForApp(page);
   await expect(page.locator(".shop-locked-heading")).toBeVisible();
   await expect(page.locator(".shop-count")).toHaveText("Locked");
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(0);
@@ -160,6 +171,7 @@ test("a locked shelf reads Locked, and the header's nav rules stay in the header
   // selectors must never reach the shop's own navigation regions, or a shelf's
   // exit and its breadcrumb inherit the header's layout.
   await page.goto("/shop/skills");
+  await waitForApp(page);
   const layout = await page.evaluate(() => {
     const others = document.querySelector('nav[aria-label="Other shelves"]');
     const label = others.querySelector(".shop-others-label");
@@ -224,6 +236,7 @@ test("the goal banner arms pick mode, and only then does a card become the goal"
 }) => {
   await seedProgress(page, { ...funded, balance: 10000, totalEarned: 10000 });
   await page.goto("/shop/pace");
+  await waitForApp(page);
   const banner = page.locator(".shop-goal");
   // Nothing tracked yet, so the banner recommends instead.
   await expect(banner).toContainText("Recommended next");
@@ -263,6 +276,7 @@ test("the skills shelf is a stall: three skills buyable, the rest under a green 
 }) => {
   await seedProgress(page, funded);
   await page.goto("/shop/skills");
+  await waitForApp(page);
   const shelf = page.locator("#shop-skills");
   await expect(shelf.getByRole("heading", { name: "Skills" })).toBeVisible();
   await expect(shelf).toContainText("rotates every five minutes");
@@ -324,6 +338,7 @@ test("the skills shelf is a stall: three skills buyable, the rest under a green 
   // reads cheapest first as well.
   await expect(shelf.locator('[data-product="quickwind-1"]')).toHaveCount(0);
   await page.goto("/shop/pace");
+  await waitForApp(page);
   const pacePrices = (
     await page
       .locator("#shop-pace .shop-card[data-product] .shop-price")
@@ -332,6 +347,7 @@ test("the skills shelf is a stall: three skills buyable, the rest under a green 
   expect([...pacePrices].sort((a, b) => a - b)).toEqual(pacePrices);
   // Companions keep their own shelf page, owned by the companion component.
   await page.goto("/shop/companions");
+  await waitForApp(page);
   await expect(
     page.locator("#shop-companions [data-pet='pebble']"),
   ).toHaveCount(1);
@@ -340,6 +356,7 @@ test("the skills shelf is a stall: three skills buyable, the rest under a green 
 test("equipping a companion uncages it with an animation", async ({ page }) => {
   await seedProgress(page, { ...funded, pets: ["pebble"], activePet: "none" });
   await page.goto("/shop/companions");
+  await waitForApp(page);
   const slide = page.locator("#shop-companions [data-pet='pebble']");
   await slide.getByRole("button", { name: "Equip", exact: true }).click();
   // The door swings and the friend hops out, then walks with you.
@@ -477,6 +494,7 @@ test("a rack can be saved on the skills shelf and put back in one click", async 
     ],
   });
   await page.goto("/shop/skills");
+  await waitForApp(page);
   const book = page.locator(".skill-racks");
   await expect(book).toBeVisible();
   // The saved rack is listed, and the rack on screen is not among them yet.
@@ -519,6 +537,7 @@ test("earned skills live on the skills shelf and equip without taking a slot", a
     rebirths: 1,
   });
   await page.goto("/shop/skills");
+  await waitForApp(page);
   const shelf = page.locator("#shop-skills");
   const earned = shelf.locator(".free-skills");
   await expect(earned).toBeVisible();
@@ -561,6 +580,7 @@ test("an aura family is a page of its own, reached from its banner", async ({
 }) => {
   await seedProgress(page, { ...funded, balance: 200000000 });
   await page.goto("/shop/auras");
+  await waitForApp(page);
   // Each named family is a real link to the set it fronts.
   expect(AURA_FAMILIES.map((family) => family.label)).toEqual([
     "Spaaaaaace",
@@ -599,6 +619,7 @@ test("an aura family is a page of its own, reached from its banner", async ({
   // A bookmark/reload renders the same family, and browser history restores
   // the shelf in both directions.
   await page.reload();
+  await waitForApp(page);
   await expect(page).toHaveURL(/\/shop\/auras\/celestial$/);
   await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText(
     "Spaaaaaace",
@@ -619,6 +640,7 @@ test("an aura family is a page of its own, reached from its banner", async ({
   await expect(page).toHaveURL(/\/shop$/);
   await expect(page.locator(".shop-hub")).toBeVisible();
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".shop-hub")).toBeVisible();
 });
 
@@ -631,6 +653,7 @@ test("the retired aura offer is gone and permanent auras keep regular prices", a
     const at = new Date(2026, 9, day, 12).getTime();
     await page.clock.setFixedTime(new Date(at));
     await page.goto("/shop/auras/randomness");
+    await waitForApp(page);
     await expect(page.locator(".aura-event-offer")).toHaveCount(0);
     await expect(page.locator(".shop-card[data-product]")).toHaveCount(4);
     expect(
@@ -663,6 +686,7 @@ test("owned retired cosmetics remain in the Legacy collection and can still be e
     equipped: "hollow-lantern",
   });
   await page.goto("/shop/auras");
+  await waitForApp(page);
 
   const legacy = page.locator('.aura-family-banner[data-family="special"]');
   await expect(legacy).toBeVisible();
@@ -694,6 +718,7 @@ test("nothing on a shelf waits behind a purchase you have not made", async ({
   // Persistence Core needs Auto-Roll; without it, it is not on the shelf.
   await seedProgress(page, { ...funded, owned: [] });
   await page.goto("/shop/tools");
+  await waitForApp(page);
   await expect(page.locator('[data-product="auto-roll"]')).toHaveCount(1);
   await expect(page.locator('[data-product="persistence-core"]')).toHaveCount(
     0,
@@ -714,6 +739,7 @@ test("nothing on a shelf waits behind a purchase you have not made", async ({
     },
   );
   await page.goto("/shop/tools");
+  await waitForApp(page);
   await expect(page.locator('[data-product="persistence-core"]')).toHaveCount(
     1,
   );

@@ -17,6 +17,7 @@ import path from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { build } from "vite";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
+import { unpackVaultSave } from "../src/save-codec.js";
 import { LOCAL_PLAY_KEY } from "../src/local-play.js";
 
 const outDir = path.resolve(".cache/cloudflare-worker-smoke");
@@ -224,11 +225,13 @@ try {
       );
 
       const url = `${origin}/`;
-      const saved = () =>
-        page.evaluate(
-          (key) => JSON.parse(localStorage.getItem(key)),
+      const saved = async () => {
+        const stored = await page.evaluate(
+          (key) => localStorage.getItem(key),
           PROGRESS_KEY,
         );
+        return JSON.parse(unpackVaultSave(stored));
+      };
       const visit = async (route) => {
         const response = await page.goto(`${url}${route.replace(/^\/+/, "")}`);
         assert.equal(response?.status(), 200, `Direct route failed: /${route}`);

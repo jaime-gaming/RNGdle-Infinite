@@ -3,7 +3,6 @@ import {
   Check,
   Cloud,
   CloudOff,
-  LoaderCircle,
   LogIn,
   LogOut,
   LockKeyhole,
@@ -502,13 +501,7 @@ export default function CloudAccount({
           role="status"
           data-testid="cloud-save-status"
         >
-          {cloud.status === "loading" || cloud.status === "saving" ? (
-            <LoaderCircle
-              size={13}
-              className="is-spinning"
-              aria-hidden="true"
-            />
-          ) : cloud.status === "synced" ? (
+          {cloud.status === "synced" ? (
             <Check size={13} aria-hidden="true" />
           ) : null}
           {statusLabel}

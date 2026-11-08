@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom, showRoll, startRoll } from "./helpers/random-roll.js";
@@ -17,9 +18,9 @@ import {
 } from "../src/progress.js";
 import { shopProducts } from "../src/shop-data.js";
 import { POPULATION } from "../src/probability.js";
+import { readSavedProgress } from "./helpers/save.js";
 
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+const saved = (p) => readSavedProgress(p);
 const rolls = async (p) =>
   (await saved(p)).history.filter((e) => e.type === "roll");
 const nav = (p, name) =>
@@ -32,6 +33,7 @@ async function readyAuto(p, words = [604827, 1337]) {
   await mockRandom(p, words);
   await p.emulateMedia({ reducedMotion: "reduce" });
   await p.goto("/");
+  await waitForApp(p);
   await expect(
     p.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -56,6 +58,7 @@ test("Auto-Roll is a confirmed purchase that does not equip and persists as an o
   });
   // Auto-Roll is a tool: its shelf is its own page.
   await page.goto("/shop/tools");
+  await waitForApp(page);
   const card = page.locator('[data-product="auto-roll"]');
   await card.locator("button:not(.shop-tag):not(.shop-look-eye)").click();
   await expect(page.getByRole("dialog")).toContainText(`${autoRollPrice} EP`);
@@ -79,6 +82,7 @@ test("Auto-Roll is a confirmed purchase that does not equip and persists as an o
     "Auto-Roll",
   );
   await page.reload();
+  await waitForApp(page);
   await page
     .getByRole("button", { name: "Back to rolling", exact: true })
     .click();
@@ -137,6 +141,7 @@ test("Auto-Roll pauses away from the Roll page and in a hidden tab, and resets o
   await expect.poll(async () => (await rolls(page)).length).toBe(3);
   await settled(page);
   await page.reload();
+  await waitForApp(page);
   await expect(auto(page)).toHaveAttribute("aria-checked", "false");
   await page.clock.fastForward(106000);
   expect(await rolls(page)).toHaveLength(3);
@@ -189,6 +194,7 @@ test("two account tabs using Auto-Roll share one committed draw and one reward",
   await mockRandom(other, [1337]);
   await other.emulateMedia({ reducedMotion: "reduce" });
   await other.goto("/");
+  await waitForApp(other);
   await expect(
     other.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -268,6 +274,7 @@ test("both new badges unlock, render in details/history and persist, without ret
   await expect(page.getByRole("dialog")).toContainText("0.0081%");
   await page.keyboard.press("Escape");
   await page.reload();
+  await waitForApp(page);
   expect((await saved(page)).discovered).toContain("INFINITE_PENDULUM");
   await nav(page, "History");
   await expect(page.locator('[data-event-type="unlock"]')).toContainText(
@@ -316,6 +323,7 @@ test("Auto-Roll uses purchased timings and Last Second appears in the actual bad
   await seedProgress(page, { owned });
   await mockRandom(page, [235959, 121212]);
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -354,6 +362,7 @@ test("Auto-Roll uses purchased timings and Last Second appears in the actual bad
   await expect(page.getByRole("dialog")).toContainText("75,000 EP");
   await expect(page.getByRole("dialog")).toContainText("0.0014%");
   await page.reload();
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "The badge collection" }),
   ).toBeVisible();

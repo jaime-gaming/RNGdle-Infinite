@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -10,6 +11,7 @@ import {
 } from "../src/roll-data.js";
 import { buildRevealTimeline } from "../src/roll-timeline.js";
 import { PROGRESS_KEY } from "../src/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 // A draw skill spends several ordinary draws and keeps the best. The overview
 // shows one panel per draw, filling the screen behind visible dividing lines,
@@ -51,6 +53,7 @@ async function startSplitRoll(page, overrides = {}) {
   await mockRandom(page, overrides.draws ?? PANELS);
   await seedProgress(page, overrides.seed ?? seed);
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -459,6 +462,7 @@ async function armedAutoRoll(page, draws = PANELS) {
   await mockRandom(page, draws);
   await seedProgress(page, { ...seed, owned: [...seed.owned, "auto-roll"] });
   await page.goto("/");
+  await waitForApp(page);
   // The roll data loads first, as it does for any player; the clock only starts
   // to move once the page is ready.
   await expect(
@@ -765,9 +769,7 @@ test("identical skill picks are paid separately, and only their actual draw is m
   await expect(
     page.locator(".result-summary .paid-number.is-best"),
   ).toHaveCount(1);
-  const progress = await page.evaluate((key) => {
-    return JSON.parse(localStorage.getItem(key));
-  }, PROGRESS_KEY);
+  const progress = await readSavedProgress(page);
   expect(progress.balance).toBe(2 * evaluate(number).totalEP);
   const rolls = progress.history.filter((entry) => entry.type === "roll");
   expect(rolls.map((entry) => entry.number)).toEqual([number, number]);

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import { buildShareTextFromHistory, GAME_URL } from "../src/roll-data.js";
 import {
@@ -77,6 +78,7 @@ test("History offers a share action for rolls, and only for rolls", async ({
     ],
   });
   await page.goto("/history");
+  await waitForApp(page);
   const row = page.locator('[data-event-type="roll"]');
   await expect(
     row.getByRole("button", { name: "Share roll 604827" }),
@@ -210,6 +212,7 @@ test("History keeps every cycle and draws a line where each rebirth opened one",
     ],
   });
   await page.goto("/history");
+  await waitForApp(page);
   // One line, labelled with the rebirth that opened the cycle.
   await expect(page.locator(".activity-divider")).toHaveCount(1);
   await expect(page.locator(".activity-divider")).toContainText("Rebirth 1");

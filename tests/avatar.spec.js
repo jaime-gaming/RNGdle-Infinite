@@ -1,16 +1,15 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import { seedProgress } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { AVATAR_LIMIT } from "../src/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 // The account's face. A logo is squared, shrunk and stored in the save; it
 // appears on the profile, in the header and on the one-way export card.
 
-const avatar = (page) =>
-  page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)).profile?.avatar ?? "",
-    PROGRESS_KEY,
-  );
+const avatar = async (page) =>
+  (await readSavedProgress(page))?.profile?.avatar ?? "";
 
 // Draws a real PNG inside the page and hands the bytes back: the upload path
 // is exercised with an actual image, not a stub.
@@ -33,6 +32,7 @@ test("a guest has no logo, and sign-up is the way to get one", async ({
   page,
 }) => {
   await page.goto("/profile");
+  await waitForApp(page);
   // Guest play is a demo, and the logo belongs to an account: no picker until
   // there is a profile to hang it on.
   await expect(page.getByTestId("avatar-upload")).toHaveCount(0);
@@ -45,6 +45,7 @@ test("a guest has no logo, and sign-up is the way to get one", async ({
   // The first profile a browser creates starts with the neutral icon.
   await seedProgress(page, { balance: 0, totalEarned: 0 });
   await page.goto("/profile");
+  await waitForApp(page);
   await expect(page.locator(".profile-title .avatar-mark")).toHaveAttribute(
     "data-avatar",
     "icon",
@@ -58,6 +59,7 @@ test("an uploaded logo lands in the save, the header and the profile", async ({
 }) => {
   await seedProgress(page, { balance: 5000000, totalEarned: 5000000 });
   await page.goto("/profile");
+  await waitForApp(page);
   await expect(page.locator(".sign-in")).toHaveAttribute("data-avatar", "icon");
 
   await page.setInputFiles('[data-testid="avatar-input"]', {
@@ -84,6 +86,7 @@ test("an uploaded logo lands in the save, the header and the profile", async ({
 
   // A reload keeps it, because it is part of the save.
   await page.reload();
+  await waitForApp(page);
   await expect(page.getByTestId("avatar-remove")).toBeVisible();
   expect(await avatar(page)).toBe(stored);
 
@@ -99,6 +102,7 @@ test("a huge picture is shrunk instead of refused, and rubbish is refused", asyn
 }) => {
   await seedProgress(page, { balance: 5000000, totalEarned: 5000000 });
   await page.goto("/profile");
+  await waitForApp(page);
 
   // A 1400px photograph is far too large to store raw: the page squares and
   // shrinks it until it fits, and says so in the save.

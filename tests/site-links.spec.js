@@ -1,4 +1,5 @@
 import { expect, test } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { GAME_URL, gameUrlForLocation } from "../src/site-links.js";
 
 test("share links use the custom production domain and a safe fallback", () => {

@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   applyProgress,
   emptyProgress,
@@ -30,11 +31,11 @@ import { historyCycles, isCycleMarker } from "../src/history-log.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { shopProducts } from "../src/shop-data.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 const ids = allBadgeMetadata.map((b) => b.id);
 const auraIds = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+const saved = (p) => readSavedProgress(p);
 const earned = (ep, at = 150000) => [
   {
     id: `ep:${at}:${ep}`,
@@ -297,6 +298,7 @@ test("the Rollback is not shown at all until three prestiges are done", async ({
 }) => {
   await seedProgress(page, uiState({ ultraRebirths: 2 }));
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await expect(page.locator(".rebirth-page")).toBeVisible();
   await expect(
     page
@@ -315,6 +317,7 @@ test("the Rollback appears after the third prestige and takes the run", async ({
     uiState({ ultraRebirths: 3, history: earned(gate.ep) }),
   );
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await dismissFreshStart(page);
   const rollback = page
     .locator(".rebirth-page")
@@ -333,6 +336,7 @@ test("the Rollback appears after the third prestige and takes the run", async ({
   // offered until the six rungs are climbed again.
   expect((await saved(page)).rebirths).toBe(0);
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await expect(page.locator(".rebirth-hero .eyebrow")).toContainText(
     "STEP 1 OF 6 · AFTER ROLLBACK 1",
   );
@@ -367,6 +371,7 @@ test("the Rollback can be taken again and again, each one stacking", async ({
     }),
   );
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await dismissFreshStart(page);
   const rollback = page
     .locator(".rebirth-page")
@@ -378,6 +383,7 @@ test("the Rollback can be taken again and again, each one stacking", async ({
   // The take ends on the activity page, so the rebirth page is read again:
   // the ladder is back at rung one and the legacy panel counts two.
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await expect(page.locator(".rebirth-hero h2")).toContainText("Rebirth 1");
   await expect(page.locator(".rebirth-legacy")).toContainText("2 taken");
   await expect(

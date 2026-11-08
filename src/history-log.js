@@ -1,20 +1,21 @@
 // The activity log's capacity and the rules for making room in it.
 //
 // The log keeps every roll, discovery, purchase and rebirth, and it is capped so
-// a save cannot outgrow the browser's storage. Two things are never removed:
+// a save cannot outgrow the browser's storage. Compression buys the extra room. Two things are never removed:
 // cycle markers (a rebirth, prestige or Rollback frames every cycle, and the
 // cycle EP gate reads them) and bookmarked rolls (the player asked to keep them).
 // Everything else can go, either in bulk from History or, once the log is full,
 // oldest first, so a new roll always has somewhere to land.
 
-// The most entries the log keeps. An entry is about 260 bytes of save, so this
-// stays comfortably inside what mobile browsers allow a site to store.
-export const HISTORY_LIMIT = 6000;
+// The most entries the log keeps. An entry is about 260 bytes of JSON, but the
+// primary save is always compressed, so the packed log stays small even at the
+// cap on a phone.
+export const HISTORY_LIMIT = 10_000;
 // How many rolls a player can bookmark; pinned rolls are never pruned.
 export const BOOKMARK_LIMIT = 10;
 // From this many entries on, History warns that space is running low and offers
 // bulk delete. It leaves room for the next few sessions before the cap.
-export const HISTORY_WARNING = 4500;
+export const HISTORY_WARNING = 7_500;
 
 export function isCycleMarker(entry) {
   return (

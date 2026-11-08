@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import {
   applyProgress,
@@ -27,6 +28,7 @@ import {
 import { cycleEarnedEp, rebirthRequirement } from "../src/rebirth.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
+import { readSavedProgress } from "./helpers/save.js";
 const DAY = 24 * 60 * 60 * 1000;
 // Task periods are UTC days and UTC weeks, so the fixtures are UTC too.
 const at = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h, min);
@@ -234,6 +236,7 @@ test("the Tasks page shows Daily and Weekly lists and lets a ready task be claim
     tasks: readyOneTask("daily", time, id),
   });
   await page.goto("/tasks");
+  await waitForApp(page);
 
   await expect(
     page.getByRole("heading", { name: "Daily", exact: true }),
@@ -249,10 +252,7 @@ test("the Tasks page shows Daily and Weekly lists and lets a ready task be claim
     .getByRole("button", { name: `Claim reward for ${task.title}` })
     .click();
   await expect(card).toHaveAttribute("data-state", "claimed");
-  const saved = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)),
-    PROGRESS_KEY,
-  );
+  const saved = await readSavedProgress(page);
   expect(saved.tasks.daily.claimed).toContain(id);
 });
 
@@ -297,6 +297,7 @@ test("the header marks a ready task until it is claimed", async ({ page }) => {
     tasks: readyOneTask("daily", time, id),
   });
   await page.goto("/");
+  await waitForApp(page);
   const tasksButton = page
     .getByRole("navigation", { name: "Main navigation" })
     .getByRole("button", { name: "Tasks" });
@@ -327,6 +328,7 @@ test("a claimed task is written to History as wallet income", async ({
   );
   await seedProgress(page, claimed);
   await page.goto("/history");
+  await waitForApp(page);
   await expect(page.locator('[data-event-type="task"]')).toContainText(
     `Task claimed · ${task.title}`,
   );
@@ -475,6 +477,7 @@ test("the Tasks page confirms before spending a Skip", async ({ page }) => {
   const tasks = { ...emptyTasks(), skip: { tokens: 1, bought: [] } };
   await seedProgress(page, { tasks });
   await page.goto("/tasks");
+  await waitForApp(page);
   const [id] = activeTaskIds(tasks, "daily", time);
   const task = taskById(id);
   const card = page.locator(`[data-task="${id}"]`);
@@ -489,10 +492,7 @@ test("the Tasks page confirms before spending a Skip", async ({ page }) => {
     .getByRole("button", { name: `Confirm skip of ${task.title}` })
     .click();
   await expect(page.getByRole("status")).toContainText("Task Skip used");
-  const saved = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)),
-    PROGRESS_KEY,
-  );
+  const saved = await readSavedProgress(page);
   expect(saved.tasks.skip.tokens).toBe(0);
   expect(saved.tasks.daily.swaps).toHaveLength(1);
 });
@@ -505,6 +505,7 @@ test("the Task Skip is bought again from Tools and waits one day", async ({
     totalEarned: 500000,
   });
   await page.goto("/shop/tools");
+  await waitForApp(page);
   const card = page.locator('[data-product="task-skip"]');
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: "Buy for 125,000 EP" }).click();
@@ -513,10 +514,7 @@ test("the Task Skip is bought again from Tools and waits one day", async ({
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(card.getByRole("button", { name: /Next in 1d/ })).toBeDisabled();
-  const saved = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)),
-    PROGRESS_KEY,
-  );
+  const saved = await readSavedProgress(page);
   expect(saved.owned).not.toContain("task-skip");
   expect(saved.tasks.skip.tokens).toBe(1);
   expect(saved.balance).toBe(375000);
@@ -531,6 +529,7 @@ test("the Tasks page fits a narrow phone without sideways scrolling", async ({
     profile: testProfile,
   });
   await page.goto("/tasks");
+  await waitForApp(page);
   await expect(page.locator(".tasks-stat").first()).toBeVisible();
   expect(
     await page.evaluate(
@@ -544,6 +543,7 @@ test("Tasks labels stay stable on desktop and mobile without the retired glitch"
 }) => {
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   const desktop = page
     .getByRole("navigation", { name: "Main navigation" })
     .getByRole("button", { name: "Tasks", exact: true });

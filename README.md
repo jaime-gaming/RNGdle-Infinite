@@ -51,7 +51,7 @@ You choose whether to share a public profile. A profile logo appears only when t
 
 ![Choose a saved copy to restore](media/save-recovery.png)
 
-Local saving retries with lossless compression if this browser runs out of storage, without deleting your history or recovery copies. If saving still fails, keep your site data and free space before trying again.
+Local saves are stored with lossless compression, so a longer activity history fits on this device without deleting recovery copies. If saving still fails, keep your site data and free space before trying again.
 
 ## FAQ
 

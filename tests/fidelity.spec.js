@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { buildChipPlan, chipLoopFrames } from "../src/chip-motion.js";
 import {
   rankPopFrames,
@@ -153,6 +154,7 @@ test("numbers are read-only; there are no editors or presets", async ({
   await mockRandom(page, [1337]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".question-number")).toHaveJSProperty(
     "tagName",
     "DIV",

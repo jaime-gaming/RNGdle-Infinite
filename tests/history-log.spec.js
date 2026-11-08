@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   applyProgress,
   emptyProgress,
@@ -17,6 +18,7 @@ import {
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { showRoll } from "./helpers/random-roll.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 const BASE = Date.UTC(2026, 0, 1);
 // A plain roll. Its tier matches its EP, as the scoring table gives it.
@@ -41,8 +43,7 @@ const marker = (count, index) => ({
   count,
 });
 
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 const count = (n) => n.toLocaleString("en-US");
 
 // A roll the way the game settles one, for building the log through actions.
@@ -55,9 +56,9 @@ const settle = (state, id, time, tier = "common", ep = 100) =>
     result: { number: 1, totalEP: ep, tier, badges: [] },
   });
 
-test("the log keeps 6,000 entries, and a new roll pushes out only the oldest entry nobody kept", () => {
-  expect(HISTORY_LIMIT).toBe(6000);
-  expect(HISTORY_WARNING).toBe(4500);
+test("the log keeps 10,000 entries, and a new roll pushes out only the oldest entry nobody kept", () => {
+  expect(HISTORY_LIMIT).toBe(10_000);
+  expect(HISTORY_WARNING).toBe(7_500);
   // Entry 0 is bookmarked and entry 1 is a rebirth marker: neither may go.
   const history = [rollEntry(0), marker(1, 1), ...rolls(HISTORY_LIMIT - 2, 2)];
   expect(history).toHaveLength(HISTORY_LIMIT);
@@ -81,7 +82,7 @@ test("the log keeps 6,000 entries, and a new roll pushes out only the oldest ent
 });
 
 test("the cap never removes a cycle marker or a bookmarked roll, however full the log is", () => {
-  // Five fixed entries plus 5,995 rolls make exactly the cap: roll 0 and roll 1
+  // Five fixed entries plus the rest make exactly the cap: roll 0 and roll 1
   // are bookmarked, markers 1 and 2 frame the log, and roll 999999 is the newest.
   const history = [
     rollEntry(0),
@@ -210,7 +211,7 @@ test("bulk delete by oldest removes the oldest entries first, skips bookmarks an
   ).toThrow(/Choose a finished cycle/);
 });
 
-test("the space warning starts at 4,500 entries, not before", async ({
+test("the space warning starts at 7,500 entries, not before", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -219,6 +220,7 @@ test("the space warning starts at 4,500 entries, not before", async ({
     totalEarned: 1000,
   });
   await page.goto("/history");
+  await waitForApp(page);
   await expect(page.locator(".activity-event")).toHaveCount(50);
   await expect(page.locator(".history-space")).toHaveCount(0);
   await expect(page.locator(".activity-summary")).toContainText(
@@ -226,7 +228,7 @@ test("the space warning starts at 4,500 entries, not before", async ({
   );
 });
 
-test("at 4,500 entries History warns, and bulk delete clears the oldest entries but keeps the bookmark", async ({
+test("at 7,500 entries History warns, and bulk delete clears the oldest entries but keeps the bookmark", async ({
   page,
 }) => {
   await seedProgress(page, {
@@ -236,6 +238,7 @@ test("at 4,500 entries History warns, and bulk delete clears the oldest entries 
     totalEarned: 1000,
   });
   await page.goto("/history");
+  await waitForApp(page);
   const warning = page.locator(".history-space");
   await expect(warning).toContainText("Low entry space");
   await expect(warning).toContainText(
@@ -280,31 +283,44 @@ test("a finished rebirth is cleared whole from History, and its divider stays in
 }) => {
   // The old cycle is long and the one in play is short, so the divider sits
   // near the top of the feed where a player would look for it.
+  const cycleRolls = HISTORY_WARNING - 40;
   await seedProgress(page, {
     rebirths: 1,
-    history: [...rolls(4460), marker(1, 4460), ...rolls(40, 4460)],
+    history: [
+      ...rolls(cycleRolls),
+      marker(1, cycleRolls),
+      ...rolls(40, cycleRolls),
+    ],
     balance: 1000,
     totalEarned: 1000,
   });
   await page.goto("/history");
+  await waitForApp(page);
   await page
     .locator(".history-space")
     .getByRole("button", { name: "Bulk delete" })
     .click();
   const cycle = page.getByRole("button", {
-    name: "Delete 4,460 entries from the cycle before Rebirth 1",
+    name: `Delete ${count(cycleRolls)} entries from the cycle before Rebirth 1`,
   });
   await expect(cycle).toBeEnabled();
   await cycle.click();
   await expect(
     page.getByRole("group", { name: "Confirm deletion" }),
-  ).toContainText("Delete 4,460 entries from the cycle before Rebirth 1?");
+  ).toContainText(
+    `Delete ${count(cycleRolls)} entries from the cycle before Rebirth 1?`,
+  );
   await page
     .getByRole("group", { name: "Confirm deletion" })
-    .getByRole("button", { name: "Delete 4,460 entries", exact: true })
+    .getByRole("button", {
+      name: `Delete ${count(cycleRolls)} entries`,
+      exact: true,
+    })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Deleted 4,460 entries" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: `Deleted ${count(cycleRolls)} entries` }),
   ).toBeVisible();
   const after = await saved(page);
   expect(after.history.filter((e) => e.type === "rebirth")).toHaveLength(1);
@@ -312,7 +328,7 @@ test("a finished rebirth is cleared whole from History, and its divider stays in
   expect(after.history.some((e) => e.id === "roll:0")).toBe(false);
   await expect(page.locator(".activity-divider")).toContainText("Rebirth 1");
   await expect(page.locator(".activity-summary")).toContainText(
-    "41 of 6,000 entries kept",
+    `${count(41)} of ${count(HISTORY_LIMIT)} entries kept`,
   );
 });
 
@@ -325,6 +341,7 @@ test("a full log says so, and the cap is shown in the summary", async ({
     totalEarned: 1000,
   });
   await page.goto("/history");
+  await waitForApp(page);
   await expect(page.locator(".history-space")).toContainText(
     "Entry space is full",
   );
@@ -343,6 +360,7 @@ test("the share and bookmark chips carry no words, but keep their names and thei
     totalEarned: 1000,
   });
   await page.goto("/history");
+  await waitForApp(page);
   const row = page.locator('[data-event-type="roll"]').first();
   const share = row.getByRole("button", { name: "Share roll 2" });
   const bookmark = row.getByRole("button", { name: "Bookmark roll 2" });
@@ -358,7 +376,7 @@ test("the share and bookmark chips carry no words, but keep their names and thei
   ).toHaveAttribute("aria-pressed", "true");
 });
 
-test("a roll that crosses 4,500 entries announces the warning once, from the roll page", async ({
+test("a roll that crosses 7,500 entries announces the warning once, from the roll page", async ({
   page,
 }) => {
   // Every badge of 1337 is already found, so the roll adds exactly one entry.
@@ -398,6 +416,7 @@ test("profile figures read the same after bulk delete clears the oldest entries"
         ),
       );
   await page.goto("/profile");
+  await waitForApp(page);
   const before = await figures();
   expect(before["Rolls completed"]).toBe(count(HISTORY_WARNING));
   // Every roll pays the same, so the best roll is the first one logged.
@@ -406,6 +425,7 @@ test("profile figures read the same after bulk delete clears the oldest entries"
     "0",
   );
   await page.goto("/history");
+  await waitForApp(page);
   await page
     .locator(".history-space")
     .getByRole("button", { name: "Bulk delete", exact: true })
@@ -427,5 +447,6 @@ test("profile figures read the same after bulk delete clears the oldest entries"
   expect((await saved(page)).history).toHaveLength(HISTORY_WARNING - 500);
   // A fresh load reads the saved log and the saved totals, and nothing moved.
   await page.goto("/profile");
+  await waitForApp(page);
   expect(await figures()).toEqual(before);
 });

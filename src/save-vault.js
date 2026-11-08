@@ -1,7 +1,7 @@
 // The vault: one compressed copy of the last save this browser managed to
-// write. The primary save is JSON or a quota-saving gzip envelope. This second
-// copy exists so a damaged, half-written or quota-squeezed save cannot end an
-// account. A 6,000-roll save is about 800 KB of JSON and about 46 KB here.
+// write. The primary save is always a gzip envelope; this second copy exists so
+// a damaged, half-written or quota-squeezed save cannot end an account. A
+// 10,000-roll save is a few megabytes of JSON and a fraction of that packed.
 import { packVaultSave, unpackVaultSave } from "./save-codec.js";
 export {
   packVaultSave,

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import {
   accountStats,
@@ -385,6 +386,7 @@ test("the PNG card carries the account's own logo", async ({ page }) => {
   // Two 2× cards are encoded here; give slow CI machines some room.
   test.slow();
   await page.goto("/");
+  await waitForApp(page);
   // A solid blue square, so the card can be checked pixel by pixel.
   const logo = await page.evaluate(() => {
     const canvas = document.createElement("canvas");

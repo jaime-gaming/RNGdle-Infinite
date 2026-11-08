@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { emptyProgress } from "../src/progress.js";
 import {
@@ -103,6 +104,7 @@ test("the gauge, the top-bar ring and the current rung show the same number", as
     history: earned(125000),
   });
   await page.goto("/rebirth");
+  await waitForApp(page);
   await expect(page.locator(".rebirth-gauge")).toHaveAttribute(
     "aria-label",
     /^75% of this step/,
@@ -137,6 +139,7 @@ test("no screen names Prestige before the sixth rebirth", async ({ page }) => {
     "/rebirth",
   ]) {
     await page.goto(route);
+    await waitForApp(page);
     await expect(page.locator("body")).toContainText("RNGdle");
     expect(await page.locator("body").innerText(), route).not.toMatch(
       /prestige/i,
@@ -144,6 +147,7 @@ test("no screen names Prestige before the sixth rebirth", async ({ page }) => {
   }
   // The teaser stands in for it on the Rebirth page.
   await page.goto("/rebirth");
+  await waitForApp(page);
   await expect(
     page.getByText("Wait, but there is more...", { exact: true }),
   ).toBeVisible();

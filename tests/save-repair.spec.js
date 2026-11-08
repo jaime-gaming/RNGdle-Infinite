@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import {
   emptyProgress,
   parseProgress,
@@ -8,6 +9,7 @@ import {
 } from "../src/progress.js";
 import { skillById } from "../src/skills.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+import { readSavedProgress, readSavedRaw } from "./helpers/save.js";
 
 const base = () => ({ ...emptyProgress(), profile: { ...testProfile } });
 const load = (overrides) =>
@@ -275,19 +277,14 @@ test("booting with a damaged save repairs it, says so, and keeps a backup", asyn
     pendingRoll: { id: "forged" },
   });
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".progress-warning")).toContainText(
     "Some saved details needed fixing",
   );
-  const healed = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)),
-    PROGRESS_KEY,
-  );
+  const healed = await readSavedProgress(page);
   expect(healed.skillCharge).toEqual({ "serpent-maw": 8 });
   expect(healed.pendingRoll).toBeNull();
   expect(healed.balance).toBe(500);
-  const backup = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)),
-    PRE_REPAIR_BACKUP_KEY,
-  );
+  const backup = JSON.parse(await readSavedRaw(page, PRE_REPAIR_BACKUP_KEY));
   expect(backup.skillCharge).toEqual({ "serpent-maw": 10 });
 });

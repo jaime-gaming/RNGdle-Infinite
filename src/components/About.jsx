@@ -69,7 +69,7 @@ export default function About({ navigate, progress }) {
         "You choose whether to share a public profile. Its logo appears only when you share it.",
         "To restore an earlier save, open Settings → Restore save and check its progress before choosing it.",
         "Local saves belong to this browser and site address. Clearing site data or using a different browser will not carry them over; use a Cloud Account for a copy across devices.",
-        "If device storage is full, the game tries a compressed save without removing history. If saving still fails, avoid clearing site data: free space and try again, or review recovery copies in Settings.",
+        "Your save is stored compressed so a long history fits on this device. If saving still fails, avoid clearing site data: free space and try again, or review recovery copies in Settings.",
       ],
     },
   ];

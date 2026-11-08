@@ -72,6 +72,13 @@ adding backgrounds, borders, underlines or other decorations.
 - **Repair saves instead of losing them.** `parseAndRepairProgress` keeps valid
   data, records repairs and backs up original bytes. New fields need a default
   in `emptyProgress()`, defensive parsing, and a malformed-save test.
+- **Compressed primary saves.** `writeDeviceSave` always writes the bounded
+  gzip envelope (plain JSON only when gzip is unavailable); a failed write
+  leaves the previous save untouched. Old JSON saves stay readable. Always read
+  via `parseProgress`/`parseAndRepairProgress` (or decode with
+  `unpackVaultSave` for raw JSON consumers). Never delete history, recovery
+  slots or owner markers to fit a new save. The activity log keeps 10,000
+  entries and warns at 7,500.
 - **Cloud save precedence is deliberate, and asks as rarely as possible.** On
   first Firebase sign-in, import an unowned local save only when that user's
   Firestore document is missing. Never copy a save marked as belonging to
@@ -197,6 +204,14 @@ adding backgrounds, borders, underlines or other decorations.
   Firestore CRUD, progress comparison, and ownership/cache/recovery markers;
   `src/use-progress.js` coordinates the local save with transactional
   reconciliation. Do not initialize Analytics unless explicitly requested.
+- **A blank loading screen owns the page until save and data are ready.**
+  `src/components/LoadingScreen.jsx` renders one spinning circle and nothing
+  else — no text, logo or artwork — while the scoring data loads, the account
+  resolves or an authenticated profile has not synced. States that need a
+  player decision (conflict, load error, offline, maintenance) still show the
+  normal interface. The local save is read and persisted before any cloud
+  request, and written again on a failed load, so waiting never costs local
+  progress.
 - Cloud loading gates progress actions for an authenticated user. On a load
   error, retain local data and require an explicit retry before changing the
   save. On sync failure, retain local progress, mark it dirty and offer retry.
@@ -352,7 +367,7 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `RNGdle-Infinitev0.5.2fix3`; do not change it
+  flow. The current label is exactly `RNGdle-Infinitev0.5.2fix4`; do not change it
   again until the next session or an explicit user request. Public release
   notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
@@ -380,5 +395,3 @@ rather than guessing.
 - After a requested merge succeeds, delete the merged remote branch (use `gh pr merge <number> --squash --delete-branch`). Never switch branches or delete the active checkout; respect session branch restrictions.
 
 - **Bug fixes never rewrite release notes.** Preserve all existing `src/changelog.js` entries verbatim during a bug fix. Record implementation/QA notes separately. Presentation-only capitalization is fine; add release notes only for an explicitly requested new release.
-
-- **Quota-safe primary saves.** `writeDeviceSave` keeps JSON normally, retries with the bounded gzip codec only on quota errors, and retains compression once selected. Always read via `parseProgress`/`parseAndRepairProgress` (or decode with `unpackVaultSave` for raw JSON consumers). Never delete history, recovery slots or owner markers to fit a new save.

@@ -1,4 +1,5 @@
 import { chooseTheme } from "./helpers/appearance.js";
+import { waitForApp } from "./helpers/app.js";
 import { test, expect } from "./helpers/clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -6,6 +7,7 @@ import { evaluate } from "./helpers/index.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { shopProducts, AURA_FAMILIES } from "../src/shop-data.js";
 import fs from "node:fs";
+import { readSavedProgress } from "./helpers/save.js";
 const css = (locator) =>
   locator.evaluate((el) => {
     const s = getComputedStyle(el);
@@ -24,6 +26,7 @@ test("shared number boxes cover the idle generator and cosmetic previews without
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".question-number.number-box")).toHaveText(
     "??????",
   );
@@ -31,6 +34,7 @@ test("shared number boxes cover the idle generator and cosmetic previews without
   // Auras are their own shelf now, and each family is a page of its own:
   // /shop/auras is the index of banners, /shop/auras/celestial is a set.
   await page.goto("/shop/auras");
+  await waitForApp(page);
   await expect(page.locator(".aura-family-banner")).toHaveCount(
     AURA_FAMILIES.length,
   );
@@ -38,6 +42,7 @@ test("shared number boxes cover the idle generator and cosmetic previews without
     AURA_FAMILIES.length * 3,
   );
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   const auraCount = shopProducts.filter(
     (p) => p.kind === "aura" && p.family === "celestial",
   ).length;
@@ -69,6 +74,7 @@ test("every roll tier uses the observed light/dark Box Lab palettes and shimmer 
   await mockRandom(page, numbers);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -147,6 +153,7 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   await expect(page.getByTestId("roll-duration")).toHaveText("35s");
   await expect(page.getByTestId("cooldown-duration")).toHaveText("0:45");
   for (const [i, id] of ["starfall", "aurora", "orbit"].entries()) {
@@ -162,10 +169,8 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
       ),
     ).toContainText("Equipped");
     await page.reload();
-    const saved = await page.evaluate(
-      (key) => JSON.parse(localStorage.getItem(key)),
-      PROGRESS_KEY,
-    );
+    await waitForApp(page);
+    const saved = await readSavedProgress(page);
     expect(saved.owned).toEqual(values.owned);
     expect(saved.balance).toBe(1000);
     expect(saved.equipped).toBe(id);
@@ -178,6 +183,7 @@ test("legacy purchases survive repricing; upgraded cosmetics match previews, res
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(360);
     await page.goto("/shop/auras/celestial");
+    await waitForApp(page);
   }
   await page.getByRole("button", { name: "Back to rolling" }).click();
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();

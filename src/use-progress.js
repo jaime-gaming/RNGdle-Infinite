@@ -510,6 +510,13 @@ export function useProgress({
       let cachedProgress = null;
       let cacheWarning = "";
 
+      // Local first: write this device's copy back before touching the cloud.
+      // A stalled request or a failed transaction then cannot cost progress
+      // the player already made here. A save owned by another account is kept
+      // in its own cache below, not written over.
+      if (localRaw && (!localOwner || localOwner === userId))
+        writeLocalSave(localProgress);
+
       if (localOwner && localOwner !== userId) {
         const rawToCache = accountSwitchSnapshot({
           localRaw,
@@ -565,6 +572,14 @@ export function useProgress({
     });
     loadTask.catch((loadError) => {
       if (!currentRequest()) return;
+      // The cloud copy could not be trusted, so the local one is authoritative
+      // until an explicit retry. Persist it and flag it for that retry instead
+      // of leaving any new local progress only in memory.
+      const ownerOnFailure = readCloudOwner();
+      if (!ownerOnFailure || ownerOnFailure === userId) {
+        writeLocalSave(current.current);
+        markCloudDirty(userId);
+      }
       cloudGate.current = { userId, ready: false };
       // Surface the underlying Firebase error code (e.g. permission-denied,
       // unavailable) so the real cause is visible without a console.

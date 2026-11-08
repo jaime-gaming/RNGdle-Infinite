@@ -1,4 +1,5 @@
 import { chooseTheme } from "./helpers/appearance.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import { test, expect } from "./helpers/clock.js";
 import {
@@ -19,8 +20,8 @@ import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { showRoll, mockRandom } from "./helpers/random-roll.js";
 import { productById } from "../src/shop-data.js";
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+import { readSavedProgress } from "./helpers/save.js";
+const saved = (p) => readSavedProgress(p);
 const home = (p) =>
   p.getByRole("button", { name: "Back to rolling", exact: true }).click();
 const complete = (id) => ({
@@ -106,6 +107,7 @@ test("first visit keeps goals as plain links without dashboard cards or invented
   page,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   const progress = page.getByRole("region", { name: "Progress" });
   await expect(progress).toContainText("0 / 235 badges");
   await expect(progress).toContainText("Quickwind I");
@@ -125,6 +127,7 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
   await mockRandom(page, [604827]);
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   await expect(page.locator(".roll-progress-links")).toHaveCount(0);
@@ -174,6 +177,7 @@ test("a found companion bursts out of its cage on the roll stage", async ({
   await seedProgress(page, {});
   await mockRandom(page, [604827]);
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   // Step the clock until the arrival lands: it lives 5.6s of clock time, so
@@ -196,6 +200,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   // The goal is set from the goal banner: arm pick mode, then tap the card
   // you want. A plain card click never changes the goal.
   await page.goto("/shop/pace");
+  await waitForApp(page);
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Set goal", exact: true })
@@ -205,6 +210,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   expect((await saved(page)).history).toHaveLength(0);
   expect((await saved(page)).balance).toBe(100000);
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".shop-goal")).toContainText(
     "Your goal: Quickwind I",
   );
@@ -262,6 +268,7 @@ test("failed goal writes preserve the previous choice and wallet and can be retr
     totalEarned: 12345,
   });
   await page.goto("/shop/skills");
+  await waitForApp(page);
   await page.evaluate((k) => {
     const write = Storage.prototype.setItem;
     window.failGoal = true;
@@ -301,12 +308,15 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
   await mockRandom(page, [604827]);
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   const before = await saved(page);
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   const other = await context.newPage();
   await other.goto("/shop/auras/celestial");
+  await waitForApp(other);
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Set goal", exact: true })
@@ -340,6 +350,7 @@ test("Auto-Roll pauses for badge inspection and resumes without replacing its co
   await page.emulateMedia({ reducedMotion: "reduce" });
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".generate")).toBeEnabled();
   await page.getByRole("switch", { name: "Auto-Roll" }).click();
   await page.clock.runFor(300);
@@ -368,6 +379,7 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   page,
 }) => {
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Set goal", exact: true })
@@ -376,9 +388,11 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   await expect(page.locator(".shop-goal")).toContainText("Your goal: Starfall");
   expect(await saved(page)).toBeNull();
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".shop-goal")).toContainText("Recommended next");
   await expect(page.locator(".shop-goal")).not.toContainText("Your goal");
   await page.goto("/shop/skills");
+  await waitForApp(page);
   // The reload dropped the guest goal, so the banner is back to "Set goal".
   await page
     .locator(".shop-goal")
@@ -398,9 +412,11 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   expect((await saved(page)).owned).toEqual([]);
   expect((await saved(page)).history).toHaveLength(0);
   await page.reload();
+  await waitForApp(page);
   // The profile page has no goal control: the saved choice is read back where
   // the banner lives.
   await page.goto("/#shop");
+  await waitForApp(page);
   await expect(page.locator(".shop-goal")).toContainText("Your goal: Flywheel");
 });
 
@@ -412,6 +428,7 @@ test("the completed workshop and collection have honest end states with no inven
     discovered: allBadgeMetadata.map((b) => b.id),
   });
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".roll-progress-links")).toContainText(
     "All shop items owned",
   );
@@ -472,6 +489,7 @@ test("a funded offline goal still explains the profile requirement instead of cl
     goalId: "offline-roller",
   });
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".roll-progress-links")).toContainText(
     "Local profile required",
   );

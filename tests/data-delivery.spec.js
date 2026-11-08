@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import http from "node:http";
 import { gzipSync, gunzipSync } from "node:zlib";
@@ -38,6 +39,7 @@ test("valid scoring data is accepted when gzip transport metadata changes", asyn
     });
   });
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();

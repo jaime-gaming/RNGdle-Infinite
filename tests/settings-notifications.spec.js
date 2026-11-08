@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import {
   defaultSettings,
   NOTIFICATION_RANKS,
@@ -326,6 +327,7 @@ test("one button turns on the ready notification and the chime", async ({
     });
   });
   await page.goto("/settings");
+  await waitForApp(page);
   await page.getByRole("button", { name: "Enable notifications" }).click();
   await expect(
     page.getByRole("switch", {

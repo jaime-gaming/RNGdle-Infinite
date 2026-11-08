@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { waitForApp } from "./helpers/app.js";
 import { expect, test } from "./helpers/clock.js";
 import { emptyProgress } from "../src/progress.js";
 import {

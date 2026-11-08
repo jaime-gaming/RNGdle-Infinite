@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 
 test("the profile page lives at /profile/<username> and follows the account", async ({
@@ -6,6 +7,7 @@ test("the profile page lives at /profile/<username> and follows the account", as
 }) => {
   // A guest lands on the bare page: there is no name to show yet.
   await page.goto("/profile");
+  await waitForApp(page);
   await expect(page.getByText("Start saving your progress")).toBeVisible();
   await expect(page.getByTestId("cloud-migration-note")).toHaveCount(0);
   await expect(page).toHaveURL(/\/profile$/);
@@ -23,6 +25,7 @@ test("a direct /profile/<other-name> link stays on that public profile", async (
 }) => {
   await seedProgress(page, { balance: 10, totalEarned: 10 });
   await page.goto("/profile/SomebodyElse");
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "SomebodyElse" }),
   ).toBeVisible();
@@ -31,6 +34,7 @@ test("a direct /profile/<other-name> link stays on that public profile", async (
 
   // The header button still opens this browser's own named profile.
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".sign-in").click();
   await expect(page).toHaveURL(new RegExp(`/profile/${testProfile.username}$`));
   await expect(
@@ -39,5 +43,6 @@ test("a direct /profile/<other-name> link stays on that public profile", async (
     }),
   ).toBeVisible();
   await page.reload();
+  await waitForApp(page);
   await expect(page).toHaveURL(new RegExp(`/profile/${testProfile.username}$`));
 });

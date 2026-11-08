@@ -275,7 +275,7 @@ test("corrupt delivery awards nothing; retry loads the text-safe scoring data", 
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
-test("loading disables generation without blocking help, and badge odds explain exact counts", async ({
+test("the blank loader owns the page while scoring data loads, then help and badge odds work", async ({
   page,
 }) => {
   await seedProgress(page, { discovered: ["LEET_EXACT"] });
@@ -293,22 +293,28 @@ test("loading disables generation without blocking help, and badge odds explain 
   });
   await page.goto("/");
   await requestSeen;
-  await expect(
-    page.getByRole("button", { name: "LOADING ROLL DATA…", exact: true }),
-  ).toBeDisabled();
+  // While the data is pending there is one circle and no other page content:
+  // help and the roll controls only arrive with the real interface.
+  await expect(page.locator(".loading-screen")).toBeVisible();
+  await expect(page.locator(".loading-circle")).toHaveCount(1);
+  expect(await page.locator(".loading-screen").textContent()).toBe("");
+  await expect(page.locator(".header")).toHaveCount(0);
+  await expect(page.locator("footer")).toHaveCount(0);
+  release();
+  await expect(page.locator(".header")).toBeVisible();
+  await expect(page.locator(".loading-screen")).toHaveCount(0);
   await page
     .getByRole("button", { name: "How to play", exact: true })
     .first()
     .click();
-  // Help is a page of its own, and it opens while the roll data is still
-  // loading; the pending draw only unblocks once the data arrives.
+  // Help is a page of its own, and the pending draw only unblocks once the
+  // scoring data arrives.
   await expect(
     page.getByRole("heading", { name: "How to play", level: 1 }),
   ).toBeVisible();
   await expect(page.locator(".about-fair")).toContainText(
     "Nothing you buy changes the odds.",
   );
-  release();
   await page.getByRole("button", { name: "Back to rolling" }).click();
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),

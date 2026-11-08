@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   emptyProgress,
   applyProgress,
@@ -10,6 +11,7 @@ import { matchesOfflineCommitment, OFFLINE_INTERVAL } from "../src/offline.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom } from "./helpers/random-roll.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 const account = (now = Date.now(), numbers = [604827, 375660, 577281]) => ({
   ...emptyProgress(),
@@ -29,8 +31,7 @@ const account = (now = Date.now(), numbers = [604827, 375660, 577281]) => ({
     },
   },
 });
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 function actionFor(p, index = p.offline.batch.index) {
   const b = p.offline.batch;
   return {
@@ -152,6 +153,7 @@ test("offline catch-up behind the watermark recovers after a failed chunk save a
     };
   }, PROGRESS_KEY);
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "Retry offline rewards" }),
   ).toBeVisible();
@@ -173,6 +175,7 @@ test("offline catch-up behind the watermark recovers after a failed chunk save a
     page.getByRole("region", { name: "Offline rewards" }),
   ).not.toContainText("+0 EP");
   await page.reload();
+  await waitForApp(page);
   expect((await saved(page)).balance).toBe(sum);
   expect(
     (await saved(page)).history.filter((row) => row.source === "offline"),

@@ -1,7 +1,7 @@
 import { gzipSync, gunzipSync, strToU8, strFromU8 } from "fflate";
 
 export const SAVE_VAULT_TAG = "rngvault1:";
-// A legitimate 6,000-roll save is well below this ceiling. The extra room
+// A legitimate 10,000-roll save is well below this ceiling. The extra room
 // covers future schema growth while preventing a tiny gzip bomb from
 // allocating unbounded memory when a local or cloud copy is opened.
 export const MAX_SAVE_OUTPUT_BYTES = 10_000_000;
@@ -23,7 +23,8 @@ function fromBase64(text) {
 }
 
 // Plain JSON in, one short string out. Compression is best-effort: a browser
-// without it (or a save too small to gain) still leaves a readable copy.
+// without it still leaves a readable copy. Older plain-JSON saves are read
+// unchanged by unpackVaultSave.
 export function packVaultSave(raw) {
   if (typeof raw !== "string" || !raw) return "";
   try {

@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import fs from "node:fs";
 import { emptyProgress } from "../src/progress.js";
@@ -39,6 +40,7 @@ test("filled actions are ink blocks: one height, no glow, and only as wide as th
   await seedProgress(page, funded);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/about");
+  await waitForApp(page);
 
   const actions = await page.evaluate(() => {
     const box = (el) => {
@@ -74,6 +76,7 @@ test("filled actions are ink blocks: one height, no glow, and only as wide as th
 
   // The one deliberately full-width action is the sign-up form's submit.
   await page.goto("/profile");
+  await waitForApp(page);
   const submit = await page.evaluate(() => {
     const el = document.querySelector(".profile-page form .primary-button");
     const r = el.getBoundingClientRect();
@@ -98,8 +101,8 @@ test("the main action wears the signature ring, and its cooldown bar stays insid
     owned: [],
   });
   await page.goto("/");
-  // Not a roll in flight: "LOADING ROLL DATA…" paints the button in its
-  // cooling style, which is a state, not the idle plate under test.
+  await waitForApp(page);
+  // Not a roll in flight: the idle plate is the one under test.
   const start = page.getByRole("button", { name: "GENERATE", exact: true });
   await expect(start).toBeEnabled();
   const idle = await page.evaluate(() => {
@@ -166,6 +169,7 @@ test("only the signature CTA and the idle tile animate on the roll screen", asyn
   await seedProgress(page, funded);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();

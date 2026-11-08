@@ -30,6 +30,9 @@ import { POPULATION, chanceLabels } from "./probability";
 import Rebirth from "./components/Rebirth";
 import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
+import { prepareRolls } from "./roll-client.js";
+import LoadingScreen from "./components/LoadingScreen.jsx";
+import { shouldShowLoadingScreen } from "./loading-gate.js";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
 import CloudAccount from "./components/CloudAccount.jsx";
@@ -239,6 +242,21 @@ function App() {
   // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
   const { toasts, notify, dismiss: dismissToast } = useToasts();
   const [appUpdate, setAppUpdate] = useState(getAppUpdateState);
+  // The page stays blank until the scoring data is ready. The roll stage asks
+  // for the same worker promise once it mounts; starting it here means the
+  // loading screen cannot wait on a child it has not rendered yet.
+  const [gameDataReady, setGameDataReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    prepareRolls()
+      .catch(() => {})
+      .finally(() => {
+        if (active) setGameDataReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   useEffect(() => {
     const syncLocalPlay = (event) => {
       if (event.key === LOCAL_PLAY_KEY || event.key === null)
@@ -773,6 +791,19 @@ function App() {
           ? rarities.indexOf(b.rarity) - rarities.indexOf(a.rarity)
           : 0,
     );
+  // One circle in the middle of an otherwise empty page until the game data
+  // and this account's progress are ready. Local profiles are already loaded
+  // from storage by useProgress; only the cloud resolution is waited on here.
+  if (
+    shouldShowLoadingScreen({
+      gameDataReady,
+      cloudStatus: cloud.status,
+      cloudReady: cloud.ready,
+      hasAccount: Boolean(auth.user),
+    })
+  )
+    return <LoadingScreen />;
+
   return (
     <>
       {/* Above everything else on the page, for exactly one day. */}

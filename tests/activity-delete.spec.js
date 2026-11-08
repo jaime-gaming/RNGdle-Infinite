@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   applyProgress,
   emptyProgress,
@@ -10,8 +11,8 @@ import { showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { productById } from "../src/shop-data.js";
 import { openShelfFor } from "./helpers/shop.js";
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+import { readSavedProgress } from "./helpers/save.js";
+const saved = (page) => readSavedProgress(page);
 const nav = (page, name) =>
   page
     .getByRole("navigation")
@@ -155,6 +156,7 @@ test("legacy companion-drop history survives reload and is shown as a found pet"
   });
 
   await page.goto("/#history");
+  await waitForApp(page);
 
   const event = page.locator('[data-event-type="pet"]');
   await expect(event).toHaveCount(1);
@@ -208,6 +210,7 @@ test("guest activity is temporary until local play keeps the session", async ({
   expect(before.balance).toBeGreaterThan(0);
   expect(before.owned).toContain("starfall");
   await page.reload();
+  await waitForApp(page);
   expect((await saved(page)).history).toHaveLength(4);
   // The existing history is present again after the page reload.
   await nav(page, "History");
@@ -238,6 +241,7 @@ test("the entire feed is accessible through pagination and works on mobile", asy
   });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/#history");
+  await waitForApp(page);
   await expect(page.locator(".activity-event")).toHaveCount(50);
   await expect(page.locator(".activity-roll .number-box").first()).toHaveText(
     "122",
@@ -259,6 +263,7 @@ test("deleting a local profile requires confirmation and permits a fresh start",
   page,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   await register(page);
   // The local save has real earned fields to remove.
   await showRoll(page, 1337);
@@ -291,6 +296,7 @@ test("deleting a local profile requires confirmation and permits a fresh start",
 
   // Deleting a profile returns to name setup; it does not reveal the old save.
   await page.reload();
+  await waitForApp(page);
   expect(await saved(page)).toBeNull();
   await register(page);
   const fresh = await saved(page);
@@ -317,8 +323,10 @@ test("deleting a local profile requires confirmation and permits a fresh start",
   await nav(page, "Badges");
   await expect(page.locator(".badge-card")).toHaveCount(0);
   await page.reload();
+  await waitForApp(page);
   expect(await saved(page)).toEqual(fresh);
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -365,11 +373,13 @@ test("deleting in another tab cancels an active reveal and clears its temporary 
   context,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   await register(page);
   await startRoll(page, 1337);
   await page.clock.runFor(3000);
   const other = await context.newPage();
   await other.goto("/");
+  await waitForApp(other);
   await openDelete(other);
   await confirmDelete(other);
   await expect(
@@ -395,6 +405,7 @@ test("a stale tab missing the deletion storage event cannot resurrect the accoun
   context,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   await register(page);
   await startRoll(page, 1337);
   await page.evaluate(() =>
@@ -406,6 +417,7 @@ test("a stale tab missing the deletion storage event cannot resurrect the accoun
   );
   const other = await context.newPage();
   await other.goto("/");
+  await waitForApp(other);
   await openDelete(other);
   await confirmDelete(other);
   await page.clock.fastForward(45010);
@@ -427,6 +439,7 @@ test("no demo best roll, fake players or UI Preview labels remain", async ({
 }) => {
   for (const hash of ["", "#history", "#shop", "#badges"]) {
     await page.goto("/" + hash);
+    await waitForApp(page);
     await expect(
       page.locator(".best-card,.best-number,.profile-number,.preview-label"),
     ).toHaveCount(0);
@@ -442,6 +455,7 @@ test("failed purchases add no transactions; failed draw commits reveal no new nu
   page,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   await register(page);
   await showRoll(page, 1337);
   const before = await saved(page);
@@ -496,6 +510,7 @@ test("a draw queued behind account deletion cannot recreate progress or leave a 
   context,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   await register(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(
@@ -503,6 +518,7 @@ test("a draw queued behind account deletion cannot recreate progress or leave a 
   ).toBeEnabled();
   const other = await context.newPage();
   await other.goto("/");
+  await waitForApp(other);
   await openDelete(other);
   await page.evaluate(async (key) => {
     let ready;

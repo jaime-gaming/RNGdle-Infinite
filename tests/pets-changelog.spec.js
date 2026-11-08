@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import {
@@ -329,6 +330,7 @@ test("the badge names in the v0.2 note are links that open the badge window", as
   page,
 }) => {
   await page.goto("/changelog");
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "Changelog", exact: true }),
   ).toBeVisible();

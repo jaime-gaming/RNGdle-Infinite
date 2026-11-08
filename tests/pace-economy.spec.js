@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import {
   emptyProgress,
@@ -17,8 +18,8 @@ import { evaluate, inflate } from "./helpers/index.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { openShelfFor } from "./helpers/shop.js";
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+import { readSavedProgress } from "./helpers/save.js";
+const saved = (p) => readSavedProgress(p);
 const rolls = (p) => p.history.filter((e) => e.type === "roll");
 const settled = (p) =>
   expect(p.locator(".roll-experience")).toHaveAttribute("data-settled", "true");
@@ -221,6 +222,7 @@ test("four online completions charge a full-length fifth reveal with no cooldown
   await mockRandom(page, [604827]);
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   for (let n = 0; n < 6; n++) {
     await expect(page.locator(".generate")).toBeEnabled();
     await page.locator(".generate").click();
@@ -252,6 +254,7 @@ test("four online completions charge a full-length fifth reveal with no cooldown
       await page.unrouteAll({ behavior: "wait" });
       await mockRandom(page, [604827]);
       await page.reload();
+      await waitForApp(page);
       await expect(
         page.getByRole("progressbar", { name: "Flywheel charge" }),
       ).toHaveAttribute("value", "4");
@@ -276,7 +279,9 @@ test("concurrent tabs restore one boosted commitment, consume one charge and set
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await pauseClockAt(other, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await other.goto("/");
+  await waitForApp(other);
   await expect(page.locator(".generate")).toBeEnabled();
   await expect(other.locator(".generate")).toBeEnabled();
   await Promise.all([
@@ -312,6 +317,7 @@ test("a failed boosted commit exposes nothing and retains all four charges for r
 }) => {
   await seedProgress(page, { owned: ["flywheel"], flywheelCharge: 4 });
   await page.goto("/");
+  await waitForApp(page);
   await page.evaluate((k) => {
     const write = Storage.prototype.setItem;
     window.failBoost = true;
@@ -348,6 +354,7 @@ test("offline catch-up leaves saved Flywheel charge untouched", async ({
   });
   await mockRandom(page, [604827]);
   await page.goto("/");
+  await waitForApp(page);
   await expect
     .poll(async () => rolls(await saved(page)).length, { timeout: 20000 })
     .toBe(12);
@@ -371,6 +378,7 @@ test("Auto-Roll uses Flywheel but reduced motion still reserves the full reveal 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".generate")).toBeEnabled();
   await page.getByRole("switch", { name: /Auto-Roll/ }).click();
   await page.clock.runFor(300);
@@ -406,6 +414,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   await page.emulateMedia({ reducedMotion: "reduce" });
   // Flywheel is a skill, so it lives on the Skills shelf.
   await page.goto("/shop/skills");
+  await waitForApp(page);
   const card = page.locator('[data-product="flywheel"]');
   await expect(card).toContainText(
     `${productById.get("flywheel").price.toLocaleString("en-US")} EP`,
@@ -430,6 +439,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
     ),
   ).toBe(true);
   await page.reload();
+  await waitForApp(page);
   await page
     .getByRole("button", { name: "Back to rolling", exact: true })
     .click();
@@ -466,6 +476,7 @@ test("a boosted reveal survives reload with its committed number and fifteen-sec
   await mockRandom(page, [604827]);
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   const before = await saved(page);
@@ -478,6 +489,7 @@ test("a boosted reveal survives reload with its committed number and fifteen-sec
   await page.unrouteAll({ behavior: "wait" });
   await mockRandom(page, [604827]);
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
     /digits|badges/,
@@ -509,6 +521,7 @@ test("buying Flywheel mid-reveal does not charge an already committed roll or al
   await mockRandom(page, [604827]);
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   const before = await saved(page);

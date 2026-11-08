@@ -1,14 +1,15 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { SETTINGS_KEY } from "../src/settings.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 const ROLL_NUMBER = 604827;
 const MINIMUM_RANK = "common";
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 const rolls = async (page) =>
   (await saved(page)).history.filter((entry) => entry.type === "roll");
 const autoRollSwitch = (page) =>
@@ -40,6 +41,7 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
   });
 
   await page.goto("/settings");
+  await waitForApp(page);
   const rankToggle = page.getByRole("switch", {
     name: "Notify me at this rank or higher",
   });

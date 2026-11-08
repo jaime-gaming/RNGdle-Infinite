@@ -1,4 +1,5 @@
 import { mockOperationalStatus } from "./helpers/status.js";
+import { waitForApp } from "./helpers/app.js";
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import { PAGES } from "../src/router.js";
@@ -6,6 +7,7 @@ import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { rebirthUnlocked, REBIRTH_VISIBLE_AT } from "../src/rebirth.js";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+import { mutateSavedProgress } from "./helpers/save.js";
 
 test.beforeEach(async ({ page }) => {
   await mockOperationalStatus(page);
@@ -179,6 +181,7 @@ test("profile and rebirth pages render with headings and no dialogs", async ({
     profile: { id: "u1", username: "pages", createdAt: 1700000000000 },
   });
   await page.goto("/profile");
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "Profile", level: 1 }),
   ).toBeVisible();
@@ -192,6 +195,7 @@ test("profile and rebirth pages render with headings and no dialogs", async ({
   // Rebirth stays silent under the threshold: a direct link goes home and the
   // page never mentions it.
   await page.goto("/rebirth");
+  await waitForApp(page);
   await expect(page).toHaveURL(/\/$/);
   await expect(
     page.getByRole("heading", { name: "Rebirth", level: 1 }),
@@ -209,6 +213,7 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
     discovered: badgeIds.slice(0, 150),
   });
   await page.goto("/rebirth");
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "Rebirth", level: 1 }),
   ).toBeVisible();
@@ -225,34 +230,25 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
     "+2% EP",
   );
   // After 1 rebirth, #4 is clear and the blurred/faded preview moves to #5, hiding #6.
-  await page.evaluate((key) => {
-    const raw = JSON.parse(localStorage.getItem(key));
-    raw.rebirths = 1;
-    localStorage.setItem(key, JSON.stringify(raw));
-  }, PROGRESS_KEY);
+  await mutateSavedProgress(page, { rebirths: 1 });
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".rebirth-ladder > li")).toHaveCount(5);
   await expect(
     page.locator(".rebirth-ladder > li.is-faded .rebirth-rung-name"),
   ).toHaveText("#5");
   // After 2 rebirths, #5 is clear and the blurred/faded preview moves to #6.
-  await page.evaluate((key) => {
-    const raw = JSON.parse(localStorage.getItem(key));
-    raw.rebirths = 2;
-    localStorage.setItem(key, JSON.stringify(raw));
-  }, PROGRESS_KEY);
+  await mutateSavedProgress(page, { rebirths: 2 });
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".rebirth-ladder > li")).toHaveCount(6);
   await expect(
     page.locator(".rebirth-ladder > li.is-faded .rebirth-rung-name"),
   ).toHaveText("#6");
   // After 3 rebirths, all 6 rungs are clear with no faded rung.
-  await page.evaluate((key) => {
-    const raw = JSON.parse(localStorage.getItem(key));
-    raw.rebirths = 3;
-    localStorage.setItem(key, JSON.stringify(raw));
-  }, PROGRESS_KEY);
+  await mutateSavedProgress(page, { rebirths: 3 });
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".rebirth-ladder > li")).toHaveCount(6);
   await expect(page.locator(".rebirth-ladder > li.is-faded")).toHaveCount(0);
   // What is kept and what is reset are both stated.
@@ -273,12 +269,9 @@ test("the rebirth page explains the ladder, its rewards and the reset once it un
     page.getByRole("button", { name: "Rebirth", exact: true }),
   ).toBeVisible();
   // The sixth rebirth finishes the ladder: the teaser gives way to Prestige.
-  await page.evaluate((key) => {
-    const raw = JSON.parse(localStorage.getItem(key));
-    raw.rebirths = 6;
-    localStorage.setItem(key, JSON.stringify(raw));
-  }, PROGRESS_KEY);
+  await mutateSavedProgress(page, { rebirths: 6 });
   await page.reload();
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "After the ladder: Prestige" }),
   ).toBeVisible();
@@ -303,6 +296,7 @@ test("equipped skills stand alone while pet and rebirth families stack in the sk
     surplusBanked: 3,
   });
   await page.goto("/");
+  await waitForApp(page);
   const bar = page.locator(".skill-bar");
   await expect(bar).toBeVisible();
   // The equipped skill stands alone while the pet and rebirth families ride in
@@ -348,6 +342,7 @@ test("a skill family is one circle: the icon in the middle, every member a slice
     ultraRebirths: 1,
   });
   await page.goto("/");
+  await waitForApp(page);
   const family = page.locator('[data-stack="rebirth"]');
   await expect(family).toBeVisible();
   // One circle, not a constellation: a single ring element carries every arc.
@@ -427,6 +422,7 @@ test("the phone rack becomes a compact horizontal dock below the header", async 
   const ring = page.locator('[data-skill="surge"] .skill-ring');
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
+  await waitForApp(page);
   await expect(bar).toBeVisible();
   const deskRing = await ring.boundingBox();
   await page.setViewportSize({ width: 390, height: 844 });
@@ -473,6 +469,7 @@ test("profile export downloads a valid PNG account card with username and bigges
     ],
   });
   await page.goto("/profile");
+  await waitForApp(page);
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /Export my data/i }).click();
   const download = await downloadPromise;

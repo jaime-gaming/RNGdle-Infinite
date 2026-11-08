@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import {
   emptyProgress,
@@ -37,11 +38,11 @@ import { skillForPet, skillSlots } from "../src/skills.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom } from "./helpers/random-roll.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 const ids = allBadgeMetadata.map((b) => b.id);
 const auraIds = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+const saved = (p) => readSavedProgress(p);
 // A save that has stopped changing: the event stamps a "seen" receipt and
 // deals its hourly board just after load, and comparing a snapshot taken
 // mid-write would credit the rebirth button with those writes.
@@ -101,6 +102,7 @@ async function start(p, extra = {}) {
   await mockRandom(p, [604827]);
   await pauseClockAt(p, new Date(Date.now() + 1000));
   await p.goto("/");
+  await waitForApp(p);
   await p.locator(".generate").click();
   await expect.poll(async () => !!(await saved(p)).pendingRoll).toBe(true);
 }
@@ -732,6 +734,7 @@ for (const [count, rebirths, ep, expected] of [
     });
     // Rebirth is its own page now; the state is driven by the save alone.
     await page.goto("/#rebirth");
+    await waitForApp(page);
     const button = page.getByRole("button", { name: "Rebirth", exact: true });
     if (expected === "hidden") {
       // Rebirth says nothing at all before it unlocks: no ladder, no locked
@@ -780,6 +783,7 @@ test("rebirth confirms in its dialog, applies once, and restarts the run without
   await seedProgress(page, initial);
   await mockRandom(page, [604827]);
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await page.getByRole("button", { name: "Rebirth", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Keep:");
@@ -824,6 +828,7 @@ test("rebirth confirms in its dialog, applies once, and restarts the run without
     "Rebirth 1",
   );
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "Rebirth", exact: true }),
   ).toBeDisabled();
@@ -832,6 +837,7 @@ test("rebirth confirms in its dialog, applies once, and restarts the run without
   await page.unrouteAll({ behavior: "wait" });
   await mockRandom(page, [604827]);
   await page.reload();
+  await waitForApp(page);
   expect((await saved(page)).rebirths).toBe(1);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.getByRole("button", { name: "RNGdle Infinite home" }).click();
@@ -853,6 +859,7 @@ test("a failed rebirth save leaves all progress intact and allows retry", async 
 }) => {
   await seedProgress(page, funded());
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await expect
     .poll(async () => (await saved(page)).offline?.lastSeenAt)
     .toBeTruthy();
@@ -889,8 +896,10 @@ test("simultaneous rebirths are applied once and reset the other tab without del
 }) => {
   await seedProgress(page, funded());
   await page.goto("/#rebirth");
+  await waitForApp(page);
   const other = await context.newPage();
   await other.goto("/#rebirth");
+  await waitForApp(other);
   await confirm(page);
   await confirm(other);
   await Promise.all([
@@ -916,6 +925,7 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
 }) => {
   await seedProgress(page, funded());
   await page.goto("/#rebirth");
+  await waitForApp(page);
   const other = await context.newPage();
   await other.addInitScript(() =>
     window.addEventListener(
@@ -927,6 +937,7 @@ test("a tab missing the rebirth storage event cannot spend or restore old-cycle 
   // The stale tab sits inside the celestial set before the rebirth happens:
   // it must never reload afterwards, or it would stop being stale.
   await other.goto("/shop/auras/celestial");
+  await waitForApp(other);
   await other
     .getByRole("button", { name: "Use original appearance", exact: true })
     .click();
@@ -968,6 +979,7 @@ test("rebirth waits for cooldown and remains usable on mobile without motion", a
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#rebirth");
+  await waitForApp(page);
   // At phone width the bottom tab bar carries a Rebirth tab of its own, so
   // the assertion scopes itself to the page's own action button.
   const rebirthButton = page
@@ -1026,6 +1038,7 @@ test("the moving bar uses the cooldown only, is smooth between seconds, survives
   });
   await page.unrouteAll({ behavior: "wait" });
   await page.reload();
+  await waitForApp(page);
   await page
     .getByRole("button", { name: "Back to rolling", exact: true })
     .click();
@@ -1134,6 +1147,7 @@ test("registered rebirth fails closed without Web Locks", async ({ page }) => {
     Object.defineProperty(navigator, "locks", { value: undefined }),
   );
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await confirm(page);
   await page
     .getByRole("button", { name: "Confirm rebirth", exact: true })
@@ -1150,6 +1164,7 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
 }) => {
   await seedProgress(page, { ...funded(), profile: null, owned: [] });
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await page.evaluate(() => {
     const write = Storage.prototype.setItem;
     window.failGuard = true;
@@ -1189,6 +1204,7 @@ test("a prestige runs the ceremony and wears its profile title, and nothing else
   // A finished ladder with a 35M-EP cycle — over the prestige's 30M gate.
   await seedProgress(page, { ...funded(), rebirths: REBIRTH_TOTAL });
   await page.goto("/#rebirth");
+  await waitForApp(page);
   const ultra = page.getByRole("button", {
     name: "Prestige",
     exact: true,
@@ -1206,6 +1222,7 @@ test("a prestige runs the ceremony and wears its profile title, and nothing else
   // The ceremony ends on the roll page — back to the rebirth page for the
   // legacy panel: the figures and the exclusives it pays.
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await expect(page.locator(".rebirth-legacy")).toContainText(
     "Your prestige legacy",
   );
@@ -1214,6 +1231,7 @@ test("a prestige runs the ceremony and wears its profile title, and nothing else
   // good: a prestige carries no mark on the game's chrome or the roll stage.
   await expect(page.locator(".rebirth-dev-note")).toHaveCount(0);
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".roll-experience")).not.toHaveAttribute(
     "data-prestige",
     "true",
@@ -1237,6 +1255,7 @@ test("the rebirth page animates its gauge and ladder, and reduced motion leaves 
     owned: ["reborn-drive"],
   });
   await page.goto("/#rebirth");
+  await waitForApp(page);
   await expect(page.locator(".rebirth-gauge")).toBeVisible();
   const moving = await page.evaluate(() => ({
     hero: getComputedStyle(document.querySelector(".rebirth-hero"))
@@ -1272,6 +1291,7 @@ test("the rebirth page animates its gauge and ladder, and reduced motion leaves 
   // the page still says what it has to say.
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();
+  await waitForApp(page);
   const still = await page.evaluate(() =>
     [
       ...document.querySelectorAll(

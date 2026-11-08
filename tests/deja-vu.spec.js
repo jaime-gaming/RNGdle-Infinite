@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
@@ -46,6 +47,7 @@ test("the live roll and the History wear the déjà vu look only on a repeat", a
   await mockRandom(page, [103002, 103002]);
   await seedProgress(page);
   await page.goto("/");
+  await waitForApp(page);
   const box = page.locator(".number-artifact.number-box");
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(box).toHaveAttribute("aria-label", "Number 103002");
@@ -69,6 +71,7 @@ test("the live roll and the History wear the déjà vu look only on a repeat", a
   expect(ink).toBe("rgb(255, 160, 255)");
   await page.clock.fastForward(105100);
   await page.goto("/history");
+  await waitForApp(page);
   const rows = page.locator(".activity-roll .number-box");
   await expect(rows).toHaveCount(2);
   // Newest first: the repeat wears the look, the original does not.

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import {
   APP_INTERNAL_VERSION,
   getAppBuildId,
@@ -16,6 +17,8 @@ import {
 } from "../src/app-update.js";
 import { seedProgress } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
+import { unpackVaultSave } from "../src/save-codec.js";
 
 test("build identity is read from the page and version checks use the app base path", async () => {
   expect(
@@ -27,7 +30,7 @@ test("build identity is read from the page and version checks use the app base p
     getAppInternalVersion({
       querySelector: () => ({ content: APP_INTERNAL_VERSION }),
     }),
-  ).toBe("RNGdle-Infinitev0.5.2fix3");
+  ).toBe("RNGdle-Infinitev0.5.2fix4");
   expect(
     makeVersionUrl({
       base: "/preview/",
@@ -71,6 +74,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     owned: ["auto-roll"],
   });
   await page.goto("/settings");
+  await waitForApp(page);
 
   const buildId = await page
     .locator('meta[name="rngdle-build-id"]')
@@ -80,7 +84,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     new URL("/version.json", page.url()).toString(),
   );
   expect(liveVersion.ok()).toBeTruthy();
-  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinitev0.5.2fix3");
+  expect(APP_INTERNAL_VERSION).toBe("RNGdle-Infinitev0.5.2fix4");
   expect(await liveVersion.json()).toMatchObject({
     buildId,
     internalVersion: APP_INTERNAL_VERSION,
@@ -105,10 +109,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
   );
   await expect(page.getByTestId("settings-update")).toHaveText("Refresh game");
 
-  const saved = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)),
-    PROGRESS_KEY,
-  );
+  const saved = await readSavedProgress(page);
   expect(saved.balance).toBe(987654);
   expect(saved.totalEarned).toBe(1234567);
   expect(saved.owned).toContain("auto-roll");
@@ -192,7 +193,7 @@ test("a save copy is used only when the landed build cannot read the save", () =
     expect(
       recoverSaveAfterUpdate({ storage: after, scratch: copy, now: 20 }),
     ).toEqual({ recovered: true });
-    expect(after.map.get(PROGRESS_KEY)).toBe(save);
+    expect(unpackVaultSave(after.map.get(PROGRESS_KEY))).toBe(save);
   }
 
   // An old copy belongs to no reload and is never restored.
@@ -239,6 +240,7 @@ test("Reload until updated clears cached files and keeps the saved game and sess
 }) => {
   await seedProgress(page, { balance: 424242, totalEarned: 999999 });
   await page.goto("/settings");
+  await waitForApp(page);
   const buildId = await page
     .locator('meta[name="rngdle-build-id"]')
     .getAttribute("content");
@@ -277,10 +279,7 @@ test("Reload until updated clears cached files and keeps the saved game and sess
     "rngdle-old-build",
   );
   await expect(page).not.toHaveURL(new RegExp(APP_UPDATE_QUERY));
-  const savedSave = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)),
-    PROGRESS_KEY,
-  );
+  const savedSave = await readSavedProgress(page);
   expect(savedSave.balance).toBe(424242);
   expect(savedSave.totalEarned).toBe(999999);
   expect(
