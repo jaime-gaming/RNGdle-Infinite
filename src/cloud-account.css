@@ -79,18 +79,18 @@
   background: var(--green);
   content: "";
 }
-.cloud-app-check-note,
+.cloud-security-note,
 .cloud-security-availability {
   margin: 9px 0 0;
   color: var(--muted);
   font-size: 10px;
   line-height: 1.55;
 }
-.cloud-app-check-note {
+.cloud-security-note {
   padding-top: 8px;
   border-top: 1px solid color-mix(in srgb, var(--green) 20%, var(--border));
 }
-.cloud-app-check-note strong {
+.cloud-security-note strong {
   color: var(--secondary);
 }
 .cloud-account-heading {
@@ -250,7 +250,7 @@
 }
 .google-sign-in-button:disabled {
   opacity: 0.62;
-  cursor: wait;
+  cursor: not-allowed;
 }
 .google-mark {
   display: inline-block;
@@ -550,7 +550,7 @@
 }
 .cloud-save-choice-actions .secondary-button:disabled {
   opacity: 0.6;
-  cursor: wait;
+  cursor: not-allowed;
 }
 .cloud-save-conflict > .cloud-account-note {
   margin-top: 9px;
@@ -590,6 +590,12 @@
 .offline-save-banner strong,
 .device-link-migration-banner strong {
   color: var(--text);
+}
+.cloud-quota-retry {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 11px;
 }
 .device-link-migration-actions {
   display: flex;
@@ -691,7 +697,6 @@
   }
 }
 
-/* Profile page pointer to the Cloud Account, which now lives in Settings. */
 .cloud-account-pointer {
   display: grid;
   gap: 8px;
@@ -700,7 +705,6 @@
   justify-self: start;
 }
 
-/* Security: two-factor sign-in and email confirmation. */
 .cloud-account-security {
   display: grid;
   gap: 12px;

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
+import { isCloudQuotaNotice } from "../cloud-quota.js";
 import {
   Check,
   Cloud,
   CloudOff,
-  LoaderCircle,
   LogIn,
   LogOut,
   LockKeyhole,
@@ -12,7 +12,6 @@ import {
   UserRound,
 } from "lucide-react";
 import { isEmailPasswordOnlyUser } from "../use-firebase-auth.js";
-import { firebaseAppCheckStatus } from "../firebase.js";
 import { pathForPage } from "../router.js";
 import { publicProfileId } from "../public-profile.js";
 import "../profile.css";
@@ -59,15 +58,6 @@ const STATUS_LABELS = {
   "signed-out": "Not signed in",
   unconfigured: "Online sign-in unavailable",
   maintenance: "Paused for maintenance",
-};
-
-const APPCHECK_STATUS_COPY = {
-  "client-ready":
-    "Extra request checks are configured for this app. Their enforcement is controlled by the cloud service.",
-  "initialization-failed":
-    "Extra request checks could not be started for this app.",
-  "site-key-required": "Extra request checks are not configured in this build.",
-  "test-disabled": "Extra request checks are disabled in test mode.",
 };
 
 function SaveSummary({ title, summary }) {
@@ -502,13 +492,7 @@ export default function CloudAccount({
           role="status"
           data-testid="cloud-save-status"
         >
-          {cloud.status === "loading" || cloud.status === "saving" ? (
-            <LoaderCircle
-              size={13}
-              className="is-spinning"
-              aria-hidden="true"
-            />
-          ) : cloud.status === "synced" ? (
+          {cloud.status === "synced" ? (
             <Check size={13} aria-hidden="true" />
           ) : null}
           {statusLabel}
@@ -549,10 +533,10 @@ export default function CloudAccount({
               public profile.
             </li>
           </ul>
-          <p className="cloud-app-check-note">
-            <strong>App Check:</strong>{" "}
-            {APPCHECK_STATUS_COPY[firebaseAppCheckStatus] ??
-              APPCHECK_STATUS_COPY["site-key-required"]}
+          <p className="cloud-security-note">
+            <strong>Request protection:</strong> Firestore rules protect your
+            save. This build does not use CAPTCHA or per-request attestation
+            checks.
           </p>
           <p className="cloud-security-availability">
             Online features depend on your connection and service availability;
@@ -777,7 +761,8 @@ export default function CloudAccount({
                   </p>
                 </div>
               )}
-              {cloud.status === "error" && (
+              {(cloud.status === "error" ||
+                isCloudQuotaNotice(cloud.notice)) && (
                 <button
                   type="button"
                   className="secondary-button cloud-retry"

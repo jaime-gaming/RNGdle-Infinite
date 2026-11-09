@@ -1,14 +1,3 @@
-// Cloudflare Workers deployment.
-//
-// `npm run build` writes the Vite SPA to dist/; this Worker serves that folder
-// as static assets with the single-page-application fallback, so direct client
-// routes (/shop/auras, /profile/<name>, …) return index.html and the router
-// takes over. There is no Worker script: the whole app is static.
-//
-// `routes` claims the custom domain on every deploy. The jaime-gaming.com zone
-// must live in the same Cloudflare account, and any old Cloudflare Pages
-// custom domain with this hostname must be removed first (a hostname can only
-// point at one service). See DEPLOYMENT.md.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "rngdle-infinite",

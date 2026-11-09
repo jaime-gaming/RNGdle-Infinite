@@ -1,7 +1,7 @@
 import { writeDeviceSave } from "./local-save.js";
 import { unpackVaultSave } from "./save-codec.js";
 import { gameNow } from "./game-clock";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { drainSerialQueue, enqueueSerial } from "./serial-queue.js";
 import {
   accountSwitchSnapshot,
@@ -25,6 +25,12 @@ import {
   writeCloudOwner,
 } from "./cloud-save.js";
 import { firebaseConfigured } from "./firebase.js";
+import {
+  clearCloudQuotaPause,
+  cloudQuotaNotice,
+  cloudQuotaPauseRemaining,
+  pauseCloudForQuota,
+} from "./cloud-quota.js";
 import { cloudGameAccess } from "./auth-gate.js";
 import { getStatusIssue, maintenanceActiveFor } from "./use-status-issue.js";
 import {
@@ -74,7 +80,7 @@ import {
   writePresence,
   clearPresence,
 } from "./offline.js";
-// Keep repair details out of player-facing messages; readable progress stays.
+
 function repairWarning(repairs) {
   if (!repairs.length) return "";
   return "Some saved details needed fixing. Your readable progress was kept.";
@@ -116,8 +122,6 @@ function load() {
     const stored = localStorage.getItem(PROGRESS_KEY);
     const { progress, repairs } = parseAndRepairProgress(stored);
     if (!progress.profile) {
-      // A stale guest guard is ephemeral session data: when it cannot be
-      // read it is dropped instead of failing the whole load.
       try {
         const guard = JSON.parse(
           sessionStorage.getItem(GUEST_ROLL_KEY) || "null",
@@ -151,8 +155,6 @@ function load() {
     if (repairs.length) {
       console.info("[RNGdle] save repaired:", repairs);
       try {
-        // Heal the file itself, keeping the exact pre-repair bytes aside so
-        // a bad repair can always be undone by hand.
         localStorage.setItem(PRE_REPAIR_BACKUP_KEY, stored);
         const saveOwner = readCloudOwner();
         writePreRepairOwner(saveOwner, localStorage);
@@ -162,9 +164,7 @@ function load() {
           storage: localStorage,
           ownerId: saveOwner,
         });
-      } catch {
-        // Storage unwritable: the repaired save still runs in memory.
-      }
+      } catch {}
     }
     return { progress, warning: repairs.length ? repairWarning(repairs) : "" };
   } catch {
@@ -203,8 +203,6 @@ export function useProgress({
   );
   const current = useRef(initial.progress),
     healthy = useRef(!initial.warning),
-    // The rolls this tab settled while saving was failing, by id. Only these
-    // are owed again when the save recovers (see recoverUnsavedRolls).
     unsaved = useRef(new Set()),
     generation = useRef(0),
     queue = useRef(Promise.resolve()),
@@ -215,6 +213,48 @@ export function useProgress({
     pendingCloudConflict = useRef(null);
   const cloudRef = useRef(cloud);
   cloudRef.current = cloud;
+  const quotaResumeTimer = useRef(null);
+
+  const applyQuotaPause = useCallback((targetUserId, remainingMs) => {
+    if (pendingCloudConflict.current?.userId === targetUserId) return;
+    const owner = readCloudOwner();
+    const localCopyIsOwned =
+      (!owner || owner === targetUserId) &&
+      Boolean(current.current.profile) &&
+      healthy.current;
+    if (localCopyIsOwned) ensureCloudOwner(targetUserId);
+    cloudGate.current = { userId: targetUserId, ready: localCopyIsOwned };
+    markCloudDirty(targetUserId);
+    updateCloud({
+      ...cloudRef.current,
+      status: "offline",
+      ready: localCopyIsOwned,
+      userId: targetUserId,
+      error: "",
+      notice: cloudQuotaNotice(remainingMs),
+      conflict: null,
+      resolving: false,
+    });
+  }, []);
+
+  const pauseForQuota = useCallback((error) => {
+    const remaining = pauseCloudForQuota(error);
+    if (!remaining) return 0;
+    if (quotaResumeTimer.current) clearTimeout(quotaResumeTimer.current);
+    quotaResumeTimer.current = setTimeout(() => {
+      quotaResumeTimer.current = null;
+      clearCloudQuotaPause();
+      setCloudRetry((retry) => retry + 1);
+    }, remaining + 1000);
+    return remaining;
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (quotaResumeTimer.current) clearTimeout(quotaResumeTimer.current);
+    },
+    [],
+  );
   const authRef = useRef({
     userId,
     authReady,
@@ -479,8 +519,6 @@ export function useProgress({
       };
     }
 
-    // A running maintenance pauses cloud sync: keep the local copy usable and
-    // wait for the maintenance to end instead of hammering Firestore.
     if (maintenanceActiveFor(getStatusIssue())) {
       const localCopyIsOwned =
         readCloudOwner() === userId &&
@@ -500,6 +538,14 @@ export function useProgress({
       };
     }
 
+    const quotaRemaining = cloudQuotaPauseRemaining();
+    if (quotaRemaining > 0) {
+      applyQuotaPause(userId, quotaRemaining);
+      return () => {
+        active = false;
+      };
+    }
+
     cloudGate.current = { userId, ready: false };
     updateCloud({ status: "loading", ready: false, userId, error: "" });
 
@@ -509,6 +555,9 @@ export function useProgress({
       let localProgress = current.current;
       let cachedProgress = null;
       let cacheWarning = "";
+
+      if (localRaw && (!localOwner || localOwner === userId))
+        writeLocalSave(localProgress);
 
       if (localOwner && localOwner !== userId) {
         const rawToCache = accountSwitchSnapshot({
@@ -524,8 +573,7 @@ export function useProgress({
           cacheWarning =
             "This device could not keep a copy of the previous account’s progress.";
         }
-        // A save marked for another auth user is never a first-sign-in import.
-        // Only this account's own cached save may follow it across a switch.
+
         const cached = readCachedSaveForUser(userId);
         if (cached) {
           try {
@@ -565,9 +613,19 @@ export function useProgress({
     });
     loadTask.catch((loadError) => {
       if (!currentRequest()) return;
+
+      const ownerOnFailure = readCloudOwner();
+      if (!ownerOnFailure || ownerOnFailure === userId) {
+        writeLocalSave(current.current);
+        markCloudDirty(userId);
+      }
+      const quotaRemaining = pauseForQuota(loadError);
+      if (quotaRemaining > 0) {
+        applyQuotaPause(userId, quotaRemaining);
+        return;
+      }
       cloudGate.current = { userId, ready: false };
-      // Surface the underlying Firebase error code (e.g. permission-denied,
-      // unavailable) so the real cause is visible without a console.
+
       const detail =
         typeof loadError?.code === "string" && loadError.code
           ? ` (${loadError.code})`
@@ -621,6 +679,12 @@ export function useProgress({
         error:
           "This device’s saved copy belongs to a different or unverified account. Reload progress before saving online.",
       });
+      return undefined;
+    }
+
+    const quotaRemaining = cloudQuotaPauseRemaining();
+    if (quotaRemaining > 0) {
+      applyQuotaPause(userId, quotaRemaining);
       return undefined;
     }
 
@@ -763,6 +827,11 @@ export function useProgress({
             authRef.current.userId !== userId
           )
             return;
+          const quotaRemaining = pauseForQuota(failure);
+          if (quotaRemaining > 0) {
+            applyQuotaPause(userId, quotaRemaining);
+            return;
+          }
           const code = String(failure?.code ?? "")
             .split("/")
             .at(-1);
@@ -772,7 +841,6 @@ export function useProgress({
               "aborted",
               "deadline-exceeded",
               "network-request-failed",
-              "resource-exhausted",
               "unavailable",
             ].includes(code) ||
             /wait a couple of seconds|temporarily unavailable/i.test(message);
@@ -822,7 +890,7 @@ export function useProgress({
             notice: "",
           });
         });
-    }, 2_100);
+    }, 10_000);
     return () => {
       active = false;
       clearTimeout(timer);
@@ -831,6 +899,11 @@ export function useProgress({
   }, [progress, userId, authReady, cloudEnabled, online, cloudWriteRetry]);
 
   function retryCloudLoad() {
+    clearCloudQuotaPause();
+    if (quotaResumeTimer.current) {
+      clearTimeout(quotaResumeTimer.current);
+      quotaResumeTimer.current = null;
+    }
     if (cloudEnabled && authReady && userId) {
       cloudWriteFailure.current = { snapshot: progress, userId, attempts: 0 };
       setCloudWriteRetry((retry) => retry + 1);
@@ -1041,8 +1114,7 @@ export function useProgress({
         if (previous.profile) {
           try {
             const stored = parseProgress(localStorage.getItem(PROGRESS_KEY));
-            // Always check identity, even after a failed write: a stale tab must
-            // never resurrect a deleted account or spend another profile's EP.
+
             if (
               stored.profile?.id !== previous.profile.id ||
               stored.rebirths !== previous.rebirths ||
@@ -1094,8 +1166,6 @@ export function useProgress({
               message: `Wait until this account’s online progress has loaded before changing the ${mutationLabel}.`,
             };
 
-          // Drain or invalidate the ordinary debounced backup before changing
-          // identity data. A cosmetic change must never hide a save conflict.
           cloudWriteVersion.current++;
           let reconciliation;
           try {
@@ -1195,8 +1265,6 @@ export function useProgress({
           if (!readable && !deletingCloudAccount)
             return { ok: false, message: "Your progress could not be opened." };
           if (cloudUser) {
-            // Invalidate an initial cloud load as well as debounced writes; it is
-            // serialized on this queue so deletion can wait for its transaction.
             if (deletingCloudAccount) cloudGeneration.current += 1;
             cloudWriteVersion.current += 1;
             cloudGate.current = { userId: cloudUser, ready: false };
@@ -1524,16 +1592,12 @@ export function useProgress({
           }
           const timing = rollSettings(previous.owned);
           const flywheel = flywheelForDraw(previous);
-          // Up to six genuine draws. Skills that cannot fit keep their charge;
-          // only actually-fired skills enter the committed snapshot below.
+
           const armed = armedSkills(previous);
           const plan = drawPlanFor(armed);
           if (flywheel === "boost" || skillWaivesCooldown(armed))
             timing.cooldownMS = 0;
-          // Every draw is an ordinary, independent roll scored by the verified
-          // index; the plan only says how many to take and when to stop early.
-          // Each draw skill spends its own draws and keeps its own number, and
-          // the roll pays for every number it kept.
+
           let result,
             draws = null,
             picks = null,
@@ -1548,7 +1612,7 @@ export function useProgress({
                 restoreRoll,
                 { ordinary: true },
               ));
-          // No digits reach the UI until the draw has been committed below.
+
           if (token !== generation.current)
             throw new Error("This game was reset. The draw was cancelled.");
           if (
@@ -1572,9 +1636,7 @@ export function useProgress({
             ...timing,
             ...(fired.length ? { skills: fired } : {}),
             ...(draws ? { draws, drawLimit: SKILL_MAX_DRAWS } : {}),
-            // Which draw skill kept which number, and which one (or the plain
-            // draw) supplied the committed result. The roll pays for every kept
-            // number, even when two skills happen to keep the same number.
+
             ...(picks && picks.length
               ? { picks, winnerSkill, winnerIndex }
               : {}),
@@ -1608,13 +1670,11 @@ export function useProgress({
             throw new Error(
               "This roll is no longer available. No EP was added.",
             );
-          // Scores and badges come from the verified index, never from a UI payload.
+
           const result = await restoreRoll(pending.number);
           if (token !== generation.current)
             throw new Error("This game was reset. The roll was cancelled.");
-          // Every other number a draw skill kept is scored here, from the same
-          // verified index, so the settlement can pay each of them: the roll
-          // banks one number per skill, not only the one it commits.
+
           const extras = [];
           for (const pick of pending.picks ?? []) {
             if (pick.skill === pending.winnerSkill) continue;
@@ -1898,8 +1958,6 @@ export function useProgress({
               };
             }
             if (action.type === "complete") {
-              // The settled roll is kept in memory only, so remember exactly
-              // which rolls those are: they are the only ones owed on recovery.
               const known = new Set(previous.history.map((e) => e.id));
               for (const event of next.history)
                 if (
@@ -2006,7 +2064,7 @@ export function useProgress({
             ? next.offline.batch.numbers.length - next.offline.batch.index
             : 0,
           ...(committed ? { run: committed } : {}),
-          // Bulk delete reports how many entries it actually removed.
+
           ...(action.type === "history-prune"
             ? { removed: previous.history.length - next.history.length }
             : {}),
@@ -2102,7 +2160,6 @@ export function useProgress({
     try {
       writeDeviceSave(localStorage, PROGRESS_KEY, copy.raw);
     } catch {
-      // Fail closed if the primary write failed after the marker changed.
       writeCloudOwner(UNKNOWN_CLOUD_OWNER);
       return {
         ok: false,
@@ -2110,17 +2167,14 @@ export function useProgress({
           "The saved copy could not be restored. Free up space on this device and try again.",
       };
     }
-    // An explicit restore is a decision about which copy is real. Tell the next
-    // sync that this local save wins over the online copy it may replace, so
-    // the restore is backed up instead of being undone as "older progress".
+
     if (typeof owner.ownerId === "string" && owner.ownerId)
       writeCloudSyncMark(
         owner.ownerId,
         { profileId: restored.profile?.id ?? null, authoritative: true },
         localStorage,
       );
-    // Do not replace the rolling vault: it still protects the progress that was
-    // active before this explicit restore. The next normal save refreshes it.
+
     reset(restored);
     return { ok: true, at: copy.at };
   }

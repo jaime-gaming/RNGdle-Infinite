@@ -1,4 +1,6 @@
 import { test, expect } from "./helpers/clock.js";
+import { installPackedSaveDecoder } from "./helpers/packed.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   emptyProgress,
   parsePending,
@@ -13,9 +15,9 @@ import { evaluate, inflate } from "./helpers/index.js";
 import { shopProducts } from "../src/shop-data.js";
 import { openShelfFor } from "./helpers/shop.js";
 import manifest from "../src/data/game-index.json" with { type: "json" };
+import { readSavedProgress } from "./helpers/save.js";
 const guestKey = "rng-infinite-guest-roll-v1";
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 const guest = (page) =>
   page.evaluate((key) => JSON.parse(sessionStorage.getItem(key)), guestKey);
 const settled = (page) =>
@@ -49,6 +51,7 @@ test("registered refresh resumes the committed number and never resets its deadl
   expect(before.pendingRoll.number).toBe(604827);
   expect(before.balance).toBe(0);
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
     "digits",
@@ -63,6 +66,7 @@ test("registered refresh resumes the committed number and never resets its deadl
     after.history.filter((e) => e.type === "roll").map((e) => e.id),
   ).toEqual([before.pendingRoll.id]);
   await page.reload();
+  await waitForApp(page);
   expect((await saved(page)).balance).toBe(4663);
   await expect(
     page.getByRole("button", { name: /COOLDOWN IN|NEXT ROLL IN/ }),
@@ -76,6 +80,7 @@ test("guest refresh cannot discard a number or cooldown, but does not persist th
   const before = await guest(page);
   expect(await saved(page)).toBeNull();
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
     "digits",
@@ -86,6 +91,7 @@ test("guest refresh cannot discard a number or cooldown, but does not persist th
   expect((await guest(page)).pendingRoll).toBeNull();
   expect((await guest(page)).cooldownUntil).toBe(before.cooldownUntil);
   await page.reload();
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: /COOLDOWN IN|NEXT ROLL IN/ }),
   ).toBeDisabled();
@@ -101,9 +107,11 @@ test("simultaneous account tabs join one committed roll and credit only once", a
   await seedProgress(page);
   await mockRandom(page, [604827]);
   await page.goto("/");
+  await waitForApp(page);
   const other = await context.newPage();
   await mockRandom(other, [1337]);
   await other.goto("/");
+  await waitForApp(other);
   for (const p of [page, other])
     await expect(
       p.getByRole("button", { name: "GENERATE", exact: true }),
@@ -254,8 +262,9 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
   page,
 }) => {
   await seedProgress(page, { balance: 10000000, totalEarned: 10000000 });
-  // Quickwind and Clockwork are the Pace shelf's two tracks.
+
   await page.goto("/shop/pace");
+  await waitForApp(page);
   await expect(
     page.locator(
       '.shop-grid-upgrades .shop-card[data-kind="roll"], .shop-grid-upgrades .shop-card[data-kind="cooldown"]',
@@ -311,6 +320,7 @@ test("new cosmetics persist and Archive Lens searches the complete history witho
     history,
   });
   await page.goto("/#history");
+  await waitForApp(page);
   await expect(page.locator(".activity-event")).toHaveCount(50);
   await expect(
     page.getByRole("searchbox", { name: "Search a rolled number" }),
@@ -319,6 +329,7 @@ test("new cosmetics persist and Archive Lens searches the complete history witho
   for (const id of ["frostglass", "emberwake", "archive-lens"])
     await buy(page, id);
   await page.reload();
+  await waitForApp(page);
   expect((await saved(page)).owned).toEqual([
     "frostglass",
     "emberwake",
@@ -374,6 +385,7 @@ test("failed settlement is merged with later cross-tab spending rather than over
   page,
   context,
 }) => {
+  await installPackedSaveDecoder(page);
   await seedProgress(page, {
     balance: 500000,
     totalEarned: 500000,
@@ -388,7 +400,9 @@ test("failed settlement is merged with later cross-tab spending rather than over
       if (
         window.failSettlement &&
         k === key &&
-        JSON.parse(v).history.some((e) => e.type === "roll")
+        JSON.parse(window.decodePackedSave(v)).history.some(
+          (e) => e.type === "roll",
+        )
       )
         throw new DOMException("Full", "QuotaExceededError");
       return write.call(this, k, v);
@@ -400,12 +414,12 @@ test("failed settlement is merged with later cross-tab spending rather than over
   expect((await saved(page)).flywheelCharge).toBe(3);
   expect((await saved(page)).pendingRoll).not.toBeNull();
   const other = await context.newPage();
-  // The failed writer recovers before the next cross-tab update arrives. The
-  // storage event must durably merge its credited roll into that new save.
+
   await page.evaluate(() => {
     window.failSettlement = false;
   });
   await other.goto("/shop/auras/celestial");
+  await waitForApp(other);
   await buy(other, "starfall");
   await nav(page, "Shop");
   const starfallPrice = shopProducts.find((p) => p.id === "starfall").price;
@@ -437,6 +451,7 @@ test("failed settlement is merged with later cross-tab spending rather than over
 test("a concurrent local save preserves a settlement this tab could not write", async ({
   page,
 }) => {
+  await installPackedSaveDecoder(page);
   await seedProgress(page, {
     balance: 500000,
     totalEarned: 500000,
@@ -451,7 +466,9 @@ test("a concurrent local save preserves a settlement this tab could not write", 
       if (
         window.failSettlement &&
         k === key &&
-        JSON.parse(v).history.some((entry) => entry.type === "roll")
+        JSON.parse(window.decodePackedSave(v)).history.some(
+          (entry) => entry.type === "roll",
+        )
       )
         throw new DOMException("Full", "QuotaExceededError");
       return write.call(this, k, v);
@@ -460,9 +477,6 @@ test("a concurrent local save preserves a settlement this tab could not write", 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await settled(page);
 
-  // Another tab writes the last durable snapshot, which still has the
-  // committed roll pending. The storage event must not replace this tab's
-  // only copy of the settlement.
   const concurrentHead = JSON.stringify(await saved(page));
   await page.evaluate(
     ({ key, raw }) => {
@@ -496,6 +510,7 @@ test("registered browsers without Web Locks fail closed before exposing a new nu
     Object.defineProperty(navigator, "locks", { value: undefined }),
   );
   await page.goto("/");
+  await waitForApp(page);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-load-error")).toContainText(
     "Update it or try another browser.",
@@ -516,6 +531,7 @@ test("guests cannot expose a roll when the temporary commit guard cannot be writ
     };
   }, guestKey);
   await page.goto("/");
+  await waitForApp(page);
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
   await expect(page.locator(".roll-load-error")).toContainText(
     "No number was revealed",

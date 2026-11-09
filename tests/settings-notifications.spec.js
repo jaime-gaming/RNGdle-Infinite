@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import {
   defaultSettings,
   NOTIFICATION_RANKS,
@@ -33,7 +34,7 @@ test("the v0.2 Flywheel-meter preference migrates to the skill bar", () => {
   expect(
     parseSettings(JSON.stringify({ showFlywheelMeter: false })).showSkillBar,
   ).toBe(false);
-  // An explicit new value always wins over the legacy key.
+
   expect(
     parseSettings(
       JSON.stringify({ showFlywheelMeter: false, showSkillBar: true }),
@@ -56,12 +57,11 @@ test("settings default to a quiet, unchanged game and are keyed separately from 
     autoRollDefault: false,
   });
   expect(parseSettings(null)).toEqual(defaultSettings);
-  // Retired seasonal presentation preferences are ignored, not restored.
+
   expect(parseSettings(JSON.stringify({ halloweenMode: false }))).toEqual(
     defaultSettings,
   );
-  // Manual Reveal Motion overrides are ignored; accessibility still follows
-  // the operating system's prefers-reduced-motion setting.
+
   expect(parseSettings(JSON.stringify({ reduceMotion: "on" }))).toEqual(
     defaultSettings,
   );
@@ -81,7 +81,7 @@ test("rank alerts accept only known ranks and use the chosen rank as a minimum",
   expect(parseSettings(JSON.stringify({ notifyRank: "epic" })).notifyRank).toBe(
     "epic",
   );
-  // Old exact-number preferences are intentionally not carried into rank alerts.
+
   expect(
     parseSettings(JSON.stringify({ notifyNumber: 604827 })).notifyRank,
   ).toBe(null);
@@ -157,7 +157,7 @@ test("compact EP is presentation only and never rounds a spendable amount", () =
   expect(formatEPCompact(12500000)).toBe("12.5M");
   expect(formatEPCompact(186186584)).toBe("186M");
   expect(formatEPCompact(1000000000)).toBe("1B");
-  // Purchases still use exact EP regardless of the display preference.
+
   const item = productById.get("archive-lens");
   const spent = buy(
     rich({ balance: item.price, totalEarned: item.price }),
@@ -182,12 +182,11 @@ test("late-game offline vaults raise the per-absence cap without touching the ra
   ])
     p = buy(p, id);
   expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 360 });
-  // A vault without its clock prerequisite cannot be owned.
+
   expect(() =>
     buy(rich({ owned: ["offline-roller"] }), "offline-vault-1"),
   ).toThrow("Requires");
-  // The third vault is the deepest cap the archive will hold, and it is a cap
-  // a saved batch is allowed to claim.
+
   expect(Math.max(...OFFLINE_CAPS)).toBe(360);
   expect(OFFLINE_CAPS).toContain(360);
   expect(offlineSettings(["offline-vault-3"]).cap).toBe(360);
@@ -222,7 +221,7 @@ test("every catalogue entry declares a known kind and late tiers stay optional",
     expect(kinds.has(product.kind)).toBe(true);
     if (product.lateGame) expect(product.requires).toBeTruthy();
     if (product.requires) expect(productById.has(product.requires)).toBe(true);
-    // Skills carry no payload of their own: skills.js is the single source.
+
     if (product.kind === "skill") expect(SKILL_IDS).toContain(product.skillId);
     if (product.kind === "skill-slot") expect(product.slots).toBeGreaterThan(2);
   }
@@ -243,12 +242,12 @@ test("new auras are cosmetic, uniquely priced and renderable by the shared numbe
     "glitch",
     "monolith",
     "chrono",
-    // The fifth wave: one more for every family but the sky, which gets two.
+
     "halcyon",
     "downpour",
     "blueprint",
     "inkblot",
-    // The sixth wave: the R4ND0MN3S5 set.
+
     "static",
     "bitstorm",
     "scramble",
@@ -259,16 +258,16 @@ test("new auras are cosmetic, uniquely priced and renderable by the shared numbe
     expect(aura.kind).toBe("aura");
     expect(aura.icon).toBeTruthy();
     expect(aura.description.length).toBeGreaterThan(30);
-    // An aura must never carry a gameplay payload of any kind.
+
     expect(aura.value ?? aura.charges ?? aura.requires).toBeUndefined();
     expect(aura.lateGame).toBeUndefined();
   }
-  // The renderer must accept exactly the catalogue's auras, no more and no less.
+
   const source = await import("node:fs").then((fs) =>
     fs.readFileSync("src/components/NumberBox.jsx", "utf8"),
   );
   for (const aura of auras) expect(source).toContain(`"${aura.id}"`);
-  // Prices are distinct so every aura occupies its own rung of the ladder.
+
   const prices = auras.map((a) => a.price);
   expect(new Set(prices).size).toBe(prices.length);
 });
@@ -282,9 +281,9 @@ test("buying an aura equips it and equipping another is free", () => {
   expect(p.equipped).toBe("none");
   p = applyProgress(p, { type: "equip", id: "tidepool" });
   expect(p.equipped).toBe("tidepool");
-  // Re-equipping an owned aura never costs EP.
+
   expect(p.balance).toBe(afterPurchase);
-  // An unowned aura cannot be worn.
+
   expect(() => applyProgress(p, { type: "equip", id: "singularity" })).toThrow(
     "Purchase this aura",
   );
@@ -298,13 +297,13 @@ test("the goal recap ring reflects the wallet without inventing progress", async
   };
   const goal = currentGoal(fresh);
   expect(goal.id).toBe("quickwind-1");
-  // The ring is a pure function of wallet over price, clamped at both ends.
+
   const fill = (balance) => Math.min(100, (balance / goal.price) * 100);
   expect(fill(0)).toBe(0);
   expect(fill(goal.price / 2)).toBe(50);
   expect(fill(goal.price)).toBe(100);
   expect(fill(goal.price * 3)).toBe(100);
-  // Saved EP is capped at the price, so it can never overstate progress.
+
   expect(Math.min(goal.price * 3, goal.price)).toBe(goal.price);
 });
 
@@ -326,6 +325,7 @@ test("one button turns on the ready notification and the chime", async ({
     });
   });
   await page.goto("/settings");
+  await waitForApp(page);
   await page.getByRole("button", { name: "Enable notifications" }).click();
   await expect(
     page.getByRole("switch", {
@@ -341,15 +341,15 @@ test("one button turns on the ready notification and the chime", async ({
   );
   expect(saved.notifyReady).toBe(true);
   expect(saved.notifySound).toBe(true);
-  // The rank alert is the player's own choice: the button never picks one.
+
   expect(saved.notifyRank).toBeNull();
   expect(saved.notifyRankEnabled).toBe(false);
   await expect(page.getByLabel("Minimum rank")).toHaveValue("");
-  // Rank alerts are off until the player switches them on themselves.
+
   await expect(
     page.getByRole("switch", { name: "Notify me at this rank or higher" }),
   ).toHaveAttribute("aria-checked", "false");
-  // The button owns up to the state it set.
+
   await expect(
     page.getByRole("button", { name: "Notifications on" }),
   ).toBeVisible();

@@ -1,5 +1,3 @@
-// Validates and documents the pinned factual indexes from RNGdle Tools.
-// No upstream executable code is bundled. Run after replacing the two gzip files.
 import fs from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
@@ -12,8 +10,7 @@ const files = {};
 for (const kind of ["ep", "badge"]) {
   const path = `public/data/${kind}-table.bin.gz`,
     compressed = fs.readFileSync(path);
-  // JSON avoids .gz Content-Encoding rewriting and binary/text conversion in
-  // embedded preview proxies. A content-addressed URL prevents stale versions.
+
   const transportPath = `/data/${kind}-table.${createHash("sha256").update(compressed).digest("hex").slice(0, 16)}.json`;
   fs.writeFileSync(
     `public${transportPath}`,
@@ -68,7 +65,7 @@ const popcount = Uint8Array.from({ length: 256 }, (_, x) => {
 for (let i = 0; i < metadata.length; i++) {
   let count = 0;
   for (let b = 0; b < rowBytes; b++) count += popcount[bits[i * rowBytes + b]];
-  // Only the low bit of the last byte belongs to the legal range.
+
   count -= popcount[bits[(i + 1) * rowBytes - 1] & 254];
   metadata[i].matchingNumbers = count;
   metadata[i].probabilityPercent = (100 * count) / population;

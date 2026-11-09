@@ -3,9 +3,6 @@ import { CreatureIcon } from "./game-icons.jsx";
 import { petBonusLabel, petById } from "../pets.js";
 import "../pet-figure.css";
 
-// A companion's face: its own creature glyph inside a token tinted with its own
-// colour. The token steps through five grades with the wallet bonus, so the shelf
-// reads at a glance and the stage keeps the same look the shop shows.
 function petGrade(multiplier) {
   const bonus = multiplier - 1;
   if (bonus >= 0.7) return 5;
@@ -25,8 +22,7 @@ export default function PetIcon({
   ...rest
 }) {
   const grade = petGrade(multiplier);
-  // The ring is the companion's own colour; the grade of its bonus stays in
-  // the ink, so the shelf reads "who" at a glance and "how strong" up close.
+
   const accent = petById.get(pet)?.accent;
   return (
     <span

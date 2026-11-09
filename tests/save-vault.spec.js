@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { seedProgress } from "./helpers/progress.js";
 import {
   CLOUD_RECOVERY_KEY,
@@ -35,8 +36,8 @@ import {
   PRE_REPAIR_BACKUP_KEY,
   PROGRESS_KEY,
 } from "../src/progress.js";
+import { readSavedRaw, readSavedProgress } from "./helpers/save.js";
 
-// A plain in-memory storage with the three methods the vault uses.
 function fakeStorage(initial = {}) {
   const map = new Map(Object.entries(initial));
   return {
@@ -56,8 +57,7 @@ test("the backup copy is compressed, exact and about twenty times smaller", () =
   expect(packed.startsWith(SAVE_VAULT_TAG)).toBe(true);
   expect(packed.length).toBeLessThan(raw.length);
   expect(unpackVaultSave(packed)).toBe(raw);
-  // A save too small to gain from gzip is still kept, and anything unreadable
-  // is refused rather than stored.
+
   expect(unpackVaultSave(packVaultSave("{}"))).toBe("{}");
   expect(packVaultSave("")).toBe("");
   expect(isReadableSave("")).toBe(false);
@@ -79,13 +79,13 @@ test("the vault keeps the newest good save and never rewrites it more than once 
   expect(first.raw).toBe(save(1));
   expect(first.profileId).toBe("p1");
   expect(first.at).toBe(1000);
-  // Inside the gap nothing is rewritten...
+
   expect(writeVault(save(2), { storage: local, now: 2000 })).toBe(false);
   expect(readVault(local).raw).toBe(save(1));
-  // ...and after it the newer save takes over.
+
   expect(writeVault(save(3), { storage: local, now: 90_000 })).toBe(true);
   expect(readVault(local).raw).toBe(save(3));
-  // Garbage never becomes a backup.
+
   expect(writeVault("not a save", { storage: local, now: 200_000 })).toBe(
     false,
   );
@@ -129,7 +129,7 @@ test("the local archive keeps daily snapshots within a 20-copy, 90-day window", 
     readSavedCopyHistory(old, { now: 10_000 + MAX_SAVE_HISTORY_AGE_MS + 1 })
       .copies,
   ).toEqual([]);
-  // Listing recovery copies also prunes expired entries from local storage.
+
   getRecoveryCopies(old);
   expect(old.map.has(SAVE_HISTORY_KEY)).toBe(false);
 
@@ -255,7 +255,6 @@ test("a cloud-conflict recovery copy survives rolling local-vault writes", () =>
   });
   expect(local.map.has(CLOUD_RECOVERY_KEY)).toBe(true);
 
-  // Reconciliation then writes the chosen save to the ordinary rolling vault.
   writeVault(save(123), { storage: local, now: 90_000, minGapMs: 0 });
   expect(readVault(local).raw).toBe(save(123));
   expect(readCloudRecovery(local).raw).toBe(displaced);
@@ -268,32 +267,33 @@ test("a broken or missing save comes back from the vault, a healthy one is left 
   const local = fakeStorage();
   writeVault(save(777), { storage: local, now: 5000 });
 
-  // Missing save: the backup is put back.
   expect(restoreVaultIfNeeded({ storage: local })).toMatchObject({
     restored: true,
   });
-  expect(JSON.parse(local.map.get(PROGRESS_KEY)).balance).toBe(777);
+  expect(JSON.parse(unpackVaultSave(local.map.get(PROGRESS_KEY))).balance).toBe(
+    777,
+  );
 
-  // Half-written save: same.
   const broken = fakeStorage({ [PROGRESS_KEY]: '{"balance": 12' });
   writeVault(save(888), { storage: broken, now: 6000 });
   expect(restoreVaultIfNeeded({ storage: broken }).restored).toBe(true);
-  expect(JSON.parse(broken.map.get(PROGRESS_KEY)).balance).toBe(888);
+  expect(
+    JSON.parse(unpackVaultSave(broken.map.get(PROGRESS_KEY))).balance,
+  ).toBe(888);
 
-  // Healthy save: never replaced, even when the vault is older.
   const healthy = fakeStorage({ [PROGRESS_KEY]: save(1) });
   writeVault(save(2), { storage: healthy, now: 7000 });
   expect(restoreVaultIfNeeded({ storage: healthy })).toEqual({
     restored: false,
   });
-  expect(JSON.parse(healthy.map.get(PROGRESS_KEY)).balance).toBe(1);
+  expect(
+    JSON.parse(unpackVaultSave(healthy.map.get(PROGRESS_KEY))).balance,
+  ).toBe(1);
 
-  // No vault at all: nothing is invented.
   expect(restoreVaultIfNeeded({ storage: fakeStorage() })).toEqual({
     restored: false,
   });
 
-  // A deleted account clears the vault, so it cannot come back from the dead.
   clearVault(healthy);
   expect(readVault(healthy)).toBeNull();
   expect(restoreVaultIfNeeded({ storage: healthy }).restored).toBe(false);
@@ -432,26 +432,24 @@ test("playing the game keeps a compressed backup in this browser", async ({
 }) => {
   await seedProgress(page, { balance: 123456, totalEarned: 123456 });
   await page.goto("/");
+  await waitForApp(page);
   await expect
     .poll(() =>
       page.evaluate((key) => localStorage.getItem(key), SAVE_VAULT_KEY),
     )
     .toBeTruthy();
-  const vault = await page.evaluate(
-    ({ key, progressKey }) => {
-      const envelope = JSON.parse(localStorage.getItem(key));
-      return {
-        packed: typeof envelope.raw === "string",
-        compressed: envelope.raw.startsWith("rngvault1:"),
-        bigger: envelope.raw.length,
-        saveBytes: localStorage.getItem(progressKey).length,
-      };
-    },
-    { key: SAVE_VAULT_KEY, progressKey: PROGRESS_KEY },
-  );
+  const vault = await page.evaluate((key) => {
+    const envelope = JSON.parse(localStorage.getItem(key));
+    return {
+      packed: typeof envelope.raw === "string",
+      compressed: envelope.raw.startsWith("rngvault1:"),
+      bigger: envelope.raw.length,
+    };
+  }, SAVE_VAULT_KEY);
+  const decoded = await readSavedRaw(page);
   expect(vault.packed).toBe(true);
   expect(vault.compressed).toBe(true);
-  expect(vault.bigger).toBeLessThan(vault.saveBytes);
+  expect(vault.bigger).toBeLessThan(decoded.length);
 });
 
 test("Restore save marks a damaged copy and will not restore it", async ({
@@ -477,6 +475,7 @@ test("Restore save marks a damaged copy and will not restore it", async ({
     },
   );
   await page.goto("/settings/save-recovery");
+  await waitForApp(page);
 
   const damaged = page.getByTestId("recovery-copy-history:damaged-copy");
   await expect(damaged).toBeDisabled();
@@ -491,6 +490,7 @@ test("Settings lets players inspect and restore a selected local save copy", asy
 }) => {
   await seedProgress(page, { balance: 4242, totalEarned: 12345 });
   await page.goto("/settings");
+  await waitForApp(page);
   await page.getByTestId("settings-open-recovery").click();
   await expect(page).toHaveURL(/\/settings\/save-recovery$/);
   const block = page.getByTestId("settings-recovery");
@@ -504,7 +504,6 @@ test("Settings lets players inspect and restore a selected local save copy", asy
     block.getByTestId("settings-restore-selected-copy"),
   ).toBeEnabled();
 
-  // Damage the save the way a bad write would, then restore the chosen copy.
   await page.evaluate(
     (key) => localStorage.setItem(key, '{"balance": 1'),
     PROGRESS_KEY,
@@ -514,12 +513,7 @@ test("Settings lets players inspect and restore a selected local save copy", asy
     page.getByRole("status").filter({ hasText: "Saved copy restored" }),
   ).toBeVisible();
   await expect
-    .poll(async () =>
-      page.evaluate(
-        (key) => JSON.parse(localStorage.getItem(key)).balance,
-        PROGRESS_KEY,
-      ),
-    )
+    .poll(async () => readSavedProgress(page).then((p) => p.balance))
     .toBe(4242);
 });
 
@@ -551,6 +545,7 @@ test("Settings preserves the active save before restoring a selected archive cop
     { key: SAVE_HISTORY_KEY, value: storage.getItem(SAVE_HISTORY_KEY) },
   );
   await page.goto("/settings/save-recovery");
+  await waitForApp(page);
 
   const selected = page.getByTestId(`recovery-copy-${archivedCopy.id}`);
   await expect(selected).toBeVisible();
@@ -563,12 +558,7 @@ test("Settings preserves the active save before restoring a selected archive cop
     page.getByRole("status").filter({ hasText: "Saved copy restored" }),
   ).toBeVisible();
   await expect
-    .poll(() =>
-      page.evaluate(
-        (key) => JSON.parse(localStorage.getItem(key)).balance,
-        PROGRESS_KEY,
-      ),
-    )
+    .poll(() => readSavedProgress(page).then((p) => p.balance))
     .toBe(73);
   await expect(page.getByText("Before manual restore")).toBeVisible();
   const activeSaveWasArchived = await page.evaluate((key) => {
@@ -598,6 +588,7 @@ test("Settings exposes and restores the separate displaced cloud-save copy", asy
     { key: CLOUD_RECOVERY_KEY, value: storage.map.get(CLOUD_RECOVERY_KEY) },
   );
   await page.goto("/settings/save-recovery");
+  await waitForApp(page);
 
   const recovery = page.getByTestId("settings-recovery");
   const conflictCopy = page.getByTestId("recovery-copy-cloud-recovery");
@@ -611,12 +602,7 @@ test("Settings exposes and restores the separate displaced cloud-save copy", asy
     page.getByRole("status").filter({ hasText: "Saved copy restored" }),
   ).toBeVisible();
   await expect
-    .poll(() =>
-      page.evaluate(
-        (key) => JSON.parse(localStorage.getItem(key)).balance,
-        PROGRESS_KEY,
-      ),
-    )
+    .poll(() => readSavedProgress(page).then((p) => p.balance))
     .toBe(314159);
 });
 
@@ -634,6 +620,7 @@ test("Restore save keeps a displaced online copy available without account contr
   );
   await seedProgress(page, { balance: 500 });
   await page.goto("/settings/save-recovery");
+  await waitForApp(page);
 
   await expect(page.getByTestId("recovery-copy-cloud-recovery")).toBeVisible();
   await expect(

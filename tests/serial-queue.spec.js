@@ -1,4 +1,5 @@
 import { expect, test } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { drainSerialQueue, enqueueSerial } from "../src/serial-queue.js";
 
 test("serial work stays ordered, drains appended work, and survives failures", async () => {

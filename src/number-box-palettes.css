@@ -1,5 +1,3 @@
-/* Observed Box Lab scoring-box colour/shadow tokens (light and dark).
-   https://rng.cubityfir.st/beta/boxes — see README for provenance. */
 .number-box[data-tier="trash"] {
   --box-background: linear-gradient(to bottom right, #fffbeb, #ffffff, #fffbeb);
   --box-border: #ffd230;

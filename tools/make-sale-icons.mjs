@@ -1,11 +1,3 @@
-// Draws the Black Friday sale icons straight from their geometry and writes the
-// PNGs the head tags point at. The SVG favicon is hand-written; these PNGs are
-// generated because a browser needs a real raster for a touch icon and a
-// manifest, and the build has no SVG rasteriser to call.
-//
-// Deterministic and dependency-free: signed distances, a 4×4 supersample per
-// pixel, and Node's own zlib for the PNG stream. Run `node
-// tools/make-sale-icons.mjs` after changing the icon art.
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -15,7 +7,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "public");
 const SAMPLES = 4;
 
-// The icon's own geometry, in a 128-unit box, matching public/favicon-sale.svg.
 const BG = "#050505";
 const HAIRLINE = "#3f3f46";
 const INK = "#f4f4f5";
@@ -43,13 +34,12 @@ function sdSegment(x, y, ax, ay, bx, by) {
   return Math.hypot(x - (ax + vx * t), y - (ay + vy * t));
 }
 
-// Which colour covers one point of the icon, or null for "nothing here".
 function paintAt(x, y, square) {
   const edge = square
     ? sdRoundBox(x, y, 64, 64, 64, 0)
     : sdRoundBox(x, y, 64, 64, 64, 28);
   if (edge > 0) return null;
-  // The percent sign: two rings and the bar between them.
+
   const ring = (cx, cy) => Math.abs(Math.hypot(x - cx, y - cy) - 11) - 5.5;
   const bar = sdSegment(x, y, 85, 41, 43, 83) - 5.5;
   if (ring(47, 45) < 0 || ring(81, 79) < 0 || bar < 0) return rgb(INK);
@@ -83,8 +73,7 @@ function render(size, square) {
       }
       const total = SAMPLES * SAMPLES;
       const index = (row * size + column) * 4;
-      // Straight (unpremultiplied) averaging: the icon's colours are all solid,
-      // so the only blending that happens is on its own rounded edge.
+
       pixels[index] = a ? Math.round(r / a) : 0;
       pixels[index + 1] = a ? Math.round(g / a) : 0;
       pixels[index + 2] = a ? Math.round(b / a) : 0;
@@ -94,7 +83,6 @@ function render(size, square) {
   return pixels;
 }
 
-// ---- A minimal PNG writer --------------------------------------------------
 const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
   let value = index;
   for (let bit = 0; bit < 8; bit++)
@@ -121,12 +109,12 @@ function writePng(file, size, pixels) {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(size, 0);
   header.writeUInt32BE(size, 4);
-  header[8] = 8; // bit depth
-  header[9] = 6; // truecolour with alpha
+  header[8] = 8;
+  header[9] = 6;
   const stride = size * 4;
   const raw = Buffer.alloc((stride + 1) * size);
   for (let row = 0; row < size; row++) {
-    raw[row * (stride + 1)] = 0; // filter: none
+    raw[row * (stride + 1)] = 0;
     pixels.copy(
       raw,
       row * (stride + 1) + 1,
@@ -144,8 +132,6 @@ function writePng(file, size, pixels) {
   return png.length;
 }
 
-// A touch icon is composited onto the home screen, so it is drawn full-bleed
-// with square corners instead of floating on transparency.
 const TARGETS = [
   { file: "icon-192-sale.png", size: 192, square: false },
   { file: "icon-512-sale.png", size: 512, square: false },

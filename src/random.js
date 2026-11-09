@@ -1,7 +1,5 @@
 import { POPULATION } from "./probability.js";
 
-// Rejection sampling removes the bias from taking uint32 % 1,000,001 directly.
-// Repeats are allowed: the previous roll never changes the next roll's odds.
 export function randomNumber(cryptoProvider = globalThis.crypto) {
   if (!cryptoProvider?.getRandomValues)
     throw new Error("Secure randomness is unavailable in this browser.");
@@ -13,8 +11,6 @@ export function randomNumber(cryptoProvider = globalThis.crypto) {
   return word[0] % POPULATION;
 }
 
-// A separate uniform sample for companion luck. Drawn from its own crypto call
-// so pet drops never consume, bias or correlate with the roll's own randomness.
 export function randomUnit(cryptoProvider = globalThis.crypto) {
   if (!cryptoProvider?.getRandomValues)
     throw new Error("Secure randomness is unavailable in this browser.");

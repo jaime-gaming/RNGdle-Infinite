@@ -38,13 +38,10 @@ import {
 import { formatEP } from "../roll-data.js";
 import "../tasks.css";
 
-// How long until a reset, in words short enough for a card header.
 function resetCountdown(ms) {
   return waitText(ms);
 }
 
-// Each kind of task has a short name and its own mark, so a list reads at a
-// glance: what it asks for, not only how much it pays.
 const KIND = {
   rolls: { name: "Volume", icon: Dices },
   rare: { name: "Rarity", icon: Sparkles },
@@ -75,7 +72,6 @@ export default function Tasks({
   notify,
   openSignup,
 }) {
-  // The one action in flight, and the one card asking to be confirmed.
   const [pending, setPending] = useState("");
   const [confirming, setConfirming] = useState("");
   const summary = taskSummary(progress.tasks, now);
@@ -87,7 +83,6 @@ export default function Tasks({
       ? `Next purchase in ${waitText(skips.waitMs)}`
       : "Buy one in the Shop, Tools shelf";
 
-  // Each list with what it shows: its tasks as views, and what is ready to pay.
   const lists = TASK_CADENCES.map((cadence) => {
     const tasks = activeTasks(progress.tasks, cadence, now);
     const views = tasks.map((task) => ({
@@ -121,7 +116,6 @@ export default function Tasks({
   const busy = !!pending;
 
   async function claim(list, task) {
-    // This claim is the last one on the list when every other task is claimed.
     const finishes =
       list.bonus.state === "open" && list.bonus.done + 1 === list.bonus.total;
     setPending(task.id);

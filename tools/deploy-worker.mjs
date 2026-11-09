@@ -1,11 +1,3 @@
-// Build and publish the app to Cloudflare Workers.
-//
-//   npm run deploy:worker                 # preview/any branch
-//   npm run deploy:worker -- --dry-run    # build and validate, upload nothing
-//   CF_ALLOW_PRODUCTION=true npm run deploy:worker   # from main
-//
-// The Worker is assets-only: `wrangler.jsonc` serves `dist/` and claims
-// rngdle-infinite.jaime-gaming.com as a custom domain on every deploy.
 import { spawnSync } from "node:child_process";
 
 function run(executable, args) {
@@ -60,6 +52,6 @@ if (!dryRun)
       "Deployed. The custom domain is claimed by the Worker on every deploy.",
       "Check the live host, then confirm in the Cloudflare dashboard that",
       "rngdle-infinite.jaime-gaming.com is attached to the Worker and not to a",
-      "Cloudflare Pages project. See DEPLOYMENT.md.",
+      "Cloudflare Pages project. See archive/DEPLOYMENT.md.",
     ].join("\n"),
   );

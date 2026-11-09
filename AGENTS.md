@@ -72,6 +72,13 @@ adding backgrounds, borders, underlines or other decorations.
 - **Repair saves instead of losing them.** `parseAndRepairProgress` keeps valid
   data, records repairs and backs up original bytes. New fields need a default
   in `emptyProgress()`, defensive parsing, and a malformed-save test.
+- **Compressed primary saves.** `writeDeviceSave` always writes the bounded
+  gzip envelope (plain JSON only when gzip is unavailable); a failed write
+  leaves the previous save untouched. Old JSON saves stay readable. Always read
+  via `parseProgress`/`parseAndRepairProgress` (or decode with
+  `unpackVaultSave` for raw JSON consumers). Never delete history, recovery
+  slots or owner markers to fit a new save. The activity log keeps 10,000
+  entries and warns at 7,500.
 - **Cloud save precedence is deliberate, and asks as rarely as possible.** On
   first Firebase sign-in, import an unowned local save only when that user's
   Firestore document is missing. Never copy a save marked as belonging to
@@ -135,9 +142,7 @@ adding backgrounds, borders, underlines or other decorations.
   the summary and ownership map with the corresponding save update. Publish
   those rules in the configured Firebase project before enabling cloud play.
   Browser config in `.env.production` and `.env.example` is public; never put
-  service-account credentials in source or build output. The old
-  `archive/supabase/migrations/` file is historical only and is not used by
-  this app; do not apply it or alter the old project.
+  service-account credentials in source or build output.
 - **UTC for calendar labels.** Daily/weekly task periods use UTC (`Date.UTC`,
   `getUTC*`, `timeZone: "UTC"`). Gameplay timers use `gameNow()` in
   `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The only
@@ -182,12 +187,11 @@ adding backgrounds, borders, underlines or other decorations.
   custom host; it is separate from the Cloudflare Worker/DNS setup. Create
   Firestore in a European location and publish `firestore.rules` before testing
   cloud saves.
-- The App Check client reads the public
-  `VITE_FIREBASE_APPCHECK_SITE_KEY` from `.env.production` and attaches
-  reCAPTCHA Enterprise attestations. This does not register the provider or
-  enable service enforcement in Firebase Console. Do not claim enforcement is
-  active until it is independently verified; never put the site key in the
-  player-facing README.
+- App Check and reCAPTCHA Enterprise are intentionally disabled in the
+  client to protect the free quota. `.env.production` carries no site key and
+  `src/firebase.js` never imports `firebase/app-check`. Firestore rules remain
+  the security boundary. Do not reintroduce per-request attestation; a visible
+  CAPTCHA, if ever needed, must be limited to sign-in only.
 - Saves use one Firestore document per UID at `player_saves/{uid}`. The JSON
   snapshot is compressed with the existing vault codec to stay below Firestore's
   1 MiB document limit. Rules are the security boundary.
@@ -197,6 +201,14 @@ adding backgrounds, borders, underlines or other decorations.
   Firestore CRUD, progress comparison, and ownership/cache/recovery markers;
   `src/use-progress.js` coordinates the local save with transactional
   reconciliation. Do not initialize Analytics unless explicitly requested.
+- **The loading screen stays quiet until a wait becomes long.**
+  `src/components/LoadingScreen.jsx` renders one small grey circle; after six
+  seconds it adds only `wait for it...`. Header, status notice and footer stay
+  visible, while roll controls and banners do not appear. States that need a
+  player decision (conflict, load error, offline, maintenance) still show the
+  normal interface. The local save is read and persisted before any cloud
+  request, and written again on a failed load, so waiting never costs local
+  progress.
 - Cloud loading gates progress actions for an authenticated user. On a load
   error, retain local data and require an explicit retry before changing the
   save. On sync failure, retain local progress, mark it dirty and offer retry.
@@ -212,6 +224,37 @@ adding backgrounds, borders, underlines or other decorations.
   be imported when the cloud document is missing, and a save owned by another
   auth user is never a candidate.
 
+## Security and UI baseline
+
+- `public/_headers` sets `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
+  `Cross-Origin-Resource-Policy` and HSTS. Do not add frame-ancestor or
+  `X-Frame-Options` denial headers: the game is shown in preview iframes.
+- Every `target="_blank"` link uses `rel="noopener noreferrer"`.
+- The loader is a small, grey circle inside `<main aria-busy>`; the header,
+  status notice and footer stay visible. A long wait adds only `wait for it...`.
+- `src/cloud-quota.js` pauses Firestore reads and writes for 15 minutes after
+  `resource-exhausted` or another quota signal. Local play stays available, the
+  save stays dirty, and cloud work resumes automatically after the cooldown or
+  on an explicit retry. The reconcile debounce is 10 seconds, not a tight loop.
+- Status notices poll every 60 seconds and also on focus, visibility and
+  reconnection. The banner is a normal-flow sibling between the header and
+  `main`, so the interface shifts down instead of being covered.
+- Black Friday side posters are ordered by the current page, never by a timer
+  or a random pick.
+
+## Tool-call budget
+
+- Tool calls are a limited per-turn resource. Arena.ai does not publish an
+  exact per-turn figure in this repository; do not invent one. Treat every
+  call as part of a small budget.
+- Batch related work: one read that collects the needed context, one script
+  that applies several file edits, one validation command that covers the
+  affected specs, and one multi-tool response for independent calls. Avoid a
+  separate tool call for each file or each tiny edit.
+- Prefer targeted validation over a long full-suite run when a batch touches a
+  known area; record the exact specs and results in a QA note.
+
 ## Source map
 
 | Path                                             | Responsibility                                                              |
@@ -222,7 +265,6 @@ adding backgrounds, borders, underlines or other decorations.
 | `src/firebase.js`, `src/use-firebase-auth.js`    | Firebase clients, email/Google auth and provider linking.                   |
 | `src/cloud-save.js`                              | Firestore CRUD, save comparison and browser ownership/cache/recovery.       |
 | `firestore.rules`                                | Per-UID Firestore access policy.                                            |
-| `archive/supabase/migrations/`                   | Archived Supabase schema; not used by the current app.                      |
 | `src/roll.worker.js`, `src/random.js`            | Worker-based roll scoring and random source.                                |
 | `src/badges.js`, `src/infinite-badges.js`        | Badge definitions, families and metadata.                                   |
 | `src/pets.js`, `src/skills.js`, `src/rebirth.js` | Companions, skills, rebirth, prestige and rollback rules.                   |
@@ -235,7 +277,7 @@ adding backgrounds, borders, underlines or other decorations.
 | `tools/`                                         | Worker/GitHub Pages builds and smoke tests, data preparation and audits.    |
 | `wrangler.jsonc`                                 | Cloudflare Worker name, `dist/` static assets, SPA fallback, custom domain. |
 | `public/_headers`                                | Update-safe static caching and security headers on the Worker.              |
-| `DEPLOYMENT.md`                                  | Worker deploy, custom-domain setup, verification and rollback.              |
+| `archive/DEPLOYMENT.md`                          | Worker deploy, custom-domain setup, verification and rollback.              |
 | `media/`                                         | README screenshots generated by `tools/screenshots.mjs`.                    |
 
 ## Commands
@@ -333,7 +375,7 @@ rather than guessing.
   builds and deploys it. A hostname can belong to only one Cloudflare service,
   so the old Pages project must not keep that custom domain. Never claim the
   live domain is updated until the deploy, DNS and HTTPS are verified
-  independently; see `DEPLOYMENT.md`.
+  independently; see `archive/DEPLOYMENT.md`.
 - GitHub Pages currently uses the legacy `main` branch `/docs` source at
   `jaime-gaming.github.io/RNGdle-Infinite`. Run
   `npm run build:github-pages` before the release PR so `docs/` contains the
@@ -352,9 +394,9 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `RNGdle-Infinitev0.5.2fix3`; do not change it
-  again until the next session or an explicit user request. Public release
-  notes live in `src/changelog.js` and keep historical entries.
+  flow. The current label is exactly `v0.5.2fix4`; do not change it
+  until the next session or an explicit user request. Public release notes
+  live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
 - **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
@@ -371,8 +413,12 @@ rather than guessing.
 ## Style
 
 - Prettier is the formatter. Format files changed by a task.
-- Keep code comments about why, not narration of what the next line does.
-- Player-facing copy should be plain and friendly; English only.
+- Source, tests, comments and generated output are English only; leave no
+  Spanish strings or copy.
+- Only event-retirement markers such as `RETIREMENT` or `DELETE EVENT` may
+  remain as comments. Remove comments that narrate or describe code, CSS or
+  markup; keep the code self-explanatory.
+- Player-facing copy should be plain and friendly.
 
 ## Required Git workflow
 
@@ -380,5 +426,3 @@ rather than guessing.
 - After a requested merge succeeds, delete the merged remote branch (use `gh pr merge <number> --squash --delete-branch`). Never switch branches or delete the active checkout; respect session branch restrictions.
 
 - **Bug fixes never rewrite release notes.** Preserve all existing `src/changelog.js` entries verbatim during a bug fix. Record implementation/QA notes separately. Presentation-only capitalization is fine; add release notes only for an explicitly requested new release.
-
-- **Quota-safe primary saves.** `writeDeviceSave` keeps JSON normally, retries with the bounded gzip codec only on quota errors, and retains compression once selected. Always read via `parseProgress`/`parseAndRepairProgress` (or decode with `unpackVaultSave` for raw JSON consumers). Never delete history, recovery slots or owner markers to fit a new save.

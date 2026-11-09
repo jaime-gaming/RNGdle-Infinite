@@ -4,11 +4,6 @@ import PetIcon from "./PetIcon.jsx";
 import { Sparkles } from "lucide-react";
 import "../pet-parade.css";
 
-// Companions live on the roll screen: the equipped one walks the stage while you
-// roll, so a collection is something you see rather than a list you own, and a
-// companion you just found walks in with its own moment. The layer is decorative
-// and inert — it never sits between you and a click — and reduced motion lines
-// it up as a still row with the same name plate.
 const MAX_VISIBLE = 8;
 
 function Walker({ pet, active, reducedMotion, phase, docked = false }) {
@@ -90,9 +85,7 @@ export default function PetParade({
   reducedMotion,
   arrival = null,
   phase = "idle",
-  // True while the active companion's signature skill is firing on the roll
-  // in flight: it leaves the stage (the number box carries its mark instead)
-  // and resumes its walk untouched once the roll settles.
+
   docked = false,
 }) {
   if (!pets.length && !arrival) return null;

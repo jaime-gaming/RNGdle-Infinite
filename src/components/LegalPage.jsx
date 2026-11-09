@@ -38,10 +38,9 @@ export default function LegalPage({ page, navigate }) {
         <article className="legal-page">
           <p>
             You can play locally or link a Cloud Account. This game does not
-            serve advertisements or use analytics. If App Check is configured,
-            Google reCAPTCHA Enterprise may process device and request signals
-            to help assess abuse; it is used for security, not advertising. The
-            game stores the data needed to run, save and restore your progress.
+            serve advertisements, use analytics, or run CAPTCHA/attestation
+            checks. The game stores the data needed to run, save and restore
+            your progress.
           </p>
           <section>
             <h2>What is stored</h2>

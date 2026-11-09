@@ -18,8 +18,7 @@ function load() {
       });
   return indexPromise;
 }
-// The restore request re-evaluates a committed draw after reload. No editor,
-// preset or number-selection control exists in the game UI.
+
 self.onmessage = async ({ data }) => {
   const { id, type } = data;
   try {

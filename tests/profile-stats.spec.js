@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import {
   accountStats,
@@ -20,9 +21,6 @@ import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { PETS } from "../src/pets.js";
 import { SKILLS } from "../src/skills.js";
 
-// A tiny PNG reader, so the exported card can be inspected for real pixels
-// rather than for "some bytes came out". Handles the colour types a canvas
-// writes (RGB and RGBA) and every scanline filter.
 function decodePng(buffer) {
   let offset = 8;
   let width = 0;
@@ -175,11 +173,11 @@ test("every profile figure is derived from the save and its activity log", () =>
     ep: 512000,
     tier: "godly",
   });
-  expect(stats.favoriteTier).toBe("rare"); // all four tie; the first seen wins
+  expect(stats.favoriteTier).toBe("rare");
   expect(stats.totalEarned).toBe(400000);
   expect(stats.spent).toBe(180000);
   expect(stats.uniqueBadges).toBe(1);
-  // Only real badge ids count: the fixture also carries one that does not exist.
+
   expect(stats.badgesNow).toBe(1);
   expect(stats.badgesTotal).toBe(BADGE_TOTAL);
   expect(stats.companions).toBe(2);
@@ -193,7 +191,7 @@ test("every profile figure is derived from the save and its activity log", () =>
   expect(stats.ultraRebirths).toBe(1);
   expect(stats.firstEventAt).toBe(at(2));
   expect(stats.lastEventAt).toBe(at(6));
-  // Nothing is written back: the caller's object is untouched.
+
   const progress = played();
   const before = JSON.stringify(progress);
   accountStats(progress);
@@ -219,7 +217,7 @@ test("profile highlights resolve the pinned rolls, the best roll and what the ac
   expect(highlights.aura).toMatchObject({ id: "starfall" });
   expect(highlights.companion).toMatchObject({ name: "Pebble" });
   expect(highlights.favoriteTier).toBe("rare");
-  // A bookmark whose roll left the log is simply not shown.
+
   const gone = profileHighlights(played({ bookmarks: ["nope", "r4"] }));
   expect(gone.pinned.map((roll) => roll.id)).toEqual(["r4"]);
   const fresh = profileHighlights(emptyProgress());
@@ -258,8 +256,6 @@ test("the export is a read-only PNG snapshot with no import path", async () => {
     /^rngdle-infinite-guest-\d{4}-\d{2}-\d{2}\.png$/,
   );
 
-  // The UI offers a PNG card download, and the only file input in the whole
-  // page is the logo picker — images in, never account data out of a file.
   const profile = fs.readFileSync("src/components/LocalProfile.jsx", "utf8");
   expect(profile).toContain("Export my data");
   expect(profile).toContain("renderExportPngBlob");
@@ -268,8 +264,6 @@ test("the export is a read-only PNG snapshot with no import path", async () => {
 });
 
 test("the PNG card paints the logo, the name, the biggest roll and the key stats", () => {
-  // A recording 2d surface: every string the card paints and every image it
-  // draws, without needing a browser canvas.
   const paint = (progress, logo) => {
     const texts = [];
     let images = 0;
@@ -299,17 +293,17 @@ test("the PNG card paints the logo, the name, the biggest roll and the key stats
   };
   const progress = played();
   const card = paint(progress, { width: 128, height: 128 });
-  // Painted at 2× so the PNG stays sharp.
+
   expect([card.canvas.width, card.canvas.height]).toEqual([2400, 1520]);
-  // Identity: the account name, with its logo drawn beside it.
+
   expect(card.images).toBe(1);
   expect(card.texts).toContain("LuckyOtter41");
-  // The hero: the biggest roll's number, tier and EP — r2, the godly roll.
+
   expect(card.texts).toContain("BIGGEST ROLL");
-  // Number boxes show raw digits, like the in-game box.
+
   expect(card.texts).toContain("999999");
   expect(card.texts).toContain("GODLY TIER · +512,000 EP");
-  // The four key figures, the pinned rolls and what the account wears.
+
   for (const label of [
     "ALL-TIME EP EARNED",
     "TOTAL ROLLS",
@@ -319,12 +313,12 @@ test("the PNG card paints the logo, the name, the biggest roll and the key stats
     "WEARING",
   ])
     expect(card.texts).toContain(label);
-  // The fixture pins r1 and r4: both numbers are painted as boxes.
+
   expect(card.texts).toContain("812044");
   expect(card.texts).toContain("4242");
   expect(card.texts).toContain("Original appearance");
   expect(card.texts.some((text) => text.startsWith("with Pebble"))).toBe(true);
-  // Without a logo the card still paints everything else — just no image.
+
   const plain = paint(progress, null);
   expect(plain.images).toBe(0);
   expect(plain.texts).toContain("LuckyOtter41");
@@ -334,7 +328,7 @@ test("the PNG card paints the logo, the name, the biggest roll and the key stats
 test("the account logo is part of the save, and only a small image data URL is one", async () => {
   const base = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAg";
   expect(validAvatar(base)).toBe(true);
-  // Wrong shapes: other formats, remote addresses, scripts, empty strings.
+
   for (const bad of [
     "",
     "https://example.com/logo.png",
@@ -345,7 +339,6 @@ test("the account logo is part of the save, and only a small image data URL is o
   ])
     expect(validAvatar(bad), bad.slice(0, 24)).toBe(false);
 
-  // The action sets and clears it, refuses anything else, and is profile-only.
   const withLogo = applyProgress(played(), { type: "avatar", avatar: base });
   expect(withLogo.profile.avatar).toBe(base);
   expect(
@@ -367,8 +360,6 @@ test("the account logo is part of the save, and only a small image data URL is o
     ),
   ).toThrow(/local profile/);
 
-  // A save carries it across a reload, and a broken one is dropped rather
-  // than allowed to brick the account over a cosmetic field.
   const parsed = parseProgress(JSON.stringify(withLogo));
   expect(parsed.profile.avatar).toBe(base);
   const broken = parseProgress(
@@ -382,10 +373,10 @@ test("the account logo is part of the save, and only a small image data URL is o
 });
 
 test("the PNG card carries the account's own logo", async ({ page }) => {
-  // Two 2× cards are encoded here; give slow CI machines some room.
   test.slow();
   await page.goto("/");
-  // A solid blue square, so the card can be checked pixel by pixel.
+  await waitForApp(page);
+
   const logo = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 128;
@@ -414,10 +405,9 @@ test("the PNG card carries the account's own logo", async ({ page }) => {
   const card = decodePng(Buffer.from(logoPng));
   expect([plain.width, plain.height]).toEqual([2400, 1520]);
   expect([card.width, card.height]).toEqual([2400, 1520]);
-  // Different pictures: the card with a logo is not the card without one.
+
   expect(logoPng.length).not.toBe(plainPng.length);
-  // The logo sits in a circle just left of the account name: the blue lands
-  // where the name would otherwise start.
+
   const at = (image, x, y) => {
     const index = y * image.width * image.channels + x * image.channels;
     return [
@@ -426,11 +416,10 @@ test("the PNG card carries the account's own logo", async ({ page }) => {
       image.pixels[index + 2],
     ];
   };
-  // Layout pixel (90, 134) is inside the 72px logo circle; the PNG is 2×.
+
   expect(at(card, 180, 268)[2]).toBeGreaterThan(200);
   expect(at(card, 180, 268)[0]).toBeLessThan(80);
-  // Without a logo the name starts there instead: light text or dark
-  // background, but never the pure blue of the logo square.
+
   const [plainRed, , plainBlue] = at(plain, 180, 268);
   expect(plainBlue > 200 && plainRed < 80).toBe(false);
 });

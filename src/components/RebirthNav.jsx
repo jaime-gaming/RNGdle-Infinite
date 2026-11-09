@@ -11,18 +11,12 @@ import { formatEPCompact } from "../roll-data.js";
 import { gameNow } from "../game-clock.js";
 import "../rebirth-nav.css";
 
-// Rebirth in the top bar, styled apart from the ordinary page buttons: a ring
-// that fills with the same mixed percentage the Rebirth page shows (half the
-// collection, half the cycle's EP). It stays put after a rebirth empties the
-// collection, so the ladder always has a visible next step.
 export default function RebirthNav({ progress, active, onClick }) {
   const ultras = progress.ultraRebirths ?? 0;
   const rollbacks = progress.rollbacks ?? 0;
-  // Nothing at all before the unlock: no icon, no ring, no hint that rebirth
-  // exists. The ladder announces itself once the collection is far enough.
+
   if (!rebirthUnlocked(progress)) return null;
-  // The Rollback is the last stage: once it is taken the ladder is complete and
-  // the ring stays full, with nothing left to reach.
+
   if (rollbacks > 0)
     return (
       <button
@@ -48,7 +42,7 @@ export default function RebirthNav({ progress, active, onClick }) {
   const view = rebirthProgress(progress);
   const { step, count, earned, percent } = view;
   const target = step.badges;
-  // The shorter bar names what the next step is waiting for.
+
   const short = view.badgeFraction <= view.epFraction ? "badges" : "EP";
   const now = gameNow();
   const ready =

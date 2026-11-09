@@ -1,6 +1,5 @@
 import { allBadgeMetadata as metadata } from "./infinite-badges.js";
-// Catalogue labels and rarities from rng.cubityfir.st/badges.
-// Catalogue odds are counted over the full-range badge membership index.
+
 const groups = {
   "Infinite Originals": `↕️|Pendulum|Anomaly;⏳|Last Second|Mythic`,
   "The Casino": `👯|Pair|Common;🫂|Contiguous Pair|Common;👯‍♀️|Two Pair|Common;👨‍👩‍👧‍👦|Contiguous Two Pair|Uncommon;👯‍♀️👯|Three Pair|Rare;👨‍👩‍👧‍👦👯|Contiguous Three Pair|Epic;🎰|Three of a Kind|Common;➖|Contiguous Trips|Uncommon;🍀|Four of a Kind|Uncommon;🏠|Full House|Uncommon;🏰|Contiguous Full House|Rare;📏|Straight|Epic;🎨|Flush|Uncommon;🃏|Straight Flush|Anomaly;👑|Royal Flush|Anomaly;🃏|Five of a Kind|Epic;📉|Low Ball|Uncommon;🤑|High Roller|Uncommon;🎲|Snake Eyes|Uncommon;♠️|Blackjack|Uncommon`,

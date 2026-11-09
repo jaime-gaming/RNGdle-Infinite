@@ -1,4 +1,3 @@
-// Reproducible full-population audit; no random sample and no reward changes.
 import fs from "node:fs";
 import { gunzipSync } from "node:zlib";
 import manifest from "../src/data/game-index.json" with { type: "json" };

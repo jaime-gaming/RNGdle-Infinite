@@ -1,5 +1,3 @@
-// Desktop notifications are a convenience only. They never roll, credit EP,
-// or change a cooldown deadline; they announce a ready roll or a chosen rank.
 import { NOTIFICATION_RANKS } from "./settings.js";
 
 const NOTIFICATION_TAG = "rngdle-infinite-ready";
@@ -14,7 +12,6 @@ export function notificationPermission() {
   return Notification.permission;
 }
 
-// Safari resolves the callback form only; wrap both shapes in one promise.
 export async function requestNotificationPermission() {
   if (!notificationsSupported()) return "unsupported";
   if (Notification.permission !== "default") return Notification.permission;
@@ -38,7 +35,6 @@ export function showReadyNotification({
   if (!notificationsSupported() || Notification.permission !== "granted")
     return null;
   try {
-    // A shared tag replaces an earlier alert of this kind instead of stacking.
     const notification = new Notification(title ?? "Your next roll is ready", {
       body: body ?? "RNGdle Infinite · the cooldown has finished.",
       tag,
@@ -93,8 +89,6 @@ export function showRankNotification(
   return notification;
 }
 
-// A short, quiet two-tone chime. No asset download, and no audio unless the
-// player has already interacted with the page.
 export function playReadyChime() {
   const Ctor = window.AudioContext ?? window.webkitAudioContext;
   if (!Ctor) return false;

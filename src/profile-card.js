@@ -1,10 +1,3 @@
-// A profile you can hand to someone: /profile/<name>?card=<data>.
-//
-// There is no server, so the link itself carries the card: a small, read-only
-// snapshot of the figures the profile page shows (name, best roll, record,
-// pins, what it wears). Opening the link shows that snapshot to anyone, on
-// any browser, and never touches the game saved there. Nothing in the game
-// reads a card back into a save, so a link can never overwrite progress.
 import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
 import { BOOKMARK_LIMIT } from "./history-log.js";
 import { TIERS } from "./history-tally.js";
@@ -16,15 +9,11 @@ const CARD_VERSION = 3;
 const MAX_CARD_OUTPUT_BYTES = AVATAR_LIMIT + 16_384;
 const MAX_CARD_TOKEN_CHARS = 400_000;
 const KNOWN_VERSIONS = new Set([1, 2, CARD_VERSION]);
-// The token carries the card line deflated and base64url'd, tagged "z1".
-// Legacy tokens are base64url of raw text (which always begins A–f), so a
-// leading "z" cannot ever be one of them and the versions never collide.
+
 const TOKEN_TAG = "z1";
 const NAME_MAX = 20;
 const NUMBER = /^\d{1,7}$/;
 
-// The snapshot the link carries. Everything is derived on the spot from the
-// save and its log, the same way the profile page does it.
 export function shareCardData(progress = {}, now = new Date()) {
   const stats = accountStats(progress);
   const highlights = profileHighlights(progress);
@@ -52,19 +41,13 @@ export function shareCardData(progress = {}, now = new Date()) {
     favoriteTier: stats.favoriteTier,
     aura: highlights.aura?.name ?? null,
     companion: highlights.companion?.name ?? null,
-    // The face of the account rides along, so a shared profile shows the same
-    // logo the owner wears. Absent or invalid, the card simply carries none.
+
     avatar: validAvatar(progress.profile?.avatar)
       ? progress.profile.avatar
       : null,
   };
 }
 
-// The card travels as one compact line, then URL-safe base64. Version 1 was
-// the JSON itself (about 1,000 characters for a full card); version 2 keeps
-// the same fields in a fixed order, numbers in base 36, tiers as an index and
-// dates in seconds, which makes the link about a quarter of the length. Old
-// version-1 links still open.
 const FIELD = "|";
 const ITEM = ",";
 const PART = ":";
@@ -77,9 +60,7 @@ const seconds = (value) => {
 const fromSeconds = (text) => (text ? fromB36(text) * 1000 : null);
 const plain = (value) =>
   typeof value === "string" ? value.replace(/[|,:]/g, "").trim() : "";
-// The logo is kept verbatim (its base64 payload is too structured to scrub);
-// only the field separator is stripped, and decoding re-validates the whole
-// data URL with the save's own rules.
+
 const avatarText = (value) =>
   validAvatar(value) ? value.replace(/[|]/g, "") : "";
 const tierIndex = (tier) => {
@@ -131,8 +112,7 @@ export function encodeShareCard(card) {
     plain(card?.companion),
     avatarText(card?.avatar),
   ].join(FIELD);
-  // Deflating the line first keeps a link short enough to paste anywhere;
-  // the base64url wrapper is what makes it query-string safe.
+
   return TOKEN_TAG + toBase64Url(deflateSync(strToU8(line), { level: 9 }));
 }
 
@@ -159,8 +139,6 @@ function inflateCard(bytes) {
   return output.length <= MAX_CARD_OUTPUT_BYTES ? output : null;
 }
 
-// The card named by a link, cleaned field by field, or null when the data
-// is missing, damaged or not a card at all. A bad link is simply ignored.
 export function decodeShareCard(token) {
   if (
     typeof token !== "string" ||
@@ -184,7 +162,6 @@ export function decodeShareCard(token) {
   }
   let raw;
   if (text.startsWith("{")) {
-    // A version-1 link: the JSON itself.
     try {
       raw = JSON.parse(text);
     } catch {
@@ -192,7 +169,7 @@ export function decodeShareCard(token) {
     }
   } else {
     const f = text.split(FIELD);
-    // 15 fields are a version-2 card (no logo); version 3 appends the logo.
+
     if (f.length !== 15 && f.length !== 16) return null;
     raw = {
       v: Number(f[0]),
@@ -276,7 +253,6 @@ function text(value) {
     : null;
 }
 
-// Saves keep dates as ISO strings or epoch milliseconds; the card uses ISO.
 function isoDate(value) {
   const time =
     typeof value === "number" ? value : Date.parse(String(value ?? ""));
@@ -285,8 +261,6 @@ function isoDate(value) {
     : null;
 }
 
-// The full link: the profile address plus the card, on whatever origin and
-// base the game is served from (local or a configured subpath).
 export function shareCardUrl(progress, origin, base) {
   const card = shareCardData(progress);
   const url = new URL(pathForProfile(card.name, base), origin);
@@ -294,7 +268,6 @@ export function shareCardUrl(progress, origin, base) {
   return url.toString();
 }
 
-// The card a visited address carries, or null for an ordinary profile page.
 export function shareCardFromLocation(location) {
   const token = new URLSearchParams(location?.search ?? "").get("card");
   return decodeShareCard(token);

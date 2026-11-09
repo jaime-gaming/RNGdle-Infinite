@@ -1,5 +1,3 @@
-// Presentation-only contributor animation plans. Rules and scoring remain outside
-// the UI. Timing and palette values were measured against RNGdle Tools.
 const CHIP_PALETTES = {
   trash: { primary: "#C8A87C", secondary: "#F0E6D8", border: "#7C5A2E" },
   common: { primary: "#D1D5DB", secondary: "#F3F4F6", border: "#6B7280" },
@@ -96,8 +94,7 @@ export function buildChipPlan(badge, number) {
   return {
     chips,
     introDuration,
-    // Reset ALL contributors first; only then begin the next highlighted sweep.
-    // This is shared by every chip, rather than each chip running its own clock.
+
     highlightAt: lastStagger + 500,
     loopDuration: lastStagger * 2 + 900 + 4000,
   };

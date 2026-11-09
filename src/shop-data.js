@@ -7,11 +7,9 @@ import {
   salePrice,
 } from "./black-friday.js";
 
-// Permanent items. Timing upgrades never affect randomness or EP scoring.
 export const BASE_ROLL_MS = 45000;
 export const BASE_COOLDOWN_MS = 60000;
-// Every reveal/cooldown value a committed roll may legally snapshot. Kept here so
-// save validation and the catalogue can never drift apart.
+
 export const ROLL_DURATIONS = [45000, 35000, 25000, 15000, 10000];
 export const COOLDOWN_DURATIONS = [
   60000, 45000, 30000, 15000, 10000, 5000, 2000,
@@ -415,8 +413,7 @@ export const shopProducts = [
     description:
       "Two mirrored blooms of ink breathe in the corners of the box: dark, symmetric and faintly alive.",
   },
-  // R4ND0MN3S5: the set for things that are random by nature. Its looks flicker,
-  // fall and jitter in steps, never in smooth curves.
+
   {
     id: "static",
     kind: "aura",
@@ -585,9 +582,6 @@ export const shopProducts = [
       "Unlock number search and roll-tier filters across your entire activity archive. Your basic feed stays free.",
   },
   {
-    // Repeatable: every purchase adds one token instead of ownership, and the
-    // tokens are spent on the Tasks page. One purchase a day, and no more than
-    // three in any five days.
     id: "task-skip",
     kind: "utility",
     name: "Task Skip",
@@ -597,8 +591,7 @@ export const shopProducts = [
     description:
       "Swap one open task on your Tasks list for the next one in its pool: one token per use, kept across rebirths. You can buy one a day, no more than three in any five days, and hold up to three.",
   },
-  // Skills are charged one-shot effects; every one is defined in skills.js so
-  // the shop, the save file and the roll engine read the same numbers.
+
   ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({
     id: skill.id,
     kind: "skill",
@@ -612,13 +605,7 @@ export const shopProducts = [
   })),
   ...SKILL_SLOTS.map((bay) => ({ ...bay })),
 ];
-// The shop's permanent shelves are real sub-pages, so the hub buttons,
-// featured picks, deep links and the back button agree about where an item is
-// sold. Companions keep their shelf too; it is owned by the companion
-// component rather than by this catalogue.
-// Auras are grouped into families so the shelf reads as five small collections
-// instead of one long list. Cosmetic only: a family never changes a price, an
-// order of purchase or anything a roll can score.
+
 export const AURA_FAMILIES = [
   {
     id: "celestial",
@@ -633,7 +620,7 @@ export const AURA_FAMILIES = [
     id: "element",
     label: "Earth",
     blurb: "Glass, tide, leaf and rain.",
-    // A soft serif for things that grew or fell rather than were built.
+
     font: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
     tracking: "0.01em",
     casing: "none",
@@ -643,7 +630,7 @@ export const AURA_FAMILIES = [
     id: "machine",
     label: "Electric Status",
     blurb: "Circuits, plans, dials and printed colour.",
-    // A compact readout for circuits, plans and machine-made colour.
+
     font: '"Space Mono", monospace',
     tracking: "0.02em",
     casing: "none",
@@ -659,7 +646,6 @@ export const AURA_FAMILIES = [
     weight: 700,
   },
   {
-    // Terminal labels: the monospace face of a machine that is guessing.
     id: "randomness",
     label: "R4ND0MN3S5",
     blurb: "Binary rain, static, scrambled digits and hex.",
@@ -709,9 +695,6 @@ export const SHOP_SECTIONS = [
   },
 ];
 
-// Which kinds of product each shelf sells. The catalogue keeps its own order;
-// the shelves themselves always read from the cheapest product upwards, and a
-// move between shelves never reshuffles a shelf you are standing on.
 const SHELF_KINDS = {
   skills: ["skill", "skill-slot", "pace"],
   pace: ["roll", "cooldown"],
@@ -722,12 +705,12 @@ const SHELF_KINDS = {
 
 export function shelfOfProduct(item) {
   if (!item) return "";
-  // A companion set as a goal is not a catalogue product, but it has a shelf.
+
   if (item.kind === "companion") return "companions";
   const shelf = SHOP_SECTIONS.find((section) =>
     (SHELF_KINDS[section.id] ?? []).includes(item.kind),
   );
-  // Every product kind belongs to a shelf; pace is the catalogue's home track.
+
   return shelf?.id ?? "pace";
 }
 
@@ -736,22 +719,13 @@ export function productsOnShelf(id) {
   return kinds ? shopProducts.filter((p) => kinds.includes(p.kind)) : [];
 }
 
-// ---- Skill stock ----------------------------------------------------------
-// The skills shelf sells its charged effects like a stall, not a catalogue:
-// only three shop skills are on sale at once, and the stock rotates every five
-// minutes. The rotation is deterministic — every tab, reload and the purchase
-// guard derive the same stock from the clock, never from a stored list. Skill
-// bays, Flywheel and anything you already own are not stock: they stay on the
-// shelf permanently.
-export const SKILL_STOCK_WINDOW_MS = 300000; // Five minutes.
+export const SKILL_STOCK_WINDOW_MS = 300000;
 export const SKILL_STOCK_SIZE = 3;
 
 export function skillStockWindow(now) {
   return Math.floor(now / SKILL_STOCK_WINDOW_MS);
 }
 
-// A seeded shuffle (mulberry32) of one window: the same index always produces
-// the same order, with no shared state that two tabs could desynchronise.
 function shuffledShopSkills(windowIndex) {
   const ids = SKILLS.filter((skill) => skill.source === "shop").map(
     (skill) => skill.id,
@@ -771,19 +745,12 @@ function shuffledShopSkills(windowIndex) {
   return ids;
 }
 
-// What the stall has on sale: the first `size` unowned skills in the window's
-// own order, so buying one mid-window slides the next one into view without
-// reshuffling the rest. Owning every shop skill sells the stall out.
 export function skillStock(windowIndex, owned = [], size = SKILL_STOCK_SIZE) {
   return shuffledShopSkills(windowIndex)
     .filter((id) => !owned.includes(id))
     .slice(0, size);
 }
 
-// When a skill is next on sale, counted in windows from `windowIndex` (1 is
-// the upcoming restock), or null if the current owned set keeps it off the
-// stall for the next two hours. Same deterministic input as the stall, so an
-// out-of-stock card can honestly say when the skill comes back.
 export function nextSkillStockOffset(windowIndex, owned, skillId) {
   for (let offset = 1; offset <= 24; offset++)
     if (skillStock(windowIndex + offset, owned).includes(skillId))
@@ -791,9 +758,6 @@ export function nextSkillStockOffset(windowIndex, owned, skillId) {
   return null;
 }
 
-// An upgrade behind a purchase that has not been made is not on the shelf at
-// all: the shop shows the next step of a chain, never the wall behind it, so a
-// card appears the moment it becomes buyable and not one roll earlier.
 export function productUnlocked(item, owned = []) {
   return !item.requires || owned.includes(item.requires);
 }
@@ -814,9 +778,6 @@ export const productById = new Map(
   ]),
 );
 
-// Special & Limiteds: the hub where every event keeps its own group of auras.
-// The hub can be empty; no unowned special aura becomes equipable, and nothing
-// here is for sale outside the day its own event allows.
 export const SPECIAL_AURA_COLLECTION = {
   id: "special",
   label: "Special & Limiteds",
@@ -838,10 +799,6 @@ export function auraFamilyById(id) {
   );
 }
 
-// Which event groups the Special & Limiteds hub shows, one banner each. A
-// group exists here only once the save owns one of its looks: nothing owned,
-// nothing advertised. While the sale day is on, the looks it puts on the
-// counter live on the sale's own shelf instead of borrowing this hub.
 export function visibleAuraFamilies(owned = []) {
   const families = [...AURA_FAMILIES];
   if (RNGWEEN_COSMETICS.some((aura) => owned.includes(aura.id)))
@@ -850,8 +807,6 @@ export function visibleAuraFamilies(owned = []) {
   return families;
 }
 
-// Event family pages show owned looks only. Unowned event looks offered during
-// the sale belong on its dedicated counter, not in an owned collection.
 export function aurasInFamily(id, owned = []) {
   return auraProducts.filter(
     (aura) =>
@@ -859,9 +814,6 @@ export function aurasInFamily(id, owned = []) {
   );
 }
 
-// What a product costs right now. The sale day discounts the whole shop product
-// by product; a retired look that is back for the day costs the counter price;
-// a limited skin is earned rather than bought, so it has no price at all.
 export function productPrice(item, at = Date.now()) {
   if (!item) return 0;
   if (item.eventOnly) return resalePrice(item, at);

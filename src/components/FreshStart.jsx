@@ -6,9 +6,6 @@ import { formatEP } from "../roll-data.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import "../fresh-start.css";
 
-// Once an account has three prestiges, the ladder has nothing left to show.
-// The game says so once, then leaves a small "!" in the header for whenever
-// the player feels like taking it up on the offer.
 const FRESH_START_SEEN_KEY = "rng-infinite-fresh-start-seen-v1";
 
 function seenFor(profileId) {
@@ -52,7 +49,7 @@ export default function FreshStartDialog({
   const dialog = useModalDialog(open);
   const eligible = freshStartEligible(progress);
   const profileId = progress.profile?.id ?? "";
-  // The one automatic appearance, per profile. Opening it again is the flag's job.
+
   useEffect(() => {
     if (!eligible || paused || open || seenFor(profileId)) return;
     markSeen(profileId);

@@ -1,16 +1,8 @@
-// In-memory Firestore stand-in for offline sync verification.
-//
-// Persists to a JSON file so separate processes behave like separate devices
-// sharing one Firestore project, and evaluates every commit against a model of
-// firestore.rules (post-commit `getAfter` semantics, 2 s write cooldowns,
-// consent/alias/claim agreement) so a client write that the real rules would
-// reject fails here the same way.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 const FILE = process.env.FAKE_FIRESTORE || "/tmp/fake-firestore.json";
 const now = () => Date.now();
 
-// ---------------------------------------------------------------- persistence
 let store = null;
 function load() {
   if (!store)
@@ -21,7 +13,6 @@ function persist() {
   writeFileSync(FILE, JSON.stringify(store, null, 1));
 }
 
-// Timestamps travel as {"__ts": ms} and hydrate to Firebase-like objects.
 function encode(value) {
   if (value && typeof value === "object" && value.__serverTimestamp)
     return { __ts: now() };
@@ -57,7 +48,6 @@ const isStamp = (value) =>
   Boolean(value && typeof value === "object" && typeof value.__ts === "number");
 const stampOf = (value) => (isStamp(value) ? value.__ts : null);
 
-// ------------------------------------------------------------- rules modelling
 const NAME_KEY = /^[\p{Ll}\p{Lo}\p{Lm}\p{N}_-]{3,20}$/u;
 const sameKeys = (data, keys) =>
   Boolean(data) &&
@@ -506,8 +496,6 @@ function makeCommit(staged) {
   }
 
   function validate(time, uid) {
-    // Deletes first: later creates of the same id in one commit are rare and
-    // the alias rules only look at the final state anyway.
     for (const [path, entry] of staged) {
       if (entry.delete) {
         const problem = checkDelete(path, raw(path), uid, time);
@@ -526,7 +514,6 @@ function makeCommit(staged) {
   return { getAfter, existsAfter, validate };
 }
 
-// ------------------------------------------------------------------- public API
 export function doc(database, ...segments) {
   const parts = segments.flatMap((segment) =>
     typeof segment === "string" ? segment.split("/") : [],

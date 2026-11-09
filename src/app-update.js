@@ -8,20 +8,37 @@ export const APP_UPDATE_QUERY = "__rngdle_refresh";
 const APP_BUILD_META = "rngdle-build-id";
 const APP_INTERNAL_META = "rngdle-internal-version";
 const APP_UPDATE_POLL_MS = 2500;
-// A browser that keeps handing back the old files cannot be fixed by reloading
-// again; give up after a handful of tries and say so instead of looping.
+
 export const APP_UPDATE_MAX_RELOADS = 6;
-// A cache or service-worker call that never answers must not stop the refresh.
+
 const APP_UPDATE_CACHE_TIMEOUT_MS = 1500;
-// The save copy only belongs to the reload that made it.
+
 const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 
-// Internal label for this bug-patch rebuild. Only the "Reload until updated"
-// flow uses it, to scope the update intent to the current internal build. It
-// is never added to the changelog or shown as a public release. Keep this exact
-// label unchanged until the next session or an explicit user request.
-// Current: RNGdle-Infinitev0.5.2fix3.
-export const APP_INTERNAL_VERSION = "RNGdle-Infinitev0.5.2fix3";
+export const APP_INTERNAL_VERSION = "v0.5.2fix4";
+
+export function isNewerVersion(candidate, baseline) {
+  const parse = (label) => {
+    const normalized = String(label ?? "")
+      .trim()
+      .replace(/^RNGdle-Infinite/i, "");
+    const match = /^v?(\d+)\.(\d+)\.(\d+)(?:fix(\d+))?$/.exec(normalized);
+    if (!match) throw new Error(`Unrecognised internal version: ${label}`);
+    return [
+      Number(match[1]),
+      Number(match[2]),
+      Number(match[3]),
+      Number(match[4] ?? 0),
+    ];
+  };
+  const a = parse(candidate);
+  const b = parse(baseline);
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] > b[index]) return true;
+    if (a[index] < b[index]) return false;
+  }
+  return false;
+}
 
 let pollTimer = null;
 let reloadTimer = null;
@@ -34,9 +51,7 @@ function publish(next) {
   for (const listener of listeners) {
     try {
       listener(updateState);
-    } catch {
-      // A UI subscriber must not be able to stop the update check.
-    }
+    } catch {}
   }
 }
 
@@ -72,6 +87,10 @@ export function getAppInternalVersion(documentRef = globalThis.document) {
   } catch {
     return APP_INTERNAL_VERSION;
   }
+}
+
+export function isLegacyMirrorBuild(base = import.meta.env?.BASE_URL ?? "/") {
+  return Boolean(base && base !== "/");
 }
 
 export function makeVersionUrl({
@@ -153,15 +172,9 @@ function saveAppUpdateIntent(intent, storage = sessionStore()) {
 function removeAppUpdateIntent(storage = sessionStore()) {
   try {
     storage?.removeItem(APP_UPDATE_STORAGE_KEY);
-  } catch {
-    // Storage can be disabled by the browser; the update loop still stops here.
-  }
+  } catch {}
 }
 
-// The save is the one thing a refresh must never cost. Before every reload the
-// exact bytes go to sessionStorage, in this tab only; a build that cannot read
-// its own save gets that copy back instead of an empty account. localStorage
-// itself is only ever read here — never cleared, never rewritten.
 export function snapshotSaveForUpdate({
   storage = localStore(),
   scratch = sessionStore(),
@@ -173,14 +186,10 @@ export function snapshotSaveForUpdate({
     scratch.setItem(APP_UPDATE_SAVE_KEY, JSON.stringify({ at: now, raw }));
     return true;
   } catch {
-    // A full or disabled sessionStorage leaves the real save untouched.
     return false;
   }
 }
 
-// Runs before the app reads its save. A readable save always wins: the copy is
-// only used when the stored save is missing or is not JSON at all, which is
-// exactly the shape of a failed update landing on a broken build.
 export function recoverSaveAfterUpdate({
   storage = localStore(),
   scratch = sessionStore(),
@@ -216,9 +225,6 @@ export function recoverSaveAfterUpdate({
   }
 }
 
-// What the update loop does next, as a plain decision so it can be tested
-// without a browser: done, wait (the page has not caught up yet), reload, or
-// stuck (this browser keeps serving old files).
 export function decideUpdateStep({
   currentBuild = "",
   publishedBuild = "",
@@ -232,15 +238,11 @@ export function decideUpdateStep({
   const reloads = Math.max(0, Math.trunc(Number(intent?.reloads ?? 0)) || 0);
   if (reloads >= maxReloads) return { kind: "stuck", reloads };
   const elapsed = now - Number(intent?.lastReloadAt ?? 0);
-  // The reload that just happened has not had time to be replaced yet.
+
   if (elapsed >= 0 && elapsed < pollMs) return { kind: "wait", reloads };
   return { kind: "reload", reloads: reloads + 1 };
 }
 
-// The part of "clear the browser cache" that a page is allowed to do: every
-// Cache Storage entry for this origin, plus a service-worker refresh that
-// installs whatever the server now serves. Site data — save, settings, device
-// link — lives in localStorage and is not touched by any of it.
 export async function clearGameCaches({
   cacheStorage = globalThis.caches,
   serviceWorker = globalThis.navigator?.serviceWorker,
@@ -270,9 +272,7 @@ export async function clearGameCaches({
               try {
                 const waiting = registration.waiting ?? registration.installing;
                 waiting?.postMessage?.({ type: "skip-waiting" });
-              } catch {
-                // A worker that cannot take the message still gets updated.
-              }
+              } catch {}
               return Promise.resolve(registration.update?.()).catch(
                 () => false,
               );
@@ -304,9 +304,7 @@ function clearRefreshQuery() {
       "",
       url.pathname + url.search + url.hash,
     );
-  } catch {
-    // The URL cleanup is cosmetic; it must not interrupt update detection.
-  }
+  } catch {}
 }
 
 function reloadWithFreshUrl() {
@@ -315,8 +313,7 @@ function reloadWithFreshUrl() {
     if (!locationRef?.href || typeof locationRef.replace !== "function")
       return false;
     const url = new URL(locationRef.href);
-    // A unique address cannot be answered from the document cache, so the
-    // HTML — and the hashed bundles it names — are fetched from the server.
+
     url.searchParams.set(
       APP_UPDATE_QUERY,
       `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
@@ -356,7 +353,7 @@ async function performReload() {
 
 function queueReload() {
   if (reloadTimer !== null) globalThis.clearTimeout(reloadTimer);
-  // Let the settings page show why it is refreshing before navigation starts.
+
   reloadTimer = globalThis.setTimeout(() => {
     reloadTimer = null;
     void performReload();
@@ -394,16 +391,13 @@ async function checkForCurrentBuild() {
     clearTimers();
     return;
   }
-  // Handle intents from older internal builds: if current internal version is newer than intent's,
-  // this page is already updated - clear intent and finish. If current is older or equal, keep polling
-  // for the next version (fix+1 etc.) instead of immediately aborting.
+
   if (
     intent.internalVersion &&
     intent.internalVersion !== APP_INTERNAL_VERSION
   ) {
     try {
-      if (isNewerVersion(intent.internalVersion, APP_INTERNAL_VERSION)) {
-        // Current page is newer than intent - we already have next version
+      if (isNewerVersion(APP_INTERNAL_VERSION, intent.internalVersion)) {
         removeAppUpdateIntent();
         clearTimers();
         clearRefreshQuery();
@@ -415,10 +409,7 @@ async function checkForCurrentBuild() {
         });
         return;
       }
-      // If current is not newer (intent is same or newer), keep intent and continue polling
-      // Don't return - fall through to version check
     } catch {
-      // If version parsing fails, fallback to old behavior: clear if mismatch
       removeAppUpdateIntent();
       clearTimers();
       return;
@@ -544,7 +535,7 @@ export function startAppUpdate() {
     });
     return false;
   }
-  // Copy the save before the first reload, not after something went wrong.
+
   snapshotSaveForUpdate();
   clearTimers();
   checking = false;

@@ -14,18 +14,14 @@ function readDismissed() {
 function writeDismissed(value) {
   try {
     sessionStorage.setItem(DISMISS_KEY, value);
-  } catch {
-    // A missing sessionStorage must not break the status notices.
-  }
+  } catch {}
 }
 
-// One shared poller for the whole app: the banner, the header indicator and
-// the maintenance gate all read this store, so the status page is fetched once
-// per interval no matter how many components are mounted.
 let state = { issue: null, dismissedId: readDismissed() };
 const listeners = new Set();
 let started = false;
 let timer = null;
+let inFlight = false;
 
 function emit() {
   for (const listener of listeners) listener();
@@ -37,16 +33,38 @@ function setState(patch) {
 }
 
 async function poll() {
-  const issue = await fetchServiceIssue();
-  setState({ issue });
+  if (inFlight) return;
+  inFlight = true;
+  try {
+    const issue = await fetchServiceIssue();
+    setState({ issue });
+  } finally {
+    inFlight = false;
+  }
+}
+
+function onVisibility() {
+  if (globalThis.document?.visibilityState === "visible") void poll();
 }
 
 function start() {
   if (started) return;
   started = true;
-  poll();
-  timer = setInterval(poll, STATUS_POLL_INTERVAL_MS);
+  void poll();
+  timer = setInterval(() => void poll(), STATUS_POLL_INTERVAL_MS);
   globalThis.addEventListener?.("online", poll);
+  globalThis.addEventListener?.("focus", poll);
+  globalThis.document?.addEventListener?.("visibilitychange", onVisibility);
+}
+
+function stop() {
+  if (!started) return;
+  started = false;
+  if (timer) clearInterval(timer);
+  timer = null;
+  globalThis.removeEventListener?.("online", poll);
+  globalThis.removeEventListener?.("focus", poll);
+  globalThis.document?.removeEventListener?.("visibilitychange", onVisibility);
 }
 
 function subscribe(listener) {
@@ -54,6 +72,7 @@ function subscribe(listener) {
   start();
   return () => {
     listeners.delete(listener);
+    if (!listeners.size) stop();
   };
 }
 
@@ -76,8 +95,6 @@ export function reopenStatusIssue() {
   setState({ dismissedId: "" });
 }
 
-// A maintenance only blocks the game while it is actually running, not while
-// it is merely scheduled for later.
 export function maintenanceActiveFor(issue) {
   if (!issue || issue.kind !== "maintenance") return false;
   const status = String(issue.status ?? "")

@@ -1,4 +1,5 @@
 import { expect, test } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   accountSwitchSnapshot,
   chooseSaveWinner,
@@ -164,7 +165,6 @@ test("a tie keeps this device's copy while mixed progress asks the player", () =
     totalEarned: 1000,
   });
 
-  // Same durable progress: no question worth interrupting the player for.
   expect(chooseSaveWinner(tie, cloud)).toMatchObject({
     winner: "local",
     preferencesOnly: true,
@@ -263,8 +263,7 @@ test("settings and log volume do not count as game progress", () => {
   });
 
   expect(compareSaveRichness(local, cloud)).toBe("equal");
-  // Preferences, log notes and auxiliary records are never progress: equal
-  // copies resolve here instead of asking which one to keep.
+
   expect(chooseSaveWinner(local, cloud)).toMatchObject({
     winner: "local",
     preferencesOnly: true,
@@ -396,7 +395,6 @@ test("a named but never played profile never blocks the copy that has progress",
   expect(saveHasProgress(playedHere)).toBe(true);
   expect(saveHasProgress(empty)).toBe(false);
 
-  // Different profile IDs, but nothing is lost by keeping the populated copy.
   expect(chooseSaveWinner(playedHere, shell)).toMatchObject({
     winner: "local",
     comparison: "local-only-progress",
@@ -429,7 +427,7 @@ test("a settled roll is newer than the online copy that still holds it pending",
   expect(chooseSaveWinner(settled, cloudWithPending)).toMatchObject({
     winner: "local",
   });
-  // Two different committed rolls really are two different copies.
+
   const otherPending = progress({
     pendingRoll: { ...pendingRoll, id: "roll-other", number: 99 },
   });
@@ -448,12 +446,11 @@ test("this device's own synced lineage continues without asking", () => {
   });
   const behind = progress({ balance: 100, totalEarned: 1_000, rebirths: 1 });
 
-  // Untrusted, a rebirth asks: another device could own that older era.
   expect(chooseSaveWinner(afterRebirth, cloud)).toMatchObject({
     winner: "choice",
     choiceReason: "generation",
   });
-  // Trusted, the same device simply moved its own save forward.
+
   expect(
     chooseSaveWinner(afterRebirth, cloud, { trusted: true }),
   ).toMatchObject({ winner: "local", trusted: true });
@@ -474,7 +471,7 @@ test("an explicit restore wins over the online copy of the same profile", () => 
   expect(
     chooseSaveWinner(restoredOlder, cloud, { localAuthoritative: true }),
   ).toMatchObject({ winner: "local", authoritativeRestore: true });
-  // A different profile is still never overwritten by a restore.
+
   const otherProfile = progress({
     profile: { id: "profile-b", username: "player-b", createdAt: 2 },
     balance: 100,
@@ -747,7 +744,7 @@ test("sync trust needs this device's exact document and the same game profile", 
       cloudProfileId: "profile-a",
     }),
   ).toEqual({ trusted: true, localAuthoritative: false });
-  // Another device wrote the online copy: fall back to the comparison rules.
+
   expect(
     cloudSyncTrust({
       mark,
@@ -756,7 +753,7 @@ test("sync trust needs this device's exact document and the same game profile", 
       cloudProfileId: "profile-a",
     }),
   ).toEqual({ trusted: false, localAuthoritative: false });
-  // A different game profile is never continued from this device's memory.
+
   expect(
     cloudSyncTrust({
       mark,

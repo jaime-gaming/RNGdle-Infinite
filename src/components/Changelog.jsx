@@ -6,8 +6,6 @@ import "../changelog.css";
 
 const badgeById = new Map(badges.map((badge) => [badge.canonicalId, badge]));
 
-// A note that names badges reads like any other line, but each badge name is
-// a link that opens the badge window with its details.
 function linkBadges(text, ids, onBadge) {
   const named = (ids ?? [])
     .map((id) => badgeById.get(id))
@@ -15,7 +13,7 @@ function linkBadges(text, ids, onBadge) {
   if (!named.length) return text;
   const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`(${named.map((b) => escape(b.name)).join("|")})`);
-  // The badge's own icon rides along, drawn like it is on the Badges page.
+
   const icons = new Set(named.map((badge) => badge.emoji));
   const withIcons = new RegExp(`(${[...icons].map(escape).join("|")})`);
   return text.split(pattern).flatMap((part, index) => {
@@ -44,8 +42,6 @@ function linkBadges(text, ids, onBadge) {
   });
 }
 
-// "Oct 10, 2026" from the entry's ISO day; the date is a calendar day, so
-// it is formatted in UTC and never shifts with the device's timezone.
 function releaseDate(iso) {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "short",
@@ -56,7 +52,6 @@ function releaseDate(iso) {
 }
 
 export default function Changelog({ onSeen, onBadge }) {
-  // Opening the page is the acknowledgement: the "New Version" flag clears.
   useEffect(() => {
     markSeen();
     onSeen?.();

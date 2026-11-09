@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { emptyProgress, parseAndRepairProgress } from "../src/progress.js";
 import {
   shareCardData,
@@ -56,6 +57,7 @@ test("Cloud Account opens from its scrollable Settings section and the top Profi
     profile: { id: "p", username: "Lucky", createdAt: 1 },
   });
   await page.goto("/settings");
+  await waitForApp(page);
   await expect(page.locator(".cloud-account")).toHaveCount(0);
   await expect(
     page.getByRole("navigation", { name: "Settings sections" }),
@@ -66,6 +68,7 @@ test("Cloud Account opens from its scrollable Settings section and the top Profi
   await expect(page).toHaveURL(/\/settings\/cloud-account$/);
   await expect(page.locator(".cloud-account")).toBeVisible();
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".cloud-account")).toBeVisible();
   await page.locator(".sign-in").click();
   await expect(page).toHaveURL(/\/profile\/Lucky$/);
@@ -75,6 +78,7 @@ test("aura reveals distinguish moving digits by brightness only", async ({
   page,
 }) => {
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   const { shopProducts } = await import("../src/shop-data.js");
   const auras = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
   for (const theme of ["light", "dark"]) {
@@ -109,7 +113,6 @@ test("aura reveals distinguish moving digits by brightness only", async ({
     );
     expect(results.length).toBeGreaterThan(10);
     for (const { landed, moving } of results) {
-      // Only brightness changes; no background, underline or box is added.
       expect(moving.slice(0, 4)).toEqual(landed.slice(0, 4));
       expect(Number(moving[4])).toBeLessThan(Number(landed[4]));
       expect(moving[1]).toBe("rgba(0, 0, 0, 0)");

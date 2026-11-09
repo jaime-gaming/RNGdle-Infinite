@@ -24,27 +24,13 @@ import {
   surplusMultiplier,
 } from "./rebirth.js";
 
-// What the rack adds up to.
-//
-// Everything a player owns is described somewhere, but the *total* was only
-// visible by adding it up in your head: Surge doubles banked EP, Double Vision
-// draws twice, Bedrock sets a floor, the companion, the prestige and the
-// Rollback bonuses multiply again. This module collects those numbers in one place so the rack,
-// the shop and the activity feed all quote the same figures.
-//
-// It is presentation only. Nothing here can change a draw, a score or a price.
-
 const amount = (value) => Math.round(value).toLocaleString("en-US");
 const times = (value) => `×${Number(value.toFixed(2))}`;
 
-// The effects of one skill, short enough for a chip: "×2 wallet EP",
-// "2 draws, best kept", "floor 25,000 EP".
 function skillEffectChip(skill) {
   return skillEffectChips(skill)[0] ?? skillEffectSummary(skill);
 }
 
-// The multiplier a roll actually banks, and where every part of it comes from.
-// Exported so the roll result can itemise the same bonus the rack quotes.
 export function walletParts(progress, armed) {
   const parts = [];
   const pet = petById.get(progress.activePet);
@@ -94,13 +80,9 @@ export function walletParts(progress, armed) {
   return parts;
 }
 
-// `progress` is any object with owned/equippedSkills/skillCharge/flywheelCharge
-// and the wallet multipliers, i.e. a save plus its derived state.
 export function rackReport(progress = {}) {
   const slots = skillSlots(progress.owned ?? []);
-  // The save already refuses more skills than the rack holds; the report
-  // enforces the same ceiling so a hand-edited object cannot overstate it.
-  // Free skills ride beside the slots, so they are never the ones trimmed.
+
   const equipped = trimToSlots(
     [...new Set(progress.equippedSkills ?? [])],
     slots,
@@ -215,9 +197,6 @@ export function rackReport(progress = {}) {
   const flywheelReady = ownsFlywheel && flywheelCharge >= flywheelNeeded;
   const absorbs = skillWaivesCooldown(armedIds) || flywheelReady;
 
-  // "No cooldown" and "n draws" affect the next roll's shape: they are added
-  // up here for display, and the plan they quote is the very same one the roll
-  // spends — stacked draw budgets and all, inside the cap.
   const chips = [];
   if (plan)
     chips.push(
@@ -233,8 +212,7 @@ export function rackReport(progress = {}) {
 
   return {
     slots,
-    // The slots only hold shop and companion skills: rebirth rewards
-    // ride free, so "used" counts only those two.
+
     used: equipped.filter((skill) => skillTakesSlot(skill.id)).length,
     equipped,
     unlocked,
@@ -256,7 +234,7 @@ export function rackReport(progress = {}) {
       cooldownFree: absorbs,
       chips,
     },
-    // The wallet multiplier in words, for tooltips that need one sentence.
+
     walletSummary:
       parts.length > 0
         ? parts

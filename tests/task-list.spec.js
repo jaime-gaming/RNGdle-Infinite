@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { applyProgress, emptyProgress } from "../src/progress.js";
 import {
   ACTIVE_PER_PERIOD,
@@ -16,9 +17,6 @@ import {
   taskSummary,
 } from "../src/tasks.js";
 import { testProfile } from "./helpers/progress.js";
-
-// The list a day deals, the rewards it pays, and the bonus for finishing it.
-// These are the rules the Tasks page and the reducer both rely on.
 
 const at = (y, m, d, h = 12, min = 0) =>
   new Date(y, m - 1, d, h, min).getTime();
@@ -55,7 +53,7 @@ test("each cadence has a varied pool, a fixed-size list, and real task rewards",
     }
   }
   expect(ACTIVE_PER_PERIOD).toEqual({ daily: 3, weekly: 4 });
-  // A weekly task pays several times a daily one on average.
+
   const average = (cadence) => {
     const pool = TASKS.filter((task) => task.cadence === cadence);
     return pool.reduce((sum, task) => sum + task.reward, 0) / pool.length;
@@ -86,8 +84,7 @@ test("a peak keeps the best single roll of the period, and a running total adds 
 
 test("each ready task is claimed on its own, and a claim pays only its reward", () => {
   let state = { ...emptyProgress(), profile: testProfile };
-  // Twelve Epic rolls high in the range, each worth 300,000 EP, so several
-  // tasks on the list (volume, rarity, high rolls) are finished at once.
+
   for (let i = 0; i < 12; i++)
     state = applyProgress(
       state,
@@ -98,7 +95,7 @@ test("each ready task is claimed on its own, and a claim pays only its reward", 
   for (const [index, id] of ready.entries()) {
     const before = state.balance;
     state = applyProgress(state, { type: "claim-task", id, at: day });
-    // The rolls themselves paid into the wallet too, so the claim is the gap.
+
     expect(state.balance - before).toBe(taskById(id).reward);
     expect(state.history.filter((e) => e.type === "task")).toHaveLength(
       index + 1,
@@ -118,9 +115,6 @@ test("each ready task is claimed on its own, and a claim pays only its reward", 
 });
 
 test("finishing the last task unlocks the list bonus; collecting it pays once, in its own step", () => {
-  // Build a state where every task on today's daily list is ready at once, by
-  // counting enough of every metric. Then claim them one at a time: none of the
-  // claims pays the bonus, and it waits for its own collect action.
   let tasks = emptyTasks();
   const every = {
     ...zeroCounts(),
@@ -150,7 +144,7 @@ test("finishing the last task unlocks the list bonus; collecting it pays once, i
     expect(taskProgress(state.tasks, taskById(id), day).state).toBe(
       "claimable",
     );
-  // The bonus cannot be collected while a task on the list is still unclaimed.
+
   expect(() =>
     applyProgress(state, {
       type: "collect-list-bonus",
@@ -170,8 +164,7 @@ test("finishing the last task unlocks the list bonus; collecting it pays once, i
   expect(state.history.filter((e) => e.taskId === "daily-list")).toHaveLength(
     0,
   );
-  // A finished list is ready to collect, so the Tasks tab counts the bonus.
-  // The same tally also finishes the weekly list, which the count includes.
+
   const weekly = claimableIds(state.tasks, "weekly", day).length;
   expect(taskSummary(state.tasks, day).ready).toBe(1 + weekly);
   const before = state.balance;
@@ -192,7 +185,7 @@ test("finishing the last task unlocks the list bonus; collecting it pays once, i
     cadence: "daily",
     ep: LIST_BONUS.daily,
   });
-  // Once per reset: a second collect is refused, and pays nothing.
+
   const paidOnce = state.balance;
   expect(() =>
     applyProgress(state, {
@@ -229,14 +222,14 @@ test("the new metrics count: a mythic roll, a companion found, and a roll of man
     peakEP: 900000,
     peakBadges: 22,
   });
-  // A companion dropped on a roll is counted once, on the roll that found it.
+
   state = applyProgress(state, {
     ...roll("p1", day + 60000, "common", 500),
     petDrop: "pebble",
   });
   expect(state.tasks.daily.counts.pets).toBe(1);
   expect(state.pets).toContain("pebble");
-  // Offline rolls count for none of it, companions included.
+
   const offline = applyProgress(state, {
     ...roll("o1", day + 120000, "godly", 9999999),
     source: "offline",
@@ -254,6 +247,6 @@ test("a list never shows a task outside its cadence, and every task is on a list
       seen.add(id);
     }
   }
-  // Forty days of lists reach most of the pool, so no task is dead weight.
+
   expect(seen.size).toBeGreaterThan(9);
 });

@@ -74,7 +74,6 @@
   z-index: 80;
 }
 
-/* Separates the temporary themes without adding another page banner. */
 .appearance-temporary {
   display: flex;
   align-items: center;

@@ -1,14 +1,5 @@
 import { mockOperationalStatus } from "../tests/helpers/status.js";
-// Build the production app and exercise the Cloudflare Workers deployment
-// locally with Wrangler. This checks the artifact, the static-asset routing and
-// the SPA fallback that the custom domain will serve; it does not validate DNS,
-// Cloudflare account settings, Firebase authorized domains or a live deploy.
-//
-//   npm run test:worker
-//
-// The browser half needs a Chromium binary (Playwright). When none is
-// installed the HTTP checks still run and the browser half is reported as
-// skipped, so the routing artifact can be verified anywhere.
+
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
@@ -17,6 +8,7 @@ import path from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { build } from "vite";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
+import { unpackVaultSave } from "../src/save-codec.js";
 import { LOCAL_PLAY_KEY } from "../src/local-play.js";
 
 const outDir = path.resolve(".cache/cloudflare-worker-smoke");
@@ -30,8 +22,7 @@ assert.ok(
   html.includes("https://rngdle-infinite.jaime-gaming.com/"),
   "The production page metadata does not use the custom domain",
 );
-// The Worker serves SPA fallback via assets.not_found_handling, so a
-// _redirects rewrite would loop (/index.html matches /* again) and is banned.
+
 await assert.rejects(fs.access(path.join(outDir, "_redirects")), {
   code: "ENOENT",
 });
@@ -44,11 +35,13 @@ assert.match(
   /\/assets\/\*\s*\n\s*Cache-Control: public, max-age=31536000, immutable/,
 );
 assert.match(headers, /\/index\.html\s*\n\s*Cache-Control: no-cache/);
+assert.match(headers, /Permissions-Policy: camera=\(\)/);
+assert.match(headers, /Cross-Origin-Opener-Policy: same-origin-allow-popups/);
+assert.match(headers, /Strict-Transport-Security: max-age=31536000/);
 await assert.rejects(fs.access(path.join(outDir, "404.html")), {
   code: "ENOENT",
 });
-// Only files that actually ship as public assets: Wrangler consumes _headers
-// and _redirects itself, so they are not listed here.
+
 for (const asset of [
   "version.json",
   "sw.js",
@@ -101,9 +94,7 @@ const sendSignal = (signal) => {
     if (process.platform !== "win32" && workerServer.pid)
       process.kill(-workerServer.pid, signal);
     else workerServer.kill(signal);
-  } catch {
-    // The server may already have exited after a startup failure.
-  }
+  } catch {}
 };
 
 let browser;
@@ -118,9 +109,7 @@ try {
         ready = true;
         break;
       }
-    } catch {
-      // The local Worker runtime is still binding its port.
-    }
+    } catch {}
     await delay(250);
   }
   assert.ok(ready, `Wrangler dev did not become ready:\n${serverLogs}`);
@@ -131,9 +120,19 @@ try {
   assert.ok(rootHtml.includes("rngdle-build-id"));
   assert.match(rootResponse.headers.get("cache-control") ?? "", /no-cache/);
   assert.equal(rootResponse.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(
+    rootResponse.headers.get("referrer-policy"),
+    "strict-origin-when-cross-origin",
+  );
+  assert.match(
+    rootResponse.headers.get("permissions-policy") ?? "",
+    /camera=\(\)/,
+  );
+  assert.equal(
+    rootResponse.headers.get("cross-origin-opener-policy"),
+    "same-origin-allow-popups",
+  );
 
-  // These are the direct URLs most likely to be broken by a missing SPA
-  // fallback: they must all answer with the app shell, never a 404.
   for (const route of [
     "/shop/auras",
     "/settings/save-recovery",
@@ -190,9 +189,6 @@ try {
       const requests = [];
       page.on("pageerror", (error) => errors.push(error.message));
       page.on("requestfailed", (request) => {
-        // Direct SPA navigation tears down the previous document's worker and
-        // status fetch. Only navigation cancellations are expected here;
-        // real network failures and HTTP errors still fail the smoke test.
         if (request.failure()?.errorText !== "net::ERR_ABORTED")
           failures.push(`${request.failure()?.errorText}: ${request.url()}`);
       });
@@ -224,11 +220,13 @@ try {
       );
 
       const url = `${origin}/`;
-      const saved = () =>
-        page.evaluate(
-          (key) => JSON.parse(localStorage.getItem(key)),
+      const saved = async () => {
+        const stored = await page.evaluate(
+          (key) => localStorage.getItem(key),
           PROGRESS_KEY,
         );
+        return JSON.parse(unpackVaultSave(stored));
+      };
       const visit = async (route) => {
         const response = await page.goto(`${url}${route.replace(/^\/+/, "")}`);
         assert.equal(response?.status(), 200, `Direct route failed: /${route}`);
@@ -240,7 +238,8 @@ try {
       ).toBeEnabled();
       await expect(page.locator(".header")).toBeVisible();
 
-      // A committed roll must survive a direct refresh on the Worker artifact.
+      await expect(page.locator(".mirror-notice")).toHaveCount(0);
+
       await page.getByRole("button", { name: "GENERATE", exact: true }).click();
       await expect
         .poll(async () => (await saved())?.pendingRoll?.number)

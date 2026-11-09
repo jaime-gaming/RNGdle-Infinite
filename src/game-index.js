@@ -23,14 +23,14 @@ export function createGameIndex(
     scores = new Uint32Array(manifest.population);
   for (let i = 0; i < scores.length; i++)
     scores[i] = view.getUint32(i * 4, true);
-  // Derive the complete game distribution after adding the two original bonuses.
+
   if (originals)
     for (const [number, badges] of originalsByNumber) {
       scores[number] += badges.reduce((sum, b) => sum + b.ep, 0);
     }
   const sorted = scores.slice().sort(),
     bits = new Uint8Array(badgeBuffer);
-  // Derive odds from the effective score population, not cached manifest counts.
+
   const tiers = manifest.tiers.map((tier, i) => ({
     ...tier,
     count:

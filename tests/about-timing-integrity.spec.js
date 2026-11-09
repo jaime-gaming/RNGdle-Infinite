@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import { PAGES, pathForPage, validPage } from "../src/router.js";
 import {
@@ -13,19 +14,17 @@ import { PETS } from "../src/pets.js";
 import { gameNow } from "../src/game-clock.js";
 
 const main = fs.readFileSync("src/main.jsx", "utf8");
-// The page pulls its figures from the game modules, so the source is checked
-// directly rather than rendered: the test runner has no DOM or CSS loader.
+
 const about = fs.readFileSync("src/components/About.jsx", "utf8");
 
 test("the help icon opens a real About page that is not a top navigation entry", () => {
   expect(validPage("about")).toBe("about");
   expect(pathForPage("about")).toBe("/about");
-  // Reached from the ? icon button, never from the main nav list; the button
-  // wears the header's shared selected state when the page is open.
+
   expect(main).toContain('icon-button help-button ${page === "about"');
   expect(main).toMatch(/help-button[\s\S]{0,200}navigate\("about"\)/);
   expect(main).toContain('{page === "about" && (');
-  // The old single-block help modal is gone.
+
   expect(main).not.toContain('modal === "help"');
   expect(main).not.toContain('setModal("help")');
   const navSource = main.slice(
@@ -47,13 +46,12 @@ test("the home screen has no generic account banner; account choices stay on the
   );
   expect(main).not.toContain('className="play-choice-banner"');
   expect(cloudStyles).not.toContain(".play-choice-banner");
-  // Cloud/local choices remain available from the header's profile route.
+
   expect(main).toContain('page === "profile" && (');
   expect(main).toContain("<CloudAccount");
   expect(cloudAccount).toContain('data-testid="continue-locally"');
   expect(cloudAccount).toContain("Create an account");
-  // The contextual alerts are still present for unresolved save conflicts and
-  // Google accounts that must finish password setup.
+
   expect(main).toContain('className="cloud-choice-banner"');
   expect(main).toContain('className="auth-password-banner"');
 });
@@ -68,7 +66,7 @@ test("About is concise, current, and uses figures from the game", () => {
     "about-footnote",
   ])
     expect(about).toContain(cls);
-  // Three short steps and three topic cards explain the play/save loop.
+
   expect(about.match(/^\s+title: "/gm)?.length ?? 0).toBe(6);
   for (const symbol of ["POPULATION", "PETS.length", "gameUrlForLocation"])
     expect(about).toContain(symbol);
@@ -108,7 +106,7 @@ test("a committed roll can never be faster than the upgrades the save has paid f
     .filter((p) => ["roll", "cooldown"].includes(p.kind))
     .map((p) => p.id);
   const max = rollSettings(fastest);
-  // Forged snapshots on an upgrade-free profile lose the roll, never the save.
+
   for (const forged of [
     { rollMS: max.rollMS, cooldownMS: max.cooldownMS },
     { rollMS: max.rollMS },
@@ -120,17 +118,17 @@ test("a committed roll can never be faster than the upgrades the save has paid f
     expect(progress.pendingRoll).toBeNull();
     expect(repairs.join(" ")).toMatch(/committed roll/);
   }
-  // Honest snapshots, at or below the paid-for speed, survive.
+
   expect(parseProgress(save([], pending({}))).pendingRoll.rollMS).toBe(45000);
   expect(
     parseProgress(save(["quickwind-1"], pending({ rollMS: 35000 }))).pendingRoll
       .rollMS,
   ).toBe(35000);
-  // Buying an upgrade mid-roll must not invalidate the roll in flight.
+
   expect(parseProgress(save(fastest, pending({}))).pendingRoll.cooldownMS).toBe(
     60000,
   );
-  // A genuine Flywheel boost may still commit a zero cooldown.
+
   expect(
     parseProgress(
       save(["flywheel"], pending({ cooldownMS: 0, flywheel: "boost" })),
@@ -160,34 +158,28 @@ test("the countdown displays the cooldown alone while the wait itself is unchang
   const startedAt = 1000;
   const window = { startsAt: startedAt + 45000, endsAt: startedAt + 105000 };
   const deadline = window.endsAt;
-  // Throughout the reveal it holds at the full cooldown, not reveal + cooldown.
+
   for (const now of [startedAt, startedAt + 10000, startedAt + 45000])
     expect(displayedCooldownSeconds(window, deadline, now)).toBe(60);
   expect(displayedCooldownSeconds(window, deadline, startedAt + 75000)).toBe(
     30,
   );
   expect(displayedCooldownSeconds(window, deadline, deadline)).toBe(0);
-  // Regression: once the deadline passes the value must be a falsy 0, never a
-  // negative. A negative is truthy, which stranded the UI on "NEXT ROLL IN
-  // 0:00" and never showed ROLL AGAIN again.
+
   for (const past of [1, 500, 1500, 4000, 60000, 864e5]) {
     const shown = displayedCooldownSeconds(window, deadline, deadline + past);
     expect(shown).toBe(0);
     expect(Boolean(shown)).toBe(false);
   }
   expect(displayedCooldownSeconds(null, deadline, deadline + 4000)).toBe(0);
-  // The last tick before readiness still reads as remaining time.
+
   expect(displayedCooldownSeconds(window, deadline, deadline - 50)).toBe(1);
 
-  // Legacy or mismatched saves fall back to the exact remaining time.
   expect(displayedCooldownSeconds(null, deadline, startedAt)).toBe(105);
   expect(
     displayedCooldownSeconds({ startsAt: 0, endsAt: 5 }, deadline, startedAt),
   ).toBe(105);
 
-  // The word matches the number it sits beside: during the reveal the only
-  // wait left after it is the cooldown, so the label says cooldown; once the
-  // cooldown itself is running, the countdown really is the next roll.
   expect(cooldownLabel(window, deadline, startedAt)).toBe("COOLDOWN IN");
   expect(cooldownLabel(window, deadline, startedAt + 30000)).toBe(
     "COOLDOWN IN",
@@ -196,13 +188,9 @@ test("the countdown displays the cooldown alone while the wait itself is unchang
   expect(cooldownLabel(window, deadline, startedAt + 75000)).toBe(
     "NEXT ROLL IN",
   );
-  // No window of its own means the shown value is reveal + cooldown, which is
-  // exactly the next roll.
+
   expect(cooldownLabel(null, deadline, startedAt)).toBe("NEXT ROLL IN");
-  // And the whole shell uses that function rather than hardcoding the words:
-  // the only wait label in the component comes from cooldownLabel(), and the
-  // no-cooldown case (a boost or a waive skill) names the reveal that is
-  // actually still playing instead of promising a roll.
+
   const roll = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
   expect(roll).toContain("cooldownLabel(");
   expect(roll).not.toContain("NEXT ROLL IN");
@@ -215,8 +203,7 @@ test("the reveal is paced by the hardened clock, not by a replaceable timer", ()
     source.indexOf("if (!run || finishedRun.current === run.id) return;"),
     source.indexOf("mounted.current = true;"),
   );
-  // Strip comments first: the code must call gameNow(), but the comments are
-  // allowed to explain which API it deliberately avoids.
+
   const code = reveal.replace(/\/\/.*$/gm, "");
   expect(code).toContain("gameNow()");
   expect(code).not.toContain("performance.now()");
@@ -233,19 +220,18 @@ test("a committed roll's own deadline cannot be truncated away by an edited save
         cooldownUntil,
       }),
     );
-  // Shortened or zeroed deadlines are restored from the roll in flight, so the
-  // wait cannot be cancelled by editing storage.
+
   for (const forged of [0, 1, committed.startedAt, honest - 1])
     expect(saved(forged).cooldownUntil).toBe(honest);
-  // An honest deadline is untouched, and a longer one is still respected.
+
   expect(saved(honest).cooldownUntil).toBe(honest);
   expect(saved(honest + 500000).cooldownUntil).toBe(honest + 500000);
-  // The cosmetic window is rebuilt against the restored deadline.
+
   expect(saved(0).cooldownWindow).toEqual({
     startsAt: committed.startedAt + committed.rollMS,
     endsAt: honest,
   });
-  // A save with no committed roll keeps its plain deadline.
+
   expect(
     parseProgress(JSON.stringify({ ...emptyProgress(), cooldownUntil: 205000 }))
       .cooldownUntil,

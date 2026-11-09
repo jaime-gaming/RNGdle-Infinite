@@ -1,13 +1,9 @@
-/* Independently styled from measured RNGdle Tools states. Infinite applies its
-   own reveal/cooldown schedule, permanent upgrades, and local-only progress. */
 :root {
   color: var(--text);
   background: var(--bg);
   --roll-font: "Space Mono", monospace;
   --ease-reveal: cubic-bezier(0.33, 1, 0.68, 1);
-  /* Only roll-specific tokens belong here. The shared light palette lives in
-     styles.css; redefining --text/--muted/--border here silently overrode it
-     because this file is imported later, which broke light mode. */
+
   --input-hint: #6b7280;
 }
 :root[data-theme="dark"] {
@@ -237,7 +233,7 @@ nav button.active {
     color 0.5s;
   transform-origin: center;
 }
-/* Moving digits are lighter than those that have landed, without extra marks. */
+
 .number-artifact.is-spinning .artifact-digit.is-scrambling {
   opacity: 0.48;
 }
@@ -257,19 +253,14 @@ nav button.active {
 .artifact-stage {
   position: relative;
 }
-/* While a draw skill's split screen is open, the number itself waits behind
-   it. It comes back once the screen is minimized to one number's stats. */
+
 .artifact-stage.is-behind {
   opacity: 0;
-  /* An invisible full-size aura still contributes scroll overflow. Clip it
-     while the overview owns the screen; minimizing restores all its art. */
+
   overflow: hidden;
   pointer-events: none;
 }
-/* The little mark a companion leaves while its signature skill fires: pinned
-   to a corner of the number box, tinted like the skill it carries, and gone
-   the moment the roll settles. It pins once and then holds still — the house
-   rule is no decorative loops on the roll screen. */
+
 .artifact-companion {
   position: absolute;
   top: -13px;
@@ -317,8 +308,7 @@ nav button.active {
     opacity: 1;
   }
 }
-/* The plate settles once as the reveal lands and then stays still. A headline
-   number that keeps scaling in and out forever is motion for its own sake. */
+
 .number-artifact.is-breathing {
   animation: artifact-settle calc(1.1s * var(--reveal-scale, 1)) ease-out both;
 }
@@ -335,9 +325,7 @@ nav button.active {
   width: 100%;
   margin-top: 24px;
 }
-/* While the draw screen is open it shows every number the roll drew, so the
-   summary underneath (the same cards again) stays out of sight until it is
-   minimized. */
+
 .result-summary.is-behind-draw {
   visibility: hidden;
 }
@@ -459,8 +447,7 @@ nav button.active {
   text-shadow: 0 1px 0 color-mix(in srgb, var(--surface) 65%, transparent);
   opacity: 0;
   pointer-events: none;
-  /* Each charge pops in, drifts right and fades on a stagger, so a settle
-     reads as one sum being added up rather than a block of text appearing. */
+
   animation: ep-float calc(1.5s * var(--reveal-scale, 1))
     cubic-bezier(0.2, 0.75, 0.25, 1)
     calc(var(--charge-index, 0) * 0.24s * var(--reveal-scale, 1)) both;
@@ -1191,11 +1178,7 @@ nav button.active {
   color: var(--secondary);
   margin: 8px 0 0;
 }
-/* The bar measures the cooldown window, not reveal + cooldown. Transform updates
-   are driven by the same monotonic clock as eligibility; no delayed CSS tween. */
-/* A track and its fill, both inside the button: at the very edge the fill's
-   corners met the button's radius and left a grey notch in the ink every time
-   a cooldown started. */
+
 .roll-experience .cooldown-fill {
   position: absolute;
   left: 0;
@@ -1209,7 +1192,6 @@ nav button.active {
   border-radius: 0 0 5px 5px;
 }
 
-/* The idle hint states what the worn companion adds, next to the timings. */
 .roll-hint-pet {
   display: inline-flex;
   align-items: center;
@@ -1220,9 +1202,6 @@ nav button.active {
   stroke-width: 1.8;
 }
 
-/* When a signature skill fires, the corner mark lands with a one-shot ripple
-   of its own tint: born with the pin, gone with the mark — no loop on the
-   roll screen. */
 .artifact-companion::after {
   content: "";
   position: absolute;
@@ -1244,8 +1223,6 @@ nav button.active {
   }
 }
 
-/* The phone's horizontal skill dock sits below the sticky app header, so the
-   active result starts after it instead of behind it. */
 @media (max-width: 760px) {
   .active-roll {
     padding-top: 68px;
@@ -1255,7 +1232,6 @@ nav button.active {
   }
 }
 
-/* Déjà vu line under the rank: the number was rolled before. */
 .deja-vu-note {
   margin: -6px 0 14px;
   font-size: 12px;

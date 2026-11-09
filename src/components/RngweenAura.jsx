@@ -1,5 +1,3 @@
-// Retired RNGween cosmetics remain wearable when already owned; only the
-// seasonal gameplay and its interface are removed.
 import React from "react";
 import {
   BatMark,
@@ -19,8 +17,6 @@ const ART = {
   "hollow-lantern": { Mark: PumpkinMark, side: PumpkinMark, label: "hollow" },
 };
 
-// Permanent collectible art, shared by previews and live numbers;
-// no calendar dependency, random sampling or change to the rarity/number itself.
 export default function RngweenAura({ aura }) {
   const art = ART[aura];
   if (!art) return null;

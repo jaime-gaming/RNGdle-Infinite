@@ -1,10 +1,6 @@
 import React from "react";
 import "../black-friday.css";
 
-// The day's own news bar: one line at the very top of the game that says SALE
-// from one end to the other, and nothing else. It is decoration with a single
-// honest sentence behind it for a screen reader, and it stops moving for a
-// player who asked for reduced motion.
 const WORDS = Array.from({ length: 18 }, (_, index) => index);
 
 export default function SaleTicker({ status }) {

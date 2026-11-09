@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { currentGoal, goalItem, validGoal } from "../src/gameplay-loop.js";
 import {
   applyProgress,
@@ -11,14 +12,9 @@ import { shelfOfProduct, shopProducts } from "../src/shop-data.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
+import { readSavedProgress } from "./helpers/save.js";
 
-// A companion can be the savings goal, like any shop item. Choosing it spends
-// nothing; it is met the moment it is found, by buying it or by a lucky drop;
-// and a goal on one survives a rebirth, because companions go back in the wild
-// at a rebirth just as the rest of the run does.
-
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+const saved = (p) => readSavedProgress(p);
 const kit = petById.get("kit");
 const pebble = petById.get("pebble");
 
@@ -34,7 +30,7 @@ const rebirthState = (extra = {}) => ({
   flywheelCharge: 4,
   ...extra,
 });
-// The cycle in play has earned enough EP for the first rung of the ladder.
+
 const earned = (ep, at = 150000) => [
   {
     id: `ep:${at}:${ep}`,
@@ -52,7 +48,7 @@ test("an unfound companion is a valid goal; a found one is not", () => {
   expect(validGoal("kit", [], ["kit"])).toBe(false);
   expect(validGoal("missing", [], [])).toBe(false);
   expect(validGoal(null, [], [])).toBe(false);
-  // Products keep their own rules, whatever the companions say.
+
   expect(validGoal("quickwind-3", [], [])).toBe(false);
 });
 
@@ -77,7 +73,7 @@ test("choosing a companion as the goal spends nothing and survives a reload", ()
   expect(p.balance).toBe(0);
   expect(parseProgress(JSON.stringify(p)).goalId).toBe("kit");
   expect(() => applyProgress(p, { type: "goal", id: "missing" })).toThrow();
-  // Clearing still hands the shop's own recommendation back.
+
   expect(applyProgress(p, { type: "goal", id: null }).goalId).toBeNull();
 });
 
@@ -94,7 +90,7 @@ test("a goal on an owned companion is dropped on load, and buying it meets the g
   expect(bought.pets).toEqual(["kit"]);
   expect(bought.balance).toBe(0);
   expect(bought.goalId).toBeNull();
-  // A different companion bought leaves the goal alone.
+
   const other = applyProgress(
     { ...emptyProgress(), balance: pebble.price, goalId: "kit" },
     { type: "buy-pet", id: "pebble" },
@@ -145,6 +141,7 @@ test("companions have no Set as goal button, but the shared goal banner can trac
     totalEarned: 10000000,
   });
   await page.goto("/shop/companions");
+  await waitForApp(page);
   await page.locator(`[data-cage="kit"]`).click();
   const current = page.locator(".pet-slide.is-current");
   await expect(current).toHaveAttribute("data-pet", "kit");
@@ -164,8 +161,9 @@ test("companions have no Set as goal button, but the shared goal banner can trac
   await expect(done.locator(".toast-mark svg")).toHaveClass(/lucide-check/);
   await expect(current.getByText("Your goal", { exact: true })).toBeVisible();
   expect((await saved(page)).goalId).toBe("kit");
-  // The roll screen's goal line lands on the companion's own cage.
+
   await page.goto("/");
+  await waitForApp(page);
   await page.getByRole("button", { name: kit.name, exact: true }).click();
   await expect(page).toHaveURL(/\/shop\/companions/);
   await expect(page.locator(".pet-slide.is-current")).toHaveAttribute(
@@ -182,6 +180,7 @@ test("pick mode makes a companion on the stage the goal when tapped", async ({
     totalEarned: 10000000,
   });
   await page.goto("/shop/companions");
+  await waitForApp(page);
   await page.locator(`[data-cage="kit"]`).click();
   await page
     .locator(".shop-goal")
@@ -193,7 +192,7 @@ test("pick mode makes a companion on the stage the goal when tapped", async ({
   await expect(page.locator(".shop-goal")).toContainText(
     `Your goal: ${kit.name}`,
   );
-  // Pick mode is done the moment the goal lands.
+
   await expect(page.locator(".shop-goal-picking")).toHaveCount(0);
   expect((await saved(page)).goalId).toBe("kit");
 });
@@ -207,6 +206,7 @@ test("buying the companion you were saving for clears the goal", async ({
     goalId: "kit",
   });
   await page.goto("/shop/companions");
+  await waitForApp(page);
   await page.locator(`[data-cage="kit"]`).click();
   await page
     .locator(".pet-slide.is-current")

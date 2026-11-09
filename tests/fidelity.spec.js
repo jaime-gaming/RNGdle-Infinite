@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { buildChipPlan, chipLoopFrames } from "../src/chip-motion.js";
 import {
   rankPopFrames,
@@ -153,6 +154,7 @@ test("numbers are read-only; there are no editors or presets", async ({
   await mockRandom(page, [1337]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".question-number")).toHaveJSProperty(
     "tagName",
     "DIV",
@@ -222,9 +224,7 @@ test("reveal and badge breakdown geometry match the reference without dashboard 
   expect(positions[".number-artifact"].height).toBe(106);
   expect(positions[".result-rank"].top).toBe(226);
   expect(positions[".roll-ep"]).toEqual({ top: 266, width: 166, height: 34 });
-  // A score-only roll draws no wallet-credit line, so the only extra below
-  // the EP pill is the goal recap living inside the session total; everything
-  // under it sits at the bare reference positions again.
+
   expect(positions[".share-row"].top).toBe(399);
   expect(positions[".generate"]).toEqual({ top: 457, width: 320, height: 72 });
   expect(positions[".badge-breakdown"].top).toBe(577);

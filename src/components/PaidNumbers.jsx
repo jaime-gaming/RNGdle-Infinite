@@ -1,10 +1,6 @@
 import React from "react";
 import "../paid-numbers.css";
 
-// Every number a draw skill kept is paid. Stacked skills pay more than one, so
-// each paid number gets its own card at full size, side by side with the rest.
-// The cards carry each number's own EP and nothing adds them up on screen: the
-// reveal never shows a total while the numbers are still being revealed.
 export default function PaidNumbers({ items, className = "" }) {
   if (!items.length) return null;
   return (

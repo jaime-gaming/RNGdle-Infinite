@@ -1,12 +1,5 @@
 import { mockOperationalStatus } from "../tests/helpers/status.js";
-// Regenerate the images used by README.md. They are real screenshots of the
-// running game (no mockups), taken from a seeded local save so the collection,
-// the shop and the profile have something to show.
-//
-//   npm run dev:test -- --port 5174 # local-only mode on 127.0.0.1:5174
-//   CHROMIUM_PATH=/path/to/chrome node tools/screenshots.mjs
-//
-// Any Chromium/Chrome binary works; the screenshots land in media/.
+
 import fs from "node:fs/promises";
 import { chromium } from "@playwright/test";
 import { emptyProgress, PROGRESS_KEY } from "../src/progress.js";
@@ -146,8 +139,7 @@ async function seed(page, logo) {
       localStorage.setItem(key, value);
       localStorage.setItem(historyKey, historyValue);
       localStorage.setItem(vaultKey, vaultValue);
-      // Auto-Roll is deliberately left off and its switch is hidden, so the
-      // pictures show the game rather than a settings card.
+
       localStorage.removeItem(
         `${autoRollPrefix}:${JSON.parse(value).profile.id}`,
       );
@@ -169,8 +161,6 @@ async function seed(page, logo) {
   );
 }
 
-// The account logo for the pictures: two rings and a spark, drawn in the page
-// and stored exactly the way an uploaded one would be.
 function drawLogo(page) {
   return page.evaluate(() => {
     const canvas = document.createElement("canvas");
@@ -224,8 +214,6 @@ try {
 
   await mockOperationalStatus(page);
 
-  // 1. The roll screen, as it loads, with a charged circle explaining itself
-  //    on hover (the rack has no text of its own).
   await seed(page, await drawLogo(page));
   await page.goto(`${BASE}/`);
   await page.waitForSelector(".generate");
@@ -234,8 +222,6 @@ try {
   await page.waitForTimeout(700);
   await shot(page, "roll");
 
-  // 2. A finished roll: reduced motion settles it instantly, and the worker is
-  //    pinned to one number so the picture is reproducible.
   await page.route("**/src/roll.worker.js*", async (route) => {
     const response = await route.fetch();
     await route.fulfill({
@@ -253,9 +239,6 @@ try {
   await hideAutoRoll(page);
   await shot(page, "result");
 
-  // 3. The skill rack, close up, with a tooltip open on the armed skill. The
-  //    clip is the rack plus the open tooltip, so the picture shows the corner
-  //    explaining itself rather than a cut-off column of circles.
   await hideAutoRoll(page);
   const rack = page.locator(".skill-bar");
   await rack.waitFor({ state: "visible" });
@@ -276,8 +259,6 @@ try {
     clip: { x: left, y: top, width: right - left, height: bottom - top },
   });
 
-  // 4. The shop front door: the six shelf buttons and the featured picks, then
-  //    one shelf page to show that a shelf is its own address.
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`${BASE}/shop`);
   await page.waitForSelector(".shop-hub");
@@ -289,16 +270,13 @@ try {
   await page.waitForTimeout(700);
   await shot(page, "shop-shelf");
 
-  // 5. The rebirth ladder, on its own page.
   await page.setViewportSize({ width: 1280, height: 1750 });
   await page.goto(`${BASE}/rebirth`);
-  // The ladder and its rungs live on the rebirth page itself.
+
   await page.waitForSelector(".rebirth-page");
   await page.waitForTimeout(700);
   await shot(page, "rebirth");
 
-  // 6. The profile page, with the derived history and the export button. A
-  //    taller viewport keeps the whole page in one frame.
   await page.setViewportSize({ width: 1280, height: 1500 });
   await page.goto(`${BASE}/profile`);
   await page.waitForSelector(".profile-history");
@@ -306,12 +284,10 @@ try {
   await shot(page, "profile", { fullPage: false });
   await page.setViewportSize({ width: 1280, height: 900 });
 
-  // 7. The changelog and its November 3 release date.
   await page.goto(`${BASE}/changelog`);
   await page.waitForTimeout(700);
   await shot(page, "changelog");
 
-  // 8. Save recovery is a separate, bookmarkable page in Settings.
   await page.setViewportSize({ width: 1280, height: 1050 });
   await page.goto(`${BASE}/settings/save-recovery`);
   await page.waitForSelector('[data-testid="settings-recovery"]');
@@ -320,7 +296,6 @@ try {
   await page.waitForTimeout(600);
   await shot(page, "save-recovery");
 
-  // Both settings sections and the light palette are documented separately.
   await page.goto(`${BASE}/settings`);
   await page.waitForSelector(".settings-group");
   await shot(page, "settings");

@@ -1,11 +1,4 @@
-// The shop's own event notice: the button at the top of the shop, the
-// explanation it opens, and the stamp card the sale day runs on.
-//
-// RETIREMENT: this file owns event-only UI; keep the permanent Blackout renderer,
-// progress and history contracts when removing it. See the retirement checklist.
-// Everything here is presentation. The window, the discounts, the stamps and the
-// limited skin are decided in black-friday.js and written by the reducer, so no
-// component in this file can hand out a reward or change a price on its own.
+// RETIREMENT: see archive/qa/black-friday-retirement.md before removing event UI.
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Clock3,
@@ -40,20 +33,16 @@ import { formatEP } from "../roll-data.js";
 import { waitText } from "../tasks.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import { useSaleStatus } from "../use-black-friday.js";
-import { useMotionPreference } from "../use-settings.jsx";
 import NumberBox from "./NumberBox";
 import { pathForSubpage } from "../router.js";
 import "../black-friday.css";
 
-// One line for the countdown, whichever side of the day it is read from.
 function whenLine(status) {
   if (status.active)
     return `Live now · ends in ${waitText(status.endsInMs)} (UTC)`;
   return `${blackFridayDayLabel()} · starts in ${waitText(status.startsInMs)} (UTC)`;
 }
 
-// The stamp card: how full it is, and what it pays. It reads the same record the
-// reducer writes, so it can never promise a stamp the save does not hold.
 export function SaleStampCard({ record, previewTier = "rare" }) {
   const stamps = record?.stamps ?? 0;
   const earned = record?.skinEarned === true;
@@ -102,8 +91,6 @@ export function SaleStampCard({ record, previewTier = "rare" }) {
   );
 }
 
-// Posters belong to the document, so they stay where they were as the page
-// scrolls. Each one is a real link and also uses the app's normal navigation.
 const SALE_ADS = [
   {
     title: "UP TO 50% OFF",
@@ -219,37 +206,39 @@ const SALE_ADS = [
   },
 ];
 
-export function SaleSideAds({ status, onOpenShelf }) {
+const AD_PAGE_ORDER = [
+  "roll",
+  "tasks",
+  "shop",
+  "badges",
+  "history",
+  "settings",
+  "changelog",
+  "about",
+];
+
+function rotationForPage(page) {
+  const index = AD_PAGE_ORDER.indexOf(page);
+  return index < 0 ? 0 : index;
+}
+
+export function SaleSideAds({ status, page, onOpenShelf }) {
   const leftRail = useRef(null);
   const rightRail = useRef(null);
-  const reducedMotion = useMotionPreference();
-  const [rotation, setRotation] = useState(0);
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
-  // Do not replace links while someone is reading, hovering or using the keyboard.
-  useEffect(() => {
-    if (!status?.active || reducedMotion || hovered || focused)
-      return undefined;
-    const timer = setInterval(() => {
-      if (!document.hidden) setRotation((value) => (value + 1) % 8);
-    }, 15000);
-    return () => clearInterval(timer);
-  }, [status?.active, reducedMotion, hovered, focused]);
+  const rotation = rotationForPage(page);
   useLayoutEffect(() => {
     if (!status?.active || !leftRail.current || !rightRail.current) return;
     const rails = [leftRail.current, rightRail.current];
     const main = leftRail.current.parentElement;
     let disposed = false;
-    // Measure the natural poster sizes, then fit whole posters only. Hidden
-    // links leave the tab order; the rails cannot make the page taller.
+
     function fit() {
       for (const rail of rails) {
         const posters = [...rail.querySelectorAll(".sale-ad")];
         posters.forEach((poster) => {
           poster.hidden = false;
         });
-        // Reserve the rail's inner padding, which keeps rotated edges and
-        // shadows inside the main area rather than clipped at the footer.
+
         const available = Math.max(0, rail.clientHeight - 20);
         let used = 0;
         let count = 0;
@@ -291,13 +280,6 @@ export function SaleSideAds({ status, onOpenShelf }) {
     <aside
       className={`sale-ads sale-ads-${side}`}
       ref={side === "left" ? leftRail : rightRail}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setFocused(true)}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget))
-          setFocused(false);
-      }}
       aria-label={`${side} Black Friday offers`}
     >
       {ads.map(({ title, note, icon: Icon, shelf, art }) => (
@@ -358,8 +340,6 @@ export function SaleSideAds({ status, onOpenShelf }) {
   );
 }
 
-// A different outline for each milestone. The last is the rounded silhouette
-// of Blackout's number box, rather than another generic stamp.
 function stampShape(index) {
   const outlines = [
     "circle(48% at 50% 50%)",
@@ -392,8 +372,6 @@ function stampShape(index) {
   return `polygon(${vertices.join(",")})`;
 }
 
-// The stamp card as an object: 25 holes, each a stamp of its own shape and its
-// own milestone, filled with ink once the spend has paid for it.
 function stampLabel(index) {
   const hundreds = index + 1;
   if (hundreds < 10) return `${hundreds * 100}K`;
@@ -404,8 +382,7 @@ function stampLabel(index) {
 export function SaleStampBook({ record, profile }) {
   const stamps = record?.stamps ?? 0;
   const earned = record?.skinEarned === true;
-  // A local presentation marker, scoped to the profile, never changes rewards.
-  // Guest progress is session-only, so its marker is session-only too.
+
   const storageKey = `rng-sale-stamps-seen-2026:${profile?.id ?? "guest"}`;
   const bookRef = useRef(null);
   const [visible, setVisible] = useState(false);
@@ -446,9 +423,7 @@ export function SaleStampBook({ record, profile }) {
         storageKey,
         String(Math.min(BLACK_FRIDAY_STAMPS, stamps)),
       );
-    } catch {
-      /* The book still works when browser storage is unavailable. */
-    }
+    } catch {}
   }, [stamps, storageKey, profile?.id, visible]);
   return (
     <div
@@ -505,7 +480,6 @@ export function SaleStampBook({ record, profile }) {
   );
 }
 
-// The button at the top of the shop and the explanation behind it.
 export default function SaleEventNotice({
   progress,
   previewTier = "rare",

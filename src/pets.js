@@ -1,21 +1,3 @@
-// Companions are collectable friends that carry a wallet multiplier and one
-// exclusive skill.
-//
-// Deliberate boundary: a companion multiplies only the EP that lands in your
-// wallet. It never touches the uniform 0–1,000,000 draw, the badge rules, the
-// scored EP of a roll, its tier or its rank. Two players rolling the same
-// number always score identically; only their spending power differs. That
-// keeps the leaderboard-facing numbers honest while letting prices stay where
-// they are.
-//
-// The multipliers are deliberately modest — their signature skill is the real
-// prize — so the shop still costs what the balance pass decided it should.
-//
-// Companion artwork is drawn for the game rather than borrowed from an emoji
-// font: every id here has a matching glyph in `components/game-icons.jsx`, and a
-// test fails if the two ever drift apart. `accent` is that companion's own
-// colour, worn by its avatar token; the grade of the bonus still decides the
-// ink the glyph is drawn in.
 export const PETS = [
   {
     id: "pebble",
@@ -152,18 +134,12 @@ export const PETS = [
 export const petById = new Map(PETS.map((pet) => [pet.id, pet]));
 export const PET_IDS = PETS.map((pet) => pet.id);
 
-// A rare chance for a pet to show up on its own, so they are not purely a
-// shopping list. Rolled independently of the number, after it is drawn, so it
-// can never bias the draw itself. The Trail and Drift skills multiply this
-// window for the single roll they fire on, and nothing else touches it.
-export const PET_DROP_CHANCE = 0.004; // 1 in 250 rolls.
+export const PET_DROP_CHANCE = 0.004;
 
 export function petMultiplier(activePet) {
   return petById.get(activePet)?.multiplier ?? 1;
 }
 
-// Wallet credit for a scored roll. The scored EP is passed through untouched;
-// only the banked amount grows, and always by whole EP.
 export function walletEP(scoredEP, activePet) {
   const multiplier = petMultiplier(activePet);
   return multiplier === 1 ? scoredEP : Math.round(scoredEP * multiplier);
@@ -173,15 +149,13 @@ export function petBonusEP(scoredEP, activePet) {
   return walletEP(scoredEP, activePet) - scoredEP;
 }
 
-// Which pet a roll awards, if any. `sample` is a uniform 0–1 value taken from
-// a dedicated random source so pet luck never consumes or shifts roll luck.
 export function petDrop(sample, owned = [], luck = 1) {
   if (!(sample >= 0 && sample < 1)) return null;
   const window = Math.min(1, PET_DROP_CHANCE * luck);
   if (sample >= window) return null;
   const missing = PETS.filter((pet) => !owned.includes(pet.id));
   if (!missing.length) return null;
-  // Rarer pets are rarer drops too; position within the drop window decides.
+
   const total = missing.reduce((sum, pet) => sum + pet.dropWeight, 0);
   let cursor = (sample / window) * total;
   for (const pet of missing) {

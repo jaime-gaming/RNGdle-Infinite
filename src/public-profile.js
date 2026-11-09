@@ -14,9 +14,6 @@ export function normalizedProfileName(value) {
   return validUsername(canonical) ? canonical : "";
 }
 
-// The document ID is a case-insensitive, normalized username. A public link
-// can therefore resolve a profile with a direct Firestore get, without a
-// compressed card in the URL or a list/query over every player's profile.
 export function publicProfileId(username) {
   return normalizedProfileName(username);
 }
@@ -40,9 +37,6 @@ export function publicProfileDocument(
   if (!userId || !usernameKey)
     throw new Error("A signed-in account and valid profile name are required.");
 
-  // Cloud names have one canonical spelling. Requiring the stored/public name
-  // to equal the lowercase reservation key lets Firestore Rules enforce the
-  // same case-insensitive uniqueness policy without trusting client transforms.
   const publicProgress = {
     ...progress,
     profile: {
@@ -90,8 +84,6 @@ export async function getPublicProfile(username) {
       ? sanitizePublicProfileDocument(snapshot.data(), username)
       : null;
   } catch (error) {
-    // A legacy or newly-private summary is intentionally indistinguishable
-    // from a missing profile to anyone who is not its owner.
     if (
       error?.code === "permission-denied" ||
       error?.code === "firestore/permission-denied"

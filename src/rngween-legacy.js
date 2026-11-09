@@ -1,5 +1,3 @@
-// Backward compatibility for already-committed Reaper rolls from the retired
-// 2026 finale. New rolls are never tagged or modified by this schedule.
 const SHOW_START = Date.UTC(2026, 9, 31, 20);
 const ACT_DURATION = 5 * 60 * 1000;
 const ACTS = [

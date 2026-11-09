@@ -1,4 +1,5 @@
 import { expect, test } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   LEGACY_DEVICE_LINK_STORAGE_KEYS,
   retireLegacyDeviceLink,

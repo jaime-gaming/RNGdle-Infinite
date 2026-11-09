@@ -21,16 +21,10 @@ import {
 } from "./game-icons.jsx";
 import "../skills.css";
 
-// Every circle on the rack is the same size: a plain skill, an always-on bonus
-// and a family alike. CSS packs them into a horizontal dock on a phone.
 const CIRCLE_SIZE = 42;
-// A family draws its slices on that one circle with a heavier stroke than a
-// plain ring, so the group reads as a group without growing.
+
 const FAMILY_STROKE = 5;
 
-// A ring that fills with charge. No running commentary on the ring itself: the
-// contribution chip appears on hover, and the tooltip carries the whole
-// explanation for anyone who wants the sentence.
 function ChargeRing({ fraction, tint, size = CIRCLE_SIZE, children }) {
   const radius = (size - 5) / 2,
     circumference = 2 * Math.PI * radius;
@@ -73,8 +67,6 @@ const AUTO_ROLL_COPY = {
   paused: "Paused while you browse. Your current roll will finish.",
 };
 
-// One charged skill circle: ring, hover chip, tooltip, screen-reader progress.
-// Rendered standalone for shop skills, or as a member of a group stack.
 function SkillCircle({ skill, active }) {
   const petName = skill.definition.petId
     ? petById.get(skill.definition.petId)?.name
@@ -133,7 +125,6 @@ function SkillCircle({ skill, active }) {
   );
 }
 
-// One always-on bonus circle: pet, rebirth, prestige, Rollback or surplus.
 function PassiveCircle({ passive }) {
   return (
     <div
@@ -171,8 +162,6 @@ function PassiveCircle({ passive }) {
 const memberId = (member) =>
   member.kind === "skill" ? member.skill.id : member.passive.id;
 
-// A member's charge as a 0–1 fraction. Passives are always-on: their circle
-// is simply full.
 const memberFraction = (member) =>
   member.kind === "skill" ? member.skill.charge / member.skill.charges : 1;
 
@@ -184,14 +173,7 @@ function MemberCircle({ member, active }) {
   );
 }
 
-// One circumference for a whole family: the group's own icon in the middle, and
-// every member stacked on that same circle as its own slice, in its own colour,
-// filled as far as its charge goes. Nothing is drawn on a second ring, so a
-// family of five still reads as one circle, not a target.
-//
-// The fan keeps its job: hover, focus or tap opens the members as ordinary
-// circles with their own chips and tooltips.
-const SLICE_GAP = 8; // degrees of empty circle between two members
+const SLICE_GAP = 8;
 
 function SkillStack({ stackId, label, icon, members, firingSet }) {
   const [open, setOpen] = useState(false);
@@ -206,9 +188,7 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
         : `${member.passive.name} ${member.passive.chip}, always active`,
     )
     .join(". ");
-  // The family is exactly the size of one plain circle, however many members
-  // it holds: the slices share that circle, and the stroke is the same all the
-  // way round.
+
   const size = CIRCLE_SIZE;
   const stroke = FAMILY_STROKE;
   const radius = (size - stroke) / 2;
@@ -303,8 +283,6 @@ function SkillStack({ stackId, label, icon, members, firingSet }) {
   );
 }
 
-// A family of circles: stacked behind one bubble when there are two or more,
-// or a plain circle when a single member stands alone.
 function GroupCircles({ stackId, label, tint, icon, members, firingSet }) {
   if (!members.length) return null;
   if (members.length === 1)
@@ -325,15 +303,6 @@ function GroupCircles({ stackId, label, tint, icon, members, firingSet }) {
   );
 }
 
-// The rack that lives in the Roll page: a desktop corner rail and a phone dock.
-//
-// Three kinds of circle share one rack: charged skills (fill over online
-// rolls, fire on the next one), Flywheel, and the Auto-Roll switch, which is
-// simply an ability you click on or off. Related circles ride together — the
-// pet bonus with its signature skill, the rebirth bonuses with their ladder
-// skills — while shop skills stand alone. The rack also carries the single
-// indicator of what it adds up to — the totals the next roll will get, with
-// every contribution named.
 export default function SkillBar({
   progress,
   firing = [],
@@ -474,8 +443,7 @@ export default function SkillBar({
         </span>
         {collapsed ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
       </button>
-      {/* Remount only presentation when folded, so an old fan/tooltip cannot
-          reopen itself later. Charging and automation live outside this rack. */}
+
       <div className="skill-bar-items" id={itemsId} key={String(collapsed)}>
         {looseSkills.map((skill) => (
           <SkillCircle
@@ -558,8 +526,7 @@ export default function SkillBar({
             />
           </div>
         )}
-        {/* Auto-Roll is an ability, not a settings toggle: one click arms it, the
-          next click stands it down. It never skips a reveal or a cooldown. */}
+
         {hasAutoRoll && (
           <button
             type="button"
@@ -593,7 +560,7 @@ export default function SkillBar({
             </span>
           </button>
         )}
-        {/* One place states the total: every armed contribution, named. */}
+
         <button
           type="button"
           ref={summary}

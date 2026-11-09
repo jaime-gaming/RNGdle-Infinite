@@ -4,9 +4,6 @@ import { currentGoal } from "../gameplay-loop.js";
 import { useFormatEP } from "../use-settings.jsx";
 import "../goal-recap.css";
 
-// A minimal savings marker after a settled reveal: a progress ring holding the
-// goal icon, plus a link to the shop. It is a view over the wallet and the
-// catalogue price — never a second reward, a discount, or a change to any odds.
 export default memo(function GoalRecap({ progress, runId, navigate }) {
   const goal = currentGoal(progress);
   if (!goal) return null;

@@ -11,4 +11,10 @@ test-results/
 
 .cache/
 .wrangler/
+media/*.png
+!media/roll.png
+!media/result.png
+!media/shop.png
+!media/rebirth.png
+!media/save-recovery.png
 .dev.vars*

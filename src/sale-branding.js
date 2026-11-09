@@ -1,7 +1,3 @@
-// The app's own icon changes for the sale day, and changes back the moment the
-// day is over. Only the links already in the document head move: no file is
-// rewritten, nothing is cached, and a browser that ignores a manifest swap
-// still picks up the favicon and the touch icon.
 import { basePath } from "./router.js";
 
 const NORMAL = {
@@ -17,7 +13,6 @@ const SALE = {
   themeColor: "#050505",
 };
 
-// Every head tag the sale is allowed to wear, and the attribute it writes.
 export const SALE_BRANDING_TARGETS = [
   ['link[rel="icon"]', "href", "icon"],
   ['link[rel="apple-touch-icon"]', "href", "apple"],
@@ -30,7 +25,6 @@ function url(file) {
   return `${base}/${file}`.replace(/\/{2,}/g, "/");
 }
 
-// True while the head is wearing the sale icon.
 export function applySaleBranding(active, doc = globalThis.document) {
   if (!doc?.querySelector) return false;
   const skin = active ? SALE : NORMAL;

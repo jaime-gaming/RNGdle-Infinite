@@ -1,11 +1,3 @@
-// One app session on one simulated device, against a shared fake Firestore.
-//
-//   node --import ./tools/cloud-sync-sim/register.mjs \
-//        tools/cloud-sync-sim/session.mjs <device> <step>
-//
-// Each step mirrors what src/use-progress.js and src/components/CloudAccount.jsx
-// do at that moment of a real session, so the Cloud Accounts engine is exercised
-// end to end without Firebase. Exits non-zero when an expectation fails.
 import { readFileSync, writeFileSync } from "node:fs";
 import { emptyProgress, PROGRESS_KEY } from "../../src/progress.js";
 import {
@@ -22,15 +14,12 @@ const UID = process.env.SIM_UID || "uid-player-one";
 const stateDir = process.env.SIM_STATE_DIR || "/tmp/rngdle-cloud-sim";
 const storageFile = `${stateDir}/device-${deviceName}.json`;
 
-// --- localStorage stand-in: one file per device -----------------------------
 let entries = new Map();
 try {
   entries = new Map(
     Object.entries(JSON.parse(readFileSync(storageFile, "utf8"))),
   );
-} catch {
-  // A new device starts with empty storage.
-}
+} catch {}
 const persist = () =>
   writeFileSync(storageFile, JSON.stringify(Object.fromEntries(entries)));
 const storage = {
@@ -46,7 +35,6 @@ const storage = {
 };
 globalThis.localStorage = storage;
 
-// --- helpers ---------------------------------------------------------------
 const report = (label, value) => console.log(`   ${label}: ${value}`);
 function fail(message) {
   console.error(`   FAIL ${message}`);
@@ -85,7 +73,6 @@ function progressWith({ id, username, earned, balance, rolls }) {
   return progress;
 }
 
-// The exact flow of restoreCloudSave() in src/use-progress.js.
 async function appSession(fallbackProgress) {
   const localOwner = readCloudOwner(storage);
   const localProgress = readLocal().profile
@@ -111,10 +98,8 @@ async function appSession(fallbackProgress) {
   return { result, choice: false };
 }
 
-// ---------------------------------------------------------------------- steps
 const steps = {
   async "first-sync"() {
-    // A signed-in account whose local save has never been uploaded.
     const progress = progressWith({
       id: "profile-a1",
       username: "luckyotter",
@@ -130,7 +115,6 @@ const steps = {
   },
 
   async adopt() {
-    // A fresh second device: nothing local, the account already has a save.
     const { result, choice } = await appSession(emptyProgress());
     if (choice) fail("a fresh device asked the player to choose");
     report("winner", result.winner);
@@ -141,7 +125,6 @@ const steps = {
   },
 
   async "play-more"() {
-    // Keep playing, then let the debounced cloud save run.
     const local = readLocal();
     const next = {
       ...local,
@@ -158,7 +141,6 @@ const steps = {
   },
 
   async resync() {
-    // The other device syncs again holding its older copy.
     const local = readLocal();
     report("earned before", local.totalEarned);
     const { result, choice } = await appSession(local);
@@ -221,7 +203,6 @@ const steps = {
   },
 
   async "conflict-profile"() {
-    // This account signed in here before and kept a different profile's copy.
     const other = progressWith({
       id: "profile-other",
       username: "guesthero",

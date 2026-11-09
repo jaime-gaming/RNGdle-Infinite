@@ -1,5 +1,3 @@
-// Minimal compatibility for retired RNGween saves. Event currency, purchases,
-// tasks and World state are discarded; permanent aura receipts remain.
 import {
   RNGWEEN_AURAS,
   RNGWEEN_FINALE_SKIN,
@@ -91,9 +89,6 @@ export function parseRngweenLimited(value, receipts = {}) {
   };
 }
 
-// A retired look bought back from the sale counter writes the same permanent
-// receipt an event reward wrote, so a later sync still recognises it as this
-// account's own cosmetic instead of an unexplained ownership entry.
 export function grantRngweenCosmetic(limited, id) {
   const base = limited ?? emptyRngweenLimited();
   if (id === RNGWEEN_WORLD_SKIN.id)

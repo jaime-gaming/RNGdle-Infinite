@@ -1,5 +1,3 @@
-// The Auto-Roll switch position only. It is never a roll, a reward, or a deadline:
-// a restored switch still waits for the same committed cooldown as a manual roll.
 export const AUTO_ROLL_KEY = "rng-infinite-auto-roll-v1";
 const scoped = (profileId) => `${AUTO_ROLL_KEY}:${profileId ?? "guest"}`;
 

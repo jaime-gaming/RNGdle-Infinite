@@ -8,7 +8,6 @@ export const testProfile = {
 };
 
 export async function seedProgress(page, values = {}) {
-  // A seeded named profile models someone who chose to continue locally.
   await page.addInitScript(
     ({ key, data, localPlayKey }) => {
       if (localStorage.getItem(key) === null)

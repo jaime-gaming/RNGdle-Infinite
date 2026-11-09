@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { gameNow } from "./game-clock.js";
 
-// Refresh task affordances as ordinary game time passes. Daily and weekly
-// tasks share the same UTC boundaries for every player.
 export function useGameClock() {
   const [now, setNow] = useState(() => gameNow());
 

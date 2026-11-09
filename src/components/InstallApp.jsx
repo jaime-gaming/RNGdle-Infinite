@@ -5,10 +5,6 @@ import "../install-app.css";
 const DISMISS_KEY = "rng-infinite-install-dismissed-v1";
 const OPEN_EVENT = "rngdle-open-install";
 
-// Phones get a small card below the roll content, above the tab bar: one tap installs the game as a
-// home-screen app (the browser's own prompt where it has one), or explains
-// the two-tap manual route where it doesn't. Desktop never sees it, and a
-// dismissed card stays dismissed until Settings reopens it.
 export default function InstallApp({ notify }) {
   const [deferred, setDeferred] = useState(null);
   const [help, setHelp] = useState(false);
@@ -95,8 +91,6 @@ export default function InstallApp({ notify }) {
   );
 }
 
-// Settings reopens the banner through this, so the card stays discoverable
-// after being dismissed.
 export function openInstallBanner() {
   window.dispatchEvent(new Event(OPEN_EVENT));
 }

@@ -8,8 +8,6 @@ async function sha256(buffer) {
   ).join("");
 }
 
-// Check the canonical bytes, not a gzip container's timestamp, OS flag, or
-// compression level. Delivery may change those without changing any score.
 export async function decodeIndex(bytes, file) {
   let buffer = bytes;
   const magic = new Uint8Array(bytes, 0, Math.min(2, bytes.byteLength));
@@ -22,7 +20,7 @@ export async function decodeIndex(bytes, file) {
       .stream()
       .pipeThrough(new DecompressionStream("gzip"))
       .getReader();
-    // Bound decompression before allocating/copying arbitrarily large output.
+
     const output = new Uint8Array(file.inflatedBytes);
     let offset = 0;
     try {
@@ -51,8 +49,6 @@ export async function decodeIndex(bytes, file) {
 }
 
 export async function readIndex(file, baseURL) {
-  // The body is ordinary ASCII JSON, so HTTP gzip handling cannot accidentally
-  // inflate or reinterpret the *inner* scoring file. The URL pins its version.
   const response = await fetch(
     `${baseURL}${file.transportPath.replace(/^\//, "")}`,
     { cache: "no-cache" },

@@ -1,8 +1,3 @@
-// Release notes remain part of the archive, including retired events.
-// Release notes, newest first. `version` doubles as the "seen" marker: the
-// header badge appears while the newest entry has not been acknowledged.
-// `date` is the day the version reached the main branch (UTC), shown on the
-// Changelog page.
 export const CHANGELOG = [
   {
     version: "v0.5.2",
@@ -89,7 +84,7 @@ export const CHANGELOG = [
       "guest play is not saved, and the interface now says so plainly.",
       "new badges: ↕️ Pendulum (anomaly) and ⏳ Last Second (mythic).",
     ],
-    // Named badges become links in the line above (see Changelog.jsx).
+
     badges: ["INFINITE_PENDULUM", "INFINITE_LAST_SECOND"],
   },
   {

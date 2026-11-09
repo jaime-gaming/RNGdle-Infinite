@@ -4,9 +4,6 @@ import ProfileRecord, { when } from "./ProfileRecord.jsx";
 import { AvatarMark } from "./LocalProfile.jsx";
 import "../profile.css";
 
-// Somebody else's profile, opened read-only. Legacy card URLs carry a fixed
-// snapshot; a direct cloud URL loads the owner's latest published summary.
-// Neither view reads, changes or compares the visitor's game save.
 export default function SharedProfile({
   card,
   live = false,

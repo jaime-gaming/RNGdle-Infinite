@@ -18,22 +18,9 @@ const EMPTY = {
   lastSentAt: 0,
 };
 
-/**
- * Two-factor sign-in for the Cloud Account.
- *
- * The second factor is an email link (Firebase Auth email link sign-in): the
- * account stores whether two-factor is on and which devices already proved
- * they own the mailbox. A new device signs in with its password, is signed
- * straight back out, and only the emailed link brings the session back — at
- * which point the device is remembered.
- *
- * The hook depends only on stable callbacks from useFirebaseAuth, never on the
- * auth object itself, which is a fresh literal on every render.
- */
 export function useTwoFactor(auth) {
   const [state, setState] = useState(EMPTY);
-  // One automatic email per account/device pair; further sends are manual so a
-  // refresh loop cannot spam the inbox.
+
   const autoSentFor = useRef("");
   const activeUserId = auth?.user?.id ?? null;
   const authEmail = auth?.user?.email ?? "";
@@ -61,7 +48,7 @@ export function useTwoFactor(auth) {
         }));
         return sent;
       }
-      // The password session must not survive: the link is the second factor.
+
       if (typeof signOutAccount === "function") await signOutAccount();
       autoSentFor.current = `${activeUserId ?? ""}:${deviceId()}`;
       setState((current) => ({
@@ -78,8 +65,6 @@ export function useTwoFactor(auth) {
     [startEmailLinkSignIn, signOutAccount, activeUserId],
   );
 
-  // Load the account's security settings whenever the signed-in account
-  // changes, and request the link when this device is not trusted yet.
   useEffect(() => {
     if (!activeUserId) {
       setState((current) =>
@@ -130,7 +115,7 @@ export function useTwoFactor(auth) {
       })
       .catch(() => {
         if (!active) return;
-        // A failed read must not lock the player out of their own save.
+
         setState((current) =>
           current.loading ? { ...current, loading: false } : current,
         );
@@ -140,7 +125,6 @@ export function useTwoFactor(auth) {
     };
   }, [activeUserId, authEmail, sendLinkAndSignOut]);
 
-  // The emailed link was opened on this device: remember it.
   useEffect(() => {
     if (!emailLinkSignIn?.userId) return undefined;
     let active = true;
@@ -172,7 +156,7 @@ export function useTwoFactor(auth) {
       if (!activeUserId)
         return { ok: false, message: "Sign in to change security settings." };
       setState((current) => ({ ...current, busy: true }));
-      // Turning it on must not lock out the device doing the switching.
+
       const trustedFirst =
         next && !state.trusted
           ? await trustDevice(activeUserId)

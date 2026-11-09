@@ -30,6 +30,10 @@ import { POPULATION, chanceLabels } from "./probability";
 import Rebirth from "./components/Rebirth";
 import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
+import { prepareRolls } from "./roll-client.js";
+import LoadingScreen from "./components/LoadingScreen.jsx";
+import MirrorNotice from "./components/MirrorNotice.jsx";
+import { shouldShowLoadingScreen } from "./loading-gate.js";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
 import CloudAccount from "./components/CloudAccount.jsx";
@@ -45,6 +49,7 @@ import {
   LOCAL_PLAY_KEY,
 } from "./local-play.js";
 import { cloudAccountRequired } from "./firebase.js";
+import { isCloudQuotaNotice } from "./cloud-quota.js";
 import { normalizedProfileName } from "./public-profile.js";
 import { useOffline } from "./use-offline";
 import { useOnlineStatus } from "./use-online-status.js";
@@ -97,6 +102,7 @@ import {
   startAppUpdate,
   stopAppUpdate,
   subscribeAppUpdate,
+  isLegacyMirrorBuild,
 } from "./app-update.js";
 import { restoreVaultIfNeeded } from "./save-vault.js";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
@@ -128,24 +134,17 @@ import {
   validPage,
 } from "./router.js";
 import { SHOP_SECTIONS, auraFamilyById, shelfOfProduct } from "./shop-data.js";
-// Last on purpose: the phone sheet must come after every component sheet.
+
 import "./mobile.css";
 
-// A shelf is a real sub-page: /shop, /shop/skills, /shop/auras and so on.
-// Anything else under /shop is not a shelf and falls back to the hub.
-// Only the auras shelf owns families, and only a family that exists counts.
 function shopFamilyFromLocation(target) {
-  // The router only reads a family off the auras shelf.
   const family = familyFromLocation(target);
   return auraFamilyById(family) ? family : "";
 }
 
 function shopSectionFromLocation(target) {
   if (pageFromLocation(target) !== "shop") return "";
-  // A legacy "#auras" bookmark names the shelf itself; a real sub-page carries
-  // it in the path. Anything else lands on the hub.
-  // The sale's own shelf is not one of the permanent SHOP_SECTIONS: it only
-  // exists while the day is on the calendar, but its address is real.
+
   const named = (name) =>
     SHOP_SECTIONS.some((section) => section.id === name) ||
     name === "black-friday"
@@ -155,7 +154,6 @@ function shopSectionFromLocation(target) {
   return named(hash) || named(subpageFromLocation(target));
 }
 
-// Used by the notices: a badge's rarity as the game writes it.
 const NO_BADGES = [];
 const RARITY_NAME = {
   epic: "Epic",
@@ -182,8 +180,7 @@ function App() {
   const [settingsSubpage, setSettingsSubpage] = useState(() =>
     settingsSubpageFromLocation(location),
   );
-  // The one-day sale drives the ticker, the two borrowed themes and the
-  // branding swap; every consumer reads the same status.
+
   const sale = useSaleStatus();
   const [theme, setTheme] = useState(() => {
     try {
@@ -218,8 +215,7 @@ function App() {
   const [shopFamily, setShopFamily] = useState(() =>
     shopFamilyFromLocation(location),
   );
-  // Goal picking is armed from the shop's goal banner; the state lives here so
-  // it survives shelf changes (the Shop remounts on every sub-page).
+
   const [pickingGoal, setPickingGoal] = useState(false);
   const taskNow = useGameClock();
   const [modal, setModal] = useState(null);
@@ -227,18 +223,29 @@ function App() {
   const openFreshStart = useCallback(() => setFreshStartOpen(true), []);
   const closeFreshStart = useCallback(() => setFreshStartOpen(false), []);
   const [selectedBadge, setSelectedBadge] = useState(null);
-  // Legacy ?card= links still open as read-only snapshots. New cloud profile
-  // links use the username in /profile/<name> and load the public profile.
+
   const [sharedCard, setSharedCard] = useState(() =>
     shareCardFromLocation(location),
   );
   const [profileName, setProfileName] = useState(() =>
     profileNameFromLocation(location),
   );
-  // Notices: a short stack of cards, one per thing that just happened. See
-  // use-toasts.js; `notify` takes a plain line or a kinded, titled notice.
+
   const { toasts, notify, dismiss: dismissToast } = useToasts();
   const [appUpdate, setAppUpdate] = useState(getAppUpdateState);
+
+  const [gameDataReady, setGameDataReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    prepareRolls()
+      .catch(() => {})
+      .finally(() => {
+        if (active) setGameDataReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   useEffect(() => {
     const syncLocalPlay = (event) => {
       if (event.key === LOCAL_PLAY_KEY || event.key === null)
@@ -264,35 +271,28 @@ function App() {
       });
     return unsubscribe;
   }, []);
-  // A prestige (the ultra-rebirth in the save) earns a moment, and so does the
-  // Rollback, the last stage, in its own words. The ceremony is a full-screen
-  // moment that lives in the app shell (the rebirth page navigates away the
-  // moment it succeeds), plays over whatever is on screen, then removes itself.
-  // Pointer-transparent and animation-driven — reduced motion never sees it.
-  // The state names the moment: "prestige", "rollback", or null for none.
+
   const [ultraCeremony, setUltraCeremony] = useState(null);
   useEffect(() => {
     if (!ultraCeremony) return;
     const timer = setTimeout(() => setUltraCeremony(null), 2700);
     return () => clearTimeout(timer);
   }, [ultraCeremony]);
-  // A plain rebirth earns a smaller moment: a spinning rainbow ring over the
-  // new cycle, in the app shell for the same reason, gone by itself.
+
   const [rebirthRing, setRebirthRing] = useState(false);
   useEffect(() => {
     if (!rebirthRing) return;
     const timer = setTimeout(() => setRebirthRing(false), 3300);
     return () => clearTimeout(timer);
   }, [rebirthRing]);
-  // The home-screen app: registering the (pass-through) service worker is
-  // part of the install criteria on some browsers.
+
   useEffect(() => {
     if ("serviceWorker" in navigator)
       navigator.serviceWorker
         .register(`${import.meta.env.BASE_URL}sw.js`)
         .catch(() => {});
   }, []);
-  // A companion found on a roll walks in with its own moment on the roll stage.
+
   const [arrivalPet, setArrivalPet] = useState(null);
   const auth = useFirebaseAuth();
   const isOnline = useOnlineStatus();
@@ -364,12 +364,8 @@ function App() {
     setPickingGoal(false);
   }, [epoch]);
   async function completeRoll(result, id, cooldownUntil) {
-    // Companion luck is sampled here, independently of the number itself.
     let drop = null;
     try {
-      // Trail and Drift widen the companion window for the roll they fire on.
-      // It is still its own sample, drawn after the number, so it can never
-      // bias the roll itself.
       drop = petDrop(
         randomUnit(),
         session.pets,
@@ -383,7 +379,7 @@ function App() {
       cooldownUntil,
       ...(drop ? { petDrop: drop } : {}),
     });
-    // Rolling counts as getting on with the game, so the flag stops nagging.
+
     if (outcome.ok && showVersionFlag) {
       markSeen();
       setSeenVersion(LATEST_VERSION);
@@ -409,9 +405,7 @@ function App() {
   const arrivalTimer = useRef(null);
   const previousFocus = useRef(null);
   const modalRef = useRef(null);
-  // The log's space warnings are announced once, when a roll or a claim carries
-  // it across a level. An account that loads already past a level stays quiet:
-  // the History page shows the warning for as long as it applies.
+
   const historySize = session.history?.length ?? 0;
   const lastHistorySize = useRef(historySize);
   useEffect(() => {
@@ -436,10 +430,7 @@ function App() {
         action: openHistory,
       });
   }, [historySize]);
-  // Two things the player waits for earn a notice when they first appear: a
-  // task that can be claimed, and a badge of Epic or better. The first load is
-  // quiet, and one roll that finishes several things is one notice. The badge
-  // notice stays off the roll page, where the result already shows the badges.
+
   const readyTasks = taskSummary(session.tasks, taskNow).ready;
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
@@ -475,8 +466,7 @@ function App() {
       action: { label: "Open Badges", onSelect: () => navigate("badges") },
     });
   }, [discovered]);
-  // Real URLs, so a page and its shelf can be linked, bookmarked and reloaded
-  // directly. The address bar is the source of truth, never component state.
+
   const push = (target, path, section = "") => {
     const here = new URL(path, location.origin).pathname;
     if (here !== location.pathname || location.hash)
@@ -486,16 +476,14 @@ function App() {
   const navigate = (next, focusProduct = null) => {
     const target = validPage(next);
     setSettingsSubpage("");
-    // Leaving the shop disarms goal picking: it belongs to the shop floor.
+
     if (target !== "shop") setPickingGoal(false);
-    // Any in-app move leaves a shared/public profile behind; only its address
-    // opens somebody else's read-only page.
+
     setSharedCard(null);
     setProfileName(
       target === "profile" ? (session.profile?.username ?? "") : "",
     );
-    // Opening the shop on a product or a companion (a goal link, a recap) opens
-    // the shelf that sells it, so the card is on screen when the page renders.
+
     const section =
       target === "shop" && goalItem(focusProduct)
         ? shelfOfProduct(goalItem(focusProduct))
@@ -553,8 +541,6 @@ function App() {
     push("shop", pathForShelfFamily("shop", "auras", family), "auras");
   };
   useEffect(() => {
-    // Back/forward must move between pages, and a legacy #shop link or a
-    // 404.html fallback landing must be normalised to its real path once.
     const update = () => {
       setPage(pageFromLocation(location));
       setSettingsSubpage(settingsSubpageFromLocation(location));
@@ -568,8 +554,7 @@ function App() {
     const section = shopSectionFromLocation(location);
     const settingsSection = settingsSubpageFromLocation(location);
     const family = shopFamilyFromLocation(location);
-    // A legacy "#shop" bookmark keeps working, a "#skills" one lands on the
-    // shelf, and an unknown sub-path is normalised back to the shop hub.
+
     if (
       location.hash ||
       !isCurrentPath(landed, location) ||
@@ -595,9 +580,7 @@ function App() {
     };
   }, []);
   const previousProfileRoute = useRef(null);
-  // A bare profile URL is canonicalized to this browser's own profile once it
-  // exists. A named path for somebody else is deliberately left alone so it
-  // can load that player's public cloud profile.
+
   useEffect(() => {
     const previous = previousProfileRoute.current;
     previousProfileRoute.current = session.profile;
@@ -625,8 +608,6 @@ function App() {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const saleTheme = SALE_THEMES.find((entry) => entry.id === theme) ?? null;
     const update = () => {
-      // A sale look borrows the dark surface and paints its own tokens over
-      // it; out of season it simply is the dark theme.
       const resolved = saleTheme
         ? "dark"
         : theme === "system"
@@ -648,8 +629,6 @@ function App() {
     return () => media.removeEventListener("change", update);
   }, [theme, sale.active]);
 
-  // The tab's identity follows the same day: sale art while it lasts, the
-  // regular set every other day of the year.
   useEffect(() => {
     applySaleBranding(sale.active);
   }, [sale.active]);
@@ -696,7 +675,7 @@ function App() {
         rarity: badge.rarity[0].toUpperCase() + badge.rarity.slice(1),
         groups: ["No Set"],
       }),
-      // Opened from the changelog, an unrolled badge is simply undiscovered.
+
       fromRoll,
     });
     setModal("badge");
@@ -726,7 +705,7 @@ function App() {
     dispatch,
     isAuthReadyForCloud(auth) && cloud.ready,
   );
-  // One alert per finished cooldown, and never while a roll is still revealing.
+
   useReadyAlert(session.cooldownUntil, {
     blocked:
       !playAccess.allowed ||
@@ -736,17 +715,15 @@ function App() {
       !!session.offline?.batch,
   });
   const rebirthVisible = rebirthUnlocked(session);
-  // A ready task shows a dot in the header and the tab bar, until it is claimed.
+
   const tasksReady = readyTasks > 0;
-  // The mobile tab bar marks the rebirth tab ready the moment either a rung
-  // or a prestige or the Rollback is available.
+
   const rebirthReadyNow =
     rebirthVisible &&
     (rebirthReady(session, gameNow()) ||
       ultraRebirthAvailable(session, gameNow()) ||
       rollbackAvailable(session, gameNow()));
-  // A direct link to a page that has not been unlocked yet simply goes home:
-  // no locked panel, no counter, nothing to explain the mystery early.
+
   useEffect(() => {
     if (page === "rebirth" && !rebirthVisible) navigate("roll");
   }, [page, rebirthVisible]);
@@ -773,10 +750,18 @@ function App() {
           ? rarities.indexOf(b.rarity) - rarities.indexOf(a.rarity)
           : 0,
     );
+
+  const loading = shouldShowLoadingScreen({
+    gameDataReady,
+    cloudStatus: cloud.status,
+    cloudReady: cloud.ready,
+    hasAccount: Boolean(auth.user),
+  });
+
   return (
     <>
-      {/* Above everything else on the page, for exactly one day. */}
-      <SaleTicker status={sale} />
+      {isLegacyMirrorBuild() && <MirrorNotice />}
+      {!loading && <SaleTicker status={sale} />}
       <header className="header">
         <div className="header-left">
           <button
@@ -908,646 +893,682 @@ function App() {
         </div>
       </header>
       <StatusBanner />
-      {!isOnline && (
-        <div
-          className="offline-save-banner"
-          role="status"
-          data-testid="offline-save-notice"
-        >
-          {session.profile ? (
-            <>
-              <strong>Offline — progress is saved on this device.</strong>{" "}
-              {auth.user?.passwordRequired
-                ? "This Google sign-in needs a linked password before Cloud saves can sync. Your current progress stays on this device."
-                : auth.user
-                  ? "Cloud sync will retry when you reconnect; it depends on your network, Firebase services, and quotas."
-                  : "This profile is local to this device. Link a Cloud Account when online to use it across devices."}
-            </>
-          ) : (
-            <strong>
-              Offline — choose a profile name before starting. Progress will
-              then be saved locally on this device.
-            </strong>
+      {!loading && (
+        <>
+          {!isOnline && (
+            <div
+              className="offline-save-banner"
+              role="status"
+              data-testid="offline-save-notice"
+            >
+              {session.profile ? (
+                <>
+                  <strong>Offline — progress is saved on this device.</strong>{" "}
+                  {auth.user?.passwordRequired
+                    ? "This Google sign-in needs a linked password before Cloud saves can sync. Your current progress stays on this device."
+                    : auth.user
+                      ? "Cloud sync will retry when you reconnect; it depends on your network, Firebase services, and quotas."
+                      : "This profile is local to this device. Link a Cloud Account when online to use it across devices."}
+                </>
+              ) : (
+                <strong>
+                  Offline — choose a profile name before starting. Progress will
+                  then be saved locally on this device.
+                </strong>
+              )}
+            </div>
           )}
-        </div>
-      )}
-      {legacyDeviceLinkNotice && session.profile && (
-        <div className="device-link-migration-banner" role="status">
-          <div>
-            <strong>Device linking has changed.</strong> Your previous device
-            link is no longer active. Sign in to the same Cloud Account on each
-            device to use one backed-up save; if copies differ, you will choose
-            which full save to keep.
-          </div>
-          <div className="device-link-migration-actions">
-            <button type="button" onClick={() => navigate("settings")}>
-              Open Cloud Account
-            </button>
-            <button
-              type="button"
-              className="device-link-migration-dismiss"
-              aria-label="Dismiss device-link update notice"
-              onClick={() => setLegacyDeviceLinkNotice(false)}
-            >
-              <X size={15} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      )}
-      {auth.user && cloud.status === "needs-choice" && page !== "settings" && (
-        <div className="cloud-choice-banner" role="alert">
-          <span>
-            This device and your online progress differ. Choose which copy to
-            keep before playing online.
-          </span>
-          <button type="button" onClick={() => navigate("settings")}>
-            Review saves
-          </button>
-        </div>
-      )}
-      {auth.user?.passwordRequired && (page !== "settings" || sharedCard) && (
-        <div className="auth-password-banner" role="alert">
-          <span>
-            Finish Google sign-in by adding a password. Game actions and online
-            backup stay paused until you do.
-          </span>
-          <button type="button" onClick={() => navigate("settings")}>
-            Set password
-          </button>
-        </div>
-      )}
-      {progressWarning && (
-        <div className="progress-warning" role="status">
-          {progressWarning}
-        </div>
-      )}
-      <main
-        className={`${page === "roll" ? "home-main" : "content-main"} ${sale.active ? "sale-ad-layout" : ""}`}
-      >
-        {/* Event-only chrome: safe to remove after the day; save data and
-            Blackout's permanent renderer are not event-only. */}
-        <SaleSideAds status={sale} onOpenShelf={openShelf} />
-        <OfflineRewards
-          progress={session}
-          status={offlineState}
-          onDismiss={() => dispatch({ type: "offline-dismiss" })}
-          onHistory={() => navigate("history")}
-        />
-        <div
-          className="roll-view"
-          hidden={page !== "roll"}
-          style={
-            page !== "roll" ? { display: "none" } : { display: "contents" }
-          }
-        >
-          <RollExperience
-            key={epoch}
-            {...{ openBadge, notify, session }}
-            cloudSaved={cloudSaved}
-            active={
-              playAccess.allowed &&
-              isAuthReadyForCloud(auth) &&
-              cloud.ready &&
-              page === "roll" &&
-              !modal &&
-              !offlineState.busy &&
-              !session.offline?.batch
-            }
-            theme={appliedTheme}
-            navigate={navigate}
-            onComplete={completeRoll}
-            onDraw={() => dispatch({ type: "draw" })}
-            openSignup={openAuth}
-            aura={session.equipped}
-            arrivalPet={arrivalPet}
-          >
-            <button
-              className="discover-link"
-              onClick={() => navigate("badges")}
-            >
-              <span className="mini-badges" aria-hidden="true">
-                <RollMark size={16} />
-                <BadgeMark size={16} />
-                <CompanionMark size={16} />
-                <SkillMark size={16} />
-              </span>
-              <span>
-                Every number has a story. <strong>Discover the badges</strong>
-              </span>
-              <ChevronRight size={14} />
-            </button>
-          </RollExperience>
-        </div>
-        {page === "history" && (
-          <ActivityFeed
-            key={epoch}
-            progress={session}
-            cloudUser={!!auth.user}
-            navigate={navigate}
-            openSignup={openAuth}
-            openBadge={openBadge}
-            notify={notify}
-            onAction={dispatch}
-          />
-        )}
-        {page === "settings" && (
-          <>
-            <button
-              className="back-link"
-              onClick={() =>
-                settingsSubpage ? navigate("settings") : navigate("roll")
-              }
-            >
-              <ArrowLeft size={14} aria-hidden="true" />
-              {settingsSubpage ? "Back to Settings" : "Back to rolling"}
-            </button>
-            <div className="page-heading">
-              <div className="page-icon">
-                <SlidersHorizontal size={25} />
+          {isOnline &&
+            auth.user &&
+            cloud.status === "offline" &&
+            isCloudQuotaNotice(cloud.notice) &&
+            page !== "settings" && (
+              <div
+                className="offline-save-banner"
+                role="status"
+                data-testid="cloud-quota-notice"
+              >
+                <span>{cloud.notice}</span>
+                <button
+                  type="button"
+                  className="secondary-button cloud-quota-retry"
+                  data-testid="cloud-quota-retry"
+                  onClick={retryCloudLoad}
+                >
+                  Retry now
+                </button>
               </div>
+            )}
+          {legacyDeviceLinkNotice && session.profile && (
+            <div className="device-link-migration-banner" role="status">
               <div>
-                <h1>
-                  {settingsSubpage === "save-recovery"
-                    ? "Restore save"
-                    : settingsSubpage === "cloud-account"
-                      ? "Cloud Account"
-                      : "Settings"}
-                </h1>
-                <p>
-                  {settingsSubpage === "save-recovery"
-                    ? "Choose an earlier saved copy for this device."
-                    : settingsSubpage === "cloud-account"
-                      ? "Sign-in, online backup and account security."
-                      : "Alerts, presentation and gameplay conveniences."}
-                </p>
+                <strong>Device linking has changed.</strong> Your previous
+                device link is no longer active. Sign in to the same Cloud
+                Account on each device to use one backed-up save; if copies
+                differ, you will choose which full save to keep.
+              </div>
+              <div className="device-link-migration-actions">
+                <button type="button" onClick={() => navigate("settings")}>
+                  Open Cloud Account
+                </button>
+                <button
+                  type="button"
+                  className="device-link-migration-dismiss"
+                  aria-label="Dismiss device-link update notice"
+                  onClick={() => setLegacyDeviceLinkNotice(false)}
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
               </div>
             </div>
-            {settingsSubpage === "save-recovery" ? (
-              <SaveRecovery vault={vault} notify={notify} />
-            ) : (
+          )}
+          {auth.user &&
+            cloud.status === "needs-choice" &&
+            page !== "settings" && (
+              <div className="cloud-choice-banner" role="alert">
+                <span>
+                  This device and your online progress differ. Choose which copy
+                  to keep before playing online.
+                </span>
+                <button type="button" onClick={() => navigate("settings")}>
+                  Review saves
+                </button>
+              </div>
+            )}
+          {auth.user?.passwordRequired &&
+            (page !== "settings" || sharedCard) && (
+              <div className="auth-password-banner" role="alert">
+                <span>
+                  Finish Google sign-in by adding a password. Game actions and
+                  online backup stay paused until you do.
+                </span>
+                <button type="button" onClick={() => navigate("settings")}>
+                  Set password
+                </button>
+              </div>
+            )}
+          {progressWarning && (
+            <div className="progress-warning" role="status">
+              {progressWarning}
+            </div>
+          )}
+        </>
+      )}
+      <main
+        aria-busy={loading}
+        className={`${page === "roll" ? "home-main" : "content-main"} ${sale.active ? "sale-ad-layout" : ""}`}
+      >
+        {loading ? (
+          <LoadingScreen />
+        ) : (
+          <>
+            {/* RETIREMENT: event-only chrome. */}
+            <SaleSideAds status={sale} page={page} onOpenShelf={openShelf} />
+            <OfflineRewards
+              progress={session}
+              status={offlineState}
+              onDismiss={() => dispatch({ type: "offline-dismiss" })}
+              onHistory={() => navigate("history")}
+            />
+            <div
+              className="roll-view"
+              hidden={page !== "roll"}
+              style={
+                page !== "roll" ? { display: "none" } : { display: "contents" }
+              }
+            >
+              <RollExperience
+                key={epoch}
+                {...{ openBadge, notify, session }}
+                cloudSaved={cloudSaved}
+                active={
+                  playAccess.allowed &&
+                  isAuthReadyForCloud(auth) &&
+                  cloud.ready &&
+                  page === "roll" &&
+                  !modal &&
+                  !offlineState.busy &&
+                  !session.offline?.batch
+                }
+                theme={appliedTheme}
+                navigate={navigate}
+                onComplete={completeRoll}
+                onDraw={() => dispatch({ type: "draw" })}
+                openSignup={openAuth}
+                aura={session.equipped}
+                arrivalPet={arrivalPet}
+              >
+                <button
+                  className="discover-link"
+                  onClick={() => navigate("badges")}
+                >
+                  <span className="mini-badges" aria-hidden="true">
+                    <RollMark size={16} />
+                    <BadgeMark size={16} />
+                    <CompanionMark size={16} />
+                    <SkillMark size={16} />
+                  </span>
+                  <span>
+                    Every number has a story.{" "}
+                    <strong>Discover the badges</strong>
+                  </span>
+                  <ChevronRight size={14} />
+                </button>
+              </RollExperience>
+            </div>
+            {page === "history" && (
+              <ActivityFeed
+                key={epoch}
+                progress={session}
+                cloudUser={!!auth.user}
+                navigate={navigate}
+                openSignup={openAuth}
+                openBadge={openBadge}
+                notify={notify}
+                onAction={dispatch}
+              />
+            )}
+            {page === "settings" && (
               <>
-                {settingsSubpage === "cloud-account" ? (
-                  <CloudAccount
-                    auth={auth}
-                    cloud={cloud}
-                    profile={session.profile}
-                    localPlay={localPlay}
-                    twoFactor={twoFactor}
-                    onContinueLocal={continueLocally}
-                    onAction={dispatch}
-                    onRetryCloud={retryCloudLoad}
-                    onResolveCloudConflict={resolveCloudConflict}
-                  />
+                <button
+                  className="back-link"
+                  onClick={() =>
+                    settingsSubpage ? navigate("settings") : navigate("roll")
+                  }
+                >
+                  <ArrowLeft size={14} aria-hidden="true" />
+                  {settingsSubpage ? "Back to Settings" : "Back to rolling"}
+                </button>
+                <div className="page-heading">
+                  <div className="page-icon">
+                    <SlidersHorizontal size={25} />
+                  </div>
+                  <div>
+                    <h1>
+                      {settingsSubpage === "save-recovery"
+                        ? "Restore save"
+                        : settingsSubpage === "cloud-account"
+                          ? "Cloud Account"
+                          : "Settings"}
+                    </h1>
+                    <p>
+                      {settingsSubpage === "save-recovery"
+                        ? "Choose an earlier saved copy for this device."
+                        : settingsSubpage === "cloud-account"
+                          ? "Sign-in, online backup and account security."
+                          : "Alerts, presentation and gameplay conveniences."}
+                    </p>
+                  </div>
+                </div>
+                {settingsSubpage === "save-recovery" ? (
+                  <SaveRecovery vault={vault} notify={notify} />
                 ) : (
-                  <Settings
-                    notify={notify}
-                    progress={session}
-                    onAction={dispatch}
-                    onOpenRecovery={openSaveRecovery}
-                    navigate={navigate}
-                    vault={vault}
-                    appUpdate={appUpdate}
-                    onStartUpdate={startAppUpdate}
-                    onStopUpdate={stopAppUpdate}
-                    onOpenAccount={openAuth}
-                  />
+                  <>
+                    {settingsSubpage === "cloud-account" ? (
+                      <CloudAccount
+                        auth={auth}
+                        cloud={cloud}
+                        profile={session.profile}
+                        localPlay={localPlay}
+                        twoFactor={twoFactor}
+                        onContinueLocal={continueLocally}
+                        onAction={dispatch}
+                        onRetryCloud={retryCloudLoad}
+                        onResolveCloudConflict={resolveCloudConflict}
+                      />
+                    ) : (
+                      <Settings
+                        notify={notify}
+                        progress={session}
+                        onAction={dispatch}
+                        onOpenRecovery={openSaveRecovery}
+                        navigate={navigate}
+                        vault={vault}
+                        appUpdate={appUpdate}
+                        onStartUpdate={startAppUpdate}
+                        onStopUpdate={stopAppUpdate}
+                        onOpenAccount={openAuth}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}
-          </>
-        )}
-        {page === "about" && (
-          <>
-            <button className="back-link" onClick={() => navigate("roll")}>
-              <ArrowLeft size={14} /> Back to rolling
-            </button>
-            <div className="page-heading">
-              <div className="page-icon">
-                <CircleHelp size={25} />
-              </div>
-              <div>
-                <h1>How to play</h1>
-                <p>What the game is, and what it never does.</p>
-              </div>
-            </div>
-            <About navigate={navigate} progress={session} />
-          </>
-        )}
-        {(page === "privacy" || page === "tos") && (
-          <LegalPage page={page} navigate={navigate} />
-        )}
-        {page === "changelog" && (
-          <>
-            <button className="back-link" onClick={() => navigate("roll")}>
-              <ArrowLeft size={14} /> Back to rolling
-            </button>
-            <div className="page-heading">
-              <div className="page-icon">
-                <ScrollText size={25} />
-              </div>
-              <div>
-                <h1>Changelog</h1>
-                <p>What changed, and when.</p>
-              </div>
-            </div>
-            <Changelog
-              onSeen={() => setSeenVersion(LATEST_VERSION)}
-              // The badge window opens right here: the collection hides
-              // badges you have not rolled yet.
-              onBadge={(badge) => openBadge(badge, { fromRoll: false })}
-            />
-          </>
-        )}
-        {page === "profile" && (
-          <>
-            <button className="back-link" onClick={() => navigate("roll")}>
-              <ArrowLeft size={14} /> Back to rolling
-            </button>
-            <div className="page-heading">
-              <div
-                className={`page-icon ${session.profile?.avatar && !sharedCard && !viewingOtherProfile ? "has-logo" : ""}`}
-              >
-                {session.profile?.avatar &&
-                !sharedCard &&
-                !viewingOtherProfile ? (
-                  <AvatarMark
-                    avatar={session.profile.avatar}
-                    size={46}
-                    label={`${session.profile.username} logo`}
-                  />
-                ) : (
-                  <UserRound size={25} />
-                )}
-              </div>
-              <div>
-                <h1>Profile</h1>
-                <p>
-                  {sharedCard
-                    ? "A record someone shared with you."
-                    : viewingOtherProfile
-                      ? `Viewing ${profileName}'s public profile.`
-                      : auth.user
-                        ? "Your game profile and progress on this device."
-                        : session.profile
-                          ? "Your profile, saved on this device."
-                          : localPlay
-                            ? "Choose your local profile name to continue."
-                            : "Choose how you want to play."}
-                </p>
-              </div>
-            </div>
-            <div className="profile-page">
-              {sharedCard ? (
-                <SharedProfile
-                  card={sharedCard}
-                  onContinue={() => navigate("roll")}
-                  onOwnProfile={
-                    session.profile ? () => navigate("profile") : null
-                  }
-                />
-              ) : viewingOtherProfile ? (
-                <CloudProfile
-                  username={profileName}
-                  onContinue={() => navigate("roll")}
-                  onOwnProfile={
-                    session.profile ? () => navigate("profile") : null
-                  }
-                />
-              ) : (
-                <>
-                  {!auth.user && !session.profile && !localPlay && (
-                    <section
-                      className="panel"
-                      aria-label="Choose where to save"
-                    >
-                      <h2>Play on this device</h2>
-                      <p>
-                        Keep your progress locally, or open Cloud Account for an
-                        online backup.
-                      </p>
-                      <button
-                        className="secondary-button"
-                        onClick={continueLocally}
-                      >
-                        Continue locally
-                      </button>
-                    </section>
-                  )}
-                  {(!cloudAccountRequired ||
-                    session.profile ||
-                    (localPlay && !auth.user)) &&
-                    !auth.user?.passwordRequired && (
-                      <LocalProfile
-                        key={epoch}
-                        profile={session.profile}
-                        progress={session}
-                        onAction={dispatch}
-                        onContinue={() => navigate("roll")}
-                        onProfileDeleted={() => {
-                          setProfileName("");
-                          history.replaceState(
-                            history.state,
-                            "",
-                            pathForProfile(""),
-                          );
-                        }}
-                        cloudAccount={auth.user}
-                        preserveGuestProgress={localPlay}
-                        canContinue={playAccess.allowed && cloud.ready}
-                        canEdit={playAccess.allowed && cloud.ready}
-                        profileLinkAvailable={cloud.publicProfileAvailable}
-                        publicProfileEnabled={cloud.publicProfileEnabled}
-                        cloudProfileIdentity={cloud.profileIdentity}
-                        onSetPublicProfile={setPublicProfileVisibility}
-                      />
-                    )}
-                  {(auth.user?.passwordRequired || !auth.user) && (
-                    <section className="panel cloud-account-pointer">
-                      <h2>Cloud Account</h2>
-                      <p>
-                        {auth.user?.passwordRequired
-                          ? "Finish setting up your Cloud Account to resume online backup."
-                          : "Sign in or create your Cloud Account to back up this progress online."}
-                      </p>
-                      <button
-                        type="button"
-                        className="primary-button"
-                        onClick={openAuth}
-                      >
-                        Open Cloud Account
-                      </button>
-                    </section>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        )}
-        {page === "rebirth" && rebirthVisible && (
-          <>
-            <button className="back-link" onClick={() => navigate("roll")}>
-              <ArrowLeft size={14} /> Back to rolling
-            </button>
-            <div className="page-heading">
-              <div className="page-icon">
-                <Sparkles size={25} />
-              </div>
-              <div>
-                <h1>Rebirth</h1>
-                <p>
-                  Start the run over; your account and aura collection stay.
-                </p>
-              </div>
-            </div>
-            <Rebirth
-              key={epoch}
-              progress={session}
-              onAction={dispatch}
-              onDone={(message, meta) => {
-                navigate("roll");
-                notify({
-                  kind: "milestone",
-                  title: "Rebirth complete",
-                  text: message ?? "The new cycle has started.",
-                });
-                if (meta?.rollback) setUltraCeremony("rollback");
-                else if (meta?.ultra) setUltraCeremony("prestige");
-                else setRebirthRing(true);
-              }}
-            />
-          </>
-        )}
-        {page === "tasks" && (
-          <ErrorBoundary>
-            <button className="back-link" onClick={() => navigate("roll")}>
-              <ArrowLeft size={14} /> Back to rolling
-            </button>
-            <div className="page-heading">
-              <div className="page-icon">
-                <ListChecks size={25} />
-              </div>
-              <div>
-                <h1>Tasks</h1>
-                <p>
-                  Small goals that pay EP. Daily tasks reset each day, weekly
-                  ones on Monday.
-                </p>
-              </div>
-            </div>
-            <Tasks
-              key={epoch}
-              progress={session}
-              cloudUser={!!auth.user}
-              now={taskNow}
-              onAction={dispatch}
-              notify={notify}
-              openSignup={openAuth}
-            />
-          </ErrorBoundary>
-        )}
-        {page === "shop" && (
-          <Shop
-            key={`${epoch}:${shopSection}:${shopFamily}`}
-            progress={session}
-            cloudUser={!!auth.user}
-            cloudSaved={cloudSaved}
-            section={shopSection}
-            family={shopFamily}
-            onOpenShelf={openShelf}
-            onOpenFamily={openFamily}
-            focusProduct={shopFocus}
-            onAction={dispatch}
-            openSignup={() =>
-              session.profile ? openAuth() : navigate("profile")
-            }
-            navigate={navigate}
-            notify={notify}
-            pickingGoal={pickingGoal}
-            onPickingGoal={setPickingGoal}
-          />
-        )}
-        {page === "badges" && (
-          <ErrorBoundary>
-            <button className="back-link" onClick={() => navigate("roll")}>
-              <ArrowLeft size={14} /> Back to rolling
-            </button>
-            <div className="page-heading">
-              <div className="page-icon">
-                <Medal size={25} />
-              </div>
-              <div>
-                <h1>The badge collection</h1>
-                <p>Discover badges by rolling numbers.</p>
-              </div>
-            </div>
-            <div className="catalogue-intro">
-              <span>
-                <strong>
-                  {discoveredBadges.length} / {badges.length}
-                </strong>{" "}
-                badges discovered
-              </span>
-              <span>
-                {badgeGroups.length} sets{" "}
-                <span className="dot-separator">·</span> 6 rarities
-              </span>
-            </div>
-            <div className="collection-progress">
-              <progress
-                className="collection-progress-bar"
-                aria-label="Badge collection progress"
-                aria-valuetext={`${discoveredBadges.length} of ${badges.length} badges discovered`}
-                value={discoveredBadges.length}
-                max={badges.length}
-              />
-              <span className="collection-progress-label">
-                {discoveredBadges.length === badges.length
-                  ? "Collection complete"
-                  : `${((discoveredBadges.length / badges.length) * 100).toFixed(1)}% complete`}
-              </span>
-            </div>
-            {!!session.rebirths && (
-              <p className="rebirth-count">
-                Rebirths: {session.rebirths.toLocaleString("en-US")}
-              </p>
-            )}
-            <div className="filters">
-              <label className="search-field">
-                <Search size={17} />
-                <input
-                  aria-label="Search badges"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search badges or sets…"
-                />
-                {search && (
-                  <button
-                    aria-label="Clear search"
-                    onClick={() => setSearch("")}
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </label>
-              <select
-                aria-label="Filter by set"
-                value={group}
-                onChange={(e) => setGroup(e.target.value)}
-              >
-                {["All sets", ...discoveredGroups].map((g) => (
-                  <option key={g}>{g}</option>
-                ))}
-              </select>
-              <select
-                aria-label="Sort badges"
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-              >
-                {["Default", "A–Z", "Rarest first"].map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div className="rarity-filters">
-              {["All rarities", ...rarities].map((r) => (
-                <button
-                  key={r}
-                  className={`${rarity === r ? "active" : ""} ${r.toLowerCase()}`}
-                  onClick={() => setRarity(r)}
-                >
-                  {r !== "All rarities" && <span className="rarity-dot" />}
-                  {r}
+            {page === "about" && (
+              <>
+                <button className="back-link" onClick={() => navigate("roll")}>
+                  <ArrowLeft size={14} /> Back to rolling
                 </button>
-              ))}
-            </div>
-            <div className="results-heading">
-              <span>{filteredBadges.length} badges</span>
-              {(search ||
-                rarity !== "All rarities" ||
-                group !== "All sets") && (
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setRarity("All rarities");
-                    setGroup("All sets");
-                  }}
-                >
-                  Reset filters
-                </button>
-              )}
-              <span>Click a badge to take a closer look</span>
-            </div>
-            <div className="badge-grid">
-              {filteredBadges.map((b) => (
-                <button
-                  className={`badge-card ${b.rarity.toLowerCase()}`}
-                  key={b.name}
-                  onClick={() => openBadge(b)}
-                >
-                  <div className="badge-card-top">
-                    <span className="badge-emoji">
-                      <Emoji text={b.emoji} />
-                    </span>
-                    <ArrowUpRight size={15} />
+                <div className="page-heading">
+                  <div className="page-icon">
+                    <CircleHelp size={25} />
                   </div>
-                  <h2>{b.name}</h2>
-                  <p>{b.groups[0]}</p>
-                  <span className="rarity-label">
-                    <span className="rarity-dot" />
-                    {b.rarity}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {!filteredBadges.length && (
-              <div className="empty-state">
-                <Search size={30} />
-                <h2>
-                  {discoveredBadges.length
-                    ? "No badges found"
-                    : "No badges discovered yet"}
-                </h2>
-                <p>
-                  {discoveredBadges.length
-                    ? "Try a different name, rarity, or badge set."
-                    : "Complete a roll to discover your first badges. Undiscovered badges stay hidden."}
-                </p>
-                <button
-                  className="secondary-button"
-                  onClick={() => {
-                    if (!discoveredBadges.length) {
-                      navigate("roll");
-                      return;
-                    }
-                    setSearch("");
-                    setRarity("All rarities");
-                    setGroup("All sets");
-                  }}
-                >
-                  {discoveredBadges.length ? "Clear filters" : "Start rolling"}
-                </button>
-              </div>
+                  <div>
+                    <h1>How to play</h1>
+                    <p>What the game is, and what it never does.</p>
+                  </div>
+                </div>
+                <About navigate={navigate} progress={session} />
+              </>
             )}
-            <p className="source-note">
-              Original badge references from{" "}
-              <a
-                href="https://rng.cubityfir.st/badges"
-                target="_blank"
-                rel="noreferrer"
-              >
-                RNGdle Tools <ArrowUpRight size={12} />
-              </a>
-              . Includes two Infinite-exclusive badges. Only your discovered
-              badges are shown.{" "}
-              {auth.user
-                ? "Your collection is backed up online."
-                : session.profile
-                  ? "Your collection is saved on this device."
-                  : discoveredBadges.length > 0
-                    ? "Guest collection is temporary. Name a local profile to keep it."
-                    : null}
-            </p>
-          </ErrorBoundary>
+            {(page === "privacy" || page === "tos") && (
+              <LegalPage page={page} navigate={navigate} />
+            )}
+            {page === "changelog" && (
+              <>
+                <button className="back-link" onClick={() => navigate("roll")}>
+                  <ArrowLeft size={14} /> Back to rolling
+                </button>
+                <div className="page-heading">
+                  <div className="page-icon">
+                    <ScrollText size={25} />
+                  </div>
+                  <div>
+                    <h1>Changelog</h1>
+                    <p>What changed, and when.</p>
+                  </div>
+                </div>
+                <Changelog
+                  onSeen={() => setSeenVersion(LATEST_VERSION)}
+
+                  onBadge={(badge) => openBadge(badge, { fromRoll: false })}
+                />
+              </>
+            )}
+            {page === "profile" && (
+              <>
+                <button className="back-link" onClick={() => navigate("roll")}>
+                  <ArrowLeft size={14} /> Back to rolling
+                </button>
+                <div className="page-heading">
+                  <div
+                    className={`page-icon ${session.profile?.avatar && !sharedCard && !viewingOtherProfile ? "has-logo" : ""}`}
+                  >
+                    {session.profile?.avatar &&
+                    !sharedCard &&
+                    !viewingOtherProfile ? (
+                      <AvatarMark
+                        avatar={session.profile.avatar}
+                        size={46}
+                        label={`${session.profile.username} logo`}
+                      />
+                    ) : (
+                      <UserRound size={25} />
+                    )}
+                  </div>
+                  <div>
+                    <h1>Profile</h1>
+                    <p>
+                      {sharedCard
+                        ? "A record someone shared with you."
+                        : viewingOtherProfile
+                          ? `Viewing ${profileName}'s public profile.`
+                          : auth.user
+                            ? "Your game profile and progress on this device."
+                            : session.profile
+                              ? "Your profile, saved on this device."
+                              : localPlay
+                                ? "Choose your local profile name to continue."
+                                : "Choose how you want to play."}
+                    </p>
+                  </div>
+                </div>
+                <div className="profile-page">
+                  {sharedCard ? (
+                    <SharedProfile
+                      card={sharedCard}
+                      onContinue={() => navigate("roll")}
+                      onOwnProfile={
+                        session.profile ? () => navigate("profile") : null
+                      }
+                    />
+                  ) : viewingOtherProfile ? (
+                    <CloudProfile
+                      username={profileName}
+                      onContinue={() => navigate("roll")}
+                      onOwnProfile={
+                        session.profile ? () => navigate("profile") : null
+                      }
+                    />
+                  ) : (
+                    <>
+                      {!auth.user && !session.profile && !localPlay && (
+                        <section
+                          className="panel"
+                          aria-label="Choose where to save"
+                        >
+                          <h2>Play on this device</h2>
+                          <p>
+                            Keep your progress locally, or open Cloud Account
+                            for an online backup.
+                          </p>
+                          <button
+                            className="secondary-button"
+                            onClick={continueLocally}
+                          >
+                            Continue locally
+                          </button>
+                        </section>
+                      )}
+                      {(!cloudAccountRequired ||
+                        session.profile ||
+                        (localPlay && !auth.user)) &&
+                        !auth.user?.passwordRequired && (
+                          <LocalProfile
+                            key={epoch}
+                            profile={session.profile}
+                            progress={session}
+                            onAction={dispatch}
+                            onContinue={() => navigate("roll")}
+                            onProfileDeleted={() => {
+                              setProfileName("");
+                              history.replaceState(
+                                history.state,
+                                "",
+                                pathForProfile(""),
+                              );
+                            }}
+                            cloudAccount={auth.user}
+                            preserveGuestProgress={localPlay}
+                            canContinue={playAccess.allowed && cloud.ready}
+                            canEdit={playAccess.allowed && cloud.ready}
+                            profileLinkAvailable={cloud.publicProfileAvailable}
+                            publicProfileEnabled={cloud.publicProfileEnabled}
+                            cloudProfileIdentity={cloud.profileIdentity}
+                            onSetPublicProfile={setPublicProfileVisibility}
+                          />
+                        )}
+                      {(auth.user?.passwordRequired || !auth.user) && (
+                        <section className="panel cloud-account-pointer">
+                          <h2>Cloud Account</h2>
+                          <p>
+                            {auth.user?.passwordRequired
+                              ? "Finish setting up your Cloud Account to resume online backup."
+                              : "Sign in or create your Cloud Account to back up this progress online."}
+                          </p>
+                          <button
+                            type="button"
+                            className="primary-button"
+                            onClick={openAuth}
+                          >
+                            Open Cloud Account
+                          </button>
+                        </section>
+                      )}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+            {page === "rebirth" && rebirthVisible && (
+              <>
+                <button className="back-link" onClick={() => navigate("roll")}>
+                  <ArrowLeft size={14} /> Back to rolling
+                </button>
+                <div className="page-heading">
+                  <div className="page-icon">
+                    <Sparkles size={25} />
+                  </div>
+                  <div>
+                    <h1>Rebirth</h1>
+                    <p>
+                      Start the run over; your account and aura collection stay.
+                    </p>
+                  </div>
+                </div>
+                <Rebirth
+                  key={epoch}
+                  progress={session}
+                  onAction={dispatch}
+                  onDone={(message, meta) => {
+                    navigate("roll");
+                    notify({
+                      kind: "milestone",
+                      title: "Rebirth complete",
+                      text: message ?? "The new cycle has started.",
+                    });
+                    if (meta?.rollback) setUltraCeremony("rollback");
+                    else if (meta?.ultra) setUltraCeremony("prestige");
+                    else setRebirthRing(true);
+                  }}
+                />
+              </>
+            )}
+            {page === "tasks" && (
+              <ErrorBoundary>
+                <button className="back-link" onClick={() => navigate("roll")}>
+                  <ArrowLeft size={14} /> Back to rolling
+                </button>
+                <div className="page-heading">
+                  <div className="page-icon">
+                    <ListChecks size={25} />
+                  </div>
+                  <div>
+                    <h1>Tasks</h1>
+                    <p>
+                      Small goals that pay EP. Daily tasks reset each day,
+                      weekly ones on Monday.
+                    </p>
+                  </div>
+                </div>
+                <Tasks
+                  key={epoch}
+                  progress={session}
+                  cloudUser={!!auth.user}
+                  now={taskNow}
+                  onAction={dispatch}
+                  notify={notify}
+                  openSignup={openAuth}
+                />
+              </ErrorBoundary>
+            )}
+            {page === "shop" && (
+              <Shop
+                key={`${epoch}:${shopSection}:${shopFamily}`}
+                progress={session}
+                cloudUser={!!auth.user}
+                cloudSaved={cloudSaved}
+                section={shopSection}
+                family={shopFamily}
+                onOpenShelf={openShelf}
+                onOpenFamily={openFamily}
+                focusProduct={shopFocus}
+                onAction={dispatch}
+                openSignup={() =>
+                  session.profile ? openAuth() : navigate("profile")
+                }
+                navigate={navigate}
+                notify={notify}
+                pickingGoal={pickingGoal}
+                onPickingGoal={setPickingGoal}
+              />
+            )}
+            {page === "badges" && (
+              <ErrorBoundary>
+                <button className="back-link" onClick={() => navigate("roll")}>
+                  <ArrowLeft size={14} /> Back to rolling
+                </button>
+                <div className="page-heading">
+                  <div className="page-icon">
+                    <Medal size={25} />
+                  </div>
+                  <div>
+                    <h1>The badge collection</h1>
+                    <p>Discover badges by rolling numbers.</p>
+                  </div>
+                </div>
+                <div className="catalogue-intro">
+                  <span>
+                    <strong>
+                      {discoveredBadges.length} / {badges.length}
+                    </strong>{" "}
+                    badges discovered
+                  </span>
+                  <span>
+                    {badgeGroups.length} sets{" "}
+                    <span className="dot-separator">·</span> 6 rarities
+                  </span>
+                </div>
+                <div className="collection-progress">
+                  <progress
+                    className="collection-progress-bar"
+                    aria-label="Badge collection progress"
+                    aria-valuetext={`${discoveredBadges.length} of ${badges.length} badges discovered`}
+                    value={discoveredBadges.length}
+                    max={badges.length}
+                  />
+                  <span className="collection-progress-label">
+                    {discoveredBadges.length === badges.length
+                      ? "Collection complete"
+                      : `${((discoveredBadges.length / badges.length) * 100).toFixed(1)}% complete`}
+                  </span>
+                </div>
+                {!!session.rebirths && (
+                  <p className="rebirth-count">
+                    Rebirths: {session.rebirths.toLocaleString("en-US")}
+                  </p>
+                )}
+                <div className="filters">
+                  <label className="search-field">
+                    <Search size={17} />
+                    <input
+                      aria-label="Search badges"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search badges or sets…"
+                    />
+                    {search && (
+                      <button
+                        aria-label="Clear search"
+                        onClick={() => setSearch("")}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </label>
+                  <select
+                    aria-label="Filter by set"
+                    value={group}
+                    onChange={(e) => setGroup(e.target.value)}
+                  >
+                    {["All sets", ...discoveredGroups].map((g) => (
+                      <option key={g}>{g}</option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="Sort badges"
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value)}
+                  >
+                    {["Default", "A–Z", "Rarest first"].map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="rarity-filters">
+                  {["All rarities", ...rarities].map((r) => (
+                    <button
+                      key={r}
+                      className={`${rarity === r ? "active" : ""} ${r.toLowerCase()}`}
+                      onClick={() => setRarity(r)}
+                    >
+                      {r !== "All rarities" && <span className="rarity-dot" />}
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <div className="results-heading">
+                  <span>{filteredBadges.length} badges</span>
+                  {(search ||
+                    rarity !== "All rarities" ||
+                    group !== "All sets") && (
+                    <button
+                      onClick={() => {
+                        setSearch("");
+                        setRarity("All rarities");
+                        setGroup("All sets");
+                      }}
+                    >
+                      Reset filters
+                    </button>
+                  )}
+                  <span>Click a badge to take a closer look</span>
+                </div>
+                <div className="badge-grid">
+                  {filteredBadges.map((b) => (
+                    <button
+                      className={`badge-card ${b.rarity.toLowerCase()}`}
+                      key={b.name}
+                      onClick={() => openBadge(b)}
+                    >
+                      <div className="badge-card-top">
+                        <span className="badge-emoji">
+                          <Emoji text={b.emoji} />
+                        </span>
+                        <ArrowUpRight size={15} />
+                      </div>
+                      <h2>{b.name}</h2>
+                      <p>{b.groups[0]}</p>
+                      <span className="rarity-label">
+                        <span className="rarity-dot" />
+                        {b.rarity}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {!filteredBadges.length && (
+                  <div className="empty-state">
+                    <Search size={30} />
+                    <h2>
+                      {discoveredBadges.length
+                        ? "No badges found"
+                        : "No badges discovered yet"}
+                    </h2>
+                    <p>
+                      {discoveredBadges.length
+                        ? "Try a different name, rarity, or badge set."
+                        : "Complete a roll to discover your first badges. Undiscovered badges stay hidden."}
+                    </p>
+                    <button
+                      className="secondary-button"
+                      onClick={() => {
+                        if (!discoveredBadges.length) {
+                          navigate("roll");
+                          return;
+                        }
+                        setSearch("");
+                        setRarity("All rarities");
+                        setGroup("All sets");
+                      }}
+                    >
+                      {discoveredBadges.length
+                        ? "Clear filters"
+                        : "Start rolling"}
+                    </button>
+                  </div>
+                )}
+                <p className="source-note">
+                  Original badge references from{" "}
+                  <a
+                    href="https://rng.cubityfir.st/badges"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    RNGdle Tools <ArrowUpRight size={12} />
+                  </a>
+                  . Includes two Infinite-exclusive badges. Only your discovered
+                  badges are shown.{" "}
+                  {auth.user
+                    ? "Your collection is backed up online."
+                    : session.profile
+                      ? "Your collection is saved on this device."
+                      : discoveredBadges.length > 0
+                        ? "Guest collection is temporary. Name a local profile to keep it."
+                        : null}
+                </p>
+              </ErrorBoundary>
+            )}
+          </>
         )}
       </main>
       <footer>
@@ -1561,205 +1582,198 @@ function App() {
           <a
             href="https://www.rngdle.com/"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="footer-real-game"
           >
             Real game <ArrowUpRight size={12} />
           </a>
-          <button onClick={() => navigate("changelog")}>changelog</button>
+          <button onClick={() => navigate("changelog")}>Changelog</button>
           <button onClick={() => navigate("settings")}>Settings</button>
           <button onClick={() => navigate("about")}>How to play</button>
         </div>
       </footer>
-      {/* The install card lives on the roll screen only: it is the landing
-          page, and other pages keep their back-links unobstructed. */}
-      {page === "roll" && <InstallApp notify={notify} />}
-      <MobileTabBar
-        page={page}
-        rebirthVisible={rebirthVisible}
-        rebirthReady={rebirthReadyNow}
-        tasksReady={tasksReady}
-        navigate={navigate}
-      />
-      <FreshStartDialog
-        progress={session}
-        open={freshStartOpen}
-        onClose={closeFreshStart}
-        onAutoOpen={openFreshStart}
-        onAction={dispatch}
-        notify={notify}
-        paused={!!modal}
-      />
-      {modal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModal(null);
-          }}
-        >
-          <section
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-title"
-            ref={modalRef}
-          >
-            <button
-              className="modal-close icon-button"
-              aria-label="Close dialog"
-              onClick={() => setModal(null)}
+      {!loading && (
+        <>
+          {page === "roll" && <InstallApp notify={notify} />}
+          <MobileTabBar
+            page={page}
+            rebirthVisible={rebirthVisible}
+            rebirthReady={rebirthReadyNow}
+            tasksReady={tasksReady}
+            navigate={navigate}
+          />
+          <FreshStartDialog
+            progress={session}
+            open={freshStartOpen}
+            onClose={closeFreshStart}
+            onAutoOpen={openFreshStart}
+            onAction={dispatch}
+            notify={notify}
+            paused={!!modal}
+          />
+          {modal && (
+            <div
+              className="modal-overlay"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setModal(null);
+              }}
             >
-              <X size={20} />
-            </button>
-            {modal === "badge" && selectedBadge && (
-              <>
-                <div
-                  className={`large-badge ${selectedBadge.rarity.toLowerCase()}`}
+              <section
+                className="modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
+                ref={modalRef}
+              >
+                <button
+                  className="modal-close icon-button"
+                  aria-label="Close dialog"
+                  onClick={() => setModal(null)}
                 >
-                  <Emoji text={selectedBadge.emoji} />
-                </div>
-                <p
-                  className={`rarity-label centered ${selectedBadge.rarity.toLowerCase()}`}
-                >
-                  <span className="rarity-dot" />
-                  {selectedBadge.rarity}
-                </p>
-                <h2 id="modal-title">{selectedBadge.name}</h2>
-                <p>
-                  {selectedBadge.description ||
-                    "A little detail that makes a number extraordinary."}
-                </p>
-                <div className="badge-details">
-                  <div>
-                    <span>Badge set</span>
-                    <strong>{selectedBadge.groups.join(" · ")}</strong>
-                  </div>
-                  <div>
-                    <span>Rarity</span>
-                    <strong>{selectedBadge.rarity}</strong>
-                  </div>
-                  <div>
-                    <span>EP value</span>
-                    <strong>
-                      {selectedBadge.ep?.toLocaleString("en-US") ?? "—"} EP
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Chance per roll</span>
-                    <strong
-                      title={
-                        selectedBadge.matchingNumbers != null
-                          ? `${selectedBadge.matchingNumbers.toLocaleString("en-US")} of ${POPULATION.toLocaleString("en-US")} possible numbers earn this badge, including superseded badges.`
-                          : undefined
-                      }
+                  <X size={20} />
+                </button>
+                {modal === "badge" && selectedBadge && (
+                  <>
+                    <div
+                      className={`large-badge ${selectedBadge.rarity.toLowerCase()}`}
                     >
-                      {selectedBadge.matchingNumbers != null
-                        ? chanceLabels(selectedBadge.matchingNumbers).percent
-                        : "—"}
-                      {selectedBadge.matchingNumbers != null && (
-                        <small className="chance-frequency">
-                          {
-                            chanceLabels(selectedBadge.matchingNumbers)
-                              .frequency
+                      <Emoji text={selectedBadge.emoji} />
+                    </div>
+                    <p
+                      className={`rarity-label centered ${selectedBadge.rarity.toLowerCase()}`}
+                    >
+                      <span className="rarity-dot" />
+                      {selectedBadge.rarity}
+                    </p>
+                    <h2 id="modal-title">{selectedBadge.name}</h2>
+                    <p>
+                      {selectedBadge.description ||
+                        "A little detail that makes a number extraordinary."}
+                    </p>
+                    <div className="badge-details">
+                      <div>
+                        <span>Badge set</span>
+                        <strong>{selectedBadge.groups.join(" · ")}</strong>
+                      </div>
+                      <div>
+                        <span>Rarity</span>
+                        <strong>{selectedBadge.rarity}</strong>
+                      </div>
+                      <div>
+                        <span>EP value</span>
+                        <strong>
+                          {selectedBadge.ep?.toLocaleString("en-US") ?? "—"} EP
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Chance per roll</span>
+                        <strong
+                          title={
+                            selectedBadge.matchingNumbers != null
+                              ? `${selectedBadge.matchingNumbers.toLocaleString("en-US")} of ${POPULATION.toLocaleString("en-US")} possible numbers earn this badge, including superseded badges.`
+                              : undefined
                           }
-                        </small>
-                      )}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Collection status</span>
-                    <strong>
-                      {session.discovered.includes(selectedBadge.canonicalId)
-                        ? "Discovered"
-                        : !selectedBadge.fromRoll
-                          ? "Not discovered yet"
-                          : session.rebirths
-                            ? "Not yet rediscovered"
-                            : "Earned in this roll"}
-                    </strong>
-                  </div>
-                </div>
-                {selectedBadge.matchingNumbers != null && (
-                  <p className="chance-outcomes">
-                    {chanceLabels(selectedBadge.matchingNumbers).outcomes} earn
-                    this badge, including superseded badges.
-                  </p>
+                        >
+                          {selectedBadge.matchingNumbers != null
+                            ? chanceLabels(selectedBadge.matchingNumbers)
+                                .percent
+                            : "—"}
+                          {selectedBadge.matchingNumbers != null && (
+                            <small className="chance-frequency">
+                              {
+                                chanceLabels(selectedBadge.matchingNumbers)
+                                  .frequency
+                              }
+                            </small>
+                          )}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Collection status</span>
+                        <strong>
+                          {session.discovered.includes(
+                            selectedBadge.canonicalId,
+                          )
+                            ? "Discovered"
+                            : !selectedBadge.fromRoll
+                              ? "Not discovered yet"
+                              : session.rebirths
+                                ? "Not yet rediscovered"
+                                : "Earned in this roll"}
+                        </strong>
+                      </div>
+                    </div>
+                    {selectedBadge.matchingNumbers != null && (
+                      <p className="chance-outcomes">
+                        {chanceLabels(selectedBadge.matchingNumbers).outcomes}{" "}
+                        earn this badge, including superseded badges.
+                      </p>
+                    )}
+                    <p className="detail-note">
+                      Only the highest-EP badge in a family scores. Other family
+                      badges are still earned, but add 0 EP. Each roll is
+                      independent; “1 in” is not a guarantee or a pity counter.
+                    </p>
+                  </>
                 )}
-                <p className="detail-note">
-                  Only the highest-EP badge in a family scores. Other family
-                  badges are still earned, but add 0 EP. Each roll is
-                  independent; “1 in” is not a guarantee or a pity counter.
-                </p>
-              </>
-            )}
-          </section>
-        </div>
-      )}
-      <Toasts items={toasts} onDismiss={dismissToast} />
+              </section>
+            </div>
+          )}
+          <Toasts items={toasts} onDismiss={dismissToast} />
 
-      {/* The ceremony: rays, a slam of the title and a storm of confetti for
-          the ultra-rebirth itself. Pointer-transparent (never in the way of
-          the game) and fully animation-driven — with reduced motion it rests
-          at opacity 0, exactly as if it were never there. */}
-      {ultraCeremony && (
-        <div className="ultra-ceremony" aria-hidden="true">
-          <span className="ultra-ceremony-rays" />
-          <span className="ultra-ceremony-mark">
-            <InfinityMark size={64} />
-          </span>
-          <strong className="ultra-ceremony-title">
-            {ultraCeremony === "rollback"
-              ? "ROLLBACK"
-              : `PRESTIGE ${session.ultraRebirths}`}
-          </strong>
-          <span className="ultra-ceremony-sub">
-            {ultraCeremony === "rollback"
-              ? "the last stage — the run starts again, the account never does"
-              : "the run starts again — the account never does"}
-          </span>
-          <span className="ultra-ceremony-confetti">
-            {Array.from({ length: 12 }, (_, index) => (
-              <i key={index} />
-            ))}
-          </span>
-        </div>
-      )}
-      {/* The rebirth moment: a flash, rainbow rays, a shockwave and the
-          spinning ring bursting into confetti over the new cycle. Pointer-
-          transparent and fully animation-driven — with reduced motion it
-          rests at opacity 0, exactly as if it were never there. */}
-      {rebirthRing && (
-        <div className="rebirth-ceremony" aria-hidden="true">
-          <span className="rebirth-ceremony-flash" />
-          <span className="rebirth-ceremony-rays" />
-          <span className="rebirth-ceremony-shock" />
-          <span className="rebirth-ceremony-circle" />
-          <strong className="rebirth-ceremony-title">
-            REBIRTH {session.rebirths}
-          </strong>
-          <span className="rebirth-ceremony-sub">a new cycle begins</span>
-          <span className="rebirth-ceremony-confetti">
-            {Array.from({ length: 12 }, (_, index) => (
-              <i key={index} />
-            ))}
-          </span>
-        </div>
+          {ultraCeremony && (
+            <div className="ultra-ceremony" aria-hidden="true">
+              <span className="ultra-ceremony-rays" />
+              <span className="ultra-ceremony-mark">
+                <InfinityMark size={64} />
+              </span>
+              <strong className="ultra-ceremony-title">
+                {ultraCeremony === "rollback"
+                  ? "ROLLBACK"
+                  : `PRESTIGE ${session.ultraRebirths}`}
+              </strong>
+              <span className="ultra-ceremony-sub">
+                {ultraCeremony === "rollback"
+                  ? "the last stage — the run starts again, the account never does"
+                  : "the run starts again — the account never does"}
+              </span>
+              <span className="ultra-ceremony-confetti">
+                {Array.from({ length: 12 }, (_, index) => (
+                  <i key={index} />
+                ))}
+              </span>
+            </div>
+          )}
+
+          {rebirthRing && (
+            <div className="rebirth-ceremony" aria-hidden="true">
+              <span className="rebirth-ceremony-flash" />
+              <span className="rebirth-ceremony-rays" />
+              <span className="rebirth-ceremony-shock" />
+              <span className="rebirth-ceremony-circle" />
+              <strong className="rebirth-ceremony-title">
+                REBIRTH {session.rebirths}
+              </strong>
+              <span className="rebirth-ceremony-sub">a new cycle begins</span>
+              <span className="rebirth-ceremony-confetti">
+                {Array.from({ length: 12 }, (_, index) => (
+                  <i key={index} />
+                ))}
+              </span>
+            </div>
+          )}
+        </>
       )}
     </>
   );
 }
 
-// A reload during "Reload until updated" leaves a copy of the save behind. If
-// the build that landed cannot read its own save, the copy is put back before
-// the app ever reads storage, so an update can never cost a player their game.
 const updateSaveRecovery = recoverSaveAfterUpdate();
-// The second safety net: if the stored save is missing or unreadable, the last
-// good compressed copy this browser kept is put back before anything reads it.
+
 const vaultRecovery = updateSaveRecovery?.recovered
   ? { restored: false }
   : restoreVaultIfNeeded();
 
-// Global error handlers to avoid white-screen on unhandled errors
 try {
   window.addEventListener("error", (e) => {
     console.error("[RNGdle] window error:", e.message, e.error);

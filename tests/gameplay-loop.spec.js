@@ -1,4 +1,5 @@
 import { chooseTheme } from "./helpers/appearance.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import { test, expect } from "./helpers/clock.js";
 import {
@@ -19,8 +20,8 @@ import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { showRoll, mockRandom } from "./helpers/random-roll.js";
 import { productById } from "../src/shop-data.js";
-const saved = (p) =>
-  p.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
+import { readSavedProgress } from "./helpers/save.js";
+const saved = (p) => readSavedProgress(p);
 const home = (p) =>
   p.getByRole("button", { name: "Back to rolling", exact: true }).click();
 const complete = (id) => ({
@@ -33,7 +34,6 @@ const complete = (id) => ({
 const settled = (p) =>
   expect(p.locator(".roll-experience")).toHaveAttribute("data-settled", "true");
 
-// No chance, reward, or timing rules live in the guidance layer.
 test("recommendations respect progression, custom choices and the completed workshop", () => {
   let p = emptyProgress();
   expect(currentGoal(p).id).toBe("quickwind-1");
@@ -106,6 +106,7 @@ test("first visit keeps goals as plain links without dashboard cards or invented
   page,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   const progress = page.getByRole("region", { name: "Progress" });
   await expect(progress).toContainText("0 / 235 badges");
   await expect(progress).toContainText("Quickwind I");
@@ -125,6 +126,7 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
   await mockRandom(page, [604827]);
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   await expect(page.locator(".roll-progress-links")).toHaveCount(0);
@@ -160,8 +162,6 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
 test("a found companion bursts out of its cage on the roll stage", async ({
   page,
 }) => {
-  // Main-thread randomness feeds the companion drop and nothing else, so
-  // pinning it to zero drops the first missing friend: pebble, every time.
   await page.addInitScript(() => {
     Object.defineProperty(globalThis.crypto, "getRandomValues", {
       configurable: true,
@@ -174,10 +174,10 @@ test("a found companion bursts out of its cage on the roll stage", async ({
   await seedProgress(page, {});
   await mockRandom(page, [604827]);
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
-  // Step the clock until the arrival lands: it lives 5.6s of clock time, so
-  // one big jump would skip past it.
+
   for (let step = 0; step < 60; step += 1) {
     if (await page.locator("[data-arrival]").count()) break;
     await page.clock.fastForward(1000);
@@ -193,9 +193,9 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
 }) => {
   await seedProgress(page, { balance: 100000, totalEarned: 100000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // The goal is set from the goal banner: arm pick mode, then tap the card
-  // you want. A plain card click never changes the goal.
+
   await page.goto("/shop/pace");
+  await waitForApp(page);
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Set goal", exact: true })
@@ -205,6 +205,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   expect((await saved(page)).history).toHaveLength(0);
   expect((await saved(page)).balance).toBe(100000);
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".shop-goal")).toContainText(
     "Your goal: Quickwind I",
   );
@@ -236,9 +237,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   await page
     .getByRole("button", { name: "Continue rolling", exact: true })
     .click();
-  // With the goal bought, the recap falls back to the next recommended item.
-  // Both the name and its price come from the loop itself, so a repricing or a
-  // reordered catalogue shows up as a real behaviour change, not a stale pin.
+
   const remaining = 100000 - productById.get("quickwind-1").price;
   const next = recommendedGoal({
     ...emptyProgress(),
@@ -262,6 +261,7 @@ test("failed goal writes preserve the previous choice and wallet and can be retr
     totalEarned: 12345,
   });
   await page.goto("/shop/skills");
+  await waitForApp(page);
   await page.evaluate((k) => {
     const write = Storage.prototype.setItem;
     window.failGoal = true;
@@ -275,8 +275,7 @@ test("failed goal writes preserve the previous choice and wallet and can be retr
       return write.call(this, key, value);
     };
   }, PROGRESS_KEY);
-  // Pick mode is armed from the banner; a failed write keeps it armed, so
-  // the retry is one tap, not a second trip to the banner.
+
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Change goal", exact: true })
@@ -301,12 +300,15 @@ test("cross-tab goal changes sync without overwriting spending or an in-flight r
   await mockRandom(page, [604827]);
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
   const before = await saved(page);
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   const other = await context.newPage();
   await other.goto("/shop/auras/celestial");
+  await waitForApp(other);
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Set goal", exact: true })
@@ -340,6 +342,7 @@ test("Auto-Roll pauses for badge inspection and resumes without replacing its co
   await page.emulateMedia({ reducedMotion: "reduce" });
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".generate")).toBeEnabled();
   await page.getByRole("switch", { name: "Auto-Roll" }).click();
   await page.clock.runFor(300);
@@ -368,6 +371,7 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   page,
 }) => {
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Set goal", exact: true })
@@ -376,10 +380,12 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   await expect(page.locator(".shop-goal")).toContainText("Your goal: Starfall");
   expect(await saved(page)).toBeNull();
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".shop-goal")).toContainText("Recommended next");
   await expect(page.locator(".shop-goal")).not.toContainText("Your goal");
   await page.goto("/shop/skills");
-  // The reload dropped the guest goal, so the banner is back to "Set goal".
+  await waitForApp(page);
+
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Set goal", exact: true })
@@ -398,9 +404,10 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   expect((await saved(page)).owned).toEqual([]);
   expect((await saved(page)).history).toHaveLength(0);
   await page.reload();
-  // The profile page has no goal control: the saved choice is read back where
-  // the banner lives.
+  await waitForApp(page);
+
   await page.goto("/#shop");
+  await waitForApp(page);
   await expect(page.locator(".shop-goal")).toContainText("Your goal: Flywheel");
 });
 
@@ -412,6 +419,7 @@ test("the completed workshop and collection have honest end states with no inven
     discovered: allBadgeMetadata.map((b) => b.id),
   });
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".roll-progress-links")).toContainText(
     "All shop items owned",
   );
@@ -472,6 +480,7 @@ test("a funded offline goal still explains the profile requirement instead of cl
     goalId: "offline-roller",
   });
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".roll-progress-links")).toContainText(
     "Local profile required",
   );
@@ -489,7 +498,7 @@ test("a funded offline goal still explains the profile requirement instead of cl
       '[data-product="offline-roller"] button:not(.shop-tag):not(.shop-look-eye)',
     )
     .click();
-  // No profile: the product button navigates to the profile page.
+
   await expect(page.locator(".profile-page")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Start saving my progress", exact: true }),

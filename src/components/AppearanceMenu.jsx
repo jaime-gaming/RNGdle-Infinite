@@ -17,8 +17,7 @@ const THEMES = [
   ["system", "System", Monitor],
   ["dark", "Dark", Moon],
 ];
-// The sale day lends the game two extra looks. They live in the same menu and
-// leave it with the day.
+
 const SALE_THEME_ICONS = { "ultra-black": Square, "red-sale": Tag };
 
 export default function AppearanceMenu({ theme, onTheme }) {
@@ -38,8 +37,7 @@ export default function AppearanceMenu({ theme, onTheme }) {
         ])
       : []),
   ];
-  // A saved sale look out of season reads as the dark theme it borrows its
-  // surface from, so the button never shows a look the game is not wearing.
+
   const effective = options.some(([value]) => value === theme)
     ? theme
     : SALE_THEMES.some((entry) => entry.id === theme)
