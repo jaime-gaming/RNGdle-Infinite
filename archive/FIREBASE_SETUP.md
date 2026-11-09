@@ -50,14 +50,13 @@ The rules are the only Firebase change this release needs:
 profiles stay broken, because the previous rules compared the game profile id
 with the public name key inside `profileIsPublic` / `profileIsPublicAfter`.
 
-## 4. App Check (optional but recommended)
+## 4. App Check (disabled)
 
-The app sends a reCAPTCHA Enterprise attestation when
-`VITE_FIREBASE_APPCHECK_SITE_KEY` is set. Enforcement is a separate switch:
-
-- Firestore → **App Check → APIs → enforce for Cloud Firestore**, only after
-  every real client sends attestations. Enforcing too early makes writes fail
-  with `failed-precondition`.
+App Check and reCAPTCHA Enterprise are disabled in the current client to
+protect the free quota. `.env.production` carries no site key and
+`src/firebase.js` does not import `firebase/app-check`. Firestore rules are the
+security boundary. Do not enable App Check enforcement for this client unless
+the provider is deliberately reintroduced.
 
 ## Reading the in-app error codes
 
@@ -65,9 +64,10 @@ The Cloud Account status shows the Firebase error code in parentheses:
 
 | Code                  | Meaning                                                        |
 | --------------------- | -------------------------------------------------------------- |
-| `permission-denied`   | Rules not deployed, or App Check rejecting the request.        |
+| `permission-denied`   | Rules not deployed, or the request rejected by the rules.      |
 | `unavailable`         | Database not created, or the network blocked Firestore.        |
-| `failed-precondition` | App Check enforcement is on and this domain is not registered. |
+| `failed-precondition` | App Check enforcement was enabled without this client.         |
+| `resource-exhausted`  | Free daily quota or rate limit reached; local play stays safe. |
 | `unauthenticated`     | Session expired; sign in again.                                |
 
 ## Two-factor behaviour (as implemented)

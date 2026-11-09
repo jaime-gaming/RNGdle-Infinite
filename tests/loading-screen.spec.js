@@ -8,7 +8,7 @@ const ready = {
   hasAccount: false,
 };
 
-test("the blank loader covers data, account and unsynced-profile waits only", () => {
+test("the loader covers data, account and unsynced-profile waits only", () => {
   expect(shouldShowLoadingScreen(ready)).toBe(false);
   expect(shouldShowLoadingScreen({ ...ready, gameDataReady: false })).toBe(
     true,
@@ -65,4 +65,17 @@ test("while the scoring data loads the chrome stays and one circle fills the con
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toHaveCount(0);
   await expect(screen).toHaveCount(0);
+});
+
+test("a slow load eventually shows wait for it...", async ({ page }) => {
+  await page.route("**/data/*.json", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 7000));
+    await route.continue();
+  });
+  await page.goto("/");
+  const screen = page.locator(".loading-screen");
+  await expect(screen).toBeVisible();
+  await expect(screen.getByText("wait for it...")).toBeVisible({
+    timeout: 8000,
+  });
 });

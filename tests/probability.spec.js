@@ -271,7 +271,7 @@ test("corrupt delivery awards nothing; retry loads the text-safe scoring data", 
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
-test("the blank loader owns the page while scoring data loads, then help and badge odds work", async ({
+test("the quiet loader owns the page while scoring data loads, then help and badge odds work", async ({
   page,
 }) => {
   await seedProgress(page, { discovered: ["LEET_EXACT"] });

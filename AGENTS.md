@@ -187,12 +187,11 @@ adding backgrounds, borders, underlines or other decorations.
   custom host; it is separate from the Cloudflare Worker/DNS setup. Create
   Firestore in a European location and publish `firestore.rules` before testing
   cloud saves.
-- The App Check client reads the public
-  `VITE_FIREBASE_APPCHECK_SITE_KEY` from `.env.production` and attaches
-  reCAPTCHA Enterprise attestations. This does not register the provider or
-  enable service enforcement in Firebase Console. Do not claim enforcement is
-  active until it is independently verified; never put the site key in the
-  player-facing README.
+- App Check and reCAPTCHA Enterprise are intentionally disabled in the
+  client to protect the free quota. `.env.production` carries no site key and
+  `src/firebase.js` never imports `firebase/app-check`. Firestore rules remain
+  the security boundary. Do not reintroduce per-request attestation; a visible
+  CAPTCHA, if ever needed, must be limited to sign-in only.
 - Saves use one Firestore document per UID at `player_saves/{uid}`. The JSON
   snapshot is compressed with the existing vault codec to stay below Firestore's
   1 MiB document limit. Rules are the security boundary.
@@ -202,10 +201,10 @@ adding backgrounds, borders, underlines or other decorations.
   Firestore CRUD, progress comparison, and ownership/cache/recovery markers;
   `src/use-progress.js` coordinates the local save with transactional
   reconciliation. Do not initialize Analytics unless explicitly requested.
-- **A blank loading screen owns the page until save and data are ready.**
-  `src/components/LoadingScreen.jsx` renders one spinning circle and nothing
-  else — no text, logo or artwork — while the scoring data loads, the account
-  resolves or an authenticated profile has not synced. States that need a
+- **The loading screen stays quiet until a wait becomes long.**
+  `src/components/LoadingScreen.jsx` renders one small grey circle; after six
+  seconds it adds only `wait for it...`. Header, status notice and footer stay
+  visible, while roll controls and banners do not appear. States that need a
   player decision (conflict, load error, offline, maintenance) still show the
   normal interface. The local save is read and persisted before any cloud
   request, and written again on a failed load, so waiting never costs local
@@ -232,8 +231,15 @@ adding backgrounds, borders, underlines or other decorations.
   `Cross-Origin-Resource-Policy` and HSTS. Do not add frame-ancestor or
   `X-Frame-Options` denial headers: the game is shown in preview iframes.
 - Every `target="_blank"` link uses `rel="noopener noreferrer"`.
-- The loader is a small, grey, text-free circle inside `<main aria-busy>`;
-  the header and footer stay visible while the game data or cloud save settles.
+- The loader is a small, grey circle inside `<main aria-busy>`; the header,
+  status notice and footer stay visible. A long wait adds only `wait for it...`.
+- `src/cloud-quota.js` pauses Firestore reads and writes for 15 minutes after
+  `resource-exhausted` or another quota signal. Local play stays available, the
+  save stays dirty, and cloud work resumes automatically after the cooldown or
+  on an explicit retry. The reconcile debounce is 10 seconds, not a tight loop.
+- Status notices poll every 60 seconds and also on focus, visibility and
+  reconnection. The banner is a normal-flow sibling between the header and
+  `main`, so the interface shifts down instead of being covered.
 - Black Friday side posters are ordered by the current page, never by a timer
   or a random pick.
 

@@ -1,7 +1,7 @@
 import { writeDeviceSave } from "./local-save.js";
 import { unpackVaultSave } from "./save-codec.js";
 import { gameNow } from "./game-clock";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { drainSerialQueue, enqueueSerial } from "./serial-queue.js";
 import {
   accountSwitchSnapshot,
@@ -25,6 +25,12 @@ import {
   writeCloudOwner,
 } from "./cloud-save.js";
 import { firebaseConfigured } from "./firebase.js";
+import {
+  clearCloudQuotaPause,
+  cloudQuotaNotice,
+  cloudQuotaPauseRemaining,
+  pauseCloudForQuota,
+} from "./cloud-quota.js";
 import { cloudGameAccess } from "./auth-gate.js";
 import { getStatusIssue, maintenanceActiveFor } from "./use-status-issue.js";
 import {
@@ -207,6 +213,48 @@ export function useProgress({
     pendingCloudConflict = useRef(null);
   const cloudRef = useRef(cloud);
   cloudRef.current = cloud;
+  const quotaResumeTimer = useRef(null);
+
+  const applyQuotaPause = useCallback((targetUserId, remainingMs) => {
+    if (pendingCloudConflict.current?.userId === targetUserId) return;
+    const owner = readCloudOwner();
+    const localCopyIsOwned =
+      (!owner || owner === targetUserId) &&
+      Boolean(current.current.profile) &&
+      healthy.current;
+    if (localCopyIsOwned) ensureCloudOwner(targetUserId);
+    cloudGate.current = { userId: targetUserId, ready: localCopyIsOwned };
+    markCloudDirty(targetUserId);
+    updateCloud({
+      ...cloudRef.current,
+      status: "offline",
+      ready: localCopyIsOwned,
+      userId: targetUserId,
+      error: "",
+      notice: cloudQuotaNotice(remainingMs),
+      conflict: null,
+      resolving: false,
+    });
+  }, []);
+
+  const pauseForQuota = useCallback((error) => {
+    const remaining = pauseCloudForQuota(error);
+    if (!remaining) return 0;
+    if (quotaResumeTimer.current) clearTimeout(quotaResumeTimer.current);
+    quotaResumeTimer.current = setTimeout(() => {
+      quotaResumeTimer.current = null;
+      clearCloudQuotaPause();
+      setCloudRetry((retry) => retry + 1);
+    }, remaining + 1000);
+    return remaining;
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (quotaResumeTimer.current) clearTimeout(quotaResumeTimer.current);
+    },
+    [],
+  );
   const authRef = useRef({
     userId,
     authReady,
@@ -490,6 +538,14 @@ export function useProgress({
       };
     }
 
+    const quotaRemaining = cloudQuotaPauseRemaining();
+    if (quotaRemaining > 0) {
+      applyQuotaPause(userId, quotaRemaining);
+      return () => {
+        active = false;
+      };
+    }
+
     cloudGate.current = { userId, ready: false };
     updateCloud({ status: "loading", ready: false, userId, error: "" });
 
@@ -563,6 +619,11 @@ export function useProgress({
         writeLocalSave(current.current);
         markCloudDirty(userId);
       }
+      const quotaRemaining = pauseForQuota(loadError);
+      if (quotaRemaining > 0) {
+        applyQuotaPause(userId, quotaRemaining);
+        return;
+      }
       cloudGate.current = { userId, ready: false };
 
       const detail =
@@ -618,6 +679,12 @@ export function useProgress({
         error:
           "This device’s saved copy belongs to a different or unverified account. Reload progress before saving online.",
       });
+      return undefined;
+    }
+
+    const quotaRemaining = cloudQuotaPauseRemaining();
+    if (quotaRemaining > 0) {
+      applyQuotaPause(userId, quotaRemaining);
       return undefined;
     }
 
@@ -760,6 +827,11 @@ export function useProgress({
             authRef.current.userId !== userId
           )
             return;
+          const quotaRemaining = pauseForQuota(failure);
+          if (quotaRemaining > 0) {
+            applyQuotaPause(userId, quotaRemaining);
+            return;
+          }
           const code = String(failure?.code ?? "")
             .split("/")
             .at(-1);
@@ -769,7 +841,6 @@ export function useProgress({
               "aborted",
               "deadline-exceeded",
               "network-request-failed",
-              "resource-exhausted",
               "unavailable",
             ].includes(code) ||
             /wait a couple of seconds|temporarily unavailable/i.test(message);
@@ -819,7 +890,7 @@ export function useProgress({
             notice: "",
           });
         });
-    }, 2_100);
+    }, 10_000);
     return () => {
       active = false;
       clearTimeout(timer);
@@ -828,6 +899,11 @@ export function useProgress({
   }, [progress, userId, authReady, cloudEnabled, online, cloudWriteRetry]);
 
   function retryCloudLoad() {
+    clearCloudQuotaPause();
+    if (quotaResumeTimer.current) {
+      clearTimeout(quotaResumeTimer.current);
+      quotaResumeTimer.current = null;
+    }
     if (cloudEnabled && authReady && userId) {
       cloudWriteFailure.current = { snapshot: progress, userId, attempts: 0 };
       setCloudWriteRetry((retry) => retry + 1);

@@ -49,6 +49,7 @@ import {
   LOCAL_PLAY_KEY,
 } from "./local-play.js";
 import { cloudAccountRequired } from "./firebase.js";
+import { isCloudQuotaNotice } from "./cloud-quota.js";
 import { normalizedProfileName } from "./public-profile.js";
 import { useOffline } from "./use-offline";
 import { useOnlineStatus } from "./use-online-status.js";
@@ -891,9 +892,9 @@ function App() {
           </button>
         </div>
       </header>
+      <StatusBanner />
       {!loading && (
         <>
-          <StatusBanner />
           {!isOnline && (
             <div
               className="offline-save-banner"
@@ -917,6 +918,27 @@ function App() {
               )}
             </div>
           )}
+          {isOnline &&
+            auth.user &&
+            cloud.status === "offline" &&
+            isCloudQuotaNotice(cloud.notice) &&
+            page !== "settings" && (
+              <div
+                className="offline-save-banner"
+                role="status"
+                data-testid="cloud-quota-notice"
+              >
+                <span>{cloud.notice}</span>
+                <button
+                  type="button"
+                  className="secondary-button cloud-quota-retry"
+                  data-testid="cloud-quota-retry"
+                  onClick={retryCloudLoad}
+                >
+                  Retry now
+                </button>
+              </div>
+            )}
           {legacyDeviceLinkNotice && session.profile && (
             <div className="device-link-migration-banner" role="status">
               <div>

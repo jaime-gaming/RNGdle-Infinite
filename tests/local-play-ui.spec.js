@@ -152,10 +152,11 @@ test("Cloud Account explains privacy and legal pages are linked from How to Play
   const securityOverview = page.getByTestId("cloud-security-overview");
   await expect(securityOverview).toContainText("Your account and progress");
   await expect(securityOverview).toContainText("Cloud is optional");
-  await expect(securityOverview).toContainText("App Check:");
-  await expect(securityOverview).not.toContainText(
-    "checks are configured and enforced",
+  await expect(securityOverview).toContainText(
+    "Firestore rules protect your save",
   );
+  await expect(securityOverview).not.toContainText("App Check:");
+  await expect(securityOverview).not.toContainText("reCAPTCHA");
 
   await seedProgress(page);
   await page.goto("/settings/cloud-account");

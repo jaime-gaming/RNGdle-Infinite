@@ -3,7 +3,6 @@ const targets = {
   "firebase/firestore": new URL("firestore.mjs", here).href,
   "firebase/app": new URL("app.mjs", here).href,
   "firebase/auth": new URL("auth.mjs", here).href,
-  "firebase/app-check": new URL("app-check.mjs", here).href,
 };
 const FAKE_FIREBASE = new URL("firebase.mjs", here).href;
 export async function resolve(specifier, context, next) {
