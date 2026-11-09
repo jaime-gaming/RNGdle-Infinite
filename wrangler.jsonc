@@ -8,7 +8,7 @@
 // `routes` claims the custom domain on every deploy. The jaime-gaming.com zone
 // must live in the same Cloudflare account, and any old Cloudflare Pages
 // custom domain with this hostname must be removed first (a hostname can only
-// point at one service). See DEPLOYMENT.md.
+// point at one service). See archive/DEPLOYMENT.md.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "rngdle-infinite",

@@ -486,3 +486,24 @@ test("profile export downloads a valid PNG account card with username and bigges
   );
   expect(buffer.length).toBeGreaterThan(1000);
 });
+
+test("after a prestige the ladder teases Rollback, not a second Prestige", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    profile: testProfile,
+    discovered: badgeIds.slice(0, 150),
+    ultraRebirths: 1,
+    rebirths: 2,
+  });
+  await page.goto("/rebirth");
+  await waitForApp(page);
+  await expect(page.locator('[data-teaser="rollback"]')).toBeVisible();
+  await expect(page.locator('[data-teaser="prestige"]')).toHaveCount(0);
+  await expect(
+    page.getByText("Wait, but there is more...", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".rebirth-teaser-hint")).toContainText(
+    "One last stage is still ahead.",
+  );
+});

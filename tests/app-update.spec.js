@@ -14,11 +14,17 @@ import {
   APP_UPDATE_SAVE_KEY,
   APP_UPDATE_QUERY,
   APP_UPDATE_MAX_RELOADS,
+  isLegacyMirrorBuild,
 } from "../src/app-update.js";
 import { seedProgress } from "./helpers/progress.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { readSavedProgress } from "./helpers/save.js";
 import { unpackVaultSave } from "../src/save-codec.js";
+
+test("only the legacy GitHub Pages build shows the mirror notice", () => {
+  expect(isLegacyMirrorBuild("/RNGdle-Infinite/")).toBe(true);
+  expect(isLegacyMirrorBuild("/")).toBe(false);
+});
 
 test("build identity is read from the page and version checks use the app base path", async () => {
   expect(
@@ -92,6 +98,9 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
   await expect(
     page.locator('meta[name="rngdle-internal-version"]'),
   ).toHaveAttribute("content", APP_INTERNAL_VERSION);
+  await expect(page.getByTestId("settings-internal-version")).toHaveText(
+    APP_INTERNAL_VERSION,
+  );
 
   // Return the build already in this page after its deliberate cache-busted
   // reload, exercising the successful end of the retry flow deterministically.

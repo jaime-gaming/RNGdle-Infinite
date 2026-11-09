@@ -60,6 +60,6 @@ if (!dryRun)
       "Deployed. The custom domain is claimed by the Worker on every deploy.",
       "Check the live host, then confirm in the Cloudflare dashboard that",
       "rngdle-infinite.jaime-gaming.com is attached to the Worker and not to a",
-      "Cloudflare Pages project. See DEPLOYMENT.md.",
+      "Cloudflare Pages project. See archive/DEPLOYMENT.md.",
     ].join("\n"),
   );

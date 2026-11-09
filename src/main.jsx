@@ -32,6 +32,7 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import { prepareRolls } from "./roll-client.js";
 import LoadingScreen from "./components/LoadingScreen.jsx";
+import MirrorNotice from "./components/MirrorNotice.jsx";
 import { shouldShowLoadingScreen } from "./loading-gate.js";
 import "./shop.css";
 import LocalProfile, { AvatarMark } from "./components/LocalProfile";
@@ -100,6 +101,7 @@ import {
   startAppUpdate,
   stopAppUpdate,
   subscribeAppUpdate,
+  isLegacyMirrorBuild,
 } from "./app-update.js";
 import { restoreVaultIfNeeded } from "./save-vault.js";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
@@ -806,6 +808,7 @@ function App() {
 
   return (
     <>
+      {isLegacyMirrorBuild() && <MirrorNotice />}
       {/* Above everything else on the page, for exactly one day. */}
       <SaleTicker status={sale} />
       <header className="header">
@@ -1597,7 +1600,7 @@ function App() {
           >
             Real game <ArrowUpRight size={12} />
           </a>
-          <button onClick={() => navigate("changelog")}>changelog</button>
+          <button onClick={() => navigate("changelog")}>Changelog</button>
           <button onClick={() => navigate("settings")}>Settings</button>
           <button onClick={() => navigate("about")}>How to play</button>
         </div>

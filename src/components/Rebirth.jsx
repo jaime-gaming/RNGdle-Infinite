@@ -107,13 +107,14 @@ function when(at) {
   });
 }
 
-// Before the last rung there is no Prestige to show. The place it will take is
-// faded out, and the page only says that there is more, so the next step stays
-// a surprise until the ladder is actually finished.
-function PrestigeTeaser() {
+// The ladder is run again after every prestige. On the first run the hidden
+// stage is Prestige; once a prestige is done, the same teaser stands in for
+// Rollback, so it never teases a stage the player has already reached.
+function StageTeaser({ target, rollbackUnlocked }) {
   return (
     <section
       className="rebirth-block rebirth-teaser"
+      data-teaser={target}
       aria-labelledby="rebirth-teaser-title"
     >
       <div className="rebirth-teaser-fade" aria-hidden="true">
@@ -124,6 +125,13 @@ function PrestigeTeaser() {
       <p id="rebirth-teaser-title" className="rebirth-teaser-line">
         Wait, but there is more...
       </p>
+      {target === "rollback" && (
+        <p className="rebirth-teaser-hint">
+          {rollbackUnlocked
+            ? "Rollback is the last stage."
+            : "One last stage is still ahead."}
+        </p>
+      )}
     </section>
   );
 }
@@ -893,7 +901,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           </div>
         </section>
       ) : (
-        <PrestigeTeaser />
+        <StageTeaser
+          target={ultras > 0 ? "rollback" : "prestige"}
+          rollbackUnlocked={ultras >= ROLLBACK_AFTER_PRESTIGES}
+        />
       )}
 
       {rollbackShown && (

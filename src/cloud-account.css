@@ -250,7 +250,7 @@
 }
 .google-sign-in-button:disabled {
   opacity: 0.62;
-  cursor: wait;
+  cursor: not-allowed;
 }
 .google-mark {
   display: inline-block;
@@ -550,7 +550,7 @@
 }
 .cloud-save-choice-actions .secondary-button:disabled {
   opacity: 0.6;
-  cursor: wait;
+  cursor: not-allowed;
 }
 .cloud-save-conflict > .cloud-account-note {
   margin-top: 9px;

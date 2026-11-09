@@ -1806,3 +1806,11 @@
   letter-spacing: 0.01em;
   color: var(--secondary);
 }
+
+/* The teaser names the last stage only once Rollback is no longer a secret. */
+.rebirth-teaser-hint {
+  position: relative;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}

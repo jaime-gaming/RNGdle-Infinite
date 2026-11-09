@@ -200,3 +200,19 @@ test("only the signature CTA and the idle tile animate on the roll screen", asyn
   expect(base).toContain("#cc68ed");
   expect(base).toContain("#666ee2");
 });
+
+test("a blocked control shows a blocked cursor, never a loading one", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForApp(page);
+  const cursors = await page.evaluate(() => {
+    const button = document.createElement("button");
+    button.disabled = true;
+    document.body.append(button);
+    const global = getComputedStyle(button).cursor;
+    button.remove();
+    return { global };
+  });
+  expect(cursors.global).toBe("not-allowed");
+});

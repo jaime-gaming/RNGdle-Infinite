@@ -242,6 +242,8 @@ try {
         page.getByRole("button", { name: "GENERATE", exact: true }),
       ).toBeEnabled();
       await expect(page.locator(".header")).toBeVisible();
+      // The root-domain build is the live game: no legacy mirror notice.
+      await expect(page.locator(".mirror-notice")).toHaveCount(0);
 
       // A committed roll must survive a direct refresh on the Worker artifact.
       await page.getByRole("button", { name: "GENERATE", exact: true }).click();

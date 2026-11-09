@@ -359,3 +359,14 @@
     gap: 3px;
   }
 }
+
+/* The exact internal build label, quietly at the very end of Settings. */
+.settings-version {
+  margin: 0;
+  padding-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  text-align: right;
+}

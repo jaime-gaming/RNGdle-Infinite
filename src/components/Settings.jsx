@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import AuraWardrobe from "./AuraWardrobe";
 import { useSettings } from "../use-settings.jsx";
+import { APP_INTERNAL_VERSION } from "../app-update.js";
 import { NOTIFICATION_RANKS } from "../settings.js";
 import {
   notificationPermission,
@@ -476,6 +477,9 @@ export default function Settings({
             "Refreshes the game to get the latest version. Your progress, profile and settings stay saved."}
         </p>
       </div>
+      <p className="settings-version" data-testid="settings-internal-version">
+        {APP_INTERNAL_VERSION}
+      </p>
     </section>
   );
 }

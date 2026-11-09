@@ -155,6 +155,12 @@ try {
   const homeResponse = await page.goto(`${origin}${base}`);
   assert.equal(homeResponse?.status(), 200);
   await expect(page.locator(".header")).toBeVisible();
+  // The /RNGdle-Infinite/ build is the legacy mirror, so it alone says so.
+  await expect(page.locator(".mirror-notice")).toBeVisible();
+  await expect(page.locator(".mirror-notice a")).toHaveAttribute(
+    "href",
+    "https://rngdle-infinite.jaime-gaming.com/",
+  );
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();

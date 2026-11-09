@@ -324,7 +324,7 @@
   outline-offset: 3px;
 }
 .profile-logo-button:disabled {
-  cursor: progress;
+  cursor: not-allowed;
 }
 .profile-logo-button .avatar-mark {
   border-style: dashed;

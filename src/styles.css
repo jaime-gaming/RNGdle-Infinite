@@ -91,7 +91,7 @@ a {
   touch-action: manipulation;
 }
 button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
 }
 a {
   color: inherit;
@@ -2150,4 +2150,21 @@ footer button:hover,
 .signup-link .secondary-button {
   width: 100%;
   justify-content: center;
+}
+
+/* Only the /RNGdle-Infinite/ GitHub Pages build renders this legacy mirror
+   notice; the root-domain build never does. */
+.mirror-notice {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+.mirror-notice a {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

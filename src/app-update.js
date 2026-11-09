@@ -74,6 +74,13 @@ export function getAppInternalVersion(documentRef = globalThis.document) {
   }
 }
 
+// GitHub Pages serves a legacy mirror under /RNGdle-Infinite/; the live
+// root-domain build and local development both use "/". Only the mirror
+// carries the visible legacy notice.
+export function isLegacyMirrorBuild(base = import.meta.env?.BASE_URL ?? "/") {
+  return Boolean(base && base !== "/");
+}
+
 export function makeVersionUrl({
   base = "/",
   origin = "http://localhost",
