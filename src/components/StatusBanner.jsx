@@ -31,10 +31,6 @@ function bodyFor(issue) {
   );
 }
 
-// Full-width notice under the header, on every page. Color and text follow the
-// incident severity and the latest status update is summarized when available.
-// Dismissal is per incident (kept in the shared status store), so the header
-// indicator can bring the banner back and a new incident shows it again.
 export default function StatusBanner() {
   const { issue, dismissedId } = useStatusIssue();
   if (!issue || dismissedId === issue.id) return null;
@@ -69,7 +65,7 @@ export default function StatusBanner() {
         className="status-banner-link"
         href={issue.url ?? STATUS_PAGE_URL}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
       >
         More info <ArrowUpRight size={13} aria-hidden="true" />
       </a>

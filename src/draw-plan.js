@@ -1,19 +1,5 @@
 import { SKILL_MAX_DRAWS } from "./skills.js";
 
-// The one rule every draw-modifying skill collapses into: take this many
-// ordinary, independent draws and keep the best of them. Two draw skills do
-// not merge into one budget — each spends its own draws and keeps its own
-// number, and the roll pays for every number it kept. The best of them is the
-// number the roll commits and shows; the others are paid and recorded beside
-// it rather than thrown away.
-//
-// A live roll adds an ordinary draw when the six-number budget has room.
-// Unfired draw skills wait, with their full charge, for the next roll. Never
-// draw a hidden seventh number or discard a skill's unspent attempts.
-//
-// `roll` draws one uniform number and `score` re-reads it from the verified
-// index, so nothing here can invent EP, bias a draw or edit a number: it only
-// chooses between numbers the player genuinely rolled.
 export async function runDrawPicks(
   picks,
   roll,
@@ -41,8 +27,7 @@ export async function runDrawPicks(
         bestHere = scored;
         bestHereIndex = drawIndex;
       }
-      // A floor skill stops the moment a draw is good enough; the rest of its
-      // own budget is never spent, and the next skill starts drawing again.
+
       if (pick.floor > 0 && scored.totalEP >= pick.floor) break;
     }
     if (!bestHere) continue;
@@ -58,7 +43,7 @@ export async function runDrawPicks(
     const drawIndex = draws.length;
     draws.push(number);
     const scored = await score(number);
-    // Ties keep the skill's number: the plain draw has to beat it outright.
+
     if (!best || scored.totalEP > best.totalEP) {
       best = scored;
       winnerSkill = null;
@@ -68,9 +53,6 @@ export async function runDrawPicks(
   return { draws, result: best, picks: kept, winnerSkill, winnerIndex };
 }
 
-// One budget, one number: the shape a single draw skill has always had, and
-// the one the tests quote when they want to reason about a plan instead of a
-// rack.
 export async function runDrawPlan(plan, roll, score) {
   return runDrawPicks(
     [{ id: null, attempts: plan?.attempts ?? 1, floor: plan?.floor ?? 0 }],

@@ -140,8 +140,7 @@ import {
   useSettings,
 } from "../use-settings.jsx";
 import "../shop.css";
-// Every product icon is a hand-drawn mark from game-icons.jsx: one grid, one
-// stroke weight, one filled accent. No stock icon sets in the catalogue.
+
 const icons = {
   speed: SpeedMark,
   clock: ClockMark,
@@ -197,8 +196,7 @@ const icons = {
   blackout: BlackoutMark,
   hollow: PumpkinMark,
 };
-// The shelves come from the catalogue, so routing, the hub, the featured picks
-// and the deep links all read the same list. This map only paints them.
+
 const shelfIcons = {
   skill: SkillMark,
   pace: PaceMark,
@@ -207,8 +205,7 @@ const shelfIcons = {
   offline: OfflineMark,
   automation: AutomationMark,
 };
-// One honest sample number per rarity for the look preview: six digits, no
-// promises, just something for the box to wear.
+
 const LOOK_SAMPLES = {
   trash: "100481",
   common: "245831",
@@ -220,7 +217,6 @@ const LOOK_SAMPLES = {
   godly: "993399",
 };
 
-// A self-contained demonstration: it never creates a game roll or changes a save.
 function LookRollPreview({ aura, tier }) {
   const reducedMotion = useMotionPreference();
   const [replay, setReplay] = useState(0);
@@ -284,9 +280,9 @@ export default function Shop({
   progress,
   cloudUser = false,
   cloudSaved = false,
-  // "" is the hub. A section id means that shelf is the page being read.
+
   section = "",
-  // Auras own families: "" is the shelf's index of banners, an id is one set.
+
   family = "",
   onOpenShelf,
   onOpenFamily,
@@ -295,19 +291,15 @@ export default function Shop({
   navigate,
   notify,
   openSignup,
-  // Goal picking is armed from the goal banner above the shelves; while it is
-  // armed, the next trackable card the player taps becomes the goal. The state
-  // lives in the app shell so it survives moving between shelves.
+
   pickingGoal = false,
   onPickingGoal = () => {},
 }) {
   const formatEP = useFormatEP();
-  // The sale day drives three things on the shelves: the event notice at the
-  // top, the discount every card wears, and the counter of missed looks.
+
   const sale = useSaleStatus();
   const saleRecord = progress.blackFriday ?? null;
-  // The sale's own shelf: one door in the hub while the day is on the calendar,
-  // and behind it everything the day puts on the counter.
+
   const saleShelf = section === "black-friday";
   const saleItems = sale.active
     ? [BLACK_FRIDAY_SKIN, ...resaleMissing(progress.owned)]
@@ -319,8 +311,7 @@ export default function Shop({
   const { settings: preferences } = useSettings();
   const [previewTier, setPreviewTier] = useState("rare");
   const [lastPurchase, setLastPurchase] = useState(null);
-  // The little eye on every aura card: a sample roll of a chosen rarity,
-  // wearing the look before you commit to it.
+
   const [lookPreview, setLookPreview] = useState(null);
   const [lookTier, setLookTier] = useState("rare");
   const lookDialog = useRef(null);
@@ -347,10 +338,7 @@ export default function Shop({
   const { intervalMS: offlineInterval, cap: offlineCap } = offlineSettings(
     progress.owned,
   );
-  // The offline shelf only exists once the Offline Roller does: no door to it
-  // in the hub or on the other shelves before then. A direct link still lands
-  // on the shelf's own locked panel, so nothing breaks — it simply never
-  // advertises itself early.
+
   const offlineUnlocked = progress.owned.includes("offline-roller");
   const visibleShelves = SHOP_SECTIONS.filter(
     (entry) => entry.id !== "offline" || offlineUnlocked,
@@ -358,8 +346,7 @@ export default function Shop({
   const charges = flywheelRequired(progress.owned);
   const rack = rackReport(progress);
   const goal = currentGoal(progress, clock);
-  // A tracked goal is a choice; anything else the banner shows is the
-  // recommendation, which is what the banner says.
+
   const goalTracked =
     !!goal &&
     !!progress.goalId &&
@@ -369,10 +356,7 @@ export default function Shop({
     ? Math.min(100, (progress.balance / goal.price) * 100)
     : 0;
   const goalReady = !!goal && progress.balance >= goal.price;
-  // The skill stall: three shop skills on sale at a time, rotating every five
-  // minutes on the shared game clock, so every tab and the purchase guard
-  // agree on the stock. The one-second ticker runs on the shelves that count
-  // down or refresh: the skill stall and Task Skips on Tools.
+
   useEffect(() => {
     if (!["skills", "tools"].includes(shelf?.id)) return;
     const timer = setInterval(() => setClock(gameNow()), 1000);
@@ -385,10 +369,9 @@ export default function Shop({
     0,
     Math.ceil(((stockWindow + 1) * SKILL_STOCK_WINDOW_MS - clock) / 1000),
   );
-  // The rotation is deterministic, so the upcoming stock is already known.
+
   const nextPair = skillStock(stockWindow + 1, progress.owned);
-  // When one out-of-stock skill comes back — the moment it is on sale again,
-  // not the next rotation, which may not carry it.
+
   function restockLabel(id) {
     const offset = nextSkillStockOffset(stockWindow, progress.owned, id);
     if (offset == null) return "Back later";
@@ -448,7 +431,6 @@ export default function Shop({
         else {
           setLastPurchase(null);
           if (type === "goal") {
-            // The pick is done the moment the goal lands.
             onPickingGoal(false);
             notify({
               kind: "done",
@@ -469,22 +451,18 @@ export default function Shop({
       setPending(false);
     }
   }
-  // Every product knows how it is doing at a glance: owned, affordable, missing
-  // its prerequisite or waiting on a local profile. A skill the stall does not
-  // stock right now is visible but not available.
+
   function stateOf(item) {
     const owned = progress.owned.includes(item.id);
     const price = currentPrice(item);
-    // A retired look the sale counter has back is for sale for exactly one day,
-    // so on that day its card behaves like any other product on a shelf.
+
     const onCounter = resalePrice(item, clock) !== null;
     const requires = !!(
       item.requires && !progress.owned.includes(item.requires)
     );
     const profileGated = !!(item.requiresProfile && !progress.profile);
     const stocked = item.kind !== "skill" || stock.includes(item.id);
-    // A repeatable product is never owned. It is blocked while its wait runs or
-    // while the save already holds the most it can, and says which.
+
     const repeat = item.repeatable ? skipStatus(progress.tasks, clock) : null;
     const blocked =
       !!repeat && (repeat.waitMs > 0 || repeat.tokens >= repeat.limit);
@@ -513,12 +491,9 @@ export default function Shop({
         progress.balance >= price,
     };
   }
-  // An upgrade behind a purchase you have not made is not on the shelf at all.
-  // The shop shows the next step of a chain, never the wall behind it, so a
-  // card appears the moment it becomes buyable and not one roll earlier.
+
   const unlockedNow = (item) => productUnlocked(item, progress.owned);
-  // The preview band is the card's headline: the same shape on every shelf, so
-  // a glance tells you what a purchase changes before you read a word.
+
   function preview(item, state) {
     const Icon = icons[item.icon] ?? ShoppingBag;
     const ownedNow = state.owned;
@@ -631,28 +606,20 @@ export default function Shop({
         : skill
           ? (progress.equippedSkills ?? []).includes(item.id)
           : false;
-    // Tracked, not recommended: a card is "the goal" only when the save has
-    // actually chosen it. The recommendation the banner falls back to must
-    // never read as tracked, or picking it would untrack nothing.
+
     const isGoal = progress.goalId === item.id;
-    // A card becomes the goal only while the goal banner's pick mode is
-    // armed: anything the goal action would accept — unowned, prerequisites
-    // unlocked — is pickable, and tapping the tracked card again untracks it.
+
     const goalable = validGoal(item.id, progress.owned ?? []);
     const pickable = pickingGoal && goalable;
-    // Out of the stall's current stock: still listed, dimmed under a green
-    // aura, with the next restock counting down.
+
     const restocking = skill && !state.owned && !state.stocked;
     const definition = skill ? skillById.get(item.skillId ?? item.id) : null;
     const Icon = icons[item.icon] ?? ShoppingBag;
-    // What the sale day adds to this one card: a discount tag, or the counter
-    // price of a retired look. The limited skin is neither — it is paid by
-    // stamps, and the card says so instead of showing a price.
+
     const discount = sale.active ? saleDiscountFor(item) : 0;
     const onCounter = resalePrice(item, clock) !== null;
     const limited = item.id === BLACK_FRIDAY_SKIN.id;
-    // A card that is simply for sale says nothing extra: the price and the
-    // button are the state. Only real states earn a chip.
+
     const stateLabel = equipped
       ? "Equipped"
       : state.owned
@@ -674,17 +641,12 @@ export default function Shop({
         tabIndex={-1}
         style={{ animationDelay: `${Math.min(index, 10) * 40}ms` }}
         onClick={(event) => {
-          // A card only becomes the goal while the goal banner's pick mode is
-          // armed — a plain click is just browsing. Clicks that land on a real
-          // control (buy, equip…) still belong to that control.
           if (event.target.closest("button, a, input, select, textarea"))
             return;
           if (!pickable) return;
           perform("goal", isGoal ? null : item.id);
         }}
       >
-        {/* While pick mode is armed, pickable cards wear a target so the
-            player knows the next tap sets the goal. */}
         {pickable && (
           <span className="shop-card-pick" aria-hidden="true">
             <Target size={15} />
@@ -717,9 +679,7 @@ export default function Shop({
           className={
             aura
               ? `aura-preview aura-${item.id}`
-              : // A skill tile wears its own tint, so the shelf reads each
-                // skill's colour the same way the corner rack does.
-                `upgrade-preview upgrade-${item.kind}${item.tint ? ` tint-${item.tint}` : ""}`
+              : `upgrade-preview upgrade-${item.kind}${item.tint ? ` tint-${item.tint}` : ""}`
           }
           aria-hidden="true"
         >
@@ -763,8 +723,7 @@ export default function Shop({
               ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum ${offlineCap} rolls per absence; unused fractions do not carry over.`
               : item.description}
           </p>
-          {/* What the skill adds, outside the folded description so the effect
-              is never the line that gets clipped: one pill per claim. */}
+
           {skill && definition && (
             <p className="shop-skill-effect">
               {skillEffectChips(definition).map((chip) => (
@@ -774,12 +733,7 @@ export default function Shop({
               ))}
             </p>
           )}
-          {/* The goal is set from the goal banner's pick mode, never by an
-              extra button on the card — the card only states when it *is* the
-              goal. An unmet prerequisite (rare now that the shelf hides
-              those) or the profile gate still reads as a caveat — a
-              prerequisite that is already met never renders a "Needs" tag on
-              a card you can buy. */}
+
           {(isGoal || state.requires || state.profileGated) && (
             <div className="shop-card-tags">
               {isGoal && (
@@ -884,8 +838,6 @@ export default function Shop({
             )}
           </button>
           {(() => {
-            // The button on an out-of-stock card already says when the skill
-            // returns; a second sentence under it would only repeat it.
             const note = restocking ? "" : noteFor(item, state);
             return note ? (
               <small className="shop-item-note">{note}</small>
@@ -895,10 +847,7 @@ export default function Shop({
       </article>
     );
   }
-  // A card for a skill the shelf never sold: no price, no stock, just the
-  // skill, its charge and an equip switch. It deliberately carries no
-  // data-product and no price, so the shelf's status line and cheapest-first
-  // order — both pinned by tests — only ever see what is for sale.
+
   function freeSkillCard(def, petName) {
     const equipped = (progress.equippedSkills ?? []).includes(def.id);
     const item = { ...def, kind: "skill" };
@@ -995,8 +944,7 @@ export default function Shop({
     }
     return "";
   }
-  // A shelf button: a real link to its own sub-page, carrying the one number
-  // that says whether it is worth opening.
+
   function shelfTile(entry) {
     const Icon = shelfIcons[entry.icon] ?? ShoppingBag;
     return (
@@ -1023,7 +971,7 @@ export default function Shop({
       </a>
     );
   }
-  // Every hub button answers one question: what is on that shelf right now?
+
   function sectionStat(section) {
     const items = productsOnShelf(section.id).filter(unlockedNow);
     if (section.id === "skills") return `${rack.used} / ${rack.slots} slots`;
@@ -1044,9 +992,7 @@ export default function Shop({
     ).length;
     return `${owned} / ${items.length} owned`;
   }
-  // The spotlight is a shop window, not a second catalogue: three picks, each
-  // one a link into the shelf that sells it. Distinct by construction so the
-  // same item is never advertised twice.
+
   const featured = (() => {
     const picks = [];
     const take = (item, label) => {
@@ -1055,12 +1001,11 @@ export default function Shop({
     };
     const open = shopProducts.filter((item) => {
       const state = stateOf(item);
-      // A featured pick must be openable: out-of-stock skills stay out of the
-      // window until the stall offers them again.
+
       if (item.kind === "skill" && !stock.includes(item.id)) return false;
       return !state.owned && !state.requires && !state.profileGated;
     });
-    // A pick already in the window is never offered twice.
+
     const unpicked = (items) =>
       items.filter((item) => !picks.some((pick) => pick.item.id === item.id));
     const cheapest = (items) =>
@@ -1084,22 +1029,16 @@ export default function Shop({
     take(cheapest(unpicked(open)), "Saving up for");
     return picks.slice(0, 3);
   })();
-  // What a shelf actually puts on screen. Pace and Offline deliberately show
-  // one level per path rather than the whole track, so the status line counts
-  // these, never the catalogue size: a shelf must never claim to be showing ten
-  // items while two cards are drawn. Every shelf reads cheapest first.
+
   const byPrice = (a, b) => currentPrice(a) - currentPrice(b);
   const shelfItemsNow = (() => {
     if (!shelf) return [];
-    // The auras shelf is an index of five banners until a family is opened.
+
     if (shelf.id === "auras")
       return auraFamily
         ? aurasInFamily(auraFamily.id, progress.owned, clock).sort(byPrice)
         : [];
     if (shelf.id === "skills")
-      // The whole skill catalogue shows cheap-first; the two the stall stocks
-      // right now are buyable, the others wait dimmed under the green restock
-      // aura. Flywheel and the bays are shelf fixtures.
       return [
         nextUpgrade(progress.owned, "pace"),
         ...productsOnShelf("skills").filter((item) => item.kind !== "pace"),
@@ -1122,13 +1061,11 @@ export default function Shop({
             .filter(Boolean)
             .sort(byPrice)
         : [];
-    // Companions are drawn by their own component, with their own count.
+
     if (shelf.id === "companions") return [];
     return productsOnShelf(shelf.id).slice().sort(byPrice);
   })().filter(unlockedNow);
-  // Saved racks. Equipping is free, so a rack is a convenience rather than a
-  // purchase: applying one can never cost EP, and a skill the account lost is
-  // simply left out of the rack it applies.
+
   const loadouts = progress.loadouts ?? [];
   const rackIds = [...new Set(progress.equippedSkills ?? [])].filter((id) =>
     skillUnlocked(id, progress),
@@ -1141,10 +1078,7 @@ export default function Shop({
     names: entry.skills.map((id) => skillById.get(id)?.name ?? id),
     ready: entry.skills.filter((id) => skillUnlocked(id, progress)).length,
   });
-  // Earned, not bought: the active companion's signature and the ladder's
-  // rewards live on this shelf too, so they can be equipped and unequipped
-  // where the rest of the rack is managed. Rebirth rewards ride free beside
-  // the slots, but companion skills do take a slot.
+
   const freeSkills = (() => {
     const earned = [];
     const signature = skillForPet(progress.activePet);
@@ -1166,7 +1100,7 @@ export default function Shop({
   const freeEquipped = freeSkills.filter(({ def }) =>
     (progress.equippedSkills ?? []).includes(def.id),
   ).length;
-  // Auras are grouped by family.
+
   const auraGroups = auraFamilies
     .map((family) => ({
       family,
@@ -1176,8 +1110,7 @@ export default function Shop({
   const affordableCount = shopProducts.filter(
     (item) => stateOf(item).affordableNow,
   ).length;
-  // The three auras a family puts on its banner: the best of the set, dearest
-  // first, with their colours for the gradient behind them.
+
   function bannerAuras(entry) {
     return (
       entry.legacyHub
@@ -1286,15 +1219,14 @@ export default function Shop({
           </p>
         </div>
       </div>
-      {/* The event object: one black button at the top of the shop that opens
-          the whole explanation of the Black Friday sale. */}
+
       <SaleEventNotice
         progress={progress}
         previewTier={previewTier}
         onOpenSpecial={() => onOpenFamily("special")}
         onOpenSaleShelf={() => onOpenShelf("black-friday")}
       />
-      {/* A shelf is its own page, so it says where it sits in the shop. */}
+
       {shelf && (
         <nav className="shop-crumb" aria-label="Breadcrumb">
           <button type="button" onClick={() => onOpenShelf("")}>
@@ -1367,8 +1299,6 @@ export default function Shop({
         aria-label="Savings goal"
       >
         {pickingGoal ? (
-          /* Pick mode, armed from here and only from here: the shelves wait
-             for the player's tap, and this banner says so out loud. */
           <div className="shop-goal-body shop-goal-picking" role="status">
             <span className="shop-goal-ring is-picking" aria-hidden="true">
               <Target size={14} />
@@ -1429,8 +1359,7 @@ export default function Shop({
               >
                 View on shelf
               </button>
-              {/* The goal is a deliberate choice: arm pick mode here first,
-                  then tap the item you want on a shelf. */}
+
               <button
                 type="button"
                 className="primary-button"
@@ -1468,10 +1397,7 @@ export default function Shop({
       {sale.active && (
         <SaleStampCard record={saleRecord} previewTier={previewTier} />
       )}
-      {/* The shop's own page is the index: one button per shelf, each a real
-          link to a real sub-page, each carrying the number that tells you
-          whether it is worth opening. The shelves themselves live on their
-          own pages. */}
+
       {!shelf && !saleShelf && (
         <>
           <section className="shop-hub" id="shop-hub" aria-label="Shop shelves">
@@ -1527,8 +1453,7 @@ export default function Shop({
               )}
             </nav>
           </section>
-          {/* A shop window, not a second catalogue: three picks that link into the
-          shelf that sells them, so nothing is listed twice. */}
+
           {!!featured.length && (
             <section
               className="shop-featured"
@@ -1610,8 +1535,7 @@ export default function Shop({
           )}
         </>
       )}
-      {/* One sticky bar per shelf: the way back and the count. Every shelf
-          shows everything it has — nothing to search, nothing to filter. */}
+
       {(shelf || saleShelf) && (
         <div className="shop-controls">
           <div className="shop-bar">
@@ -1632,14 +1556,9 @@ export default function Shop({
                   : shelf.id === "auras" && auraFamily?.legacyHub
                     ? `${legacyFamilies.length} event group${legacyFamilies.length === 1 ? "" : "s"} · ${auraProducts.filter((item) => item.eventOnly && progress.owned.includes(item.id)).length} owned`
                     : shelf.id === "auras" && !auraFamily
-                      ? // The index has no cards to count — its five banners are
-                        // the shelf, so it counts sets instead of calling itself
-                        // locked.
-                        `${auraFamilies.length} sets · ${auraFamilies.reduce((total, entry) => total + aurasInFamily(entry.id, progress.owned, clock).length, 0)} looks`
+                      ? `${auraFamilies.length} sets · ${auraFamilies.reduce((total, entry) => total + aurasInFamily(entry.id, progress.owned, clock).length, 0)} looks`
                       : !shelfItemsNow.length
-                        ? // A locked shelf has nothing to count; its own panel says
-                          // why, and a second "0 of 0" would only be noise.
-                          "Locked"
+                        ? "Locked"
                         : `${shelfItemsNow.length} on this shelf`}
             </span>
           </div>
@@ -1709,7 +1628,7 @@ export default function Shop({
               {rack.used} / {rack.slots} slots used
             </span>
           </div>
-          {/* The stall itself: how full, and when the stock rotates. */}
+
           <div
             className={`skill-stock ${stock.length ? "" : "is-empty"}`}
             role="status"
@@ -1724,8 +1643,7 @@ export default function Shop({
                 <b data-testid="skill-stock-timer">
                   {formatDuration(stockSecondsLeft)}
                 </b>
-                {/* The rotation is deterministic, so the stock that replaces
-                    this one is already knowable — say it. */}
+
                 {!!nextPair.length && (
                   <em className="skill-stock-next">
                     {" · next: "}
@@ -1739,8 +1657,7 @@ export default function Shop({
               <span>You own every shop skill.</span>
             )}
           </div>
-          {/* What the rack adds up to is stated once — in the Σ panel of the
-              skill bar — not repeated here. */}
+
           {(!!loadouts.length || !!rackIds.length) && (
             <div className="skill-racks" aria-labelledby="skill-racks-title">
               <div className="skill-racks-head">
@@ -1916,7 +1833,7 @@ export default function Shop({
             </label>
             <span>Same rarity — your look.</span>
           </div>
-          {/* The index: one banner per family, each one a real page. */}
+
           {!auraFamily && (
             <div className="aura-family-banners">
               {regularFamilies.map((entry) => familyBanner(entry))}
@@ -1924,7 +1841,7 @@ export default function Shop({
                 familyBanner(SPECIAL_AURA_COLLECTION)}
             </div>
           )}
-          {/* Inside a family: its banner opens the page, its cards follow. */}
+
           {auraFamily?.legacyHub && (
             <>
               <div className="aura-family-banners aura-special-banners">
@@ -2021,8 +1938,6 @@ export default function Shop({
               </div>
             </>
           ) : (
-            // Nothing on this shelf can be bought before the roller exists, so
-            // the page says exactly which door to open instead of guessing.
             <div className="shop-section-heading shop-locked-heading">
               <div>
                 <h2>
@@ -2067,7 +1982,7 @@ export default function Shop({
           </aside>
         </>
       )}
-      {/* Leaving a shelf is one click: the other five, with their own numbers. */}
+
       {shelf && (
         <nav className="shop-others" aria-label="Other shelves">
           <span className="shop-others-label">Other shelves</span>
@@ -2204,8 +2119,7 @@ export default function Shop({
           </>
         )}
       </dialog>
-      {/* The eye on an aura card opens this: a sample roll of any rarity,
-          wearing the look, so a purchase is never a guess. */}
+
       <dialog
         className="shop-preview-dialog"
         ref={lookDialog}

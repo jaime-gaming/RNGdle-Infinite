@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import {
   FRESH_START_PRESTIGES,
@@ -8,9 +9,8 @@ import {
   freshStartEligible,
   parseAndRepairProgress,
 } from "../src/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
 
-// Mirrors FRESH_START_SEEN_KEY in src/components/FreshStart.jsx, which pulls
-// CSS in and so cannot be imported from a Node test.
 const SEEN_KEY = "rng-infinite-fresh-start-seen-v1";
 const veteran = (patch = {}) => ({
   ...emptyProgress(),
@@ -24,8 +24,7 @@ const veteran = (patch = {}) => ({
   equipped: "prism",
   ...patch,
 });
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 const seen = (page) =>
   page.evaluate((key) => localStorage.getItem(key), SEEN_KEY);
 
@@ -33,7 +32,7 @@ test("a fresh start needs a profile and three prestiges, wipes the run and keeps
   expect(freshStartEligible(veteran({ ultraRebirths: 2, rollbacks: 0 }))).toBe(
     false,
   );
-  // A Rollback hands the prestiges back, but it still counts as seen it all.
+
   expect(freshStartEligible(veteran({ ultraRebirths: 0, rollbacks: 1 }))).toBe(
     true,
   );
@@ -46,7 +45,7 @@ test("a fresh start needs a profile and three prestiges, wipes the run and keeps
   ).toThrow("three prestiges");
   const after = applyProgress(veteran(), { type: "fresh-start", at: 1000 });
   expect(after.profile).toEqual(testProfile);
-  // Auras survive; the skill does not. The equipped aura stays equipped.
+
   expect(after.owned).toEqual(["starfall", "prism"]);
   expect(after.equipped).toBe("prism");
   expect(after.balance).toBe(0);
@@ -69,7 +68,7 @@ test("a fresh start needs a profile and three prestiges, wipes the run and keeps
       },
     },
   ]);
-  // The reset save reads back without repairs, and is no longer eligible.
+
   const read = parseAndRepairProgress(JSON.stringify(after));
   expect(read.repairs).toEqual([]);
   expect(freshStartEligible(read.progress)).toBe(false);
@@ -80,14 +79,16 @@ test("the suggestion opens once per profile, then lives behind the header flag",
 }) => {
   await seedProgress(page, veteran());
   await page.goto("/");
+  await waitForApp(page);
   const dialog = page.getByRole("dialog", { name: "You have seen it all." });
   await expect(dialog).toBeVisible();
   expect(await seen(page)).toBe(testProfile.id);
   await dialog.getByRole("button", { name: "Keep playing" }).click();
   await expect(dialog).not.toBeVisible();
   expect((await saved(page)).ultraRebirths).toBe(FRESH_START_PRESTIGES);
-  // Not again on reload; the "!" flag reopens it on demand.
+
   await page.reload();
+  await waitForApp(page);
   await expect(dialog).not.toBeVisible();
   const flag = page.getByRole("button", {
     name: "Start fresh? The game has a suggestion",
@@ -108,6 +109,7 @@ test("confirming the reset saves the wiped game, keeps the auras and removes the
 }) => {
   await seedProgress(page, veteran());
   await page.goto("/");
+  await waitForApp(page);
   const dialog = page.getByRole("dialog", { name: "You have seen it all." });
   await dialog.getByRole("button", { name: "Start from zero" }).click();
   await dialog.getByRole("button", { name: "Yes, reset everything" }).click();
@@ -124,6 +126,7 @@ test("confirming the reset saves the wiped game, keeps the auras and removes the
     }),
   ).toHaveCount(0);
   await page.goto("/history");
+  await waitForApp(page);
   await expect(page.locator('[data-event-type="fresh-start"]')).toBeVisible();
 });
 
@@ -132,6 +135,7 @@ test("a guest with three prestiges is not offered a fresh start", async ({
 }) => {
   await seedProgress(page, veteran({ profile: null }));
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
     page.getByRole("button", {

@@ -1,12 +1,6 @@
 import { expect } from "@playwright/test";
 
-// Test-only interception of the worker module; no seed/number input exists in
-// production. The real loader, gzip integrity checks, scoring, and UI still run.
 export async function mockRandom(page, words) {
-  // Matches the dev-served module and the built asset, so the same helper can
-  // drive either build. The body is fetched through the API request context
-  // instead of the intercepted response: a navigation can dispose that body,
-  // and a disposed response must never break the handler.
   await page.route("**/roll.worker*.js*", async (route) => {
     try {
       const response = await page.request.get(route.request().url());
@@ -18,9 +12,6 @@ export async function mockRandom(page, words) {
         body,
       });
     } catch {
-      // A teardown can close the request context mid-flight; serving the real
-      // module then fails the test loudly on the number it draws, which is far
-      // better than a transport error in place of an assertion.
       await route.continue().catch(() => {});
     }
   });
@@ -44,11 +35,10 @@ export async function showRoll(page, number) {
   );
 }
 
-// Start a fresh generated roll under a virtual clock, not a production replay.
 export async function startRoll(page, number) {
   await mockRandom(page, [number]);
   await page.goto("/");
-  // Loading the full scoring dataset can take longer under parallel suite load.
+
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled({ timeout: 45000 });

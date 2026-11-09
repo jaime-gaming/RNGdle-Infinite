@@ -1,17 +1,3 @@
-// Legacy `rngween-*` rows remain in old saves and stay non-roll income.
-// What the activity log adds up to, kept per cycle so that entries can leave the
-// log without taking their share of the profile with them.
-//
-// The profile and the Rebirth page read the log, and bulk delete or the cap
-// removes entries from it. Each removed entry is first folded into a tally for
-// the cycle it belonged to. A tally holds exactly what those pages read: the
-// counts, the best roll, the badges found, companions, skills, and the first and
-// last times. Every figure is then the entries still in the log plus the tallies,
-// so removing entries never changes what the profile shows.
-//
-// Cycles are numbered by the rebirth markers before them. Markers are never
-// removed, so an entry's cycle number never changes.
-
 import { isCycleMarker } from "./history-log.js";
 import { allBadgeMetadata } from "./infinite-badges.js";
 import { petById } from "./pets.js";
@@ -43,17 +29,15 @@ function emptyTally() {
   return {
     rolls: 0,
     offlineRolls: 0,
-    // How many rolls landed in each tier, and when the first of them did. A tie
-    // for the favourite tier goes to the tier seen first.
+
     tiers: emptyTiers(),
     best: null,
-    // Every badge a roll or a discovery named...
+
     badges: [],
-    // ...and the ones a discovery found, which is what the Rebirth page counts.
+
     discovered: [],
     spent: 0,
-    // How many companion discoveries were logged, and which companions were
-    // found or bought. The ids are what a rebuilt companion list is made from.
+
     companions: 0,
     pets: [],
     skills: 0,
@@ -63,8 +47,6 @@ function emptyTally() {
   };
 }
 
-// The better of two best rolls: the higher score. On a tie the one logged first
-// wins, as the profile has always chosen.
 function bestOf(a, b) {
   if (!a) return b;
   if (!b) return a;
@@ -75,7 +57,6 @@ function bestOf(a, b) {
 
 const unionIds = (a, b) => [...new Set([...a, ...b])];
 
-// Adds two tallies together. Neither argument is changed.
 export function mergeTallies(a, b) {
   const tiers = emptyTiers();
   for (const tier of TIERS) {
@@ -103,8 +84,6 @@ export function mergeTallies(a, b) {
   };
 }
 
-// The tally of a list of log entries. Entries of every kind count towards the
-// first and last times, as the profile has always counted them.
 export function tallyEntries(entries = []) {
   const tally = emptyTally();
   const badges = new Set();
@@ -154,9 +133,6 @@ export function tallyEntries(entries = []) {
   return tally;
 }
 
-// Folds entries that have just left the log into the tallies of the cycles they
-// belonged to, and returns the new list. `history` is the log as it was before
-// they left, which says which cycle each entry was in.
 export function archiveRemoved(totals = [], history = [], removed = []) {
   if (!removed.length) return totals;
   const cycleOf = new Map();
@@ -180,13 +156,11 @@ export function archiveRemoved(totals = [], history = [], removed = []) {
       next[index] ?? emptyTally(),
       tallyEntries(entries),
     );
-  // Trailing cycles with nothing in them are not kept.
+
   while (next.length && next.at(-1) === null) next.pop();
   return next;
 }
 
-// One stored tally, checked field by field. Anything that does not read back
-// exactly is refused, so a damaged record is reset rather than trusted.
 function readTally(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const amounts = [
@@ -203,7 +177,7 @@ function readTally(value) {
   for (const tier of TIERS) {
     const row = value.tiers[tier];
     if (!row || typeof row !== "object" || !validAmount(row.count)) return null;
-    // A tier has a first time exactly when it has rolls.
+
     const hasRolls = row.count > 0;
     if (hasRolls !== (row.since !== null)) return null;
     if (hasRolls && !validTime(row.since)) return null;
@@ -254,9 +228,6 @@ function readTally(value) {
   };
 }
 
-// The stored tallies, one per cycle (null where a cycle has none). A value that
-// is not a list is dropped; a single unreadable tally is reset to nothing. The
-// result says whether anything had to be reset, so the caller can report it.
 export function parseRemovedTotals(value) {
   if (value == null) return { totals: [], repaired: false };
   if (!Array.isArray(value)) return { totals: [], repaired: true };
@@ -270,8 +241,6 @@ export function parseRemovedTotals(value) {
   return { totals, repaired };
 }
 
-// The tier most rolls landed in, or null with no rolls. A tie goes to the tier
-// seen first.
 export function favoriteTier(tally) {
   let top = null;
   for (const tier of TIERS) {

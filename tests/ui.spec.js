@@ -1,4 +1,5 @@
 import { chooseTheme } from "./helpers/appearance.js";
+import { waitForApp } from "./helpers/app.js";
 import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { allBadgeMetadata as metadata } from "../src/infinite-badges.js";
@@ -7,6 +8,7 @@ test("home, random roll, cooldown, and badge breakdown", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", {
       name: "One number. What will yours be?",
@@ -35,6 +37,7 @@ test("home, random roll, cooldown, and badge breakdown", async ({ page }) => {
 test("badge catalogue filters and details", async ({ page }) => {
   await seedProgress(page, { discovered: metadata.map((b) => b.id) });
   await page.goto("/#badges");
+  await waitForApp(page);
   await page.getByRole("textbox", { name: "Search badges" }).fill("Exact Leet");
   await expect(page.locator(".badge-card")).toHaveCount(1);
   await page.locator(".badge-card").click();
@@ -63,15 +66,17 @@ test("badge catalogue filters and details", async ({ page }) => {
 
 test("navigation, themes, help and local signup", async ({ page }) => {
   await page.goto("/");
+  await waitForApp(page);
   await chooseTheme(page, "dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page
     .getByRole("button", { name: "How to play", exact: true })
     .first()
     .click();
-  // The roll surface stays mounted but hidden behind the help page.
+
   await expect(page.locator(".roll-view")).toBeHidden();
   await expect(
     page.getByRole("heading", { name: "How to play", level: 1 }),
@@ -98,6 +103,7 @@ test("navigation, themes, help and local signup", async ({ page }) => {
     page.getByRole("navigation").getByRole("button", { name: "Leaderboard" }),
   ).toHaveCount(0);
   await page.goto("/#leaderboard");
+  await waitForApp(page);
   await expect(page.locator(".roll-view")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Global leaderboard" }),
@@ -120,6 +126,7 @@ test("desktop and mobile layouts do not overflow", async ({ page }) => {
       "#about",
     ]) {
       await page.goto("/" + hash);
+      await waitForApp(page);
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -129,6 +136,7 @@ test("desktop and mobile layouts do not overflow", async ({ page }) => {
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
+  await waitForApp(page);
   await page.screenshot({
     path: "test-results/home-desktop.png",
     fullPage: true,
@@ -145,18 +153,19 @@ test("the phone header carries the game logo in the middle", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
+  await waitForApp(page);
   const logo = await page.locator(".wordmark").boundingBox();
   const header = await page.locator(".header").boundingBox();
   const controls = await page.locator(".header-right").boundingBox();
-  // Centred on the screen, and never overlapping the theme and account
-  // buttons that share the bar with it.
+
   expect(
     Math.round(logo.x + logo.width / 2 - (header.x + header.width / 2)),
   ).toBe(0);
   expect(logo.x + logo.width).toBeLessThanOrEqual(controls.x);
-  // The desktop bar is left alone: the logo still leads the row.
+
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
+  await waitForApp(page);
   const wide = await page.locator(".wordmark").boundingBox();
   expect(wide.x).toBeLessThan(120);
 });

@@ -9,8 +9,6 @@ export function cloudGameAccess({
   maintenance = false,
   twoFactorPending = false,
 } = {}) {
-  // Two-factor: the device has not opened the emailed sign-in link yet, so the
-  // online session is not established. Playing locally stays available.
   if (twoFactorPending && !localPlay) {
     return {
       allowed: false,
@@ -18,9 +16,7 @@ export function cloudGameAccess({
         "Confirm the sign-in link we emailed you to finish signing in on this device.",
     };
   }
-  // While a scheduled maintenance is actually running, cloud features are
-  // unavailable. When a cloud account is required this blocks play (online
-  // progress cannot sync during maintenance); otherwise local play continues.
+
   if (maintenance) {
     return required
       ? {

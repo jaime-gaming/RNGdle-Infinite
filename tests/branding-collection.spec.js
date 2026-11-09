@@ -1,4 +1,5 @@
 import { chooseTheme } from "./helpers/appearance.js";
+import { waitForApp } from "./helpers/app.js";
 import { test, expect } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { showRoll } from "./helpers/random-roll.js";
@@ -12,6 +13,7 @@ test("the original RNGdle Infinite wordmark links home and navigation keeps keyb
   page,
 }) => {
   await page.goto("/#history");
+  await waitForApp(page);
   const logo = page.getByRole("button", { name: "RNGdle Infinite home" });
   await expect(logo.locator(".brand-edition")).toHaveText("INFINITE");
   await expect(logo.locator("img,svg")).toHaveCount(0);
@@ -42,6 +44,7 @@ test("empty badge collection has an accessible zero progress bar without reveali
   page,
 }) => {
   await page.goto("/#badges");
+  await waitForApp(page);
   await expect(progress(page)).toHaveAttribute("value", "0");
   await expect(progress(page)).toHaveAttribute("max", String(metadata.length));
   await expect(progress(page)).toHaveAttribute(
@@ -75,6 +78,7 @@ test("collection progress updates after earning badges, ignores search filters a
   await expect(progress(page)).toHaveAttribute("value", String(count));
   await page.unrouteAll({ behavior: "wait" });
   await page.reload();
+  await waitForApp(page);
   await expect(progress(page)).toHaveAttribute("value", String(count));
   await expect(page.locator(".badge-card")).toHaveCount(count);
 });
@@ -84,6 +88,7 @@ test("completed collection fills the bar and badge details have no reference but
 }) => {
   await seedProgress(page, { discovered: metadata.map((b) => b.id) });
   await page.goto("/#badges");
+  await waitForApp(page);
   await expect(progress(page)).toHaveAttribute(
     "value",
     String(metadata.length),
@@ -110,6 +115,7 @@ test("branding, ordered navigation and collection progress fit mobile and both t
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/#badges");
+  await waitForApp(page);
   for (const width of [1200, 768, 390, 360, 340]) {
     await page.setViewportSize({ width, height: 900 });
     for (const theme of ["light", "dark"]) {

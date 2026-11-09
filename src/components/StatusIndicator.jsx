@@ -3,9 +3,6 @@ import { AlertTriangle, Wrench } from "lucide-react";
 import { reopenStatusIssue, useStatusIssue } from "../use-status-issue.js";
 import "../status-banner.css";
 
-// Persistent header indicator: stays visible for as long as the status page
-// reports an incident or maintenance for RNGdle Infinite, even after the
-// banner is dismissed. Tapping it brings the banner back.
 export default function StatusIndicator() {
   const { issue } = useStatusIssue();
   if (!issue) return null;

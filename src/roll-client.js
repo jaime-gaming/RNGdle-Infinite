@@ -51,5 +51,4 @@ function request(type, number) {
 export const prepareRolls = () => request("init");
 export const generateRoll = () => request("roll");
 
-// Internal recovery of a committed number, never a number-entry UI.
 export const restoreRoll = (number) => request("restore", number);

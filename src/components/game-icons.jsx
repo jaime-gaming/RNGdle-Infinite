@@ -1,15 +1,5 @@
-// Product marks and collectible illustrations. Legacy cosmetic marks stay so
-// permanent aura rewards from retired seasons remain wearable.
 import React from "react";
 
-// Hand-drawn game marks.
-//
-// The interface used stock emoji artwork for companions and for a few call to
-// actions, which reads as clip art next to the rest of the interface. These are
-// original line icons instead: one 24×24 grid, a 2px optical margin, one stroke
-// weight, round caps and joins, and a single filled accent per glyph at most
-// (the `tone` class), so a companion, a badge or a shelf looks like part of the
-// same product at any size from 16px to 28px.
 function Mark({ children, size = 20, className = "", title, ...rest }) {
   return (
     <svg
@@ -32,8 +22,6 @@ function Mark({ children, size = 20, className = "", title, ...rest }) {
   );
 }
 
-// ---- Product marks --------------------------------------------------------
-// Used for page headings, the catalogue strip and the shop shelves.
 export const RollMark = (props) => (
   <Mark {...props}>
     <rect x="3.6" y="3.6" width="16.8" height="16.8" rx="4.6" />
@@ -145,7 +133,6 @@ export const LegendMark = (props) => (
   </Mark>
 );
 
-// ---- Pace, tools and skill marks ------------------------------------------
 export const SpeedMark = (props) => (
   <Mark {...props}>
     <path d="M3.6 8.4h9.2M3.6 12h6.4M3.6 15.6h4.2" />
@@ -153,7 +140,6 @@ export const SpeedMark = (props) => (
   </Mark>
 );
 
-// The Task Skip: two opposing arrows, one task swapped for the next.
 export const SkipMark = (props) => (
   <Mark {...props}>
     <path d="M4.2 8.6h11.4M12.2 5.4l3.4 3.2-3.4 3.2" />
@@ -178,10 +164,6 @@ export const FlywheelMark = (props) => (
   </Mark>
 );
 
-// ---- Skill marks ---------------------------------------------------------
-// One shape language per kind, so a rack reads at 16px: a bolt for the wallet,
-// a U-turn for the cooldown, panels for the draws, a floor line for the
-// redraws, chevrons for the overdrive and a paw for companion luck.
 export const SurgeMark = (props) => (
   <Mark {...props}>
     <path className="tone" d="M13.4 3.4 7.2 12.4h3.9l-1.5 8.2L18 10.6h-4.1Z" />
@@ -267,9 +249,6 @@ export const BayMark = (props) => (
   </Mark>
 );
 
-// Every `icon` a skill can carry, mapped to its mark. The shop card, the
-// corner rack and a companion's signature chip all read this one map, so the
-// same skill is the same drawing everywhere — no stock icons, no lookalikes.
 const SKILL_MARKS = {
   surge: SurgeMark,
   trail: TrailMark,
@@ -287,9 +266,6 @@ export function SkillIcon({ icon, ...props }) {
   return <Glyph {...props} />;
 }
 
-// ---- Aura marks -----------------------------------------------------------
-// One glyph per cosmetic, drawn from the same vocabulary as the box layers so
-// the shelf preview and the worn aura describe the same effect.
 export const StarfallMark = (props) => (
   <Mark {...props}>
     <path d="M12 3.8c.7 3.3 1.9 4.5 5.2 5.2-3.3.7-4.5 1.9-5.2 5.2-.7-3.3-1.9-4.5-5.2-5.2 3.3-.7 4.5-1.9 5.2-5.2Z" />
@@ -445,7 +421,6 @@ export const ChronoMark = (props) => (
   </Mark>
 );
 
-// Fifth-generation aura marks, drawn on the same 24x24 grid as the rest.
 export const HalcyonMark = (props) => (
   <Mark {...props}>
     <circle cx="12" cy="12" r="7.4" />
@@ -489,7 +464,6 @@ export const InkblotMark = (props) => (
   </Mark>
 );
 
-// R4ND0MN3S5: four marks for things that are random by nature.
 export const StaticMark = (props) => (
   <Mark {...props}>
     <rect x="4.2" y="4.2" width="15.6" height="15.6" rx="2.6" />
@@ -524,7 +498,6 @@ export const HexDumpMark = (props) => (
   </Mark>
 );
 
-// Legacy aura marks share the same grid as the permanent collection.
 export const PumpkinMark = (props) => (
   <Mark {...props}>
     <path d="M12 6.5c-8-3.5-10.6 2-9 8.3C4.3 20.3 9 21 12 19.5c3 1.5 7.7.8 9-4.7 1.6-6.3-1-11.8-9-8.3Z" />
@@ -554,7 +527,7 @@ export const BloodMoonMark = (props) => (
     <path d="M8 7h1M10 17h1M20 9v4M18 11h4" />
   </Mark>
 );
-// The world prize: a crowned phantom and six points, not a stock icon.
+
 export const HexboundMark = (props) => (
   <Mark {...props}>
     <path d="m6.5 7.7-1-3.4 4 1.8L12 2.8l2.5 3.3 4-1.8-1 3.4" />
@@ -575,8 +548,6 @@ export const BatMark = (props) => (
   </Mark>
 );
 
-// The limited Black Friday 2026 skin: the quietest mark in the set — a matte
-// card, a percent sign, one bar. Nothing else, on purpose.
 export const BlackoutMark = (props) => (
   <Mark {...props}>
     <rect x="3.4" y="3.4" width="17.2" height="17.2" rx="4.4" />
@@ -594,7 +565,6 @@ export const BlackoutMark = (props) => (
   </Mark>
 );
 
-// The two late skills: a hoard, and three draws.
 export const RackMark = (props) => (
   <Mark {...props}>
     <path d="M4.4 6.2h15.2v3.8H4.4zM4.4 10.8h15.2v3.8H4.4zM4.4 15.4h15.2v3.8H4.4z" />
@@ -609,11 +579,7 @@ export const SparkMark = (props) => (
   </Mark>
 );
 
-// ---- Companion creatures --------------------------------------------------
-// One glyph per companion, drawn on the same grid so a shelf of thirteen still
-// looks like one collection rather than thirteen pasted images.
 const CREATURES = {
-  // A small loyal rock. Chipped on one side, entirely unbothered.
   pebble: (
     <>
       <path
@@ -626,7 +592,7 @@ const CREATURES = {
       <path d="M11 14.2c.8.7 1.8.7 2.6 0" className="cut-line" />
     </>
   ),
-  // Lumen Moth: two broad wings, two antennae, one steady body.
+
   moth: (
     <>
       <path
@@ -645,7 +611,7 @@ const CREATURES = {
       />
     </>
   ),
-  // Static Kit: a fox whose fur has not settled since 1998.
+
   kit: (
     <>
       <path
@@ -662,7 +628,7 @@ const CREATURES = {
       <path d="M10.8 15.4c.8.6 1.6.6 2.4 0" className="cut-line" />
     </>
   ),
-  // Lunar Snail: a spiral house, carried at a lunar pace.
+
   snail: (
     <>
       <path
@@ -675,7 +641,7 @@ const CREATURES = {
       <circle cx="5.4" cy="17" r=".9" className="tone" />
     </>
   ),
-  // Tide Jelly: a bell that pulses, trailing three quiet tentacles.
+
   jelly: (
     <>
       <path d="M5 12.6a7 7 0 0 1 14 0Z" className="tone" />
@@ -684,7 +650,7 @@ const CREATURES = {
       <circle cx="14" cy="10.6" r=".95" className="cut" />
     </>
   ),
-  // Amber Bee: striped, busy, counting every digit three times.
+
   bee: (
     <>
       <path
@@ -698,7 +664,7 @@ const CREATURES = {
       <circle cx="13.4" cy="9.9" r=".85" className="cut" />
     </>
   ),
-  // Ledger Corvid: a raven with a quill and strong opinions about rounding.
+
   corvid: (
     <>
       <path
@@ -710,7 +676,7 @@ const CREATURES = {
       <circle cx="9.6" cy="11.4" r=".9" className="cut" />
     </>
   ),
-  // Archive Owl: two enormous eyes, and the whole catalogue memorised.
+
   owl: (
     <>
       <path
@@ -725,7 +691,7 @@ const CREATURES = {
       <path d="M6.2 7.6 5 4.6l2.8 1M17.8 7.6 19 4.6l-2.8 1" />
     </>
   ),
-  // Patient Turtle: a plated shell, and nowhere in particular to be.
+
   turtle: (
     <>
       <path d="M4 15.6a8 8 0 0 1 16 0Z" className="tone" />
@@ -736,7 +702,7 @@ const CREATURES = {
       <circle cx="14.6" cy="13.4" r=".85" className="cut" />
     </>
   ),
-  // Storm Griffin: wings up, one talon down, three laps of the reveal.
+
   griffin: (
     <>
       <path
@@ -756,7 +722,7 @@ const CREATURES = {
       <path d="M8.8 19.8h6.4l-1.4-2.6h-3.6Z" />
     </>
   ),
-  // Astral Unicorn: rare, radiant, and entirely aware of it.
+
   unicorn: (
     <>
       <path
@@ -768,7 +734,7 @@ const CREATURES = {
       <circle cx="12" cy="11.2" r=".9" className="cut" />
     </>
   ),
-  // Void Serpent: swallows whole cooldowns and asks whether that is all.
+
   serpent: (
     <>
       <path
@@ -780,7 +746,7 @@ const CREATURES = {
       <circle cx="13.6" cy="5.9" r=".9" className="cut" />
     </>
   ),
-  // Ember Dragonet: small, smug, faintly on fire, and the largest ordinary bonus.
+
   dragonet: (
     <>
       <path

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import AuraWardrobe from "./AuraWardrobe";
 import { useSettings } from "../use-settings.jsx";
+import { APP_INTERNAL_VERSION } from "../app-update.js";
 import { NOTIFICATION_RANKS } from "../settings.js";
 import {
   notificationPermission,
@@ -70,7 +71,7 @@ export default function Settings({
 }) {
   const { settings, update, reset, saveError } = useSettings();
   const [permission, setPermission] = useState(notificationPermission);
-  // The backup copy this browser keeps, read once when the page opens.
+
   const [backup, setBackup] = useState(() => vault?.get?.() ?? null);
   const [restoring, setRestoring] = useState(false);
   useEffect(() => {
@@ -139,9 +140,6 @@ export default function Settings({
     }
   }
 
-  // One button for the section: the ready notification and its chime. The
-  // rank alert stays the player's own choice, and the permission prompt is
-  // the only thing the button cannot answer for them.
   async function enableNotifications() {
     let result = permission;
     if (result !== "granted") {
@@ -357,8 +355,6 @@ export default function Settings({
         </button>
       </div>
 
-      {/* The footer never paints on phones, so its destinations live here —
-          the group only renders where the footer is gone. */}
       <div className="settings-group settings-mobile-only">
         <h2>
           <Gamepad2 size={16} aria-hidden="true" /> More
@@ -382,7 +378,7 @@ export default function Settings({
             className="secondary-button"
             href="https://www.rngdle.com/"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
           >
             <ArrowUpRight size={14} /> Real game
           </a>
@@ -476,6 +472,9 @@ export default function Settings({
             "Refreshes the game to get the latest version. Your progress, profile and settings stay saved."}
         </p>
       </div>
+      <p className="settings-version" data-testid="settings-internal-version">
+        {APP_INTERNAL_VERSION}
+      </p>
     </section>
   );
 }

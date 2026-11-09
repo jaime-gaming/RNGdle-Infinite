@@ -11,7 +11,6 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log for debugging – never blank page silently
     try {
       console.error(
         "[RNGdle] Render error caught by boundary:",
@@ -24,7 +23,7 @@ export default class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    // Try to recover by reloading – keep save safe (save is in localStorage, not cleared)
+
     try {
       if (this.props.onReset) this.props.onReset();
     } catch {}
@@ -58,12 +57,12 @@ export default class ErrorBoundary extends React.Component {
           }}
         >
           <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>
-            Algo salió mal
+            Something went wrong
           </h2>
           <p style={{ maxWidth: 520, opacity: 0.8, lineHeight: 1.5 }}>
-            La página encontró un error y no pudo mostrarse. Tu progreso y
-            perfil están guardados en este navegador y no se borran al recargar.
-            Prueba recargar o volver al inicio.
+            The page encountered an error and could not be displayed. Your
+            progress and profile are saved in this browser and won't be lost
+            upon reloading. Try reloading or going back to the home page.
           </p>
           <details
             style={{
@@ -77,7 +76,7 @@ export default class ErrorBoundary extends React.Component {
             }}
           >
             <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-              Detalles técnicos
+              Technical details
             </summary>
             <pre
               style={{
@@ -107,14 +106,14 @@ export default class ErrorBoundary extends React.Component {
               onClick={this.handleReload}
               style={{ minWidth: 140 }}
             >
-              Recargar página
+              Reload page
             </button>
             <button
               className="secondary-button"
               onClick={this.handleReset}
               style={{ minWidth: 140 }}
             >
-              Intentar de nuevo
+              Try again
             </button>
             <button
               className="secondary-button"
@@ -125,12 +124,12 @@ export default class ErrorBoundary extends React.Component {
               }}
               style={{ minWidth: 140 }}
             >
-              Ir al inicio
+              Go to home
             </button>
           </div>
           <small style={{ opacity: 0.6 }}>
-            Si esto sigue ocurriendo, prueba borrar caché o abrir en otra
-            pestaña. El backup está en Ajustes.
+            If this keeps happening, try clearing your cache or opening in
+            another tab. The backup can be found in Settings.
           </small>
         </div>
       );

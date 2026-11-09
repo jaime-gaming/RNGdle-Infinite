@@ -25,9 +25,6 @@ function hasActiveLegacyLink(raw) {
   }
 }
 
-// Retire the old shared-device token and relay override on first launch of the
-// Cloud Account build. The token is no longer used; report only that an active
-// link existed, never expose or log its room/key.
 export function retireLegacyDeviceLink(storage) {
   const store = storageRef(storage);
   if (!store) return false;
@@ -40,10 +37,7 @@ export function retireLegacyDeviceLink(storage) {
     store.removeItem(LEGACY_LINK_KEY);
     store.removeItem(LEGACY_RELAY_KEY);
     if (active && !alreadyNotified) store.setItem(MIGRATION_NOTICE_KEY, "1");
-  } catch {
-    // Keep local play available if storage is read-only. The notice is still
-    // shown for this load when an active token was successfully read.
-  }
+  } catch {}
   return active && !alreadyNotified;
 }
 

@@ -52,9 +52,7 @@
   flex-direction: column;
   gap: 16px;
 }
-/* A rebirth ends a cycle, not the story: the log keeps every entry and a
-   dotted rule marks where the run was handed back and a new cycle began, so
-   the whole account reads as one continuous history. */
+
 .activity-divider {
   display: flex;
   align-items: center;
@@ -299,7 +297,6 @@
   padding: 0;
 }
 
-/* Which charged skills fired on a historical roll. */
 .activity-skills {
   display: inline-block;
   margin-top: 4px;
@@ -313,9 +310,6 @@
   color: var(--green);
 }
 
-/* Share and bookmark are icon-only chips. Their names live in aria-label and
-   title, so the row stays quiet, and a hover or a focus still says what each
-   one does. */
 .activity-actions {
   display: flex;
   align-items: center;
@@ -340,8 +334,7 @@
   border-color: var(--text);
   color: var(--text);
 }
-/* A pinned roll is filled and green once saved, so the state reads without
-   any words. A copied link turns the share chip green for a moment. */
+
 .activity-bookmark.is-saved,
 .activity-bookmark.is-saved:hover,
 .activity-share.is-copied,
@@ -350,7 +343,7 @@
   background: var(--green-bg);
   color: var(--green);
 }
-/* What each fired skill actually added to that roll. */
+
 .activity-skills {
   display: flex;
   flex-wrap: wrap;
@@ -372,14 +365,11 @@
   color: var(--green);
 }
 
-/* A claimed task has its own icon tone, so it reads apart from the purchases
-   beside it. */
 .event-task {
   color: var(--green);
   background: var(--green-bg);
 }
 
-/* The warning that the log is nearly full, and the bulk delete it offers. */
 .history-space {
   display: flex;
   justify-content: space-between;

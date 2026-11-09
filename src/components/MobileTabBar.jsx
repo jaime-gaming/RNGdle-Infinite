@@ -11,11 +11,6 @@ import {
 } from "lucide-react";
 import "../mobile-tabbar.css";
 
-// Phones get their own layout: the logo stays in a slim top bar, and the
-// destinations live in a bottom bar of at most five buttons. Shop and Tasks
-// sit on the left, Roll stays in the centre, and Badges and More take the right.
-// More holds everything else and opens inward from the edge. The bar renders in
-// the DOM everywhere but only paints under 761px.
 export default function MobileTabBar({
   page,
   rebirthVisible,
@@ -27,8 +22,6 @@ export default function MobileTabBar({
   const bar = useRef(null);
   const more = useRef(null);
 
-  // A tap anywhere outside the bar, or Escape, closes the menu. Escape also
-  // gives focus back to the button that opened it.
   useEffect(() => {
     if (!menuOpen) return undefined;
     function outside(event) {
@@ -47,7 +40,6 @@ export default function MobileTabBar({
     };
   }, [menuOpen]);
 
-  // Moving to another page closes the menu, whatever moved us there.
   useEffect(() => {
     setMenuOpen(false);
   }, [page]);

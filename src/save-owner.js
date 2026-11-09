@@ -50,10 +50,7 @@ export function parseOwnerMarker(raw) {
     const parsed = JSON.parse(raw);
     if (parsed?.version === OWNER_MARKER_VERSION && "owner" in parsed)
       return decodeOwnerMetadata(parsed.owner);
-  } catch {
-    // Prior versions stored the Firebase UID directly. Keep those values
-    // readable; an invalid marker cannot be treated as an unowned local save.
-  }
+  } catch {}
   return validUid(raw) ? raw : UNKNOWN_CLOUD_OWNER;
 }
 
@@ -64,8 +61,6 @@ export function readCloudOwner(storage) {
     const raw = target.getItem(CLOUD_OWNER_KEY);
     return raw == null || raw === "" ? null : parseOwnerMarker(raw);
   } catch {
-    // Storage errors must fail closed rather than making an account-owned save
-    // look like an unowned guest save eligible for first-sign-in import.
     return UNKNOWN_CLOUD_OWNER;
   }
 }

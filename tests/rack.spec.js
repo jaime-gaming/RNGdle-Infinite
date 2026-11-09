@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import {
   drawPlanFor,
   skillById,
@@ -22,9 +23,6 @@ import {
   ULTRA_BONUS_PER_REBIRTH,
 } from "../src/rebirth.js";
 
-// The rack report is the single place that adds the active effects up: the
-// corner summary on the Roll page and the skills shelf in the shop both read
-// it, so a player never has to do the arithmetic in their head.
 const ids = allBadgeMetadata.map((badge) => badge.id);
 const armed = (extra = {}) => ({
   ...emptyProgress(),
@@ -65,7 +63,6 @@ test("the rack adds up its own effects, and only for the skills it holds", () =>
   expect(bare.next.walletMultiplier).toBe(1);
   expect(bare.next.attempts).toBe(1);
 
-  // Surge armed: it fires on the next roll, so the total moves.
   const armedSurge = rackReport(
     armed({
       owned: ["surge"],
@@ -79,7 +76,6 @@ test("the rack adds up its own effects, and only for the skills it holds", () =>
   expect(armedSurge.next.chips).toContain("×2 banked EP");
   expect(armedSurge.equipped[0].charge).toBe(6);
 
-  // Charging, not armed: equipped but worth nothing yet.
   const charging = rackReport(
     armed({
       owned: ["surge"],
@@ -94,7 +90,6 @@ test("the rack adds up its own effects, and only for the skills it holds", () =>
 });
 
 test("rebirth bonuses are named parts of the wallet total", () => {
-  // Two finished rungs: the +2% per rebirth shows up as its own part.
   const reborn = rackReport(armed({ rebirths: 2 }));
   expect(reborn.next.walletMultiplier).toBeCloseTo(
     1 + REBIRTH_BONUS_PER_REBIRTH * 2,
@@ -107,7 +102,7 @@ test("rebirth bonuses are named parts of the wallet total", () => {
       value: 1 + REBIRTH_BONUS_PER_REBIRTH * 2,
     },
   ]);
-  // It stacks with a companion and the prestige bonus, each part still named.
+
   const stacked = rackReport(
     armed({
       rebirths: 1,
@@ -139,7 +134,7 @@ test("a companion and a prestige bonus are part of the same total", () => {
       ultraRebirths: 2,
     }),
   );
-  // 1.13 companion × 1.2 ultra × 2 Surge, each part named.
+
   expect(report.next.walletMultiplier).toBeCloseTo(
     petById.get("kit").multiplier * (1 + ULTRA_BONUS_PER_REBIRTH * 2) * 2,
     6,
@@ -161,7 +156,7 @@ test("draw skills are reported as one plan, never as a taller total", () => {
       skillCharge: { twice: 10, bedrock: 8 },
     }),
   );
-  // The same plan the draw itself spends: stacked budgets, the higher floor.
+
   expect(report.next).toMatchObject({ attempts: 6, floor: 25000 });
   expect(report.next.chips).toEqual([
     "6 draws · 2 numbers paid",
@@ -188,7 +183,7 @@ test("Flywheel and Auto-Roll appear in the record without touching the sums", ()
   });
   expect(report.next.cooldownFree).toBe(true);
   expect(report.next.chips).toContain("no cooldown");
-  // Auto-Roll is a tool: it never adds a multiplier or an extra draw.
+
   expect(report.next.walletMultiplier).toBe(1);
   expect(report.next.attempts).toBe(1);
 });
@@ -202,11 +197,10 @@ test("the rack never reports more slots or effects than the save allows", () => 
       skillCharge: { surge: 6 },
     }),
   );
-  // Two slots by default, and the report refuses to show more.
+
   expect(skillSlots(["surge", "trail", "bounce"])).toBe(2);
   expect(report.used).toBeLessThanOrEqual(report.slots);
-  // The description of each contribution is the same sentence the tooltip and
-  // the screen reader get.
+
   for (const skill of report.equipped)
     expect(skill.effect).toBe(skillEffectSummary(skillById.get(skill.id)));
 });
@@ -221,8 +215,7 @@ test("the rack report counts slots in shop skills, with free skills beside them"
     }),
   );
   expect(report.slots).toBe(2);
-  // "Used" is the shop skills alone: the ladder's reward rides free, and the
-  // report still lists it — it fires like any equipped skill.
+
   expect(report.used).toBe(2);
   expect(report.equipped.map((skill) => skill.id)).toEqual([
     "surge",
@@ -231,9 +224,6 @@ test("the rack report counts slots in shop skills, with free skills beside them"
   ]);
 });
 
-// ---- Saved racks ----------------------------------------------------------
-// Equipping is free, so a saved rack is a shortcut and never a purchase: these
-// actions must move no EP, write no history and change nothing but the rack.
 const rack = (extra = {}) => ({
   ...armed({
     profile: { id: "tester", username: "Tester", createdAt: 0 },
@@ -248,23 +238,21 @@ test("a rack can be saved, applied and deleted, and none of it costs anything", 
   const saved = applyProgress(rack(), { type: "save-loadout" });
   expect(saved.loadouts).toHaveLength(1);
   expect(saved.loadouts[0].skills).toEqual(["surge", "trail"]);
-  // Its name is the rack itself, so the shelf never invents one.
+
   expect(saved.loadouts[0].name).toBe("Surge + Trail");
-  // Free: no EP moved, no history written, nothing else touched.
+
   expect(saved.balance).toBe(rack().balance);
   expect(saved.history).toEqual(rack().history);
   expect(saved.skillCharge).toEqual(rack().skillCharge);
 
-  // The same rack is never saved twice.
   expect(applyProgress(saved, { type: "save-loadout" })).toBe(saved);
-  // A different rack is its own entry.
+
   const second = applyProgress(
     { ...saved, equippedSkills: ["bounce"] },
     { type: "save-loadout" },
   );
   expect(second.loadouts).toHaveLength(2);
 
-  // Applying one swaps the whole rack in one action, still for free.
   const applied = applyProgress(second, {
     type: "apply-loadout",
     id: second.loadouts[0].id,
@@ -272,7 +260,6 @@ test("a rack can be saved, applied and deleted, and none of it costs anything", 
   expect(applied.equippedSkills).toEqual(["surge", "trail"]);
   expect(applied.history).toEqual(rack().history);
 
-  // Deleting leaves the rest in place.
   const deleted = applyProgress(second, {
     type: "delete-loadout",
     id: second.loadouts[0].id,
@@ -280,18 +267,17 @@ test("a rack can be saved, applied and deleted, and none of it costs anything", 
   expect(deleted.loadouts.map((entry) => entry.id)).toEqual([
     second.loadouts[1].id,
   ]);
-  // Deleting something that is already gone changes nothing.
+
   expect(applyProgress(deleted, { type: "delete-loadout", id: "nope" })).toBe(
     deleted,
   );
 });
 
 test("saved racks respect the rack they land in", () => {
-  // An empty rack is not worth saving.
   expect(() =>
     applyProgress(rack({ equippedSkills: [] }), { type: "save-loadout" }),
   ).toThrow(/worth saving/);
-  // Four is a full book.
+
   const full = rack({
     equippedSkills: ["bounce"],
     loadouts: Array.from({ length: LOADOUT_LIMIT }, (_, i) => ({
@@ -303,9 +289,7 @@ test("saved racks respect the rack they land in", () => {
   expect(() => applyProgress(full, { type: "save-loadout" })).toThrow(
     /saved racks/,
   );
-  // A rack whose skills have all been handed back cannot be applied — and says
-  // so, rather than silently equipping nothing. The shelf disables the button
-  // long before this can happen.
+
   const saved = applyProgress(rack(), { type: "save-loadout" });
   expect(() =>
     applyProgress(
@@ -313,17 +297,17 @@ test("saved racks respect the rack they land in", () => {
       { type: "apply-loadout", id: saved.loadouts[0].id },
     ),
   ).toThrow(/unlocked/);
-  // One skill of two still standing: the rack applies what is left.
+
   const half = applyProgress(
     { ...saved, owned: ["surge"], skills: ["surge"], equippedSkills: [] },
     { type: "apply-loadout", id: saved.loadouts[0].id },
   );
   expect(half.equippedSkills).toEqual(["surge"]);
-  // …and a rack that no longer exists refuses politely.
+
   expect(() =>
     applyProgress(saved, { type: "apply-loadout", id: "gone" }),
   ).toThrow(/gone/);
-  // A rack bigger than the slots that remain is trimmed, not refused.
+
   const three = applyProgress(
     rack({
       owned: ["surge", "trail", "bounce"],
@@ -358,13 +342,13 @@ test("a saved rack keeps its free skills when the slots run out", () => {
     { ...saved, equippedSkills: [] },
     { type: "apply-loadout", id: saved.loadouts[0].id },
   );
-  // Two slots hold two shop skills; the ladder's reward rides free.
+
   expect(narrow.equippedSkills).toEqual(["surge", "trail", "reborn-drive"]);
 });
 
 test("saved racks survive a reload, are repaired when damaged and kept through rebirth", () => {
   const saved = applyProgress(rack(), { type: "save-loadout" });
-  // Round trip through the save, junk and all.
+
   const parsed = parseProgress(
     JSON.stringify({
       ...saved,
@@ -380,14 +364,14 @@ test("saved racks survive a reload, are repaired when damaged and kept through r
   );
   expect(parsed.loadouts).toHaveLength(1);
   expect(parsed.loadouts[0].skills).toEqual(["surge", "trail"]);
-  // A nameless rack is named after itself.
+
   const unnamed = parseProgress(
     JSON.stringify({ ...saved, loadouts: [{ id: "a", skills: ["surge"] }] }),
   );
   expect(unnamed.loadouts[0].name).toBe("Surge");
   expect(loadoutName(["surge", "trail", "bounce"])).toBe("Surge + 2 more");
   expect(loadoutName([])).toBe("Empty rack");
-  // The book is capped on the way in as well as on the way out.
+
   const many = parseProgress(
     JSON.stringify({
       ...saved,
@@ -399,7 +383,6 @@ test("saved racks survive a reload, are repaired when damaged and kept through r
   );
   expect(many.loadouts).toHaveLength(LOADOUT_LIMIT);
 
-  // A rebirth clears the run, but saved racks are an account convenience.
   const ladder = {
     ...saved,
     discovered: ids.slice(0, 60),

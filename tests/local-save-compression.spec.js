@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { writeDeviceSave } from "../src/local-save.js";
 import { unpackVaultSave, SAVE_VAULT_TAG } from "../src/save-codec.js";
 import {
@@ -18,6 +19,7 @@ import {
   APP_UPDATE_SAVE_KEY,
 } from "../src/app-update.js";
 import { seedProgress } from "./helpers/progress.js";
+import { HISTORY_LIMIT } from "../src/history-log.js";
 
 const history = Array.from({ length: 200 }, (_, i) => ({
   id: `roll-${i}`,
@@ -54,7 +56,7 @@ function limitedStore(limit = Infinity) {
   };
 }
 
-test("quota retries compress losslessly and never delete history, recovery or owner data", () => {
+test("a compressed save survives a quota-limited store and never deletes history, recovery or owner data", () => {
   const store = limitedStore(5000);
   store.values.set(PROGRESS_KEY, "previous-save");
   store.values.set("owner", "owner-marker");
@@ -74,6 +76,49 @@ test("quota retries compress losslessly and never delete history, recovery or ow
     JSON.stringify({ ...state, balance: 1900 }),
   );
   expect(store.getItem(PROGRESS_KEY).startsWith(SAVE_VAULT_TAG)).toBe(true);
+});
+
+test("every primary write is compressed, even with free storage", () => {
+  const store = limitedStore();
+  writeDeviceSave(store, PROGRESS_KEY, raw);
+  expect(store.getItem(PROGRESS_KEY).startsWith(SAVE_VAULT_TAG)).toBe(true);
+  expect(unpackVaultSave(store.getItem(PROGRESS_KEY))).toBe(raw);
+  expect(store.getItem(PROGRESS_KEY).length).toBeLessThan(raw.length);
+  writeDeviceSave(
+    store,
+    PROGRESS_KEY,
+    JSON.stringify({ ...state, balance: 5 }),
+  );
+  expect(store.getItem(PROGRESS_KEY).startsWith(SAVE_VAULT_TAG)).toBe(true);
+  expect(unpackVaultSave(store.getItem(PROGRESS_KEY))).toBe(
+    JSON.stringify({ ...state, balance: 5 }),
+  );
+
+  writeDeviceSave(store, PROGRESS_KEY, '{"ok":true}');
+  expect(unpackVaultSave(store.getItem(PROGRESS_KEY))).toBe('{"ok":true}');
+});
+
+test("a full 10,000-entry log round-trips inside a tight storage quota", () => {
+  const full = {
+    ...state,
+    history: Array.from({ length: HISTORY_LIMIT }, (_, i) => ({
+      id: `roll-${i}`,
+      type: "roll",
+      number: 123456,
+      tier: "common",
+      ep: 10,
+      at: 1700000000000 + i,
+      badges: [],
+    })),
+  };
+  const rawFull = JSON.stringify(full);
+  const store = limitedStore(900_000);
+  writeDeviceSave(store, PROGRESS_KEY, rawFull);
+  expect(store.getItem(PROGRESS_KEY).startsWith(SAVE_VAULT_TAG)).toBe(true);
+  expect(store.getItem(PROGRESS_KEY).length).toBeLessThan(rawFull.length / 5);
+  expect(
+    parseAndRepairProgress(store.getItem(PROGRESS_KEY)).progress.history,
+  ).toHaveLength(HISTORY_LIMIT);
 });
 
 test("a failed compressed write and disabled storage leave the previous save unchanged", () => {
@@ -122,14 +167,16 @@ test("vault and update recovery recognize a compressed primary save instead of r
   expect(unpackVaultSave(store.getItem(PROGRESS_KEY))).toBe(raw);
 });
 
-test("quota fallback survives rename, another tab and reload with the complete history", async ({
+test("a compressed rename syncs to another tab and survives a tight quota and reload with the complete history", async ({
   page,
   context,
 }) => {
   await seedProgress(page, state);
   await page.goto("/profile");
+  await waitForApp(page);
   const other = await context.newPage();
   await other.goto("/profile");
+  await waitForApp(other);
   await page.evaluate((key) => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function (k, value) {
@@ -154,6 +201,7 @@ test("quota fallback survives rename, another tab and reload with the complete h
   expect(stored.startsWith(SAVE_VAULT_TAG)).toBe(true);
   expect(parseAndRepairProgress(stored).progress.history).toHaveLength(200);
   await page.reload();
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "Your profile, CompressedPlayer" }),
   ).toBeVisible();
@@ -164,6 +212,7 @@ test("help links use the themed buttons and historical notes are capitalized onl
   page,
 }) => {
   await page.goto("/about");
+  await waitForApp(page);
   for (const name of ["Privacy & Rights", "Terms of Service"]) {
     const link = page.getByRole("link", { name, exact: true });
     await expect(link).toHaveClass(/secondary-button/);
@@ -172,6 +221,7 @@ test("help links use the themed buttons and historical notes are capitalized onl
     page.getByRole("heading", { name: "Understand a roll" }),
   ).toBeVisible();
   await page.goto("/changelog");
+  await waitForApp(page);
   await expect(
     page.getByRole("heading", { name: "Changelog", exact: true }),
   ).toBeVisible();

@@ -1,6 +1,3 @@
-/* Permanent aura art for cosmetics already owned from retired content. */
-/* Permanent cosmetics earned in a temporary season. They keep working after
-   Halloween; these layers never replace the underlying rarity palette. */
 .number-box[data-cosmetic="jack-o-glow"] .box-halo {
   display: block;
   inset: -12px;
@@ -192,8 +189,6 @@
   }
 }
 
-/* Permanent premium layers: keep after seasonal UI cleanup. All colour and
-   motion live outside the scoring palette and the readable number layer. */
 .rngween-aura {
   --aura-primary: #fb923c;
   --aura-secondary: #b45309;
@@ -525,8 +520,7 @@
     transform: translateY(-6px);
   }
 }
-/* Compact previews keep every ornament inside its padded scene: the seal
-   shrinks to the box's own height instead of ringing the neighbours. */
+
 .number-box-compact .aura-seal {
   width: 84px;
   height: 84px;
@@ -545,7 +539,6 @@
   }
 }
 
-/* Permanent world-only skin. Keep after the limited shop/world retire. */
 .aura-hexbound {
   --aura-primary: #5eead4;
   --aura-secondary: #8b5cf6;
@@ -596,9 +589,6 @@
   }
 }
 
-/* A miniature seal inside each multi-roll box: never borrow the header/EP
-   row's space. These selectors override every seasonal variant, including
-   Hexbound, while preserving its own colours and glyphs. */
 .number-box[data-aura-layout="contained"] .aura-atmosphere {
   inset: 0;
   filter: none;
@@ -675,7 +665,6 @@
   opacity: 0.4;
 }
 
-/* Halloween night skin: the lantern that stayed lit. Keep after the event. */
 .aura-hollow {
   --aura-primary: #fdba74;
   --aura-secondary: #7c2d12;

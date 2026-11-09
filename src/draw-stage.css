@@ -1,21 +1,11 @@
-/* The overview a draw skill earns: one panel per draw, filling the screen behind
-   visible dividing lines, each rolling its digits and earning its badges in the
-   open. When the best draw is known it is filled green, and every number stays
-   on the screen. Tapping a number opens its own stats in the page flow.
-
-   The overview is a takeover of the roll screen, not of the game: it never
-   scores, it only shows what the roll already committed. Nothing behind it is
-   visible, and nothing under it scrolls while it is up (html.draw-takeover). */
 html.draw-takeover {
   overflow: hidden;
 }
-/* The skill rack is not part of the overview: it sits out while the overview is
-   up, so none of its icons cover a panel. */
+
 html.draw-takeover .skill-bar {
   visibility: hidden;
 }
-/* The install prompt waits while a multi-number roll is on screen, rather than
-   covering the overview's label or the way back from a number's stats. */
+
 html.draw-split .install-app {
   display: none;
 }
@@ -79,9 +69,6 @@ html.draw-split .install-app {
   outline-offset: 2px;
 }
 
-/* The grid: the panels sit on the page background with the border colour
-   showing through the gaps, which is what draws every dividing line. It takes
-   whatever height the label leaves, and it never scrolls. */
 .draw-grid {
   --cols: 2;
   --rows: 2;
@@ -117,8 +104,7 @@ html.draw-split .install-app {
   --cols: 2;
   --rows: 4;
 }
-/* The number is the point of every panel: it is sized for the panel it gets,
-   not for the screen. */
+
 .draw-stage[data-count="2"] {
   --draw-box-font: 44px;
 }
@@ -145,8 +131,7 @@ html.draw-split .install-app {
   background: var(--bg);
   overflow: hidden;
 }
-/* The whole panel is the button once the best is known, so a tap anywhere on a
-   number opens it. Before that it is a plain box with the same layout. */
+
 .draw-pick {
   position: relative;
   display: flex;
@@ -168,7 +153,7 @@ html.draw-split .install-app {
   text-align: center;
   overflow: hidden;
 }
-/* The stats hint has its own space, never on top of the last badge row. */
+
 .draw-stage.is-decided .draw-pick {
   padding-bottom: 28px;
 }
@@ -182,7 +167,7 @@ button.draw-pick:focus-visible {
   outline: 2px solid var(--green);
   outline-offset: -4px;
 }
-/* A hint pinned to the foot of the panel, so the number itself stays centred. */
+
 .draw-panel-more {
   position: absolute;
   bottom: 9px;
@@ -214,8 +199,7 @@ button.draw-pick:focus-visible {
   text-transform: uppercase;
   color: var(--muted);
 }
-/* "Draw 6" stays on one line: a long claim name is what gives way, not the
-   number of the draw. */
+
 .draw-panel-label {
   flex: none;
   white-space: nowrap;
@@ -237,8 +221,7 @@ button.draw-pick:focus-visible {
   background: var(--green-bg);
   color: var(--green);
 }
-/* A number a draw skill kept is paid, not thrown away: it says so, in the
-   colour of the skill that kept it. */
+
 .draw-panel-tag.is-paid {
   border-color: color-mix(
     in srgb,
@@ -321,7 +304,7 @@ button.draw-pick:focus-visible {
     opacity 0.4s;
   transform-origin: center;
 }
-/* Match the headline reveal: only the moving digits are lighter. */
+
 .draw-box.is-spinning .draw-digit.is-scrambling {
   opacity: 0.48;
 }
@@ -414,9 +397,6 @@ button.draw-pick:focus-visible {
   }
 }
 
-/* The decision: every number stays on the grid. The best one is filled with the
-   theme's green, and the text on it turns to the page colour so it reads. Every
-   panel can be tapped for that number's stats. */
 .draw-stage.is-decided .draw-grid,
 .draw-stage.is-decided .draw-stage-label {
   pointer-events: auto;
@@ -450,17 +430,13 @@ button.draw-pick:focus-visible {
 .draw-panel.is-winner .draw-badge-more {
   border-color: color-mix(in srgb, var(--bg) 55%, transparent);
 }
-/* The chips keep their names and EP on the green, in the page colour: their
-   rarity tints were picked for the plain page and lose contrast on the green. */
+
 .draw-panel.is-winner .draw-badge {
   border-color: color-mix(in srgb, var(--bg) 55%, transparent);
   background: color-mix(in srgb, var(--bg) 14%, transparent);
   color: var(--bg);
 }
 
-/* One number's own stats, in the page flow, at the size of the roll's own
-   result: its number, its rank and EP, the roll's button in the middle, then
-   every badge it earned. */
 .draw-detail {
   display: flex;
   flex-direction: column;
@@ -513,9 +489,7 @@ button.draw-pick:focus-visible {
   width: 100%;
   max-width: 640px;
 }
-/* The desktop skill rack holds the top-left corner. Narrow pages reserve a
-   strip above the detail controls so the phone's horizontal dock never covers
-   the way back to the draw overview. */
+
 @media (max-width: 800px) {
   .draw-detail-bar,
   .draw-back-row {
@@ -582,9 +556,7 @@ button.draw-pick:focus-visible {
   .draw-ep {
     font-size: 11px;
   }
-  /* Seven or eight draws leave a phone panel barely a fifth of the screen
-     high. The badge row gives up its emoji and its EP figures so two chips
-     share a line and the whole row still fits instead of being cut off. */
+
   .draw-stage[data-count="7"] .draw-badge .emoji,
   .draw-stage[data-count="8"] .draw-badge .emoji {
     display: none;
@@ -599,10 +571,6 @@ button.draw-pick:focus-visible {
   }
 }
 
-/* The roll's own button, centred under the numbers. It has a strip of its own:
-   a button over the middle of the grid would sit on a number whenever two or
-   three of them share a row. The strip keeps its height while the roll is
-   still busy, so the numbers do not jump when the button arrives. */
 .draw-stage-roll {
   flex: none;
   display: flex;
@@ -611,12 +579,7 @@ button.draw-pick:focus-visible {
   min-height: 96px;
   padding: 0 12px 10px;
 }
-/* In the strip the wrap never collapses. The global rise animation shrinks the
-   wrap to zero and slides it up 28px; inside the strip that starts the button
-   below the stage's bottom edge, where it is clipped off-screen or under the
-   tab bar — it looked like the button had fallen out of the view. The strip
-   already reserves the wrap's height, so the button only fades and rises the
-   short distance that always stays inside. */
+
 .draw-stage .draw-stage-roll .generate-wrap {
   max-height: 96px;
 }
@@ -626,9 +589,6 @@ button.draw-pick:focus-visible {
   overflow: visible;
 }
 
-/* The roll button in the middle of the overview, where the panels meet. It only
-   appears where the layout measured that it covers nothing; otherwise the strip
-   under the panels holds it. */
 .draw-stage.is-probing .draw-stage-roll {
   display: none;
 }
@@ -657,7 +617,7 @@ button.draw-pick:focus-visible {
 .roll-experience .draw-hub .generate::after {
   border-radius: 50%;
 }
-/* While waiting, the circle shows the clock and the time only. */
+
 .roll-experience .draw-hub .generate-word {
   display: none;
 }

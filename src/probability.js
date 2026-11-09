@@ -1,10 +1,9 @@
-// All ranks use the entire 0..1,000,000 population, never a session/sample pool.
 export const POPULATION = 1000001;
 export function formatPercent(value) {
   if (!Number.isFinite(value) || value < 0 || value > 100)
     throw new RangeError("Invalid percentage");
   let rounded = Number(value.toPrecision(3));
-  // Rounding must not turn a possible event into 0% or a near-certain one into 100%.
+
   if (rounded === 100 && value < 100) rounded = value;
   const label = rounded.toLocaleString("en-US", { maximumFractionDigits: 6 });
   if (label === "100" && value < 100) return ">99.999999";
@@ -62,8 +61,6 @@ export function rankExplanation(result) {
   return `${precise} — ${count.toLocaleString("en-US")} of ${rank.population.toLocaleString("en-US")} possible numbers score ${top ? "at least" : "at most"} ${result.totalEP.toLocaleString("en-US")} EP. Ties are included (${rank.equal.toLocaleString("en-US")} numbers share this score).`;
 }
 
-// One source for badge and tier chance labels. A displayed inverse probability
-// is descriptive, not a promise that a win will happen within that many rolls.
 export function chanceLabels(count, population = POPULATION) {
   if (
     !Number.isSafeInteger(population) ||

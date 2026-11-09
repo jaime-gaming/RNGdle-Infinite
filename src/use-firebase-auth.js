@@ -25,20 +25,12 @@ import {
 } from "firebase/auth";
 import { firebaseAuth, firebaseConfigured } from "./firebase.js";
 
-// The address is remembered locally so the emailed sign-in link can be
-// completed on this device without asking for it again.
 const EMAIL_LINK_EMAIL_KEY = "rng-infinite-email-link-email-v1";
 
-// Captured at import time, before any router normalisation can rewrite the
-// URL: Firebase parses the one-time code out of this exact href.
 const emailLinkHref =
   typeof globalThis.location?.href === "string" ? globalThis.location.href : "";
 
 export function emailLinkActionCodeSettings() {
-  // handleCodeInApp must be true: the sign-in always completes in the app.
-  // The domain of this URL must be in Firebase's authorised domains list.
-  // dynamicLinkDomain is deprecated and linkDomain only applies to Firebase
-  // Hosting link domains, so neither is set.
   return {
     url: `${globalThis.location.origin}${globalThis.location.pathname}`,
     handleCodeInApp: true,
@@ -160,11 +152,9 @@ export function useFirebaseAuth() {
     user: null,
     error: "",
   });
-  // Set once when this page load finished a two-factor email link, so the app
-  // can remember the device that proved it owns the mailbox.
+
   const [emailLinkSignIn, setEmailLinkSignIn] = useState(null);
-  // True when a sign-in link was opened on a device that does not know the
-  // address it was sent to; the user is asked for it before completing.
+
   const [pendingEmailLink, setPendingEmailLink] = useState(false);
 
   useEffect(() => {
@@ -215,8 +205,6 @@ export function useFirebaseAuth() {
     };
   }, []);
 
-  // Finishes the emailed sign-in. Firebase parses the one-time code out of the
-  // captured href; the address must match the one the link was sent to.
   const completeEmailLinkSignIn = useCallback(async (email) => {
     const address = String(email ?? "").trim();
     if (!address)
@@ -253,9 +241,6 @@ export function useFirebaseAuth() {
     }
   }, []);
 
-  // A two-factor email link lands back on the app with ?oobCode=... in the URL.
-  // Finish that sign-in once, then strip the query so a refresh cannot replay
-  // an already-used code.
   useEffect(() => {
     if (!firebaseAuth || !isSignInWithEmailLink(firebaseAuth, emailLinkHref))
       return undefined;
@@ -264,8 +249,6 @@ export function useFirebaseAuth() {
       storedEmail = globalThis.localStorage.getItem(EMAIL_LINK_EMAIL_KEY) ?? "";
     } catch {}
     if (!storedEmail) {
-      // The link was opened on another device. Ask for the address again
-      // instead of trusting anything from the URL (session fixation).
       setPendingEmailLink(true);
       setState((current) => ({ ...current, ready: true }));
       return undefined;
@@ -311,8 +294,7 @@ export function useFirebaseAuth() {
         email.trim(),
         password,
       );
-      // Registration always sends a confirmation email. The account is usable
-      // right away; the app keeps reminding until the address is confirmed.
+
       let verificationMessage = "";
       try {
         await sendEmailVerification(credential.user);
@@ -661,9 +643,6 @@ export function useFirebaseAuth() {
     }
   }, []);
 
-  // Two-factor: send the email link that proves this device owns the mailbox.
-  // Firebase signs the user in when the link is opened, so the caller signs the
-  // password session out again and waits for that link.
   const startEmailLinkSignIn = useCallback(async (email) => {
     if (!firebaseAuth)
       return {

@@ -1,7 +1,3 @@
-/* Companions are a slideshow of cages: one large stage in the middle, an
-   arrow on each side to slide to the next cage, and a rail of small cages
-   underneath to jump straight to a friend. One column of DOM that reads as a
-   shelf you walk along, not a wall of thirteen rows. */
 .pet-disclaimer {
   margin: 0 0 14px;
   padding: 10px 14px;
@@ -46,8 +42,7 @@
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
-/* The stage clips its track: slides live side by side and the track slides
-   exactly one stage-width per step. */
+
 .pet-stage {
   position: relative;
   overflow: hidden;
@@ -71,10 +66,7 @@
   align-items: center;
   padding: 20px;
 }
-/* The cage: an arched alcove washed in the companion's own colour, hung from
-   a ring, standing on a tray, with a barred door across the front. The door
-   stands open while the friend walks with you — and swings open with a hop
-   the moment it is uncaged. */
+
 .pet-cage {
   position: relative;
   display: grid;
@@ -164,7 +156,7 @@
   text-align: center;
   color: color-mix(in srgb, var(--pet-accent, var(--muted)) 72%, var(--text));
 }
-/* Still wild: the friend waits behind its bars, a touch dimmed. */
+
 .pet-slide:not(.is-owned) .pet-cage .pet-figure {
   opacity: 0.72;
   filter: saturate(0.75);
@@ -179,12 +171,12 @@
   box-shadow: 0 0 0 3px
     color-mix(in srgb, var(--pet-accent, transparent) 14%, transparent);
 }
-/* Walking with you: the door stands open. */
+
 .pet-slide.is-active .pet-cage-door {
   transform: perspective(420px) rotateY(-68deg);
   opacity: 0.2;
 }
-/* The uncaging: the door swings wide while the friend hops out twice. */
+
 .pet-slide.is-uncaging .pet-cage-door {
   animation: pet-uncage-door 1.2s ease-out forwards;
 }
@@ -325,8 +317,7 @@
   font-size: 11px;
   white-space: nowrap;
 }
-/* A tracked companion wears a tag; unfound friends show a target only in the
-   shop's shared goal-picking mode. */
+
 .pet-goal-tag {
   display: inline-flex;
   align-items: center;
@@ -367,7 +358,7 @@
   line-height: 15px;
   color: var(--muted);
 }
-/* The foot: position, the rail of cages, and the instruction. */
+
 .pet-slideshow-foot {
   grid-column: 1 / -1;
   display: grid;
@@ -410,7 +401,7 @@
   border-color: var(--text);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--text) 18%, transparent);
 }
-/* A found friend carries its own colour on the rail. */
+
 .pet-rail-cage.is-owned {
   border-color: color-mix(
     in srgb,
@@ -502,9 +493,6 @@
   }
 }
 
-/* The companion shelf lives a little: the equipped cage breathes a glow of
-   its own colour, and the slide carries a touch of overshoot on the way to
-   the next cage — springy, never loose. Reduced motion kills both. */
 .pet-slide.is-active .pet-cage {
   animation: pet-cage-breathe 3.2s ease-in-out infinite;
 }

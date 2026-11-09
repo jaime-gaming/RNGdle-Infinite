@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import { accountStats, cycleStats } from "../src/profile-stats.js";
 import {
   applyProgress,
@@ -13,15 +14,11 @@ import { shopProducts } from "../src/shop-data.js";
 import { SKILLS } from "../src/skills.js";
 import { testProfile } from "./helpers/progress.js";
 
-// What the profile and the Rebirth page show must not depend on how much of the
-// log is still there. These tests clear entries in every way the game allows
-// and check that every figure reads the same afterwards.
-
 const BASE = Date.UTC(2026, 0, 1);
 const at = (minutes) => BASE + minutes * 60000;
 const BADGES = allBadgeMetadata.map((badge) => badge.id);
 const PRODUCT = shopProducts[0].id;
-// The EP a roll of each tier pays, inside that tier's band of the scoring table.
+
 const EP = {
   trash: 40,
   common: 2500,
@@ -50,9 +47,6 @@ const marker = (count, minutes) => ({
   count,
 });
 
-// Three finished cycles and a running one, with every kind of entry the profile
-// reads: rolls of every tier, offline and boosted rolls, charged skills, badge
-// unlocks, purchases and companions.
 function richLog() {
   const history = [];
   const tiers = ["trash", "common", "rare", "epic", "godly", "uncommon"];
@@ -67,7 +61,7 @@ function richLog() {
           minutes: tick(),
           tier: tiers[n % tiers.length],
           number: n,
-          // A roll names each badge once, as the game does.
+
           badges: [...new Set([BADGES[n % 60], BADGES[(n * 7) % 60]])],
           ...(n % 5 === 0 ? { source: "offline" } : {}),
           ...(n % 9 === 0 ? { skills: [SKILLS[0].id] } : {}),
@@ -116,7 +110,6 @@ function richLog() {
   return history;
 }
 
-// A save the way the game keeps it: the current cycle's EP is stored too.
 function saveWith(history, extra = {}) {
   const start = history.findLastIndex(isCycleMarker);
   const cycleEP = history
@@ -136,7 +129,6 @@ function saveWith(history, extra = {}) {
   };
 }
 
-// Every figure a profile or a cycle reports, compared as a whole.
 const figures = (state) => ({
   account: accountStats(state),
   cycle: cycleStats(state),
@@ -145,8 +137,7 @@ const figures = (state) => ({
 test("bulk delete takes entries out of the log, but none of their figures out of the profile", () => {
   const state = saveWith(richLog());
   const before = figures(state);
-  // A finished cycle goes whole, then the oldest entries go in a block that is
-  // large enough to reach into the cycle in play.
+
   const cut = applyProgress(state, {
     type: "history-prune",
     mode: "cycle",
@@ -159,8 +150,7 @@ test("bulk delete takes entries out of the log, but none of their figures out of
   });
   expect(figures(cut)).toEqual(before);
   expect(figures(trimmed)).toEqual(before);
-  // Only the markers and the bookmarked roll are left in the log: the block
-  // took everything else, the running cycle included.
+
   expect(trimmed.history.map((entry) => entry.id)).toEqual([
     "reb1",
     "c1-r3",
@@ -182,7 +172,6 @@ test("the totals survive a save and a load, and the figures read back the same",
 });
 
 test("the first cycle still starts when its first entries have been removed", () => {
-  // No rebirth yet, and no profile creation date to fall back on.
   const state = saveWith(
     richLog().filter((entry) => !isCycleMarker(entry)),
     {
@@ -201,7 +190,6 @@ test("the first cycle still starts when its first entries have been removed", ()
 });
 
 test("when the cap trims the oldest entries, the best roll and the counts stay", () => {
-  // The oldest entry is the best roll the account has, and it is the first to go.
   const history = [
     roll({ id: "best", minutes: 1, tier: "godly", number: 999999 }),
     ...Array.from({ length: HISTORY_LIMIT - 1 }, (_, i) =>
@@ -246,8 +234,7 @@ test("a tie for the favourite tier still goes to the tier seen first, after its 
     count: 1,
   });
   expect(cut.history.some((entry) => entry.id === "a")).toBe(false);
-  // Rare still has three rolls once the first one is counted, so the tie stands
-  // and rare, seen first, keeps the title.
+
   expect(accountStats(cut).favoriteTier).toBe("rare");
 });
 
@@ -298,10 +285,10 @@ test("a companion list that has to be rebuilt still includes companions whose en
     mode: "cycle",
     marker: "reb1",
   });
-  // The moth's only entry is gone from the log...
+
   expect(cut.history.some((entry) => entry.type === "pet")).toBe(false);
   expect(accountStats(cut).companionsFound).toBe(1);
-  // ...so a rebuilt companion list must still find it there.
+
   const damaged = { ...JSON.parse(JSON.stringify(cut)), pets: "broken" };
   const { progress, repairs } = parseAndRepairProgress(JSON.stringify(damaged));
   expect(repairs).toContain(

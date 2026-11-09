@@ -1,26 +1,5 @@
-// Tasks: small daily and weekly goals that pay EP once per reset.
-//
-// Progress is kept on the save rather than read back from the activity log, so
-// bulk deleting history never un-finishes a task and the log can be trimmed
-// freely. Each cadence remembers its current day or Monday-start week, along
-// with its tallies, claimed tasks and list-bonus state. The first action in a
-// new period starts from zero, so nothing has to run on a timer to reset.
-//
-// Each cadence has a pool of tasks. A period deals a fixed number onto the list
-// (three Daily, four Weekly), in an order that depends only on the period's key
-// and each task's id, so every device shows the same ones without storing them. A Task Skip swaps one open
-// task on the list for the next pool task that is not on it. The swap is saved
-// with the period, together with the running count its new task starts from; a
-// peak task reads the best roll of the period instead, as it always does.
-//
-// Finishing every task on a list unlocks a bonus once more, on top of the
-// rewards. The player collects the bonus with its own button.
-
 export const TASK_CADENCES = ["daily", "weekly"];
 
-// What a task can count. Each settled online roll adds to these, and a task
-// reads one of them against its goal. Peak metrics keep the best single roll of
-// the period instead of a running total.
 export const TASK_METRICS = [
   "rolls",
   "rare",
@@ -33,7 +12,7 @@ export const TASK_METRICS = [
   "pets",
   "peakEP",
   "peakBadges",
-  // Second wave: luck in both directions, plus badge volume.
+
   "anomaly",
   "trash",
   "high",
@@ -41,29 +20,25 @@ export const TASK_METRICS = [
   "low1k",
   "badges",
 ];
-// A roll of HIGH_ROLL_MIN or more is a "high" roll; LOW_ROLL_MAX or less, "low".
+
 export const HIGH_ROLL_MIN = 900000;
 export const LOW_ROLL_MAX = 10000;
 export const PEAK_METRICS = ["peakEP", "peakBadges"];
 
-// The tiers at or above Rare, Epic, and Mythic, in the scoring table.
 export const RARE_OR_BETTER = ["rare", "epic", "anomaly", "mythic", "godly"];
 export const EPIC_OR_BETTER = ["epic", "anomaly", "mythic", "godly"];
 export const MYTHIC_OR_BETTER = ["mythic", "godly"];
 
-// How many tasks a period puts on each cadence's list.
 export const ACTIVE_PER_PERIOD = { daily: 3, weekly: 4 };
-// A Task Skip can be bought once a day, and no more than SKIP_WINDOW_LIMIT in
-// any SKIP_WINDOW_MS. A save holds at most SKIP_HOLD_LIMIT unused ones.
+
 const SKIP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 export const SKIP_WINDOW_MS = 5 * 24 * 60 * 60 * 1000;
 export const SKIP_WINDOW_LIMIT = 3;
 export const SKIP_HOLD_LIMIT = 3;
-// The bonus for claiming every task on a list in one period.
+
 export const LIST_BONUS = { daily: 100000, weekly: 500000 };
 
 export const TASKS = [
-  // ---- Daily: three on the list each day ----------------------------------
   {
     id: "daily-rolls",
     cadence: "daily",
@@ -247,7 +222,7 @@ export const TASKS = [
   {
     id: "daily-trash-5",
     cadence: "daily",
-    // Trash is about 1% of rolls, as rare as a Mythic: one is a day's work.
+
     title: "Roll a Trash number",
     detail: "Bad luck pays too. Only the lowest tier counts.",
     metric: "trash",
@@ -290,7 +265,7 @@ export const TASKS = [
     goal: 10,
     reward: 80000,
   },
-  // ---- Weekly: twenty-one tasks, four on the list each week --------------
+
   {
     id: "weekly-rolls",
     cadence: "weekly",
@@ -550,8 +525,6 @@ const addCapped = (total, amount) =>
 const isPoolId = (cadence, id) => TASK_BY_ID.get(id)?.cadence === cadence;
 const isPeak = (metric) => PEAK_METRICS.includes(metric);
 
-// A small, stable string hash (FNV-1a). Every device runs the same arithmetic,
-// so a period deals the same tasks everywhere without storing them.
 function hash(text) {
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
@@ -561,8 +534,6 @@ function hash(text) {
   return h >>> 0;
 }
 
-// Every task in a cadence's pool, in the order this period deals them out.
-// The active portion goes on the list; the rest are available to Task Skip.
 function dealt(cadence, period) {
   return TASKS.filter((task) => task.cadence === cadence)
     .map((task) => ({ id: task.id, rank: hash(`${period}|${task.id}`) }))
@@ -584,15 +555,10 @@ function emptySlot() {
   };
 }
 
-// `bought` holds the times of the last few Task Skips bought, oldest first. It
-// is all the wait needs: one a day, and a fourth only once the oldest of the
-// last three has left the window. An empty list never holds a purchase back.
 function emptySkip() {
   return { tokens: 0, bought: [] };
 }
 
-// The purchase times the wait reads, sanitized. Never more than the window
-// counts, so a long-running save cannot grow this list.
 function skipPurchases(tasks) {
   const bought = tasks?.skip?.bought;
   if (!Array.isArray(bought)) return [];
@@ -610,8 +576,6 @@ export function emptyTasks() {
   };
 }
 
-// The UTC day a moment falls on, or for a weekly cadence the UTC Monday that
-// starts its week. Every player shares the same reset, whatever their timezone.
 function periodStart(cadence, at) {
   const date = new Date(at);
   let day = Date.UTC(
@@ -627,20 +591,14 @@ function periodStart(cadence, at) {
 }
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// A stable key for the period a moment belongs to: "2026-10-08" for a daily
-// period, the Monday of the week for a weekly one. Keys sort chronologically.
 export function periodKey(cadence, at) {
   return new Date(periodStart(cadence, at)).toISOString().slice(0, 10);
 }
 
-// When the period a moment belongs to ends, as a timestamp in milliseconds
-// (00:00 UTC of the next day or the next Monday).
 export function nextReset(cadence, at) {
   return periodStart(cadence, at) + (cadence === "weekly" ? 7 : 1) * DAY_MS;
 }
 
-// The slot a cadence counts in at a given moment. A slot from an earlier period
-// is treated as empty, which is what makes every reset happen lazily.
 function currentSlot(tasks, cadence, at) {
   const period = periodKey(cadence, at);
   const stored = tasks?.[cadence];
@@ -653,8 +611,6 @@ function currentSlot(tasks, cadence, at) {
   return { period, counts: zeroCounts(), claimed: [], swaps: [], bonus: false };
 }
 
-// The ids on a cadence's list at a moment: the ones dealt for the period, with
-// any skip of this period swapped in, in the order the swaps were made.
 export function activeTaskIds(tasks, cadence, at) {
   const slot = currentSlot(tasks, cadence, at);
   const active = dealt(cadence, slot.period).slice(
@@ -668,13 +624,10 @@ export function activeTaskIds(tasks, cadence, at) {
   return active;
 }
 
-// The same list as task objects, in the order the page shows them.
 export function activeTasks(tasks, cadence, at) {
   return activeTaskIds(tasks, cadence, at).map((id) => TASK_BY_ID.get(id));
 }
 
-// How far a task has got this period. A running total counts from the moment a
-// task was swapped in; a peak keeps the best roll of the period, whenever it was.
 function progressOf(slot, task) {
   const total = slot.counts[task.metric] ?? 0;
   if (isPeak(task.metric)) return total;
@@ -682,8 +635,6 @@ function progressOf(slot, task) {
   return Math.max(0, total - (swap?.base ?? 0));
 }
 
-// Where a task stands right now: how far along it is, and whether it is still
-// open, ready to claim, or already claimed for this reset.
 export function taskProgress(tasks, task, at) {
   const slot = currentSlot(tasks, task.cadence, at);
   const count = progressOf(slot, task);
@@ -698,15 +649,12 @@ export function taskProgress(tasks, task, at) {
   };
 }
 
-// The ids of a cadence's list that are finished and not yet claimed.
 export function claimableIds(tasks, cadence, at) {
   return activeTaskIds(tasks, cadence, at).filter(
     (id) => taskProgress(tasks, TASK_BY_ID.get(id), at).state === "claimable",
   );
 }
 
-// Where the list bonus of a cadence stands: how many of its tasks are claimed,
-// and whether the bonus itself is open, ready to claim, or taken.
 export function listBonusState(tasks, cadence, at) {
   const slot = currentSlot(tasks, cadence, at);
   const list = activeTaskIds(tasks, cadence, at);
@@ -746,13 +694,10 @@ export function taskSummary(tasks, at) {
   }
 }
 
-// The Task Skips a save holds right now, and how long until the next one can be
-// bought. Both read the save alone, so every tab says the same thing.
 export function skipStatus(tasks, at) {
   const stored = tasks?.skip ?? emptySkip();
   const bought = skipPurchases(tasks);
-  // One a day. And once three were bought in the window, the oldest of them has
-  // to leave it before another can be bought.
+
   const daily = bought.length ? bought.at(-1) + SKIP_INTERVAL_MS - at : 0;
   const windowed =
     bought.length >= SKIP_WINDOW_LIMIT ? bought[0] + SKIP_WINDOW_MS - at : 0;
@@ -763,9 +708,6 @@ export function skipStatus(tasks, at) {
   };
 }
 
-// The Task Skip save after one purchase at `at`: one more token, and the time
-// goes on the record the window reads. The caller has already checked the wait
-// and the hold limit.
 export function boughtSkip(tasks, at) {
   const stored = tasks?.skip ?? emptySkip();
   return {
@@ -774,7 +716,6 @@ export function boughtSkip(tasks, at) {
   };
 }
 
-// A wait in words short enough for a button: "2d 4h", "5h 10m", "12m".
 export function waitText(ms) {
   const minutes = Math.max(0, Math.ceil(ms / 60000));
   const days = Math.floor(minutes / 1440);
@@ -785,9 +726,6 @@ export function waitText(ms) {
   return `${rest}m`;
 }
 
-// What one settled online roll adds to each cadence. A settlement from an
-// earlier period (a roll replayed after a failed save) never reopens that
-// period, because the stored one is already further along.
 export function recordTally(tasks, tally, at) {
   const next = {};
   for (const cadence of TASK_CADENCES) {
@@ -820,8 +758,6 @@ export function recordTally(tasks, tally, at) {
   };
 }
 
-// Marks a task as claimed for the current reset. The caller credits the reward;
-// this only refuses a claim that is not earned, not on the list, or taken.
 export function claimTask(tasks, task, at) {
   const slot = currentSlot(tasks, task.cadence, at);
   if (slot.claimed.includes(task.id))
@@ -841,9 +777,6 @@ export function claimTask(tasks, task, at) {
   };
 }
 
-// Marks a cadence's list bonus as taken for the current reset. The caller
-// credits the reward. The reducer calls this when the player collects a finished
-// list's bonus; it refuses a bonus that is not earned or is already taken.
 export function claimListBonus(tasks, cadence, at) {
   const bonus = listBonusState(tasks, cadence, at);
   if (bonus.state === "claimed")
@@ -858,10 +791,6 @@ export function claimListBonus(tasks, cadence, at) {
   };
 }
 
-// A Task Skip: one open task on the list is swapped for the next pool task that
-// is not on the list and was not skipped this period, and one token is used. The
-// new task starts at zero from this moment. A claimed task is already paid for,
-// and a finished one is ready to claim, so neither can be skipped.
 export function skipTask(tasks, task, at) {
   const status = skipStatus(tasks, at);
   if (status.tokens < 1)
@@ -879,7 +808,7 @@ export function skipTask(tasks, task, at) {
     (id) => !active.includes(id) && !used.has(id),
   );
   if (!incoming) throw new Error("No other task is left for this reset.");
-  // A peak counts from the best roll of the period, so it has no base to pass.
+
   const incomingTask = TASK_BY_ID.get(incoming);
   const base = isPeak(incomingTask.metric)
     ? 0
@@ -895,9 +824,6 @@ export function skipTask(tasks, task, at) {
   };
 }
 
-// A swap is kept only if it could have happened: it takes a task that was on the
-// list for that period out, and brings in a pool task that was not on it and
-// had not been skipped before. Anything else is dropped, and reported.
 function sanitizeSwaps(cadence, period, swaps) {
   const kept = [];
   const list = period
@@ -921,8 +847,6 @@ function sanitizeSwaps(cadence, period, swaps) {
   return kept;
 }
 
-// The tasks read back from a save. Anything unreadable is reset to an empty
-// slot rather than failing the whole load, and the caller is told when it was.
 export function parseTasks(value) {
   if (value == null) return { tasks: emptyTasks(), repaired: false };
   if (typeof value !== "object" || Array.isArray(value))
@@ -977,7 +901,7 @@ export function parseTasks(value) {
   let skip = emptySkip();
   if (value.skip !== undefined) {
     const stored = value.skip;
-    // A save from before the window kept only its last purchase.
+
     const bought = Array.isArray(stored?.bought)
       ? stored.bought
       : stored?.boughtAt == null
@@ -998,7 +922,6 @@ export function parseTasks(value) {
     else repaired = true;
   }
   tasks.skip = skip;
-  // The retired `rngween` save slot is ignored; its earned auras are repaired
-  // independently from the profile's permanent cosmetic receipts.
+
   return { tasks, repaired };
 }

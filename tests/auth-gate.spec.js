@@ -1,4 +1,5 @@
 import { expect, test } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { cloudGameAccess } from "../src/auth-gate.js";
 
 test("cloud play requires a configured, ready account unless local play was chosen", () => {

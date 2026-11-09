@@ -7,9 +7,7 @@
   text-align: center;
   padding-bottom: 26px;
 }
-/* A quiet halo behind the welcome block, grey like every shadow on the
-   site — the page's business is trust, not decoration. It bleeds
-   vertically only: sideways bleed would scroll the document on phones. */
+
 .about-intro::before {
   content: "";
   position: absolute;

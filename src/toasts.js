@@ -1,19 +1,7 @@
-// In-game notices: the short cards that say what just happened ("+25,000 EP
-// claimed", "New companion joined you"). The queue is plain data, so it can be
-// tested without a browser. The cards and their timers live in Toasts.jsx.
-//
-// A notice is either a plain string (an information line, as it always was) or
-// an object: a kind that sets its colour, icon and how long it stays, an
-// optional title above the text, an optional icon, and an optional action
-// button ("Open History") that also dismisses the notice.
-
 const TOAST_KINDS = ["info", "done", "reward", "milestone", "warning", "error"];
 
-// Up to this many notices are on screen at once; the oldest makes room.
 export const TOAST_LIMIT = 3;
 
-// How long each kind stays by default. Longer text earns a little more time, so
-// a notice can be read without rushing, and it never stays past the cap.
 const BASE_MS = {
   info: 3500,
   done: 3500,
@@ -34,8 +22,6 @@ export function toastLife({ kind, title = "", text = "" }) {
   return Math.min(CAP_MS, base + extra);
 }
 
-// Reads whatever a caller passed. A notice with nothing to say is dropped, and
-// an unknown kind is treated as information rather than failing the page.
 export function toastFrom(input) {
   if (typeof input === "string") {
     const text = input.trim();
@@ -57,9 +43,6 @@ export function toastFrom(input) {
   return { kind, title, text, icon: input.icon ?? null, action };
 }
 
-// The notices on screen, newest last. A notice that repeats one still on screen
-// is counted instead of stacked, and its time starts again. Past the limit the
-// oldest notice is the one that leaves.
 export function pushToast(list, input, id) {
   const notice = toastFrom(input);
   if (!notice) return list;

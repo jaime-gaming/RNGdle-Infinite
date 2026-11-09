@@ -25,8 +25,7 @@ export function groupResultBadges(badges) {
 }
 
 export const formatEP = (value) => Math.round(value).toLocaleString("en-US");
-// Optional shorthand for wallet-sized amounts. Purely presentational: exact
-// values are always the ones spent, saved and recorded in history.
+
 export function formatEPCompact(value) {
   const rounded = Math.round(value);
   if (Math.abs(rounded) < 100000) return formatEP(rounded);
@@ -43,8 +42,7 @@ export function formatEPCompact(value) {
     }
   return formatEP(rounded);
 }
-// One palette for every shared roll, so a result shared live and the same roll
-// shared later from History read identically.
+
 const TIER_SQUARES = {
   trash: "\u{1F7EB}",
   common: "\u2B1C",
@@ -77,8 +75,6 @@ function shareLines(number, tier, badges, ep, extra = "") {
 }
 
 export function buildShareText(result) {
-  // The rank line only exists for a freshly scored roll: History keeps the
-  // number, the tier and the EP, so an archived share simply omits it.
   return shareLines(
     result.number,
     result.tier,
@@ -88,9 +84,6 @@ export function buildShareText(result) {
   );
 }
 
-// Sharing an old roll from History: same shape, built from what the save
-// actually kept (number, tier, EP, badges, wallet bonus) instead of a live
-// result object. Nothing here can invent a figure the roll did not have.
 export function buildShareTextFromHistory(event) {
   const badges = (event.badges ?? [])
     .map((id) => badgeMetadata.get(id))

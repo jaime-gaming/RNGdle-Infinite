@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { seedProgress } from "./helpers/progress.js";
@@ -11,11 +12,11 @@ import {
   parseProgress,
   PROGRESS_KEY,
 } from "../src/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 const LOW = [88125, 375660, 861456, 90750, 577281, 25663];
 const PACE = ["quickwind-1", "quickwind-2", "quickwind-3", "quickwind-4"];
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 
 function staged(numbers) {
   let index = 0;
@@ -147,7 +148,6 @@ test("new committed rolls reject a seventh number, but already-committed legacy 
 test("overflow charge survives settlement and reload, then fires on the following real roll", async ({
   page,
 }) => {
-  // Two animated multi-rolls and the full virtual cooldown can be slow under load.
   test.setTimeout(60000);
   const words = [...LOW, 139598, 861456, 375660, 577281];
   await mockRandom(page, words);
@@ -158,6 +158,7 @@ test("overflow charge survives settlement and reload, then fires on the followin
     skillCharge: { triptych: 6, quarry: 11 },
   });
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -174,6 +175,7 @@ test("overflow charge survives settlement and reload, then fires on the followin
   expect(progress.skillCharge).toMatchObject({ triptych: 0, quarry: 11 });
   const receipts = progress.receipts.length;
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".idle-roll .generate")).toBeVisible();
   expect((await saved(page)).skillCharge.quarry).toBe(11);
   await page.clock.runFor(120000);

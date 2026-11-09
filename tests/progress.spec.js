@@ -1,4 +1,5 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import {
   applyProgress,
   emptyProgress,
@@ -16,9 +17,9 @@ import { formatEP } from "../src/roll-data.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom, showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+import { readSavedProgress } from "./helpers/save.js";
 
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 
 test("wallet rules: one credit per roll, all earned badges unlocked, no duplicate or unaffordable purchases", () => {
   const result = evaluate(1337),
@@ -32,7 +33,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   const earned = applyProgress(emptyProgress(), action);
   expect(earned.balance).toBe(result.totalEP);
   expect(earned.discovered).toHaveLength(17);
-  expect(earned.discovered).toContain("LEET"); // Superseded still counts as discovered.
+  expect(earned.discovered).toContain("LEET");
   expect(applyProgress(earned, action)).toBe(earned);
   expect(() =>
     applyProgress(emptyProgress(), { type: "buy", id: "starfall" }),
@@ -43,8 +44,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   expect(() =>
     applyProgress(emptyProgress(), { type: "equip", id: "orbit" }),
   ).toThrow("Purchase");
-  // Local profile registration starts fresh; the cloud registration path is
-  // tested below because it deliberately retains the progress being imported.
+
   let state = applyProgress(emptyProgress(), {
     type: "register",
     id: "shop-test",
@@ -64,10 +64,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   state = applyProgress(state, { ...action, id: "second-test-roll" });
   for (const item of shopProducts) {
     const before = state.balance;
-    // The stall sells two skills at a time, rotating every five minutes, so a
-    // plain buy for an unstocked skill legitimately throws. The rotation is
-    // deterministic: buy each skill in the soonest window that stocks it
-    // (recomputed after earlier purchases, which slide the order).
+
     const at =
       item.kind === "skill"
         ? (() => {
@@ -89,7 +86,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
           .filter((p) => p.kind === "aura")
           .at(-1)?.id ?? "none",
       );
-    // A repeatable product is never owned: its second buy waits instead.
+
     expect(() => applyProgress(state, { type: "buy", id: item.id })).toThrow(
       item.repeatable ? "available in" : "already own",
     );
@@ -102,10 +99,10 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
 
 test("saved progress is versioned, self-repairing, and cannot equip an unowned item", () => {
   expect(parseProgress(null)).toEqual(emptyProgress());
-  // Data that is not a save at all is still rejected.
+
   for (const value of ["broken", JSON.stringify({ version: 999 })])
     expect(() => parseProgress(value)).toThrow();
-  // Bad values inside a real save are repaired, never reset.
+
   const negative = parseAndRepairProgress(
     JSON.stringify({ ...emptyProgress(), balance: -1 }),
   );
@@ -232,6 +229,7 @@ test("undiscovered badges are absent from collection and search; demo cards are 
   page,
 }) => {
   await page.goto("/");
+  await waitForApp(page);
   await expect(page.locator(".best-card .badge-pill")).toHaveCount(0);
   await expect(
     page
@@ -276,6 +274,7 @@ test("completed random rolls unlock only their badges and preserve EP/discoverie
     page.getByRole("heading", { name: "Prime Number", exact: true }),
   ).toHaveCount(0);
   await page.reload();
+  await waitForApp(page);
   await expect(page.locator(".badge-card")).toHaveCount(17);
   expect(await saved(page)).toEqual(before);
   await page
@@ -307,15 +306,16 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
 }) => {
   const starfall = shopProducts.find((item) => item.id === "starfall");
   const priced = `Buy for ${formatEP(starfall.price)} EP`;
-  // Exactly enough for one starfall: the purchase must leave an empty wallet.
+
   await seedProgress(page, {
     balance: starfall.price,
     totalEarned: starfall.price,
   });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // Auras are sold inside their family page.
+
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   const card = page.locator('[data-product="starfall"]');
   await card.getByRole("button", { name: priced }).click();
   await page
@@ -342,6 +342,7 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
     ),
   ).toBeDisabled();
   await page.reload();
+  await waitForApp(page);
   await expect(
     card.getByRole("button", { name: "Equipped", exact: true }),
   ).toBeDisabled();
@@ -353,7 +354,7 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
   );
   await expect(page.locator(".roll-ep")).toHaveText("4,663 EP");
   await expect.poll(async () => (await saved(page))?.balance).toBe(4663);
-  // "Use original appearance" is the Auras shelf's own control.
+
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Shop", exact: true })
@@ -373,17 +374,16 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   page,
   context,
 }) => {
-  // Two items that are each affordable alone but not together, so only one of
-  // the simultaneous purchases can be applied. Derived from the catalogue so a
-  // rebalance keeps the invariant under test.
   const pair = ["aurora", "starfall"].map((id) =>
     shopProducts.find((item) => item.id === id),
   );
   const wallet = pair[0].price + pair[1].price - 1;
   await seedProgress(page, { balance: wallet, totalEarned: wallet });
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   const other = await context.newPage();
   await other.goto("/shop/auras/celestial");
+  await waitForApp(other);
   await page
     .locator(
       `[data-product="${pair[0].id}"] button:not(.shop-tag):not(.shop-look-eye)`,
@@ -435,6 +435,7 @@ test("a failed save does not spend EP or grant a purchase", async ({
     },
   );
   await page.goto("/shop/auras/celestial");
+  await waitForApp(page);
   await page
     .locator(
       '[data-product="starfall"] button:not(.shop-tag):not(.shop-look-eye)',
@@ -462,6 +463,7 @@ test("malformed localStorage fails safely and shop layouts fit mobile", async ({
     await page.setViewportSize({ width, height: 900 });
     for (const path of ["/shop", "/shop/skills", "/shop/auras"]) {
       await page.goto(path);
+      await waitForApp(page);
       await expect(page.getByTestId("wallet-balance")).toHaveText("0 EP");
       await expect(page.locator(".progress-warning")).toBeVisible();
       expect(
@@ -480,6 +482,7 @@ test("draws wait for the save lock without exposing a number", async ({
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await waitForApp(page);
   await page.evaluate(async (key) => {
     let ready;
     const acquired = new Promise((resolve) => {

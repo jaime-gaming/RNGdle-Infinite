@@ -179,9 +179,6 @@
   }
 }
 
-/* ---- Phone-only "More" group ------------------------------------------------
-   The site footer never paints under 761px, so its links (and the home-screen
-   install entry) live here instead. Desktop keeps the footer. */
 .settings-mobile-only {
   display: none;
 }
@@ -201,7 +198,6 @@
   }
 }
 
-/* The save block: what this browser keeps, and the way back to it. */
 .settings-save {
   display: flex;
   flex-direction: column;
@@ -358,4 +354,14 @@
     flex-direction: column;
     gap: 3px;
   }
+}
+
+.settings-version {
+  margin: 0;
+  padding-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  text-align: right;
 }

@@ -1,8 +1,6 @@
 import baseMetadata from "./data/badge-metadata.json" with { type: "json" };
 import { POPULATION, formatPercent } from "./probability.js";
 
-// Infinite-only additions. Keep the pinned upstream bitsets and EP table intact.
-// Six actual decimal digits are required: no implicit leading zeroes.
 const pendulums = [];
 for (let a = 1; a <= 9; a++)
   for (let b = 0; b <= 9; b++)

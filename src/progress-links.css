@@ -116,9 +116,6 @@
   }
 }
 
-/* The return banner arrives with a pop and a little storm of confetti —
-   decorative, aria-hidden, and motion the global reduced-motion reset
-   removes entirely. */
 .purchase-return {
   animation: purchase-banner-in 0.5s var(--ease-reveal) both;
 }

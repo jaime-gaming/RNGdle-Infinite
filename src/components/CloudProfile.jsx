@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { AlertCircle, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import LoadingScreen from "./LoadingScreen.jsx";
 import { getPublicProfile } from "../public-profile.js";
 import SharedProfile from "./SharedProfile.jsx";
 import "../profile.css";
@@ -48,15 +49,12 @@ export default function CloudProfile({ username, onContinue, onOwnProfile }) {
       />
     );
 
+  if (result.status === "loading") return <LoadingScreen />;
+
   return (
     <section className="cloud-profile-state" aria-live="polite">
       <h2 className="profile-title">{username}</h2>
-      {result.status === "loading" ? (
-        <p className="cloud-profile-message" role="status">
-          <LoaderCircle className="is-spinning" size={16} aria-hidden="true" />
-          Loading public profile…
-        </p>
-      ) : result.status === "missing" ? (
+      {result.status === "missing" ? (
         <p className="cloud-profile-message" role="status">
           No public profile was found for this name. Check the address or ask
           the player to make their profile public from their account.
@@ -70,31 +68,29 @@ export default function CloudProfile({ username, onContinue, onOwnProfile }) {
           </div>
         </div>
       )}
-      {result.status !== "loading" && (
-        <div className="profile-actions">
-          {result.status === "error" && (
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => setAttempt((value) => value + 1)}
-            >
-              <RefreshCw size={14} aria-hidden="true" /> Try again
-            </button>
-          )}
-          <button className="primary-button" onClick={onContinue}>
-            Play RNGdle <span aria-hidden="true">→</span>
+      <div className="profile-actions">
+        {result.status === "error" && (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            <RefreshCw size={14} aria-hidden="true" /> Try again
           </button>
-          {onOwnProfile && (
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={onOwnProfile}
-            >
-              My profile
-            </button>
-          )}
-        </div>
-      )}
+        )}
+        <button className="primary-button" onClick={onContinue}>
+          Play RNGdle <span aria-hidden="true">→</span>
+        </button>
+        {onOwnProfile && (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onOwnProfile}
+          >
+            My profile
+          </button>
+        )}
+      </div>
     </section>
   );
 }

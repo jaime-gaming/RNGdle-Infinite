@@ -59,15 +59,6 @@ import { gameNow } from "../game-clock.js";
 import { LegendMark, InfinityMark } from "./game-icons.jsx";
 import "../rebirth.css";
 
-// The ladder, step by step: a slice of the collection and EP the cycle earned,
-// both growing with every rung. A prestige (the ultra-rebirth in the save) only
-// appears once the last rung is done. After three prestiges the Rollback opens:
-// the last stage, which can be taken again and again, and the only action that
-// pays more than a prestige. It stays out of sight until then.
-//
-// Nothing here renders before the ladder unlocks — the page, the header entry
-// and the help page all stay silent, so rebirth is a discovery rather than a
-// promise made too early.
 function Reward({ step, earned, current }) {
   const skill = rebirthSkill(step);
   if (!skill) return null;
@@ -107,13 +98,11 @@ function when(at) {
   });
 }
 
-// Before the last rung there is no Prestige to show. The place it will take is
-// faded out, and the page only says that there is more, so the next step stays
-// a surprise until the ladder is actually finished.
-function PrestigeTeaser() {
+function StageTeaser({ target, rollbackUnlocked }) {
   return (
     <section
       className="rebirth-block rebirth-teaser"
+      data-teaser={target}
       aria-labelledby="rebirth-teaser-title"
     >
       <div className="rebirth-teaser-fade" aria-hidden="true">
@@ -124,6 +113,13 @@ function PrestigeTeaser() {
       <p id="rebirth-teaser-title" className="rebirth-teaser-line">
         Wait, but there is more...
       </p>
+      {target === "rollback" && (
+        <p className="rebirth-teaser-hint">
+          {rollbackUnlocked
+            ? "Rollback is the last stage."
+            : "One last stage is still ahead."}
+        </p>
+      )}
     </section>
   );
 }
@@ -135,14 +131,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
   const rollbacks = progress.rollbacks ?? 0;
   const requirement = rebirthRequirement(rebirths);
   const ladderComplete = !requirement;
-  // The Rollback only exists once the three prestiges are done. Before that it
-  // is not shown at all, not even as a locked teaser.
+
   const rollbackShown = ladderComplete && ultras >= ROLLBACK_AFTER_PRESTIGES;
-  // The last stage: the ladder is complete and prestige is closed, so the
-  // Rollback is what the run does next, again and again.
+
   const lastStage = rollbackShown;
-  // The Rollback is a secret until three prestiges, so before that the
-  // prestige bonus is simply described as outlasting every rebirth.
+
   const prestigeSpan = rollbackShown
     ? "until a Rollback"
     : "kept through every rebirth";
@@ -174,11 +167,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     if (open) dialog.current?.showModal();
     else dialog.current?.close();
   }, [open]);
-  // A step asks for two things: a slice of the collection and EP earned in the
-  // cycle that is asking. The page reads both off the save.
-  // The page works towards one step at a time: a rung, then Prestige, and the
-  // Rollback once three prestiges are done. Its percentage mixes the collection
-  // and the cycle's EP, half and half, so 100% needs both.
+
   const step = nextStep(progress) ?? ultraRebirthRequirement();
   const target = step.badges;
   const epTarget = step.ep;
@@ -194,8 +183,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
       rollbackPercent +
       surplusBanked,
   );
-  // What this exact account would hand back and what it would be paid for it,
-  // read from the save rather than described in general terms.
+
   const cycle = cycleStats(progress);
   const cycleEp = cycle.earned;
   const epRemaining = Math.max(0, epTarget - cycleEp);
@@ -210,9 +198,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     (sum, id) => sum + (productById.get(id)?.price ?? 0),
     0,
   );
-  // The overshoot, in this save's numbers: the gate is a floor, and the page
-  // shows what the surplus would pay right now — in the preview, in the
-  // dialog, and again in the result message after the rebirth lands.
+
   const previewGate = epTarget;
   const rawPreviewSurplus = rebirthSurplus(
     cycleEp,
@@ -246,10 +232,9 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     (id) => skillById.get(id)?.source !== "shop",
   ).length;
   const starter = cycleStarterEp(rebirths + 1, ultras);
-  // A prestige sends the ladder back to zero, so its starting sum is paid by
-  // prestiges alone.
+
   const ultraStarter = cycleStarterEp(0, ultras + 1);
-  // Rollback has no starting grant; the other stage bonuses remain active.
+
   const rollbackStarter = 0;
   const starterGain = ladderComplete ? ultraStarter - starter : starter;
   const keeps = [
@@ -337,8 +322,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 : `Rebirth ${rebirths + 1} complete: +${Math.round(
                     REBIRTH_BONUS_PER_REBIRTH * 100,
                   )}% EP for the ladder and ${formatEP(starter + dialogSurplus.starterBonus)} EP to start.${surplusNote}`;
-        // A prestige and the Rollback also fire the ceremony — in the app shell,
-        // which is still mounted after this page navigates away.
+
         onDone(message, {
           ultra: mode === "ultra",
           rollback: mode === "rollback",
@@ -349,7 +333,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
       setPending(false);
     }
   }
-  // Silence before the unlock: no counter, no locked panel, no "coming soon".
+
   if (!unlocked) return null;
 
   return (
@@ -441,8 +425,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               </>
             }
           </div>
-          {/* This cycle, in the player's own numbers: what the run they are
-              about to hand back actually did. */}
+
           <dl className="rebirth-cycle">
             <div>
               <dt>This cycle began</dt>
@@ -520,8 +503,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
         </div>
       </div>
 
-      {/* What the button would do to this save, right now — not a general
-          promise: the figures are this account's. */}
       <section
         className="rebirth-block rebirth-preview"
         aria-labelledby="rebirth-preview-title"
@@ -678,9 +659,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
         </div>
         <p className="rebirth-preview-note">
           <Target size={13} aria-hidden="true" />
-          {/* One flex item for the whole paragraph: the note is a flex row
-              around its icon, and loose inline children become items of
-              their own — more than a phone-wide row can hold. */}
+
           <span>
             This step asks for <b>{target} badges</b> ({count} found) and{" "}
             <b>{formatEP(epTarget)} EP</b> earned in this cycle —{" "}
@@ -744,8 +723,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                       ? "is-locked is-faded"
                       : "is-locked";
               const needed = Math.ceil(BADGE_TOTAL * rung.badges);
-              // The bar is the gauge's blend, against this rung's own gate, so a
-              // rung never shows a different number from the page's counter.
+
               const stepPercent =
                 index < rebirths
                   ? 100
@@ -893,7 +871,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           </div>
         </section>
       ) : (
-        <PrestigeTeaser />
+        <StageTeaser
+          target={ultras > 0 ? "rollback" : "prestige"}
+          rollbackUnlocked={ultras >= ROLLBACK_AFTER_PRESTIGES}
+        />
       )}
 
       {rollbackShown && (
@@ -943,9 +924,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
         </section>
       )}
 
-      {/* Past the ladder the account keeps its own page: what every prestige
-          has paid so far, the Rollback if it was taken, and which exclusives
-          are wearing. */}
       {(ladderComplete || ultras > 0 || rollbacks > 0) && (
         <section
           className="rebirth-block rebirth-legacy"
@@ -985,7 +963,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                 </dt>
                 <dd>
                   {formatEPCompact(
-                    // The ladder resets, so only prestiges count here.
                     ultras >= ROLLBACK_AFTER_PRESTIGES ? 0 : ultraStarter,
                   )}{" "}
                   EP

@@ -1,9 +1,6 @@
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { firestoreDb } from "./firebase.js";
 
-// Two-factor sign-in keeps its own document so the strictly whitelisted
-// cloud_profile_settings document (and every code path that writes it) stays
-// untouched.
 const ACCOUNT_SECURITY_COLLECTION = "account_security";
 const DEVICE_ID_KEY = "rng-infinite-device-id-v1";
 export const MAX_TRUSTED_DEVICES = 12;
@@ -16,11 +13,6 @@ function randomId() {
     .slice(2, 10)}`;
 }
 
-/**
- * Stable id for this browser profile. Two-factor trusts devices, so the id
- * lives in localStorage: clearing site data simply makes the device "new"
- * again and asks for the email link once more.
- */
 export function deviceId(storage = globalThis.localStorage) {
   try {
     const existing = storage.getItem(DEVICE_ID_KEY);
@@ -29,7 +21,6 @@ export function deviceId(storage = globalThis.localStorage) {
     storage.setItem(DEVICE_ID_KEY, next);
     return next;
   } catch {
-    // Private mode or a blocked storage still gets an id for this session.
     return randomId();
   }
 }
@@ -47,10 +38,6 @@ function securityRef(userId) {
   return doc(firestoreDb, ACCOUNT_SECURITY_COLLECTION, userId);
 }
 
-/**
- * Reads the account's security preferences. A missing document means
- * "two-factor off", which is the default for every existing account.
- */
 export async function readAccountSecurity(userId) {
   if (!firestoreDb || typeof userId !== "string" || !userId)
     return { enabled: false, trustedDevices: [] };
@@ -87,10 +74,6 @@ export async function setTwoFactorEnabled(userId, enabled) {
   }
 }
 
-/**
- * Remembers this device so the email link is not requested again. The list is
- * capped; the oldest entries drop off first.
- */
 export async function trustDevice(userId, id = deviceId()) {
   if (!firestoreDb || typeof userId !== "string" || !userId)
     return { ok: false, message: "Online sign-in is unavailable right now." };

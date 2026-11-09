@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import fs from "node:fs";
 import http from "node:http";
 import { gzipSync, gunzipSync } from "node:zlib";
@@ -26,8 +27,7 @@ test("valid scoring data is accepted when gzip transport metadata changes", asyn
       : "badge";
     const payload = getTransport(kind),
       body = Buffer.from(payload.data, "base64");
-    // Same regression as the formerly failing binary request: gzip metadata
-    // changes while the exact decompressed score/badge bytes stay identical.
+
     body[9] ^= 1;
     payload.data = body.toString("base64");
     deliveries++;
@@ -38,6 +38,7 @@ test("valid scoring data is accepted when gzip transport metadata changes", asyn
     });
   });
   await page.goto("/");
+  await waitForApp(page);
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
@@ -102,8 +103,7 @@ test("versioned JSON transports contain the pinned indexes without HTTP Content-
 
 test("HTTP-compressed JSON is decoded once and truly corrupt scoring bytes still fail", async () => {
   let corrupt = true;
-  // Real HTTP exercises Fetch's Content-Encoding decoding; route.fulfill()
-  // supplies an already-decoded body and cannot simulate that network layer.
+
   const server = http.createServer((request, response) => {
     const kind = request.url.includes("/ep-") ? "ep" : "badge";
     const payload = getTransport(kind);

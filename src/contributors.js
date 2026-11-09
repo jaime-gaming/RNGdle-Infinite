@@ -1,7 +1,5 @@
 import hints from "./data/diagram-hints.json" with { type: "json" };
 
-// Presentation helpers only: badges are awarded by the full-range membership
-// index. These locate concrete digits supporting a badge; they never affect EP.
 const indices = (values) => ({ type: "indices", indices: values });
 const range = (start, end) => ({ type: "range", start, end });
 const groups = (values) => ({ type: "groups", groups: values });
@@ -287,7 +285,6 @@ export function getContributors(badge, number, equation = null) {
       }
   }
   if (id === "CONSEC_PAIR_NEARBY") {
-    // Supporting substrings must be separated, and not just two single digits.
     for (let start = 0; start < n; start++)
       for (let end = start + 1; end < n; end++) {
         const left = s.slice(start, end);
@@ -344,6 +341,6 @@ export function getContributors(badge, number, equation = null) {
         if (exact) break;
       }
   }
-  // Omit a diagram when no concrete supporting digits can be established.
+
   return null;
 }

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForApp } from "./helpers/app.js";
 import {
   applyProgress,
   emptyProgress,
@@ -178,8 +179,6 @@ test("legacy permanent cosmetics survive same-account save reconciliation", () =
 });
 
 test("a first sync with no displaced copy needs no previous save", () => {
-  // A second device adopts the online copy: there is no earlier device copy to
-  // carry cosmetics over from, and reconciliation must not throw.
   const cloud = parseProgress(JSON.stringify(retiredEventSave()));
   expect(() => preservePermanentCosmetics(null, cloud)).not.toThrow();
   expect(preservePermanentCosmetics(null, cloud)).toBe(cloud);

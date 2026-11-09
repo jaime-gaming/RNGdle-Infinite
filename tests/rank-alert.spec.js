@@ -1,21 +1,20 @@
 import { test, expect } from "./helpers/clock.js";
+import { waitForApp } from "./helpers/app.js";
 import { pauseClockAt } from "./helpers/clock.js";
 import { seedProgress } from "./helpers/progress.js";
 import { mockRandom } from "./helpers/random-roll.js";
 import { PROGRESS_KEY } from "../src/progress.js";
 import { SETTINGS_KEY } from "../src/settings.js";
+import { readSavedProgress } from "./helpers/save.js";
 
 const ROLL_NUMBER = 604827;
 const MINIMUM_RANK = "common";
-const saved = (page) =>
-  page.evaluate((key) => JSON.parse(localStorage.getItem(key)), PROGRESS_KEY);
+const saved = (page) => readSavedProgress(page);
 const rolls = async (page) =>
   (await saved(page)).history.filter((entry) => entry.type === "roll");
 const autoRollSwitch = (page) =>
   page.getByRole("switch", { name: "Auto-Roll", exact: true });
 
-// A selected rank threshold stops automation and leaves the roll's stats
-// available, without putting its exact number in the notification.
 test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async ({
   page,
 }) => {
@@ -40,13 +39,14 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
   });
 
   await page.goto("/settings");
+  await waitForApp(page);
   const rankToggle = page.getByRole("switch", {
     name: "Notify me at this rank or higher",
   });
   const rankSelect = page.getByLabel("Minimum rank");
   await expect(rankToggle).toHaveAttribute("aria-checked", "false");
   await expect(rankSelect).toBeDisabled();
-  // Rank alerts activate on their own switch, not via the ready notification.
+
   await rankToggle.click();
   await expect(rankToggle).toHaveAttribute("aria-checked", "true");
   await expect(rankSelect).toBeEnabled();
@@ -102,8 +102,7 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
     tag: "rngdle-infinite-rank",
     silent: true,
   });
-  // Auto-Roll was on when the matching roll committed, so the notification
-  // offers to stop it, plus a plain dismiss.
+
   expect(notification.actions).toEqual([
     { action: "stop-auto-roll", title: "Stop auto roll" },
     { action: "dismiss", title: "Dismiss" },

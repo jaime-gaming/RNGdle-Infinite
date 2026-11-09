@@ -13,13 +13,6 @@ import { favoriteTier, mergeTallies, tallyEntries } from "./history-tally.js";
 import { productById } from "./shop-data.js";
 import { gameUrlForLocation } from "./site-links.js";
 
-// How far you have come, in numbers.
-//
-// Every figure here is derived from the saved game, its activity log, and the
-// totals of the entries that have since left that log (see history-tally.js).
-// Nothing is stored twice, and clearing history never lowers a figure. A
-// rebirth restarts the run, not the account: the log keeps every cycle, so
-// these are the figures for the whole account.
 export function accountStats(progress = {}) {
   const total = allTimeTally(progress);
   return {
@@ -51,16 +44,11 @@ export function accountStats(progress = {}) {
   };
 }
 
-// The current cycle in numbers: everything since the last rebirth (or since
-// the account began, for a first cycle). It reads the same log as the account
-// summary, so the rebirth page and the profile can never disagree about what
-// this run has done.
 export function cycleStats(progress = {}) {
   const history = Array.isArray(progress.history) ? progress.history : [];
   const start = history.findLastIndex(isCycleMarker);
   const events = start >= 0 ? history.slice(start + 1) : history;
-  // The cycle in play comes after every marker the log holds, so that is the
-  // number its removed entries were filed under.
+
   const cycle = history.filter(isCycleMarker).length;
   const tally = cycleTally(progress, events, cycle);
   return {
@@ -70,7 +58,7 @@ export function cycleStats(progress = {}) {
         : (progress.profile?.createdAt ?? tally.first ?? null),
     rebirths: progress.rebirths ?? 0,
     rolls: tally.rolls,
-    // The gate a rebirth reads: EP this cycle scored, straight from the log.
+
     earned: cycleEarnedEp(progress),
     spent: tally.spent,
     badges: tally.discovered.length,
@@ -78,8 +66,6 @@ export function cycleStats(progress = {}) {
   };
 }
 
-// What a profile is proud of: the best roll, the rolls it pinned, what it is
-// wearing. Read from the save and the log, never stored on their own.
 export function profileHighlights(progress = {}) {
   const history = Array.isArray(progress.history) ? progress.history : [];
   const stats = accountStats(progress);
@@ -122,8 +108,6 @@ function removedTotalsOf(progress) {
   return Array.isArray(progress.removedTotals) ? progress.removedTotals : [];
 }
 
-// Every entry the log has ever held: the ones still in it, and the totals of
-// the ones that have left it.
 export function allTimeTally(progress) {
   const history = Array.isArray(progress.history) ? progress.history : [];
   return removedTotalsOf(progress).reduce(
@@ -132,7 +116,6 @@ export function allTimeTally(progress) {
   );
 }
 
-// One cycle's figures: its entries still in the log, and those that left it.
 function cycleTally(progress, events, cycle) {
   const tally = tallyEntries(events);
   const removed = removedTotalsOf(progress)[cycle];
@@ -143,8 +126,6 @@ function bestRollOf(tally) {
   return tally.best ? { ...tally.best } : null;
 }
 
-// The game's dark number-box palette, so a roll on the card looks like the
-// roll on screen. Values mirror src/number-box-palettes.css (dark theme).
 const CARD_TIERS = {
   trash: {
     bg: ["rgba(123, 51, 6, 0.6)", "#27272a", "rgba(123, 51, 6, 0.6)"],
@@ -214,10 +195,6 @@ function cardDate(at) {
   });
 }
 
-// The export is a read-only PNG snapshot of the account's key information,
-// username and biggest roll. It exists to be looked at or shared — nothing in
-// the game reads a card back, so a downloaded file can never overwrite a live
-// game.
 export function exportPayload(progress = {}) {
   const stats = accountStats(progress);
   return {
@@ -263,9 +240,6 @@ export function exportFileName(progress = {}) {
   return `rngdle-infinite-${name || "guest"}-${stamp}.png`;
 }
 
-// The account logo is already a data URL, so the card can carry it without
-// touching the network. A picture that fails to decode simply leaves the card
-// without a logo rather than failing the export.
 function loadAvatar(avatar) {
   if (typeof Image === "undefined" || !avatar) return Promise.resolve(null);
   return new Promise((resolve) => {
@@ -276,9 +250,6 @@ function loadAvatar(avatar) {
   });
 }
 
-// The canvas paints before the web fonts finish loading, so glyphs fall back
-// to a generic sans-serif and the layout shifts. Wait for the exact faces the
-// card uses — and cap the wait so a blocked font never stalls the export.
 async function waitForExportFonts() {
   if (typeof document === "undefined" || !document.fonts?.ready) return;
   try {
@@ -299,8 +270,6 @@ function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// A number box as the game draws it: tier gradient, tier border, the digits
-// in the tier's ink. `scale` sizes the whole box; digits shrink to fit.
 function drawNumberBox(ctx, roll, x, y, w, h, { label = "" } = {}) {
   const tier = roll?.dejaVu
     ? { bg: ["#183d4b", "#53334f"], border: "#ffa0ff", ink: "#a0ffff" }
@@ -320,7 +289,7 @@ function drawNumberBox(ctx, roll, x, y, w, h, { label = "" } = {}) {
   ctx.lineWidth = Math.max(2, h * 0.03);
   drawRoundedRect(ctx, x, y, w, h, Math.max(10, h * 0.12));
   ctx.stroke();
-  // A soft top highlight, like the inset shadow on screen.
+
   ctx.save();
   drawRoundedRect(ctx, x, y, w, h, Math.max(10, h * 0.12));
   ctx.clip();
@@ -354,15 +323,13 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   const payload = exportPayload(progress);
   const { stats, accountName, biggestRoll, highlights } = payload;
   const { width, height, scale } = EXPORT_CARD_SIZE;
-  // Painted at twice the layout size so the PNG stays crisp when zoomed or
-  // shared; every coordinate below is in layout pixels.
+
   canvas.width = width * scale;
   canvas.height = height * scale;
   const ctx = canvas.getContext("2d");
   if (!ctx) return payload;
   ctx.scale?.(scale, scale);
 
-  // Background: deep slate with a faint tier-coloured glow behind the hero.
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0, "#111218");
   bg.addColorStop(1, "#1a1c25");
@@ -377,14 +344,12 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     ctx.fillRect(0, 0, width, height);
   }
 
-  // Frame: gold once the account has prestiged.
   ctx.strokeStyle =
     stats.ultraRebirths > 0 || stats.rollbacks > 0 ? "#d9a441" : "#2e313d";
   ctx.lineWidth = 3;
   drawRoundedRect(ctx, 18, 18, width - 36, height - 36, 22);
   ctx.stroke();
 
-  // Header line.
   ctx.fillStyle = "#89c4a8";
   ctx.font = `700 15px ${MONO}`;
   ctx.fillText(
@@ -398,7 +363,6 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
   ctx.fillText(`SNAPSHOT · ${payload.exportedAt.slice(0, 10)}`, width - 54, 66);
   ctx.textAlign = "left";
 
-  // Identity: logo, name, standing.
   const left = 54;
   let nameX = left;
   if (logo) {
@@ -442,7 +406,6 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     );
   }
 
-  // Key figures: four tiles under the name.
   const tiles = [
     {
       label: "ALL-TIME EP EARNED",
@@ -497,7 +460,6 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     ctx.fillText(tile.sub, tx + 18, ty + 82);
   });
 
-  // Hero: the biggest roll, as a real number box.
   const heroX = 714;
   const heroY = 104;
   const heroW = 432;
@@ -523,13 +485,11 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     ctx.fillText("No rolls recorded yet", heroX, heroY + heroH + 30);
   }
 
-  // Pinned rolls: the bookmarks, as small boxes.
   const pinY = 452;
   ctx.fillStyle = "#89c4a8";
   ctx.font = `700 13px ${MONO}`;
   ctx.fillText("PINNED ROLLS", left, pinY);
   if (highlights.pinned.length) {
-    // Up to ten boxes in two rows of five, the same width as the tiles above.
     const perRow = 5;
     const gap = 12;
     const boxW = (2 * tileW + tileGap - gap * (perRow - 1)) / perRow;
@@ -551,7 +511,6 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     );
   }
 
-  // Wearing: aura and companion, bottom right.
   ctx.fillStyle = "#89c4a8";
   ctx.font = `700 13px ${MONO}`;
   ctx.fillText("WEARING", heroX, pinY);
@@ -574,7 +533,6 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     pinY + 64,
   );
 
-  // Footer
   ctx.fillStyle = "#6e6b65";
   ctx.font = `500 12px ${MONO}`;
   ctx.fillText("RNGdle Infinite · Read-only PNG account card", 54, height - 34);
@@ -592,8 +550,7 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
 export async function renderExportPngBlob(progress = {}) {
   if (typeof document !== "undefined") {
     const canvas = document.createElement("canvas");
-    // Wait for the web fonts the card paints with, so the layout matches
-    // what the player sees on screen. The logo loads in parallel.
+
     const [logo] = await Promise.all([
       loadAvatar(progress.profile?.avatar),
       waitForExportFonts(),

@@ -1,5 +1,3 @@
-// Public status page (incident.io) for jaime-gaming services. The summary
-// endpoint is public, CORS-enabled and meant for exactly this kind of check.
 export const STATUS_PAGE_URL = "https://status.jaime-gaming.com/";
 export const STATUS_SUMMARY_URL =
   "https://status.jaime-gaming.com/api/v2/summary.json";
@@ -7,7 +5,6 @@ export const STATUS_SERVICE_NAME = "RNGdle Infinite";
 export const STATUS_POLL_INTERVAL_MS = 60_000;
 export const STATUS_FETCH_TIMEOUT_MS = 8_000;
 
-// incident.io lifecycle statuses that mean "no longer an active problem".
 const RESOLVED_INCIDENT_STATUSES = new Set([
   "resolved",
   "completed",
@@ -22,8 +19,6 @@ const RESOLVED_MAINTENANCE_STATUSES = new Set([
 const OPERATIONAL = "operational";
 const UNDER_MAINTENANCE = "under_maintenance";
 
-// Banner severity drives its color: critical (red), major (amber),
-// minor/maintenance (neutral).
 export const SEVERITY_LABELS = {
   critical: "Outage",
   major: "Issues",
@@ -37,8 +32,6 @@ function normalize(value) {
     .toLowerCase();
 }
 
-// ONLY RNGdle Infinite matters: incidents or maintenances that name another
-// service (Wave, Website & Docs, ...) are ignored on purpose.
 function matchesService(text) {
   return normalize(text).includes("rngdle");
 }
@@ -47,11 +40,7 @@ function severityOf({ incident, componentStatus }) {
   const impact = normalize(incident?.impact);
   if (componentStatus === "full_outage" || impact === "critical")
     return "critical";
-  if (
-    componentStatus === "partial_outage" ||
-    impact === "major" ||
-    incident // an active incident with unknown impact is at least "major"
-  )
+  if (componentStatus === "partial_outage" || impact === "major" || incident)
     return "major";
   if (componentStatus === "degraded_performance" || impact === "minor")
     return "minor";
@@ -59,22 +48,17 @@ function severityOf({ incident, componentStatus }) {
   return incident ? "major" : "minor";
 }
 
-// incident.io update bodies are markdown; keep the banner readable.
 export function plainSnippet(text, maxLength = 160) {
   const plain = String(text ?? "")
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1") // images
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // links
-    .replace(/[*_`>#~]/g, "") // emphasis / heading / quote marks
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`>#~]/g, "")
     .replace(/\s+/g, " ")
     .trim();
   if (plain.length <= maxLength) return plain;
   return `${plain.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
-/**
- * Turn a summary.json payload into a banner model, or null when the game is
- * healthy (or the payload cannot be trusted). Never throws.
- */
 export function serviceIssueFromSummary(summary) {
   try {
     if (!summary || typeof summary !== "object") return null;
@@ -144,11 +128,6 @@ export function serviceIssueFromSummary(summary) {
   }
 }
 
-/**
- * Fetch the public status summary and reduce it to a banner model. Any
- * network, CORS or parse failure resolves to null: a broken status check must
- * never break the game.
- */
 export async function fetchServiceIssue({
   summaryUrl = STATUS_SUMMARY_URL,
   timeoutMs = STATUS_FETCH_TIMEOUT_MS,

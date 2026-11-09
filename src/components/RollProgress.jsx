@@ -5,7 +5,7 @@ import { gameNow } from "../game-clock.js";
 import { taskSummary } from "../tasks.js";
 import { formatEP } from "../roll-data.js";
 import "../progress-links.css";
-// Keep progression as quiet links, outside the original reveal and breakdown.
+
 export default memo(function RollProgress({ progress, runId, navigate }) {
   const goal = currentGoal(progress),
     receipt = rollReceipt(progress, runId),

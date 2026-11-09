@@ -1,6 +1,3 @@
-// Independently implemented from the observable timing specification documented at
-// https://github.com/CubityFirst/rngdle-ep-calculator/blob/main/site/README.md#roll-timings
-// Kept separate from rendering and data so a future backend can supply any result.
 import { BASE_ROLL_MS } from "./shop-data.js";
 export const SCRAMBLE_MS = 100;
 const SETTLE_MS = 400;
@@ -42,7 +39,6 @@ export function buildReferenceTimeline(digitCount, badgeGroupCount) {
   };
 }
 
-// Preserve the reference choreography, scaled to a fixed complete reveal.
 export function buildRevealTimeline(
   digitCount,
   badgeGroupCount,
@@ -73,8 +69,6 @@ export function buildRevealTimeline(
 
 export const easeOutCubic = (t) => 1 - (1 - Math.min(1, Math.max(0, t))) ** 3;
 
-// Only wake React for a visual cue. Digit scrambling and numeric tweens run in
-// their own components; a 40 Hz full-screen render loop is not needed.
 export function revealCueTimes(timeline) {
   return [
     ...new Set([
@@ -93,8 +87,6 @@ export function revealCueTimes(timeline) {
   ].sort((a, b) => a - b);
 }
 
-// Samples of the reference's back.out(s) easing for Web Animations. This
-// preserves the real overshoot instead of approximating it with a CSS bounce.
 export function rankPopFrames(overshoot, fromScale, opacity = false) {
   return Array.from({ length: 61 }, (_, i) => {
     const t = i / 60;

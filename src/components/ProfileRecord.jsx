@@ -18,9 +18,6 @@ export function when(at) {
   });
 }
 
-// The record block: best roll, key figures, pinned rolls and what the profile
-// wears. It draws from a card (see profile-card.js), so the owner's profile
-// page and a shared link render the exact same thing from the same data.
 export default function ProfileRecord({
   record,
   shared = false,

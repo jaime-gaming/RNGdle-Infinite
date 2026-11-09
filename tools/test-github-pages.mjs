@@ -23,6 +23,7 @@ await writeFile(path.join(outputDirectory, ".nojekyll"), "");
 
 const html = await readFile(path.join(outputDirectory, "index.html"), "utf8");
 assert.ok(html.includes('name="rngdle-build-id"'));
+assert.match(html, /<html lang="en">/);
 assert.match(html, /(?:src|href)="\/RNGdle-Infinite\/assets\//);
 assert.equal(
   await readFile(path.join(outputDirectory, "404.html"), "utf8"),
@@ -155,12 +156,16 @@ try {
   const homeResponse = await page.goto(`${origin}${base}`);
   assert.equal(homeResponse?.status(), 200);
   await expect(page.locator(".header")).toBeVisible();
+
+  await expect(page.locator(".mirror-notice")).toBeVisible();
+  await expect(page.locator(".mirror-notice a")).toHaveAttribute(
+    "href",
+    "https://rngdle-infinite.jaime-gaming.com/",
+  );
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toBeEnabled();
 
-  // GitHub Pages serves 404.html for a deep link with an HTTP 404 status;
-  // the built asset URLs must still load under the repository prefix.
   const directRoute = await page.goto(`${origin}${fallbackPath}`);
   assert.equal(directRoute?.status(), 404);
   await expect(

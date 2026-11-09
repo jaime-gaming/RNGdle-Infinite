@@ -8,6 +8,8 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
   <a href="https://rngdle-infinite.jaime-gaming.com/"><strong>▶ Play now</strong></a>
 </p>
 
+**In this README:** [How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Black Friday 2026](#black-friday-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Credits](#credits) · [Project layout](#project-layout)
+
 ![The game, ready for a roll](media/roll.png)
 
 ## How to play
@@ -51,7 +53,7 @@ You choose whether to share a public profile. A profile logo appears only when t
 
 ![Choose a saved copy to restore](media/save-recovery.png)
 
-Local saving retries with lossless compression if this browser runs out of storage, without deleting your history or recovery copies. If saving still fails, keep your site data and free space before trying again.
+Local saves are stored with lossless compression, so a longer activity history fits on this device without deleting recovery copies. If saving still fails, keep your site data and free space before trying again.
 
 ## FAQ
 
@@ -76,4 +78,15 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
-_Documentation updated November 7, 2026._
+## Project layout
+
+| Path       | What lives here                                   |
+| ---------- | ------------------------------------------------- |
+| `src/`     | The game: screens, styles, saves and cloud sync.  |
+| `public/`  | Static assets and the generated scoring tables.   |
+| `tests/`   | Playwright specs and shared test helpers.         |
+| `tools/`   | Builds, data preparation, audits and smoke tests. |
+| `archive/` | QA notes, developer guides and retired history.   |
+| `docs/`    | The published GitHub Pages mirror (generated).    |
+
+_Documentation updated November 8, 2026._
