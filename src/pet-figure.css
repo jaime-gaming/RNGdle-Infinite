@@ -1,6 +1,3 @@
-/* Companion faces. One token shape, five grades: the grade follows the wallet
-   bonus, so a shelf of thirteen still reads as one collection. The ring carries
-   the companion's own accent colour, the glyph its grade. */
 .pet-figure {
   position: relative;
   isolation: isolate;

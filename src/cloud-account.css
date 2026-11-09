@@ -691,7 +691,6 @@
   }
 }
 
-/* Profile page pointer to the Cloud Account, which now lives in Settings. */
 .cloud-account-pointer {
   display: grid;
   gap: 8px;
@@ -700,7 +699,6 @@
   justify-self: start;
 }
 
-/* Security: two-factor sign-in and email confirmation. */
 .cloud-account-security {
   display: grid;
   gap: 12px;

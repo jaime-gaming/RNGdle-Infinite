@@ -11,13 +11,6 @@ import {
 import { seedProgress } from "./helpers/progress.js";
 import { pauseClockAt } from "./helpers/clock.js";
 
-// Black Friday 2026 is one day — Friday 27 November, UTC — and the whole shop
-// wears it: a ticker above the header, an event notice at the top of the shop,
-// a discount on every product, one sale stamp per 100,000 EP accumulated across purchases, a limited skin at
-// 25 stamps, the retired RNGween looks back on the counter at a fixed price,
-// two borrowed themes and the sale's own favicon. Every test below pins the
-// clock to that day (or to the day before it) and reads the real UI.
-
 const SALE_DAY = Date.UTC(2026, 10, 27, 12);
 const DAY_BEFORE = Date.UTC(2026, 10, 26, 12);
 
@@ -50,7 +43,6 @@ test("the sale day dresses the page: ticker, event notice and sale branding", as
   await expect(ticker).toBeVisible();
   await expect(ticker).toContainText("SALE");
 
-  // The tab wears the sale's own art for exactly this day.
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
     "href",
     /favicon-sale\.svg$/,
@@ -60,12 +52,10 @@ test("the sale day dresses the page: ticker, event notice and sale branding", as
     /manifest-sale\.webmanifest$/,
   );
 
-  // The margins wear the day's flyers.
   await expect(page.locator(".sale-ads-left .sale-ad")).toHaveCount(8);
   await expect(page.locator(".sale-ads-right .sale-ad")).toHaveCount(8);
   await expect(page.locator(".sale-ads-left").first()).toContainText("OFF");
 
-  // The shop's event object opens the whole explanation.
   await page.goto("/shop");
   await waitForApp(page);
   const flag = page.locator('[data-testid="sale-event-button"]');
@@ -81,7 +71,6 @@ test("the sale day dresses the page: ticker, event notice and sale branding", as
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
 
-  // The stamp card sits on the hub while the day is on.
   await expect(
     page.locator('[data-testid="sale-stamp-card"]:visible'),
   ).toBeVisible();
@@ -103,8 +92,6 @@ test("every product carries its own discount, and stamps follow EP spent", async
     `${salePrice(cheap, SALE_DAY).toLocaleString("en-US")} EP`,
   );
 
-  // A 21,000 EP upgrade is under one stamp's worth of spending: the card
-  // records the EP but hands out nothing yet.
   await buy(page, "quickwind-1");
   const stampCard = page.locator('[data-testid="sale-stamp-card"]:visible');
   await page.goto("/shop");
@@ -124,7 +111,6 @@ test("every product carries its own discount, and stamps follow EP spent", async
   await waitForApp(page);
   await expect(stampCard).toContainText(`${stamps} of 25`);
 
-  // The stamp receipt is saved along with the purchase.
   const receipts = await page.evaluate(async () => {
     const { parseProgress, PROGRESS_KEY } = await import("/src/progress.js");
     return parseProgress(localStorage.getItem(PROGRESS_KEY)).history.filter(
@@ -148,7 +134,7 @@ test("the hub grows a Black Friday door while the day is on", async ({
   await expect(page).toHaveURL(/\/shop\/black-friday$/);
   const shelf = page.locator("#shop-black-friday");
   await expect(shelf).toBeVisible();
-  // The card of stamps: 25 holes, none filled yet on a fresh save.
+
   const book = shelf.locator('[data-testid="sale-stamp-book"]');
   await expect(book).toBeVisible();
   await expect(book.locator(".sale-stamp")).toHaveCount(25);
@@ -161,7 +147,7 @@ test("the hub grows a Black Friday door while the day is on", async ({
       slots.map((slot) => getComputedStyle(slot).clipPath),
     );
   expect(new Set(shapes).size).toBe(25);
-  // The limited skin plus every RNGween look this save missed.
+
   await expect(shelf.locator(".shop-card[data-product]")).toHaveCount(7);
   await expect(shelf.locator('[data-product="jack-o-glow"]')).toBeVisible();
   await page.reload();
@@ -195,14 +181,13 @@ test("25 stamps unlock the limited skin, kept like every permanent cosmetic", as
   await page.goto("/shop/auras/randomness");
   await waitForApp(page);
 
-  // 2,400,000 EP already spent plus this aura crosses the 25th stamp.
   await buy(page, "static");
   await page.goto("/shop");
   await waitForApp(page);
   await expect(
     page.locator('[data-testid="sale-stamp-card"]:visible'),
   ).toContainText("unlocked");
-  // The book on the sale shelf shows a full card of ink.
+
   await page.goto("/shop/black-friday");
   await waitForApp(page);
   await page
@@ -228,7 +213,6 @@ test("25 stamps unlock the limited skin, kept like every permanent cosmetic", as
   await expect(skin).toHaveClass(/is-owned/);
   await expect(skin.getByRole("button", { name: /equip/i })).toBeVisible();
 
-  // The wardrobe lists it with the special collection.
   await page.goto("/settings");
   await waitForApp(page);
   await page
@@ -292,8 +276,6 @@ test("outside the day the sale leaves no trace", async ({ page }) => {
   await expect(card.locator(".sale-tag")).toHaveCount(0);
   await expect(card.locator(".shop-price")).toContainText("30,000 EP");
 
-  // A save that owns nothing special sees nothing special: no groups, no
-  // filter, no counter.
   await page.goto("/shop/auras");
   await waitForApp(page);
   await expect(page.locator(".aura-family-banner")).toHaveCount(5);
@@ -308,7 +290,6 @@ test("outside the day the sale leaves no trace", async ({ page }) => {
     page.getByRole("button", { name: "Special & Limiteds" }),
   ).toHaveCount(0);
 
-  // The two borrowed themes are not in the menu.
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
   await expect(
     page.getByRole("menuitemradio", { name: "Ultra-Black theme" }),
@@ -349,7 +330,6 @@ test("the sale lends the game two themes, and takes them back", async ({
     "red-sale",
   );
 
-  // The next day the borrowed look steps back to plain dark.
   await pauseClockAt(page, SALE_DAY + 86400000);
   await expect(page.locator("html")).not.toHaveAttribute("data-sale-theme");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -556,7 +536,7 @@ test("Blackout keeps bright ink and honors reduced motion", async ({
   ).toBe("none");
 });
 
-test("posters rotate through offers and pause for keyboard interaction", async ({
+test("posters follow the page, not a timer or a random pick", async ({
   page,
 }) => {
   await seedProgress(page, funded);
@@ -568,23 +548,17 @@ test("posters rotate through offers and pause for keyboard interaction", async (
     "aria-label",
     "UP TO 50% OFF: Every shelf",
   );
-  await page.clock.runFor(15000);
-  await expect(first).toHaveAttribute(
-    "aria-label",
-    "ONE DAY ONLY: The sale counter",
-  );
   await first.focus();
-  await page.clock.runFor(30000);
+  await page.clock.runFor(45000);
   await expect(first).toHaveAttribute(
     "aria-label",
-    "ONE DAY ONLY: The sale counter",
+    "UP TO 50% OFF: Every shelf",
   );
-  await page.locator(".wordmark").focus();
-  await page.clock.runFor(15000);
-  await expect(first).toHaveAttribute(
-    "aria-label",
-    "100K EP = 1 STAMP: Fill your card",
-  );
+  await page.getByRole("button", { name: "Shop", exact: true }).first().click();
+  await waitForApp(page);
+  await expect(
+    page.locator(".sale-ads-left .sale-ad:not([hidden])").first(),
+  ).toHaveAttribute("aria-label", "100K EP = 1 STAMP: Fill your card");
 });
 
 test("the event briefing highlights the essentials and opens the sale shelf", async ({
@@ -614,7 +588,7 @@ test("the event briefing highlights the essentials and opens the sale shelf", as
   await expect(page).toHaveURL(/\/shop\/black-friday$/);
 });
 
-test("posters do not rotate when reduced motion is requested", async ({
+test("posters stay put over time regardless of motion preference", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });

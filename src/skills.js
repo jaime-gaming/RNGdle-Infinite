@@ -1,21 +1,6 @@
-// Skills are charged, one-shot effects that fire on the next completed roll.
-//
-// Deliberate boundary: a skill may change how a number is *drawn* (extra
-// uniform draws, a redraw floor) but every draw stays a plain, independent
-// 0–1,000,000 crypto draw and every score still comes from the verified
-// full-range index. Nothing here can invent EP, edit a number, or bias a roll
-// towards a badge: a charged skill only ever picks between numbers the player
-// genuinely rolled. Wallet effects multiply only the EP that reaches the
-// wallet, exactly like companions.
-//
-// A full circle is armed. A roll snapshots only the skills that actually fire;
-// draw skills that cannot fit the six-number budget keep their charge for the
-// next roll. Reloading or sharing a committed roll cannot re-fire its skills.
 export const SKILL_SLOTS_BASE = 2;
 export const SKILL_MAX_DRAWS = 6;
 
-// Shop slot upgrades. Kept here so save validation and the shop can never
-// drift apart; the shop catalogue re-exports them as ordinary products.
 export const SKILL_SLOTS = [
   {
     id: "skill-bay-1",
@@ -42,15 +27,7 @@ export const SKILL_SLOTS = [
   },
 ];
 
-// Effects, in plain terms:
-//   wallet     multiplies the EP added to your wallet (never the scored EP)
-//   waive      the roll it fires on has no cooldown after its full reveal
-//   best-of N  draws N numbers and keeps the one that scores the most EP
-//   floor F, T redraws until a draw scores at least F EP, at most T draws
-//   pet-luck   multiplies the chance of a companion appearing on that roll
-//   overdrive  that roll counts N times towards Flywheel and skill charge
 export const SKILLS = [
-  // ---- Bought in the shop -------------------------------------------------
   {
     id: "surge",
     source: "shop",
@@ -144,7 +121,6 @@ export const SKILLS = [
       "The next roll is redrawn until it scores at least 100,000 EP, up to five draws. If none reaches it you keep the best of them.",
   },
 
-  // ---- Companion signatures ----------------------------------------------
   {
     id: "miser",
     source: "shop",
@@ -341,7 +317,6 @@ export const SKILLS = [
       "The next roll is redrawn until it scores at least 150,000 EP, up to six draws. The strongest effect in the game.",
   },
 
-  // ---- Rebirth ladder ----------------------------------------------------
   {
     id: "reborn-drive",
     source: "rebirth",
@@ -438,7 +413,6 @@ export function rebirthSkill(rebirths) {
   return rebirthSkills.find((skill) => skill.rebirth === rebirths) ?? null;
 }
 
-// How many skills a profile may keep equipped: two, plus one per bay owned.
 export function skillSlots(owned = []) {
   return SKILL_SLOTS.filter((bay) => owned.includes(bay.id)).reduce(
     (slots, bay) => Math.max(slots, bay.slots),
@@ -446,8 +420,6 @@ export function skillSlots(owned = []) {
   );
 }
 
-// A shop or rebirth skill is unlocked for good; a companion skill exists only
-// while that companion is the active one.
 export function skillUnlocked(id, progress) {
   const skill = skillById.get(id);
   if (!skill) return false;
@@ -472,19 +444,12 @@ export function skillArmed(progress, id) {
   );
 }
 
-// Equipped, unlocked and full: eligible to fire, in rack order. A draw skill
-// that cannot fit the current roll stays armed for the following roll.
 export function armedSkills(progress) {
   return (progress.equippedSkills ?? []).filter((id) =>
     skillArmed(progress, id),
   );
 }
 
-// ---- Draw plan ------------------------------------------------------------
-// Each draw skill retains its whole budget and keeps one number. Never trim a
-// skill's promise or consume an unfired circle: if it does not fit, it waits.
-// The live runner can make room for a later skill when an earlier floor stops
-// early. The rack quotes the conservative, full-budget plan.
 export function drawPicksFor(ids = []) {
   return [...new Set(ids)].flatMap((id) => {
     const skill = skillById.get(id);
@@ -528,7 +493,6 @@ export function skillPetLuck(ids = []) {
   }, 1);
 }
 
-// Wallet-only multiplier, exactly like companions: the scored roll never moves.
 export function skillWalletMultiplier(ids = []) {
   return ids.reduce((multiplier, id) => {
     const skill = skillById.get(id);
@@ -536,7 +500,6 @@ export function skillWalletMultiplier(ids = []) {
   }, 1);
 }
 
-// How many times the roll counts towards Flywheel and other skill circles.
 export function skillChargeFactor(ids = []) {
   return ids.reduce((factor, id) => {
     const skill = skillById.get(id);
@@ -544,9 +507,6 @@ export function skillChargeFactor(ids = []) {
   }, 1);
 }
 
-// ---- Charge bookkeeping ---------------------------------------------------
-// Only a settled, committed, online roll moves a circle. The skills that fired
-// empty; every other equipped skill gains one charge (or the overdrive factor).
 export function chargeAfterSettlement(progress, id, source) {
   const current = progress.skillCharge ?? {};
   if (source === "offline" || progress.pendingRoll?.id !== id)
@@ -564,7 +524,6 @@ export function chargeAfterSettlement(progress, id, source) {
   return next;
 }
 
-// ---- Save validation ------------------------------------------------------
 export function parseSkillCharge(value) {
   const next = {};
   for (const [id, charge] of Object.entries(value ?? {}))
@@ -573,16 +532,11 @@ export function parseSkillCharge(value) {
   return next;
 }
 
-// Only shop skills and companion signatures take rack slots. Rebirth rewards
-// ride free beside the rack: the slots are a shelf for purchases, not a tax
-// on earnings.
 export function skillTakesSlot(id) {
   const source = skillById.get(id)?.source;
   return source === "shop" || source === "pet";
 }
 
-// Trim an equipped list to the rack: free skills always stay, slot-taking skills keep
-// their order until the slots run out.
 export function trimToSlots(ids, slots) {
   const kept = [];
   let taken = 0;
@@ -621,14 +575,11 @@ export function parseUnlockedSkills(value, progress) {
     (id, index, list) =>
       permanent.has(id) &&
       list.indexOf(id) === index &&
-      // A skill bought in the shop must also be owned, so a save cannot grant
-      // a purchase it never paid for.
       (skillById.get(id).source !== "shop" ||
         (progress.owned ?? []).includes(id)),
   );
 }
 
-// ---- Presentation ---------------------------------------------------------
 export function skillEffectSummary(skill) {
   switch (skill.kind) {
     case "wallet":
@@ -648,9 +599,6 @@ export function skillEffectSummary(skill) {
   }
 }
 
-// The same effect as a short, numeric chip, so a shelf, a rack summary or a
-// receipt can state what a skill adds without a paragraph. The full sentence
-// stays in `skillEffectSummary` for tooltips and screen readers.
 export function skillEffectChips(skill) {
   switch (skill.kind) {
     case "wallet":

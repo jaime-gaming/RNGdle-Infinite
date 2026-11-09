@@ -1,5 +1,3 @@
-/* Profile is its own page; the wrapper gives it the same measure the other
-   pages use. The "How far you have come" section doubles as the look back. */
 .profile-page {
   width: min(100%, 640px);
   margin: 0 auto;
@@ -95,7 +93,7 @@
 }
 .profile-history dl {
   display: grid;
-  /* Four figures: a 2×2 block on phones, one row where there is room. */
+
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 16px;
   margin: 0;
@@ -128,8 +126,7 @@
   line-height: 1.7;
   color: var(--muted);
 }
-/* The copy confirmation sits right under the buttons; a hand-copy field
-   only appears when the clipboard said no. */
+
 .profile-page .profile-share-note {
   display: grid;
   gap: 8px;
@@ -148,8 +145,7 @@
   color: var(--text);
   font: 12px var(--roll-font);
 }
-/* A shared card is somebody else's record: a calm banner says so before
-   the figures, and the owner-only actions never appear. */
+
 .profile-shared-banner {
   display: flex;
   align-items: flex-start;
@@ -222,7 +218,7 @@
   font-size: 12px;
   line-height: 1.6;
 }
-/* The sign-up form's single action owns the width of the form it submits. */
+
 .profile-page form > .primary-button {
   width: 100%;
 }
@@ -233,8 +229,6 @@
   gap: 7px;
 }
 
-/* Ultra-rebirth prestige on the profile: the Transcendent title that only
-   accounts past the top of the ladder can wear. */
 .profile-prestige {
   display: inline-flex;
   align-items: center;
@@ -250,10 +244,6 @@
   text-transform: uppercase;
 }
 
-/* ---- The account's face -------------------------------------------------- */
-/* One mark, three homes: the header button, the profile heading and the
-   upload card. The logo is a plain data URL, so it renders from the save with
-   no network request at all. */
 .avatar-mark {
   display: inline-grid;
   place-items: center;
@@ -303,8 +293,7 @@
     transform: translateY(0);
   }
 }
-/* The picture is the upload control: hover or focus reveals what a click
-   does, and the hidden input underneath does the actual picking. */
+
 .profile-logo-button {
   position: relative;
   flex-shrink: 0;
@@ -353,8 +342,7 @@
 .profile-logo-button[data-state="busy"] .profile-logo-overlay {
   opacity: 1;
 }
-/* An empty mark is the invitation itself: a dashed ring with "upload" in it,
-   no placeholder icon fighting underneath. */
+
 .profile-logo-button[data-state="empty"] .avatar-mark > svg {
   opacity: 0;
 }
@@ -384,7 +372,7 @@
 .profile-logo-remove:hover {
   color: var(--text);
 }
-/* The picker is driven by the picture beside it, so the raw input never shows. */
+
 .profile-logo-input {
   position: absolute;
   width: 1px;
@@ -396,7 +384,7 @@
   overflow: hidden;
   white-space: nowrap;
 }
-/* Under the title: the save/remove note and the remove link, one quiet line. */
+
 .profile-logo-line {
   display: flex;
   flex-wrap: wrap;
@@ -411,7 +399,6 @@
   color: var(--green);
 }
 
-/* The record: best roll on top, pinned rolls below the figures. */
 .profile-best {
   display: flex;
   align-items: center;

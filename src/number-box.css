@@ -1,5 +1,3 @@
-/* Legacy aura geometry remains available for cosmetics the player already owns. */
-/* Shared, independently implemented scoring-box geometry and effect layers. */
 .number-box.number-box {
   position: relative;
   isolation: isolate;
@@ -88,8 +86,7 @@ button.number-box.number-box:hover {
 }
 .number-box .box-cosmetic {
   position: absolute;
-  /* A local layer keeps crests/particles below the ink, even when they have
-     their own z-index. Without it a crest could climb above the number. */
+
   z-index: 0;
   inset: 0;
   border-radius: inherit;
@@ -332,7 +329,6 @@ button.number-box.number-box:hover {
   }
 }
 
-/* User-specified GODLY recipe. This is earned at 500,000 EP, not a shop item. */
 .tier-godly {
   --sb-bg: linear-gradient(to bottom right, #fde68a, #fffbeb, #fde68a);
   --sb-bd: #f59e0b;
@@ -440,9 +436,6 @@ button.number-box.number-box:hover {
   }
 }
 
-/* Shared finish for every aura: a slowly turning two-tone rim light and a soft
-   breathing glow in the aura's own swatch colours, plus a brighter ink glow.
-   It sits under each aura's bespoke layers so none of them need changes. */
 @property --aura-turn {
   syntax: "<angle>";
   inherits: false;
@@ -525,12 +518,6 @@ button.number-box.number-box:hover {
   }
 }
 
-/* A worn aura also tints the digits: a two-tone gradient in the aura's own
-   swatch, mixed with the rarity ink so the tier still reads at a glance, with
-   a slow sheen passing through. The swatch is first pulled to a readable
-   lightness for the theme (light ink on dark, dark ink on light); browsers
-   without relative colours keep the plain rarity ink. Godly and déjà vu keep
-   their own ink. */
 @property --box-sweep {
   syntax: "<angle>";
   inherits: false;
@@ -574,7 +561,7 @@ button.number-box.number-box:hover {
       var(--box-ink)
     );
   }
-  /* Dark-bodied auras keep light ink on both themes. */
+
   :root[data-theme="dark"]
     .number-box[data-cosmetic]:not([data-cosmetic="none"]):not(.tier-godly):not(
       [data-deja-vu="true"]
@@ -618,7 +605,6 @@ button.number-box.number-box:hover {
   }
 }
 
-/* Second-generation aura details. All layers stay behind the number's ink. */
 .box-ornament,
 .aura-trace {
   position: absolute;
@@ -801,8 +787,6 @@ button.number-box.number-box:hover {
   }
 }
 
-/* Third-generation auras. Every layer sits behind the number's ink, keeps the
-   original rarity palette visible, and is disabled by reduced motion above. */
 .number-box[data-cosmetic="tidepool"] .box-halo {
   display: block;
   inset: -14px;
@@ -1041,7 +1025,7 @@ button.number-box.number-box:hover {
     #7c3aed00
   );
   filter: blur(9px);
-  /* The angle turns, not the element: a spinning ellipse would swing out. */
+
   animation: box-sweep-turn 9s linear infinite;
 }
 .number-box[data-cosmetic="singularity"] .box-ribbon {
@@ -1090,9 +1074,7 @@ button.number-box.number-box:hover {
   box-shadow: 0 0 6px #c4b5fd;
   animation: box-infall 4.5s ease-in infinite;
 }
-/* Fifth-generation auras. Same contract as the ones before: every layer sits
-   behind the number's ink, the rarity palette stays readable underneath, only
-   the decorative layers are used, and reduced motion stills them all. */
+
 .number-box[data-cosmetic="halcyon"] .box-halo {
   display: block;
   inset: -16px;
@@ -1230,10 +1212,6 @@ button.number-box.number-box:hover {
   animation: box-twinkle 6.4s ease-in-out infinite;
 }
 
-/* Sixth-generation auras: the R4ND0MN3S5 set. Everything in it is random by
-   nature, so it moves in steps, never in smooth curves. The same contract holds:
-   every layer sits behind the number's ink, the rarity palette stays readable,
-   and reduced motion stills them all. */
 .number-box[data-cosmetic="static"] .box-halo {
   display: block;
   inset: -12px;
@@ -1378,7 +1356,7 @@ button.number-box.number-box:hover {
     transparent 1px 9px
   );
 }
-/* The dump reads along the top edge, inside the box's own padding. */
+
 .number-box[data-cosmetic="hexdump"] .box-ornament::after {
   top: 7px;
   left: 10px;
@@ -1418,9 +1396,6 @@ button.number-box.number-box:hover {
   content: "0x1F";
 }
 
-/* Fourth-generation auras. Same contract as the third: every layer sits behind
-   the number's ink, keeps the rarity palette visible underneath, uses only the
-   decorative layers, and is stilled by reduced motion. */
 .number-box[data-cosmetic="nebula"] .box-halo {
   display: block;
   inset: -18px;
@@ -1845,9 +1820,6 @@ button.number-box.number-box:hover {
   }
 }
 
-/* Multi-roll panels have no spare ornament margin. Give each draw its own
-   clipped scene, not a full-size aura that can cross labels or neighbouring
-   numbers. The main result/detail and shop previews keep the full artwork. */
 .number-box[data-aura-layout="contained"] .box-cosmetic,
 .number-box[data-aura-layout="contained"] .godly-particles {
   overflow: hidden;
@@ -1876,13 +1848,6 @@ button.number-box.number-box:hover {
   border-radius: inherit;
 }
 
-/* Compact boxes (shop set banners, wardrobe, pinned rolls, profile) sit
-   shoulder to shoulder, so an aura drawn for the big result box — halos
-   20px out, 150px seals — spills over its neighbours and the card edge.
-   Every ornament keeps its shape; it is simply clipped to a snug rounded
-   frame 8px outside the box. The big boxes keep the full artwork, and the
-   RNGween looks are composed for the small box already (crest on the lip,
-   guardians at the sides), so they are left alone. */
 .number-box.number-box-compact .box-cosmetic:not(:has(.rngween-aura)),
 .number-box.number-box-compact .godly-particles {
   clip-path: inset(-8px round 20px);
@@ -1892,9 +1857,6 @@ button.number-box.number-box:hover {
   height: 4px !important;
 }
 
-/* Déjà vu: an exact number rolled again. Box Lab community recipe "Exactnium"
-   (by Numbas), worn as a look on top of whatever tier the number has. It
-   never changes EP, badges or rank; only the box. */
 @property --deja-vu-turn {
   syntax: "<angle>";
   inherits: false;
@@ -1919,7 +1881,7 @@ button.number-box.number-box:hover {
 .number-box[data-deja-vu="true"] .artifact-digit {
   text-shadow: none;
 }
-/* Spinning border: a conic ring just outside the box edge. */
+
 .number-box[data-deja-vu="true"]::before {
   content: "";
   position: absolute;
@@ -1941,7 +1903,7 @@ button.number-box.number-box:hover {
   mask-composite: exclude;
   animation: deja-vu-turn 6s linear infinite;
 }
-/* Holographic sheen over the gradient. */
+
 .number-box[data-deja-vu="true"]::after {
   content: "";
   position: absolute;
@@ -2003,8 +1965,6 @@ button.number-box.number-box:hover {
   text-shadow: none;
 }
 
-/* A gradient clipped on the entire line masks each child's opacity. During a
-   reveal, clip it per digit instead, so aura ink still shows which digits move. */
 .number-box[data-cosmetic]:not([data-cosmetic="none"]):has(.is-scrambling)
   .number-box-content {
   background: none;

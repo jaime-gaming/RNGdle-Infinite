@@ -1,13 +1,3 @@
-/* Black Friday 2026: the sale's own chrome, and nothing else.
-   The news bar, the shop's event notice, the stamp card, the two colour themes
-   the day offers, and the permanent art of the limited skin. When retiring the
-   event UI, keep the blackout-2026 rules below for owners of the permanent aura. Every rule here
-   is presentation — prices, stamps and rewards are decided in black-friday.js
-   and written by the reducer. */
-
-/* ---- The day's news bar ----------------------------------------------------
-   One line at the very top of the game, saying SALE from end to end. The strip
-   is laid down twice and moved by exactly half, so the loop has no seam. */
 .sale-ticker {
   position: relative;
   z-index: 8;
@@ -54,7 +44,7 @@
     animation: none;
   }
 }
-/* The bar is decoration; this is the one honest sentence it stands for. */
+
 .sale-ticker-say {
   position: absolute;
   width: 1px;
@@ -67,8 +57,6 @@
   border: 0;
 }
 
-/* The strip fades at both edges so the words slide out of the bar instead of
-   hitting its border, and it holds still while you read it. */
 .sale-ticker::before,
 .sale-ticker::after {
   content: "";
@@ -91,9 +79,6 @@
   animation-play-state: paused;
 }
 
-/* ---- The shop's event notice ----------------------------------------------
-   A black object at the top of the shop. It is the same object before and
-   during the day; only the line under the title changes. */
 .sale-flag {
   display: flex;
   align-items: center;
@@ -169,7 +154,6 @@
   color: #d4d4d8;
 }
 
-/* ---- The explanation ------------------------------------------------------ */
 .sale-dialog {
   position: fixed;
   inset: 0;
@@ -274,7 +258,6 @@
   color: #0a0a0b;
 }
 
-/* ---- The stamp card ------------------------------------------------------- */
 .sale-stamp-card {
   display: flex;
   align-items: center;
@@ -338,7 +321,6 @@
   background: #ff2d2d;
 }
 
-/* ---- The looks the counter still has -------------------------------------- */
 .sale-missing {
   display: flex;
   flex-direction: column;
@@ -364,7 +346,6 @@
   color: #8b8b93;
 }
 
-/* ---- Sale markings on the shelves ----------------------------------------- */
 .sale-tag {
   position: absolute;
   top: 10px;
@@ -404,9 +385,6 @@
   color: var(--text);
 }
 
-/* ---- The two looks the day offers -----------------------------------------
-   Both are variants of the dark theme, so every dark rule keeps applying and
-   only the palette changes. */
 :root[data-sale-theme="ultra-black"] {
   --bg: #000000;
   --surface: #060607;
@@ -447,7 +425,7 @@
   --rank-below: #e08a72;
   --rank-low: #c96a6a;
 }
-/* A red accent needs red-dark ink on the buttons that wear it. */
+
 :root[data-sale-theme="red-sale"] .primary-button {
   color: #1a0308;
 }
@@ -456,9 +434,6 @@
   box-shadow: 0 0 0 1px #ff3b3040;
 }
 
-/* ---- The sale's own shelf --------------------------------------------------
-   One more door in the hub while the day is on the calendar: the only tile
-   that is black on a light shop, because the day itself is black. */
 .shop-tile.is-sale {
   background: #050505;
   border-color: #26262b;
@@ -484,8 +459,7 @@
   font-size: 12px;
   line-height: 1.6;
 }
-/* Borrowed themes should feel like the room changing light, not a repaint:
-   the surfaces that carry them ease between colours. */
+
 :root[data-sale-theme] body,
 :root[data-sale-theme] .header,
 :root[data-sale-theme] .shop-tile {
@@ -495,7 +469,6 @@
     border-color 0.35s ease;
 }
 
-/* Blackout keeps its black base, with a red foil edge and moving sale glint. */
 .number-box[data-cosmetic="blackout-2026"] {
   --box-background: #080809;
   --box-border: #c52f39;
@@ -536,7 +509,7 @@
     transparent 72%
   );
 }
-/* A faint foil sweep and red sparks add movement without hiding the digits. */
+
 .number-box[data-cosmetic="blackout-2026"] .box-gloss::before {
   content: "";
   position: absolute;
@@ -592,7 +565,6 @@
   }
 }
 
-/* ---- Phones --------------------------------------------------------------- */
 @media (max-width: 760px) {
   .sale-ticker {
     height: 24px;
@@ -616,7 +588,6 @@
   }
 }
 
-/* Posters scroll with the page and each is a real, keyboard-accessible link. */
 :root {
   --sale-rail-width: clamp(44px, 10vw, 155px);
 }
@@ -778,9 +749,6 @@ main.sale-ad-layout {
   }
 }
 
-/* ---- The stamp card as a card of stamps ------------------------------------
-   Twenty-five different shapes, each with the milestone it pays.
-   Empty shapes are outlines; filled shapes are stamped in red. */
 .sale-stamp-book {
   margin: 0 0 18px;
   padding: 16px;
@@ -964,7 +932,6 @@ main.sale-ad-layout {
   }
 }
 
-/* Small event affordances remain readable with the ticker and posters present. */
 .sale-flag:hover {
   border-color: #ff8a8a;
   box-shadow: 0 8px 24px #b3173433;
@@ -999,7 +966,6 @@ main.sale-ad-layout {
   }
 }
 
-/* The event briefing puts the essentials up front before the full terms. */
 .sale-dialog {
   max-width: 580px;
   border-color: #71313a;

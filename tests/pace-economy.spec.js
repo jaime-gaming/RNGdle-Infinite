@@ -132,7 +132,7 @@ test("Flywheel migration repairs charge and drops bad zero-cooldown snapshots wi
   expect(parsed.history[0].ep).toBe(125000);
   expect(parsed.owned).toEqual(legacy.owned);
   expect(parsed.pendingRoll).toEqual(legacy.pendingRoll);
-  // Out-of-range charges clamp to the owned model instead of bricking the save.
+
   for (const [flywheelCharge, expected] of [
     [-1, 0],
     [5, 4],
@@ -155,7 +155,7 @@ test("Flywheel migration repairs charge and drops bad zero-cooldown snapshots wi
   expect(parseProgress(JSON.stringify(boost)).pendingRoll).toEqual(
     boost.pendingRoll,
   );
-  // A zero cooldown the snapshot cannot explain discards the roll, never the save.
+
   for (const change of [
     { flywheel: undefined, cooldownMS: 0 },
     { flywheel: "charge", cooldownMS: 0 },
@@ -196,7 +196,7 @@ test("two complete Flywheel cycles require four distinct eligible completions ea
     expect(applyProgress(p, complete(id))).toBe(p);
     p = parseProgress(JSON.stringify(p));
   }
-  // 10 credited rolls on top of whatever the Flywheel purchase left behind.
+
   expect(p.balance).toBe(
     1000000 -
       shopProducts.find((item) => item.id === "flywheel").price +
@@ -412,7 +412,7 @@ test("Flywheel purchase is confirmed, stays out of aura and timing slots, and re
   });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // Flywheel is a skill, so it lives on the Skills shelf.
+
   await page.goto("/shop/skills");
   await waitForApp(page);
   const card = page.locator('[data-product="flywheel"]');

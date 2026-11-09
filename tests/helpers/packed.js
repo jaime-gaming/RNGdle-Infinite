@@ -1,8 +1,5 @@
 import fs from "node:fs";
 
-// Some specs make a primary write fail only when the incoming save contains a
-// particular row. The primary save is always a gzip envelope now, so the page
-// needs the same synchronous decoder as src/save-codec.js to inspect it.
 const fflateUmd = fs.readFileSync(
   new URL("../../node_modules/fflate/umd/index.js", import.meta.url),
   "utf8",

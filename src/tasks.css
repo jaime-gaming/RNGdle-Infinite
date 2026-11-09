@@ -1,6 +1,3 @@
-/* The Tasks page: four figures on top, then one group per cadence. Each group
-   shows its tasks as segments, and a card that can be claimed is the only one
-   that turns green, so the page reads at a glance. */
 .tasks-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -104,7 +101,7 @@
   color: var(--muted);
   letter-spacing: 0.02em;
 }
-/* The four-task weekly list keeps its balanced two-by-two layout. */
+
 .task-list {
   list-style: none;
   margin: 0;
@@ -275,8 +272,7 @@
 .task-percent {
   color: var(--secondary);
 }
-/* The list bonus sits under its tasks: dashed while it is still to earn, solid
-   once it is ready to collect or has been paid. */
+
 .task-bonus {
   display: flex;
   align-items: center;
@@ -368,7 +364,6 @@
   }
 }
 
-/* The header's Tasks tab carries a dot while a reward is waiting. */
 .header nav button {
   position: relative;
 }

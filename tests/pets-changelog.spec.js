@@ -48,17 +48,17 @@ test("a companion multiplies banked EP only, never the scored roll", () => {
     { ...fund(5000000), pets: ["dragonet"], activePet: "dragonet" },
     { type: "complete", result, id: "a", cooldownUntil: 1, at: 1 },
   );
-  // The recorded roll is identical: same number, tier and scored EP.
+
   const scored = plain.history.find((e) => e.type === "roll");
   const boosted = withPet.history.find((e) => e.type === "roll");
   expect(boosted.ep).toBe(scored.ep);
   expect(boosted.number).toBe(scored.number);
   expect(boosted.tier).toBe(scored.tier);
-  // Only the wallet differs, and the bonus is disclosed on the event.
+
   expect(withPet.balance - 5000000).toBe(walletEP(result.totalEP, "dragonet"));
   expect(boosted.petBonus).toBe(petBonusEP(result.totalEP, "dragonet"));
   expect(plain.history.find((e) => e.type === "roll").petBonus).toBeUndefined();
-  // Discoveries are unaffected by companions.
+
   expect(withPet.discovered).toEqual(plain.discovered);
 });
 
@@ -66,10 +66,9 @@ test("companion multipliers stay ordered, and never reach the draw", () => {
   expect(PETS).toHaveLength(13);
   const multipliers = PETS.map((p) => p.multiplier);
   expect(Math.min(...multipliers)).toBeGreaterThanOrEqual(1.01);
-  // A deliberate ceiling, raised in v0.3: companions are meant to feel strong
-  // now, but they still only multiply the EP that reaches the wallet.
+
   expect(Math.max(...multipliers)).toBeLessThanOrEqual(1.8);
-  // Every companion carries exactly one exclusive skill, and no two share one.
+
   const signatures = PETS.map((p) => skillForPet(p.id)?.id);
   expect(signatures.every(Boolean)).toBe(true);
   expect(new Set(signatures).size).toBe(PETS.length);
@@ -77,7 +76,7 @@ test("companion multipliers stay ordered, and never reach the draw", () => {
     expect(signature.source).toBe("pet");
     expect(signature.charges).toBeGreaterThan(0);
   }
-  // Drop weights fall as the reward grows, so a rarer companion is rarer.
+
   const weights = PETS.map((p) => p.dropWeight);
   expect([...weights].sort((a, b) => b - a)).toEqual(weights);
   expect([...multipliers].sort((a, b) => a - b)).toEqual(multipliers);
@@ -92,7 +91,7 @@ test("companion multipliers stay ordered, and never reach the draw", () => {
   expect(petMultiplier("not-a-pet")).toBe(1);
   expect(walletEP(5801, "none")).toBe(5801);
   expect(petBonusLabel(1.2)).toBe("+20% EP");
-  // Every credited amount stays a whole number of EP.
+
   for (const pet of PETS)
     expect(Number.isInteger(walletEP(5801, pet.id))).toBe(true);
 });
@@ -117,7 +116,7 @@ test("companions are bought or found, equip freely and cannot be faked", () => {
   expect(() => applyProgress(p, { type: "buy-pet", id: "nope" })).toThrow(
     "not available",
   );
-  // Swapping is free; an unowned companion cannot be worn.
+
   const balance = p.balance;
   p = applyProgress(p, { type: "equip-pet", id: "none" });
   expect(p.activePet).toBe("none");
@@ -126,7 +125,7 @@ test("companions are bought or found, equip freely and cannot be faked", () => {
   expect(() => applyProgress(p, { type: "equip-pet", id: "dragonet" })).toThrow(
     "before equipping",
   );
-  // Corrupt saves cannot smuggle in a companion or a bonus.
+
   const forged = parseProgress(
     JSON.stringify({ ...p, pets: ["kit", "ghost"], activePet: "ghost" }),
   );
@@ -136,7 +135,7 @@ test("companions are bought or found, equip freely and cannot be faked", () => {
 
 test("companion drops are rare, weighted and cannot duplicate or auto-swap", () => {
   expect(PET_DROP_CHANCE).toBeLessThanOrEqual(0.01);
-  // Deterministic sweep across the drop window: every sample is a valid pet.
+
   const seen = new Set();
   for (let i = 0; i < 1000; i++) {
     const id = petDrop((i / 1000) * PET_DROP_CHANCE, []);
@@ -144,7 +143,7 @@ test("companion drops are rare, weighted and cannot duplicate or auto-swap", () 
     seen.add(id);
   }
   expect(seen.size).toBeGreaterThan(1);
-  // Outside the window, and with everything owned, nothing drops.
+
   expect(petDrop(PET_DROP_CHANCE, [])).toBeNull();
   expect(petDrop(0.5, [])).toBeNull();
   expect(petDrop(-1, [])).toBeNull();
@@ -156,7 +155,7 @@ test("companion drops are rare, weighted and cannot duplicate or auto-swap", () 
   ).toBeNull();
 
   const result = evaluate(1337);
-  // A drop is credited once, logged, and equipped only if nothing is worn.
+
   let p = applyProgress(emptyProgress(), {
     type: "complete",
     result,
@@ -179,8 +178,8 @@ test("companion drops are rare, weighted and cannot duplicate or auto-swap", () 
     petDrop: "moth",
   });
   expect(p.pets).toEqual(["pebble", "moth"]);
-  expect(p.activePet).toBe("pebble"); // A later find never swaps your choice.
-  // An already-owned or invalid drop is ignored rather than duplicated.
+  expect(p.activePet).toBe("pebble");
+
   p = applyProgress(p, {
     type: "complete",
     result,
@@ -210,7 +209,7 @@ test("guest play is not saved and signing up starts a clean account", () => {
     username: "tester",
     createdAt: 2,
   });
-  // Nothing rolled before signing up carries into the account.
+
   expect(account.profile).toMatchObject({ username: "tester" });
   expect(account.balance).toBe(0);
   expect(account.totalEarned).toBe(0);
@@ -230,9 +229,6 @@ test("share text ends with the public game link", () => {
 });
 
 test("the changelog lists every release and flags an unseen version", () => {
-  // Each release ships as one entry rather than inventing a version per part:
-  // v0.3 was the shop wave, and v0.4 carries the rebirth rework together with
-  // the shelves it regrouped afterwards.
   expect(CHANGELOG.map((e) => e.version)).toEqual([
     "v0.5.2",
     "v0.5.1",
@@ -248,11 +244,11 @@ test("the changelog lists every release and flags an unseen version", () => {
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
   expect(launch.body[0]).toContain("the game is live");
-  // Every entry carries its changes in the body, one line per change.
+
   for (const entry of CHANGELOG) {
     expect(entry.body.length).toBeGreaterThan(0);
   }
-  // The flag shows until the newest version is acknowledged.
+
   expect(hasUnseenVersion("")).toBe(true);
   expect(hasUnseenVersion("v0.1")).toBe(true);
   expect(hasUnseenVersion(LATEST_VERSION)).toBe(false);
@@ -264,7 +260,7 @@ test("the changelog lists every release and flags an unseen version", () => {
   expect(readSeenVersion(storage)).toBe("");
   markSeen(LATEST_VERSION, storage);
   expect(readSeenVersion(storage)).toBe(LATEST_VERSION);
-  // Unavailable storage must never throw into the render path.
+
   const broken = {
     getItem() {
       throw new Error("blocked");
@@ -279,10 +275,10 @@ test("the changelog lists every release and flags an unseen version", () => {
 
 test("ambient animations are subtle and fully disabled by reduced motion", () => {
   const css = fs.readFileSync("src/ambient.css", "utf8");
-  // Nothing should travel far enough to be distracting.
+
   for (const [, value] of css.matchAll(/translateY\((-?[\d.]+)px\)/g))
     expect(Math.abs(Number(value))).toBeLessThanOrEqual(8);
-  // The global reset in styles.css kills every animation and transition.
+
   const styles = fs.readFileSync("src/styles.css", "utf8");
   expect(styles).toContain("prefers-reduced-motion: reduce");
   expect(styles).toContain("animation: none !important");
@@ -296,28 +292,25 @@ test("the changelog reads like release notes, not like a chat log", () => {
     expect(entry.title).toMatch(/^[a-z]/);
     for (const line of entry.body) {
       expect(line).toMatch(/^[a-z]/);
-      // v0.4.1 is the author's own note; its wording is preserved while the
-      // opening letter follows the lowercase changelog style.
+
       if (entry.version === "v0.4.1") {
         expect(line).toBe("qol, like basic UI changes :D");
         continue;
       }
-      // One short line per change, always a finished sentence.
+
       expect(line.length).toBeLessThanOrEqual(140);
-      // Release-note lines begin with a lowercase letter, never a digit.
+
       expect(line.trim().endsWith(".")).toBe(true);
-      // No placeholder chat register anywhere in the notes.
+
       expect(line).not.toMatch(/\b(uhh+|tf|lol|idk|tbh|omg|pls|u)\b/i);
     }
   }
-  // Keep the current release note especially compact; older entries remain
-  // archived at their original length.
+
   expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(3);
-  // Every archived release, v0.4's ladder rework and v0.3's shop wave
-  // included, still fits the historical budget of eight lines.
+
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);
-  // The two Infinite-only badges are announced in v0.2, as plain text.
+
   const v02 = CHANGELOG.find((entry) => entry.version === "v0.2");
   const named = v02.body.find((line) => line.startsWith("new badges:"));
   for (const badge of allBadgeMetadata.filter((b) =>
@@ -339,8 +332,7 @@ test("the badge names in the v0.2 note are links that open the badge window", as
   await expect(links).toHaveCount(2);
   await expect(links.nth(0)).toHaveText("Pendulum");
   await expect(links.nth(1)).toHaveText("Last Second");
-  // Still one plain line of the note, not a block of its own; the icons are
-  // drawn by the game's emoji renderer, like on the Badges page.
+
   const line = links.first().locator("xpath=..");
   await expect(line).toContainText(
     "New badges: Pendulum (anomaly) and Last Second (mythic).",
@@ -364,15 +356,14 @@ test("every companion wears its own colour and has its own face", async () => {
   );
   const colours = new Set();
   for (const pet of PETS) {
-    // One colour each, and no two companions share one.
     expect(pet.accent).toMatch(/^#[0-9a-f]{6}$/);
     expect(colours.has(pet.accent)).toBe(false);
     colours.add(pet.accent);
-    // A glyph drawn for the game, and a skill of its own.
+
     expect(icons).toContain(`  ${pet.id}: (`);
     expect(skillForPet(pet.id)?.petId).toBe(pet.id);
   }
-  // The avatar token paints that colour, and the icon passes it through.
+
   expect(token).toContain("var(--pet-accent,");
   const icon = await import("node:fs").then((fs) =>
     fs.readFileSync("src/components/PetIcon.jsx", "utf8"),
@@ -383,7 +374,7 @@ test("every companion wears its own colour and has its own face", async () => {
 
 test("share is the single copy action and carries the link with it", () => {
   const source = fs.readFileSync("src/components/RollExperience.jsx", "utf8");
-  // One share control: no separate link area or second copy button.
+
   expect(source).not.toContain("share-link");
   expect(source).not.toContain("copyLink");
   expect(source.match(/async function share\(/g)).toHaveLength(1);
@@ -394,12 +385,12 @@ test("share is the single copy action and carries the link with it", () => {
 
 test("the goal recap is a ring and a shop link, with the figures still announced", () => {
   const source = fs.readFileSync("src/components/GoalRecap.jsx", "utf8");
-  // No bar, no headline numbers, no percentage text in the layout.
+
   expect(source).not.toContain("<progress");
   expect(source).not.toContain("goal-recap-figures");
   expect(source).not.toContain("SAVING TOWARDS");
   expect(source).toContain("goal-recap-ring");
-  // The numbers must survive for screen readers even though they are not drawn.
+
   expect(source).toContain("aria-label={label}");
   expect(source).toContain("Saving towards");
   const css = fs.readFileSync("src/goal-recap.css", "utf8");
@@ -408,7 +399,7 @@ test("the goal recap is a ring and a shop link, with the figures still announced
 
 test("sign-up validates the name live and states what is and is not kept", () => {
   const source = fs.readFileSync("src/components/LocalProfile.jsx", "utf8");
-  // Submission is blocked until the name is actually valid.
+
   expect(source).toContain("disabled={pending || !ready}");
   expect(source).toContain("validUsername");
   expect(source).toContain("aria-invalid");
@@ -419,7 +410,7 @@ test("sign-up validates the name live and states what is and is not kept", () =>
   );
   expect(source).toContain("This profile stays on this device.");
   expect(source).not.toContain("A fresh start:");
-  // The same validator guards the reducer, so UI and rules cannot disagree.
+
   for (const good of ["abc", "Lucky_Otter-12", "Zoë99"])
     expect(validUsername(good)).toBe(true);
   for (const bad of ["ab", "", "a".repeat(21), "has space", "bad!"])

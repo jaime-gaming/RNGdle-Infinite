@@ -17,26 +17,11 @@ import { skillById } from "../skills.js";
 import { SCRAMBLE_MS } from "../roll-timeline";
 import "../draw-stage.css";
 
-// A draw-modifying skill (Double Vision, Bedrock, Omen, Wish…) takes several
-// ordinary, independent rolls and keeps the one that scores the most EP. The
-// saving already commits exactly one of them — this is the part the player
-// used to have to take on trust.
-//
-// The overview is a takeover of the roll screen: one panel per draw, every draw
-// rolling its digits and earning its badges in the open. When the last badge
-// has landed the best draw is marked green, and every number stays on screen.
-// Nothing behind the overview is visible or scrolls. Tapping a number opens its
-// own stats in the page flow: the best one is the roll's own result, any other
-// one is shown at the same size, with the roll's button in the middle.
-// Nothing here scores anything: the numbers were drawn and scored before the
-// roll was committed, and the worker re-reads them from the same verified index.
 const NO_DRAWS = [];
 const NO_SCORES = {};
 const randomDigits = (count) =>
   Array.from({ length: count }, () => String(Math.floor(Math.random() * 10)));
 
-// How many badge chips a panel lists before the rest becomes a count. The more
-// panels are on screen, the fewer chips each one can take, so none is cut off.
 function chipLimitFor(count) {
   if (count <= 2) return 6;
   if (count <= 4) return 4;
@@ -57,9 +42,6 @@ function useScramble(spinning, slots, reducedMotion) {
   return scramble;
 }
 
-// Every panel fills its badges on the beats the winner's own breakdown uses,
-// spread evenly across that window: a draw that earned three badges and one
-// that earned fifteen both finish together, so the screen reads as one clock.
 function laneBeats(beats, count) {
   if (!count || !beats.length) return [];
   if (count === beats.length) return beats;
@@ -70,11 +52,6 @@ function laneBeats(beats, count) {
   );
 }
 
-// The scored result of every draw a roll took, by number, read from the same
-// verified index the settlement uses. The committed draw is already in
-// `run.result`, so only the others are read. A run's draws never change, so each
-// one is read once per run, and the result is only ever for the run it was read
-// for.
 export function useDrawScores(run) {
   const runId = run?.id ?? null;
   const [held, setHeld] = useState({ run: null, scores: NO_SCORES });
@@ -102,9 +79,6 @@ export function useDrawScores(run) {
   return held.run === runId ? held.scores : NO_SCORES;
 }
 
-// The skill that kept this particular draw, if one did: its name and tint.
-// Numbers can repeat across independent draws, so the source is found within
-// each skill's own consecutive draw budget instead of by number alone.
 export function claimFor(run, drawIndex) {
   const draws = run?.draws ?? [];
   let start = 0;
@@ -124,8 +98,6 @@ export function claimFor(run, drawIndex) {
   return null;
 }
 
-// One number, landing digit by digit exactly as the headline number does: the
-// slots that have settled hold their digit, the rest keep scrambling.
 function Digits({ number, slots, done, scramble, reducedMotion }) {
   const target = String(number);
   const pad = slots - target.length;
@@ -180,8 +152,6 @@ function BadgeChips({ groups, shown, limit }) {
   );
 }
 
-// What a draw was in the decision: the best one, one a draw skill kept and
-// paid, or one that was thrown away.
 function decisionTag(best, claim) {
   if (best) return { label: "Best", className: "is-best", icon: true };
   if (claim) return { label: "Paid", className: "is-paid", icon: false };
@@ -198,8 +168,6 @@ function DecisionTag({ best, claim }) {
   );
 }
 
-// The roll's own number box, drawn still: the same box and the same digits the
-// reveal ends on, with nothing left to scramble.
 function StaticArtifact({ number, tier, aura }) {
   const target = String(number);
   const size =
@@ -235,10 +203,6 @@ function StaticArtifact({ number, tier, aura }) {
   );
 }
 
-// One number that is not the committed one, shown the way the roll shows its
-// own: the number, its rank and EP, the roll's button in the middle, and every
-// badge it earned. It is in the page flow, so the page scrolls as it does for
-// any result.
 export function DrawDetail({
   number,
   index,
@@ -315,13 +279,8 @@ export function DrawDetail({
   );
 }
 
-// The roll button in the middle of the overview, where the panels meet. Its
-// radius is the button's plus a margin. It is only shown where it covers no
-// digit, label, chip, hint or icon; anywhere else it stays in the strip below.
 const HUB_RADIUS = 36;
 
-// A text leaf is measured by its words, not by its box: a hint can span a whole
-// panel while its words sit in the middle of it.
 function inkBox(el) {
   const hasText = [...el.childNodes].some(
     (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
@@ -334,8 +293,6 @@ function inkBox(el) {
 
 function hubIsClear(grid, x, y) {
   return ![...grid.querySelectorAll(".draw-panel *")].some((el) => {
-    // Clipped decorative layers are not ink and cannot cover the hub. Measuring
-    // their rotating SVGs instead could move the button as an aura animated.
     if (el.closest(".box-cosmetic, .box-gloss, .box-shimmer, .godly-particles"))
       return false;
     if (el.children.length > 0) return false;
@@ -355,7 +312,6 @@ function hubIsClear(grid, x, y) {
   });
 }
 
-// The overview: every draw on one screen, with nothing behind it.
 export default function DrawStage({
   run,
   elapsed,
@@ -382,23 +338,17 @@ export default function DrawStage({
   const [frame, setFrame] = useState({ top: 0, bottom: 0 });
   const stageRef = useRef(null);
   const gridRef = useRef(null);
-  // Where the roll button sits in the middle, relative to the overview, or null
-  // when it stays in the strip under the panels.
+
   const [hub, setHub] = useState(null);
   const hasRoll = roll !== null;
 
-  // Decided once the reveal is over, and again when the window changes: the
-  // panels are then final. The strip is hidden while this measures, so the grid
-  // is measured at the height it has when the button is in the middle.
   useLayoutEffect(() => {
     if (!hasRoll) return undefined;
     const probe = () => {
       const stage = stageRef.current;
       const grid = gridRef.current;
       if (!stage || !grid) return;
-      // The tap hint sits in the outer bottom corner of its panel: panels on the
-      // left half of the grid keep it on the left, the others on the right. That
-      // leaves the middle of the grid to the roll button.
+
       const cols = Math.max(
         1,
         Number.parseInt(
@@ -423,9 +373,7 @@ export default function DrawStage({
     };
     probe();
     window.addEventListener("resize", probe);
-    // Ink moves when the real fonts swap in for the fallbacks, and the
-    // decision is only as good as the measurement: probe again once they are
-    // in, so the button is placed against the layout the player sees.
+
     let cancelled = false;
     document.fonts?.ready.then(() => {
       if (!cancelled) probe();
@@ -436,9 +384,6 @@ export default function DrawStage({
     };
   }, [decided, numbers.length, hasRoll, frame.top, frame.bottom]);
 
-  // The overview is a takeover, not a panel: it starts under the header and
-  // stops above the phone tab bar. Both are measured, and measured again when
-  // the window changes size, so the panels never sit under either one.
   useLayoutEffect(() => {
     const measure = () => {
       const header = document.querySelector(".header");
@@ -472,11 +417,9 @@ export default function DrawStage({
   );
 
   if (numbers.length < 2) return null;
-  // More than one number is paid: each paid number is a card of its own on its
-  // stats screen, and no total EP is counted up on the overview.
+
   const paid = (run.picks ?? []).length + (run.winnerSkill == null ? 1 : 0);
-  // Dense phone panels reserve space for the tap hint. A badge plus a real
-  // remainder count is readable; three wrapped chips could cover that hint.
+
   const chipLimit =
     frame.bottom > 0 && numbers.length >= 5 ? 1 : chipLimitFor(numbers.length);
 

@@ -3,7 +3,6 @@ import { saleCompanionPrice } from "./black-friday.js";
 import { isCycleMarker } from "./history-log.js";
 import { petById } from "./pets.js";
 
-// Goals are a view over the existing economy, never another reward system.
 export function availableGoals(progress, at = Date.now()) {
   return shopProducts
     .filter(
@@ -14,9 +13,7 @@ export function availableGoals(progress, at = Date.now()) {
     )
     .map((item) => ({ ...item, price: productPrice(item, at) }));
 }
-// A goal is a shop product still for sale, or a companion not found yet. Only
-// the player's products and companions decide it: a companion is never a
-// prerequisite for anything, so it is always reachable while unowned.
+
 export function validGoal(id, owned = [], pets = []) {
   if (petById.has(id)) return !petById.get(id).eventOnly && !pets.includes(id);
   const item = productById.get(id);
@@ -27,9 +24,7 @@ export function validGoal(id, owned = [], pets = []) {
     (!item.requires || owned.includes(item.requires))
   );
 }
-// What the goal views read: a name, a price, an id, a description and an icon.
-// Companions are not catalogue products, so they are shaped to match here and
-// the banner, the recap and the spotlight need no special case.
+
 export function goalItem(id, at = Date.now()) {
   const pet = petById.get(id);
   if (pet && !pet.eventOnly)
@@ -68,8 +63,6 @@ export function currentGoal(progress, at = Date.now()) {
     : recommendedGoal(progress, at);
 }
 export function rollReceipt(progress, id) {
-  // The cycle in play starts at its last marker: a rebirth, a prestige or the
-  // Rollback. A roll from before that marker belongs to an earlier cycle.
   const cycleStart = progress.history.findLastIndex(isCycleMarker);
   const roll = progress.history.findLast(
     (e, i) =>

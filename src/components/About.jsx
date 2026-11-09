@@ -138,19 +138,23 @@ export default function About({ navigate, progress }) {
 
       <p className="about-footnote">
         An independent tribute to{" "}
-        <a href="https://www.rngdle.com/" target="_blank" rel="noreferrer">
+        <a
+          href="https://www.rngdle.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           RNGdle <ArrowUpRight size={12} />
         </a>
         . Badge references come from{" "}
         <a
           href="https://rng.cubityfir.st/badges"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           RNGdle Tools <ArrowUpRight size={12} />
         </a>
         . Play it at{" "}
-        <a href={gameUrl} target="_blank" rel="noreferrer">
+        <a href={gameUrl} target="_blank" rel="noopener noreferrer">
           {gameUrl.replace("https://", "")}
         </a>
         . Questions? Email{" "}

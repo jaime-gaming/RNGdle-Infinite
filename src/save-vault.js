@@ -1,7 +1,3 @@
-// The vault: one compressed copy of the last save this browser managed to
-// write. The primary save is always a gzip envelope; this second copy exists so
-// a damaged, half-written or quota-squeezed save cannot end an account. A
-// 10,000-roll save is a few megabytes of JSON and a fraction of that packed.
 import { packVaultSave, unpackVaultSave } from "./save-codec.js";
 export {
   packVaultSave,
@@ -30,7 +26,6 @@ const SAVE_HISTORY_VERSION = 1;
 const SAVE_HISTORY_CAPTURE_GAP_MS = 24 * 60 * 60 * 1000;
 const SAVE_VAULT_MIN_GAP_MS = 60 * 1000;
 
-// A save worth restoring: real JSON with an object inside.
 export function isReadableSave(raw) {
   if (typeof raw !== "string" || !raw.trim()) return false;
   try {
@@ -165,7 +160,7 @@ function writeHistoryEnvelope(storage, records, requiredId = null) {
       return true;
     } catch {
       if (!remaining.length) return false;
-      // Drop the oldest archive first if the browser's storage quota is tight.
+
       remaining.pop();
     }
   }
@@ -378,8 +373,6 @@ export function getRecoveryCopies(storage) {
   return copies.sort((left, right) => right.at - left.at);
 }
 
-// Keep the newest good copy. `raw` is the exact save string that was just
-// written, and `now` only decides how often the vault is refreshed.
 export function writeVault(
   raw,
   {
@@ -419,13 +412,10 @@ export function writeVault(
     );
     return true;
   } catch {
-    // A full vault must never break the save that was just written.
     return false;
   }
 }
 
-// A separate, explicit slot for the save displaced by an account conflict.
-// The ordinary rolling vault continues to protect the live local save.
 export const CLOUD_RECOVERY_KEY = "rng-infinite-cloud-recovery-v1";
 
 export function writeCloudRecovery(
@@ -439,9 +429,7 @@ export function writeCloudRecovery(
   try {
     const profileId = saveProfileId(raw);
     const current = readCloudRecovery(store);
-    // There is one recovery slot. Never silently replace a copy belonging to
-    // another account or profile; a later conflict must stop until the earlier
-    // copy has been deliberately restored or removed.
+
     if (
       current &&
       (current.profileId !== profileId || current.ownerId !== ownerId)
@@ -503,14 +491,10 @@ export function clearCloudRecovery(storage) {
     store.removeItem(CLOUD_RECOVERY_KEY);
     return store.getItem(CLOUD_RECOVERY_KEY) === null;
   } catch {
-    // A cleanup failure cannot affect the live save.
     return false;
   }
 }
 
-// Runs at start-up, before anything reads the save. Only an unreadable or
-// missing save is replaced, so a working account is never overwritten and a
-// deleted account (which clears the vault too) is never resurrected.
 export function restoreVaultIfNeeded({
   storage,
   now = Date.now(),
@@ -551,7 +535,6 @@ export function clearVault(storage) {
     store.removeItem(SAVE_VAULT_KEY);
     return store.getItem(SAVE_VAULT_KEY) === null;
   } catch {
-    // Nothing to do: the ordinary save is untouched either way.
     return false;
   }
 }
@@ -577,9 +560,7 @@ function copyDisposition(
       return "remove";
     return "keep";
   }
-  // Old copies and malformed ownership metadata cannot be attributed by UID.
-  // An exact profile ID remains a useful compatibility signal; otherwise do
-  // not delete a possibly unrelated account's recovery data silently.
+
   if (profileMatches) return "remove";
   if (typeof targetOwner === "string") return "unverified";
   if (targetOwner === UNKNOWN_CLOUD_OWNER) return "unverified";
@@ -647,8 +628,6 @@ export function clearLocalSaveRecovery(storage, profileId, ownerId) {
         else if (disposition === "unverified") cleared = false;
       }
     } else if (preRepairOwnerRaw != null) {
-      // An orphaned metadata key is not save content, but remove it when its
-      // owner is the account being deleted.
       const copyOwner = parseOwnerMarker(preRepairOwnerRaw);
       if (copyOwner === targetOwner)
         cleared = removeAndVerify(store, [PRE_REPAIR_OWNER_KEY]) && cleared;

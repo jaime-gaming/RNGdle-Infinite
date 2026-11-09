@@ -130,9 +130,6 @@ const NumberArtifact = memo(function NumberArtifact({
       className={`artifact-stage aura-${aura} ${behind ? "is-behind" : ""}`}
       data-aura={aura}
     >
-      {/* While the worn companion's signature skill fires, the companion steps
-          off the stage and pins itself here, on the corner of the number box,
-          until the roll settles and it can go back to walking. */}
       {dockedPet && dockedSkill && (
         <span
           className={`artifact-companion tint-${dockedSkill.tint}`}
@@ -198,8 +195,7 @@ export default function RollExperience({
   const settings = rollSettings(session.owned);
   const { settings: preferences } = useSettings();
   const ownsAutoRoll = session.owned.includes("auto-roll");
-  // Persistence Core is the only way a switch survives a reload; without it the
-  // stored value is ignored so Auto-Roll still starts off, as documented.
+
   const persistsAutoRoll =
     ownsAutoRoll && session.owned.includes("persistence-core");
   const [autoRoll, setAutoRoll] = useState(() =>
@@ -212,8 +208,7 @@ export default function RollExperience({
   );
   const autoAction = useRef(null);
   autoAction.current = generate;
-  // The switch only runs on the visible Roll page unless Persistence Core is
-  // owned. The rack states the same thing in words, so the two can never drift.
+
   const autoRollRunning = autoRoll && active && (visible || persistsAutoRoll);
   useEffect(() => {
     const update = () => setVisible(document.visibilityState === "visible");
@@ -242,10 +237,7 @@ export default function RollExperience({
       gameNow(),
     ),
   );
-  // Time left on the committed reservation, separate from the cooldown shown
-  // by the button: a zero-cooldown boost (or a cooldown-waiving skill) still
-  // reserves its whole reveal, so `reserving` stays true until the deadline
-  // actually passes and the next roll cannot start on top of a live one.
+
   const [remainingMS, setRemainingMS] = useState(() =>
     Math.max(
       0,
@@ -268,10 +260,7 @@ export default function RollExperience({
   const generateButton = useRef(null);
   creditCallback.current = onComplete;
   const result = run?.result;
-  // More than one number is paid: each paid number is shown on its own card,
-  // and no total EP is counted up on screen for the roll.
-  // Every number a draw skill kept is listed as paid. A plain draw can win, so a
-  // single paid number is listed too when it is not the roll's own number.
+
   const paidPicks = run?.picks ?? [];
   const winnerSkill =
     run && Object.prototype.hasOwnProperty.call(run, "winnerSkill")
@@ -291,7 +280,7 @@ export default function RollExperience({
       ),
     [result, groups, run?.rollMS],
   );
-  // Déjà vu: this exact number was already rolled on the account. A look only.
+
   const dejaVuCount = useMemo(
     () => (run ? priorRollsOf(session.history, run.result.number, run.id) : 0),
     [run, session.history],
@@ -303,24 +292,17 @@ export default function RollExperience({
   const awaitingSettlement =
     !!run && session.pendingRoll?.id === run.id && !runSettled;
   const busy = !!run && elapsed < timeline.end;
-  // While the worn companion's signature skill fires on this roll, the
-  // companion steps off the stage and shows as a small mark on the number
-  // box; it goes back to walking the moment the roll settles.
+
   const companionSkill = skillForPet(session.activePet);
   const companionSkillFiring =
     !!run &&
     !runSettled &&
     !!companionSkill &&
     (run.skills ?? []).includes(companionSkill.id);
-  // What actually lands in the wallet: the settlement's own formula, so the
-  // on-screen sum matches the credit to the EP — companion, rebirth bonuses,
-  // prestige, the Rollback and every wallet skill that fired, never the score.
+
   const firedSkills = run?.skills ?? [];
   const bankedMultiplier = result ? walletMultiplier(session, firedSkills) : 1;
-  // Every draw skill keeps its own number, and every number it keeps is a
-  // banked roll: the sum that lands in the wallet is the sum of all of them,
-  // not just the one the roll commits. The extra numbers are scored here from
-  // the same verified index the settlement will read.
+
   const keptNumbers = useMemo(
     () =>
       (run?.picks ?? []).filter(
@@ -353,10 +335,7 @@ export default function RollExperience({
       cancelled = true;
     };
   }, [run?.id, keptNumbers.length]);
-  // Every paid number, the one the roll committed included, each with the EP
-  // it banks. A number whose score is still loading shows a dash for now.
-  // Every paid number is a card. When a plain draw won, the roll's own number is
-  // not a skill's pick, so its card leads the list as the Best one, by itself.
+
   const paidItems = useMemo(() => {
     const picks = run?.picks ?? [];
     const cards = picks
@@ -436,20 +415,13 @@ export default function RollExperience({
   const cooldownDeadline = Math.max(session.cooldownUntil, localCooldownUntil);
   const cooldownWindow =
     session.cooldownWindow ?? parseCooldownWindow(null, cooldownDeadline, run);
-  // The word in front of the countdown always names the wait that number
-  // actually is: the cooldown while the reveal still holds the roll back, the
-  // next roll once the cooldown itself is running, and the rest of the reveal
-  // when a boost or a waive skill removed the cooldown entirely.
+
   const waitWord = cooldown
     ? cooldownLabel(cooldownWindow, cooldownDeadline, gameNow())
     : "REVEAL IN";
   const instant = reducedMotion || instantCompletion;
   const digitsDone = !!run && elapsed >= timeline.collapse;
-  // A draw skill took more than one number. The overview shows every draw while
-  // each rolls its digits and earns its badges. Tapping a number opens it: the
-  // best one is the roll's own result, any other one shows its own stats. The
-  // view lives here, keyed by the run, so the next roll always opens on the
-  // overview again.
+
   const splitDraws = run && (run.draws ?? []).length > 1 ? run.draws : null;
   const splitDecision = useMemo(() => {
     if (!splitDraws) return 0;
@@ -472,36 +444,30 @@ export default function RollExperience({
       ? run.winnerIndex
       : Math.max(0, splitDraws?.indexOf(run?.number) ?? 0);
   const drawScores = useDrawScores(splitDraws ? run : null);
-  // A draw other than the committed draw, once its own stats are read. Compare
-  // indices, not number values: two independent draws can land on the same
-  // number and still need their own detail screen.
+
   const splitDetailScored =
     splitPick != null && splitIndex !== splitWinnerIndex
       ? (drawScores[splitPick] ??
         (splitPick === result?.number ? result : null))
       : null;
   const splitDetail = !!splitDetailScored;
-  // Any single number on screen (its own stats, or the best one's result) means
-  // the numbers are being looked at up close, so auto-roll stands still. The
-  // overview does not stop it: the rolls keep turning under it.
+
   const splitClose = !!splitDraws && !splitOpen;
   const splitDecided = !!splitDraws && elapsed >= splitDecision;
-  // The overview is a takeover: nothing under it may scroll while it is up.
+
   useEffect(() => {
     if (!splitOpen || !active) return;
     document.documentElement.classList.add("draw-takeover");
     return () => document.documentElement.classList.remove("draw-takeover");
   }, [splitOpen, active]);
-  // A multi-number roll keeps the install prompt out of the way for as long as
-  // it is on screen: the prompt would otherwise cover the way back to the numbers.
+
   const splitRun = !!splitDraws;
   useEffect(() => {
     if (!splitRun || !active) return;
     document.documentElement.classList.add("draw-split");
     return () => document.documentElement.classList.remove("draw-split");
   }, [splitRun, active]);
-  // A number opened from the overview starts at the top of the roll, so its way
-  // back to the numbers is the first thing on screen, wherever the page was.
+
   useEffect(() => {
     if (splitIndex == null || !rollSection.current) return;
     rollSection.current.scrollIntoView({
@@ -514,9 +480,6 @@ export default function RollExperience({
   const visibleGroups = groups.slice(-visibleCount || groups.length);
   const shownEP = visibleGroups.reduce((sum, g) => sum + g.lead.ep, 0);
 
-  // A matching rank stays on screen: Auto-Roll was disarmed as soon as the
-  // committed draw was known, and the desktop alert waits until its stats have
-  // finished revealing. Keeping this keyed by run prevents duplicate alerts.
   useEffect(() => {
     const alert = rankAlertRun.current;
     if (
@@ -554,13 +517,7 @@ export default function RollExperience({
       session.pendingRoll
     )
       return;
-    // Schedule from the durable deadline, not the displayed cooldown tick.
-    // This also wakes correctly after timer throttling or a skipped UI tick.
-    // Use the same serialized, persisted draw path as the manual button. Cleanup
-    // cancels a queued auto-start when switching it off or leaving the page.
-    // Never queue a start inside the window this roll is still reserving: the
-    // wait is measured from the game clock, not from a display tick, so a paused
-    // or throttled countdown cannot fire the next roll early or stall the loop.
+
     const remaining =
       Math.max(
         0,
@@ -590,8 +547,7 @@ export default function RollExperience({
 
   useEffect(() => {
     const until = Math.max(session.cooldownUntil, localCooldownUntil);
-    // Show the cooldown alone, not the reveal that precedes it. Eligibility is
-    // still governed by `until`, so the actual wait is unchanged.
+
     const window =
       session.cooldownWindow ?? parseCooldownWindow(null, until, run);
     const update = () => {
@@ -617,14 +573,10 @@ export default function RollExperience({
     if (!run || finishedRun.current === run.id) return;
     let stopped = false,
       timer;
-    // gameNow() rather than performance.now(): the reveal is paced by the same
-    // hardened, monotonic clock as the cooldown, so replacing performance.now
-    // cannot fast-forward the number onto the screen.
+
     const start = gameNow();
     const alreadyElapsed = Math.max(0, start - run.startedAt);
-    // The reveal only wakes on its own beats. A draw skill's split screen has a
-    // beat of its own, the decision, and it would otherwise hang between two
-    // badge cues until the whole reveal ended.
+
     const cues = [
       ...new Set([
         ...revealCueTimes(timeline),
@@ -727,15 +679,12 @@ export default function RollExperience({
     const rankMatched =
       rankAlertEnabled && rankMeetsMinimum(rolledRank, minimumRank);
     const draws = committed.draws ?? [];
-    // Remember whether Auto-Roll was on when the matching roll committed: the
-    // rank notification offers to stop it, but only if it was actually on.
+
     const autoRollWasActive = autoRoll;
     rankAlertRun.current = rankMatched
       ? { id: committed.id, rank: rolledRank, autoRoll: autoRollWasActive }
       : null;
     if (rankMatched) {
-      // Turn Auto-Roll off before the result settles, so no queued roll can
-      // replace the rank the player asked to inspect.
       setAutoRoll(false);
       if (draws.length > 1) {
         const winnerIndex =
@@ -821,8 +770,6 @@ export default function RollExperience({
     }
   }
 
-  // The roll's button. It is the same control on the roll's own result and on a
-  // number's own stats, so it reads and behaves the same wherever it appears.
   const rollAgainControl = (
     <div
       className={`generate-wrap ${busy ? "is-away" : ""}`}
@@ -877,9 +824,7 @@ export default function RollExperience({
       </button>
     </div>
   );
-  // The EP balance a roll's result carries: the wallet, the EP this roll is
-  // about to credit while it settles, and the goal line under it. A paid
-  // number shows the same two, since it pays into the same wallet.
+
   const sessionTotal = digitsDone ? (
     <div
       className={`session-total ${elapsed >= timeline.sessionShow ? "is-visible" : ""}`}
@@ -910,16 +855,13 @@ export default function RollExperience({
           ))}
       </span>
       <small>Your EP balance</small>
-      {/* Savings sit with the wallet they are measured against,
-          and only once the reveal has settled and the EP is
-          actually credited. */}
+
       {!busy && runSettled && preferences.showGoalRecap && (
         <GoalRecap progress={session} runId={run.id} navigate={navigate} />
       )}
     </div>
   ) : null;
-  // The share line and the roll's status under it. A paid number shares its
-  // own result, not the roll's.
+
   const shareRowFor = (shared) => (
     <div className="share-row">
       <button
@@ -945,8 +887,7 @@ export default function RollExperience({
       </span>
     </div>
   );
-  // A paid number that is not the roll's own result: its stats show the
-  // balance and the share line the roll's result shows.
+
   const paidDetail = splitDetail && !!claimFor(run, splitIndex);
   return (
     <div
@@ -961,10 +902,7 @@ export default function RollExperience({
         className={`roll-vignette ${busy && !reducedMotion ? "is-visible" : ""}`}
         aria-hidden="true"
       />
-      {/* The corner rack: charged circles, Flywheel, and Auto-Roll as one more
-          ability you click on or off. A full circle fires on the next roll, and
-          during that roll it shows as firing; the Σ button states what the
-          whole rack adds up to. */}
+
       {preferences.showSkillBar && (
         <SkillBar
           progress={session}
@@ -982,10 +920,7 @@ export default function RollExperience({
           onToggleAutoRoll={() => setAutoRoll((enabled) => !enabled)}
         />
       )}
-      {/* Only the equipped companion walks the roll screen, so it is always
-          obvious which one is actually active. The rest stay on the shelf.
-          While its signature skill fires it steps off the stage entirely and
-          lives on the corner of the number until the roll settles. */}
+
       <PetParade
         pets={
           session.activePet && session.activePet !== "none"
@@ -1044,7 +979,6 @@ export default function RollExperience({
               ? "no"
               : formatDuration(settings.cooldownMS / 1000)}{" "}
             cooldown
-            {/* What the worn companion adds, stated where the timings are. */}
             {activeCompanion && (
               <>
                 <span>·</span>{" "}
@@ -1078,8 +1012,6 @@ export default function RollExperience({
             className="active-roll"
             aria-label="Your roll"
           >
-            {/* Every draw the roll took, side by side, until the best of them
-                takes the centre and becomes the number that pays. */}
             {splitOpen && (
               <DrawStage
                 key={`draw-${run.id}`}
@@ -1199,8 +1131,7 @@ export default function RollExperience({
                     EP
                   </div>
                 )}
-                {/* Every number a draw skill kept is paid: each one is a card
-                    of its own, side by side, with the EP it banks. */}
+
                 {digitsDone && stacked && <PaidNumbers items={paidItems} />}
                 {sessionTotal}
                 {rankKnown && shareRowFor(result)}

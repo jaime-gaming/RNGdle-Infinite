@@ -31,10 +31,6 @@ const app = firebaseConfigured
     : initializeApp(config)
   : null;
 
-// App Check adds an automatically refreshed reCAPTCHA Enterprise attestation
-// to Firebase SDK requests. A site key is public client configuration. Firestore
-// enforcement is a separate Firebase Console setting and must be enabled there
-// before invalid or missing attestations are rejected.
 let appCheck = null;
 if (app && appCheckSiteKey && env.MODE !== "test") {
   try {
@@ -42,10 +38,7 @@ if (app && appCheckSiteKey && env.MODE !== "test") {
       provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
       isTokenAutoRefreshEnabled: true,
     });
-  } catch {
-    // A missing/invalid provider setup must not make local play unusable. The
-    // console and App Check status below make the configuration gap explicit.
-  }
+  } catch {}
 }
 
 export const firebaseAppCheck = appCheck;

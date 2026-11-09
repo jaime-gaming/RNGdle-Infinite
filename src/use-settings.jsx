@@ -12,7 +12,7 @@ const SettingsContext = createContext({
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(loadSettings);
   const [saveError, setSaveError] = useState("");
-  // Other tabs share one preference set; adopt their changes without a reload.
+
   useEffect(() => {
     const sync = (event) => {
       if (event.key !== null && event.key !== "rng-infinite-settings-v1")
@@ -48,7 +48,6 @@ export function useSettings() {
   return useContext(SettingsContext);
 }
 
-// All motion follows the system accessibility preference.
 export function useMotionPreference() {
   const [systemReduced, setSystemReduced] = useState(
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -75,8 +74,6 @@ export function useMotionPreference() {
   return systemReduced;
 }
 
-// Formats EP for display according to the player's preference. Exact amounts are
-// still used for every purchase, balance check and history entry.
 export function useFormatEP() {
   const { settings } = useSettings();
   return settings.compactNumbers ? formatEPCompact : formatEP;

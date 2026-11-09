@@ -61,7 +61,7 @@ const fund = (balance, extra = {}) => ({
   totalEarned: balance,
   ...extra,
 });
-// A committed roll with the skills that fired on it, ready to settle.
+
 const roll = (id, skills = [], extra = {}) => ({
   id,
   number: 1337,
@@ -86,7 +86,7 @@ test("every skill states one effect, one charge cost and where it comes from", (
     if (skill.source === "rebirth")
       expect(skill.rebirth).toBeGreaterThanOrEqual(1);
   }
-  // Every companion has exactly one signature, and every shop skill is sold.
+
   for (const pet of PETS) expect(skillForPet(pet.id)).toBeTruthy();
   for (const skill of shopSkills)
     expect(
@@ -101,7 +101,7 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
   expect(skillSlots([])).toBe(2);
   expect(skillSlots(["skill-bay-1"])).toBe(3);
   expect(skillSlots(["skill-bay-1", "skill-bay-2"])).toBe(4);
-  // The bays are an upgrade chain inside the price rules the shop test pins.
+
   const bay1 = productById.get("skill-bay-1"),
     bay2 = productById.get("skill-bay-2");
   expect(bay2.requires).toBe("skill-bay-1");
@@ -115,7 +115,7 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
   p = applyProgress(p, { type: "equip-skill", id: "trail", at: 1 });
   expect(p.equippedSkills).toEqual(["surge", "trail"]);
   const balance = p.balance;
-  // A third skill does not fit until a bay is bought.
+
   expect(() =>
     applyProgress(
       { ...p, owned: [...p.owned, "bounce"], skills: [...p.skills, "bounce"] },
@@ -126,7 +126,7 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
       },
     ),
   ).toThrow(/rack holds 2 shop skills/);
-  // Unequipping and re-equipping spends nothing, and no charge is lost.
+
   const charged = { ...p, skillCharge: { surge: 4, trail: 2 } };
   const swapped = applyProgress(charged, {
     type: "equip-skill",
@@ -144,8 +144,7 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
     at: 1,
   });
   expect(back.equippedSkills).toEqual(["trail", "surge"]);
-  // Rebirth rewards ride free beside the rack: a full rack still takes them,
-  // and they take no slot. A companion signature does take one.
+
   const signature = skillForPet("pebble");
   const full = {
     ...back,
@@ -159,7 +158,7 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
     at: 1,
   });
   expect(withReborn.equippedSkills).toEqual(["trail", "surge", "reborn-drive"]);
-  // The rack is full of shop skills, so the signature waits for a free slot.
+
   expect(() =>
     applyProgress(withReborn, {
       type: "equip-skill",
@@ -183,7 +182,7 @@ test("the rack holds two skills, four with both bays, and swapping is free", () 
     "reborn-drive",
     signature.id,
   ]);
-  // And they unequip like any other skill.
+
   const without = applyProgress(withBoth, {
     type: "equip-skill",
     id: "reborn-drive",
@@ -197,8 +196,7 @@ test("shop skills and companion signatures take rack slots, and trimming keeps t
   expect(skillTakesSlot("surge")).toBe(true);
   expect(skillTakesSlot("reborn-drive")).toBe(false);
   expect(skillTakesSlot(skillForPet("pebble").id)).toBe(true);
-  // Trimming keeps every free skill and the shop skills in order, wherever
-  // the free ones sit in the list.
+
   expect(trimToSlots(["reborn-drive", "surge", "trail", "bounce"], 2)).toEqual([
     "reborn-drive",
     "surge",
@@ -224,8 +222,7 @@ test("a repaired save keeps its free skills no matter how full the rack is", () 
     activePet: "pebble",
     equippedSkills: ["surge", "trail", "bounce", "reborn-drive", signature.id],
   });
-  // Two slots hold two shop skills, so the companion's signature, which also
-  // takes a slot, is trimmed off. The ladder's reward stays on, in place.
+
   expect(parseEquippedSkills(progress.equippedSkills, progress)).toEqual([
     "surge",
     "trail",
@@ -241,13 +238,12 @@ test("a companion's signature only exists while it is the active companion", () 
   const wearing = { ...base, activePet: "pebble" };
   expect(skillUnlocked(signature.id, wearing)).toBe(true);
   expect(skillUnlocked(other.id, wearing)).toBe(false);
-  // Equipping Pebble puts its signature in a free slot; swapping to Moth pulls
-  // Pebble's skill out of the rack and offers Moth's.
+
   let p = applyProgress(base, { type: "equip-pet", id: "pebble", at: 1 });
   expect(p.equippedSkills).toEqual([signature.id]);
   p = applyProgress(p, { type: "equip-pet", id: "moth", at: 1 });
   expect(p.equippedSkills).toEqual([other.id]);
-  // A forged save cannot wear a signature without the companion.
+
   const forged = parseProgress(
     JSON.stringify({
       ...base,
@@ -268,7 +264,7 @@ test("circles charge on settled online rolls only, and firing empties them", () 
     skills: ["surge", "trail"],
     equippedSkills: ["surge", "trail"],
   });
-  // An offline settlement never charges a circle.
+
   expect(
     chargeAfterSettlement(
       { ...base, pendingRoll: { id: "x", skills: ["surge"] } },
@@ -276,7 +272,7 @@ test("circles charge on settled online rolls only, and firing empties them", () 
       "offline",
     ),
   ).toEqual({});
-  // A settlement that does not match the committed roll charges nothing.
+
   expect(
     chargeAfterSettlement(
       { ...base, pendingRoll: { id: "x", skills: [] } },
@@ -284,7 +280,7 @@ test("circles charge on settled online rolls only, and firing empties them", () 
       "online",
     ),
   ).toEqual({});
-  // A committed online roll charges every equipped skill by one.
+
   const settled = applyProgress(
     { ...base, pendingRoll: roll("r1") },
     {
@@ -296,7 +292,7 @@ test("circles charge on settled online rolls only, and firing empties them", () 
     },
   );
   expect(settled.skillCharge).toEqual({ surge: 1, trail: 1 });
-  // Firing empties the circle that fired and charges the others.
+
   const fired = applyProgress(
     {
       ...base,
@@ -312,7 +308,7 @@ test("circles charge on settled online rolls only, and firing empties them", () 
     },
   );
   expect(fired.skillCharge).toEqual({ surge: 0, trail: 4 });
-  // Turbo counts triple, for Flywheel and for the rack alike.
+
   expect(skillChargeFactor(["turbo"])).toBe(3);
   expect(
     chargeAfterSettlement(
@@ -328,7 +324,7 @@ test("circles charge on settled online rolls only, and firing empties them", () 
       "online",
     ),
   ).toEqual({ surge: 3, trail: 3, turbo: 0 });
-  // Nothing can charge past the circle's own limit.
+
   expect(
     chargeAfterSettlement(
       { ...base, skillCharge: { surge: 6 }, pendingRoll: roll("r4") },
@@ -350,7 +346,7 @@ test("armed skills are the equipped, unlocked, full circles", () => {
   expect(armedSkills({ ...base, skillCharge: { surge: 6, trail: 6 } })).toEqual(
     ["surge", "trail"],
   );
-  // An equipped skill that is not unlocked never arms, whatever the charge says.
+
   const forged = {
     ...base,
     skills: ["trail"],
@@ -368,9 +364,7 @@ test("draw skills keep their own budgets and never invent EP", () => {
     floor: 25000,
     keeps: 1,
   });
-  // Budgets stack — Double Vision draws twice and Bedrock would draw four, so
-  // together they draw six — while the floor stays the strongest promise, not
-  // the sum of the two.
+
   expect(drawPlanFor(["twice", "bedrock"])).toEqual({
     attempts: 6,
     floor: 25000,
@@ -381,14 +375,13 @@ test("draw skills keep their own budgets and never invent EP", () => {
     floor: 0,
     keeps: 1,
   });
-  // Two draw skills pay two numbers, because each keeps its own.
+
   expect(drawPlanFor(["twice", "bedrock"]).keeps).toBe(2);
-  // Six draws fill this roll. Big Game keeps its whole budget and waits;
-  // the runner never silently trims it or consumes its charge.
+
   expect(drawPlanFor(["twice", "bedrock", "quarry"]).attempts).toBe(
     SKILL_MAX_DRAWS,
   );
-  // The wallet multiplier is a multiplier of banked EP and nothing else.
+
   expect(skillWalletMultiplier(["surge"])).toBe(2);
   expect(skillWalletMultiplier(["surge", "unicorn-wish"])).toBe(5);
   expect(skillWalletMultiplier(["turbo", "bounce"])).toBe(1);
@@ -403,17 +396,17 @@ test("the two late shop skills reuse effects that are already proven", () => {
     triptych = skillById.get("triptych");
   for (const skill of [miser, triptych]) {
     expect(skill.source).toBe("shop");
-    // Sold, priced above everything that came before, and never a pet skill.
+
     expect(productById.get(skill.id).price).toBe(skill.price);
     expect(skill.price).toBeGreaterThan(productById.get("quarry").price);
     expect(skill.charges).toBeGreaterThan(0);
     expect(skill.description.endsWith(".")).toBe(true);
   }
-  // Miser is a wallet multiplier, exactly like Surge and the companions.
+
   expect(miser.kind).toBe("wallet");
   expect(skillWalletMultiplier(["miser"])).toBe(3);
   expect(drawPlanFor(["miser"])).toBeNull();
-  // Triptych is a best-of-three: three ordinary draws, one kept.
+
   expect(triptych.kind).toBe("best-of");
   expect(drawPlanFor(["triptych"])).toEqual({
     attempts: 3,
@@ -421,8 +414,7 @@ test("the two late shop skills reuse effects that are already proven", () => {
     keeps: 1,
   });
   expect(triptych.attempts).toBeLessThanOrEqual(SKILL_MAX_DRAWS);
-  // Triptych fires first; Big Game cannot fit and waits for the following
-  // roll, keeping its whole five-draw promise.
+
   expect(drawPlanFor(["triptych", "quarry"])).toEqual({
     attempts: 3,
     floor: 0,
@@ -442,7 +434,7 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
     { ...base, pendingRoll: roll("r1", ["surge"]) },
     { type: "complete", result, id: "r1", cooldownUntil: 100000, at: 2 },
   );
-  // The scored roll is identical to a plain one.
+
   const plain = applyProgress(
     { ...base, pendingRoll: roll("r2") },
     { type: "complete", result, id: "r2", cooldownUntil: 100000, at: 2 },
@@ -453,13 +445,12 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
   expect(scored(settled, "r1").number).toBe(scored(plain, "r2").number);
   expect(scored(settled, "r1").tier).toBe(scored(plain, "r2").tier);
   expect(scored(settled, "r1").badges).toEqual(scored(plain, "r2").badges);
-  // Only the wallet moves, and the receipt says which skills did it.
+
   expect(settled.balance - 1000000).toBe(result.totalEP * 2);
   expect(scored(settled, "r1").walletMultiplier).toBe(2);
   expect(scored(settled, "r1").walletBonus).toBe(result.totalEP);
   expect(scored(settled, "r1").skills).toEqual(["surge"]);
-  // A companion, a skill and both rebirth bonuses all multiply banked EP
-  // together.
+
   const combined = applyProgress(
     {
       ...fund(0, {
@@ -483,7 +474,7 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
     ]),
   ).toBeCloseTo(multiplier, 6);
   expect(combined.balance).toBe(Math.round(result.totalEP * multiplier));
-  // And a reload keeps the receipt.
+
   const reloaded = parseProgress(JSON.stringify(combined));
   expect(
     reloaded.history.find((e) => e.type === "roll" && e.id === "r3").skills,
@@ -492,8 +483,7 @@ test("a settled roll banks the wallet multiplier and keeps the scored EP honest"
 
 test("forged saves cannot smuggle charge, slots or a free roll", () => {
   const base = fund(0);
-  // Charge beyond a circle's limit is clamped, never trusted — so a balance
-  // patch that cheapens a circle can no longer brick an older save.
+
   const overcharged = parseAndRepairProgress(
     JSON.stringify({
       ...base,
@@ -509,7 +499,7 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   );
   expect(negative.progress.skillCharge).toEqual({});
   expect(negative.repairs.join(" ")).toMatch(/Surge/);
-  // Unknown skills and unknown charge keys are dropped, never trusted.
+
   const cleaned = parseProgress(
     JSON.stringify({
       ...base,
@@ -521,12 +511,12 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   expect(cleaned.skills).toEqual([]);
   expect(cleaned.equippedSkills).toEqual([]);
   expect(cleaned.skillCharge).toEqual({ surge: 3 });
-  // A bought skill is unlocked only together with its purchase.
+
   const bought = parseProgress(
     JSON.stringify({ ...base, owned: ["surge"], skills: ["surge", "quarry"] }),
   );
   expect(bought.skills).toEqual(["surge"]);
-  // More equipped skills than the rack allows is trimmed to the rack.
+
   const many = parseProgress(
     JSON.stringify({
       ...base,
@@ -536,7 +526,7 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
     }),
   );
   expect(many.equippedSkills).toHaveLength(3);
-  // A zero cooldown must be explained by a boost or a waiving skill.
+
   const pending = (extra) => ({
     id: "c1",
     number: 604827,
@@ -554,12 +544,11 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   expect(
     parsePending(pending({ cooldownMS: 0, flywheel: "boost" })).cooldownMS,
   ).toBe(0);
-  // Committed draws must belong to the plan that was charged for them.
+
   expect(() => parsePending(pending({ draws: [604827, 12] }))).toThrow(
     /Invalid committed roll/,
   );
-  // Double Vision draws twice; a live roll adds one ordinary draw after them, so
-  // three draws are the most it can commit and a fourth is forged.
+
   expect(() =>
     parsePending(pending({ skills: ["twice"], draws: [604827, 12, 13, 14] })),
   ).toThrow(/Invalid committed roll/);
@@ -577,7 +566,7 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
   expect(honest.draws.length).toBeLessThanOrEqual(
     Math.min(plan.attempts + 1, SKILL_MAX_DRAWS + 1),
   );
-  // Timings still cannot outrun the upgrades the save paid for.
+
   expect(() =>
     parsePending(pending({ rollMS: 10000 }), ["quickwind-1"]),
   ).toThrow(/do not match your upgrades/);
@@ -595,8 +584,7 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
     equippedSkills: ["surge"],
     skillCharge: { surge: 4 },
     flywheelCharge: 3,
-    // The rung's other half: EP this cycle has scored. It is a mark of
-    // progress, not a spend, so the wallet is untouched by it.
+
     history: [
       {
         id: "old",
@@ -619,8 +607,7 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
     ],
     receipts: ["old"],
   });
-  // The ladder's first rung: a fifth of the collection and 250,000 EP the
-  // cycle earned — both are met by this account.
+
   expect(REBIRTH_STEPS[0]).toEqual({ badges: 0.2, ep: 250000 });
   const reborn = applyProgress(state, {
     type: "rebirth",
@@ -629,8 +616,7 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
     eventId: "ev1",
   });
   expect(reborn.rebirths).toBe(1);
-  // The run resets, but the entire aura collection and its equipped look stay;
-  // ordinary purchases, companions and the badge collection start over.
+
   expect(reborn.balance).toBe(REBIRTH_STARTER_EP);
   expect(reborn.owned).toEqual(["starfall"]);
   expect(reborn.pets).toEqual([]);
@@ -640,17 +626,14 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
   expect(reborn.flywheelCharge).toBe(0);
   expect(reborn.pendingRoll).toBeNull();
   expect(reborn.cooldownUntil).toBe(0);
-  // The wallet keeps its balance of EP earned all-time and the +2% the rung
-  // just paid — the companion that went back with the run does not count.
+
   expect(reborn.totalEarned).toBe(5000000 + REBIRTH_STARTER_EP);
   expect(walletMultiplier(reborn, [])).toBeCloseTo(1.02, 6);
-  // The ladder skill is earned, not bought: it arrives unlocked and takes the
-  // rack's slot, while the shop skill went back on the stall.
+
   const granted = rebirthSkill(1);
   expect(reborn.skills).toEqual([granted.id]);
   expect(reborn.equippedSkills).toEqual([granted.id]);
-  // The activity history is the account's, so the old roll stays and the
-  // rebirth is recorded after it.
+
   expect(reborn.history.map((e) => e.type)).toEqual([
     "roll",
     "roll",
@@ -663,8 +646,7 @@ test("rebirth hands back the run — shelf, companions and wallet — grants the
     skill: granted.id,
   });
   expect(parseProgress(JSON.stringify(reborn)).skills).toContain(granted.id);
-  // The next rung asks for more badges and more EP, and the cycle has to
-  // rediscover the collection before it can be claimed.
+
   expect(REBIRTH_STEPS[1]).toEqual({ badges: 0.25, ep: 600000 });
   expect(() =>
     applyProgress(reborn, { type: "rebirth", expectedRebirths: 1, at: 200000 }),
@@ -675,7 +657,7 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   const top = fund(9000000, {
     profile: { id: "p", username: "Tester", createdAt: 1 },
     discovered: ids,
-    // The ultra-rebirth asks for the cycle's EP as well as the badges.
+
     history: [
       {
         id: "old",
@@ -691,29 +673,28 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
     equipped: "starfall",
     pets: ["pebble"],
     activePet: "pebble",
-    // One shop skill and one the ladder paid for: the first goes back on the
-    // stall, the second was earned by a rebirth the account keeps.
+
     skills: ["surge", "reborn-drive"],
     equippedSkills: ["surge", "reborn-drive"],
     skillCharge: { surge: 5 },
     rebirths: REBIRTH_TOTAL,
     ultraRebirths: 1,
   });
-  // Not available before the last rung.
+
   expect(() =>
     applyProgress(
       { ...top, rebirths: REBIRTH_TOTAL - 1 },
       { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
     ),
   ).toThrow(/ladder/);
-  // And not without half the collection back.
+
   expect(() =>
     applyProgress(
       { ...top, discovered: ids.slice(0, 10) },
       { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
     ),
   ).toThrow(/Discover 118 badges/);
-  // Nor without the EP the cycle has to have earned.
+
   expect(() =>
     applyProgress(
       { ...top, history: [] },
@@ -728,9 +709,7 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   });
   expect(reborn.ultraRebirths).toBe(2);
   expect(reborn.profile).toEqual(top.profile);
-  // Prestige resets the run like a Rebirth but keeps every aura, including the
-  // equipped look; the ordinary upgrade, collection and companions go back.
-  // The rebirth ladder starts over too, so only prestiges fund the wallet.
+
   expect(reborn.balance).toBe(cycleStarterEp(0, 2));
   expect(reborn.discovered).toEqual([]);
   expect(reborn.owned).toEqual(["starfall"]);
@@ -739,15 +718,14 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
   expect(reborn.skills).toEqual([]);
   expect(reborn.equippedSkills).toEqual([]);
   expect(reborn.skillCharge).toEqual({});
-  // The ladder and its skills are climbed again; the prestige bonus stays.
+
   expect(reborn.rebirths).toBe(0);
   expect(reborn.totalEarned).toBe(9000000 + cycleStarterEp(0, 2));
-  // The roll that paid for it stays in the log, and the ultra-rebirth is
-  // recorded after it: the history is the account's, never the cycle's.
+
   expect(reborn.history).toHaveLength(2);
   expect(reborn.history[0]).toMatchObject({ type: "roll" });
   expect(reborn.history[1]).toMatchObject({ type: "ultra-rebirth", count: 2 });
-  // The bonus is permanent and multiplies banked EP only: +10% per ultra.
+
   expect(ULTRA_BONUS_PER_REBIRTH).toBe(0.1);
   expect(walletMultiplier({ activePet: "none", ultraRebirths: 3 })).toBeCloseTo(
     1.3,
@@ -769,10 +747,9 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
     },
     { type: "complete", result, id: "u", cooldownUntil: 2, at: 3 },
   );
-  // The bonus is permanent and multiplies banked EP only: +10% per ultra.
-  // The ladder's +2% per rung is gone until the rungs are climbed again.
+
   expect(credited.balance).toBe(Math.round(result.totalEP * 1.2));
-  // The roll this settlement wrote, not the one that paid for the ultra.
+
   expect(credited.history.findLast((e) => e.type === "roll").ep).toBe(
     result.totalEP,
   );
@@ -782,18 +759,17 @@ test("the skill stall sells three skills at a time and rotates every five minute
   const ids = shopSkills.map((skill) => skill.id);
   expect(SKILL_STOCK_SIZE).toBe(3);
   expect(SKILL_STOCK_WINDOW_MS).toBe(5 * 60 * 1000);
-  // The window is the clock, not a stored list.
+
   expect(skillStockWindow(0)).toBe(0);
   expect(skillStockWindow(SKILL_STOCK_WINDOW_MS - 1)).toBe(0);
   expect(skillStockWindow(SKILL_STOCK_WINDOW_MS)).toBe(1);
-  // One window, one pair — deterministic, so two tabs can never disagree.
+
   const pair = skillStock(42);
   expect(pair).toEqual(skillStock(42));
   expect(pair).toHaveLength(SKILL_STOCK_SIZE);
   expect(new Set(pair).size).toBe(SKILL_STOCK_SIZE);
   for (const id of pair) expect(ids).toContain(id);
-  // Owning one slides it out of the stall and the next into view, without
-  // reshuffling the rest of the window's order.
+
   const [first, second] = pair;
   const restocked = skillStock(42, [first]);
   expect(restocked).toHaveLength(SKILL_STOCK_SIZE);
@@ -804,9 +780,9 @@ test("the skill stall sells three skills at a time and rotates every five minute
     ids.filter((id) => id !== first),
   );
   expect(finalSlot).toEqual([first]);
-  // Owning everything sells the stall out completely.
+
   expect(skillStock(42, ids)).toEqual([]);
-  // Across windows the pair rotates and every shop skill gets its turn.
+
   const pairs = new Set(),
     seen = new Set();
   for (let index = 0; index < 25; index++) {
@@ -823,18 +799,18 @@ test("the stall can say exactly when an out-of-stock skill comes back", () => {
   for (let window = 40; window < 60; window++) {
     for (const id of ids) {
       const offset = nextSkillStockOffset(window, [], id);
-      // The rotation carries every skill back within the two-hour horizon.
+
       expect(offset).toBeGreaterThanOrEqual(1);
       expect(offset).toBeLessThanOrEqual(24);
-      // …and the answer is exact: that window has it, no earlier one does.
+
       expect(skillStock(window + offset)).toContain(id);
       for (let earlier = 1; earlier < offset; earlier++)
         expect(skillStock(window + earlier)).not.toContain(id);
     }
   }
-  // An owned skill never comes back on the stall, so there is no answer.
+
   expect(nextSkillStockOffset(40, ["surge"], "surge")).toBeNull();
-  // The answer is deterministic: every tab quotes the same window.
+
   expect(nextSkillStockOffset(41, [], "twice")).toBe(
     nextSkillStockOffset(41, [], "twice"),
   );
@@ -842,18 +818,18 @@ test("the stall can say exactly when an out-of-stock skill comes back", () => {
 
 test("only the stocked skills can be bought, and buying one does not reshuffle the rest", () => {
   const ids = shopSkills.map((skill) => skill.id);
-  const at = 7 * SKILL_STOCK_WINDOW_MS + 1000; // Firmly inside window 7.
+  const at = 7 * SKILL_STOCK_WINDOW_MS + 1000;
   const stocked = skillStock(7);
   const away = ids.filter((id) => !stocked.includes(id));
   expect(away.length).toBeGreaterThan(0);
   const base = fund(100000000);
-  // The stall refuses an out-of-stock purchase, politely and without a sale.
+
   for (const id of away)
     expect(() => applyProgress(base, { type: "buy", id, at })).toThrow(
       /out of stock/,
     );
   expect(base.owned).toEqual([]);
-  // The stocked pair sells exactly as before: unlock, rack slot, one purchase.
+
   const bought = applyProgress(base, {
     type: "buy",
     id: stocked[0],
@@ -864,13 +840,12 @@ test("only the stocked skills can be bought, and buying one does not reshuffle t
   expect(bought.skills).toEqual([stocked[0]]);
   expect(bought.equippedSkills).toEqual([stocked[0]]);
   expect(bought.balance).toBe(100000000 - productById.get(stocked[0]).price);
-  // The other slot keeps its skill: the stall slides the next one in behind
-  // it rather than dealing a brand-new pair mid-window.
+
   const after = skillStock(7, bought.owned);
   expect(after).toHaveLength(SKILL_STOCK_SIZE);
   expect(after).toContain(stocked[1]);
   expect(after).not.toContain(stocked[0]);
-  // The arriving skill is buyable too, in the same window.
+
   const newcomer = after.find((id) => id !== stocked[1]);
   expect(() =>
     applyProgress(bought, { type: "buy", id: newcomer, at }),
@@ -878,12 +853,10 @@ test("only the stocked skills can be bought, and buying one does not reshuffle t
 });
 
 test("skill effects never touch the draw itself", () => {
-  // The whole engine only ever picks between numbers that were really rolled:
-  // a plan states a budget, and the floors are thresholds, not guarantees.
   const plan = drawPlanFor(["quarry", "griffin-dive"]);
   expect(plan.attempts).toBeLessThanOrEqual(SKILL_MAX_DRAWS);
   expect(plan.floor).toBe(100000);
-  // A floor cannot promise EP: an unfinished plan still commits a real number.
+
   const fallingBack = parsePending({
     id: "p1",
     number: 7,
@@ -895,7 +868,7 @@ test("skill effects never touch the draw itself", () => {
   });
   expect(fallingBack.draws).toContain(fallingBack.number);
   expect(fallingBack.skills).toEqual(["quarry"]);
-  // Skill products carry no number-editing payload of their own.
+
   for (const product of shopProducts.filter((p) => p.kind === "skill")) {
     expect(product.rollMS).toBeUndefined();
     expect(product.value).toBeUndefined();

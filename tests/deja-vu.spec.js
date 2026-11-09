@@ -6,8 +6,6 @@ import { evaluate } from "./helpers/index.js";
 import { emptyProgress, applyProgress } from "../src/progress.js";
 import { priorRollsOf, dejaVuIds } from "../src/deja-vu.js";
 
-// Déjà vu is a look for a number rolled before: the box changes, nothing else.
-
 const roll = (id, number, at) => {
   const scored = evaluate(number);
   return {
@@ -32,7 +30,7 @@ test("a repeated exact number is counted from the history and pays nothing extra
   state = applyProgress(state, roll("a", 103002, 1000));
   const once = state.balance;
   state = applyProgress(state, roll("b", 103002, 2000));
-  // Same EP both times: déjà vu is not a multiplier.
+
   expect(state.balance).toBe(once * 2);
   expect(priorRollsOf(state.history, 103002, "b")).toBe(1);
   expect(priorRollsOf(state.history, 103002, "a")).toBe(1);
@@ -74,7 +72,7 @@ test("the live roll and the History wear the déjà vu look only on a repeat", a
   await waitForApp(page);
   const rows = page.locator(".activity-roll .number-box");
   await expect(rows).toHaveCount(2);
-  // Newest first: the repeat wears the look, the original does not.
+
   await expect(rows.nth(0)).toHaveAttribute("data-deja-vu", "true");
   await expect(rows.nth(1)).not.toHaveAttribute("data-deja-vu", "true");
 });

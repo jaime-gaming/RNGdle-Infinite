@@ -74,7 +74,7 @@ import {
   writePresence,
   clearPresence,
 } from "./offline.js";
-// Keep repair details out of player-facing messages; readable progress stays.
+
 function repairWarning(repairs) {
   if (!repairs.length) return "";
   return "Some saved details needed fixing. Your readable progress was kept.";
@@ -116,8 +116,6 @@ function load() {
     const stored = localStorage.getItem(PROGRESS_KEY);
     const { progress, repairs } = parseAndRepairProgress(stored);
     if (!progress.profile) {
-      // A stale guest guard is ephemeral session data: when it cannot be
-      // read it is dropped instead of failing the whole load.
       try {
         const guard = JSON.parse(
           sessionStorage.getItem(GUEST_ROLL_KEY) || "null",
@@ -151,8 +149,6 @@ function load() {
     if (repairs.length) {
       console.info("[RNGdle] save repaired:", repairs);
       try {
-        // Heal the file itself, keeping the exact pre-repair bytes aside so
-        // a bad repair can always be undone by hand.
         localStorage.setItem(PRE_REPAIR_BACKUP_KEY, stored);
         const saveOwner = readCloudOwner();
         writePreRepairOwner(saveOwner, localStorage);
@@ -162,9 +158,7 @@ function load() {
           storage: localStorage,
           ownerId: saveOwner,
         });
-      } catch {
-        // Storage unwritable: the repaired save still runs in memory.
-      }
+      } catch {}
     }
     return { progress, warning: repairs.length ? repairWarning(repairs) : "" };
   } catch {
@@ -203,8 +197,6 @@ export function useProgress({
   );
   const current = useRef(initial.progress),
     healthy = useRef(!initial.warning),
-    // The rolls this tab settled while saving was failing, by id. Only these
-    // are owed again when the save recovers (see recoverUnsavedRolls).
     unsaved = useRef(new Set()),
     generation = useRef(0),
     queue = useRef(Promise.resolve()),
@@ -479,8 +471,6 @@ export function useProgress({
       };
     }
 
-    // A running maintenance pauses cloud sync: keep the local copy usable and
-    // wait for the maintenance to end instead of hammering Firestore.
     if (maintenanceActiveFor(getStatusIssue())) {
       const localCopyIsOwned =
         readCloudOwner() === userId &&
@@ -510,10 +500,6 @@ export function useProgress({
       let cachedProgress = null;
       let cacheWarning = "";
 
-      // Local first: write this device's copy back before touching the cloud.
-      // A stalled request or a failed transaction then cannot cost progress
-      // the player already made here. A save owned by another account is kept
-      // in its own cache below, not written over.
       if (localRaw && (!localOwner || localOwner === userId))
         writeLocalSave(localProgress);
 
@@ -531,8 +517,7 @@ export function useProgress({
           cacheWarning =
             "This device could not keep a copy of the previous account’s progress.";
         }
-        // A save marked for another auth user is never a first-sign-in import.
-        // Only this account's own cached save may follow it across a switch.
+
         const cached = readCachedSaveForUser(userId);
         if (cached) {
           try {
@@ -572,17 +557,14 @@ export function useProgress({
     });
     loadTask.catch((loadError) => {
       if (!currentRequest()) return;
-      // The cloud copy could not be trusted, so the local one is authoritative
-      // until an explicit retry. Persist it and flag it for that retry instead
-      // of leaving any new local progress only in memory.
+
       const ownerOnFailure = readCloudOwner();
       if (!ownerOnFailure || ownerOnFailure === userId) {
         writeLocalSave(current.current);
         markCloudDirty(userId);
       }
       cloudGate.current = { userId, ready: false };
-      // Surface the underlying Firebase error code (e.g. permission-denied,
-      // unavailable) so the real cause is visible without a console.
+
       const detail =
         typeof loadError?.code === "string" && loadError.code
           ? ` (${loadError.code})`
@@ -1056,8 +1038,7 @@ export function useProgress({
         if (previous.profile) {
           try {
             const stored = parseProgress(localStorage.getItem(PROGRESS_KEY));
-            // Always check identity, even after a failed write: a stale tab must
-            // never resurrect a deleted account or spend another profile's EP.
+
             if (
               stored.profile?.id !== previous.profile.id ||
               stored.rebirths !== previous.rebirths ||
@@ -1109,8 +1090,6 @@ export function useProgress({
               message: `Wait until this account’s online progress has loaded before changing the ${mutationLabel}.`,
             };
 
-          // Drain or invalidate the ordinary debounced backup before changing
-          // identity data. A cosmetic change must never hide a save conflict.
           cloudWriteVersion.current++;
           let reconciliation;
           try {
@@ -1210,8 +1189,6 @@ export function useProgress({
           if (!readable && !deletingCloudAccount)
             return { ok: false, message: "Your progress could not be opened." };
           if (cloudUser) {
-            // Invalidate an initial cloud load as well as debounced writes; it is
-            // serialized on this queue so deletion can wait for its transaction.
             if (deletingCloudAccount) cloudGeneration.current += 1;
             cloudWriteVersion.current += 1;
             cloudGate.current = { userId: cloudUser, ready: false };
@@ -1539,16 +1516,12 @@ export function useProgress({
           }
           const timing = rollSettings(previous.owned);
           const flywheel = flywheelForDraw(previous);
-          // Up to six genuine draws. Skills that cannot fit keep their charge;
-          // only actually-fired skills enter the committed snapshot below.
+
           const armed = armedSkills(previous);
           const plan = drawPlanFor(armed);
           if (flywheel === "boost" || skillWaivesCooldown(armed))
             timing.cooldownMS = 0;
-          // Every draw is an ordinary, independent roll scored by the verified
-          // index; the plan only says how many to take and when to stop early.
-          // Each draw skill spends its own draws and keeps its own number, and
-          // the roll pays for every number it kept.
+
           let result,
             draws = null,
             picks = null,
@@ -1563,7 +1536,7 @@ export function useProgress({
                 restoreRoll,
                 { ordinary: true },
               ));
-          // No digits reach the UI until the draw has been committed below.
+
           if (token !== generation.current)
             throw new Error("This game was reset. The draw was cancelled.");
           if (
@@ -1587,9 +1560,7 @@ export function useProgress({
             ...timing,
             ...(fired.length ? { skills: fired } : {}),
             ...(draws ? { draws, drawLimit: SKILL_MAX_DRAWS } : {}),
-            // Which draw skill kept which number, and which one (or the plain
-            // draw) supplied the committed result. The roll pays for every kept
-            // number, even when two skills happen to keep the same number.
+
             ...(picks && picks.length
               ? { picks, winnerSkill, winnerIndex }
               : {}),
@@ -1623,13 +1594,11 @@ export function useProgress({
             throw new Error(
               "This roll is no longer available. No EP was added.",
             );
-          // Scores and badges come from the verified index, never from a UI payload.
+
           const result = await restoreRoll(pending.number);
           if (token !== generation.current)
             throw new Error("This game was reset. The roll was cancelled.");
-          // Every other number a draw skill kept is scored here, from the same
-          // verified index, so the settlement can pay each of them: the roll
-          // banks one number per skill, not only the one it commits.
+
           const extras = [];
           for (const pick of pending.picks ?? []) {
             if (pick.skill === pending.winnerSkill) continue;
@@ -1913,8 +1882,6 @@ export function useProgress({
               };
             }
             if (action.type === "complete") {
-              // The settled roll is kept in memory only, so remember exactly
-              // which rolls those are: they are the only ones owed on recovery.
               const known = new Set(previous.history.map((e) => e.id));
               for (const event of next.history)
                 if (
@@ -2021,7 +1988,7 @@ export function useProgress({
             ? next.offline.batch.numbers.length - next.offline.batch.index
             : 0,
           ...(committed ? { run: committed } : {}),
-          // Bulk delete reports how many entries it actually removed.
+
           ...(action.type === "history-prune"
             ? { removed: previous.history.length - next.history.length }
             : {}),
@@ -2117,7 +2084,6 @@ export function useProgress({
     try {
       writeDeviceSave(localStorage, PROGRESS_KEY, copy.raw);
     } catch {
-      // Fail closed if the primary write failed after the marker changed.
       writeCloudOwner(UNKNOWN_CLOUD_OWNER);
       return {
         ok: false,
@@ -2125,17 +2091,14 @@ export function useProgress({
           "The saved copy could not be restored. Free up space on this device and try again.",
       };
     }
-    // An explicit restore is a decision about which copy is real. Tell the next
-    // sync that this local save wins over the online copy it may replace, so
-    // the restore is backed up instead of being undone as "older progress".
+
     if (typeof owner.ownerId === "string" && owner.ownerId)
       writeCloudSyncMark(
         owner.ownerId,
         { profileId: restored.profile?.id ?? null, authoritative: true },
         localStorage,
       );
-    // Do not replace the rolling vault: it still protects the progress that was
-    // active before this explicit restore. The next normal save refreshes it.
+
     reset(restored);
     return { ok: true, at: copy.at };
   }

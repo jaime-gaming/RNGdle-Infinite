@@ -5,7 +5,7 @@ was explicitly approved as-is and was not changed.
 
 ## Changes
 
-- Settings ends with the exact internal label `RNGdle-Infinitev0.5.2fix4` in a
+- Settings ends with the exact internal label `v0.5.2fix4` in a
   small muted line (`settings-version`), pinned by a test.
 - The footer's changelog button now reads `Changelog`, like its neighbours.
 - Disabled controls show `cursor: not-allowed` instead of `wait`/`progress`.

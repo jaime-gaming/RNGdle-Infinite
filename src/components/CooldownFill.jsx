@@ -9,8 +9,7 @@ export default function CooldownFill({ window: window, reducedMotion }) {
     if (start == null || end <= start) return;
     const node = ref.current,
       duration = end - start;
-    // Let the compositor interpolate, rather than rendering React or writing the
-    // DOM every frame. Resynchronise against the authoritative local deadline.
+
     const animation = reducedMotion
       ? null
       : node.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {

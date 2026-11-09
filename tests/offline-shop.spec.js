@@ -72,7 +72,7 @@ test("offline accounting uses whole ten-minute periods, caps at 144, and exclude
       "offline-roller",
     ]),
   ).toThrow();
-  // A vault owner may legitimately hold a larger batch, but never more than it.
+
   expect(
     parseOffline({ ...b, batch: { ...b.batch, numbers: Array(216).fill(1) } }, [
       "offline-roller",
@@ -317,8 +317,7 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
   page,
 }) => {
   await seedProgress(page, { balance: 40000000, totalEarned: 40000000 });
-  // Every set is its own page now, so the walk is per family: each one
-  // previews exactly its own looks behind the same rarity control.
+
   const auras = shopProducts.filter((p) => p.kind === "aura");
   let auraCount = 0;
   for (const family of AURA_FAMILIES) {
@@ -336,7 +335,6 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
   }
   expect(auraCount).toBe(auras.length);
   for (const id of ["eclipse", "prism", "offline-roller"]) {
-    // Auras open their family page; the Offline Roller itself is a tool.
     await openShelfFor(page, id);
     await page
       .locator(
@@ -356,7 +354,7 @@ test("new premium cosmetics share rarity previews, preserve ownership and respec
       ),
   );
   expect((await saved(page)).equipped).toBe("prism");
-  // Back to each aura's own page: the roller lives in Tools.
+
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });
   for (const [family, id] of [

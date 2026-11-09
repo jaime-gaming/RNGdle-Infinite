@@ -14,14 +14,9 @@ function readDismissed() {
 function writeDismissed(value) {
   try {
     sessionStorage.setItem(DISMISS_KEY, value);
-  } catch {
-    // A missing sessionStorage must not break the status notices.
-  }
+  } catch {}
 }
 
-// One shared poller for the whole app: the banner, the header indicator and
-// the maintenance gate all read this store, so the status page is fetched once
-// per interval no matter how many components are mounted.
 let state = { issue: null, dismissedId: readDismissed() };
 const listeners = new Set();
 let started = false;
@@ -76,8 +71,6 @@ export function reopenStatusIssue() {
   setState({ dismissedId: "" });
 }
 
-// A maintenance only blocks the game while it is actually running, not while
-// it is merely scheduled for later.
 export function maintenanceActiveFor(issue) {
   if (!issue || issue.kind !== "maintenance") return false;
   const status = String(issue.status ?? "")

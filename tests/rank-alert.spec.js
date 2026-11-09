@@ -15,8 +15,6 @@ const rolls = async (page) =>
 const autoRollSwitch = (page) =>
   page.getByRole("switch", { name: "Auto-Roll", exact: true });
 
-// A selected rank threshold stops automation and leaves the roll's stats
-// available, without putting its exact number in the notification.
 test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async ({
   page,
 }) => {
@@ -48,7 +46,7 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
   const rankSelect = page.getByLabel("Minimum rank");
   await expect(rankToggle).toHaveAttribute("aria-checked", "false");
   await expect(rankSelect).toBeDisabled();
-  // Rank alerts activate on their own switch, not via the ready notification.
+
   await rankToggle.click();
   await expect(rankToggle).toHaveAttribute("aria-checked", "true");
   await expect(rankSelect).toBeEnabled();
@@ -104,8 +102,7 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
     tag: "rngdle-infinite-rank",
     silent: true,
   });
-  // Auto-Roll was on when the matching roll committed, so the notification
-  // offers to stop it, plus a plain dismiss.
+
   expect(notification.actions).toEqual([
     { action: "stop-auto-roll", title: "Stop auto roll" },
     { action: "dismiss", title: "Dismiss" },

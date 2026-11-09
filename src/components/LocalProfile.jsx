@@ -18,9 +18,6 @@ import { publicProfileId, publicProfileUrl } from "../public-profile.js";
 import ProfileRecord from "./ProfileRecord.jsx";
 import "../profile.css";
 
-// A one-way export: the browser saves a PNG card with the account name,
-// biggest roll and key stats. Nothing in the game reads a card back — a card
-// you downloaded can never overwrite the game you are playing.
 async function downloadExport(progress) {
   const blob = await renderExportPngBlob(progress);
   const url = URL.createObjectURL(blob);
@@ -33,9 +30,6 @@ async function downloadExport(progress) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// The account's face: the logo it uploaded, or the neutral icon every new
-// account starts with. Used by the profile page, the header button and the
-// sign-up preview, so all three can never disagree.
 export function AvatarMark({
   avatar,
   size = 40,
@@ -63,7 +57,6 @@ export function AvatarMark({
   );
 }
 
-// Suggestions are cosmetic only: a starting point for the name field.
 const NAME_PARTS = [
   ["Lucky", "Golden", "Cosmic", "Quiet", "Feral", "Velvet", "Neon", "Humble"],
   ["Comet", "Otter", "Pigeon", "Cipher", "Marble", "Falcon", "Ember", "Badger"],
@@ -77,8 +70,6 @@ function suggestName() {
   )}`;
 }
 
-// Every prestige means the six rungs were climbed once more; every Rollback
-// means three prestiges and its own climb on top.
 function ladderClimbs(progress) {
   const n =
     (progress.ultraRebirths ?? 0) +
@@ -146,9 +137,7 @@ export default function LocalProfile({
     : "";
   const [logoNote, setLogoNote] = useState("");
   const [shareNote, setShareNote] = useState("");
-  // Cloud profiles use a clean /profile/<username> URL only after the owner
-  // explicitly enables public visibility. Local-only cards stay one-way
-  // snapshots carried by their own read-only links.
+
   const [shareLink, setShareLink] = useState("");
   async function copyProfileLink() {
     let url;
@@ -212,7 +201,7 @@ export default function LocalProfile({
   const avatar = profile?.avatar ?? "";
   async function chooseLogo(event) {
     const file = event.target.files?.[0];
-    // Reset first: choosing the same file twice must work.
+
     event.target.value = "";
     if (!file) return;
     if (logoLocked) {
@@ -251,7 +240,7 @@ export default function LocalProfile({
       outcome.ok ? "Logo removed. The account icon is back." : outcome.message,
     );
   }
-  // Live feedback: say what is wrong while typing rather than only on submit.
+
   const trimmed = username.trim();
   const tooShort = trimmed.length > 0 && trimmed.length < 3;
   const badCharacters =
@@ -337,7 +326,6 @@ export default function LocalProfile({
     try {
       const result = await onAction({ type: "delete", profileId: profile.id });
       if (result.ok) {
-        // The page stays: with the profile gone, the account setup returns.
         setDeleting(false);
         setConfirmation("");
         onProfileDeleted?.();
@@ -406,8 +394,6 @@ export default function LocalProfile({
     <>
       <h2 className="profile-title">
         {profile && canEdit && (
-          // The logo is its own control: click it to add or replace the
-          // picture. No separate upload section.
           <button
             type="button"
             className="profile-logo-button"

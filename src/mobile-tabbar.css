@@ -1,7 +1,3 @@
-/* The phone layout: a bottom bar of at most five buttons. Shop and Tasks lead
-   on the left, Roll stays centred on its raised disc, Badges and More take the
-   right, and More holds everything else. Hidden above 760px — the header owns
-   the navigation there. */
 .mobile-tabbar {
   display: none;
 }
@@ -83,7 +79,6 @@
     white-space: nowrap;
   }
 
-  /* Roll: the disc lifts above the bar, the label keeps the common baseline. */
   .mobile-tabbar .mobile-tabbar-roll,
   .mobile-tabbar .mobile-tabbar-roll.active {
     background: none;
@@ -111,7 +106,6 @@
       0 8px 20px color-mix(in srgb, var(--green) 40%, transparent);
   }
 
-  /* More sits at the far right; its menu opens inward so it stays on-screen. */
   .mobile-more-menu {
     position: absolute;
     bottom: calc(100% + 12px);

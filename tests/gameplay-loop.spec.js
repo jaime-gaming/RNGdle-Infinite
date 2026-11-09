@@ -34,7 +34,6 @@ const complete = (id) => ({
 const settled = (p) =>
   expect(p.locator(".roll-experience")).toHaveAttribute("data-settled", "true");
 
-// No chance, reward, or timing rules live in the guidance layer.
 test("recommendations respect progression, custom choices and the completed workshop", () => {
   let p = emptyProgress();
   expect(currentGoal(p).id).toBe("quickwind-1");
@@ -163,8 +162,6 @@ test("post-roll feedback waits for the full reveal and repeated numbers do not i
 test("a found companion bursts out of its cage on the roll stage", async ({
   page,
 }) => {
-  // Main-thread randomness feeds the companion drop and nothing else, so
-  // pinning it to zero drops the first missing friend: pebble, every time.
   await page.addInitScript(() => {
     Object.defineProperty(globalThis.crypto, "getRandomValues", {
       configurable: true,
@@ -180,8 +177,7 @@ test("a found companion bursts out of its cage on the roll stage", async ({
   await waitForApp(page);
   await page.locator(".generate").click();
   await expect.poll(async () => !!(await saved(page)).pendingRoll).toBe(true);
-  // Step the clock until the arrival lands: it lives 5.6s of clock time, so
-  // one big jump would skip past it.
+
   for (let step = 0; step < 60; step += 1) {
     if (await page.locator("[data-arrival]").count()) break;
     await page.clock.fastForward(1000);
@@ -197,8 +193,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
 }) => {
   await seedProgress(page, { balance: 100000, totalEarned: 100000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // The goal is set from the goal banner: arm pick mode, then tap the card
-  // you want. A plain card click never changes the goal.
+
   await page.goto("/shop/pace");
   await waitForApp(page);
   await page
@@ -242,9 +237,7 @@ test("a chosen goal persists, focuses its shop card, requires confirmation and a
   await page
     .getByRole("button", { name: "Continue rolling", exact: true })
     .click();
-  // With the goal bought, the recap falls back to the next recommended item.
-  // Both the name and its price come from the loop itself, so a repricing or a
-  // reordered catalogue shows up as a real behaviour change, not a stale pin.
+
   const remaining = 100000 - productById.get("quickwind-1").price;
   const next = recommendedGoal({
     ...emptyProgress(),
@@ -282,8 +275,7 @@ test("failed goal writes preserve the previous choice and wallet and can be retr
       return write.call(this, key, value);
     };
   }, PROGRESS_KEY);
-  // Pick mode is armed from the banner; a failed write keeps it armed, so
-  // the retry is one tap, not a second trip to the banner.
+
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Change goal", exact: true })
@@ -393,7 +385,7 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   await expect(page.locator(".shop-goal")).not.toContainText("Your goal");
   await page.goto("/shop/skills");
   await waitForApp(page);
-  // The reload dropped the guest goal, so the banner is back to "Set goal".
+
   await page
     .locator(".shop-goal")
     .getByRole("button", { name: "Set goal", exact: true })
@@ -413,8 +405,7 @@ test("guest goals are temporary until signup; signup preserves the choice withou
   expect((await saved(page)).history).toHaveLength(0);
   await page.reload();
   await waitForApp(page);
-  // The profile page has no goal control: the saved choice is read back where
-  // the banner lives.
+
   await page.goto("/#shop");
   await waitForApp(page);
   await expect(page.locator(".shop-goal")).toContainText("Your goal: Flywheel");
@@ -507,7 +498,7 @@ test("a funded offline goal still explains the profile requirement instead of cl
       '[data-product="offline-roller"] button:not(.shop-tag):not(.shop-look-eye)',
     )
     .click();
-  // No profile: the product button navigates to the profile page.
+
   await expect(page.locator(".profile-page")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Start saving my progress", exact: true }),

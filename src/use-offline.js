@@ -43,8 +43,7 @@ export function useOffline(progress, dispatch, enabled = true) {
         ) {
           result = await action.current({ type: "offline-settle" });
           if (!result.ok) throw new Error(result.message);
-          // Record presence only after persisted commitments are fully settled;
-          // a reload interrupted during catch-up must not discard another absence.
+
           if (result.offlineRemaining === 0) {
             result = await action.current({
               type: "offline-sync",

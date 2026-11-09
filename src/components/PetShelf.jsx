@@ -16,28 +16,18 @@ import PetIcon from "./PetIcon.jsx";
 import { CompanionMark, SkillIcon } from "./game-icons.jsx";
 import "../pets.css";
 
-// Companions are a slideshow of cages: one companion stands in the middle of
-// the stage and the arrows slide to the next one, so thirteen friends read as
-// a shelf you walk along instead of a wall of rows. A rail of small cages
-// under the stage jumps straight to any of them.
-//
-// Buy one, or be very lucky. Equipping is free and the bonus applies to
-// banked EP only — never to the number, its tier or its score.
 export default function PetShelf({
   progress,
   onAction,
   notify,
-  // A goal link (the banner, the spotlight, a recap) names the companion it
-  // points at: the stage turns to it.
+
   focus = null,
-  // Pick mode is armed from the goal banner; while it is, any unfound
-  // companion on the stage becomes the goal when tapped.
+
   pickingGoal = false,
   onPickingGoal = () => {},
 }) {
   const formatEP = useFormatEP();
-  // The sale covers the whole shop, companions included, so the price a cage
-  // shows is the day's price while the day is on.
+
   const sale = useSaleStatus();
   const priceOf = (pet) => saleCompanionPrice(pet, sale.now);
   const [pending, setPending] = useState("");
@@ -51,8 +41,7 @@ export default function PetShelf({
     PETS.some((pet) => pet.id === id),
   );
   const active = progress.activePet ?? "none";
-  // The tracked goal, when it is a companion still unfound. A product goal is
-  // the shop's own banner's business, so it reads as no goal here.
+
   const tracked = validGoal(progress.goalId, progress.owned, owned)
     ? progress.goalId
     : null;
@@ -61,7 +50,7 @@ export default function PetShelf({
   useEffect(() => {
     const at = PETS.findIndex((pet) => pet.id === focus);
     if (at < 0) return;
-    // A goal can only be an unfound companion, so "Only mine" steps aside.
+
     setOnlyMine(false);
     setIndex(at);
     const frame = requestAnimationFrame(() => {
@@ -75,7 +64,6 @@ export default function PetShelf({
     return () => cancelAnimationFrame(frame);
   }, [focus]);
 
-  // Resolves to whether the action landed, so a pick can end once it has.
   async function run(action, id, message) {
     if (busy.current) return false;
     busy.current = true;
@@ -84,9 +72,7 @@ export default function PetShelf({
       const result = await onAction({ type: action, id });
       if (result.ok) {
         notify?.({ kind: "done", text: message });
-        // Equipping — or buying, which equips — opens the cage: the door
-        // swings and the friend hops out. Putting one away cages it again,
-        // so that one stays quiet.
+
         if ((action === "equip-pet" || action === "buy-pet") && id !== "none") {
           setUncaged(id);
           clearTimeout(uncageTimer.current);
@@ -100,9 +86,6 @@ export default function PetShelf({
     }
   }
 
-  // A companion goal is a choice like a product goal: no EP is spent, and the
-  // pick is done the moment the goal lands. Clearing it hands back the shop's
-  // own recommendation.
   async function setGoal(pet) {
     const done = await run(
       "goal",
@@ -120,13 +103,10 @@ export default function PetShelf({
     return true;
   });
 
-  // The stage points inside the visible list: "Only mine" can shrink the list
-  // under it, and the position clamps rather than falling off the end.
   const at = visible.length ? Math.min(index, visible.length - 1) : 0;
   const slide = (delta) =>
     setIndex((at + delta + visible.length) % visible.length);
 
-  // Left and right arrows slide the stage while the shelf has focus.
   function slideKeys(event) {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
@@ -217,8 +197,7 @@ export default function PetShelf({
                 const affordable = progress.balance >= price;
                 const signature = skillForPet(pet.id);
                 const current = i === at;
-                // Pick mode: an unfound companion is the goal when tapped, and
-                // tapping the tracked one again untracks it, as on the shelves.
+
                 const pickable = pickingGoal && !isOwned;
                 return (
                   <article
@@ -365,8 +344,7 @@ export default function PetShelf({
           >
             <ChevronRight size={20} aria-hidden="true" />
           </button>
-          {/* One quiet announcement for screen readers: the stage's label
-              changes with the slides, and this is what changed. */}
+
           <span className="sr-only" aria-live="polite">
             {visible[at].name}, {petBonusLabel(visible[at].multiplier)}
           </span>
@@ -375,7 +353,7 @@ export default function PetShelf({
               {String(at + 1).padStart(2, "0")} /{" "}
               {String(visible.length).padStart(2, "0")}
             </span>
-            {/* Every cage is one jump: the rail is the shelf seen from above. */}
+
             <div className="pet-rail" aria-label="Companion cages">
               {visible.map((pet, i) => (
                 <button

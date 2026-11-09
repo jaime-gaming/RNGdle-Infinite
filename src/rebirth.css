@@ -1,10 +1,3 @@
-/* The rebirth page: a milestone with figures, a ladder and the two lists that
-   answer "what do I lose, what do I keep". Nothing here renders before the
-   ladder unlocks.
-   The page is one ceremony: every block rises into place, the gauge winds
-   itself up to the number it is showing, and the rung you are standing on
-   keeps a slow pulse until it is done. Every one of those animations is
-   decoration — switch off motion and the page is exactly the same page. */
 @property --gauge-fill {
   syntax: "<percentage>";
   inherits: false;
@@ -17,9 +10,6 @@
   margin-bottom: 40px;
 }
 
-/* ---- The hero ------------------------------------------------------------ */
-/* The step you are on, with the ring that measures it. Two slow auroras drift
-   behind the copy so the band reads as an occasion rather than a card. */
 .rebirth-hero {
   position: relative;
   display: grid;
@@ -128,8 +118,7 @@
   align-items: center;
   gap: 7px;
 }
-/* The rebirth button is the moment the whole page is about: it breathes once
-   every few seconds while the step is within reach. */
+
 .rebirth-actions .primary-button:not(:disabled) {
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 45%, transparent);
   animation: rebirth-pulse 3.4s ease-in-out infinite;
@@ -149,8 +138,7 @@
   line-height: 1.6;
   color: var(--muted);
 }
-/* This cycle, in the player's own numbers: what the run they are about to hand
-   back has actually done. */
+
 .rebirth-cycle {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -179,7 +167,6 @@
   overflow-wrap: anywhere;
 }
 
-/* ---- The gauge ----------------------------------------------------------- */
 .rebirth-hero-progress {
   display: flex;
   flex-direction: column;
@@ -194,8 +181,7 @@
   width: 148px;
   height: 148px;
   border-radius: 50%;
-  /* The sheen below is a rotating square: the ring's own circle is the only
-     shape it is allowed to paint in. */
+
   overflow: hidden;
   background: conic-gradient(
     var(--green) var(--gauge-fill),
@@ -208,8 +194,7 @@
     --gauge-fill: 0%;
   }
 }
-/* A slow sheen crosses the ring while it is filling, so the number is being
-   counted up rather than simply printed. */
+
 .rebirth-gauge::before {
   content: "";
   position: absolute;
@@ -272,8 +257,7 @@
   margin: 0;
   font: 700 15px/1.3 var(--roll-font);
 }
-/* The second half of a rung's price: how much of the EP this cycle has
-   already scored, next to the badge ring's slice of the collection. */
+
 .rebirth-meter {
   display: flex;
   flex-direction: column;
@@ -308,7 +292,6 @@
   transition: width 0.5s ease;
 }
 
-/* ---- Blocks -------------------------------------------------------------- */
 .rebirth-block {
   padding: 22px 24px;
   border: 1px solid var(--border);
@@ -320,8 +303,7 @@
     box-shadow 0.3s ease,
     transform 0.3s ease;
 }
-/* The page is long: a block that is being read lifts a hair towards the
-   reader, so where you are is never in doubt. */
+
 .rebirth-block:hover {
   border-color: color-mix(in srgb, var(--green) 28%, var(--border));
   box-shadow: 0 10px 30px color-mix(in srgb, var(--text) 6%, transparent);
@@ -425,9 +407,6 @@
   color: var(--muted);
 }
 
-/* ---- The ladder ---------------------------------------------------------- */
-/* Six rungs, each with its requirement, its progress and the skill it hands
-   over. The one you are standing on is the only one that moves. */
 .rebirth-ladder {
   display: flex;
   flex-direction: column;
@@ -448,9 +427,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg);
-  /* The ladder is re-keyed when a rebirth lands, so every rung replays its
-     entrance: the finished one settles green, the next one steps up, and the
-     blurred preview comes back into focus one step further down. */
+
   animation: rung-in 380ms ease-out both;
   transition:
     border-color 0.35s ease,
@@ -470,9 +447,7 @@
 .rebirth-ladder li.is-done {
   animation: rung-done 460ms ease-out both;
 }
-/* Finished rungs are memories: they wear the same blur as the faded preview,
-   only lighter, and come back into focus on hover or keyboard focus. On
-   touch screens the blur stays subtle enough to read without a pointer. */
+
 .rebirth-ladder li.is-done {
   opacity: 0.82;
   filter: blur(1.5px);
@@ -560,7 +535,7 @@
   color: var(--green);
   border-color: color-mix(in srgb, var(--green) 45%, var(--border));
 }
-/* The step you are on keeps a slow pulse, so the eye finds it first. */
+
 .rebirth-ladder li.is-current .rebirth-rung-mark {
   color: var(--text);
   border-color: var(--text);
@@ -613,8 +588,7 @@
   );
   transition: width 0.5s ease;
 }
-/* The bar you are filling carries a shine that travels it, so a rung that is
-   nearly there reads as nearly there. */
+
 .rebirth-ladder li.is-current .rebirth-rung-bar span::after {
   content: "";
   position: absolute;
@@ -680,7 +654,7 @@
 .rebirth-reward.is-earned > svg {
   color: var(--green);
 }
-/* The starting sum each rung pays, on the same line as its reward. */
+
 .rebirth-reward-starter {
   display: inline-flex;
   align-items: center;
@@ -697,7 +671,6 @@
   color: var(--green);
 }
 
-/* ---- The preview: what the button would do to this save ------------------ */
 .rebirth-preview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -723,8 +696,7 @@
   transform: translateY(-2px);
   box-shadow: 0 12px 26px color-mix(in srgb, var(--text) 7%, transparent);
 }
-/* A wash of the card's own colour at its top edge: give, take and keep read
-   apart before a word is read. */
+
 .rebirth-preview-card::before {
   content: "";
   position: absolute;
@@ -821,8 +793,6 @@
   font-family: var(--roll-font);
 }
 
-/* ---- Ultra-rebirth ------------------------------------------------------- */
-/* The permanent bonus, explained where the ladder ends. */
 .rebirth-ultra-card {
   display: grid;
   grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.6fr);
@@ -842,8 +812,7 @@
   text-align: center;
   overflow: hidden;
 }
-/* A slow wheel of light behind the infinity mark: the one place on the page
-   that is allowed to look like prestige. */
+
 .rebirth-ultra-figure::before {
   content: "";
   position: absolute;
@@ -928,9 +897,6 @@
   border-color: color-mix(in srgb, var(--green) 40%, var(--border));
 }
 
-/* ---- Rollback: the last stage ------------------------------------------ */
-/* The same card as the prestige, worn in gold: it is the final stage, and it
-   pays more than any stage before it. */
 .rebirth-rollback {
   background: rgb(217 164 65 / 0.14);
   color: #a97c1f;
@@ -944,10 +910,6 @@
   color: #a97c1f;
 }
 
-/* ---- The confirm dialog -------------------------------------------------- */
-/* The one decision on the page worth a ceremony of its own: the dialog comes
-   up out of the page instead of blinking into it. The rebirth dialog shares
-   the shop's shell, so it names both classes to win the slower entrance. */
 .rebirth-confirm.shop-confirm[open] {
   animation: rebirth-dialog 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
@@ -1022,7 +984,6 @@
   }
 }
 
-/* ---- Ultra legacy panel -------------------------------------------------- */
 .rebirth-legacy-grid {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr);
@@ -1062,7 +1023,6 @@
   color: #a97c1f;
 }
 
-/* ---- Phones -------------------------------------------------------------- */
 @media (max-width: 900px) {
   .rebirth-hero,
   .rebirth-columns,
@@ -1099,7 +1059,7 @@
   .rebirth-figures {
     grid-template-columns: 1fr 1fr;
   }
-  /* Two columns of figures and a smaller ring keep the hero inside a phone. */
+
   .rebirth-gauge {
     width: 124px;
     height: 124px;
@@ -1126,7 +1086,7 @@
     flex-shrink: 1;
     white-space: normal;
   }
-  /* One thumb-wide target per action on a phone. */
+
   .rebirth-actions {
     align-items: stretch;
   }
@@ -1139,9 +1099,6 @@
   }
 }
 
-/* ---- Stillness ----------------------------------------------------------- */
-/* Motion is decoration here: with it switched off the page is the same page,
-   one frame older, and every number stays readable. */
 @media (prefers-reduced-motion: reduce) {
   .rebirth-hero,
   .rebirth-block,
@@ -1174,11 +1131,6 @@
   }
 }
 
-/* ---- The ceremony ---------------------------------------------------------
-   The ultra-rebirth earns a moment: rays, a slam and confetti, pointer-
-   transparent over the page. Everything is driven by animation — the global
-   reduced-motion reset sets `animation: none`, which leaves the shell at its
-   resting opacity of 0, so reduced motion never sees any of it. */
 .ultra-ceremony {
   position: fixed;
   inset: 0;
@@ -1417,16 +1369,6 @@
   align-items: center;
 }
 
-/* ---- The rebirth ceremony ---------------------------------------------------
-   A plain rebirth earns a smaller moment than the ultra ceremony: one rainbow
-   circle spinning over the new cycle, pointer-transparent over the page.
-   Everything is driven by animation — the global reduced-motion reset sets
-   `animation: none`, which leaves the shell at its resting opacity of 0, so
-   reduced motion never sees any of it.
-
-   The name is deliberately its own: `.rebirth-ring` also styles the progress
-   ring inside the header's rebirth button, and the two used to collide — the
-   ceremony's fixed overlay hid the button's ring. */
 .rebirth-ceremony {
   position: fixed;
   inset: 0;
@@ -1445,7 +1387,7 @@
     rgb(10 10 16 / 0.62);
   animation: rebirth-ceremony-shell 3.3s ease-out forwards;
 }
-/* One bright frame as the cycle turns — the "camera flash" of the moment. */
+
 .rebirth-ceremony-flash {
   position: absolute;
   inset: 0;
@@ -1458,7 +1400,7 @@
   opacity: 0;
   animation: rebirth-ceremony-flash 3.3s ease-out forwards;
 }
-/* Rainbow rays wheeling behind the ring, masked so only the halo shows. */
+
 .rebirth-ceremony-rays {
   position: absolute;
   left: 50%;
@@ -1488,7 +1430,7 @@
   opacity: 0;
   animation: rebirth-ceremony-rays 3.3s ease-out forwards;
 }
-/* The shockwave the burst leaves behind: a thin ring racing outwards. */
+
 .rebirth-ceremony-shock {
   position: absolute;
   left: 50%;
@@ -1552,8 +1494,7 @@
   opacity: 0;
   animation: rebirth-ceremony-sub 3.3s ease-out forwards;
 }
-/* The burst, in shards: the same confetti storm the ultra ceremony earns,
-   in the rainbow the ring was wearing. */
+
 .rebirth-ceremony-confetti {
   position: absolute;
   inset: 0;
@@ -1763,9 +1704,6 @@
   }
 }
 
-/* Before the last rung there is no Prestige to show. The place it will take is
-   a faded, blurred stand-in with one line on top: there is more, and nothing in
-   the stand-in is interactive. */
 .rebirth-teaser {
   position: relative;
   overflow: hidden;
@@ -1807,7 +1745,6 @@
   color: var(--secondary);
 }
 
-/* The teaser names the last stage only once Rollback is no longer a secret. */
 .rebirth-teaser-hint {
   position: relative;
   margin: 8px 0 0;

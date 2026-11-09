@@ -1,7 +1,3 @@
-/* Incident banner: sits under the header on every page, in the normal flow so
-   it never covers the rack, game controls or tab bar. The severity class sets
-   the accent color: critical = danger red, major = warning amber,
-   minor/maintenance = neutral. */
 .status-banner {
   --status-accent: var(--warning);
   display: flex;
@@ -110,8 +106,6 @@
   }
 }
 
-/* Header indicator: stays while any RNGdle Infinite incident/maintenance is
-   active, even when the banner is dismissed. */
 .status-indicator {
   position: relative;
   display: inline-flex;

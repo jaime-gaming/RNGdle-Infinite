@@ -19,7 +19,6 @@ const nav = (page, name) =>
     .getByRole("button", { name, exact: true })
     .click();
 async function register(page) {
-  // Profile is a page now: the button navigates to /profile.
   await page.locator(".sign-in").click();
   const continueLocally = page.getByRole("button", {
     name: "Continue locally",
@@ -46,7 +45,6 @@ async function confirmDelete(page) {
     .click();
 }
 async function buy(page, id) {
-  // The shop is a street of sub-pages: open the shelf that sells it first.
   await openShelfFor(page, id);
   await page
     .locator(`[data-product="${id}"] button:not(.shop-tag):not(.shop-look-eye)`)
@@ -195,7 +193,7 @@ test("guest activity is temporary until local play keeps the session", async ({
   await nav(page, "History");
   await page.getByRole("button", { name: "Shop", exact: true }).last().click();
   await expect(page.locator(".activity-event")).toHaveCount(2);
-  // Price comes from the catalogue so a rebalance cannot stale the assertion.
+
   await expect(page.locator('[data-event-type="purchase"]')).toContainText(
     `−${productById.get("starfall").price.toLocaleString("en-US")} EP`,
   );
@@ -204,15 +202,14 @@ test("guest activity is temporary until local play keeps the session", async ({
   );
   await register(page);
   const before = await saved(page);
-  // Choosing local play gives the guest session a name without discarding its
-  // roll, badges, purchase, or equipment change.
+
   expect(before.history).toHaveLength(4);
   expect(before.balance).toBeGreaterThan(0);
   expect(before.owned).toContain("starfall");
   await page.reload();
   await waitForApp(page);
   expect((await saved(page)).history).toHaveLength(4);
-  // The existing history is present again after the page reload.
+
   await nav(page, "History");
   await expect(page.locator(".activity-event")).toHaveCount(4);
   await expect(page.locator('[data-event-type="roll"]')).toHaveCount(1);
@@ -265,7 +262,7 @@ test("deleting a local profile requires confirmation and permits a fresh start",
   await page.goto("/");
   await waitForApp(page);
   await register(page);
-  // The local save has real earned fields to remove.
+
   await showRoll(page, 1337);
   await nav(page, "Shop");
   await buy(page, "starfall");
@@ -294,7 +291,6 @@ test("deleting a local profile requires confirmation and permits a fresh start",
   await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
   expect(await saved(page)).toBeNull();
 
-  // Deleting a profile returns to name setup; it does not reveal the old save.
   await page.reload();
   await waitForApp(page);
   expect(await saved(page)).toBeNull();
@@ -347,7 +343,7 @@ test("failed deletion leaves the account and complete history intact and support
   }, PROGRESS_KEY);
   await openDelete(page);
   await confirmDelete(page);
-  // The error is page-level now: profile is a page, not a dialog.
+
   await expect(page.getByRole("alert")).toContainText(
     "could not be removed from this device",
   );
@@ -389,7 +385,7 @@ test("deleting in another tab cancels an active reveal and clears its temporary 
     }),
   ).toBeVisible();
   await expect(page.locator(".number-artifact")).toHaveCount(0);
-  // The deleted local profile must be named again before play can continue.
+
   await expect(
     page.getByRole("button", { name: "GENERATE", exact: true }),
   ).toHaveCount(0);

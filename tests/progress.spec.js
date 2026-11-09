@@ -33,7 +33,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   const earned = applyProgress(emptyProgress(), action);
   expect(earned.balance).toBe(result.totalEP);
   expect(earned.discovered).toHaveLength(17);
-  expect(earned.discovered).toContain("LEET"); // Superseded still counts as discovered.
+  expect(earned.discovered).toContain("LEET");
   expect(applyProgress(earned, action)).toBe(earned);
   expect(() =>
     applyProgress(emptyProgress(), { type: "buy", id: "starfall" }),
@@ -44,8 +44,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   expect(() =>
     applyProgress(emptyProgress(), { type: "equip", id: "orbit" }),
   ).toThrow("Purchase");
-  // Local profile registration starts fresh; the cloud registration path is
-  // tested below because it deliberately retains the progress being imported.
+
   let state = applyProgress(emptyProgress(), {
     type: "register",
     id: "shop-test",
@@ -65,10 +64,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   state = applyProgress(state, { ...action, id: "second-test-roll" });
   for (const item of shopProducts) {
     const before = state.balance;
-    // The stall sells two skills at a time, rotating every five minutes, so a
-    // plain buy for an unstocked skill legitimately throws. The rotation is
-    // deterministic: buy each skill in the soonest window that stocks it
-    // (recomputed after earlier purchases, which slide the order).
+
     const at =
       item.kind === "skill"
         ? (() => {
@@ -90,7 +86,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
           .filter((p) => p.kind === "aura")
           .at(-1)?.id ?? "none",
       );
-    // A repeatable product is never owned: its second buy waits instead.
+
     expect(() => applyProgress(state, { type: "buy", id: item.id })).toThrow(
       item.repeatable ? "available in" : "already own",
     );
@@ -103,10 +99,10 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
 
 test("saved progress is versioned, self-repairing, and cannot equip an unowned item", () => {
   expect(parseProgress(null)).toEqual(emptyProgress());
-  // Data that is not a save at all is still rejected.
+
   for (const value of ["broken", JSON.stringify({ version: 999 })])
     expect(() => parseProgress(value)).toThrow();
-  // Bad values inside a real save are repaired, never reset.
+
   const negative = parseAndRepairProgress(
     JSON.stringify({ ...emptyProgress(), balance: -1 }),
   );
@@ -310,14 +306,14 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
 }) => {
   const starfall = shopProducts.find((item) => item.id === "starfall");
   const priced = `Buy for ${formatEP(starfall.price)} EP`;
-  // Exactly enough for one starfall: the purchase must leave an empty wallet.
+
   await seedProgress(page, {
     balance: starfall.price,
     totalEarned: starfall.price,
   });
   await mockRandom(page, [604827]);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // Auras are sold inside their family page.
+
   await page.goto("/shop/auras/celestial");
   await waitForApp(page);
   const card = page.locator('[data-product="starfall"]');
@@ -358,7 +354,7 @@ test("purchases require confirmation, deduct once, persist ownership, and equip 
   );
   await expect(page.locator(".roll-ep")).toHaveText("4,663 EP");
   await expect.poll(async () => (await saved(page))?.balance).toBe(4663);
-  // "Use original appearance" is the Auras shelf's own control.
+
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Shop", exact: true })
@@ -378,9 +374,6 @@ test("cross-tab purchases cannot overspend a shared wallet", async ({
   page,
   context,
 }) => {
-  // Two items that are each affordable alone but not together, so only one of
-  // the simultaneous purchases can be applied. Derived from the catalogue so a
-  // rebalance keeps the invariant under test.
   const pair = ["aurora", "starfall"].map((id) =>
     shopProducts.find((item) => item.id === id),
   );

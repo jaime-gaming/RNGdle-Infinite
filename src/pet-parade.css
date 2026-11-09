@@ -1,6 +1,3 @@
-/* Companions wander across the roll stage. Decorative only: the layer ignores
-   pointer events and is hidden from assistive tech, and nothing here changes the
-   document flow, so the reveal keeps its measured layout. */
 .roll-experience {
   position: relative;
 }
@@ -42,14 +39,12 @@
 .pet-walker.phase-cooldown .pet-figure {
   opacity: 0.5;
 }
-/* While the companion's signature skill fires on a roll, it steps off the
-   stage: the number box carries a small corner mark instead, and the walk
-   resumes from this exact spot once the roll settles. */
+
 .pet-walker.is-docked {
   visibility: hidden;
   animation-play-state: paused;
 }
-/* The shadow keeps the walker grounded, and shrinks as it bobs up. */
+
 .pet-walker-ground {
   width: 34px;
   height: 6px;
@@ -154,8 +149,6 @@
   }
 }
 
-/* A companion found on a roll gets its own entrance, then walks the stage with
-   the rest. Animation only: the state is cleared by the app after it plays. */
 .pet-arrival {
   position: absolute;
   top: 16%;
@@ -186,9 +179,7 @@
   --pet-size: 74px;
   animation: pet-arrival-figure 5.4s ease-out forwards;
 }
-/* The friend bursts out of its cage: bars flash over the figure, then fly
-   apart while the figure pops through them. Same geometry as the rings, so
-   the cage sits exactly where the friend lands. */
+
 .pet-arrival-cage {
   position: absolute;
   left: 18px;
@@ -293,8 +284,6 @@
   }
 }
 
-/* Reduced motion: no crossing, no bobbing, no entrance. The equipped companion
-   simply stands at the foot of the stage with its name plate. */
 .pet-parade.is-still {
   display: flex;
   align-items: flex-end;
@@ -344,9 +333,6 @@
   }
 }
 
-/* Walking has a waddle: the figure leans into each step while the body bobs
-   above it, and odd/even walkers fall out of step with each other so the
-   parade never marches in lockstep. */
 .pet-walker .pet-figure {
   animation: pet-waddle 0.55s ease-in-out infinite alternate;
   transform-origin: 50% 88%;

@@ -38,7 +38,6 @@ import {
 } from "../src/progress.js";
 import { readSavedRaw, readSavedProgress } from "./helpers/save.js";
 
-// A plain in-memory storage with the three methods the vault uses.
 function fakeStorage(initial = {}) {
   const map = new Map(Object.entries(initial));
   return {
@@ -58,8 +57,7 @@ test("the backup copy is compressed, exact and about twenty times smaller", () =
   expect(packed.startsWith(SAVE_VAULT_TAG)).toBe(true);
   expect(packed.length).toBeLessThan(raw.length);
   expect(unpackVaultSave(packed)).toBe(raw);
-  // A save too small to gain from gzip is still kept, and anything unreadable
-  // is refused rather than stored.
+
   expect(unpackVaultSave(packVaultSave("{}"))).toBe("{}");
   expect(packVaultSave("")).toBe("");
   expect(isReadableSave("")).toBe(false);
@@ -81,13 +79,13 @@ test("the vault keeps the newest good save and never rewrites it more than once 
   expect(first.raw).toBe(save(1));
   expect(first.profileId).toBe("p1");
   expect(first.at).toBe(1000);
-  // Inside the gap nothing is rewritten...
+
   expect(writeVault(save(2), { storage: local, now: 2000 })).toBe(false);
   expect(readVault(local).raw).toBe(save(1));
-  // ...and after it the newer save takes over.
+
   expect(writeVault(save(3), { storage: local, now: 90_000 })).toBe(true);
   expect(readVault(local).raw).toBe(save(3));
-  // Garbage never becomes a backup.
+
   expect(writeVault("not a save", { storage: local, now: 200_000 })).toBe(
     false,
   );
@@ -131,7 +129,7 @@ test("the local archive keeps daily snapshots within a 20-copy, 90-day window", 
     readSavedCopyHistory(old, { now: 10_000 + MAX_SAVE_HISTORY_AGE_MS + 1 })
       .copies,
   ).toEqual([]);
-  // Listing recovery copies also prunes expired entries from local storage.
+
   getRecoveryCopies(old);
   expect(old.map.has(SAVE_HISTORY_KEY)).toBe(false);
 
@@ -257,7 +255,6 @@ test("a cloud-conflict recovery copy survives rolling local-vault writes", () =>
   });
   expect(local.map.has(CLOUD_RECOVERY_KEY)).toBe(true);
 
-  // Reconciliation then writes the chosen save to the ordinary rolling vault.
   writeVault(save(123), { storage: local, now: 90_000, minGapMs: 0 });
   expect(readVault(local).raw).toBe(save(123));
   expect(readCloudRecovery(local).raw).toBe(displaced);
@@ -270,7 +267,6 @@ test("a broken or missing save comes back from the vault, a healthy one is left 
   const local = fakeStorage();
   writeVault(save(777), { storage: local, now: 5000 });
 
-  // Missing save: the backup is put back.
   expect(restoreVaultIfNeeded({ storage: local })).toMatchObject({
     restored: true,
   });
@@ -278,7 +274,6 @@ test("a broken or missing save comes back from the vault, a healthy one is left 
     777,
   );
 
-  // Half-written save: same.
   const broken = fakeStorage({ [PROGRESS_KEY]: '{"balance": 12' });
   writeVault(save(888), { storage: broken, now: 6000 });
   expect(restoreVaultIfNeeded({ storage: broken }).restored).toBe(true);
@@ -286,7 +281,6 @@ test("a broken or missing save comes back from the vault, a healthy one is left 
     JSON.parse(unpackVaultSave(broken.map.get(PROGRESS_KEY))).balance,
   ).toBe(888);
 
-  // Healthy save: never replaced, even when the vault is older.
   const healthy = fakeStorage({ [PROGRESS_KEY]: save(1) });
   writeVault(save(2), { storage: healthy, now: 7000 });
   expect(restoreVaultIfNeeded({ storage: healthy })).toEqual({
@@ -296,12 +290,10 @@ test("a broken or missing save comes back from the vault, a healthy one is left 
     JSON.parse(unpackVaultSave(healthy.map.get(PROGRESS_KEY))).balance,
   ).toBe(1);
 
-  // No vault at all: nothing is invented.
   expect(restoreVaultIfNeeded({ storage: fakeStorage() })).toEqual({
     restored: false,
   });
 
-  // A deleted account clears the vault, so it cannot come back from the dead.
   clearVault(healthy);
   expect(readVault(healthy)).toBeNull();
   expect(restoreVaultIfNeeded({ storage: healthy }).restored).toBe(false);
@@ -512,7 +504,6 @@ test("Settings lets players inspect and restore a selected local save copy", asy
     block.getByTestId("settings-restore-selected-copy"),
   ).toBeEnabled();
 
-  // Damage the save the way a bad write would, then restore the chosen copy.
   await page.evaluate(
     (key) => localStorage.setItem(key, '{"balance": 1'),
     PROGRESS_KEY,

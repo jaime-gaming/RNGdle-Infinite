@@ -3,14 +3,11 @@ import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
 
-// Give each built app a unique identity and publish the same identity in both
-// index.html and version.json. The Settings update loop compares these values,
-// so it can tell whether a cache-busted reload actually reached the new build.
 function appBuildVersion() {
   const { version } = JSON.parse(
     fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
   );
-  const internalVersion = "RNGdle-Infinitev0.5.2fix4";
+  const internalVersion = "v0.5.2fix4";
   const buildId = `${version}-${Date.now().toString(36)}-${process.pid.toString(36)}`;
   const payload = JSON.stringify({ version, buildId, internalVersion });
   let outDir = path.resolve("dist");

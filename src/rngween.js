@@ -1,5 +1,3 @@
-// Cosmetic definitions and legacy receipts retained so retired event rewards
-// remain owned, wearable, and readable in old saves. No event progression lives here.
 export const RNGWEEN_ID = "rngween-2026";
 
 export const RNGWEEN_AURAS = [
@@ -61,8 +59,6 @@ export const RNGWEEN_WORLD_SKIN = {
   description: "A permanent appearance preserved from a retired game world.",
 };
 
-// This permanent cosmetic was added to the source game's Halloween finale.
-// Keep its ownership and rendering data when importing saves made on newer main.
 export const RNGWEEN_FINALE_SKIN = {
   id: "hollow-lantern",
   kind: "aura",
@@ -92,8 +88,6 @@ export const RNGWEEN_FAMILY = {
   eventOnly: true,
 };
 
-// Old task slots are read only to restore a cosmetic already earned before
-// RNGween ended. They are never part of the current task state.
 const LEGACY_MISSIONS = [
   { id: "jack-o-glow", metric: "rolls", goal: 300 },
   { id: "phantom-veil", metric: "rare", goal: 60 },

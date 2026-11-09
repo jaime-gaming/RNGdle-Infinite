@@ -48,7 +48,6 @@ const buy = (p, id, at = 1000) => applyProgress(p, { type: "buy", id, at });
 const nav = (p, name) =>
   p.getByRole("navigation").getByRole("button", { name, exact: true }).click();
 async function purchase(page, id) {
-  // Each tier lives on the shelf that tracks it; open it without reloading.
   await openShelfFor(page, id);
   await page
     .locator(`[data-product="${id}"] button:not(.shop-tag):not(.shop-look-eye)`)
@@ -84,15 +83,13 @@ test("every late tier requires its predecessor, charges exactly once and preserv
     const before = p.balance;
     let at = 1000;
     if (item.kind === "skill") {
-      // The stall rotates its stock every five minutes: a skill is only sold
-      // in the windows that stock it, so buy it in one of those.
       let window = 0;
       while (!skillStock(window, p.owned).includes(item.id)) window += 1;
       at = window * SKILL_STOCK_WINDOW_MS + 500;
     }
     p = buy(p, item.id, at);
     expect(p.balance).toBe(before - item.price);
-    // A repeatable product is never owned: its second buy waits instead.
+
     expect(() => buy(p, item.id)).toThrow(
       item.repeatable ? "available in" : "already own",
     );
@@ -103,7 +100,7 @@ test("every late tier requires its predecessor, charges exactly once and preserv
   expect(rollSettings(p.owned)).toEqual({ rollMS: 10000, cooldownMS: 2000 });
   expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 360 });
   expect(flywheelRequired(p.owned)).toBe(1);
-  // Buying an aura equips it, so the last aura in the catalogue ends up worn.
+
   expect(p.equipped).toBe(
     shopProducts.filter((item) => item.kind === "aura").at(-1).id,
   );
@@ -172,9 +169,7 @@ test("useful recommendations combine tools with pace tiers instead of prioritisi
       "flywheel",
     ],
   });
-  // Cheapest useful pace/earning tool first, regardless of which track it is
-  // on. The expected order is derived from the catalogue so a repricing shows
-  // up as a genuine ordering change rather than a stale literal.
+
   const candidates = [
     "quickwind-4",
     "flywheel-2",
@@ -191,9 +186,9 @@ test("useful recommendations combine tools with pace tiers instead of prioritisi
     expect(recommendedGoal(p).id).toBe(id);
     p.owned.push(id);
   }
-  // A guest is never pointed at a purchase that needs a saved profile.
+
   expect(recommendedGoal({ ...p, profile: null }).requiresProfile).toBeFalsy();
-  // Cosmetics never outrank an available pace or tool upgrade.
+
   expect(recommendedGoal(p).kind).not.toBe("aura");
 });
 
@@ -207,7 +202,7 @@ for (const [owned, required] of [
       const boost = n % (required + 1) === required,
         id = `roll-${n}`;
       expect(flywheelForDraw(p)).toBe(boost ? "boost" : "charge");
-      // The committed draw consumes a boost; this test exercises settlement rules.
+
       p = {
         ...p,
         flywheelCharge: boost ? 0 : p.flywheelCharge,
@@ -327,7 +322,7 @@ test("offline upgrades are profile gated and cannot discard or re-rate owed batc
   ).toBe(0);
   expect(p.balance).toBe(200000000);
   expect(p.offline.lastSeenAt).toBe(1000);
-  // Vaults are gated by the same owed-batch rule and keep the saved summary.
+
   const withClock = buy(p, "offline-clock-1", 1000);
   expect(() =>
     buy(
@@ -386,7 +381,7 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
   await seedProgress(page, rich({ owned }));
   await page.setViewportSize({ width: 360, height: 800 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  // Each late tier lives on the shelf that tracks it.
+
   await page.goto("/shop/pace");
   await waitForApp(page);
   await expect(page.locator('[data-product="clockwork-5"]')).toHaveCount(0);
@@ -403,7 +398,7 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
     "offline-clock-2",
   ];
   for (const id of upgrades) await purchase(page, id);
-  // Each purchase is charged once, at the catalogue price.
+
   expect((await saved(page)).balance).toBe(
     200000000 -
       upgrades.reduce((sum, id) => sum + productById.get(id).price, 0),
@@ -415,8 +410,7 @@ test("mobile shop exposes only the next tier, confirms exact effects and persist
   await expect(page.locator('[data-product="offline-roller"]')).toContainText(
     "5 minutes away",
   );
-  // One level at a time: the bought clocks collapse and the next tier takes
-  // their place, so only a fully-owned path reads as complete.
+
   await gotoShelfFor(page, "offline-clock-3");
   await expect(page.locator('[data-product="offline-clock-3"]')).toContainText(
     "Buy for",
@@ -467,8 +461,7 @@ test("a late cooldown purchase keeps the current 10-second commitment and uses 5
   expect((await saved(page)).pendingRoll).toEqual(current);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(async () => rows(await saved(page)).length).toBe(2);
-  // The stored window is the committed roll's own reservation: the reveal pace
-  // that was paid for, plus the cooldown tier in place when it was drawn.
+
   const timing = rollSettings((await saved(page)).owned);
   expect(current.rollMS).toBe(timing.rollMS);
   expect((await saved(page)).cooldownWindow).toEqual({
@@ -492,7 +485,7 @@ for (const owned of [clocks.slice(0, 2), clocks]) {
     await mockRandom(page, [604827]);
     await page.goto("/");
     await waitForApp(page);
-    // Whole rolls only, at the rate the owned clocks actually pay for.
+
     const intervalMS = offlineSettings(owned).intervalMS;
     await collected(page, count);
     const p = await saved(page);
@@ -572,11 +565,7 @@ test("two tabs cannot purchase a late Flywheel tier twice or lose the earned cha
         '[data-product="flywheel-2"] button:not(.shop-tag):not(.shop-look-eye)',
       )
       .click();
-  // Both tabs press confirm at once, and whichever reaches the lock first
-  // buys. The loser must not double-buy: its dialog disables itself the
-  // moment the storage event lands, or the reducer rejects the duplicate.
-  // Either way exactly one purchase goes through, so a click that never
-  // fires because the button is already dead is a valid outcome here.
+
   await Promise.all(
     [page, other].map((p) =>
       p
@@ -606,7 +595,7 @@ test("final Flywheel boost survives reload and reduced motion still reserves the
   await seedProgress(page, { owned: [...timings, ...pace], flywheelCharge: 1 });
   await startRoll(page, 604827);
   const before = await saved(page);
-  // A boost waives the cooldown, never the reveal the pace tiers paid for.
+
   expect(before.pendingRoll).toMatchObject({
     rollMS: timing.rollMS,
     cooldownMS: 0,
@@ -667,7 +656,6 @@ test("failed late-tier saves leave wallet, charge and offline rate unchanged unt
     };
   }, PROGRESS_KEY);
   for (const id of ["flywheel-2", "offline-clock-1"]) {
-    // Skills and Offline are separate shelves, so walk to each one.
     await openShelfFor(page, id);
     await page
       .locator(

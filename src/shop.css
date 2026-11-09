@@ -1,6 +1,3 @@
-/* The shop is a street of shelves. One sticky bar holds the shelves, the search
-   and the filters; below it each shelf is a short list of rows rather than a
-   wall of cards, so nothing needs reading twice. */
 .shop-wallet {
   display: flex;
   align-items: center;
@@ -50,7 +47,6 @@
   font-size: 22px;
 }
 
-/* ---- The sticky map: shelves, search, filters ---------------------------- */
 .shop-controls {
   position: sticky;
   top: 0;
@@ -60,9 +56,7 @@
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
-/* ---- The hub: the shop as buttons -----------------------------------------
-   Six tiles, one per shelf. Each is a real anchor (/shop#skills) and each
-   carries the one number that says whether it is worth opening. */
+
 .shop-hub {
   margin: 26px 0 2px;
 }
@@ -126,10 +120,6 @@
   white-space: nowrap;
 }
 
-/* ---- Featured: a shop window, three picks, three doorways ----------------- */
-/* ---- Sub-pages -------------------------------------------------------------
-   Each shelf is its own page, so it says where it sits (breadcrumb, right under
-   the shop heading) and offers the other five on the way out. */
 .shop-crumb {
   display: flex;
   align-items: center;
@@ -175,7 +165,7 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-/* A shelf nobody can shop yet states the one door that opens it. */
+
 .shop-locked-heading {
   align-items: flex-start;
   gap: 18px;
@@ -293,13 +283,11 @@
   font: 500 10.5px var(--roll-font);
   color: var(--muted);
 }
-/* The price never breaks mid-number, and the door is always the last thing on
-   the card: it is where the click leads. */
+
 .spotlight-price {
   white-space: nowrap;
 }
-/* A number and its unit (110,000 EP, 25s, 4 rolls) are one token on the preview
-   band: a wrap between them reads as two different facts. */
+
 .upgrade-preview span,
 .upgrade-preview small {
   white-space: nowrap;
@@ -345,10 +333,7 @@
   color: var(--muted);
   white-space: nowrap;
 }
-/* ---- The savings goal ------------------------------------------------------
-   The goal lives in the shop, above everything: what is tracked (or what the
-   shop recommends), how the wallet is doing against it, and the shelf that
-   sells it. Clicking any item on a shelf retracks it. */
+
 .shop-goal {
   margin: 18px 0 2px;
   padding: 12px 14px;
@@ -374,7 +359,7 @@
     var(--ring-colour, var(--secondary)) var(--fill, 0%),
     var(--border) 0
   );
-  /* --fill is registered in rebirth-nav.css; the savings ring glides too. */
+
   transition: --fill 0.6s ease;
 }
 .shop-goal-ring::after {
@@ -456,7 +441,7 @@
     margin-left: auto;
   }
 }
-/* Pick mode: the banner asks for a choice and the shelves wait for the tap. */
+
 .shop-goal.is-picking {
   border-color: color-mix(in srgb, var(--green) 55%, var(--border));
   background: var(--green-bg);
@@ -492,8 +477,7 @@
     opacity: 0.75;
   }
 }
-/* While pick mode is armed, every pickable card offers itself: dashed green
-   edge, a target in the corner, and a lift on hover. */
+
 .shop-card.is-picking[data-goalable] {
   cursor: pointer;
   border-style: dashed;
@@ -524,12 +508,12 @@
   animation: goal-pick-in 0.25s ease-out both;
   pointer-events: none;
 }
-/* A tracked goal keeps its quiet green tag. */
+
 .shop-tag.is-goal.is-on {
   border-color: color-mix(in srgb, var(--green) 55%, var(--border));
   background: color-mix(in srgb, var(--green) 12%, var(--bg));
 }
-/* The "Clear" action is deliberately the quietest button in the shop. */
+
 .ghost-button {
   padding: 8px 12px;
   border-radius: 8px;
@@ -542,9 +526,6 @@
   color: var(--danger);
 }
 
-/* ---- Shelves --------------------------------------------------------------
-   A shelf is five lines of explanation and a list of rows: much less ink than a
-   grid of full cards, and every row carries the same four facts. */
 .shop-category {
   margin-top: 30px;
   scroll-margin-top: 132px;
@@ -611,10 +592,6 @@
   text-align: center;
 }
 
-/* ---- Cards ---------------------------------------------------------------
-   Every shelf speaks the same language: a preview band that shows the change
-   at a glance, the name with its state, the plain description, the price and
-   one black button. Nothing competes with the buy action. */
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
@@ -624,9 +601,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-/* The auras shelf is grouped into families: a small heading, then that
-   family's cards. Same grid, so a family of three and a family of eight lay
-   out identically. */
 .shop-family + .shop-family {
   margin-top: 26px;
 }
@@ -660,8 +634,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-/* A chip of the aura's own two colours, so the shelf shows what you are
-   buying before the preview band animates. */
+
 .aura-swatch {
   flex: 0 0 auto;
   width: 28px;
@@ -682,7 +655,7 @@
     transform 0.2s ease,
     border-color 0.2s ease,
     box-shadow 0.2s ease;
-  /* Cards arrive softly, one after another, when a shelf opens. */
+
   animation: card-in 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
 }
 .shop-card:hover {
@@ -743,8 +716,7 @@
   color: var(--green);
   border-color: color-mix(in srgb, var(--green) 40%, var(--border));
 }
-/* A skill out of the stall's rotation waits under a green restock aura: the
-   card dims, the preview glows green, and the tag says when the pair turns. */
+
 .shop-card.is-restocking {
   opacity: 0.78;
 }
@@ -773,8 +745,7 @@
   font-size: 12px;
   line-height: 1.75;
   color: var(--secondary);
-  /* Three lines keep every card the same height without hiding the point: the
-     purchase dialog repeats the whole sentence. */
+
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -788,7 +759,7 @@
   color: var(--text);
   font: 500 11px/1.5 var(--roll-font);
 }
-/* One pill per claim: the effect reads as facts, not as a sentence to parse. */
+
 .shop-effect-chip {
   padding: 2px 8px;
   border: 1px solid var(--border);
@@ -825,7 +796,7 @@
   color: var(--warning);
   border-color: color-mix(in srgb, var(--warning) 30%, var(--border));
 }
-/* The price and the button sit at the bottom, level across a row of cards. */
+
 .shop-price {
   display: flex;
   gap: 7px;
@@ -853,7 +824,7 @@
   color: var(--muted);
   text-align: center;
 }
-/* ---- Preview bands ------------------------------------------------------- */
+
 .upgrade-preview {
   position: relative;
   display: flex;
@@ -884,8 +855,7 @@
 .upgrade-utility {
   background: radial-gradient(ellipse at 50% 20%, #94a3b820, transparent 80%);
 }
-/* A skill card wears the same tint the corner rack gives its ring, so the
-   colour of a skill means one thing everywhere in the game. */
+
 .upgrade-preview.tint-gold {
   --skill-tint: #d9a441;
 }
@@ -944,7 +914,7 @@
   line-height: 20px;
   text-align: center;
 }
-/* Auras keep the full preview: the rarity box is the product. */
+
 .aura-preview {
   position: relative;
   isolation: isolate;
@@ -966,8 +936,7 @@
 .aura-preview .number-box {
   transform: scale(0.88);
 }
-/* The limited sale skin previews as what it is: matte black, one hairline of
-   light, the mark in quiet grey. */
+
 .aura-preview.aura-blackout-2026 {
   background:
     radial-gradient(ellipse at 50% 42%, #ffffff0a, transparent 68%), #08080a;
@@ -1054,9 +1023,6 @@
   text-align: right;
 }
 
-/* ---- The skill stall ------------------------------------------------- */
-/* The skill stall's own line: what the five-minute rotation is selling right
-   now and when the pair changes. */
 .skill-stock {
   display: flex;
   align-items: center;
@@ -1090,7 +1056,7 @@
   font-style: normal;
   color: var(--muted);
 }
-/* ---- Purchase confirmation ---------------------------------------------- */
+
 .shop-confirm {
   position: fixed;
   inset: 0;
@@ -1216,8 +1182,6 @@
   }
 }
 @media (max-width: 800px) {
-  /* Two columns fit a tablet; below them a card turns on its side so the
-     preview sits next to its facts instead of above them. */
   .shop-grid {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
@@ -1230,8 +1194,7 @@
   .shop-grid-upgrades {
     grid-template-columns: minmax(0, 1fr);
   }
-  /* Phones keep the same cards, just less air: a shorter preview band and two
-     lines of copy, so a shelf of eighteen auras stays walkable. */
+
   .upgrade-preview {
     height: 104px;
   }
@@ -1317,7 +1280,6 @@
   }
 }
 @media (max-width: 460px) {
-  /* The smallest phones stack the preview back on top of the facts. */
   .shop-card {
     display: flex;
   }
@@ -1358,8 +1320,6 @@
   }
 }
 
-/* Saved racks. Equipping is free, so these are shortcuts, not purchases:
-   plain chips under the stall, never taller than the row they sit in. */
 .skill-racks {
   margin-bottom: 16px;
   padding: 12px 14px;
@@ -1367,8 +1327,7 @@
   border-radius: 12px;
   background: var(--hover);
 }
-/* Earned skills sit below the shelf's stock with the same head shape as the
-   saved racks, so the section reads as part of the shelf, not a second shop. */
+
 .free-skills {
   margin-top: 16px;
   padding: 12px 14px;
@@ -1413,8 +1372,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-/* Where a product card shows its price, an earned skill names its source:
-   the line holds the same place so the button stays level across the row. */
+
 .shop-source {
   margin: auto 0 14px;
   padding-top: 16px;
@@ -1481,10 +1439,6 @@
   color: var(--primary);
 }
 
-/* ---- Aura family banners ------------------------------------------------
-   Each family fronts its own page: a gradient mixed from the three best looks
-   in the set, three live previews, and the family's own type — the same family
-   reads the same way wherever it appears. */
 .aura-family-banners {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1594,8 +1548,6 @@
   }
 }
 
-/* The Limited & Special hub is a celestial card: ivory and gold, a soft halo,
-   no family gradient. It only exists while the player owns a legacy cosmetic. */
 .aura-family-banner[data-family="special"] {
   border-color: #e9d79a;
   background:
@@ -1643,11 +1595,6 @@
     #f7ecc4;
 }
 
-/* ---- Purchase celebrations ------------------------------------------------
-   Buying something is a moment: the card pops and rims in the shop's gold,
-   the wallet answers with a pulse of its own, and the return banner drops
-   its confetti. All one-shot keyframes — the global reduced-motion reset
-   turns every one of them off, and nothing here ever changes a number. */
 .shop-card.is-celebrated {
   animation: purchase-card-pop 0.7s var(--ease-reveal) both;
   box-shadow:
@@ -1722,7 +1669,6 @@
   align-items: center;
 }
 
-/* The little eye on an aura card: peek at the look on a sample roll. */
 .shop-look-eye {
   position: absolute;
   top: 10px;

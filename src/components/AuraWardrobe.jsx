@@ -1,4 +1,3 @@
-// Owned cosmetics from retired content remain available in the wardrobe.
 import React, { useState } from "react";
 import { Shirt, Check, ArrowRight } from "lucide-react";
 import { auraProducts, productById } from "../shop-data.js";
@@ -15,8 +14,6 @@ const tiers = [
   "godly",
 ];
 
-// Equip any aura you already own, previewed on any rarity, without walking back
-// to the shop. Equipping is free and cosmetic: it spends no EP and buys nothing.
 export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
   const [previewTier, setPreviewTier] = useState("rare");
   const [collection, setCollection] = useState("all");
@@ -90,8 +87,7 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
             {[
               ["all", "All"],
               ["regular", "Regular"],
-              // The special collection only earns its filter once this save
-              // actually holds one of its looks.
+
               ...(hasSpecial ? [["legacy", "Special & Limiteds"]] : []),
             ].map(([id, label]) => (
               <button

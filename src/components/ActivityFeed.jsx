@@ -1,5 +1,3 @@
-// Legacy `rngween-*` history rows remain in saves, so keep their labels and
-// icons aligned with the history parser.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -40,7 +38,7 @@ const filters = [
   "Tasks",
   "Offline",
 ];
-// The oldest-first sizes the bulk delete offers for "little by little".
+
 const OLDEST_STEPS = [500, 1000, 2000];
 const count = (n) => n.toLocaleString("en-US");
 const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
@@ -86,8 +84,7 @@ export default function ActivityFeed({
   const copiedTimer = useRef(null);
   const [query, setQuery] = useState(""),
     [tier, setTier] = useState("all");
-  // Bulk delete: the panel is opened from the space warning, and a cut waits
-  // for its own confirmation before anything is removed.
+
   const [pruneOpen, setPruneOpen] = useState(false),
     [pending, setPending] = useState(null),
     [pruning, setPruning] = useState(false),
@@ -95,8 +92,7 @@ export default function ActivityFeed({
   const lens = progress.owned.includes("archive-lens");
   const history = progress.history ?? [];
   const repeats = useMemo(() => dejaVuIds(history), [history]);
-  // A few rolls can be pinned for later: the bookmarks live on the save, so
-  // they survive reloads, rebirths and other tabs.
+
   const bookmarks = progress.bookmarks ?? [];
   const cycles = useMemo(
     () => historyCycles(history, bookmarks),
@@ -108,8 +104,7 @@ export default function ActivityFeed({
   );
   const spaceFull = history.length >= HISTORY_LIMIT;
   const lowSpace = history.length >= HISTORY_WARNING;
-  // Below the warning level there is nothing to make room for, so the panel
-  // closes rather than waiting, open, for the next time the log fills up.
+
   useEffect(() => {
     if (!lowSpace) {
       setPruneOpen(false);
@@ -167,8 +162,7 @@ export default function ActivityFeed({
     if (result && !result.ok && result.message)
       notify?.({ kind: "error", text: result.message });
   }
-  // Any archived roll can be shared later: the text is rebuilt from the entry
-  // the save kept, so it can only ever state what the roll actually earned.
+
   async function shareRoll(event) {
     try {
       await navigator.clipboard.writeText(buildShareTextFromHistory(event));
@@ -182,8 +176,7 @@ export default function ActivityFeed({
       });
     }
   }
-  // Confirming runs the cut the player picked. The save works out what that
-  // removes, so the count shown here can only ever be a preview of it.
+
   async function confirmPrune() {
     if (!pending) return;
     setPruning(true);
@@ -505,8 +498,6 @@ export default function ActivityFeed({
         <ol className="activity-feed">
           {events.slice(0, limit).map((event) => (
             <React.Fragment key={event.id}>
-              {/* A rebirth ends a cycle, not the story: the log keeps every
-                  entry and draws a dotted line where the new one begins. */}
               {(event.type === "rebirth" ||
                 event.type === "ultra-rebirth" ||
                 event.type === "rollback" ||
@@ -643,8 +634,7 @@ export default function ActivityFeed({
                               {event.skills.map((id) => {
                                 const skill = skillById.get(id);
                                 if (!skill) return null;
-                                // The receipt states what the skill actually
-                                // added to this roll, not just its name.
+
                                 return (
                                   <span className="activity-skill" key={id}>
                                     <strong>{skill.name}</strong>

@@ -1,19 +1,16 @@
-/* The boot/loader screen: one centred circle over an empty themed page. */
 .loading-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
   display: grid;
   place-items: center;
-  background: var(--bg, #fafafa);
+  min-height: 55vh;
+  padding: 48px 0;
 }
 
 .loading-circle {
   display: block;
-  width: 44px;
-  height: 44px;
-  border: 3px solid var(--border, #d9dbe3);
-  border-top-color: var(--green, #2f6b57);
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border, #d9dbe3);
+  border-top-color: var(--muted, #898a96);
   border-radius: 50%;
   animation: loading-circle-turn 900ms linear infinite;
 }

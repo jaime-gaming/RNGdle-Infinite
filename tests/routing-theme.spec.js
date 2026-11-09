@@ -47,7 +47,7 @@ test("every app page has a direct path, not a hash fragment", () => {
   expect(pathForPage("roll")).toBe("/");
   for (const page of PAGES.filter((p) => p !== HOME))
     expect(pathForPage(page)).toBe(`/${page}`);
-  // Embedded builds keep the same routes under their optional base.
+
   expect(basePath("/preview/")).toBe("/preview");
   expect(pathForPage("shop", "/preview/")).toBe("/preview/shop");
   expect(
@@ -72,31 +72,30 @@ test("paths, legacy hashes and unknown routes all resolve without a dead end", (
   for (const page of PAGES)
     expect(pageFromLocation({ pathname: `/${page}`, hash: "" })).toBe(page);
   expect(pageFromLocation({ pathname: "/", hash: "" })).toBe(HOME);
-  // Old #shop bookmarks keep working and are normalised to the real path.
+
   expect(pageFromLocation({ pathname: "/", hash: "#history" })).toBe("history");
   expect(
     pathForPage(pageFromLocation({ pathname: "/", hash: "#history" })),
   ).toBe("/history");
-  // Nonsense and removed routes fall back to the roll page rather than a blank.
+
   for (const bad of ["/leaderboard", "/../etc", "/shop/extra/deep", "/SHOP!"])
     expect(PAGES).toContain(pageFromLocation({ pathname: bad, hash: "" }));
   expect(pageFromLocation({ pathname: "/leaderboard", hash: "" })).toBe(HOME);
   expect(validPage("nope")).toBe(HOME);
-  // Re-navigating to the current page must not push a duplicate history entry.
+
   expect(isCurrentPath("shop", { pathname: "/shop", hash: "" })).toBe(true);
   expect(isCurrentPath("shop", { pathname: "/badges", hash: "" })).toBe(false);
 });
 
 test("a shelf is a real sub-page of the shop, on every host", () => {
-  // Locally (/shop/skills) and under an optional base path (/preview/shop/skills).
   expect(pathForSubpage("shop", "skills")).toBe("/shop/skills");
   expect(pathForSubpage("shop", "auras", "/preview/")).toBe(
     "/preview/shop/auras",
   );
-  // The hub is the page itself, never a trailing slash or an empty segment.
+
   expect(pathForSubpage("shop", "")).toBe("/shop");
   expect(pathForSubpage("shop", "", "/preview/")).toBe("/preview/shop");
-  // A sub-segment is read from the path, and only the page's own segment counts.
+
   expect(subpageFromLocation({ pathname: "/shop/skills", hash: "" })).toBe(
     "skills",
   );
@@ -107,7 +106,7 @@ test("a shelf is a real sub-page of the shop, on every host", () => {
     ),
   ).toBe("tools");
   expect(subpageFromLocation({ pathname: "/shop", hash: "" })).toBe("");
-  // The page itself still resolves from its sub-path, so a shelf never 404s.
+
   expect(pageFromLocation({ pathname: "/shop/skills", hash: "" })).toBe("shop");
   expect(
     pageFromLocation(
@@ -115,7 +114,7 @@ test("a shelf is a real sub-page of the shop, on every host", () => {
       "/preview/",
     ),
   ).toBe("shop");
-  // Slugs use the same alphabet pages do, so a crafted segment cannot break out.
+
   expect(pathForSubpage("shop", "  Auras!../")).toBe("/shop/auras");
 });
 
@@ -140,20 +139,19 @@ test("save recovery is a distinct Settings subpage with a direct link", () => {
 
 test("the profile address names the account: /profile/<username>", () => {
   expect(pathForProfile("LuckyOtter41")).toBe("/profile/LuckyOtter41");
-  // Guests have no name yet, so they land on the bare page.
+
   expect(pathForProfile("")).toBe("/profile");
   expect(pathForProfile(undefined)).toBe("/profile");
-  // Names keep their case and are only URL-escaped; the base is honoured.
-  expect(pathForProfile("Ñandú_7", "/preview/")).toBe(
-    "/preview/profile/%C3%91and%C3%BA_7",
+
+  expect(pathForProfile("Zoë_7", "/preview/")).toBe(
+    "/preview/profile/Zo%C3%AB_7",
   );
-  expect(
-    profileNameFromLocation({ pathname: "/profile/%C3%91and%C3%BA_7" }),
-  ).toBe("Ñandú_7");
+  expect(profileNameFromLocation({ pathname: "/profile/Zo%C3%AB_7" })).toBe(
+    "Zoë_7",
+  );
   expect(profileNameFromLocation({ pathname: "/profile" })).toBe("");
   expect(profileNameFromLocation({ pathname: "/shop/auras" })).toBe("");
-  // Any /profile/<name> is the profile page, so a direct load is not bounced
-  // to the roll page, and the page is "current" for history purposes.
+
   expect(pageFromLocation({ pathname: "/profile/Someone", hash: "" })).toBe(
     "profile",
   );
@@ -167,8 +165,6 @@ test("the Cloudflare Worker serves dist, falls back to the app shell and avoids 
   const vite = fs.readFileSync("vite.config.js", "utf8");
   expect(vite).not.toContain("404.html");
 
-  // Workers static assets, not Pages: the SPA fallback replaces _redirects,
-  // and the custom domain is claimed by the deploy itself.
   const config = fs.readFileSync("wrangler.jsonc", "utf8");
   expect(config).toMatch(/"directory"\s*:\s*"\.\/dist"/);
   expect(config).toMatch(
@@ -178,7 +174,6 @@ test("the Cloudflare Worker serves dist, falls back to the app shell and avoids 
   expect(config).toMatch(/"custom_domain"\s*:\s*true/);
   expect(config).not.toMatch(/pages_build_output_dir/);
 
-  // A catch-all rewrite would loop against the built-in SPA fallback.
   expect(fs.existsSync("public/_redirects")).toBe(false);
 
   const headers = fs.readFileSync("public/_headers", "utf8");
@@ -195,15 +190,13 @@ test("the Cloudflare Worker serves dist, falls back to the app shell and avoids 
 test("the rebirth ladder depends on the collection alone, never on auras or tools", () => {
   expect(BADGE_TOTAL).toBe(allBadgeMetadata.length);
   expect(REBIRTH_OPTIONAL_KINDS).toContain("aura");
-  // No purchase is ever part of a rung: shekels can buy the shop, not the ladder.
+
   const auras = shopProducts.filter((p) => p.kind === "aura").map((p) => p.id);
   for (const id of auras) expect(rebirthOptionalProducts).toContain(id);
   for (const id of ["auto-roll", "archive-lens", "offline-roller"])
     expect(rebirthOptionalProducts).toContain(id);
   expect(rebirthRelevantPurchases([...auras, "auto-roll"])).toEqual([]);
 
-  // Rung 1 wants a fifth of the collection and 100,000 EP the cycle earned;
-  // owning nothing else is fine, and the EP is never something you can buy.
   const ids = allBadgeMetadata.map((b) => b.id);
   const rungOne = ids.slice(
     0,
@@ -227,11 +220,11 @@ test("the rebirth ladder depends on the collection alone, never on auras or tool
     history: earned,
   };
   expect(rebirthBlocker(broke, 0)).toBe("");
-  // Shekels cannot buy the EP half either: a full wallet changes nothing.
+
   expect(
     rebirthBlocker({ ...broke, balance: 100000000, history: [] }, 0),
   ).toContain("Earn 250,000 EP");
-  // An all-owned shop with one badge missing from the rung still cannot.
+
   const rich = {
     ...emptyProgress(),
     discovered: rungOne.slice(0, -1),
@@ -243,13 +236,11 @@ test("the rebirth ladder depends on the collection alone, never on auras or tool
   );
 });
 test("light mode keeps a single source of truth for the palette", () => {
-  // roll.css is imported after styles.css, so an unscoped :root palette there
-  // silently overrides light mode. Theme overrides must be theme-scoped.
   const roll = fs.readFileSync("src/roll.css", "utf8");
   const rootBlock = roll.slice(roll.indexOf(":root {"), roll.indexOf("}"));
   for (const token of ["--text:", "--muted:", "--secondary:", "--border:"])
     expect(rootBlock).not.toContain(token);
-  // Semantic colours are themed rather than hardcoded to dark-mode values.
+
   const styles = fs.readFileSync("src/styles.css", "utf8");
   for (const token of ["--danger:", "--warning:", "--rank-low:", "--scrim:"]) {
     expect(styles).toContain(token);
@@ -266,10 +257,7 @@ test("light mode keeps a single source of truth for the palette", () => {
 
 test("rebalanced prices keep the catalogue shape and every chain affordable", () => {
   const price = Object.fromEntries(shopProducts.map((p) => [p.id, p.price]));
-  // 34 upgrades, nine skills and bays, and eighteen auras: the v0.4 catalogue,
-  // repriced at v0.3. Trail was halved with the companions since, and the total
-  // is pinned to that. It still costs less than the launch catalogue did, and
-  // the late additions sit on top of it rather than inside it.
+
   const addedInV05 = [
     "halcyon",
     "downpour",
@@ -279,8 +267,7 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
     "triptych",
     "offline-vault-3",
   ];
-  // The Task Skip and the R4ND0MN3S5 set were added after the original v0.3
-  // shop repricing, so they are not part of that repriced set.
+
   const addedLater = ["task-skip", "static", "bitstorm", "scramble", "hexdump"];
   const before = shopProducts.filter(
     (p) => !addedInV05.includes(p.id) && !addedLater.includes(p.id),
@@ -289,7 +276,7 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
   expect(before.reduce((sum, p) => sum + p.price, 0)).toBe(107090000);
   expect(107090000).toBeLessThan(131145000);
   expect(shopProducts).toHaveLength(61);
-  // The first upgrade of each visible chain stays reachable early.
+
   expect(price["quickwind-1"]).toBeLessThanOrEqual(30000);
   expect(price["clockwork-1"]).toBeLessThanOrEqual(50000);
   for (const product of shopProducts) {
@@ -300,20 +287,18 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
 });
 
 test("an aura family is a real sub-page of its shelf, on every host", () => {
-  // /shop/auras/celestial, locally and under an optional base path.
   expect(pathForShelfFamily("shop", "auras", "celestial")).toBe(
     "/shop/auras/celestial",
   );
   expect(pathForShelfFamily("shop", "auras", "element", "/preview/")).toBe(
     "/preview/shop/auras/element",
   );
-  // Without a family it is the shelf index, never a dangling slash.
+
   expect(pathForShelfFamily("shop", "auras", "")).toBe("/shop/auras");
   expect(pathForShelfFamily("shop", "auras", "", "/preview/")).toBe(
     "/preview/shop/auras",
   );
-  // A family is read from the third segment, and only from the shelf's own
-  // path: the shop's other shelves and the site's other pages ignore it.
+
   expect(familyFromLocation({ pathname: "/shop/auras/void", hash: "" })).toBe(
     "void",
   );
@@ -326,7 +311,7 @@ test("an aura family is a real sub-page of its shelf, on every host", () => {
   expect(familyFromLocation({ pathname: "/shop/auras", hash: "" })).toBe("");
   expect(familyFromLocation({ pathname: "/shop/skills/x", hash: "" })).toBe("");
   expect(familyFromLocation({ pathname: "/play/auras/x", hash: "" })).toBe("");
-  // The slug is scrubbed the same way pages and shelves are.
+
   expect(pathForShelfFamily("shop", "auras", "  Celestial!../")).toBe(
     "/shop/auras/celestial",
   );
@@ -337,11 +322,10 @@ test("every aura belongs to a family that has its own type and three best", () =
   const auras = shopProducts.filter((p) => p.kind === "aura");
   expect(auras.length).toBeGreaterThan(0);
   for (const aura of auras) {
-    if (aura.family === undefined) continue; // a look outside the four sets
+    if (aura.family === undefined) continue;
     expect(families.has(aura.family), `${aura.id} family`).toBe(true);
   }
   for (const family of AURA_FAMILIES) {
-    // Type: a real stack, a tracking and a casing that the banner can wear.
     expect(family.font.length).toBeGreaterThan(8);
     expect(family.tracking).toMatch(/^-?[\d.]+em$/);
     expect(["none", "uppercase", "lowercase", "capitalize"]).toContain(
@@ -349,7 +333,7 @@ test("every aura belongs to a family that has its own type and three best", () =
     );
     expect(family.weight).toBeGreaterThanOrEqual(300);
     expect(family.weight).toBeLessThanOrEqual(900);
-    // The banner samples the family's own three priciest looks.
+
     const best = auras
       .filter((p) => p.family === family.id)
       .sort((a, b) => b.price - a.price)
@@ -364,7 +348,7 @@ test("every aura belongs to a family that has its own type and three best", () =
         .map((p) => p.id),
     );
   }
-  // One family per look: no aura is claimed twice.
+
   const claimed = auras.filter((p) => p.family !== undefined).map((p) => p.id);
   expect(new Set(claimed).size).toBe(claimed.length);
 });

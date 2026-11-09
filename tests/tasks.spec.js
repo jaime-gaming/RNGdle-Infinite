@@ -30,11 +30,9 @@ import { seedProgress, testProfile } from "./helpers/progress.js";
 import { evaluate } from "./helpers/index.js";
 import { readSavedProgress } from "./helpers/save.js";
 const DAY = 24 * 60 * 60 * 1000;
-// Task periods are UTC days and UTC weeks, so the fixtures are UTC too.
+
 const at = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h, min);
 
-// A small, settled roll. Its tier is explicit so each tally assertion tests the
-// task rule rather than relying on a lucky result from the random table.
 const roll = (id, time, tier = "trash", ep = 1000, badges = []) => ({
   type: "complete",
   id,

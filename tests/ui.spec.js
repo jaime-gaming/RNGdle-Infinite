@@ -76,7 +76,7 @@ test("navigation, themes, help and local signup", async ({ page }) => {
     .getByRole("button", { name: "How to play", exact: true })
     .first()
     .click();
-  // The roll surface stays mounted but hidden behind the help page.
+
   await expect(page.locator(".roll-view")).toBeHidden();
   await expect(
     page.getByRole("heading", { name: "How to play", level: 1 }),
@@ -157,13 +157,12 @@ test("the phone header carries the game logo in the middle", async ({
   const logo = await page.locator(".wordmark").boundingBox();
   const header = await page.locator(".header").boundingBox();
   const controls = await page.locator(".header-right").boundingBox();
-  // Centred on the screen, and never overlapping the theme and account
-  // buttons that share the bar with it.
+
   expect(
     Math.round(logo.x + logo.width / 2 - (header.x + header.width / 2)),
   ).toBe(0);
   expect(logo.x + logo.width).toBeLessThanOrEqual(controls.x);
-  // The desktop bar is left alone: the logo still leads the row.
+
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await waitForApp(page);

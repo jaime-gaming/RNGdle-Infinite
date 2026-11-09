@@ -18,8 +18,7 @@
   --green-bg: #edf5f0;
   --shadow: 0 4px 20px #20212a0a;
   --button: #1b1c24;
-  /* Semantic colours, themed in one place so light mode stays legible.
-     Light values are chosen to clear WCAG AA (4.5:1) against --bg/--surface. */
+
   --danger: #b3373c;
   --danger-border: #b3373c60;
   --warning: #9a5b06;
@@ -75,7 +74,7 @@ a,
 input,
 select {
   -webkit-tap-highlight-color: transparent;
-  /* No double-tap zoom and no 300 ms tap delay on touch screens. */
+
   touch-action: manipulation;
 }
 button {
@@ -122,14 +121,12 @@ svg {
   display: flex;
   flex-direction: column;
 }
-/* One filled accent per line mark: at 16px a solid shape is what makes a
-   glyph legible, and it keeps the set on a single visual system. */
+
 svg .tone {
   fill: currentColor;
   stroke: none;
 }
-/* The other half of the same system: a mark drawn as a solid silhouette needs
-   its details cut back out of it, and the surface behind it is the paint. */
+
 svg .cut {
   fill: var(--surface);
   stroke: none;
@@ -337,8 +334,7 @@ svg .cut-line {
   color: var(--muted);
   margin: 0;
 }
-/* The main action wears the site's signature: a soft pink-to-blue gradient
-   ring with a tinted ambient glow, inherited from the launch skin. */
+
 .generate {
   position: relative;
   isolation: isolate;
@@ -844,8 +840,7 @@ footer button:hover,
   margin: 0 auto;
   flex: 1;
   padding: 38px 30px 65px;
-  /* Every page past the roll eases in instead of snapping, which also gives
-     the route change a beat the eye can follow. */
+
   animation: page-enter 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 @keyframes page-enter {
@@ -889,8 +884,7 @@ footer button:hover,
   border-color: #f0e2c9;
   color: #b59b69;
 }
-/* An uploaded logo replaces the glyph with the account's own picture, in the
-   same rounded tile. */
+
 .page-icon.has-logo {
   padding: 0;
   background: var(--surface);
@@ -906,7 +900,7 @@ footer button:hover,
   width: 100%;
   height: 100%;
 }
-/* The header button keeps its shape when the mark stands in for the glyph. */
+
 .sign-in .avatar-mark {
   border-color: color-mix(in srgb, var(--text) 18%, var(--border));
 }
@@ -1168,7 +1162,7 @@ footer button:hover,
 .empty-state p {
   font-size: 12px;
 }
-/* Same height as a filled button, so a row of the two never steps. */
+
 .secondary-button {
   display: inline-flex;
   align-items: center;
@@ -1405,10 +1399,7 @@ footer button:hover,
   text-align: left;
   margin: 22px 0;
 }
-/* The filled action sizes itself to its label. A button that stretches to
-   whatever column it lands in reads as a banner, not as something to press:
-   the few places that do want a full-width action (a shop card, the sign-up
-   form) ask for it explicitly. */
+
 .primary-button {
   display: inline-flex;
   align-items: center;
@@ -1622,36 +1613,30 @@ footer button:hover,
     display: none;
   }
 }
-/* Phone layout: a slim sticky top bar with the game logo, and a bottom tab
-   bar (MobileTabBar) carrying the destinations. The header's own button row
-   and its secondary buttons hand over to the tab bar below. */
+
 @media (max-width: 760px) {
   #root {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
-  /* A pull-to-refresh in the middle of a 45-second reveal throws it away. */
+
   html,
   body {
     overscroll-behavior-y: contain;
   }
-  /* iOS zooms into any field smaller than 16px. */
+
   input,
   select,
   textarea {
     font-size: 16px;
   }
-  /* Finger-sized hit areas for every small control, without changing the art. */
+
   .icon-button,
   .header-right button,
   .sign-in {
     min-width: 40px;
     min-height: 40px;
   }
-  /* The bar becomes three columns — an empty one on the left, the logo, and
-     the account controls — so the game logo sits in the middle of the screen
-     instead of hugging the left edge. Both side columns take the same share,
-     but the right one still keeps whatever room its buttons need, so the logo
-     can never end up underneath them. */
+
   .header {
     position: sticky;
     top: 0;
@@ -1678,14 +1663,14 @@ footer button:hover,
   .nav-divider {
     display: none;
   }
-  /* The destinations live in the bottom tab bar now. */
+
   .header nav {
     display: none;
   }
   .header-right {
     gap: 8px;
   }
-  /* Help, settings and the rebirth pill ride in the tab bar. */
+
   .help-button {
     display: none;
   }
@@ -1696,8 +1681,7 @@ footer button:hover,
     padding: 4px 8px;
     font-size: 9px;
   }
-  /* Phones keep a compact icon-only profile button; only the text label is
-     hidden — the avatar mark is a span too and must stay visible. */
+
   .sign-in {
     padding: 8px;
   }
@@ -1725,8 +1709,7 @@ footer button:hover,
   .content-main {
     padding: 24px 16px 40px;
   }
-  /* The phone layout ends at the tab bar: the footer only adds a scroll
-     tail, and its destinations live in Settings and the tab bar. */
+
   footer {
     display: none;
   }
@@ -1937,7 +1920,7 @@ footer button:hover,
     scroll-behavior: auto !important;
   }
 }
-/* Self-hosted emoji keep badges consistent across platforms. */
+
 .emoji {
   display: inline-flex;
   align-items: center;
@@ -1974,7 +1957,7 @@ footer button:hover,
 .badge-emoji:has(.emoji img:nth-child(4)) .emoji {
   font-size: 21px;
 }
-/* Preserve the reference's airy layout without pushing the card off desktop. */
+
 @media (min-width: 761px) and (max-height: 1050px) {
   .home-main {
     padding-top: 42px;
@@ -2023,7 +2006,6 @@ footer button:hover,
   margin: 16px 0 0;
 }
 
-/* Sign-up: what is saved, what is not, and live name validation. */
 .signup-points {
   margin: 0 0 18px;
   padding: 0;
@@ -2128,8 +2110,7 @@ footer button:hover,
   line-height: 1.6;
   color: var(--muted);
 }
-/* The other way in: an account on another device joins through the device
-   link instead of starting over. */
+
 .signup-link {
   margin-top: 18px;
   padding: 14px;
@@ -2152,11 +2133,11 @@ footer button:hover,
   justify-content: center;
 }
 
-/* Only the /RNGdle-Infinite/ GitHub Pages build renders this legacy mirror
-   notice; the root-domain build never does. */
 .mirror-notice {
   padding: 10px 20px;
   border-bottom: 1px solid var(--border);
+  border-inline-start: 3px solid var(--green);
+  box-shadow: inset 0 -1px 0 var(--border);
   background: var(--surface);
   color: var(--muted);
   font-size: 12px;

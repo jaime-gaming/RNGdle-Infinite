@@ -1,8 +1,6 @@
-// Browser-local accounting, not a background server. Timestamp tampering cannot
-// be made authoritative without a backend. A visible tab keeps the account online.
 export const OFFLINE_INTERVAL = 600000;
 const OFFLINE_CAP = 144;
-// Every offline rate and per-absence cap a saved batch may legally claim.
+
 const OFFLINE_INTERVALS = [600000, 450000, 300000, 180000];
 export const OFFLINE_CAPS = [144, 216, 288, 360];
 const OFFLINE_CAP_BY_PRODUCT = {
@@ -15,7 +13,7 @@ const amount = (n) => Number.isSafeInteger(n) && n >= 0;
 const timestamp = (n) => amount(n) && n <= 8640000000000000;
 export function parseOffline(value, owned) {
   if (!owned.includes("offline-roller") || value == null) return null;
-  // A saved batch can never claim more rolls than the owned vault allows.
+
   const cap = owned.reduce(
     (largest, id) =>
       OFFLINE_CAP_BY_PRODUCT[id] > largest
@@ -78,8 +76,7 @@ export function parseOffline(value, owned) {
   }
   return { lastSeenAt: value.lastSeenAt, batch, report };
 }
-// Only the current saved batch pointer authorizes an old-dated settlement.
-// Calling something "offline" is not enough to bypass replay protection.
+
 export function matchesOfflineCommitment(offline, action) {
   const batch = offline?.batch;
   if (!batch || action.source !== "offline") return false;

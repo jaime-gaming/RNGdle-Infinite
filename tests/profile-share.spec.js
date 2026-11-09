@@ -11,11 +11,9 @@ import {
 } from "../src/profile-card.js";
 import { mutateSavedProgress } from "./helpers/save.js";
 
-// Log times are epoch milliseconds; the card carries them as ISO strings.
 const at = (day) => Date.UTC(2026, 2, day, 10, 0, 0);
 const iso = (day) => new Date(at(day)).toISOString();
 
-// A logo that satisfies the save's avatar validation: one png data URL.
 const LOGO =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
@@ -86,7 +84,7 @@ test("a profile card survives the trip through the address and rejects damage", 
   expect(card.pins.map((pin) => pin.number)).toEqual([812044, 1337]);
   expect(card.aura).toBe("Starfall");
   const token = encodeShareCard(card);
-  // URL-safe: nothing that needs escaping in a query string.
+
   expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
   const back = decodeShareCard(token);
   expect(back).toMatchObject({
@@ -108,14 +106,13 @@ test("a profile card survives the trip through the address and rejects damage", 
     { number: "812044", ep: 12000, tier: "rare" },
     { number: "1337", ep: 40, tier: "trash" },
   ]);
-  // The logo rides along, so a shared profile shows the same face its owner
-  // wears; a card without one keeps sharing just the same.
+
   expect(card.avatar).toBe(LOGO);
   expect(back.avatar).toBe(LOGO);
   expect(
     decodeShareCard(encodeShareCard({ ...card, avatar: null })).avatar,
   ).toBeNull();
-  // A forged logo — the wrong mime, markup, a remote address — is dropped.
+
   for (const forged of [
     "data:text/html;base64,PGI+",
     "https://example.com/logo.png",
@@ -124,12 +121,10 @@ test("a profile card survives the trip through the address and rejects damage", 
     expect(
       decodeShareCard(encodeShareCard({ ...card, avatar: forged })).avatar,
     ).toBeNull();
-  // The token is the card line deflated behind a "z1" tag: a share stays
-  // compact even with a logo inside, and the tag cannot collide with a plain
-  // old token (those are base64url of raw text and always begin A–f).
+
   expect(token.startsWith("z1")).toBe(true);
   expect(token.length).toBeLessThan(500);
-  // An uncompressed old link still opens: version 2 predates the logo field.
+
   const secs = (day) => Math.floor(at(day) / 1000).toString(36);
   const legacyToken = btoa(
     [
@@ -156,7 +151,7 @@ test("a profile card survives the trip through the address and rejects damage", 
   const legacy = decodeShareCard(legacyToken);
   expect(legacy.name).toBe("LuckyOtter41");
   expect(legacy.avatar).toBeNull();
-  // Damaged, foreign or oversized data is dropped field by field or whole.
+
   expect(decodeShareCard("")).toBeNull();
   expect(decodeShareCard("not-a-card")).toBeNull();
   expect(decodeShareCard(encodeShareCard({ v: 99, name: "x" }))).toBeNull();
@@ -183,7 +178,7 @@ test("a profile card survives the trip through the address and rejects damage", 
   expect(outOfRange.best).toBeNull();
   expect(outOfRange.pins).toEqual([]);
   expect(forged.aura).toHaveLength(40);
-  // The link points at the named profile on the given origin and base.
+
   const url = new URL(
     shareCardUrl(played(), "https://rngdle-infinite.jaime-gaming.com", "/"),
   );
@@ -242,7 +237,6 @@ test("the profile link opens as a read-only card anywhere, and never touches the
   const link = await page.evaluate(() => navigator.clipboard.readText());
   expect(link).toMatch(new RegExp(`/profile/${testProfile.username}\\?card=`));
 
-  // A different browser, a different (guest) player.
   const other = await browser.newContext();
   const visitor = await other.newPage();
   await visitor.goto(link);
@@ -251,7 +245,7 @@ test("the profile link opens as a read-only card anywhere, and never touches the
     visitor.getByRole("heading", { level: 2, name: testProfile.username }),
   ).toBeVisible();
   await expect(visitor.getByText("A saved profile card.")).toBeVisible();
-  // The logo came along: the shared profile wears the same face.
+
   await expect(
     visitor.locator(".profile-title .avatar-mark img"),
   ).toHaveAttribute("src", LOGO);
@@ -260,28 +254,27 @@ test("the profile link opens as a read-only card anywhere, and never touches the
     "424242",
   );
   await expect(visitor.getByLabel("Pinned rolls")).toContainText("+9,000 EP");
-  // None of the owner's controls exist on a shared card.
+
   await expect(visitor.getByTestId("profile-share")).toHaveCount(0);
   await expect(visitor.getByTestId("avatar-upload")).toHaveCount(0);
   await expect(visitor.getByText("Delete account")).toHaveCount(0);
-  // The address keeps the card, so a reload shows the same thing.
+
   await visitor.reload();
   await waitForApp(visitor);
   await expect(visitor.getByText("A saved profile card.")).toBeVisible();
-  // The visitor's own game is untouched: still a guest with nothing saved.
+
   expect(
     await visitor.evaluate(() =>
       localStorage.getItem("rng-infinite-progress-v1"),
     ),
   ).toBeNull();
-  // Moving on in the app leaves the card behind: the visitor's own (empty) profile.
+
   await visitor.getByRole("button", { name: /Roll a number/ }).click();
   await expect(visitor).not.toHaveURL(/card=/);
   await visitor.locator(".sign-in").click();
   await expect(visitor.getByText("Start saving your progress")).toBeVisible();
   await other.close();
 
-  // A damaged link is just the owner's own profile page.
   await page.goto(`/profile/${testProfile.username}?card=broken`);
   await waitForApp(page);
   await expect(
@@ -299,9 +292,7 @@ test("a heavy logo is shrunk to link size before it travels", async ({
   await seedProgress(page, { balance: 5000, totalEarned: 90000 });
   await page.goto("/profile");
   await waitForApp(page);
-  // A real photo-like logo (random pixels, the compressible kind never
-  // shrinks) goes into the save, then the link is copied. It stays under the
-  // save's avatar ceiling so it survives the parse on reload.
+
   const heavy = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 200;
@@ -328,10 +319,9 @@ test("a heavy logo is shrunk to link size before it travels", async ({
   await waitForApp(page);
   await page.getByTestId("profile-share").click();
   const link = await page.evaluate(() => navigator.clipboard.readText());
-  // Compact: the logo rides as a small square, not as the whole picture.
+
   expect(link.length).toBeLessThan(heavy.length / 4);
 
-  // The visitor still sees the face that was shared.
   const other = await browser.newContext();
   const visitor = await other.newPage();
   await visitor.goto(link);

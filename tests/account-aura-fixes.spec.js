@@ -113,7 +113,6 @@ test("aura reveals distinguish moving digits by brightness only", async ({
     );
     expect(results.length).toBeGreaterThan(10);
     for (const { landed, moving } of results) {
-      // Only brightness changes; no background, underline or box is added.
       expect(moving.slice(0, 4)).toEqual(landed.slice(0, 4));
       expect(Number(moving[4])).toBeLessThan(Number(landed[4]));
       expect(moving[1]).toBe("rgba(0, 0, 0, 0)");

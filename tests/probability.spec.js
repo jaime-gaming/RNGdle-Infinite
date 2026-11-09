@@ -181,8 +181,6 @@ test("arbitrary-number contributor diagrams only refer to valid digits; equation
 test("repeated random results each earn EP once and double-clicking cannot bypass cooldown", async ({
   page,
 }) => {
-  // This checks roll accounting, not independent companion luck. A random
-  // first pet would auto-equip and legitimately boost the next roll's wallet.
   await page.addInitScript(() => {
     Object.defineProperty(crypto, "getRandomValues", {
       value: (array) => array.fill(0xffffffff),
@@ -205,9 +203,7 @@ test("repeated random results each earn EP once and double-clicking cannot bypas
     "data-settled",
     "true",
   );
-  // The reveal runs on a virtual clock, so the button changes to ROLL AGAIN
-  // only once the cooldown is actually running. Wait for the label to land
-  // before advancing time, otherwise the next click races the state update.
+
   await expect(page.locator(".generate")).toContainText("COOLDOWN IN");
   await page.clock.fastForward(105100);
   await expect(page.locator(".generate")).toContainText("ROLL AGAIN", {
@@ -293,13 +289,11 @@ test("the blank loader owns the page while scoring data loads, then help and bad
   });
   await page.goto("/");
   await requestSeen;
-  // While the data is pending there is one circle and no other page content:
-  // help and the roll controls only arrive with the real interface.
   await expect(page.locator(".loading-screen")).toBeVisible();
   await expect(page.locator(".loading-circle")).toHaveCount(1);
   expect(await page.locator(".loading-screen").textContent()).toBe("");
-  await expect(page.locator(".header")).toHaveCount(0);
-  await expect(page.locator("footer")).toHaveCount(0);
+  await expect(page.locator(".header")).toBeVisible();
+  await expect(page.locator("footer")).toBeVisible();
   release();
   await expect(page.locator(".header")).toBeVisible();
   await expect(page.locator(".loading-screen")).toHaveCount(0);
@@ -307,8 +301,7 @@ test("the blank loader owns the page while scoring data loads, then help and bad
     .getByRole("button", { name: "How to play", exact: true })
     .first()
     .click();
-  // Help is a page of its own, and the pending draw only unblocks once the
-  // scoring data arrives.
+
   await expect(
     page.getByRole("heading", { name: "How to play", level: 1 }),
   ).toBeVisible();

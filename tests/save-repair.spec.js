@@ -17,8 +17,6 @@ const load = (overrides) =>
 const notes = (result) => result.repairs.join(" ");
 
 test("a v0.3 save with an overcharged circle loads with the circle clamped", () => {
-  // The real incident: Maw held 10 charges from an older balance while the
-  // current circle holds 8, and the whole save was rejected over it.
   const max = skillById.get("serpent-maw").charges;
   const { progress, repairs } = load({
     skillCharge: { "serpent-maw": max + 2, surge: 3 },
@@ -35,7 +33,7 @@ test("unreadable skill charges reset the affected circles only", () => {
   const shaped = load({ skillCharge: ["surge"] });
   expect(shaped.progress.skillCharge).toEqual({});
   expect(notes(shaped)).toMatch(/skill charges were unreadable/);
-  // Unknown keys are future skills, not corruption: dropped silently.
+
   const future = load({ skillCharge: { surge: 3, ghost: 9 } });
   expect(future.progress.skillCharge).toEqual({ surge: 3 });
   expect(future.repairs).toEqual([]);
@@ -49,7 +47,7 @@ test("wallet figures repair without ever inventing EP", () => {
   const garbageWallet = load({ balance: -1, totalEarned: 100 });
   expect(garbageWallet.progress.balance).toBe(0);
   expect(garbageWallet.progress.totalEarned).toBe(100);
-  // An unreadable all-time total is rebuilt from a healthy wallet.
+
   const garbageTotal = load({ balance: 500, totalEarned: "lots" });
   expect(garbageTotal.progress.balance).toBe(500);
   expect(garbageTotal.progress.totalEarned).toBe(500);
@@ -66,7 +64,7 @@ test("Flywheel charge clamps to what the owned model holds", () => {
   const negative = load({ owned: ["flywheel"], flywheelCharge: -2 });
   expect(negative.progress.flywheelCharge).toBe(0);
   expect(notes(negative)).toMatch(/Flywheel charge/);
-  // Without a Flywheel there is nothing to hold a charge: zero, silently.
+
   const modeless = load({ flywheelCharge: 99 });
   expect(modeless.progress.flywheelCharge).toBe(0);
   expect(modeless.repairs).toEqual([]);
@@ -96,7 +94,7 @@ test("unreadable lists reset, rebuildable ones rebuild from the save itself", ()
   expect(collections.progress.owned).toEqual([]);
   expect(collections.progress.receipts).toEqual([]);
   expect(notes(collections)).toMatch(/badge collection/);
-  // The activity log remembers every companion found or bought.
+
   const pets = load({
     pets: "pebble",
     history: [
@@ -119,7 +117,7 @@ test("unreadable lists reset, rebuildable ones rebuild from the save itself", ()
   });
   expect(pets.progress.pets).toEqual(["pebble", "moth"]);
   expect(notes(pets)).toMatch(/companion list/);
-  // Purchases plus rebirths re-unlock every skill.
+
   const skills = load({
     skills: "surge",
     owned: ["surge"],
@@ -159,7 +157,7 @@ test("the profile repairs piece by piece instead of degrading to a guest", () =>
   expect(reissued.progress.profile.username).toBe(testProfile.username);
   expect(reissued.progress.profile.createdAt).toBeGreaterThan(0);
   expect(notes(reissued)).toMatch(/profile id/);
-  // Even a profile that is not an object keeps the save funded.
+
   const replaced = load({
     balance: 50,
     totalEarned: 50,

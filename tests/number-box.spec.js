@@ -31,8 +31,7 @@ test("shared number boxes cover the idle generator and cosmetic previews without
     "??????",
   );
   await expect(page.locator(".best-number, .profile-number")).toHaveCount(0);
-  // Auras are their own shelf now, and each family is a page of its own:
-  // /shop/auras is the index of banners, /shop/auras/celestial is a set.
+
   await page.goto("/shop/auras");
   await waitForApp(page);
   await expect(page.locator(".aura-family-banner")).toHaveCount(
@@ -115,27 +114,26 @@ test("every aura belongs to a family, shows its colours and is renderable", () =
   const families = new Set(AURA_FAMILIES.map((family) => family.id));
   const seen = new Map();
   for (const aura of auras) {
-    // A family, and a family that exists.
     expect(families.has(aura.family)).toBe(true);
     seen.set(aura.family, (seen.get(aura.family) ?? 0) + 1);
-    // Two distinct colours, so the chip on the card can be drawn.
+
     expect(aura.swatch).toHaveLength(2);
     for (const colour of aura.swatch) expect(colour).toMatch(/^#[0-9a-f]{6}$/);
     expect(aura.swatch[0]).not.toBe(aura.swatch[1]);
-    // The box must agree to wear it, and the stylesheet must dress it.
+
     expect(box).toContain(`"${aura.id}"`);
     expect(styles).toContain(`data-cosmetic="${aura.id}"`);
   }
-  // Five families, every one of them populated, and no aura left over.
+
   expect(AURA_FAMILIES).toHaveLength(5);
   for (const family of AURA_FAMILIES)
     expect(seen.get(family.id)).toBeGreaterThan(0);
   expect([...seen.values()].reduce((a, b) => a + b, 0)).toBe(auras.length);
-  // A card's chip is painted from the product, never from a hard-coded list.
+
   const shop = fs.readFileSync("src/components/Shop.jsx", "utf8");
   expect(shop).toContain('"--swatch-a": item.swatch[0]');
   expect(shop).toContain('"--swatch-b": item.swatch[1]');
-  // And the shelf groups by family rather than printing one long list.
+
   expect(shop).toMatch(/auraGroups\s*=\s*auraFamilies\s*\.map\(/);
 });
 
@@ -241,9 +239,9 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     "offline-clock-3": 8500000,
     "offline-vault-1": 6000000,
     "offline-vault-2": 11000000,
-    // v0.3 skills and the two rack upgrades.
+
     surge: 180000,
-    // v0.5: the Task Skip, a repeatable utility bought once a day.
+
     "task-skip": 125000,
     trail: 160000,
     bounce: 500000,
@@ -253,14 +251,14 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     quarry: 6000000,
     "skill-bay-1": 1000000,
     "skill-bay-2": 4000000,
-    // The second wave of auras.
+
     nebula: 520000,
     solstice: 780000,
     lumen: 1050000,
     glitch: 1650000,
     monolith: 2700000,
     chrono: 4200000,
-    // v0.4: the two late skills, the third vault and four more auras.
+
     miser: 9000000,
     triptych: 12000000,
     "offline-vault-3": 18000000,
@@ -268,7 +266,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     downpour: 380000,
     blueprint: 1450000,
     inkblot: 2400000,
-    // v0.5: the R4ND0MN3S5 set, four looks that are random by nature.
+
     static: 260000,
     bitstorm: 880000,
     scramble: 1800000,
@@ -278,14 +276,13 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     prices,
   );
   expect(new Set(shopProducts.map((p) => p.id)).size).toBe(61);
-  // A skill product carries its effect in skills.js, never inside the product:
-  // the shop only mirrors the catalogue so both read the same numbers.
+
   for (const product of shopProducts.filter((p) => p.kind === "skill")) {
     expect(typeof product.skillId).toBe("string");
     expect(product.value).toBeUndefined();
     expect(product.floor).toBeUndefined();
   }
-  // Every aura is cosmetic: none may carry a timing, charge or cap payload.
+
   for (const aura of shopProducts.filter((p) => p.kind === "aura")) {
     expect(aura.value).toBeUndefined();
     expect(aura.charges).toBeUndefined();
@@ -297,14 +294,11 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     if (product.requires)
       expect(product.price).toBeGreaterThan(prices[product.requires]);
   }
-  // No step inside a chain may cost more than four times its predecessor: late
-  // tiers must stay reachable rather than becoming a wall.
+
   for (const product of shopProducts)
     if (product.requires)
       expect(product.price / prices[product.requires]).toBeLessThanOrEqual(4);
-  // The catalogue stays within a sane multiple of the cheapest upgrade. v0.4's
-  // seven late additions are priced above everything else, so the guard is kept
-  // on the catalogue they joined; the premium event auras are part of its new total.
+
   const addedInV05 = new Set([
     "halcyon",
     "downpour",

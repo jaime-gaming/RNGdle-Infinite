@@ -114,8 +114,7 @@ test("completed rolls persist EP exactly once and enforce the saved cooldown", a
   page,
 }) => {
   await seedProgress(page);
-  // Two full reveals with reloads take about 20 seconds alone and run slower
-  // while the rest of the suite shares the machine, so give it room.
+
   test.setTimeout(90000);
   await startRoll(page, 1337);
   await page.clock.runFor(buildRevealTimeline(4, 14).end + 20);
@@ -223,7 +222,6 @@ test("share format and actual badge details", async ({ page, context }) => {
 test("all result tiers fit mobile, including a seven-digit result", async ({
   page,
 }) => {
-  // Nine full scoring and settlement cycles need extra time under suite load.
   test.setTimeout(150000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 360, height: 800 });

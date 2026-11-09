@@ -5,9 +5,6 @@ import fs from "node:fs";
 import { emptyProgress } from "../src/progress.js";
 import { seedProgress } from "./helpers/progress.js";
 
-// Ink shadows in this codebase are black or the #101828 blue-black (a channel
-// spread of 24). The signature glow on the main action — the pink/violet pair
-// — spreads past 100, so this line separates ordinary ink from the CTA's halo.
 const INK_SPREAD = 48;
 
 const funded = {
@@ -17,8 +14,6 @@ const funded = {
   owned: ["quickwind-1"],
 };
 
-// Colours that make up a shadow, as numbers: a decorative glow is any channel
-// that is not grey (and, being a shadow, not fully transparent).
 function shadowInks(value) {
   return [...String(value).matchAll(/rgba?\(([^)]+)\)|color\(srgb ([^)]+)\)/g)]
     .map(([, legacy, modern]) => {
@@ -59,14 +54,11 @@ test("filled actions are ink blocks: one height, no glow, and only as wide as th
     return { row: row.map(box), room: 720 };
   });
 
-  // Two buttons side by side: same height, each sized to its own words. A
-  // filled action stretched across the page reads as a banner.
   expect(actions.row).toHaveLength(2);
   expect(actions.row[0].h).toBe(actions.row[1].h);
   for (const button of actions.row)
     expect(button.w, `${button.text} width`).toBeLessThan(actions.room * 0.5);
   for (const button of actions.row) {
-    // Whatever it sits on, a shadow is a shadow: grey, never a coloured halo.
     for (const [r, g, b] of shadowInks(button.shadow))
       expect(
         Math.max(r, g, b) - Math.min(r, g, b),
@@ -74,7 +66,6 @@ test("filled actions are ink blocks: one height, no glow, and only as wide as th
       ).toBeLessThan(INK_SPREAD);
   }
 
-  // The one deliberately full-width action is the sign-up form's submit.
   await page.goto("/profile");
   await waitForApp(page);
   const submit = await page.evaluate(() => {
@@ -102,7 +93,7 @@ test("the main action wears the signature ring, and its cooldown bar stays insid
   });
   await page.goto("/");
   await waitForApp(page);
-  // Not a roll in flight: the idle plate is the one under test.
+
   const start = page.getByRole("button", { name: "GENERATE", exact: true });
   await expect(start).toBeEnabled();
   const idle = await page.evaluate(() => {
@@ -114,8 +105,7 @@ test("the main action wears the signature ring, and its cooldown bar stays insid
       shadow: cs.boxShadow,
     };
   });
-  // The launch skin's signature: a painted gradient ring that cycles colour,
-  // under a tinted ambient glow — every other filled action stays plain ink.
+
   expect(idle.before).not.toBe("none");
   expect(idle.animation).toContain("cta-ring-cycle");
   expect(
@@ -124,23 +114,15 @@ test("the main action wears the signature ring, and its cooldown bar stays insid
     ),
   ).toBe(true);
 
-  // The cooldown track hugs the bottom edge without poking past it, and the
-  // ring rests while the timer is the content.
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await start.click();
-  // The draw is committed asynchronously (worker plus Web Lock), so the reveal
-  // clock only means anything from the tick the roll is actually committed:
-  // wait for the running reveal instead of assuming the click finished in the
-  // same turn. During the reveal the only wait left after the number is the
-  // cooldown, so the label names the cooldown, and the number beside it is the
-  // cooldown alone rather than reveal plus cooldown.
+
   const cta = page.locator(".generate");
   await expect(cta).toContainText("COOLDOWN IN");
   await expect(cta).toContainText("1:00");
   await page.clock.fastForward(44000);
   await page.clock.runFor(1200);
-  // Past the reveal the cooldown itself is ticking, so the same countdown is
-  // now honestly the next roll.
+
   await expect(cta).toContainText("NEXT ROLL IN");
   const rail = await page.evaluate(() => {
     const button = document.querySelector(".generate").getBoundingClientRect();
@@ -184,10 +166,7 @@ test("only the signature CTA and the idle tile animate on the roll screen", asyn
       }))
       .filter((row) => row.animation.includes("infinite")),
   );
-  // Two moving things on the roll screen since launch: the CTA's cycling
-  // ring and the idle tile's soft shimmer. Everything else holds still until
-  // a roll is asked for. (The changelog's unseen dot lives in the header and
-  // is a notification, not decoration.)
+
   expect(loops).toEqual([]);
 
   const roll = fs.readFileSync("src/roll.css", "utf8");
@@ -195,7 +174,7 @@ test("only the signature CTA and the idle tile animate on the roll screen", asyn
   expect(roll).toContain("cta-ring-cycle");
   expect(roll).not.toContain("artifact-breathing");
   expect(roll).toContain("artifact-settle");
-  // The plate settles once and stops; the reveal keeps its pop animations.
+
   expect(roll).toContain(".number-artifact.is-breathing {");
   expect(base).toContain("#cc68ed");
   expect(base).toContain("#666ee2");

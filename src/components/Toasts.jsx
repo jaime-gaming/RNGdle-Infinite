@@ -10,11 +10,6 @@ import {
 } from "lucide-react";
 import "../toasts.css";
 
-// The notice cards. Each kind has its own mark, so a glance says whether it was
-// done, a plain piece of information, a reward, a milestone, a warning or a
-// failure. Only a finished action gets the tick; a failure never does. A notice
-// waits for its time, pauses while the pointer or the keyboard is on it, and
-// leaves on its own, by the close button, or by its action.
 const KIND_ICON = {
   info: Info,
   done: Check,
@@ -31,12 +26,10 @@ function Notice({ item, onDismiss }) {
   const [leaving, setLeaving] = useState(false);
   const remaining = useRef(item.life);
   const since = useRef(0);
-  // A repeated notice starts its time again.
+
   useEffect(() => {
     remaining.current = item.life;
-    // A repeat may arrive during the short exit animation. It revives this
-    // keyed card as well as restarting its reading time, rather than letting
-    // the previous dismiss timer remove the newly repeated notice.
+
     setLeaving(false);
   }, [item.stamp, item.life]);
   useEffect(() => {

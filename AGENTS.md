@@ -142,9 +142,7 @@ adding backgrounds, borders, underlines or other decorations.
   the summary and ownership map with the corresponding save update. Publish
   those rules in the configured Firebase project before enabling cloud play.
   Browser config in `.env.production` and `.env.example` is public; never put
-  service-account credentials in source or build output. The old
-  `archive/supabase/migrations/` file is historical only and is not used by
-  this app; do not apply it or alter the old project.
+  service-account credentials in source or build output.
 - **UTC for calendar labels.** Daily/weekly task periods use UTC (`Date.UTC`,
   `getUTC*`, `timeZone: "UTC"`). Gameplay timers use `gameNow()` in
   `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The only
@@ -227,6 +225,30 @@ adding backgrounds, borders, underlines or other decorations.
   be imported when the cloud document is missing, and a save owned by another
   auth user is never a candidate.
 
+## Security and UI baseline
+
+- `public/_headers` sets `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
+  `Cross-Origin-Resource-Policy` and HSTS. Do not add frame-ancestor or
+  `X-Frame-Options` denial headers: the game is shown in preview iframes.
+- Every `target="_blank"` link uses `rel="noopener noreferrer"`.
+- The loader is a small, grey, text-free circle inside `<main aria-busy>`;
+  the header and footer stay visible while the game data or cloud save settles.
+- Black Friday side posters are ordered by the current page, never by a timer
+  or a random pick.
+
+## Tool-call budget
+
+- Tool calls are a limited per-turn resource. Arena.ai does not publish an
+  exact per-turn figure in this repository; do not invent one. Treat every
+  call as part of a small budget.
+- Batch related work: one read that collects the needed context, one script
+  that applies several file edits, one validation command that covers the
+  affected specs, and one multi-tool response for independent calls. Avoid a
+  separate tool call for each file or each tiny edit.
+- Prefer targeted validation over a long full-suite run when a batch touches a
+  known area; record the exact specs and results in a QA note.
+
 ## Source map
 
 | Path                                             | Responsibility                                                              |
@@ -237,7 +259,6 @@ adding backgrounds, borders, underlines or other decorations.
 | `src/firebase.js`, `src/use-firebase-auth.js`    | Firebase clients, email/Google auth and provider linking.                   |
 | `src/cloud-save.js`                              | Firestore CRUD, save comparison and browser ownership/cache/recovery.       |
 | `firestore.rules`                                | Per-UID Firestore access policy.                                            |
-| `archive/supabase/migrations/`                   | Archived Supabase schema; not used by the current app.                      |
 | `src/roll.worker.js`, `src/random.js`            | Worker-based roll scoring and random source.                                |
 | `src/badges.js`, `src/infinite-badges.js`        | Badge definitions, families and metadata.                                   |
 | `src/pets.js`, `src/skills.js`, `src/rebirth.js` | Companions, skills, rebirth, prestige and rollback rules.                   |
@@ -367,9 +388,9 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `RNGdle-Infinitev0.5.2fix4`; do not change it
-  again until the next session or an explicit user request. Public release
-  notes live in `src/changelog.js` and keep historical entries.
+  flow. The current label is exactly `v0.5.2fix4`; do not change it
+  until the next session or an explicit user request. Public release notes
+  live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
 - **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
@@ -386,8 +407,12 @@ rather than guessing.
 ## Style
 
 - Prettier is the formatter. Format files changed by a task.
-- Keep code comments about why, not narration of what the next line does.
-- Player-facing copy should be plain and friendly; English only.
+- Source, tests, comments and generated output are English only; leave no
+  Spanish strings or copy.
+- Only event-retirement markers such as `RETIREMENT` or `DELETE EVENT` may
+  remain as comments. Remove comments that narrate or describe code, CSS or
+  markup; keep the code self-explanatory.
+- Player-facing copy should be plain and friendly.
 
 ## Required Git workflow
 

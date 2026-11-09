@@ -1,14 +1,5 @@
 #!/usr/bin/env node
-/**
- * Reports the Firebase Authentication configuration that the two-factor email
- * link flow depends on, using only the public web API key from .env.production
- * (no console or Google Cloud access needed).
- *
- * Usage: node tools/check-firebase-config.mjs [--domain rngdle-infinite.jaime-gaming.com]
- *
- * Exit code 0 when email link sign-in is enabled and the domain is authorised,
- * 1 otherwise (with the missing piece named).
- */
+
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";

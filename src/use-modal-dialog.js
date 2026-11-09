@@ -1,7 +1,5 @@
 import { useEffect, useRef } from "react";
 
-// Native dialogs supply focus trapping, Escape and a top layer above the dock.
-// Restore scrolling/focus on navigation too, not just when the close is clicked.
 export function useModalDialog(open) {
   const dialog = useRef(null);
   useEffect(() => {

@@ -1,20 +1,7 @@
-// The activity log's capacity and the rules for making room in it.
-//
-// The log keeps every roll, discovery, purchase and rebirth, and it is capped so
-// a save cannot outgrow the browser's storage. Compression buys the extra room. Two things are never removed:
-// cycle markers (a rebirth, prestige or Rollback frames every cycle, and the
-// cycle EP gate reads them) and bookmarked rolls (the player asked to keep them).
-// Everything else can go, either in bulk from History or, once the log is full,
-// oldest first, so a new roll always has somewhere to land.
-
-// The most entries the log keeps. An entry is about 260 bytes of JSON, but the
-// primary save is always compressed, so the packed log stays small even at the
-// cap on a phone.
 export const HISTORY_LIMIT = 10_000;
-// How many rolls a player can bookmark; pinned rolls are never pruned.
+
 export const BOOKMARK_LIMIT = 10;
-// From this many entries on, History warns that space is running low and offers
-// bulk delete. It leaves room for the next few sessions before the cap.
+
 export const HISTORY_WARNING = 7_500;
 
 export function isCycleMarker(entry) {
@@ -26,7 +13,6 @@ export function isCycleMarker(entry) {
   );
 }
 
-// True for an entry that no removal may touch.
 function isKeptEntry(entry, bookmarks = []) {
   return (
     isCycleMarker(entry) ||
@@ -34,7 +20,6 @@ function isKeptEntry(entry, bookmarks = []) {
   );
 }
 
-// Splits a log into what stays and what goes, both in their original order.
 function cutEntries(history, doomed) {
   const kept = [];
   const removed = [];
@@ -44,10 +29,6 @@ function cutEntries(history, doomed) {
   return { history: kept, removed };
 }
 
-// The log brought back under the cap. Once it is over, the oldest removable
-// entries go; markers and bookmarks are passed over, so the log can never shed
-// the things it exists to keep. Returns the log and the entries that left it,
-// so their figures can be kept (see history-tally.js).
 export function capHistory(
   history = [],
   bookmarks = [],
@@ -64,7 +45,6 @@ export function capHistory(
   return cutEntries(history, doomed);
 }
 
-// How many entries bulk delete could remove at all.
 export function removableCount(history = [], bookmarks = []) {
   return history.reduce(
     (total, entry) => total + (isKeptEntry(entry, bookmarks) ? 0 : 1),
@@ -72,7 +52,6 @@ export function removableCount(history = [], bookmarks = []) {
   );
 }
 
-// The save keeps the prestige as "ultra-rebirth"; the player sees its name.
 function markerName(entry) {
   if (entry.type === "rollback") return "Rollback";
   if (entry.type === "fresh-start") return "Fresh start";
@@ -91,9 +70,6 @@ function countRange(history, from, to, bookmarks) {
   return { entries, kept };
 }
 
-// The timeline split into cycles. Each finished cycle is the run of entries
-// that a rebirth, prestige or Rollback closed, and is named after that marker; the
-// cycle still in play has no marker yet and is reported on its own.
 export function historyCycles(history = [], bookmarks = []) {
   const finished = [];
   let start = 0;
@@ -119,10 +95,6 @@ export function historyCycles(history = [], bookmarks = []) {
   };
 }
 
-// Removes the removable entries of one finished cycle: those between the marker
-// before it and the marker that closes it. The markers stay, so the timeline
-// keeps its dividers and the cycle gate still finds its boundary. Returns the
-// log and the entries that left it.
 export function pruneCycle(history, bookmarks, markerId) {
   const index = history.findIndex(
     (entry) => isCycleMarker(entry) && entry.id === markerId,
@@ -137,8 +109,6 @@ export function pruneCycle(history, bookmarks, markerId) {
   return cutEntries(history, doomed);
 }
 
-// Removes the oldest removable entries, by time, up to the number asked for.
-// Returns the log and the entries that left it.
 export function pruneOldest(history, bookmarks, count) {
   const doomed = new Set(
     history

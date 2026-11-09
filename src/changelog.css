@@ -51,7 +51,7 @@
   line-height: 1.6;
   color: var(--secondary);
 }
-/* Badge names inside a note: the same text, underlined, opens the badge. */
+
 .changelog-badge-link {
   padding: 0;
   border: 0;
@@ -78,7 +78,7 @@
   line-height: 1.6;
   color: var(--muted);
 }
-/* Header flag shown until the newest entry has been opened. */
+
 .version-flag {
   display: inline-flex;
   align-items: center;
@@ -119,8 +119,6 @@
   }
 }
 @media (max-width: 420px) {
-  /* The smallest header keeps the ladder, the theme switch and the profile
-     button; the changelog stays one tap away in the footer. */
   .version-flag {
     display: none;
   }

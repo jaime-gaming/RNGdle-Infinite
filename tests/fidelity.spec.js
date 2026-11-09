@@ -224,9 +224,7 @@ test("reveal and badge breakdown geometry match the reference without dashboard 
   expect(positions[".number-artifact"].height).toBe(106);
   expect(positions[".result-rank"].top).toBe(226);
   expect(positions[".roll-ep"]).toEqual({ top: 266, width: 166, height: 34 });
-  // A score-only roll draws no wallet-credit line, so the only extra below
-  // the EP pill is the goal recap living inside the session total; everything
-  // under it sits at the bare reference positions again.
+
   expect(positions[".share-row"].top).toBe(399);
   expect(positions[".generate"]).toEqual({ top: 457, width: 320, height: 72 });
   expect(positions[".badge-breakdown"].top).toBe(577);

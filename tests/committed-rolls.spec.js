@@ -262,7 +262,7 @@ test("only the next upgrade in each path is shown, with a maxed card after the f
   page,
 }) => {
   await seedProgress(page, { balance: 10000000, totalEarned: 10000000 });
-  // Quickwind and Clockwork are the Pace shelf's two tracks.
+
   await page.goto("/shop/pace");
   await waitForApp(page);
   await expect(
@@ -414,8 +414,7 @@ test("failed settlement is merged with later cross-tab spending rather than over
   expect((await saved(page)).flywheelCharge).toBe(3);
   expect((await saved(page)).pendingRoll).not.toBeNull();
   const other = await context.newPage();
-  // The failed writer recovers before the next cross-tab update arrives. The
-  // storage event must durably merge its credited roll into that new save.
+
   await page.evaluate(() => {
     window.failSettlement = false;
   });
@@ -478,9 +477,6 @@ test("a concurrent local save preserves a settlement this tab could not write", 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await settled(page);
 
-  // Another tab writes the last durable snapshot, which still has the
-  // committed roll pending. The storage event must not replace this tab's
-  // only copy of the settlement.
   const concurrentHead = JSON.stringify(await saved(page));
   await page.evaluate(
     ({ key, raw }) => {

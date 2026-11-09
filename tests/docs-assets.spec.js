@@ -6,9 +6,6 @@ import { PETS } from "../src/pets.js";
 import { CREATURE_IDS } from "../src/components/game-icons.jsx";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 
-// Artwork and documentation are shipped assets too: a badge that falls back to
-// a text glyph, a companion with no drawing of its own, or a README image that
-// was never committed, is a visible regression on the public page.
 const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
 const emojiMap = JSON.parse(fs.readFileSync("src/emoji-map.json", "utf8"));
 
@@ -29,15 +26,13 @@ test("every badge glyph has local artwork", () => {
 });
 
 test("every companion has its own drawing, and no companion borrows another", () => {
-  // The interface draws companions itself instead of pasting emoji artwork, so
-  // each id needs a glyph and the glyphs must be distinct.
   const icons = new Set(CREATURE_IDS);
   for (const pet of PETS)
     expect(icons.has(pet.id), `no icon for ${pet.id}`).toBe(true);
   expect(
     CREATURE_IDS.filter((id) => PETS.some((pet) => pet.id === id)),
   ).toEqual(PETS.map((pet) => pet.id));
-  // The parade and the shelf both render that artwork, never an emoji glyph.
+
   const parade = fs.readFileSync("src/components/PetParade.jsx", "utf8");
   const shelf = fs.readFileSync("src/components/PetShelf.jsx", "utf8");
   for (const source of [parade, shelf]) {
@@ -109,10 +104,7 @@ test("the shop hub links match the shelf pages it renders", () => {
   const data = fs.readFileSync("src/shop-data.js", "utf8");
   const companion = fs.readFileSync("src/components/PetShelf.jsx", "utf8");
   const source = `${shop}\n${companion}`;
-  // The sections are catalogue data: routing, the hub and the featured picks
-  // all read the one list.
-  // A shelf section carries an icon; the aura families that group a shelf's
-  // cards do not, so the two lists cannot be confused.
+
   const ids = [
     ...data.matchAll(
       /\bid: "([a-z-]+)",\s*\n\s*label: "([^"]+)",\s*\n\s*icon: "/g,
@@ -124,10 +116,9 @@ test("the shop hub links match the shelf pages it renders", () => {
     expect(seen.has(id)).toBe(false);
     seen.add(id);
     expect(label).toMatch(/^[A-Z]/);
-    // Each shelf renders its own anchor on its own page…
+
     expect(source).toContain(`id="shop-${id}"`);
-    // …and every hub button is a real link to that page, so a shelf can be
-    // linked to, bookmarked and shared.
+
     expect(shop).toContain('pathForSubpage("shop", entry.id)');
     expect(shop).toContain('id="shop-hub"');
   }

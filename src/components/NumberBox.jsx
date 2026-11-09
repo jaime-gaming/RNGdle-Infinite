@@ -1,4 +1,3 @@
-// Retain rendering for the legacy cosmetics that players already own.
 import React from "react";
 import "../number-box.css";
 import "../number-box-palettes.css";
@@ -52,7 +51,7 @@ const cosmetics = new Set([
   "hollow-lantern",
   "blackout-2026",
 ]);
-// Fixed decorative positions keep previews and live boxes consistent. No game RNG.
+
 const stars = [
   [8, 20, 8],
   [85, 17, 11],
@@ -62,7 +61,6 @@ const stars = [
   [42, 12, 5],
 ];
 
-// Deterministic, decorative scatter. Never consumes the gameplay RNG.
 const godlyStars = (() => {
   let seed = 1234;
   const random = () =>
@@ -111,7 +109,7 @@ export default function NumberBox({
       data-aura-layout={auraLayout === "contained" ? "contained" : undefined}
       style={{
         "--box-font": `${fontSize}px`,
-        // Every aura's own two swatch colours drive the shared finish layer.
+
         ...(swatch && { "--aura-a": swatch[0], "--aura-b": swatch[1] }),
         ...style,
       }}

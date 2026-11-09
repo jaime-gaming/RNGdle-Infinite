@@ -148,7 +148,6 @@ test("new committed rolls reject a seventh number, but already-committed legacy 
 test("overflow charge survives settlement and reload, then fires on the following real roll", async ({
   page,
 }) => {
-  // Two animated multi-rolls and the full virtual cooldown can be slow under load.
   test.setTimeout(60000);
   const words = [...LOW, 139598, 861456, 375660, 577281];
   await mockRandom(page, words);

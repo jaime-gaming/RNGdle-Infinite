@@ -93,7 +93,7 @@ test("every primary write is compressed, even with free storage", () => {
   expect(unpackVaultSave(store.getItem(PROGRESS_KEY))).toBe(
     JSON.stringify({ ...state, balance: 5 }),
   );
-  // Plain JSON written by an older build is still accepted as input.
+
   writeDeviceSave(store, PROGRESS_KEY, '{"ok":true}');
   expect(unpackVaultSave(store.getItem(PROGRESS_KEY))).toBe('{"ok":true}');
 });

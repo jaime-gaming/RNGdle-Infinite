@@ -1,5 +1,3 @@
-// Local, non-scoring preferences. Settings never touch randomness, EP, prices,
-// cooldown deadlines, or saved progress: they only change presentation and alerts.
 import gameIndex from "./data/game-index.json" with { type: "json" };
 
 export const SETTINGS_KEY = "rng-infinite-settings-v1";
@@ -14,18 +12,17 @@ export function rankMeetsMinimum(actualRank, minimumRank) {
 }
 
 export const defaultSettings = {
-  // Alerts
   notifyReady: false,
   notifySound: false,
   notifyRankEnabled: false,
   notifyRank: null,
-  // Presentation
+
   compactNumbers: false,
   showSkillBar: true,
   skillBarCollapsed: false,
   showGoalRecap: true,
   confirmPurchases: true,
-  // Gameplay conveniences (never a reward or odds change)
+
   autoRollDefault: false,
 };
 
@@ -55,8 +52,7 @@ export function parseSettings(raw) {
     if (typeof value[key] === "boolean") next[key] = value[key];
   if (NOTIFICATION_RANKS.includes(value.notifyRank))
     next.notifyRank = value.notifyRank;
-  // v0.2 saves stored the Flywheel meter toggle under its old name; the rack
-  // that replaced it keeps the same preference.
+
   if (
     typeof value.showFlywheelMeter === "boolean" &&
     value.showSkillBar == null

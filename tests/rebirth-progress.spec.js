@@ -15,7 +15,7 @@ import {
 import { seedProgress, testProfile } from "./helpers/progress.js";
 
 const badgeIds = allBadgeMetadata.map((b) => b.id);
-// A roll that scored `ep` in the cycle in play. The gate reads only these.
+
 const earned = (ep, at = 150000) => [
   {
     id: `ep:${at}:${ep}`,
@@ -34,7 +34,6 @@ const save = (extra) => ({
 });
 
 test("the one percentage is the mean of the badge share and the EP share, rounded down", () => {
-  // The first rung asks for 47 badges and 250,000 EP.
   expect(
     rebirthProgress(
       save({ discovered: badgeIds.slice(0, 47), history: earned(125000) }),
@@ -45,7 +44,7 @@ test("the one percentage is the mean of the badge share and the EP share, rounde
     rebirthProgress(save({ discovered: badgeIds.slice(0, 47) })).percent,
   ).toBe(50);
   expect(rebirthProgress(save({ history: earned(250000) })).percent).toBe(50);
-  // It reads 100 only when both halves are done, never 99.9 rounded up.
+
   expect(
     rebirthProgress(
       save({ discovered: badgeIds.slice(0, 47), history: earned(249999) }),
@@ -79,14 +78,14 @@ test("the steps run: six rungs, then three prestiges, then the Rollback again an
   expect(nextStep({ rebirths: 6, ultraRebirths: 0 }).kind).toBe("prestige");
   expect(nextStep({ rebirths: 6, ultraRebirths: 2 }).kind).toBe("prestige");
   expect(nextStep({ rebirths: 6, ultraRebirths: 3 }).kind).toBe("rollback");
-  // A Rollback does not end the steps: the next one is always the Rollback.
+
   expect(nextStep({ rebirths: 6, ultraRebirths: 3, rollbacks: 1 }).kind).toBe(
     "rollback",
   );
   expect(nextStep({ rebirths: 6, ultraRebirths: 3, rollbacks: 5 }).kind).toBe(
     "rollback",
   );
-  // Prestige closes after the third: the Rollback is the only way out.
+
   expect(
     ultraRebirthAvailable(
       { rebirths: 6, ultraRebirths: 3, history: [] },
@@ -126,7 +125,7 @@ test("no screen names Prestige before the sixth rebirth", async ({ page }) => {
     discovered: badgeIds.slice(0, 150),
     rebirths: 3,
   });
-  // The changelog is release history, so it is the one page left out.
+
   for (const route of [
     "/",
     "/tasks",
@@ -145,7 +144,7 @@ test("no screen names Prestige before the sixth rebirth", async ({ page }) => {
       /prestige/i,
     );
   }
-  // The teaser stands in for it on the Rebirth page.
+
   await page.goto("/rebirth");
   await waitForApp(page);
   await expect(

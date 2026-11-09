@@ -14,13 +14,11 @@ await build({
   },
 });
 
-// GitHub Pages' legacy main/docs source needs a 404 document for direct SPA
-// routes. Keep the URL unchanged so the router can resolve the requested path.
 await copyFile(
   path.join(outputDirectory, "index.html"),
   path.join(outputDirectory, "404.html"),
 );
-// Pages' legacy/Jekyll mode can otherwise ignore underscore-prefixed assets.
+
 await writeFile(path.join(outputDirectory, ".nojekyll"), "");
 
 console.log(

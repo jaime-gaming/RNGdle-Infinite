@@ -5,13 +5,12 @@ import { seedProgress, testProfile } from "./helpers/progress.js";
 test("the profile page lives at /profile/<username> and follows the account", async ({
   page,
 }) => {
-  // A guest lands on the bare page: there is no name to show yet.
   await page.goto("/profile");
   await waitForApp(page);
   await expect(page.getByText("Start saving your progress")).toBeVisible();
   await expect(page.getByTestId("cloud-migration-note")).toHaveCount(0);
   await expect(page).toHaveURL(/\/profile$/);
-  // Signing up rewrites the address to the new name without a new entry.
+
   await page.getByLabel("Username").fill("LuckyOtter41");
   await page.getByRole("button", { name: /Start saving my progress/ }).click();
   await expect(page).toHaveURL(/\/profile\/LuckyOtter41$/);
@@ -32,7 +31,6 @@ test("a direct /profile/<other-name> link stays on that public profile", async (
   await expect(page.getByText("Public profile unavailable")).toBeVisible();
   await expect(page).toHaveURL(/\/profile\/SomebodyElse$/);
 
-  // The header button still opens this browser's own named profile.
   await page.goto("/");
   await waitForApp(page);
   await page.locator(".sign-in").click();

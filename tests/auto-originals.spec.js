@@ -48,7 +48,6 @@ async function enable(p) {
 test("Auto-Roll is a confirmed purchase that does not equip and persists as an off-by-default tool", async ({
   page,
 }) => {
-  // Price comes from the catalogue so a rebalance cannot silently stale this.
   const autoRoll = shopProducts.find((p) => p.id === "auto-roll");
   expect(autoRoll).toMatchObject({ kind: "utility" });
   const autoRollPrice = autoRoll.price.toLocaleString("en-US");
@@ -56,7 +55,7 @@ test("Auto-Roll is a confirmed purchase that does not equip and persists as an o
     balance: autoRoll.price,
     totalEarned: autoRoll.price,
   });
-  // Auto-Roll is a tool: its shelf is its own page.
+
   await page.goto("/shop/tools");
   await waitForApp(page);
   const card = page.locator('[data-product="auto-roll"]');

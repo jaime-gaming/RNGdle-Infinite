@@ -11,7 +11,6 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log for debugging – never blank page silently
     try {
       console.error(
         "[RNGdle] Render error caught by boundary:",
@@ -24,7 +23,7 @@ export default class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    // Try to recover by reloading – keep save safe (save is in localStorage, not cleared)
+
     try {
       if (this.props.onReset) this.props.onReset();
     } catch {}
@@ -61,9 +60,9 @@ export default class ErrorBoundary extends React.Component {
             Something went wrong
           </h2>
           <p style={{ maxWidth: 520, opacity: 0.8, lineHeight: 1.5 }}>
-            The page encountered an error and could not be displayed. Your progress and
-            profile are saved in this browser and won't be lost upon reloading.
-            Try reloading or going back to the home page.
+            The page encountered an error and could not be displayed. Your
+            progress and profile are saved in this browser and won't be lost
+            upon reloading. Try reloading or going back to the home page.
           </p>
           <details
             style={{
@@ -129,8 +128,8 @@ export default class ErrorBoundary extends React.Component {
             </button>
           </div>
           <small style={{ opacity: 0.6 }}>
-            If this keeps happening, try clearing your cache or opening in another
-            tab. The backup can be found in Settings.
+            If this keeps happening, try clearing your cache or opening in
+            another tab. The backup can be found in Settings.
           </small>
         </div>
       );

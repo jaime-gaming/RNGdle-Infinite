@@ -19,10 +19,6 @@ import {
 } from "../src/tasks.js";
 import { badgeMetadata } from "../src/roll-data.js";
 
-// The in-game notices: the cards that say what just happened. The queue and
-// the rules that post them are plain code, so most of this runs without a page;
-// one test rolls a number in the browser to see a notice come up for real.
-
 const zeroCounts = () =>
   Object.fromEntries(TASK_METRICS.map((metric) => [metric, 0]));
 
@@ -33,7 +29,7 @@ test("a notice is a line, or a kinded card with an optional title and action", (
     kind: "info",
   });
   expect(toastFrom({ kind: "reward", title: "", text: "" })).toBeNull();
-  // An action needs a label and a handler; anything less is dropped, not run.
+
   expect(
     toastFrom({ kind: "milestone", text: "x", action: { label: "Open" } })
       .action,
@@ -53,7 +49,7 @@ test("the same notice twice is one card counted twice, and the oldest leaves pas
   list = pushToast(list, { kind: "reward", title: "+5 EP", text: "A" }, 2);
   expect(list).toHaveLength(1);
   expect(list[0]).toMatchObject({ count: 2, stamp: 2 });
-  // Different text is a new card, and a fourth card pushes the first out.
+
   for (let i = 0; i < TOAST_LIMIT; i++)
     list = pushToast(list, `Notice ${i}`, 10 + i);
   expect(list).toHaveLength(TOAST_LIMIT);
@@ -87,15 +83,13 @@ test("only an Epic-or-better badge newly found is worth a notice", () => {
       (badge) => badge.id,
     ),
   ).toEqual([epic.id]);
-  // Badges already found are not news again.
+
   expect(freshRareBadges([epic.id], [epic.id], lookup)).toEqual([]);
 });
 
 test("a roll that finishes a task posts a notice that opens the Tasks page", async ({
   page,
 }) => {
-  // A day whose daily list holds "Roll 10 numbers": nine rolls already count,
-  // so the next roll finishes it.
   const noon = (offset) => {
     const date = new Date();
     date.setDate(date.getDate() + offset);
@@ -119,7 +113,7 @@ test("a roll that finishes a task posts a notice that opens the Tasks page", asy
   ).toBeEnabled();
   await page.clock.pauseAt(new Date(when));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
-  // A base roll reveals over 45 seconds of game time, so walk the clock on.
+
   for (let step = 0; step < 300; step++) {
     const done = await page.evaluate(
       () =>
@@ -129,7 +123,7 @@ test("a roll that finishes a task posts a notice that opens the Tasks page", asy
     if (done) break;
     await page.clock.runFor(250);
   }
-  // One roll can finish several tasks, so the notice counts them in one card.
+
   const notice = page.locator("article.toast", {
     hasText: "ready to claim",
   });
@@ -143,7 +137,6 @@ test("a roll that finishes a task posts a notice that opens the Tasks page", asy
 test("an Epic badge found while the roll is off the roll page posts a notice that opens Badges", async ({
   page,
 }) => {
-  // 13589 earns Ascension, an Epic badge, on its first roll.
   await mockRandom(page, [13589]);
   await seedProgress(page, {});
   await page.goto("/");
@@ -153,7 +146,7 @@ test("an Epic badge found while the roll is off the roll page posts a notice tha
   ).toBeEnabled();
   await pauseClockAt(page, new Date(Date.now() + 1000));
   await page.getByRole("button", { name: "GENERATE", exact: true }).click();
-  // The reveal keeps running on the clock while the player is on the Shop.
+
   await page.getByRole("button", { name: "Shop", exact: true }).click();
   for (let step = 0; step < 300; step++) {
     const done = await page.evaluate(
@@ -222,8 +215,7 @@ test("a repeated error notice revives the card instead of inheriting its exit ti
 
   await page.clock.runFor(life);
   await expect(notice).toHaveClass(/is-leaving/);
-  // Repeat it while the original card is fading out. Its count rises and its
-  // full reading time starts again, so the old 200 ms exit cannot eat it.
+
   await share.evaluate((button) => button.click());
   await expect(notice).not.toHaveClass(/is-leaving/);
   await expect(notice.locator(".toast-count")).toHaveText("×2");
@@ -235,7 +227,6 @@ test("a repeated error notice revives the card instead of inheriting its exit ti
 test("a failure shows its own mark and alert role, and never the tick of a finished action", async ({
   page,
 }) => {
-  // The clipboard refuses the share, so the share fails for real in the page.
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,

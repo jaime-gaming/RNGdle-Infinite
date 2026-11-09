@@ -1,5 +1,3 @@
-/* Deliberately unlike the plain nav buttons: bordered pill, progress ring and
-   a distinct accent, so Rebirth reads as a milestone rather than a page. */
 .rebirth-nav {
   display: inline-flex;
   align-items: center;
@@ -30,8 +28,7 @@
   border-color: var(--text);
   color: var(--text);
 }
-/* Registering the custom property lets the conic fill glide instead of jumping
-   when a badge lands. Browsers without @property simply skip the transition. */
+
 @property --fill {
   syntax: "<percentage>";
   inherits: false;
@@ -45,7 +42,7 @@
   height: 25px;
   border-radius: 50%;
   color: var(--muted);
-  /* The ring itself is the progress bar: conic fill to the discovered share. */
+
   background: conic-gradient(
     var(--ring-colour, var(--secondary)) var(--fill, 0%),
     var(--border) 0
@@ -78,7 +75,7 @@
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
-/* Complete collection: the one state that earns colour. */
+
 .rebirth-nav.is-ready {
   border-color: var(--green);
   background: var(--green-bg);
@@ -112,8 +109,7 @@
     padding: 5px;
   }
 }
-/* On phones the bottom tab bar carries the rebirth entry, so the header
-   pill stays out of the way. */
+
 @media (max-width: 760px) {
   .rebirth-nav {
     display: none;
