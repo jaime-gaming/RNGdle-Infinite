@@ -24,6 +24,7 @@ import {
 } from "./save-vault.js";
 import { productById } from "./shop-data.js";
 import { RNGWEEN_RESALE_PRICE, isResaleCosmetic } from "./black-friday.js";
+import { BATTLE_PASS_PREMIUM_PRICE, passLevelForXp } from "./battle-pass.js";
 import {
   UNKNOWN_CLOUD_OWNER,
   isCloudUserDeleted,
@@ -330,6 +331,10 @@ function investedWealth(progress) {
       (isResaleCosmetic(item) ? RNGWEEN_RESALE_PRICE : 0);
     wealth = Math.min(Number.MAX_SAFE_INTEGER, wealth + price);
   }
+  wealth = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    wealth + passLifetimePremium(progress) * BATTLE_PASS_PREMIUM_PRICE,
+  );
   return wealth;
 }
 
@@ -366,10 +371,46 @@ export function saveHasProgress(progress) {
   if (progress.rngweenLimited?.finaleEarned) return true;
   if (safeAmount(progress.blackFriday?.stamps) > 0) return true;
   if (progress.blackFriday?.skinEarned) return true;
+  if (passLifetimeXp(progress) > 0) return true;
+  if (passLifetimeClaims(progress) > 0) return true;
+  if (passLifetimePremium(progress) > 0) return true;
   if (Array.isArray(progress.history) && progress.history.length > 0)
     return true;
   const tally = allTimeTally(progress);
   return tally.rolls > 0 || tally.spent > 0;
+}
+
+function passLifetimeXp(progress) {
+  const pass = progress?.battlePass;
+  return (
+    safeAmount(pass?.xp) +
+    (Array.isArray(pass?.archive)
+      ? pass.archive.reduce((total, entry) => total + safeAmount(entry?.xp), 0)
+      : 0)
+  );
+}
+
+function passLifetimeClaims(progress) {
+  const pass = progress?.battlePass;
+  return (
+    uniqueIds(pass?.claimed).size +
+    (Array.isArray(pass?.archive)
+      ? pass.archive.reduce(
+          (total, entry) => total + safeAmount(entry?.claimed),
+          0,
+        )
+      : 0)
+  );
+}
+
+function passLifetimePremium(progress) {
+  const pass = progress?.battlePass;
+  return (
+    (pass?.premium ? 1 : 0) +
+    (Array.isArray(pass?.archive)
+      ? pass.archive.filter((entry) => entry?.premium).length
+      : 0)
+  );
 }
 
 export function compareSaveRichness(local, cloud) {
@@ -431,6 +472,9 @@ export function compareSaveRichness(local, cloud) {
 
   compareNumber(local.blackFriday?.stamps, cloud.blackFriday?.stamps);
   compareFlag(local.blackFriday?.skinEarned, cloud.blackFriday?.skinEarned);
+  compareNumber(passLifetimeXp(local), passLifetimeXp(cloud));
+  compareNumber(passLifetimeClaims(local), passLifetimeClaims(cloud));
+  compareNumber(passLifetimePremium(local), passLifetimePremium(cloud));
 
   const localPending = local.pendingRoll;
   const cloudPending = cloud.pendingRoll;
@@ -475,6 +519,16 @@ export function summarizeSaveProgress(progress) {
     skills: uniqueIds(progress?.skills).size,
     companions: uniqueIds(progress?.pets).size,
     pendingRoll: Boolean(progress?.pendingRoll),
+    battlePass: {
+      seasonId: String(progress?.battlePass?.seasonId ?? ""),
+      xp: safeAmount(progress?.battlePass?.xp),
+      level: passLevelForXp(safeAmount(progress?.battlePass?.xp)),
+      premium: Boolean(progress?.battlePass?.premium),
+      claimed: uniqueIds(progress?.battlePass?.claimed).size,
+      archivedSeasons: Array.isArray(progress?.battlePass?.archive)
+        ? progress.battlePass.archive.length
+        : 0,
+    },
   };
 }
 

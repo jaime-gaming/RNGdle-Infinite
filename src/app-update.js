@@ -15,7 +15,7 @@ const APP_UPDATE_CACHE_TIMEOUT_MS = 1500;
 
 const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 
-export const APP_INTERNAL_VERSION = "v0.5.2fix4";
+export const APP_INTERNAL_VERSION = "v0.6";
 
 export function isNewerVersion(candidate, baseline) {
   const parse = (label) => {

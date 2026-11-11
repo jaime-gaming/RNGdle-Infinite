@@ -54,6 +54,7 @@ test("the README is a short, player-friendly guide with current screenshots", ()
   for (const section of [
     "## How to play",
     "## What you can discover",
+    "## Battle Pass",
     "## Keep your progress",
     "## FAQ",
     "## Privacy & contact",

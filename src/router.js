@@ -1,6 +1,7 @@
 export const PAGES = [
   "roll",
   "tasks",
+  "pass",
   "shop",
   "badges",
   "history",

@@ -33,6 +33,7 @@ test("every app page has a direct path, not a hash fragment", () => {
   expect(PAGES).toEqual([
     "roll",
     "tasks",
+    "pass",
     "shop",
     "badges",
     "history",

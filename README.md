@@ -8,7 +8,7 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
   <a href="https://rngdle-infinite.jaime-gaming.com/"><strong>▶ Play now</strong></a>
 </p>
 
-**In this README:** [How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Black Friday 2026](#black-friday-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Credits](#credits) · [Project layout](#project-layout)
+**In this README:** [How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Battle Pass](#battle-pass) · [Black Friday 2026](#black-friday-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Credits](#credits)
 
 ![The game, ready for a roll](media/roll.png)
 
@@ -32,6 +32,13 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 ![The shop and its upgrades](media/shop.png)
 
 ![The Rebirth ladder](media/rebirth.png)
+
+## Battle Pass
+
+The Battle Pass runs in 28-day seasons. Missions pay **BPEP**, which only moves
+the pass; EP remains your shop wallet. Every reward is visible across 30 levels,
+and the optional premium track is bought with EP, never real money. Earned
+rewards are kept; unclaimed earned rewards arrive when the season closes.
 
 ## Black Friday 2026
 
@@ -78,15 +85,4 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
-## Project layout
-
-| Path       | What lives here                                   |
-| ---------- | ------------------------------------------------- |
-| `src/`     | The game: screens, styles, saves and cloud sync.  |
-| `public/`  | Static assets and the generated scoring tables.   |
-| `tests/`   | Playwright specs and shared test helpers.         |
-| `tools/`   | Builds, data preparation, audits and smoke tests. |
-| `archive/` | QA notes, developer guides and retired history.   |
-| `docs/`    | The published GitHub Pages mirror (generated).    |
-
-_Documentation updated November 8, 2026._
+_Documentation updated November 11, 2026._

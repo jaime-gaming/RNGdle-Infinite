@@ -4,6 +4,7 @@ import {
   skillById,
   skillChargeFactor,
   skillChargeOf,
+  skillCombinationWarnings,
   skillEffectChips,
   skillEffectSummary,
   skillPetLuck,
@@ -210,8 +211,11 @@ export function rackReport(progress = {}) {
   if (chargeFactor > 1) chips.push(`${times(chargeFactor)} charge`);
   if (absorbs) chips.push("no cooldown");
 
+  const warnings = skillCombinationWarnings(armedIds);
+
   return {
     slots,
+    warnings,
 
     used: equipped.filter((skill) => skillTakesSlot(skill.id)).length,
     equipped,

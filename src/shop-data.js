@@ -1,4 +1,9 @@
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
+import {
+  BATTLE_PASS_COSMETICS,
+  BATTLE_PASS_FAMILY,
+  BATTLE_PASS_VARIANT,
+} from "./battle-pass.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
 import {
   BLACK_FRIDAY_FAMILY,
@@ -767,15 +772,19 @@ export function nextUpgrade(owned, kind) {
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);
 }
 export const auraProducts = [
+  ...BATTLE_PASS_COSMETICS,
   ...shopProducts.filter((item) => item.kind === "aura"),
   ...RNGWEEN_COSMETICS,
   BLACK_FRIDAY_SKIN,
 ];
 export const productById = new Map(
-  [...shopProducts, ...RNGWEEN_COSMETICS, BLACK_FRIDAY_SKIN].map((item) => [
-    item.id,
-    item,
-  ]),
+  [
+    ...shopProducts,
+    ...RNGWEEN_COSMETICS,
+    BLACK_FRIDAY_SKIN,
+    ...BATTLE_PASS_COSMETICS,
+    BATTLE_PASS_VARIANT,
+  ].map((item) => [item.id, item]),
 );
 
 export const SPECIAL_AURA_COLLECTION = {
@@ -789,7 +798,11 @@ export const SPECIAL_AURA_COLLECTION = {
   weight: 600,
 };
 
-export const EVENT_AURA_FAMILIES = [RNGWEEN_FAMILY, BLACK_FRIDAY_FAMILY];
+export const EVENT_AURA_FAMILIES = [
+  RNGWEEN_FAMILY,
+  BLACK_FRIDAY_FAMILY,
+  BATTLE_PASS_FAMILY,
+];
 
 export function auraFamilyById(id) {
   return (
@@ -804,6 +817,8 @@ export function visibleAuraFamilies(owned = []) {
   if (RNGWEEN_COSMETICS.some((aura) => owned.includes(aura.id)))
     families.push(RNGWEEN_FAMILY);
   if (owned.includes(BLACK_FRIDAY_SKIN.id)) families.push(BLACK_FRIDAY_FAMILY);
+  if (BATTLE_PASS_COSMETICS.some((aura) => owned.includes(aura.id)))
+    families.push(BATTLE_PASS_FAMILY);
   return families;
 }
 

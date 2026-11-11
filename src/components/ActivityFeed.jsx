@@ -27,6 +27,7 @@ import {
 } from "../history-log.js";
 import { CADENCE_NAME } from "../tasks.js";
 import { BOOKMARK_LIMIT } from "../progress.js";
+import { productById } from "../shop-data.js";
 import { dejaVuIds } from "../deja-vu.js";
 import "../activity.css";
 const byId = new Map(badges.map((b) => [b.canonicalId, b]));
@@ -34,6 +35,7 @@ const filters = [
   "All activity",
   "Rolls",
   "Badge unlocks",
+  "Pass",
   "Shop",
   "Tasks",
   "Offline",
@@ -137,6 +139,7 @@ export default function ActivityFeed({
                 "rngween-world-exchange",
                 "rngween-forged-key",
                 "rngween-farewell",
+                "pass-upgrade",
               ].includes(e.type)) ||
             (filter === "Tasks" &&
               [
@@ -144,7 +147,9 @@ export default function ActivityFeed({
                 "rngween-mission",
                 "rngween-hourly",
                 "rngween-finale",
-              ].includes(e.type)),
+              ].includes(e.type)) ||
+            (filter === "Pass" &&
+              ["pass-reward", "pass-mission", "pass-upgrade"].includes(e.type)),
         )
         .filter(
           (e) =>
@@ -527,9 +532,11 @@ export default function ActivityFeed({
                       "rngween-purchase",
                       "rngween-world-purchase",
                       "rngween-world-exchange",
+                      "pass-upgrade",
                     ].includes(event.type) ? (
                     <ShoppingBag size={19} />
-                  ) : event.type === "sale-reward" ? (
+                  ) : event.type === "sale-reward" ||
+                    event.type === "pass-reward" ? (
                     <Tag size={19} />
                   ) : event.type === "pet" ? (
                     <PawPrint size={19} />
@@ -544,6 +551,7 @@ export default function ActivityFeed({
                       "rngween-mission",
                       "rngween-hourly",
                       "rngween-finale",
+                      "pass-mission",
                     ].includes(event.type) ? (
                     <ListChecks size={19} />
                   ) : (
@@ -589,13 +597,22 @@ export default function ActivityFeed({
                                                   "rngween-hourly",
                                                 ].includes(event.type)
                                               ? `Task claimed · ${event.name}`
-                                              : event.type === "rngween-finale"
-                                                ? `Event keepsake · ${event.name}`
-                                                : event.type === "sale-reward"
-                                                  ? event.stamps >= 25
-                                                    ? "Sale reward · Blackout 2026 unlocked"
-                                                    : `Sale stamp ${event.stamps} of 25`
-                                                  : `Equipped ${event.name}`}
+                                              : event.type === "pass-mission"
+                                                ? `Pass mission · ${event.name}`
+                                                : event.type === "pass-reward"
+                                                  ? `Pass reward · ${event.name}`
+                                                  : event.type ===
+                                                      "pass-upgrade"
+                                                    ? `Premium track · ${event.name}`
+                                                    : event.type ===
+                                                        "rngween-finale"
+                                                      ? `Event keepsake · ${event.name}`
+                                                      : event.type ===
+                                                          "sale-reward"
+                                                        ? event.stamps >= 25
+                                                          ? "Sale reward · Blackout 2026 unlocked"
+                                                          : `Sale stamp ${event.stamps} of 25`
+                                                        : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString("en-US", {
@@ -768,6 +785,30 @@ export default function ActivityFeed({
                     <p className="activity-transaction">
                       <strong>+{formatEP(event.ep)} EP</strong> ·{" "}
                       {CADENCE_NAME[event.cadence]} task, paid into your wallet
+                    </p>
+                  ) : event.type === "pass-mission" ? (
+                    <p className="activity-transaction">
+                      <strong>+{count(event.bpep)} BPEP</strong> · season pass
+                      progress
+                    </p>
+                  ) : event.type === "pass-reward" ? (
+                    <p className="activity-transaction">
+                      {event.ep ? (
+                        <strong>+{formatEP(event.ep)} EP</strong>
+                      ) : (
+                        <strong>
+                          {productById.get(event.productId)?.kind ===
+                          "pet-variant"
+                            ? "Permanent companion variant"
+                            : "Permanent aura"}
+                        </strong>
+                      )}{" "}
+                      · level {event.level} {event.track} track
+                    </p>
+                  ) : event.type === "pass-upgrade" ? (
+                    <p className="activity-transaction">
+                      <strong>-{formatEP(event.ep)} EP</strong> · optional
+                      premium track, no real money
                     </p>
                   ) : event.type === "sale-reward" ? (
                     <p className="activity-transaction">

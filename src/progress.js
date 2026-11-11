@@ -111,6 +111,23 @@ import {
   parseRngweenLimited,
 } from "./rngween-limited.js";
 import {
+  BATTLE_PASS_LEVELS,
+  BATTLE_PASS_PREMIUM_PRICE,
+  BATTLE_PASS_REWARDS,
+  battlePassSeason,
+  claimPassMission,
+  emptyBattlePass,
+  parseBattlePass,
+  passLevelForXp,
+  passMissionById,
+  passRewardEP,
+  passRewardState,
+  recordPassTally,
+  rerollPassDaily,
+  rewardKey,
+  seasonNumber,
+} from "./battle-pass.js";
+import {
   BLACK_FRIDAY_SKIN,
   blackFridayActive,
   emptyBlackFriday,
@@ -231,6 +248,7 @@ export function emptyProgress() {
     rngweenLimited: emptyRngweenLimited(),
     // RETIREMENT: keep parsing the Black Friday save record.
     blackFriday: emptyBlackFriday(),
+    battlePass: emptyBattlePass(),
 
     events: {},
   };
@@ -490,6 +508,23 @@ export function parseAndRepairProgress(raw) {
     owned.push(BLACK_FRIDAY_SKIN.id);
     note("your limited Black Friday 2026 skin was restored from its stamps.");
   }
+  const passRead = parseBattlePass(p.battlePass);
+  if (p.battlePass != null && passRead.repaired)
+    note("battle pass progress was unreadable, so it was reset.");
+  const battlePass = passRead.pass;
+  for (const reward of BATTLE_PASS_REWARDS) {
+    for (const track of ["free", "premium"]) {
+      const definition = reward[track];
+      if (
+        definition.kind !== "ep" &&
+        battlePass.claimed.includes(rewardKey(track, reward.level)) &&
+        !owned.includes(definition.id)
+      ) {
+        owned.push(definition.id);
+        note("a claimed battle pass reward was restored from its receipt.");
+      }
+    }
+  }
 
   let petsInput = p.pets;
   if (p.pets != null && !Array.isArray(p.pets)) {
@@ -638,6 +673,7 @@ export function parseAndRepairProgress(raw) {
     tasks: tasksRead.tasks,
     rngweenLimited,
     blackFriday,
+    battlePass,
     skillCharge,
     cooldownUntil,
     receipts: [
@@ -667,7 +703,10 @@ export function preservePermanentCosmetics(previous, next) {
       ...(previous.owned ?? []),
       ...limitedRewardIds(previous.rngweenLimited),
     ]),
-  ].filter((id) => productById.get(id)?.kind === "aura");
+  ].filter((id) => {
+    const item = productById.get(id);
+    return item?.kind === "aura" || item?.passReward;
+  });
   const missing = known.filter(
     (id) =>
       !next.owned.includes(id) ||
@@ -769,9 +808,10 @@ function startNewCycle(
   state,
   { granted = null, starter = 0, resetLadder = false } = {},
 ) {
-  const owned = [...new Set(state.owned ?? [])].filter(
-    (id) => productById.get(id)?.kind === "aura",
-  );
+  const owned = [...new Set(state.owned ?? [])].filter((id) => {
+    const item = productById.get(id);
+    return item?.kind === "aura" || item?.passReward;
+  });
 
   const kept = (state.skills ?? []).filter(
     (id) =>
@@ -939,6 +979,99 @@ function collectBonus(state, cadence, at, eventId = null) {
       },
     ]),
   };
+}
+
+function grantPassReward(state, level, track, at, eventId = null) {
+  const pass = state.battlePass ?? emptyBattlePass();
+  const reward = BATTLE_PASS_REWARDS.find((entry) => entry.level === level)?.[
+    track
+  ];
+  if (!reward) throw new Error("That pass reward does not exist.");
+  if (passRewardState(pass, level, track) !== "claimable")
+    throw new Error("This pass reward is not ready to claim.");
+  const ep = passRewardEP(reward, state.owned ?? []);
+  const balance = state.balance + ep;
+  const totalEarned = state.totalEarned + ep;
+  if (!validAmount(balance) || !validAmount(totalEarned))
+    throw new Error("EP balance limit reached.");
+  const permanent =
+    reward.kind !== "ep" && !(state.owned ?? []).includes(reward.id);
+  return {
+    ...state,
+    balance,
+    totalEarned,
+    owned: permanent ? [...(state.owned ?? []), reward.id] : state.owned,
+    battlePass: {
+      ...pass,
+      claimed: [...pass.claimed, rewardKey(track, level)],
+    },
+    history: appendHistory(state.history, [
+      {
+        id: eventId ?? `pass-reward:${pass.seasonId}:${track}-${level}`,
+        type: "pass-reward",
+        at,
+        seasonId: pass.seasonId,
+        level,
+        track,
+        name: reward.name ?? `Level ${level} ${track} reward`,
+        ep,
+        ...(reward.kind !== "ep" ? { productId: reward.id } : {}),
+      },
+    ]),
+  };
+}
+
+function ensurePassSeason(state, at) {
+  const season = battlePassSeason(at);
+  const pass = state.battlePass ?? emptyBattlePass();
+  if (!season.active)
+    return state.battlePass ? state : { ...state, battlePass: pass };
+  if (pass.seasonId === season.id)
+    return state.battlePass ? state : { ...state, battlePass: pass };
+  if (pass.seasonId && seasonNumber(pass.seasonId) >= season.index)
+    return state.battlePass ? state : { ...state, battlePass: pass };
+  let next = { ...state, battlePass: pass };
+  if (pass.seasonId) {
+    const level = passLevelForXp(pass.xp);
+    for (const reward of BATTLE_PASS_REWARDS) {
+      if (reward.level > level) continue;
+      for (const track of ["free", "premium"]) {
+        if (
+          passRewardState(next.battlePass, reward.level, track) === "claimable"
+        )
+          next = grantPassReward(
+            next,
+            reward.level,
+            track,
+            at,
+            `pass-auto:${pass.seasonId}:${track}-${reward.level}`,
+          );
+      }
+    }
+    const archive = [
+      ...(next.battlePass.archive ?? []),
+      {
+        seasonId: pass.seasonId,
+        xp: pass.xp,
+        premium: pass.premium,
+        claimed: next.battlePass.claimed.length,
+      },
+    ].slice(-24);
+    next = {
+      ...next,
+      battlePass: { ...emptyBattlePass(), seasonId: season.id, archive },
+    };
+  } else {
+    next = {
+      ...next,
+      battlePass: {
+        ...emptyBattlePass(),
+        seasonId: season.id,
+        archive: pass.archive ?? [],
+      },
+    };
+  }
+  return next;
 }
 
 export function applyProgress(state, action) {
@@ -1113,9 +1246,10 @@ function applyEvent(state, action) {
       },
     };
 
-    const cosmetics = [...new Set(state.owned ?? [])].filter(
-      (id) => productById.get(id)?.kind === "aura",
-    );
+    const cosmetics = [...new Set(state.owned ?? [])].filter((id) => {
+      const item = productById.get(id);
+      return item?.kind === "aura" || item?.passReward;
+    });
     const next = {
       ...emptyProgress(),
       profile: state.profile,
@@ -1126,6 +1260,7 @@ function applyEvent(state, action) {
       rngweenLimited: state.rngweenLimited,
 
       blackFriday: state.blackFriday ?? emptyBlackFriday(),
+      battlePass: state.battlePass ?? emptyBattlePass(),
       loadouts: state.loadouts ?? [],
       goalId: state.goalId ?? null,
       events: state.events ?? {},
@@ -1183,6 +1318,89 @@ function applyEvent(state, action) {
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid task time");
     return collectBonus(state, action.cadence, at, action.eventId);
+  }
+
+  if (action.type === "claim-pass-mission") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass mission time");
+    const ready = ensurePassSeason(state, at);
+    const mission = passMissionById(action.id);
+    const battlePass = claimPassMission(ready.battlePass, action.id, at);
+    return {
+      ...ready,
+      battlePass,
+      history: appendHistory(ready.history, [
+        {
+          id:
+            action.eventId ??
+            `pass-mission:${battlePass.seasonId}:${action.id}`,
+          type: "pass-mission",
+          at,
+          seasonId: battlePass.seasonId,
+          missionId: action.id,
+          name: mission.title,
+          bpep: mission.reward,
+        },
+      ]),
+    };
+  }
+  if (action.type === "reroll-pass-mission") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass mission time");
+    const ready = ensurePassSeason(state, at);
+    return {
+      ...ready,
+      battlePass: rerollPassDaily(ready.battlePass, action.id, at),
+    };
+  }
+  if (action.type === "claim-pass-reward") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass reward time");
+    const level = Number(action.level);
+    const track = action.track;
+    if (!Number.isInteger(level) || level < 1 || level > BATTLE_PASS_LEVELS)
+      throw new Error("That pass reward does not exist.");
+    if (track !== "free" && track !== "premium")
+      throw new Error("That pass track does not exist.");
+    const ready = state.battlePass?.seasonId
+      ? state
+      : ensurePassSeason(state, at);
+    return grantPassReward(ready, level, track, at, action.eventId);
+  }
+  if (action.type === "buy-pass-premium") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass purchase time");
+    const ready = ensurePassSeason(state, at);
+    const season = battlePassSeason(at);
+    if (!season.active || ready.battlePass.seasonId !== season.id)
+      throw new Error("The pass season is not open for upgrades.");
+    if (ready.battlePass.premium)
+      throw new Error("This season's premium track is already unlocked.");
+    if (ready.balance < BATTLE_PASS_PREMIUM_PRICE)
+      throw new Error("Not enough EP for the premium track.");
+    return withSaleStamp(
+      {
+        ...ready,
+        balance: ready.balance - BATTLE_PASS_PREMIUM_PRICE,
+        battlePass: { ...ready.battlePass, premium: true },
+        history: appendHistory(ready.history, [
+          {
+            id: action.eventId ?? `pass-upgrade:${ready.battlePass.seasonId}`,
+            type: "pass-upgrade",
+            at,
+            seasonId: ready.battlePass.seasonId,
+            name: "Premium track",
+            ep: BATTLE_PASS_PREMIUM_PRICE,
+          },
+        ]),
+      },
+      at,
+      BATTLE_PASS_PREMIUM_PRICE,
+    );
   }
 
   if (action.type === "history-prune") {
@@ -1301,6 +1519,8 @@ function applyEvent(state, action) {
     )
       return state;
 
+    if (action.source !== "offline")
+      state = ensurePassSeason(state, action.at ?? Math.ceil(Date.now()));
     const extra = (action.extras ?? []).map((entry, index) => {
       const scored = entry?.result ?? entry;
       if (!validRollResult(scored)) throw new Error("Invalid roll");
@@ -1465,39 +1685,39 @@ function applyEvent(state, action) {
         ? action.petDrop
         : null;
 
+    const tally = {
+      rolls: 1,
+      rare: RARE_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+      epic: EPIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+      mythic: MYTHIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+      multi: paidEvents.length > 1 ? 1 : 0,
+      discovered: paidEvents.reduce(
+        (total, paid) => total + paid.unlocked.length,
+        0,
+      ),
+      banked: credited,
+      skills: fired.length ? 1 : 0,
+      pets: droppedPet ? 1 : 0,
+      peakEP: committed.scored.totalEP,
+      peakBadges: committed.scored.badges.length,
+      anomaly: committed.scored.tier === "anomaly" ? 1 : 0,
+      trash: committed.scored.tier === "trash" ? 1 : 0,
+      high: committed.scored.number >= HIGH_ROLL_MIN ? 1 : 0,
+      low: committed.scored.number <= LOW_ROLL_MAX ? 1 : 0,
+      low1k: committed.scored.number <= 1000 ? 1 : 0,
+      badges: paidEvents.reduce(
+        (total, paid) => total + paid.scored.badges.length,
+        0,
+      ),
+    };
     const tasks =
       action.source === "offline"
         ? (state.tasks ?? emptyTasks())
-        : recordTally(
-            state.tasks,
-            {
-              rolls: 1,
-              rare: RARE_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
-              epic: EPIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
-              mythic: MYTHIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
-
-              multi: paidEvents.length > 1 ? 1 : 0,
-              discovered: paidEvents.reduce(
-                (total, paid) => total + paid.unlocked.length,
-                0,
-              ),
-              banked: credited,
-              skills: fired.length ? 1 : 0,
-              pets: droppedPet ? 1 : 0,
-              peakEP: committed.scored.totalEP,
-              peakBadges: committed.scored.badges.length,
-              anomaly: committed.scored.tier === "anomaly" ? 1 : 0,
-              trash: committed.scored.tier === "trash" ? 1 : 0,
-              high: committed.scored.number >= HIGH_ROLL_MIN ? 1 : 0,
-              low: committed.scored.number <= LOW_ROLL_MAX ? 1 : 0,
-              low1k: committed.scored.number <= 1000 ? 1 : 0,
-              badges: paidEvents.reduce(
-                (total, paid) => total + paid.scored.badges.length,
-                0,
-              ),
-            },
-            at,
-          );
+        : recordTally(state.tasks, tally, at);
+    const battlePass =
+      action.source === "offline"
+        ? (state.battlePass ?? emptyBattlePass())
+        : recordPassTally(state.battlePass ?? emptyBattlePass(), tally, at);
     if (droppedPet)
       events.push({
         id: `${id}:pet`,
@@ -1510,6 +1730,7 @@ function applyEvent(state, action) {
       ...state,
       history: appendHistory(state.history, events),
       tasks,
+      battlePass,
       pendingRoll: null,
       flywheelCharge: flywheelAfterSettlement(
         state,
@@ -2117,6 +2338,60 @@ function parseHistory(value) {
       )
         return [];
       next = { ...base, name: e.name, productId: e.productId };
+    } else if (e.type === "pass-reward") {
+      if (
+        !/^season-[1-9]\d*$/.test(e.seasonId ?? "") ||
+        !validAmount(e.level) ||
+        e.level < 1 ||
+        e.level > BATTLE_PASS_LEVELS ||
+        !["free", "premium"].includes(e.track) ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.ep)
+      )
+        return [];
+      next = {
+        ...base,
+        seasonId: e.seasonId,
+        level: e.level,
+        track: e.track,
+        name: e.name,
+        ep: e.ep,
+        ...(typeof e.productId === "string" && productById.has(e.productId)
+          ? { productId: e.productId }
+          : {}),
+      };
+    } else if (e.type === "pass-mission") {
+      if (
+        !/^season-[1-9]\d*$/.test(e.seasonId ?? "") ||
+        typeof e.missionId !== "string" ||
+        !passMissionById(e.missionId) ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.bpep) ||
+        e.bpep < 1
+      )
+        return [];
+      next = {
+        ...base,
+        seasonId: e.seasonId,
+        missionId: e.missionId,
+        name: e.name,
+        bpep: e.bpep,
+      };
+    } else if (e.type === "pass-upgrade") {
+      if (
+        !/^season-[1-9]\d*$/.test(e.seasonId ?? "") ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.ep) ||
+        e.ep < 1
+      )
+        return [];
+      next = { ...base, seasonId: e.seasonId, name: e.name, ep: e.ep };
     } else if (e.type === "task") {
       if (
         !TASK_CADENCES.includes(e.cadence) ||

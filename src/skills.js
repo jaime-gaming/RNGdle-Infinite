@@ -48,11 +48,11 @@ export const SKILLS = [
     icon: "trail",
     tint: "pink",
     kind: "pet-luck",
-    value: 4,
-    charges: 5,
+    value: 5,
+    charges: 4,
     price: 160000,
     description:
-      "A companion is four times as likely to turn up on the next roll. Companion luck is its own sample and never touches your number.",
+      "A companion is five times as likely to turn up on the next roll. Companion luck is its own sample and never touches your number.",
   },
   {
     id: "bounce",
@@ -61,7 +61,7 @@ export const SKILLS = [
     icon: "bounce",
     tint: "cyan",
     kind: "waive",
-    charges: 4,
+    charges: 5,
     price: 500000,
     description:
       "The next roll has no cooldown after a complete reveal. It stacks with nothing: a roll can only be free once.",
@@ -100,11 +100,11 @@ export const SKILLS = [
     icon: "turbo",
     tint: "orange",
     kind: "overdrive",
-    value: 3,
-    charges: 7,
+    value: 4,
+    charges: 8,
     price: 2600000,
     description:
-      "The next roll counts triple towards Flywheel and towards every other skill's circle.",
+      "The next roll counts four times towards Flywheel and towards every other skill's circle. Only the strongest overdrive applies.",
   },
   {
     id: "quarry",
@@ -317,6 +317,46 @@ export const SKILLS = [
       "The next roll is redrawn until it scores at least 150,000 EP, up to six draws. The strongest effect in the game.",
   },
 
+  {
+    id: "moss-shield",
+    source: "pet",
+    petId: "moss",
+    name: "Moss Shield",
+    icon: "bedrock",
+    tint: "green",
+    kind: "floor",
+    floor: 12000,
+    attempts: 3,
+    charges: 5,
+    description:
+      "The next roll is redrawn until it scores at least 12,000 EP, up to three draws. If none reaches it you keep the best of them.",
+  },
+  {
+    id: "crab-wind",
+    source: "pet",
+    petId: "crab",
+    name: "Clockwork Wind",
+    icon: "turbo",
+    tint: "orange",
+    kind: "overdrive",
+    value: 2,
+    charges: 5,
+    description:
+      "The next roll counts twice towards Flywheel and every other skill's circle. Only the strongest overdrive applies.",
+  },
+  {
+    id: "axolotl-comet",
+    source: "pet",
+    petId: "axolotl",
+    name: "Comet Tail",
+    icon: "twice",
+    tint: "violet",
+    kind: "best-of",
+    attempts: 4,
+    charges: 8,
+    description:
+      "The next roll is drawn four times and you keep whichever number scores the most EP. All four draws are ordinary, independent rolls.",
+  },
   {
     id: "reborn-drive",
     source: "rebirth",
@@ -578,6 +618,50 @@ export function parseUnlockedSkills(value, progress) {
       (skillById.get(id).source !== "shop" ||
         (progress.owned ?? []).includes(id)),
   );
+}
+
+export const SKILL_FAMILY_LABELS = {
+  wallet: "Wallet burst",
+  "pet-luck": "Companion search",
+  waive: "Pace",
+  "best-of": "Extra draws",
+  floor: "Safety floor",
+  overdrive: "Charge engine",
+};
+
+export function skillFamilyLabel(skill) {
+  return SKILL_FAMILY_LABELS[skill?.kind] ?? "Skill";
+}
+
+export function skillCombinationWarnings(ids = []) {
+  const skills = [...new Set(ids)]
+    .map((id) => skillById.get(id))
+    .filter(Boolean);
+  const warnings = [];
+  const drawSkills = skills.filter((skill) =>
+    ["best-of", "floor"].includes(skill.kind),
+  );
+  const requested = drawSkills.reduce(
+    (total, skill) => total + skill.attempts,
+    0,
+  );
+  if (requested > SKILL_MAX_DRAWS)
+    warnings.push(
+      `This rack asks for ${requested} draws. A roll can use at most ${SKILL_MAX_DRAWS}, so some draw skills will not add draws.`,
+    );
+  if (skills.filter((skill) => skill.kind === "waive").length > 1)
+    warnings.push(
+      "Several cooldown waivers are armed. A roll can only be free once.",
+    );
+  if (skills.filter((skill) => skill.kind === "overdrive").length > 1)
+    warnings.push(
+      "Several charge engines are armed. Only the strongest one applies.",
+    );
+  if (skills.filter((skill) => skill.kind === "floor").length > 1)
+    warnings.push(
+      "Several safety floors are armed. The highest floor is the target; each skill still spends its own draws.",
+    );
+  return warnings;
 }
 
 export function skillEffectSummary(skill) {

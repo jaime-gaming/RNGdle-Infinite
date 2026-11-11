@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   RefreshCw,
+  Ticket,
 } from "lucide-react";
 import "../mobile-tabbar.css";
 
@@ -16,6 +17,7 @@ export default function MobileTabBar({
   rebirthVisible,
   rebirthReady,
   tasksReady,
+  passReady,
   navigate,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,6 +47,13 @@ export default function MobileTabBar({
   }, [page]);
 
   const moreItems = [
+    {
+      id: "pass",
+      label: "Pass",
+      icon: Ticket,
+      ready: passReady,
+      go: () => navigate("pass"),
+    },
     {
       id: "history",
       label: "History",

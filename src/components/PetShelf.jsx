@@ -41,6 +41,7 @@ export default function PetShelf({
     PETS.some((pet) => pet.id === id),
   );
   const active = progress.activePet ?? "none";
+  const prismAxolotl = (progress.owned ?? []).includes("pass-axolotl");
 
   const tracked = validGoal(progress.goalId, progress.owned, owned)
     ? progress.goalId
@@ -227,6 +228,7 @@ export default function PetShelf({
                         multiplier={pet.multiplier}
                         size={124}
                         active={isActive}
+                        prism={prismAxolotl}
                       />
                       <span className="pet-cage-door" aria-hidden="true" />
                       <span className="pet-cage-tray" aria-hidden="true" />
@@ -254,6 +256,11 @@ export default function PetShelf({
                         </span>
                       </div>
                       <p className="pet-description">{pet.description}</p>
+                      {pet.id === "axolotl" && prismAxolotl && (
+                        <p className="pet-skill">
+                          Prism variant unlocked by the Battle Pass.
+                        </p>
+                      )}
                       {signature && (
                         <p className="pet-skill">
                           <span className="pet-skill-name">
@@ -376,6 +383,7 @@ export default function PetShelf({
                     multiplier={pet.multiplier}
                     size={34}
                     active={active === pet.id}
+                    prism={prismAxolotl}
                   />
                   {owned.includes(pet.id) && (
                     <span className="pet-rail-owned" aria-hidden="true">

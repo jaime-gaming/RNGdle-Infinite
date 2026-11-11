@@ -28,8 +28,8 @@ aura ownership, Hexbound, attendance timestamps and `rngween-*` history are
 still part of the save contract. Do not remove those records or reintroduce
 event progression/UI. The old RNGween changelog entry is historical and stays.
 
-Black Friday 2026 is the single event exception. It is one UTC day — Friday 27
-November 2026, `src/black-friday.js` — during which the whole shop is
+Black Friday 2026 and the Battle Pass are the event exceptions. Black Friday is
+one UTC day — Friday 27 November 2026, `src/black-friday.js` — during which the whole shop is
 discounted 20–50% per product, every 100,000 EP spent awards one sale stamp
 (`SALE_STAMP_EVERY`), 25 stamps unlock the limited `blackout-2026` skin, and
 the RNGween looks a save missed return to the counter at 10,000,000 EP each.
@@ -57,6 +57,15 @@ only when the save owns an event aura, even during the sale;
 missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
 Moving reveal digits are lighter than landed digits using opacity only, without
 adding backgrounds, borders, underlines or other decorations.
+
+The Battle Pass (`src/battle-pass.js`) runs in 28-day UTC seasons anchored at
+2026-11-16. Missions pay BPEP only; BPEP is not a shop wallet. The optional
+premium track is bought with EP, never real money. Reward tracks are visible,
+each reward claims once, and earned rewards are delivered automatically when a
+season closes. `progress.battlePass` survives Rebirth, Prestige, Rollback and
+Fresh Start. Dev builds honour `VITE_BATTLE_PASS_PREVIEW_AT`; production ignores
+it. Pass auras and the Prism Axolotl variant are permanent cosmetics once
+claimed.
 
 ## Architecture
 
@@ -145,9 +154,10 @@ adding backgrounds, borders, underlines or other decorations.
   service-account credentials in source or build output.
 - **UTC for calendar labels.** Daily/weekly task periods use UTC (`Date.UTC`,
   `getUTC*`, `timeZone: "UTC"`). Gameplay timers use `gameNow()` in
-  `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The only
-  event-gated system is the one-day Black Friday sale (`src/black-friday.js`),
-  which gates prices and cosmetics for that UTC day and nothing else.
+  `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The event-gated
+  systems are the one-day Black Friday sale (`src/black-friday.js`) and the
+  28-day Battle Pass season (`src/battle-pass.js`). Nothing else gates gameplay
+  by calendar date.
 - **Routes are client paths.** `src/router.js` owns paths such as `/shop/auras`
   and `/profile/<username>`. The Worker serves the app at the domain root; its `assets.not_found_handling: single-page-application` serves
   `index.html` for direct route loads, and `public/_headers` keeps HTML and the
@@ -173,6 +183,9 @@ adding backgrounds, borders, underlines or other decorations.
   empty one.
 - `sale-reward` activity rows stay parseable and visible in history; they carry
   no EP and never count as spending.
+- `battlePass` keeps the current season, BPEP, premium flag, claimed rewards,
+  mission tallies and a bounded archive. `pass-reward`, `pass-mission` and
+  `pass-upgrade` activity rows stay parseable and visible in history.
 
 ## Firebase setup and implementation
 
@@ -359,7 +372,7 @@ rather than guessing.
 
 - Companion prices/multipliers: `src/pets.js`; skills and stall rotation:
   `src/skills.js`; rebirth rules: `src/rebirth.js`; products/timing upgrades:
-  `src/shop-data.js`; tasks: `src/tasks.js`.
+  `src/shop-data.js`; tasks: `src/tasks.js`; Battle Pass: `src/battle-pass.js`.
 - Run `npm run audit:economy` after changing economy values. Check that nothing
   becomes free or unreachable and the ladder still climbs.
 - Badge data comes from `src/badges.js` and `src/infinite-badges.js`; artwork
@@ -394,7 +407,7 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.5.2fix4`; do not change it
+  flow. The current label is exactly `v0.6`; do not change it
   until the next session or an explicit user request. Public release notes
   live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR

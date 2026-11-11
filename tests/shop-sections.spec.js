@@ -137,7 +137,7 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
 
   await page.goto("/shop/companions");
   await waitForApp(page);
-  await expect(page.locator(".shop-count")).toHaveText(/^\d+ \/ 13 found$/);
+  await expect(page.locator(".shop-count")).toHaveText(/^\d+ \/ 16 found$/);
 });
 
 test("a locked shelf reads Locked, and the header's nav rules stay in the header", async ({

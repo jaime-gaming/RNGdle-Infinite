@@ -1,0 +1,343 @@
+.battle-pass {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.pass-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px 20px;
+  align-items: center;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--green) 14%, transparent),
+      transparent 55%
+    ),
+    var(--surface);
+}
+.pass-hero-mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--green);
+}
+.pass-hero-copy h2 {
+  margin: 4px 0 6px;
+  font-size: 24px;
+}
+.pass-hero-copy p {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pass-hero-stats {
+  display: flex;
+  gap: 18px;
+}
+.pass-hero-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pass-hero-stats span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pass-hero-stats strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 18px;
+}
+.pass-level-progress {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pass-level-progress progress {
+  flex: 1;
+  height: 10px;
+  accent-color: var(--green);
+}
+.pass-level-progress span {
+  font-size: 12px;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+.pass-premium {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.pass-premium h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.pass-premium p {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.pass-premium.is-owned {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+}
+.pass-premium-owned,
+.pass-claimed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 650;
+}
+.pass-confirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+.pass-track-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.pass-track-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.pass-track-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.pass-track-scroll {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.pass-track-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(150px, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pass-level {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  opacity: 0.72;
+}
+.pass-level.is-reached {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--green) 35%, var(--border));
+}
+.pass-level-number {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.pass-reward {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 74px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid transparent;
+}
+.pass-reward.is-claimable {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+}
+.pass-reward.is-premium-locked {
+  opacity: 0.65;
+}
+.pass-reward-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.pass-reward-aura {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pass-reward-aura small {
+  font-weight: 500;
+  color: var(--muted);
+}
+.pass-reward-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.pass-reward .primary-button {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.pass-missions header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.pass-missions h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.pass-missions header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.pass-missions header > span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--secondary);
+}
+.pass-missions ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pass-mission {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(140px, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.pass-mission-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pass-mission-copy strong {
+  font-size: 14px;
+}
+.pass-mission-copy span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.pass-mission-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pass-mission-progress progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--green);
+}
+.pass-mission-progress span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--secondary);
+}
+.pass-mission-reward {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--green);
+  white-space: nowrap;
+}
+.pass-mission-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.pass-mission-actions .primary-button,
+.pass-mission-actions .secondary-button {
+  min-height: 32px;
+  padding: 5px 12px;
+  font-size: 12px;
+}
+.pass-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+@media (max-width: 760px) {
+  .pass-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 16px;
+  }
+  .pass-hero-stats {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .pass-level-progress {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pass-level-progress span {
+    white-space: normal;
+  }
+  .pass-premium {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pass-mission {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pass-mission-actions {
+    justify-content: flex-start;
+  }
+  .pass-track-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

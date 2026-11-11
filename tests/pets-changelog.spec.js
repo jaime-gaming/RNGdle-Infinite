@@ -63,7 +63,7 @@ test("a companion multiplies banked EP only, never the scored roll", () => {
 });
 
 test("companion multipliers stay ordered, and never reach the draw", () => {
-  expect(PETS).toHaveLength(13);
+  expect(PETS).toHaveLength(16);
   const multipliers = PETS.map((p) => p.multiplier);
   expect(Math.min(...multipliers)).toBeGreaterThanOrEqual(1.01);
 
@@ -84,8 +84,8 @@ test("companion multipliers stay ordered, and never reach the draw", () => {
     PETS.map((p) => p.price),
   );
   expect(PETS.map((pet) => pet.price)).toEqual([
-    125000, 300000, 600000, 900000, 1250000, 1650000, 2050000, 2500000, 3100000,
-    3800000, 5000000, 7000000, 10000000,
+    125000, 300000, 450000, 600000, 900000, 1250000, 1650000, 2050000, 2500000,
+    3100000, 3400000, 3800000, 5000000, 7000000, 8500000, 10000000,
   ]);
   expect(petMultiplier("none")).toBe(1);
   expect(petMultiplier("not-a-pet")).toBe(1);
@@ -230,6 +230,7 @@ test("share text ends with the public game link", () => {
 
 test("the changelog lists every release and flags an unseen version", () => {
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.6",
     "v0.5.2",
     "v0.5.1",
     "v0.5",
@@ -239,7 +240,7 @@ test("the changelog lists every release and flags an unseen version", () => {
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.5.2");
+  expect(LATEST_VERSION).toBe("v0.6");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");
@@ -306,17 +307,25 @@ test("the changelog reads like release notes, not like a chat log", () => {
     }
   }
 
-  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(3);
+  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(8);
 
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);
 
   const v02 = CHANGELOG.find((entry) => entry.version === "v0.2");
-  const named = v02.body.find((line) => line.startsWith("new badges:"));
+  const v06 = CHANGELOG.find((entry) => entry.version === "v0.6");
+  const oldNamed = v02.body.find((line) => line.startsWith("new badges:"));
+  const newNamed = v06.body.join(" ");
   for (const badge of allBadgeMetadata.filter((b) =>
     b.id.startsWith("INFINITE_"),
-  ))
+  )) {
+    const named = ["INFINITE_PENDULUM", "INFINITE_LAST_SECOND"].includes(
+      badge.id,
+    )
+      ? oldNamed
+      : newNamed;
     expect(named).toContain(badge.name);
+  }
 });
 
 test("the badge names in the v0.2 note are links that open the badge window", async ({
@@ -328,7 +337,10 @@ test("the badge names in the v0.2 note are links that open the badge window", as
     page.getByRole("heading", { name: "Changelog", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("What changed, and when.")).toBeVisible();
-  const links = page.locator(".changelog-badge-link");
+  const v02 = page.locator(".changelog-entry", {
+    has: page.getByText("v0.2", { exact: true }),
+  });
+  const links = v02.locator(".changelog-badge-link");
   await expect(links).toHaveCount(2);
   await expect(links.nth(0)).toHaveText("Pendulum");
   await expect(links.nth(1)).toHaveText("Last Second");

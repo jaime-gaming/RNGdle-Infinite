@@ -7,7 +7,7 @@ function appBuildVersion() {
   const { version } = JSON.parse(
     fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
   );
-  const internalVersion = "v0.5.2fix4";
+  const internalVersion = "v0.6";
   const buildId = `${version}-${Date.now().toString(36)}-${process.pid.toString(36)}`;
   const payload = JSON.stringify({ version, buildId, internalVersion });
   let outDir = path.resolve("dist");

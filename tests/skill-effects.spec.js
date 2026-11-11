@@ -359,10 +359,10 @@ test("an overdrive skill multiplies charging, and a pet-luck skill only widens t
   });
 
   const after = chargeAfterSettlement(state, "p1");
-  expect(skillChargeFactor(["turbo"])).toBe(3);
-  expect(after).toEqual({ turbo: 0, surge: 4 });
+  expect(skillChargeFactor(["turbo"])).toBe(4);
+  expect(after).toEqual({ turbo: 0, surge: 5 });
 
-  expect(skillPetLuck(["trail"])).toBe(4);
+  expect(skillPetLuck(["trail"])).toBe(5);
   expect(petDrop(PET_DROP_CHANCE * 3.5, [], 4)).toBeTruthy();
   expect(petDrop(PET_DROP_CHANCE * 4.5, [], 4)).toBeNull();
   expect(petDrop(0.9, [], 1)).toBeNull();

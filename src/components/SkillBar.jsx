@@ -587,6 +587,16 @@ export default function SkillBar({
                 {hasAutoRoll ? " · Auto-Roll" : ""}
               </span>
             </span>
+            {report.warnings?.length ? (
+              <ul
+                className="skill-rack-warnings"
+                aria-label="Skill combination warnings"
+              >
+                {report.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            ) : null}
             {report.next.chips.length ? (
               <>
                 <span className="rack-panel-label">Next roll gets</span>

@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   Percent,
   Repeat,
+  Search,
   ShoppingBag,
   Target,
   X,
@@ -323,6 +324,9 @@ export default function Shop({
     returnFocus = useRef(null),
     returnKind = useRef(null);
   const [clock, setClock] = useState(() => gameNow());
+  const [shopQuery, setShopQuery] = useState("");
+  const [onlyAffordable, setOnlyAffordable] = useState(false);
+  const [hideOwned, setHideOwned] = useState(false);
   const currentPrice = (item) => productPrice(item, clock);
   const shelf = SHOP_SECTIONS.find((entry) => entry.id === section) ?? null;
   const auraFamilies = visibleAuraFamilies(progress.owned, clock);
@@ -1064,7 +1068,20 @@ export default function Shop({
 
     if (shelf.id === "companions") return [];
     return productsOnShelf(shelf.id).slice().sort(byPrice);
-  })().filter(unlockedNow);
+  })()
+    .filter(unlockedNow)
+    .filter((item) => {
+      if (!shelf || ["auras", "companions"].includes(shelf.id)) return true;
+      const state = stateOf(item);
+      if (
+        shopQuery &&
+        !item.name.toLowerCase().includes(shopQuery.toLowerCase())
+      )
+        return false;
+      if (onlyAffordable && !state.owned && !state.affordableNow) return false;
+      if (hideOwned && state.owned) return false;
+      return true;
+    });
 
   const loadouts = progress.loadouts ?? [];
   const rackIds = [...new Set(progress.equippedSkills ?? [])].filter((id) =>
@@ -1606,6 +1623,35 @@ export default function Shop({
             </p>
           )}
         </section>
+      )}
+      {shelf && !["auras", "companions"].includes(shelf.id) && (
+        <div className="shop-filters" aria-label="Shelf filters">
+          <label className="search-field">
+            <Search size={15} aria-hidden="true" />
+            <input
+              aria-label="Search this shelf"
+              value={shopQuery}
+              onChange={(event) => setShopQuery(event.target.value)}
+              placeholder="Search this shelf…"
+            />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={onlyAffordable}
+              onChange={(event) => setOnlyAffordable(event.target.checked)}
+            />
+            Within reach
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={hideOwned}
+              onChange={(event) => setHideOwned(event.target.checked)}
+            />
+            Hide owned
+          </label>
+        </div>
       )}
       {shelf?.id === "skills" && (
         <section

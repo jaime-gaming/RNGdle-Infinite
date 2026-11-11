@@ -228,6 +228,6 @@ test("help links use the themed buttons and historical notes are capitalized onl
   await expect(
     page.locator(".changelog-entry").first().locator("p").first(),
   ).toHaveText(
-    "Name a local profile to keep progress on this device, or sign in to a Cloud Account and keep it in step on every device.",
+    "The Battle Pass arrives: 28-day seasons, 30 visible levels, BPEP missions and an optional premium track paid with EP.",
   );
 });

@@ -6,7 +6,14 @@ import "../pet-parade.css";
 
 const MAX_VISIBLE = 8;
 
-function Walker({ pet, active, reducedMotion, phase, docked = false }) {
+function Walker({
+  pet,
+  active,
+  reducedMotion,
+  phase,
+  docked = false,
+  prism = false,
+}) {
   const definition = petById.get(pet);
   if (!definition) return null;
   const normalIndex = PETS.findIndex((entry) => entry.id === pet);
@@ -30,6 +37,7 @@ function Walker({ pet, active, reducedMotion, phase, docked = false }) {
           multiplier={definition.multiplier}
           size={active ? 52 : 40}
           active={active}
+          prism={prism}
         />
         <span className="pet-walker-trail" aria-hidden="true">
           <i />
@@ -48,7 +56,7 @@ function Walker({ pet, active, reducedMotion, phase, docked = false }) {
   );
 }
 
-function Arrival({ pet }) {
+function Arrival({ pet, prism = false }) {
   const definition = petById.get(pet);
   if (!definition) return null;
   return (
@@ -65,6 +73,7 @@ function Arrival({ pet }) {
         multiplier={definition.multiplier}
         size={74}
         className="pet-arrival-figure"
+        prism={prism}
       />
       <span className="pet-arrival-copy">
         <span className="pet-arrival-eyebrow">
@@ -87,6 +96,7 @@ export default function PetParade({
   phase = "idle",
 
   docked = false,
+  prism = false,
 }) {
   if (!pets.length && !arrival) return null;
   const ordered = [...pets].sort((a, b) =>
@@ -106,9 +116,10 @@ export default function PetParade({
           reducedMotion={reducedMotion}
           phase={phase}
           docked={docked && id === active}
+          prism={prism}
         />
       ))}
-      {arrival && <Arrival pet={arrival} />}
+      {arrival && <Arrival pet={arrival} prism={prism} />}
     </div>
   );
 }

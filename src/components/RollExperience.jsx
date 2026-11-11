@@ -931,6 +931,7 @@ export default function RollExperience({
         reducedMotion={reducedMotion}
         arrival={arrivalPet}
         docked={companionSkillFiring}
+        prism={session.owned.includes("pass-axolotl")}
         phase={!run ? "idle" : busy ? "reveal" : "cooldown"}
       />
       {!run ? (

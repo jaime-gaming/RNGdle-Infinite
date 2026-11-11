@@ -90,7 +90,7 @@ test("tier chances are derived from all effective scores even when cached manife
     examples[tier] ??= n;
   }
   expect(counts).toEqual([
-    10114, 489889, 250019, 149965, 50003, 40011, 7925, 2075,
+    10111, 488169, 251295, 150304, 50079, 40037, 7931, 2075,
   ]);
   const original = manifest.tiers.map((t) => t.count);
   try {

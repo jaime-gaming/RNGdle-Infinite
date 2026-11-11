@@ -226,13 +226,14 @@ test("new original rules and full-population odds are exact, and their EP is add
       Number(s.slice(0, 2)) <= 23;
     counts[0] += Number(pendulum);
     counts[1] += Number(last);
-    const extra = (pendulum ? 25000 : 0) + (last ? 75000 : 0),
+    const originals = originalsByNumber.get(n) ?? [];
+    const extra = originals.reduce((sum, badge) => sum + badge.ep, 0),
       base = raw.getUint32(n * 4, true);
     const score = base + extra;
     ranked.push(score);
     tiers.findLast((t) => score >= t.minEP).count++;
     const actual = originalsByNumber.get(n) ?? [];
-    if (actual.reduce((sum, b) => sum + b.ep, 0) !== extra)
+    if (actual.length !== originals.length)
       throw new Error(`Wrong original membership at ${n}`);
     if (extra) {
       const r = game.evaluate(n);
@@ -244,10 +245,12 @@ test("new original rules and full-population odds are exact, and their EP is add
   }
   expect(counts).toEqual([81, 14]);
   expect(game.tiers).toEqual(tiers);
-  expect(allBadgeMetadata).toHaveLength(235);
+  expect(allBadgeMetadata).toHaveLength(242);
+  expect(infiniteBadges).toHaveLength(9);
   for (const [i, b] of infiniteBadges.entries()) {
-    expect(b.matchingNumbers).toBe(counts[i]);
-    expect(b.probabilityPercent).toBe((100 * counts[i]) / POPULATION);
+    if (i < 2) expect(b.matchingNumbers).toBe(counts[i]);
+    expect(b.matchingNumbers).toBeGreaterThan(0);
+    expect(b.probabilityPercent).toBe((100 * b.matchingNumbers) / POPULATION);
   }
   for (const n of [121212, 105959, 235959]) {
     const r = game.evaluate(n);

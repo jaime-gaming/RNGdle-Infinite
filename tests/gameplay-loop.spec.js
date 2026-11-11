@@ -108,7 +108,7 @@ test("first visit keeps goals as plain links without dashboard cards or invented
   await page.goto("/");
   await waitForApp(page);
   const progress = page.getByRole("region", { name: "Progress" });
-  await expect(progress).toContainText("0 / 235 badges");
+  await expect(progress).toContainText("0 / 242 badges");
   await expect(progress).toContainText("Quickwind I");
   await expect(progress).toContainText(
     `0 / ${productById.get("quickwind-1").price.toLocaleString("en-US")} EP`,
@@ -424,7 +424,7 @@ test("the completed workshop and collection have honest end states with no inven
     "All shop items owned",
   );
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "235 / 235 badges",
+    "242 / 242 badges",
   );
   await page
     .locator(".roll-progress-links")

@@ -16,6 +16,7 @@ import {
   UserRound,
   Sparkles,
   ListChecks,
+  Ticket,
 } from "lucide-react";
 import { badges, badgeGroups, rarities } from "./badges";
 import "@fontsource-variable/inter";
@@ -57,6 +58,9 @@ import { retireLegacyDeviceLink } from "./device-link-migration.js";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
 import Tasks from "./components/Tasks";
+import BattlePass from "./components/BattlePass.jsx";
+import { passReadyCount } from "./battle-pass.js";
+import { infiniteBadges } from "./infinite-badges.js";
 import { taskSummary } from "./tasks.js";
 import { useGameClock } from "./use-game-clock.js";
 import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
@@ -432,6 +436,7 @@ function App() {
   }, [historySize]);
 
   const readyTasks = taskSummary(session.tasks, taskNow).ready;
+  const readyPass = passReadyCount(session.battlePass, taskNow);
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
     const rose = newlyReady(lastReadyTasks.current, readyTasks);
@@ -717,6 +722,7 @@ function App() {
   const rebirthVisible = rebirthUnlocked(session);
 
   const tasksReady = readyTasks > 0;
+  const passReady = readyPass > 0;
 
   const rebirthReadyNow =
     rebirthVisible &&
@@ -780,6 +786,7 @@ function App() {
           <nav aria-label="Main navigation">
             {[
               ["shop", "Shop", ShoppingBag],
+              ["pass", "Pass", Ticket],
               ["tasks", "Tasks", ListChecks],
               ["badges", "Badges", Medal],
               ["history", "History", History],
@@ -789,7 +796,9 @@ function App() {
                 aria-label={
                   destination === "tasks" && tasksReady
                     ? "Tasks, ready to claim"
-                    : label
+                    : destination === "pass" && passReady
+                      ? "Pass, ready to claim"
+                      : label
                 }
                 aria-current={page === destination ? "page" : undefined}
                 className={page === destination ? "active" : ""}
@@ -797,7 +806,8 @@ function App() {
               >
                 <Icon size={16} />
                 <span>{label}</span>
-                {destination === "tasks" && tasksReady && (
+                {((destination === "tasks" && tasksReady) ||
+                  (destination === "pass" && passReady)) && (
                   <i className="nav-ready-dot" aria-hidden="true" />
                 )}
               </button>
@@ -1334,6 +1344,34 @@ function App() {
                 />
               </>
             )}
+            {page === "pass" && (
+              <ErrorBoundary>
+                <button className="back-link" onClick={() => navigate("roll")}>
+                  <ArrowLeft size={14} /> Back to rolling
+                </button>
+                <div className="page-heading">
+                  <div className="page-icon">
+                    <Ticket size={25} />
+                  </div>
+                  <div>
+                    <h1>Battle Pass</h1>
+                    <p>
+                      Earn BPEP from missions, climb 30 levels and claim visible
+                      rewards. The premium track is optional and paid with EP.
+                    </p>
+                  </div>
+                </div>
+                <BattlePass
+                  key={epoch}
+                  progress={session}
+                  cloudUser={!!auth.user}
+                  now={taskNow}
+                  onAction={dispatch}
+                  notify={notify}
+                  openSignup={openAuth}
+                />
+              </ErrorBoundary>
+            )}
             {page === "tasks" && (
               <ErrorBoundary>
                 <button className="back-link" onClick={() => navigate("roll")}>
@@ -1351,6 +1389,17 @@ function App() {
                     </p>
                   </div>
                 </div>
+                <button
+                  className="pass-link-banner"
+                  onClick={() => navigate("pass")}
+                >
+                  <Ticket size={16} aria-hidden="true" />
+                  <span>
+                    Battle Pass missions pay BPEP. The same online rolls can
+                    count here and there.
+                  </span>
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
                 <Tasks
                   key={epoch}
                   progress={session}
@@ -1556,8 +1605,8 @@ function App() {
                   >
                     RNGdle Tools <ArrowUpRight size={12} />
                   </a>
-                  . Includes two Infinite-exclusive badges. Only your discovered
-                  badges are shown.{" "}
+                  . Includes {infiniteBadges.length} Infinite-exclusive badges.
+                  Only your discovered badges are shown.{" "}
                   {auth.user
                     ? "Your collection is backed up online."
                     : session.profile
@@ -1600,6 +1649,7 @@ function App() {
             rebirthVisible={rebirthVisible}
             rebirthReady={rebirthReadyNow}
             tasksReady={tasksReady}
+            passReady={passReady}
             navigate={navigate}
           />
           <FreshStartDialog

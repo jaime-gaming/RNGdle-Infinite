@@ -1,5 +1,28 @@
 export const CHANGELOG = [
   {
+    version: "v0.6",
+    date: "2026-11-11",
+    title: "battle pass, new discoveries and a clearer shop",
+    body: [
+      "the Battle Pass arrives: 28-day seasons, 30 visible levels, BPEP missions and an optional premium track paid with EP.",
+      "pass missions share your online rolls with Tasks, include a free daily swap, and keep earned rewards safe when a season closes.",
+      "seven new Infinite Originals: Perfect Number, Narcissistic, Triangular, Kaprekar, Automorphic, Factorion and Emirp.",
+      "three new companions join the cage: Moss Beetle, Clockwork Crab and Comet Axolotl, each with its own signature skill.",
+      "the premium pass track includes a permanent Prism Axolotl variant; it changes the look, never the companion bonus.",
+      "skills receive a moderate rework: Trail, Bounce and Turbo were retuned, and the rack warns about overlapping effects.",
+      "shop shelves gain search and ownership/affordability filters; Black Friday remains unchanged.",
+    ],
+    badges: [
+      "INFINITE_PERFECT_NUMBER",
+      "INFINITE_NARCISSISTIC",
+      "INFINITE_TRIANGULAR",
+      "INFINITE_KAPREKAR",
+      "INFINITE_AUTOMORPHIC",
+      "INFINITE_FACTORION",
+      "INFINITE_EMIRP",
+    ],
+  },
+  {
     version: "v0.5.2",
     date: "2026-11-03",
     title: "cloud accounts and easier save recovery",

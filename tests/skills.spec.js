@@ -309,7 +309,7 @@ test("circles charge on settled online rolls only, and firing empties them", () 
   );
   expect(fired.skillCharge).toEqual({ surge: 0, trail: 4 });
 
-  expect(skillChargeFactor(["turbo"])).toBe(3);
+  expect(skillChargeFactor(["turbo"])).toBe(4);
   expect(
     chargeAfterSettlement(
       {
@@ -323,7 +323,7 @@ test("circles charge on settled online rolls only, and firing empties them", () 
       "r3",
       "online",
     ),
-  ).toEqual({ surge: 3, trail: 3, turbo: 0 });
+  ).toEqual({ surge: 4, trail: 4, turbo: 0 });
 
   expect(
     chargeAfterSettlement(
@@ -385,7 +385,7 @@ test("draw skills keep their own budgets and never invent EP", () => {
   expect(skillWalletMultiplier(["surge"])).toBe(2);
   expect(skillWalletMultiplier(["surge", "unicorn-wish"])).toBe(5);
   expect(skillWalletMultiplier(["turbo", "bounce"])).toBe(1);
-  expect(skillPetLuck(["trail"])).toBe(4);
+  expect(skillPetLuck(["trail"])).toBe(5);
   expect(skillPetLuck([])).toBe(1);
   expect(skillWaivesCooldown(["bounce"])).toBe(true);
   expect(skillWaivesCooldown(["surge"])).toBe(false);
@@ -575,7 +575,7 @@ test("forged saves cannot smuggle charge, slots or a free roll", () => {
 test("rebirth hands back the run — shelf, companions and wallet — grants the ladder skill and keeps the history", () => {
   const state = fund(5000000, {
     profile: { id: "p", username: "Tester", createdAt: 1 },
-    discovered: ids.slice(0, REBIRTH_STEPS[0].badges * BADGE_TOTAL),
+    discovered: ids.slice(0, Math.ceil(REBIRTH_STEPS[0].badges * BADGE_TOTAL)),
     owned: ["quickwind-1", "starfall", "flywheel", "skill-bay-1"],
     equipped: "starfall",
     pets: ["pebble"],
@@ -693,7 +693,7 @@ test("the ultra-rebirth only exists at the top of the ladder and restarts the ru
       { ...top, discovered: ids.slice(0, 10) },
       { type: "ultra-rebirth", expectedUltraRebirths: 1, at: 200000 },
     ),
-  ).toThrow(/Discover 118 badges/);
+  ).toThrow(/Discover 121 badges/);
 
   expect(() =>
     applyProgress(

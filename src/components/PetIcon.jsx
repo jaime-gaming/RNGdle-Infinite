@@ -19,11 +19,13 @@ export default function PetIcon({
   size = 42,
   active = false,
   className = "",
+  prism = false,
   ...rest
 }) {
   const grade = petGrade(multiplier);
 
-  const accent = petById.get(pet)?.accent;
+  const variant = pet === "axolotl" && prism;
+  const accent = variant ? "#c084fc" : petById.get(pet)?.accent;
   return (
     <span
       className={`pet-figure grade-${grade} ${active ? "is-active" : ""} ${className}`}
@@ -35,7 +37,10 @@ export default function PetIcon({
       {...rest}
     >
       <span className="pet-figure-halo" />
-      <CreatureIcon pet={pet} size={Math.round(size * 0.52)} />
+      <CreatureIcon
+        pet={variant ? "axolotl-prism" : pet}
+        size={Math.round(size * 0.52)}
+      />
       {name && (
         <span className="sr-only">{`${name} ${petBonusLabel(multiplier)}`}</span>
       )}

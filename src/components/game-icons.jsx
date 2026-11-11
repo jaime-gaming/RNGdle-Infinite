@@ -612,6 +612,16 @@ const CREATURES = {
     </>
   ),
 
+  moss: (
+    <>
+      <ellipse cx="12" cy="13" rx="6.2" ry="7.2" className="tone" />
+      <path d="M12 6.2V4.4M8.4 7.2 6.8 5.6M15.6 7.2l1.6-1.6" />
+      <path d="M12 7v12M7.2 11h9.6M7.6 15h8.8" className="cut-line" />
+      <circle cx="9.6" cy="9.6" r=".8" className="cut" />
+      <circle cx="14.4" cy="9.6" r=".8" className="cut" />
+    </>
+  ),
+
   kit: (
     <>
       <path
@@ -703,6 +713,16 @@ const CREATURES = {
     </>
   ),
 
+  crab: (
+    <>
+      <ellipse cx="12" cy="13.4" rx="6" ry="4.6" className="tone" />
+      <path d="M6.6 11.2 4 9.2M4 9.2l-1.4 1.6M4 9.2l1.8-.8M17.4 11.2 20 9.2M20 9.2l1.4 1.6M20 9.2l-1.8-.8" />
+      <path d="M7.4 16.4 5.6 18.4M9.6 17.4l-.8 2M14.4 17.4l.8 2M16.6 16.4l1.8 2" />
+      <circle cx="9.8" cy="12.4" r=".8" className="cut" />
+      <circle cx="14.2" cy="12.4" r=".8" className="cut" />
+    </>
+  ),
+
   griffin: (
     <>
       <path
@@ -744,6 +764,33 @@ const CREATURES = {
       <path d="M12.7 5a2.1 2.1 0 1 0 2.3 3.4" />
       <path d="m15 9.6 2.4-1.6-1.6-.8" />
       <circle cx="13.6" cy="5.9" r=".9" className="cut" />
+    </>
+  ),
+
+  axolotl: (
+    <>
+      <path
+        d="M5 14.6c2.2-3.4 5.2-5 8.6-4.4 2.6.4 4.6 2.2 5.4 4.4-2 1.8-4.6 2.8-7.4 2.6-2.8-.2-5-1-6.6-2.6Z"
+        className="tone"
+      />
+      <path d="M8.2 10.8 6 8.6M9.8 10.2 8.6 7.6M15.8 10.8l2.2-2.2M14.2 10.2l1.2-2.6" />
+      <path d="M18.8 14.8c1.2.4 2 .8 2.6 1.6" />
+      <circle cx="10.4" cy="13.4" r=".8" className="cut" />
+      <circle cx="14.6" cy="13.4" r=".8" className="cut" />
+    </>
+  ),
+
+  "axolotl-prism": (
+    <>
+      <path
+        d="M5 14.6c2.2-3.4 5.2-5 8.6-4.4 2.6.4 4.6 2.2 5.4 4.4-2 1.8-4.6 2.8-7.4 2.6-2.8-.2-5-1-6.6-2.6Z"
+        className="tone"
+      />
+      <path d="M8.2 10.8 6 8.6M9.8 10.2 8.6 7.6M15.8 10.8l2.2-2.2M14.2 10.2l1.2-2.6" />
+      <path d="M18.8 14.8c1.2.4 2 .8 2.6 1.6" />
+      <path d="m12 4.2 1.2 2.4-1.2 2.4-1.2-2.4Z" className="tone" />
+      <circle cx="10.4" cy="13.4" r=".8" className="cut" />
+      <circle cx="14.6" cy="13.4" r=".8" className="cut" />
     </>
   ),
 

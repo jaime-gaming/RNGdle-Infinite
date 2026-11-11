@@ -1989,7 +1989,13 @@ export function useProgress({
                                   ? renameUserId
                                     ? "The online profile name changed, but this device could not save its matching copy. The previous copy is available in Settings → Restore save; free up space and reload before continuing."
                                     : "The profile name could not be saved. Your previous name and progress are unchanged."
-                                  : "Your purchase or equipment change could not be saved. No EP was spent.",
+                                  : action.type === "claim-pass-mission"
+                                    ? "Your pass mission could not be saved. No BPEP was claimed."
+                                    : action.type === "claim-pass-reward"
+                                      ? "Your pass reward could not be saved. No EP or reward was claimed."
+                                      : action.type === "buy-pass-premium"
+                                        ? "The premium track could not be saved. No EP was spent."
+                                        : "Your purchase or equipment change could not be saved. No EP was spent.",
               };
           }
         }
