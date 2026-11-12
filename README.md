@@ -35,10 +35,12 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 
 ## Battle Pass
 
-The Battle Pass runs in 28-day seasons. Missions pay **BPEP**, which only moves
-the pass; EP remains your shop wallet. Every reward is visible across 30 levels,
-and the optional premium track is bought with EP, never real money. Earned
-rewards are kept; unclaimed earned rewards arrive when the season closes.
+The Battle Pass runs in named 28-day seasons, starting with **First Light**.
+Missions pay **BPEP**, which only moves the pass; EP remains your shop wallet.
+Every reward is visible across 30 levels, and the optional premium track is
+bought with EP, never real money. Earned rewards are kept; unclaimed earned
+rewards arrive when the season closes. Rebirth never resets the pass, and the
+cosmetics you claim are yours forever.
 
 ## Black Friday 2026
 

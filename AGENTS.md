@@ -59,13 +59,20 @@ Moving reveal digits are lighter than landed digits using opacity only, without
 adding backgrounds, borders, underlines or other decorations.
 
 The Battle Pass (`src/battle-pass.js`) runs in 28-day UTC seasons anchored at
-2026-11-16. Missions pay BPEP only; BPEP is not a shop wallet. The optional
+2026-11-16. Every season carries a name, theme and accent from
+`PASS_SEASON_NAMES`; names cycle every twelve seasons while `seasonId` stays
+unique, so the archive is never ambiguous. Missions pay BPEP only; BPEP is not a
+shop wallet. The optional
 premium track is bought with EP, never real money. Reward tracks are visible,
 each reward claims once, and earned rewards are delivered automatically when a
 season closes. `progress.battlePass` survives Rebirth, Prestige, Rollback and
 Fresh Start. Dev builds honour `VITE_BATTLE_PASS_PREVIEW_AT`; production ignores
 it. Pass auras and the Prism Axolotl variant are permanent cosmetics once
-claimed.
+claimed. `rebirthKeptPurchases` in `src/rebirth.js` mirrors the reducer's keep
+rule (aura or `passReward`); the Rebirth page and Fresh Start read it instead of
+guessing from product kinds, so a `pet-variant` is never listed as handed back.
+Badge gates round up over `BADGE_TOTAL`, so the ladder prints the real count and
+`badgeGatePercent`, never the nominal slice. Only rolls fund a cycle gate.
 
 ## Architecture
 

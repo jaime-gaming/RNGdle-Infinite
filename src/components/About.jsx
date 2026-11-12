@@ -52,12 +52,12 @@ export default function About({ navigate, progress }) {
       title: "Make progress",
       points: [
         "Daily and weekly tasks reward EP. Claim them before they reset; calendar tasks use UTC.",
-        "The Battle Pass runs in 28-day seasons. Missions pay BPEP, rewards are visible, and the optional premium track is bought with EP.",
+        "The Battle Pass runs in named 28-day seasons. Missions pay BPEP, rewards are visible, and the optional premium track is bought with EP. Rebirth never resets it.",
         "Set a shop goal to track a purchase without spending EP. Skills charge through play; equip the ones you want for the next draw.",
         "Bookmark up to ten rolls in History to display them on your profile. Déjà Vu marks a repeated number, not a higher rarity or an extra reward.",
         `${PETS.length} companions boost the EP you bank. Auras are cosmetic, and upgrades never change the odds.`,
         showsRebirth
-          ? "Rebirth starts a new run for permanent bonuses; your aura collection stays."
+          ? "Rebirth starts a new run for permanent bonuses; your auras, pass rewards and Battle Pass season stay."
           : "Collect badges and earn EP to unlock Rebirth.",
       ],
     },

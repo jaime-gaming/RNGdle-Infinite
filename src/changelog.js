@@ -6,7 +6,8 @@ export const CHANGELOG = [
     body: [
       "the Battle Pass arrives: 28-day seasons, 30 visible levels, BPEP missions and an optional premium track paid with EP.",
       "pass missions share your online rolls with Tasks, include a free daily swap, and keep earned rewards safe when a season closes.",
-      "seven new Infinite Originals: Perfect Number, Narcissistic, Triangular, Kaprekar, Automorphic, Factorion and Emirp.",
+      "new originals: Perfect Number (mythic), Narcissistic (anomaly), Triangular (uncommon) and Kaprekar (rare).",
+      "also new: Automorphic (epic), Factorion (mythic) and Emirp (uncommon); every one wears its own icon.",
       "three new companions join the cage: Moss Beetle, Clockwork Crab and Comet Axolotl, each with its own signature skill.",
       "the premium pass track includes a permanent Prism Axolotl variant; it changes the look, never the companion bonus.",
       "skills receive a moderate rework: Trail, Bounce and Turbo were retuned, and the rack warns about overlapping effects.",
@@ -105,7 +106,7 @@ export const CHANGELOG = [
       "you can bookmark a shelf or page and open it again later.",
       "sharing a result copies the link as well as the text.",
       "guest play is not saved, and the interface now says so plainly.",
-      "new badges: ↕️ Pendulum (anomaly) and ⏳ Last Second (mythic).",
+      "new badges: Pendulum (anomaly) and Last Second (mythic).",
     ],
 
     badges: ["INFINITE_PENDULUM", "INFINITE_LAST_SECOND"],

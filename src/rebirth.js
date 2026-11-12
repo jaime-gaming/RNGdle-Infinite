@@ -1,24 +1,50 @@
 import { allBadgeMetadata } from "./infinite-badges.js";
-import { shopProducts, auraProducts } from "./shop-data.js";
+import { productById } from "./shop-data.js";
 import { rebirthSkills } from "./skills.js";
 import { formatEP } from "./roll-data.js";
 
 export const BADGE_TOTAL = allBadgeMetadata.length;
 const badgeIds = new Set(allBadgeMetadata.map((b) => b.id));
 
-export const REBIRTH_OPTIONAL_KINDS = ["aura", "utility", "offline-cap"];
+export const REBIRTH_OPTIONAL_KINDS = [
+  "aura",
+  "utility",
+  "offline-cap",
+  "pet-variant",
+];
 export const rebirthOptionalProducts = [
-  ...new Set([
-    ...shopProducts
+  ...new Set(
+    [...productById.values()]
       .filter((product) => REBIRTH_OPTIONAL_KINDS.includes(product.kind))
       .map((product) => product.id),
-    ...auraProducts.map((aura) => aura.id),
-  ]),
+  ),
 ];
 const optional = new Set(rebirthOptionalProducts);
 
 export function rebirthRelevantPurchases(owned = []) {
   return owned.filter((id) => !optional.has(id));
+}
+
+// The reducer keeps an owned product when it is an aura or a pass reward.
+// This is the same rule, so the page can never promise a different outcome.
+export function rebirthKeepsPurchase(id) {
+  const item = productById.get(id);
+  return item?.kind === "aura" || !!item?.passReward;
+}
+
+export function rebirthKeptPurchases(owned = []) {
+  return [...new Set(owned)].filter(rebirthKeepsPurchase);
+}
+
+export function rebirthHandedBackPurchases(owned = []) {
+  return [...new Set(owned)].filter((id) => !rebirthKeepsPurchase(id));
+}
+
+// A rung asks for a rounded-up slice of a 242-badge collection, so the honest
+// share is slightly above the nominal 20/25/... label. Show the real one.
+export function badgeGatePercent(badges) {
+  const count = Number.isFinite(badges) ? Math.max(0, badges) : 0;
+  return Math.round((1000 * count) / BADGE_TOTAL) / 10;
 }
 
 export const REBIRTH_VISIBLE_AT = Math.ceil(BADGE_TOTAL * 0.15);

@@ -14,20 +14,11 @@ function linkBadges(text, ids, onBadge) {
   const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`(${named.map((b) => escape(b.name)).join("|")})`);
 
-  const icons = new Set(named.map((badge) => badge.emoji));
-  const withIcons = new RegExp(`(${[...icons].map(escape).join("|")})`);
-  return text.split(pattern).flatMap((part, index) => {
+  // The icon belongs to the link, so a name is never written with a loose
+  // glyph beside it: one badge, one icon, one click target.
+  return text.split(pattern).map((part, index) => {
     const badge = named.find((entry) => entry.name === part);
-    if (!badge)
-      return part
-        .split(withIcons)
-        .map((piece, i) =>
-          icons.has(piece) ? (
-            <Emoji key={`${index}-${i}`} text={piece} />
-          ) : (
-            piece
-          ),
-        );
+    if (!badge) return part;
     return (
       <button
         key={index}
@@ -36,6 +27,7 @@ function linkBadges(text, ids, onBadge) {
         onClick={() => onBadge?.(badge)}
         title={badge.description}
       >
+        <Emoji text={badge.emoji} />
         {part}
       </button>
     );

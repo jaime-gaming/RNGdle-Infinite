@@ -13,6 +13,90 @@ const PREVIEW_OFFSET =
     ? PREVIEW_AT - Date.now()
     : 0;
 
+export const PASS_SEASON_NAMES = [
+  {
+    name: "First Light",
+    theme: "A clean signal at dawn. The pass opens here.",
+    accent: "#7dd3fc",
+  },
+  {
+    name: "Copper Rain",
+    theme: "Warm metal, cold weather. Bank it while it falls.",
+    accent: "#fb923c",
+  },
+  {
+    name: "Glass Meadow",
+    theme: "Thin ice over green. Every roll leaves a mark.",
+    accent: "#4ade80",
+  },
+  {
+    name: "Long Dusk",
+    theme: "The slow hours. Steady rolling wins the season.",
+    accent: "#c084fc",
+  },
+  {
+    name: "Salt Horizon",
+    theme: "Flat light, far distance. Nothing but the next number.",
+    accent: "#38bdf8",
+  },
+  {
+    name: "Ember Circuit",
+    theme: "Old wires still warm. Keep the current moving.",
+    accent: "#f87171",
+  },
+  {
+    name: "Paper Lanterns",
+    theme: "Small lights, long nights. Collect them all.",
+    accent: "#fbbf24",
+  },
+  {
+    name: "Quiet Frost",
+    theme: "Everything slows down. The pass does not.",
+    accent: "#a5b4fc",
+  },
+  {
+    name: "Iron Bloom",
+    theme: "Heavy ground, sudden colour. Dig for it.",
+    accent: "#f472b6",
+  },
+  {
+    name: "Tide Machine",
+    theme: "Same wave, new shape. Ride the whole cycle.",
+    accent: "#2dd4bf",
+  },
+  {
+    name: "Amber Static",
+    theme: "Warm noise on every channel. Tune it in.",
+    accent: "#facc15",
+  },
+  {
+    name: "Last Prism",
+    theme: "The year closes in split colour. Finish the track.",
+    accent: "#e879f9",
+  },
+];
+
+const clampIndex = (index) => {
+  const value = Number.isFinite(index) ? Math.floor(index) : 1;
+  return Math.max(1, value);
+};
+
+// Names repeat every twelve seasons; the season number stays unique, so a
+// returning name is never ambiguous in the archive.
+export function passSeasonIdentity(index) {
+  const number = clampIndex(index);
+  const entry = PASS_SEASON_NAMES[(number - 1) % PASS_SEASON_NAMES.length];
+  return {
+    ...entry,
+    number,
+    lap: Math.ceil(number / PASS_SEASON_NAMES.length),
+  };
+}
+
+export function passSeasonName(index) {
+  return passSeasonIdentity(index).name;
+}
+
 export const BATTLE_PASS_FAMILY = {
   id: "battle-pass",
   label: "Battle Pass",
@@ -317,9 +401,19 @@ export function battlePassSeason(at = Date.now()) {
   );
   const start = BATTLE_PASS_FIRST_START + index * BATTLE_PASS_SEASON_MS;
   const end = start + BATTLE_PASS_SEASON_MS;
+  const identity = passSeasonIdentity(index + 1);
   return {
     index: index + 1,
     id: `season-${index + 1}`,
+    name: identity.name,
+    theme: identity.theme,
+    accent: identity.accent,
+    nextName: passSeasonName(index + 2),
+    daysLong: BATTLE_PASS_SEASON_MS / DAY_MS,
+    day: Math.min(
+      BATTLE_PASS_SEASON_MS / DAY_MS,
+      Math.floor((now - start) / DAY_MS) + 1,
+    ),
     start,
     end,
     now,
@@ -332,6 +426,12 @@ export function battlePassSeason(at = Date.now()) {
 export function seasonNumber(id) {
   const match = SEASON_RE.exec(String(id ?? ""));
   return match ? Number(id.slice(7)) : 0;
+}
+
+export function seasonLabel(id) {
+  const number = seasonNumber(id);
+  if (!number) return "Unstarted season";
+  return `Season ${number} · ${passSeasonName(number)}`;
 }
 
 export function passLevelForXp(xp) {

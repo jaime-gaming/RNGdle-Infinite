@@ -30,8 +30,11 @@ import {
   discoveredCount,
   nextRebirthSkill,
   nextStep,
-  rebirthBlocker,
+  badgeGatePercent,
   blendedPercent,
+  rebirthBlocker,
+  rebirthHandedBackPurchases,
+  rebirthKeptPurchases,
   rebirthProgress,
   rebirthRequirement,
   rebirthSurplus,
@@ -52,6 +55,11 @@ import {
   skillEffectSummary,
 } from "../skills.js";
 import { productById } from "../shop-data.js";
+import {
+  BATTLE_PASS_LEVELS,
+  battlePassSeason,
+  passLevelForXp,
+} from "../battle-pass.js";
 import { PETS } from "../pets.js";
 import { cycleStats } from "../profile-stats.js";
 import { formatEP, formatEPCompact } from "../roll-data.js";
@@ -192,12 +200,20 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
     Math.round((cycleEp / Math.max(1, epTarget)) * 100),
   );
   const owned = progress.owned ?? [];
-  const keptAuras = owned.filter((id) => productById.get(id)?.kind === "aura");
-  const handedBack = owned.filter((id) => productById.get(id)?.kind !== "aura");
+  const keptPurchases = rebirthKeptPurchases(owned);
+  const keptAuras = keptPurchases.filter(
+    (id) => productById.get(id)?.kind === "aura",
+  );
+  const keptLooks = keptPurchases.filter(
+    (id) => productById.get(id)?.kind === "pet-variant",
+  );
+  const handedBack = rebirthHandedBackPurchases(owned);
   const ownedValue = handedBack.reduce(
     (sum, id) => sum + (productById.get(id)?.price ?? 0),
     0,
   );
+  const passLevel = passLevelForXp(progress.battlePass?.xp ?? 0);
+  const season = battlePassSeason(now);
 
   const previewGate = epTarget;
   const rawPreviewSurplus = rebirthSurplus(
@@ -245,6 +261,18 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           ["Rebirth ladder", "your rebirths, their skills and the +2% EP each"],
         ]),
     ["Aura collection", "every owned look, including the one you are wearing"],
+    [
+      "Battle Pass",
+      `season ${season.index} stays at level ${passLevel}, with its missions, claims and premium track`,
+    ],
+    ...(keptLooks.length
+      ? [
+          [
+            "Pass cosmetics",
+            `${keptLooks.length} permanent look${keptLooks.length === 1 ? "" : "s"} from the pass, kept like any aura`,
+          ],
+        ]
+      : []),
     ...(ladderComplete && !lastStage
       ? [["Prestige bonus", `+10% EP per prestige, ${prestigeSpan}`]]
       : []),
@@ -271,7 +299,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
           ],
         ]
       : []),
-    ["Other purchases", "upgrades, tools and shop skills"],
+    [
+      "Other purchases",
+      "upgrades, tools and shop skills — never auras or pass rewards",
+    ],
     ["Companions", "found or bought, they start over too"],
     [
       "Wallet EP",
@@ -370,12 +401,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             </p>
           ) : (
             <p>
-              The collection and everything you bought start over — the wallet,
-              the upgrades, the companions. Your history, your rebirths and
-              every permanent bonus stay, and each rung pays a skill, +2% EP for
-              as long as the ladder stands and the EP to start the next cycle.
-              This step asks for <b>{target} badges</b> and{" "}
-              <b>{formatEP(epTarget)} EP</b> earned in this cycle.
+              The collection and the run start over — the wallet, the upgrades,
+              the companions. Your history, your rebirths, your auras, your
+              Battle Pass season and every permanent bonus stay, and each rung
+              pays a skill, +2% EP for as long as the ladder stands and the EP
+              to start the next cycle. This step asks for <b>{target} badges</b>{" "}
+              and <b>{formatEP(epTarget)} EP</b> earned in this cycle.
             </p>
           )}
           <div className="rebirth-actions">
@@ -576,8 +607,18 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <li>
                 <strong>
                   {keptAuras.length} aura{keptAuras.length === 1 ? "" : "s"}
+                  {keptLooks.length > 0 &&
+                    ` · ${keptLooks.length} pass look${keptLooks.length === 1 ? "" : "s"}`}
                 </strong>
                 <small>kept, including your equipped look</small>
+              </li>
+              <li>
+                <strong>
+                  Pass level {passLevel} / {BATTLE_PASS_LEVELS}
+                </strong>
+                <small>
+                  {season.name} carries on, with every claim and mission
+                </small>
               </li>
               <li>
                 <strong>{formatEP(progress.totalEarned ?? 0)} EP</strong>
@@ -697,10 +738,12 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             <LegendMark size={16} /> The ladder
           </h3>
           <p>
-            Each step asks for a slice of the collection and EP the cycle has
-            earned, and grants a skill found nowhere else, a permanent +2% EP
-            and the sum the next cycle starts with. No purchase is ever
-            required. Whatever the cycle scores <em>over</em> the gate is
+            Each step asks for a slice of the {BADGE_TOTAL}-badge collection and
+            EP earned from rolls this cycle, and grants a skill found nowhere
+            else, a permanent +2% EP and the sum the next cycle starts with.
+            Badge gates round up, so the real share sits just above the nominal
+            one; task and pass payouts never count towards them. No purchase is
+            ever required. Whatever the cycle scores <em>over</em> the gate is
             surplus: {Math.round(SURPLUS_START_SHARE * 100)}% joins the new
             wallet, and every {formatEP(SURPLUS_BANKED_EP_STEP)} of it banks +1%
             EP forever, up to +{Math.round(SURPLUS_BANKED_CAP * 100)}% on a
@@ -751,10 +794,11 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                   <span className="rebirth-rung-head">
                     <span className="rebirth-rung-name">#{index + 1}</span>
                     <span className="rebirth-rung-percent">
-                      {Math.round(rung.badges * 100)}% of the collection
+                      {needed} of {BADGE_TOTAL} badges
                     </span>
                     <span className="rebirth-rung-badges">
-                      {needed} badges · {formatEPCompact(rung.ep)} EP earned
+                      {badgeGatePercent(needed)}% of the collection ·{" "}
+                      {formatEPCompact(rung.ep)} roll EP
                     </span>
                   </span>
                   <span className="rebirth-rung-bar" aria-hidden="true">
@@ -1055,11 +1099,13 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <ul>
                 <li>
                   <strong>Reset:</strong> your EP, your badges, every upgrade,
-                  tool, shop skill and companion. Owned auras stay.
+                  tool, shop skill and companion. Owned auras and pass rewards
+                  stay.
                 </li>
                 <li>
                   <strong>Keep:</strong> your profile, your activity history,
-                  your owned auras and your {rollbacks} Rollback
+                  your owned auras, your Battle Pass season and your {rollbacks}{" "}
+                  Rollback
                   {rollbacks === 1 ? "" : "s"}, with their permanent bonuses.
                 </li>
                 <li>
@@ -1100,11 +1146,13 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               <ul>
                 <li>
                   <strong>Reset:</strong> your EP, your badges, every upgrade,
-                  tool, shop skill and companion. Owned auras stay.
+                  tool, shop skill and companion. Owned auras and pass rewards
+                  stay.
                 </li>
                 <li>
                   <strong>Keep:</strong> your profile, your activity history,
-                  your owned auras and every Prestige bonus.
+                  your owned auras, your Battle Pass season and every Prestige
+                  bonus.
                 </li>
                 <li>
                   <strong>Ladder:</strong> all {REBIRTH_TOTAL} rebirths, their
@@ -1151,13 +1199,14 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
               </p>
               <ul>
                 <li>
-                  <strong>Reset:</strong> the badge collection, every purchase,
-                  the companions and the {formatEP(progress.balance ?? 0)} EP in
-                  your wallet.
+                  <strong>Reset:</strong> the badge collection, every purchase
+                  except auras and pass rewards, the companions and the{" "}
+                  {formatEP(progress.balance ?? 0)} EP in your wallet.
                 </li>
                 <li>
                   <strong>Keep:</strong> the activity history, your rebirths
-                  with their skills, and every permanent EP bonus.
+                  with their skills, your auras, your Battle Pass season and
+                  every permanent EP bonus.
                 </li>
                 <li>
                   <strong>Gain:</strong>{" "}

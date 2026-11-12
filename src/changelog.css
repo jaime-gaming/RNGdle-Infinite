@@ -53,6 +53,9 @@
 }
 
 .changelog-badge-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 0;
   border: 0;
   background: none;
@@ -62,6 +65,9 @@
   text-underline-offset: 3px;
   text-decoration-color: var(--muted);
   cursor: pointer;
+}
+.changelog-badge-link .emoji {
+  font-size: 1.05em;
 }
 .changelog-badge-link:hover {
   color: var(--text);

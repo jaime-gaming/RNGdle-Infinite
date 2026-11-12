@@ -71,7 +71,7 @@ const definitions = [
     name: "Perfect Number",
     description:
       "A positive number equal to the sum of its proper divisors, such as 28 = 1 + 2 + 4 + 7 + 14.",
-    emoji: "💯",
+    emoji: "➗",
     ep: 150000,
     rarity: "mythic",
     numbers: perfectNumbers,
@@ -81,7 +81,7 @@ const definitions = [
     name: "Narcissistic",
     description:
       "Each digit is raised to the number of digits, and the powers add back to the number. Single-digit cases are excluded.",
-    emoji: "🪞",
+    emoji: "🤳",
     ep: 30000,
     rarity: "anomaly",
     numbers: narcissisticNumbers,
@@ -91,7 +91,7 @@ const definitions = [
     name: "Triangular",
     description:
       "A sum of consecutive whole numbers starting at 1, such as 500500 = 1 + 2 + ... + 1000.",
-    emoji: "🔺",
+    emoji: "🔻",
     ep: 1500,
     rarity: "uncommon",
     numbers: triangularNumbers,
@@ -121,7 +121,7 @@ const definitions = [
     name: "Factorion",
     description:
       "The sum of the factorials of its digits equals the number, such as 145 = 1! + 4! + 5!. Trivial 1 and 2 are excluded.",
-    emoji: "❗",
+    emoji: "🧾",
     ep: 120000,
     rarity: "mythic",
     numbers: factorionNumbers,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, RotateCcw, X } from "lucide-react";
 import { freshStartEligible, FRESH_START_PRESTIGES } from "../progress.js";
+import { rebirthKeptPurchases } from "../rebirth.js";
 import { formatEP } from "../roll-data.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import "../fresh-start.css";
@@ -60,7 +61,7 @@ export default function FreshStartDialog({
   }, [open]);
   if (!eligible) return null;
   const prestiges = progress.ultraRebirths ?? 0;
-  const kept = (progress.owned ?? []).length;
+  const kept = rebirthKeptPurchases(progress.owned ?? []).length;
   async function start() {
     if (pending) return;
     setPending(true);
@@ -120,12 +121,13 @@ export default function FreshStartDialog({
           </p>
           <ul className="fresh-start-terms">
             <li>
-              <strong>Kept:</strong> your profile and every aura you own
-              {kept ? ` (${kept})` : ""}, including event ones.
+              <strong>Kept:</strong> your profile, every aura you own
+              {kept ? ` (${kept} cosmetic${kept === 1 ? "" : "s"} kept)` : ""},
+              including event and pass looks, and your Battle Pass season.
             </li>
             <li>
-              <strong>Gone:</strong> EP, companions, skills, upgrades, rebirths,
-              prestiges, Rollback bonuses and history.
+              <strong>Gone:</strong> EP, badges, companions, skills, upgrades,
+              rebirths, prestiges, Rollback bonuses and history.
             </li>
             <li>A keepsake in your history remembers what this run reached.</li>
           </ul>

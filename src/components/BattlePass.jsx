@@ -1,8 +1,12 @@
 import React, { useRef, useState } from "react";
 import {
   ArrowRightLeft,
+  CalendarDays,
   Check,
+  Coins,
+  Crown,
   Gift,
+  History,
   Lock,
   Sparkles,
   Ticket,
@@ -24,9 +28,11 @@ import {
   passRewardEP,
   passRewardState,
   passXpIntoLevel,
+  seasonLabel,
 } from "../battle-pass.js";
 import { waitText as taskWaitText } from "../tasks.js";
 import { useFormatEP } from "../use-settings.jsx";
+import { CreatureIcon } from "./game-icons.jsx";
 import "./battle-pass.css";
 
 const count = (value) => value.toLocaleString("en-US");
@@ -35,15 +41,29 @@ function RewardLabel({ reward, owned, formatEP }) {
   if (reward.kind !== "ep")
     return (
       <span className="pass-reward-aura">
-        <Sparkles size={14} aria-hidden="true" />
-        {reward.name}
-        {reward.kind === "pet-variant" && <small>Comet Axolotl look</small>}
+        <span className="pass-reward-name">
+          {reward.kind === "pet-variant" ? (
+            <CreatureIcon pet="axolotl-prism" size={16} aria-hidden="true" />
+          ) : (
+            <Sparkles size={14} aria-hidden="true" />
+          )}
+          {reward.name}
+        </span>
+        <small>
+          {reward.kind === "pet-variant"
+            ? "Comet Axolotl look · yours forever"
+            : "Aura · yours forever"}
+        </small>
         {owned.includes(reward.id) && (
           <small>Already owned · +{formatEP(reward.repeatEP)} EP</small>
         )}
       </span>
     );
-  return <span>+{formatEP(reward.ep)} EP</span>;
+  return (
+    <span className="pass-reward-ep">
+      <Coins size={13} aria-hidden="true" />+{formatEP(reward.ep)} EP
+    </span>
+  );
 }
 
 export default function BattlePass({
@@ -72,6 +92,9 @@ export default function BattlePass({
   const owned = progress.owned ?? [];
   const currentSeason = pass.seasonId === season.id;
   const ended = !!pass.seasonId && !currentSeason && !season.upcoming;
+  const claimedCount = (pass.claimed ?? []).length;
+  const trackSlots = BATTLE_PASS_LEVELS * (pass.premium ? 2 : 1);
+  const archive = [...(pass.archive ?? [])].reverse();
 
   async function run(action, message) {
     if (busy.current) return;
@@ -99,9 +122,11 @@ export default function BattlePass({
     const definition = reward[track];
     const key = `${track}-${reward.level}`;
     return (
-      <div className={`pass-reward is-${state}`} data-reward={key}>
+      <div className={`pass-reward is-${state} is-${track}`} data-reward={key}>
         <div className="pass-reward-label">
-          {track === "premium" && <Lock size={12} aria-hidden="true" />}
+          {track === "premium" && state === "premium-locked" && (
+            <Lock size={12} aria-hidden="true" />
+          )}
           <RewardLabel reward={definition} owned={owned} formatEP={formatEP} />
         </div>
         {state === "claimable" ? (
@@ -145,24 +170,36 @@ export default function BattlePass({
           </button>
         </div>
       )}
-      <section className="pass-hero" aria-label="Season summary">
+      <section
+        className="pass-hero"
+        aria-label="Season summary"
+        style={{ "--pass-accent": season.accent }}
+      >
         <div className="pass-hero-mark" aria-hidden="true">
           <Ticket size={28} />
         </div>
         <div className="pass-hero-copy">
-          <span className="eyebrow">Season {season.index}</span>
+          <span className="eyebrow">
+            Season {season.index}
+            {!season.upcoming &&
+              !ended &&
+              ` · day ${season.day} of ${season.daysLong}`}
+          </span>
           <h2>
             {season.upcoming
               ? "The pass opens soon"
               : ended
                 ? "Season complete"
-                : "First Light"}
+                : season.name}
           </h2>
+          {!season.upcoming && !ended && (
+            <p className="pass-hero-theme">{season.theme}</p>
+          )}
           <p>
             {season.upcoming
-              ? `Starts ${passDateLabel(season.start)} UTC.`
+              ? `${season.name} starts ${passDateLabel(season.start)} UTC.`
               : ended
-                ? "Claim any rewards you earned. Your next online roll opens the new season and delivers anything still waiting."
+                ? `Claim any rewards you earned. Your next online roll opens ${season.name} and delivers anything still waiting.`
                 : `${passDateLabel(season.start)} – ${passDateLabel(season.end)} UTC. BPEP moves the pass; EP stays your shop wallet.`}
           </p>
         </div>
@@ -176,6 +213,12 @@ export default function BattlePass({
           <div>
             <span>BPEP</span>
             <strong>{count(pass.xp)}</strong>
+          </div>
+          <div>
+            <span>Claimed</span>
+            <strong>
+              {claimedCount} / {trackSlots}
+            </strong>
           </div>
           <div>
             <span>{season.upcoming ? "Opens in" : "Ends in"}</span>
@@ -200,6 +243,12 @@ export default function BattlePass({
               : `${count(BPEP_PER_LEVEL - intoLevel)} BPEP to level ${level + 1}`}
           </span>
         </div>
+        {!season.upcoming && (
+          <p className="pass-hero-next">
+            <CalendarDays size={13} aria-hidden="true" />
+            Next season: <strong>{season.nextName}</strong>
+          </p>
+        )}
       </section>
 
       <section
@@ -208,17 +257,18 @@ export default function BattlePass({
       >
         <div>
           <h3>
-            <Sparkles size={16} aria-hidden="true" /> Premium track
+            <Crown size={16} aria-hidden="true" /> Premium track
           </h3>
           <p>
             Optional. Paid with EP, never real money. Extra EP rewards, the
-            Prism Axolotl variant and the Prism Circuit aura; the free track
-            keeps every core reward.
+            Prism Axolotl variant at level 20 and the Prism Circuit aura at
+            level 30; the free track keeps every core reward. Cosmetics you
+            claim are yours forever, even after a Rebirth.
           </p>
         </div>
         {pass.premium ? (
           <span className="pass-premium-owned">
-            <Check size={14} aria-hidden="true" /> Unlocked this season
+            <Check size={14} aria-hidden="true" /> Unlocked for {season.name}
           </span>
         ) : confirmPremium ? (
           <div className="pass-confirm">
@@ -264,20 +314,43 @@ export default function BattlePass({
       <section className="pass-track" aria-label="Reward track">
         <div className="pass-track-head">
           <h3>Reward track</h3>
-          <span>Every reward is visible. Claim each one once.</span>
+          <span>
+            Every reward is visible. Claim each one once. Levels 10, 20 and 30
+            carry the season cosmetics.
+          </span>
+        </div>
+        <div className="pass-track-legend" aria-hidden="true">
+          <span className="pass-legend-free">
+            <Gift size={12} /> Free
+          </span>
+          <span className="pass-legend-premium">
+            <Crown size={12} /> Premium
+          </span>
         </div>
         <div className="pass-track-scroll">
           <ol className="pass-track-grid">
-            {BATTLE_PASS_REWARDS.map((reward) => (
-              <li
-                key={reward.level}
-                className={`pass-level ${level >= reward.level ? "is-reached" : ""}`}
-              >
-                <span className="pass-level-number">{reward.level}</span>
-                {rewardButton(reward, "free")}
-                {rewardButton(reward, "premium")}
-              </li>
-            ))}
+            {BATTLE_PASS_REWARDS.map((reward) => {
+              const milestone =
+                reward.free.kind !== "ep" || reward.premium.kind !== "ep";
+              const isNext = reward.level === level + 1;
+              return (
+                <li
+                  key={reward.level}
+                  className={[
+                    "pass-level",
+                    level >= reward.level ? "is-reached" : "",
+                    milestone ? "is-milestone" : "",
+                    isNext ? "is-next" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <span className="pass-level-number">{reward.level}</span>
+                  {rewardButton(reward, "free")}
+                  {rewardButton(reward, "premium")}
+                </li>
+              );
+            })}
           </ol>
         </div>
       </section>
@@ -387,12 +460,44 @@ export default function BattlePass({
         );
       })}
 
+      {archive.length > 0 && (
+        <section className="pass-archive" aria-labelledby="pass-archive-title">
+          <header>
+            <h3 id="pass-archive-title">
+              <History size={16} aria-hidden="true" /> Past seasons
+            </h3>
+            <span>{archive.length} closed</span>
+          </header>
+          <ul>
+            {archive.map((entry) => (
+              <li key={entry.seasonId}>
+                <span className="pass-archive-name">
+                  {seasonLabel(entry.seasonId)}
+                </span>
+                <span className="pass-archive-level">
+                  Level {passLevelForXp(entry.xp)} / {BATTLE_PASS_LEVELS}
+                </span>
+                <span className="pass-archive-claimed">
+                  {entry.claimed} reward{entry.claimed === 1 ? "" : "s"} claimed
+                </span>
+                {entry.premium && (
+                  <span className="pass-archive-premium">
+                    <Crown size={12} aria-hidden="true" /> Premium
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <p className="pass-note">
         The same online roll can advance Tasks and the pass. Offline rolls pay
         EP but do not advance pass missions. BPEP is not spendable. Rewards you
         earned are kept; when a season closes, any unclaimed earned rewards are
         delivered on your next online roll. Premium unlocks last for that season
-        only.
+        only. Rebirth, Prestige and Rollback never touch the pass: your level,
+        missions and claimed cosmetics all carry on.
       </p>
     </div>
   );
