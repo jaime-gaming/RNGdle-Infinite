@@ -1,3 +1,5 @@
+import { themeForStart } from "./season-config.js";
+
 export const BATTLE_PASS_FIRST_START = Date.UTC(2026, 10, 16, 0, 0, 0);
 export const BATTLE_PASS_SEASON_MS = 28 * 24 * 60 * 60 * 1000;
 export const BATTLE_PASS_LEVELS = 30;
@@ -13,83 +15,29 @@ const PREVIEW_OFFSET =
     ? PREVIEW_AT - Date.now()
     : 0;
 
-export const PASS_SEASON_NAMES = [
-  {
-    name: "First Light",
-    theme: "A clean signal at dawn. The pass opens here.",
-    accent: "#7dd3fc",
-  },
-  {
-    name: "Copper Rain",
-    theme: "Warm metal, cold weather. Bank it while it falls.",
-    accent: "#fb923c",
-  },
-  {
-    name: "Glass Meadow",
-    theme: "Thin ice over green. Every roll leaves a mark.",
-    accent: "#4ade80",
-  },
-  {
-    name: "Long Dusk",
-    theme: "The slow hours. Steady rolling wins the season.",
-    accent: "#c084fc",
-  },
-  {
-    name: "Salt Horizon",
-    theme: "Flat light, far distance. Nothing but the next number.",
-    accent: "#38bdf8",
-  },
-  {
-    name: "Ember Circuit",
-    theme: "Old wires still warm. Keep the current moving.",
-    accent: "#f87171",
-  },
-  {
-    name: "Paper Lanterns",
-    theme: "Small lights, long nights. Collect them all.",
-    accent: "#fbbf24",
-  },
-  {
-    name: "Quiet Frost",
-    theme: "Everything slows down. The pass does not.",
-    accent: "#a5b4fc",
-  },
-  {
-    name: "Iron Bloom",
-    theme: "Heavy ground, sudden colour. Dig for it.",
-    accent: "#f472b6",
-  },
-  {
-    name: "Tide Machine",
-    theme: "Same wave, new shape. Ride the whole cycle.",
-    accent: "#2dd4bf",
-  },
-  {
-    name: "Amber Static",
-    theme: "Warm noise on every channel. Tune it in.",
-    accent: "#facc15",
-  },
-  {
-    name: "Last Prism",
-    theme: "The year closes in split colour. Finish the track.",
-    accent: "#e879f9",
-  },
-];
-
 const clampIndex = (index) => {
   const value = Number.isFinite(index) ? Math.floor(index) : 1;
   return Math.max(1, value);
 };
 
-// Names repeat every twelve seasons; the season number stays unique, so a
-// returning name is never ambiguous in the archive.
+export function seasonStartFor(index) {
+  return (
+    BATTLE_PASS_FIRST_START + (clampIndex(index) - 1) * BATTLE_PASS_SEASON_MS
+  );
+}
+
+// A season wears the theme of the month it opens in. Names come from
+// season-config.js, so editing a month there renames every season that starts
+// in it. The season number stays unique, so a returning name is never ambiguous.
 export function passSeasonIdentity(index) {
   const number = clampIndex(index);
-  const entry = PASS_SEASON_NAMES[(number - 1) % PASS_SEASON_NAMES.length];
+  const start = seasonStartFor(number);
+  const theme = themeForStart(start);
   return {
-    ...entry,
+    ...theme,
     number,
-    lap: Math.ceil(number / PASS_SEASON_NAMES.length),
+    month: new Date(start).getUTCMonth() + 1,
+    lap: Math.ceil(number / 12),
   };
 }
 
@@ -150,6 +98,65 @@ export const BATTLE_PASS_COSMETICS = [
   },
 ];
 
+// Consumable boosts. Each charge runs for its own window once activated and
+// multiplies banked EP from rolls; nothing else in the economy changes.
+export const PASS_BOOSTS = [
+  {
+    id: "boost-spark",
+    name: "Spark Injector",
+    mult: 1.5,
+    minutes: 15,
+    blurb: "×1.5 banked EP for 15 minutes.",
+  },
+  {
+    id: "boost-surge",
+    name: "Surge Capacitor",
+    mult: 2,
+    minutes: 10,
+    blurb: "×2 banked EP for 10 minutes.",
+  },
+  {
+    id: "boost-overdrive",
+    name: "Overdrive Cell",
+    mult: 2.5,
+    minutes: 5,
+    blurb: "×2.5 banked EP for 5 minutes.",
+  },
+];
+const BOOST_BY_ID = new Map(PASS_BOOSTS.map((boost) => [boost.id, boost]));
+
+export function passBoostById(id) {
+  return BOOST_BY_ID.get(id) ?? null;
+}
+
+// Levels that hand out a boost charge on top of their EP. The boost is an extra
+// reward, never a replacement: every level keeps the EP it always paid.
+export const PASS_BOOST_GRANTS = {
+  free: [
+    { level: 5, id: "boost-spark", charges: 1 },
+    { level: 15, id: "boost-surge", charges: 1 },
+    { level: 25, id: "boost-overdrive", charges: 1 },
+  ],
+  premium: [
+    { level: 5, id: "boost-spark", charges: 2 },
+    { level: 15, id: "boost-surge", charges: 2 },
+    { level: 25, id: "boost-overdrive", charges: 2 },
+  ],
+};
+
+function boostGrant(track, level) {
+  const entry = PASS_BOOST_GRANTS[track].find((grant) => grant.level === level);
+  if (!entry) return null;
+  const boost = passBoostById(entry.id);
+  return {
+    id: boost.id,
+    name: boost.name,
+    charges: entry.charges,
+    minutes: boost.minutes,
+    mult: boost.mult,
+  };
+}
+
 const FREE_EP = [
   5000, 10000, 15000, 20000, 25000, 30000, 40000, 50000, 75000, 0, 60000, 70000,
   80000, 90000, 100000, 110000, 120000, 130000, 140000, 150000, 160000, 170000,
@@ -190,6 +197,14 @@ export const BATTLE_PASS_REWARDS = Array.from(
               repeatEP: 150000,
             }
           : { kind: "ep", ep: PREMIUM_EP[index] };
+    // Boosts ride along with the EP, so a level never pays less than before.
+    for (const [track, reward] of [
+      ["free", free],
+      ["premium", premium],
+    ]) {
+      const boost = reward.kind === "ep" ? boostGrant(track, level) : null;
+      if (boost) reward.boost = boost;
+    }
     return { level, free, premium };
   },
 );
@@ -388,6 +403,132 @@ const SEASON_RE = /^season-[1-9]\d*$/;
 const PERIOD_RE = /^\d{4}-\d{2}-\d{2}$/;
 const validAmount = (value) => Number.isSafeInteger(value) && value >= 0;
 
+export function emptyBoosts() {
+  return { charges: {}, active: [] };
+}
+
+export function boostCharges(boosts, id) {
+  const value = boosts?.charges?.[id];
+  return Number.isSafeInteger(value) && value > 0 ? value : 0;
+}
+
+export function activeBoosts(boosts, at = Date.now()) {
+  const list = Array.isArray(boosts?.active) ? boosts.active : [];
+  return list
+    .filter(
+      (entry) =>
+        entry &&
+        passBoostById(entry.id) &&
+        Number.isSafeInteger(entry.until) &&
+        entry.until > at,
+    )
+    .map((entry) => ({ ...passBoostById(entry.id), until: entry.until }));
+}
+
+export function boostMultiplier(boosts, at = Date.now()) {
+  return activeBoosts(boosts, at).reduce(
+    (total, boost) => total * boost.mult,
+    1,
+  );
+}
+
+// Reading a save must never throw away a window just because it is measured
+// against another clock; only a window that clearly expired is dropped.
+function pruneBoosts(boosts, at, keepExpired = false) {
+  const active = (Array.isArray(boosts?.active) ? boosts.active : []).filter(
+    (entry) =>
+      entry &&
+      passBoostById(entry.id) &&
+      Number.isSafeInteger(entry.until) &&
+      (keepExpired || entry.until > at),
+  );
+  return { charges: { ...(boosts?.charges ?? {}) }, active };
+}
+
+export function grantBoost(boosts, id, charges, at = Date.now()) {
+  const boost = passBoostById(id);
+  if (!boost || !Number.isSafeInteger(charges) || charges < 1) return boosts;
+  const clean = pruneBoosts(boosts, at, true);
+  return {
+    ...clean,
+    charges: {
+      ...clean.charges,
+      [id]: Math.min(99, boostCharges(clean, id) + charges),
+    },
+  };
+}
+
+export function activateBoost(boosts, id, at) {
+  const boost = passBoostById(id);
+  if (!boost) throw new Error("That boost does not exist.");
+  const clean = pruneBoosts(boosts, at);
+  if (boostCharges(clean, id) < 1)
+    throw new Error("You have no charge of that boost.");
+  if (clean.active.length)
+    throw new Error("A boost is already running. Let it finish first.");
+  const charges = { ...clean.charges };
+  if (boostCharges(clean, id) <= 1) delete charges[id];
+  else charges[id] = boostCharges(clean, id) - 1;
+  return {
+    charges,
+    active: [...clean.active, { id, until: at + boost.minutes * 60 * 1000 }],
+  };
+}
+
+export function parseBoosts(value, at = Date.now()) {
+  if (value == null) return { boosts: emptyBoosts(), repaired: false };
+  if (typeof value !== "object" || Array.isArray(value))
+    return { boosts: emptyBoosts(), repaired: true };
+  let repaired = false;
+  const charges = {};
+  const stored = value.charges;
+  if (
+    stored !== undefined &&
+    (typeof stored !== "object" || Array.isArray(stored))
+  )
+    repaired = true;
+  else
+    for (const [id, amount] of Object.entries(stored ?? {})) {
+      if (!passBoostById(id)) {
+        repaired = true;
+        continue;
+      }
+      if (!Number.isSafeInteger(amount) || amount < 0 || amount > 99) {
+        if (amount !== 0) repaired = true;
+        continue;
+      }
+      if (amount > 0) charges[id] = amount;
+    }
+  const active = [];
+  if (value.active !== undefined && !Array.isArray(value.active))
+    repaired = true;
+  else
+    for (const entry of value.active ?? []) {
+      if (
+        !entry ||
+        typeof entry !== "object" ||
+        !passBoostById(entry.id) ||
+        !Number.isSafeInteger(entry.until) ||
+        entry.until <= 0 ||
+        entry.until > 8640000000000000
+      ) {
+        repaired = true;
+        continue;
+      }
+      // An expired window is normal bookkeeping, not damage.
+      if (active.length >= 2) {
+        repaired = true;
+        continue;
+      }
+      if (active.some((kept) => kept.id === entry.id)) {
+        repaired = true;
+        continue;
+      }
+      active.push({ id: entry.id, until: entry.until });
+    }
+  return { boosts: { charges, active }, repaired };
+}
+
 export function passNow(at = Date.now()) {
   const value = Number.isFinite(at) ? at : Date.now();
   return PREVIEW_OFFSET ? value + PREVIEW_OFFSET : value;
@@ -408,6 +549,7 @@ export function battlePassSeason(at = Date.now()) {
     name: identity.name,
     theme: identity.theme,
     accent: identity.accent,
+    month: identity.month,
     nextName: passSeasonName(index + 2),
     daysLong: BATTLE_PASS_SEASON_MS / DAY_MS,
     day: Math.min(
@@ -490,6 +632,7 @@ export function emptyBattlePass() {
     premium: false,
     claimed: [],
     missions: emptyPassMissions(),
+    boosts: emptyBoosts(),
     archive: [],
   };
 }
@@ -581,14 +724,23 @@ export function passMissionProgress(pass, mission, at) {
   };
 }
 
-export function passReadyCount(pass, at) {
+// Missions live on the Tasks page, so their readiness lights that tab.
+export function passMissionReadyCount(pass, at) {
   if (!pass?.seasonId) return 0;
+  if (pass.seasonId !== battlePassSeason(at).id) return 0;
   let ready = 0;
   for (const cadence of PASS_CADENCES) {
     for (const mission of activePassMissions(pass, cadence, at)) {
       if (passMissionProgress(pass, mission, at).state === "claimable") ready++;
     }
   }
+  return ready;
+}
+
+// Rewards stay on the Pass page, so only their readiness lights that tab.
+export function passReadyCount(pass, at) {
+  if (!pass?.seasonId) return 0;
+  let ready = 0;
   const level = passLevelForXp(pass.xp);
   for (const reward of BATTLE_PASS_REWARDS) {
     if (reward.level > level) continue;
@@ -757,7 +909,7 @@ function parseSlot(value, cadence) {
   return { slot: { period, counts, claimed, swaps, rerolls }, repaired };
 }
 
-export function parseBattlePass(value) {
+export function parseBattlePass(value, at = Date.now()) {
   if (value == null) return { pass: emptyBattlePass(), repaired: false };
   if (typeof value !== "object" || Array.isArray(value))
     return { pass: emptyBattlePass(), repaired: true };
@@ -779,6 +931,8 @@ export function parseBattlePass(value) {
     missions[cadence] = read.slot;
     if (read.repaired) repaired = true;
   }
+  const boostRead = parseBoosts(value.boosts, at);
+  if (boostRead.repaired) repaired = true;
   const archive = [];
   if (Array.isArray(value.archive)) {
     for (const entry of value.archive.slice(-BATTLE_PASS_ARCHIVE_LIMIT)) {
@@ -800,7 +954,15 @@ export function parseBattlePass(value) {
     }
   } else if (value.archive !== undefined) repaired = true;
   return {
-    pass: { seasonId, xp, premium, claimed, missions, archive },
+    pass: {
+      seasonId,
+      xp,
+      premium,
+      claimed,
+      missions,
+      boosts: boostRead.boosts,
+      archive,
+    },
     repaired,
   };
 }

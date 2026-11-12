@@ -307,7 +307,8 @@ test("the changelog reads like release notes, not like a chat log", () => {
     }
   }
 
-  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(8);
+  // The newest note stays tight; every note stays within its eight-line cap.
+  expect(CHANGELOG[0].body.length).toBeLessThanOrEqual(7);
 
   for (const entry of CHANGELOG)
     expect(entry.body.length).toBeLessThanOrEqual(8);

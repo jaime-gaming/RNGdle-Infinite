@@ -59,7 +59,7 @@ import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
 import Tasks from "./components/Tasks";
 import BattlePass from "./components/BattlePass.jsx";
-import { passReadyCount } from "./battle-pass.js";
+import { passMissionReadyCount, passReadyCount } from "./battle-pass.js";
 import { infiniteBadges } from "./infinite-badges.js";
 import { taskSummary } from "./tasks.js";
 import { useGameClock } from "./use-game-clock.js";
@@ -77,6 +77,11 @@ import Settings from "./components/Settings";
 import SaveRecovery from "./components/SaveRecovery";
 import { SettingsProvider } from "./use-settings.jsx";
 import { useReadyAlert } from "./use-ready-alert.js";
+import {
+  NOTIFICATION_ACTION_MESSAGE,
+  handleNotificationAction,
+  setNotificationRegistration,
+} from "./notifications.js";
 import { petDrop, petById } from "./pets.js";
 import { goalItem } from "./gameplay-loop.js";
 import {
@@ -291,10 +296,22 @@ function App() {
   }, [rebirthRing]);
 
   useEffect(() => {
-    if ("serviceWorker" in navigator)
-      navigator.serviceWorker
-        .register(`${import.meta.env.BASE_URL}sw.js`)
-        .catch(() => {});
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}sw.js`)
+      .then((registered) => {
+        setNotificationRegistration(registered);
+        return navigator.serviceWorker.ready;
+      })
+      .then((ready) => setNotificationRegistration(ready))
+      .catch(() => {});
+    const onMessage = (event) => {
+      if (event.data?.type !== NOTIFICATION_ACTION_MESSAGE) return;
+      handleNotificationAction(event.data.action);
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", onMessage);
   }, []);
 
   const [arrivalPet, setArrivalPet] = useState(null);
@@ -435,7 +452,10 @@ function App() {
       });
   }, [historySize]);
 
-  const readyTasks = taskSummary(session.tasks, taskNow).ready;
+  // Pass missions sit on the Tasks page, so they count towards that tab.
+  const readyTasks =
+    taskSummary(session.tasks, taskNow).ready +
+    passMissionReadyCount(session.battlePass, taskNow);
   const readyPass = passReadyCount(session.battlePass, taskNow);
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
@@ -1356,8 +1376,9 @@ function App() {
                   <div>
                     <h1>Battle Pass</h1>
                     <p>
-                      Earn BPEP from missions, climb 30 levels and claim visible
-                      rewards. The premium track is optional and paid with EP.
+                      Climb 30 levels and claim visible rewards. The premium
+                      track is optional and paid with EP, and every pass mission
+                      waits on the Tasks page.
                     </p>
                   </div>
                 </div>
@@ -1369,6 +1390,7 @@ function App() {
                   onAction={dispatch}
                   notify={notify}
                   openSignup={openAuth}
+                  onOpenTasks={() => navigate("tasks")}
                 />
               </ErrorBoundary>
             )}
@@ -1384,8 +1406,9 @@ function App() {
                   <div>
                     <h1>Tasks</h1>
                     <p>
-                      Small goals that pay EP. Daily tasks reset each day,
-                      weekly ones on Monday.
+                      Daily, weekly and pass missions in one place. Tasks pay EP
+                      into your wallet; pass missions pay BPEP onto the season
+                      track.
                     </p>
                   </div>
                 </div>
@@ -1395,8 +1418,8 @@ function App() {
                 >
                   <Ticket size={16} aria-hidden="true" />
                   <span>
-                    Battle Pass missions pay BPEP. The same online rolls can
-                    count here and there.
+                    Daily, weekly and season pass missions pay BPEP and reset
+                    with the season. The pass track is on the Pass page.
                   </span>
                   <ChevronRight size={14} aria-hidden="true" />
                 </button>

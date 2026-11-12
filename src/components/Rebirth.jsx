@@ -30,7 +30,6 @@ import {
   discoveredCount,
   nextRebirthSkill,
   nextStep,
-  badgeGatePercent,
   blendedPercent,
   rebirthBlocker,
   rebirthHandedBackPurchases,
@@ -741,8 +740,8 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
             Each step asks for a slice of the {BADGE_TOTAL}-badge collection and
             EP earned from rolls this cycle, and grants a skill found nowhere
             else, a permanent +2% EP and the sum the next cycle starts with.
-            Badge gates round up, so the real share sits just above the nominal
-            one; task and pass payouts never count towards them. No purchase is
+            Each rung prints its exact badge count beside the percentage, and
+            task and pass payouts never count towards a gate. No purchase is
             ever required. Whatever the cycle scores <em>over</em> the gate is
             surplus: {Math.round(SURPLUS_START_SHARE * 100)}% joins the new
             wallet, and every {formatEP(SURPLUS_BANKED_EP_STEP)} of it banks +1%
@@ -794,11 +793,10 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
                   <span className="rebirth-rung-head">
                     <span className="rebirth-rung-name">#{index + 1}</span>
                     <span className="rebirth-rung-percent">
-                      {needed} of {BADGE_TOTAL} badges
+                      {Math.round(rung.badges * 100)}% of the collection
                     </span>
                     <span className="rebirth-rung-badges">
-                      {badgeGatePercent(needed)}% of the collection ·{" "}
-                      {formatEPCompact(rung.ep)} roll EP
+                      {needed} badges · {formatEPCompact(rung.ep)} roll EP
                     </span>
                   </span>
                   <span className="rebirth-rung-bar" aria-hidden="true">

@@ -149,7 +149,9 @@ export default function ActivityFeed({
                 "rngween-finale",
               ].includes(e.type)) ||
             (filter === "Pass" &&
-              ["pass-reward", "pass-mission", "pass-upgrade"].includes(e.type)),
+              ["pass-reward", "pass-mission", "pass-upgrade", "boost"].includes(
+                e.type,
+              )),
         )
         .filter(
           (e) =>
@@ -536,7 +538,8 @@ export default function ActivityFeed({
                     ].includes(event.type) ? (
                     <ShoppingBag size={19} />
                   ) : event.type === "sale-reward" ||
-                    event.type === "pass-reward" ? (
+                    event.type === "pass-reward" ||
+                    event.type === "boost" ? (
                     <Tag size={19} />
                   ) : event.type === "pet" ? (
                     <PawPrint size={19} />
@@ -601,18 +604,20 @@ export default function ActivityFeed({
                                                 ? `Pass mission · ${event.name}`
                                                 : event.type === "pass-reward"
                                                   ? `Pass reward · ${event.name}`
-                                                  : event.type ===
-                                                      "pass-upgrade"
-                                                    ? `Premium track · ${event.name}`
+                                                  : event.type === "boost"
+                                                    ? `Boost activated · ${event.name}`
                                                     : event.type ===
-                                                        "rngween-finale"
-                                                      ? `Event keepsake · ${event.name}`
+                                                        "pass-upgrade"
+                                                      ? `Premium track · ${event.name}`
                                                       : event.type ===
-                                                          "sale-reward"
-                                                        ? event.stamps >= 25
-                                                          ? "Sale reward · Blackout 2026 unlocked"
-                                                          : `Sale stamp ${event.stamps} of 25`
-                                                        : `Equipped ${event.name}`}
+                                                          "rngween-finale"
+                                                        ? `Event keepsake · ${event.name}`
+                                                        : event.type ===
+                                                            "sale-reward"
+                                                          ? event.stamps >= 25
+                                                            ? "Sale reward · Blackout 2026 unlocked"
+                                                            : `Sale stamp ${event.stamps} of 25`
+                                                          : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString("en-US", {
@@ -804,6 +809,11 @@ export default function ActivityFeed({
                         </strong>
                       )}{" "}
                       · level {event.level} {event.track} track
+                    </p>
+                  ) : event.type === "boost" ? (
+                    <p className="activity-transaction">
+                      <strong>{event.name}</strong> · consumable pass boost,
+                      banked EP multiplied for {event.minutes} minutes
                     </p>
                   ) : event.type === "pass-upgrade" ? (
                     <p className="activity-transaction">

@@ -92,7 +92,7 @@ test("companions are uncaged with an animation, on the shelf and on arrival", ()
 test("the roll animates each wallet bonus charge instead of showing a static extra line", () => {
   const roll = read("components/RollExperience.jsx");
 
-  expect(roll).toContain("walletMultiplier(session, firedSkills)");
+  expect(roll).toContain("walletMultiplier(session, firedSkills, gameNow())");
   expect(roll).toContain("creditedEP");
   expect(roll).toContain("floatingCharges");
   expect(roll).toContain("is-bonus-charge");

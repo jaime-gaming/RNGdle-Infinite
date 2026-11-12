@@ -228,6 +228,6 @@ test("help links use the themed buttons and historical notes are capitalized onl
   await expect(
     page.locator(".changelog-entry").first().locator("p").first(),
   ).toHaveText(
-    "The Battle Pass arrives: 28-day seasons, 30 visible levels, BPEP missions and an optional premium track paid with EP.",
+    "The Battle Pass arrives: 28-day seasons themed by the month they open in, 30 vertical levels and optional EP premium.",
   );
 });

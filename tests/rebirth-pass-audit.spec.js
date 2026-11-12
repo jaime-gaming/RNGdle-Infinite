@@ -252,12 +252,14 @@ test("the rebirth page tells the truth about the pass and the prism look", async
   await expect(keeps).toContainText("Battle Pass");
   await expect(keeps).toContainText("Pass cosmetics");
 
+  // The round percentage is the label; the exact count sits beside it so the
+  // gate is never understated.
   const ladder = page.locator(".rebirth-ladder li").first();
   await expect(ladder.locator(".rebirth-rung-percent")).toHaveText(
-    `49 of ${BADGE_TOTAL} badges`,
+    "20% of the collection",
   );
   await expect(ladder.locator(".rebirth-rung-badges")).toContainText(
-    "20.2% of the collection",
+    "49 badges",
   );
 });
 

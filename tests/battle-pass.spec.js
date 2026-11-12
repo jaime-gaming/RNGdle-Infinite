@@ -14,13 +14,17 @@ import {
   BATTLE_PASS_FIRST_START,
   BATTLE_PASS_LEVELS,
   BATTLE_PASS_PREMIUM_PRICE,
+  BATTLE_PASS_REWARDS,
   BATTLE_PASS_SEASON_MS,
   BATTLE_PASS_VARIANT,
   BPEP_PER_LEVEL,
+  PASS_BOOSTS,
   PASS_METRICS,
+  activeBoosts,
   activePassMissionIds,
   activePassMissions,
   battlePassSeason,
+  boostMultiplier,
   emptyBattlePass,
   parseBattlePass,
   passPeriodKey,
@@ -288,7 +292,7 @@ test("malformed pass saves repair without losing the rest of the profile", () =>
   expect(repaired.repairs.join(" ")).toMatch(/battle pass/i);
 });
 
-test("the pass page claims a mission and a reward, and fits a phone", async ({
+test("the pass page claims a reward and stays vertical on a phone", async ({
   page,
 }) => {
   const pass = readyPass();
@@ -305,18 +309,25 @@ test("the pass page claims a mission and a reward, and fits a phone", async ({
     page.getByRole("heading", { name: "Battle Pass" }),
   ).toBeVisible();
   await expect(page.locator(".pass-level")).toHaveCount(BATTLE_PASS_LEVELS);
+  // Missions moved to Tasks: the pass page no longer hosts them.
+  await expect(page.locator(".pass-mission")).toHaveCount(0);
+  await expect(page.locator(".pass-missions")).toHaveCount(0);
 
-  const mission = activePassMissions(pass, "daily", at)[0];
-  await page
-    .getByRole("button", { name: `Claim BPEP for ${mission.title}` })
-    .click();
-  await expect
-    .poll(async () => (await saved(page)).battlePass.xp)
-    .toBe(BPEP_PER_LEVEL + mission.reward);
   await page.getByRole("button", { name: "Claim free level 1 reward" }).click();
   await expect
     .poll(async () => (await saved(page)).battlePass.claimed)
     .toContain(rewardKey("free", 1));
+
+  // The track reads downwards: each level sits below the one before it.
+  const first = await page.locator(".pass-level").first().boundingBox();
+  const second = await page.locator(".pass-level").nth(1).boundingBox();
+  expect(second.y).toBeGreaterThan(first.y + 8);
+  expect(Math.abs(second.x - first.x)).toBeLessThan(4);
+  expect(
+    await page.evaluate(
+      () => document.querySelector(".pass-track-scroll").scrollWidth,
+    ),
+  ).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".battle-pass")).toBeVisible();
@@ -420,6 +431,179 @@ test("a daily pass mission swaps once and the replacement starts from its own ba
   expect(() =>
     applyProgress(swapped, { type: "reroll-pass-mission", id: after[1], at }),
   ).toThrow("already used");
+});
+
+test("pass missions are claimed and swapped on the Tasks page", async ({
+  page,
+}) => {
+  const pass = readyPass();
+  pass.xp = BPEP_PER_LEVEL;
+  await seedProgress(page, { battlePass: pass });
+  await pauseClockAt(page, new Date(at));
+  await page.goto("/tasks");
+  await waitForApp(page);
+
+  // All three pass cadences now live here, each in its own section.
+  const section = page.locator(".task-pass");
+  await expect(section).toHaveCount(1);
+  await expect(section.locator(".task-group-pass")).toHaveCount(3);
+  await expect(section).toContainText("Daily pass missions");
+  await expect(section).toContainText("Weekly pass missions");
+  await expect(section).toContainText("Season milestones");
+
+  const mission = activePassMissions(pass, "daily", at)[0];
+  await expect(page.locator(`[data-pass-mission="${mission.id}"]`)).toHaveCount(
+    1,
+  );
+  await page
+    .getByRole("button", { name: `Claim BPEP for ${mission.title}` })
+    .click();
+  await expect
+    .poll(async () => (await saved(page)).battlePass.xp)
+    .toBe(BPEP_PER_LEVEL + mission.reward);
+  // Claiming BPEP never moves the EP wallet.
+  const claim = await saved(page);
+  expect(claim.history.at(-1)?.type).toBe("pass-mission");
+  expect(claim.balance).toBe(0);
+});
+
+test("a daily pass mission can be swapped once on the Tasks page", async ({
+  page,
+}) => {
+  // A fresh pass has no counts, so every daily mission is still open.
+  const pass = { ...emptyBattlePass(), seasonId: "season-1" };
+  await seedProgress(page, { battlePass: pass });
+  await pauseClockAt(page, new Date(at));
+  await page.goto("/tasks");
+  await waitForApp(page);
+
+  const swap = activePassMissions(pass, "daily", at)[0];
+  await page.getByRole("button", { name: `Swap ${swap.title}` }).click();
+  await expect
+    .poll(async () => (await saved(page)).battlePass.missions.daily.rerolls)
+    .toBe(1);
+  const swapped = await saved(page);
+  expect(activePassMissionIds(swapped.battlePass, "daily", at)).not.toContain(
+    swap.id,
+  );
+  // The one free swap per day is spent.
+  await expect(
+    page.getByRole("button", { name: /^Swap / }).first(),
+  ).toBeDisabled();
+});
+
+test("a pass boost multiplies banked EP only while its window runs", () => {
+  const pass = readyPass();
+  pass.xp = BPEP_PER_LEVEL * 5;
+  const state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    battlePass: pass,
+    balance: 0,
+    totalEarned: 0,
+  };
+  const claimed = applyProgress(state, {
+    type: "claim-pass-reward",
+    level: 5,
+    track: "free",
+    at,
+  });
+  expect(claimed.battlePass.boosts.charges).toEqual({ "boost-spark": 1 });
+  // The boost is an extra reward: level 5 still pays the EP it always paid.
+  expect(claimed.balance).toBe(25000);
+  expect(boostMultiplier(claimed.battlePass.boosts, at)).toBe(1);
+
+  expect(() =>
+    applyProgress(claimed, { type: "activate-boost", id: "boost-surge", at }),
+  ).toThrow("no charge");
+
+  const running = applyProgress(claimed, {
+    type: "activate-boost",
+    id: "boost-spark",
+    at,
+  });
+  expect(running.battlePass.boosts.charges).toEqual({});
+  expect(activeBoosts(running.battlePass.boosts, at + 60_000)).toHaveLength(1);
+  expect(boostMultiplier(running.battlePass.boosts, at + 60_000)).toBe(1.5);
+  expect(boostMultiplier(running.battlePass.boosts, at + 20 * 60_000)).toBe(1);
+  expect(running.history.at(-1)).toMatchObject({
+    type: "boost",
+    boostId: "boost-spark",
+    minutes: 15,
+  });
+
+  // One window at a time, and a second charge is never spent by mistake.
+  const twoCharges = {
+    ...running,
+    battlePass: {
+      ...running.battlePass,
+      boosts: {
+        charges: { "boost-spark": 1 },
+        active: running.battlePass.boosts.active,
+      },
+    },
+  };
+  expect(() =>
+    applyProgress(twoCharges, {
+      type: "activate-boost",
+      id: "boost-spark",
+      at,
+    }),
+  ).toThrow("already running");
+
+  // The multiplier is real EP: the same roll banks more inside the window than
+  // outside it, while cycle gates still count only the number itself.
+  const sample = roll("boosted", at + 60_000);
+  const boosted = applyProgress(running, sample);
+  const plain = applyProgress(
+    { ...running, battlePass: { ...running.battlePass, boosts: undefined } },
+    sample,
+  );
+  expect(boosted.balance).toBeGreaterThan(plain.balance);
+  expect(boosted.balance - plain.balance).toBe(
+    Math.round(plain.history.find((event) => event.id === "boosted").ep * 0.5),
+  );
+  expect(boosted.cycleEarnedEP).toBe(plain.cycleEarnedEP);
+
+  // Charges and a running window survive a season change and a save repair.
+  const nextSeason = BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS + 1000;
+  const rolled = applyProgress(
+    {
+      ...running,
+      battlePass: {
+        ...running.battlePass,
+        boosts: { charges: { "boost-surge": 2 }, active: [] },
+      },
+    },
+    roll("next-season-boost", nextSeason),
+  );
+  expect(rolled.battlePass.boosts.charges).toEqual({ "boost-surge": 2 });
+  const repaired = parseAndRepairProgress(JSON.stringify(rolled));
+  expect(repaired.progress.battlePass.boosts.charges).toEqual({
+    "boost-surge": 2,
+  });
+  expect(repaired.repairs.join(" ")).not.toMatch(/battle pass/i);
+});
+
+test("every boost level keeps its EP and the premium track doubles the charge", () => {
+  for (const reward of BATTLE_PASS_REWARDS) {
+    const boosted = ["free", "premium"].filter((track) => reward[track].boost);
+    for (const track of boosted) {
+      expect(reward[track].kind).toBe("ep");
+      expect(reward[track].ep).toBeGreaterThan(0);
+      expect(PASS_BOOSTS.some((b) => b.id === reward[track].boost.id)).toBe(
+        true,
+      );
+    }
+    if (reward.level === 5) {
+      expect(reward.free.boost.charges).toBe(1);
+      expect(reward.premium.boost.charges).toBe(2);
+    }
+  }
+  const levels = BATTLE_PASS_REWARDS.filter((r) => r.free.boost).map(
+    (r) => r.level,
+  );
+  expect(levels).toEqual([5, 15, 25]);
 });
 
 test("before the first season the pass shows its opening date and sells nothing", async ({

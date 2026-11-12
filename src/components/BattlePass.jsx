@@ -1,8 +1,8 @@
 import React, { useRef, useState } from "react";
 import {
-  ArrowRightLeft,
   CalendarDays,
   Check,
+  Clock,
   Coins,
   Crown,
   Gift,
@@ -11,26 +11,26 @@ import {
   Sparkles,
   Ticket,
   Timer,
+  Zap,
 } from "lucide-react";
 import {
   BATTLE_PASS_LEVELS,
   BATTLE_PASS_PREMIUM_PRICE,
   BATTLE_PASS_REWARDS,
   BPEP_PER_LEVEL,
-  PASS_CADENCES,
-  PASS_DAILY_REROLLS,
-  activePassMissions,
+  PASS_BOOSTS,
+  activeBoosts,
   battlePassSeason,
+  boostCharges,
+  boostMultiplier,
+  passBoostById,
   passDateLabel,
   passLevelForXp,
-  passMissionProgress,
-  passNextReset,
-  passRewardEP,
   passRewardState,
   passXpIntoLevel,
   seasonLabel,
 } from "../battle-pass.js";
-import { waitText as taskWaitText } from "../tasks.js";
+import { waitText } from "../tasks.js";
 import { useFormatEP } from "../use-settings.jsx";
 import { CreatureIcon } from "./game-icons.jsx";
 import "./battle-pass.css";
@@ -62,6 +62,13 @@ function RewardLabel({ reward, owned, formatEP }) {
   return (
     <span className="pass-reward-ep">
       <Coins size={13} aria-hidden="true" />+{formatEP(reward.ep)} EP
+      {reward.boost && (
+        <small className="pass-reward-boost">
+          <Zap size={11} aria-hidden="true" />+{reward.boost.charges}{" "}
+          {reward.boost.charges === 1 ? "charge" : "charges"} ·{" "}
+          {reward.boost.name}
+        </small>
+      )}
     </span>
   );
 }
@@ -73,6 +80,7 @@ export default function BattlePass({
   notify,
   cloudUser,
   openSignup,
+  onOpenTasks,
 }) {
   const formatEP = useFormatEP();
   const pass = progress.battlePass ?? {
@@ -95,6 +103,8 @@ export default function BattlePass({
   const claimedCount = (pass.claimed ?? []).length;
   const trackSlots = BATTLE_PASS_LEVELS * (pass.premium ? 2 : 1);
   const archive = [...(pass.archive ?? [])].reverse();
+  const active = activeBoosts(pass.boosts, now);
+  const multiplier = boostMultiplier(pass.boosts, now);
 
   async function run(action, message) {
     if (busy.current) return;
@@ -225,8 +235,8 @@ export default function BattlePass({
             <strong>
               <Timer size={14} aria-hidden="true" />
               {season.upcoming
-                ? taskWaitText(season.start - season.now)
-                : taskWaitText(season.endsInMs)}
+                ? waitText(season.start - season.now)
+                : waitText(season.endsInMs)}
             </strong>
           </div>
         </div>
@@ -260,10 +270,11 @@ export default function BattlePass({
             <Crown size={16} aria-hidden="true" /> Premium track
           </h3>
           <p>
-            Optional. Paid with EP, never real money. Extra EP rewards, the
-            Prism Axolotl variant at level 20 and the Prism Circuit aura at
-            level 30; the free track keeps every core reward. Cosmetics you
-            claim are yours forever, even after a Rebirth.
+            Optional. Paid with EP, never real money. Extra EP rewards, double
+            the boost charges at levels 5, 15 and 25, the Prism Axolotl variant
+            at level 20 and the Prism Circuit aura at level 30; the free track
+            keeps every core reward. Cosmetics you claim are yours forever, even
+            after a Rebirth.
           </p>
         </div>
         {pass.premium ? (
@@ -355,110 +366,76 @@ export default function BattlePass({
         </div>
       </section>
 
-      {PASS_CADENCES.map((cadence) => {
-        const missions = activePassMissions(pass, cadence, now);
-        const slot = pass.missions?.[cadence];
-        const rerolls = slot?.rerolls ?? 0;
-        return (
-          <section
-            className="pass-missions"
-            key={cadence}
-            aria-labelledby={`pass-missions-${cadence}`}
+      <section
+        className="pass-boosts"
+        aria-labelledby="pass-boosts-title"
+        style={{ "--pass-accent": season.accent }}
+      >
+        <header>
+          <div>
+            <h3 id="pass-boosts-title">
+              <Zap size={16} aria-hidden="true" /> Consumable boosts
+            </h3>
+            <p>
+              Extra rewards from levels 5, 15 and 25. One boost runs at a time
+              and multiplies what your rolls bank, never your task or pass EP.
+              Unused charges carry into the next season and survive every reset.
+            </p>
+          </div>
+          <span
+            className={`pass-boost-mult ${active.length ? "is-on" : ""}`}
+            data-boost-multiplier={multiplier.toFixed(2)}
           >
-            <header>
-              <div>
-                <h3 id={`pass-missions-${cadence}`}>
-                  {cadence === "daily"
-                    ? "Daily missions"
-                    : cadence === "weekly"
-                      ? "Weekly missions"
-                      : "Season milestones"}
-                </h3>
-                <p>
-                  {cadence === "season"
-                    ? "Long goals that stay with the season."
-                    : `Resets in ${taskWaitText(passNextReset(cadence, now) - now)} UTC.`}
-                  {cadence === "daily" &&
-                    ` Free swaps: ${Math.max(0, PASS_DAILY_REROLLS - rerolls)} left today.`}
-                </p>
-              </div>
-              <span>{missions.length} active</span>
-            </header>
-            <ul>
-              {missions.map((mission) => {
-                const view = passMissionProgress(pass, mission, now);
-                const shown = Math.min(view.count, view.goal);
-                const actionKey = `mission-${mission.id}`;
-                return (
-                  <li
-                    key={mission.id}
-                    className={`pass-mission is-${view.state}`}
-                    data-mission={mission.id}
+            Rolls bank ×{Number(multiplier.toFixed(2))}
+          </span>
+        </header>
+        <ul>
+          {PASS_BOOSTS.map((boost) => {
+            const charges = boostCharges(pass.boosts, boost.id);
+            const live = active.find((entry) => entry.id === boost.id);
+            const busy = !!pending;
+            return (
+              <li
+                key={boost.id}
+                className={`pass-boost ${live ? "is-active" : ""} ${charges ? "is-held" : ""}`}
+                data-boost={boost.id}
+              >
+                <div className="pass-boost-copy">
+                  <strong>{boost.name}</strong>
+                  <span>{boost.blurb}</span>
+                </div>
+                <span className="pass-boost-charges">
+                  {charges
+                    ? `${charges} charge${charges === 1 ? "" : "s"}`
+                    : "No charges"}
+                </span>
+                {live ? (
+                  <span className="pass-boost-running">
+                    <Clock size={13} aria-hidden="true" />
+                    Running · {waitText(live.until - now)}
+                  </span>
+                ) : (
+                  <button
+                    className="secondary-button"
+                    disabled={busy || charges < 1 || !!active.length || ended}
+                    aria-label={`Activate ${boost.name}`}
+                    onClick={() =>
+                      run(
+                        { type: "activate-boost", id: boost.id },
+                        `${boost.name} is running for ${boost.minutes} minutes.`,
+                      )
+                    }
                   >
-                    <div className="pass-mission-copy">
-                      <strong>{mission.title}</strong>
-                      <span>{mission.detail}</span>
-                    </div>
-                    <div className="pass-mission-progress">
-                      <progress
-                        max={mission.goal}
-                        value={shown}
-                        aria-label={mission.title}
-                        aria-valuetext={`${count(shown)} of ${count(mission.goal)}`}
-                      />
-                      <span>
-                        {count(shown)} / {count(mission.goal)}
-                      </span>
-                    </div>
-                    <span className="pass-mission-reward">
-                      +{count(mission.reward)} BPEP
-                    </span>
-                    <div className="pass-mission-actions">
-                      {view.state === "claimable" && (
-                        <button
-                          className="primary-button"
-                          disabled={!!pending || ended}
-                          aria-label={`Claim BPEP for ${mission.title}`}
-                          onClick={() =>
-                            run(
-                              { type: "claim-pass-mission", id: mission.id },
-                              `${mission.title} claimed.`,
-                            )
-                          }
-                        >
-                          {pending === actionKey ? "Claiming…" : "Claim"}
-                        </button>
-                      )}
-                      {view.state === "claimed" && (
-                        <span className="pass-claimed">
-                          <Check size={13} aria-hidden="true" /> Claimed
-                        </span>
-                      )}
-                      {view.state === "open" && cadence === "daily" && (
-                        <button
-                          className="secondary-button"
-                          disabled={
-                            !!pending || ended || rerolls >= PASS_DAILY_REROLLS
-                          }
-                          aria-label={`Swap ${mission.title}`}
-                          onClick={() =>
-                            run(
-                              { type: "reroll-pass-mission", id: mission.id },
-                              "Daily pass mission swapped.",
-                            )
-                          }
-                        >
-                          <ArrowRightLeft size={13} aria-hidden="true" /> Swap
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
+                    {pending === `activate-boost-${boost.id}`
+                      ? "Activating…"
+                      : "Activate"}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       {archive.length > 0 && (
         <section className="pass-archive" aria-labelledby="pass-archive-title">
@@ -491,13 +468,21 @@ export default function BattlePass({
         </section>
       )}
 
+      <button className="pass-link-banner" onClick={onOpenTasks}>
+        <Zap size={16} aria-hidden="true" />
+        <span>
+          Daily, weekly and season pass missions now live on the Tasks page.
+        </span>
+      </button>
+
       <p className="pass-note">
         The same online roll can advance Tasks and the pass. Offline rolls pay
         EP but do not advance pass missions. BPEP is not spendable. Rewards you
         earned are kept; when a season closes, any unclaimed earned rewards are
         delivered on your next online roll. Premium unlocks last for that season
         only. Rebirth, Prestige and Rollback never touch the pass: your level,
-        missions and claimed cosmetics all carry on.
+        missions, boost charges and claimed cosmetics all carry on. Pass
+        missions live on the Tasks page.
       </p>
     </div>
   );

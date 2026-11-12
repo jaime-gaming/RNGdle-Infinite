@@ -378,3 +378,56 @@
   box-shadow: 0 0 0 2px var(--bg);
   animation: tabbar-dot-pulse 2.2s ease-in-out infinite;
 }
+
+/* Pass missions live here now, in their own section under the tasks. */
+.task-pass {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 6px;
+}
+.task-pass-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.task-pass-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.task-pass-head h2 svg {
+  color: var(--green);
+}
+.task-pass-closed {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.task-group-pass .task-group-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.task-group-pass .task-group-head {
+  margin-bottom: 8px;
+}
+.task-group-pass .task-list {
+  gap: 8px;
+}
+.task-list-pass-season .task-card {
+  border-style: solid;
+}
+@media (max-width: 760px) {
+  .task-pass-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

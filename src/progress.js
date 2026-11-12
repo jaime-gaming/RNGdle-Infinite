@@ -117,7 +117,14 @@ import {
   battlePassSeason,
   claimPassMission,
   emptyBattlePass,
+  activateBoost,
+  activeBoosts,
+  boostCharges,
+  boostMultiplier,
+  emptyBoosts,
+  grantBoost,
   parseBattlePass,
+  passBoostById,
   passLevelForXp,
   passMissionById,
   passRewardEP,
@@ -176,6 +183,7 @@ function freshProfileId() {
 export function walletMultiplier(
   progress,
   skillIds = progress.pendingRoll?.skills,
+  at = null,
 ) {
   return (
     petMultiplier(progress.activePet) *
@@ -183,7 +191,9 @@ export function walletMultiplier(
     ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
     rollbackMultiplier(progress.rollbacks ?? 0) *
     surplusMultiplier(progress.surplusBanked ?? 0) *
-    skillWalletMultiplier(skillIds ?? [])
+    skillWalletMultiplier(skillIds ?? []) *
+    // Consumable pass boosts are the only temporary factor in the wallet.
+    (at === null ? 1 : boostMultiplier(progress.battlePass?.boosts, at))
   );
 }
 
@@ -996,6 +1006,10 @@ function grantPassReward(state, level, track, at, eventId = null) {
     throw new Error("EP balance limit reached.");
   const permanent =
     reward.kind !== "ep" && !(state.owned ?? []).includes(reward.id);
+  // Some levels also hand out consumable boosts; the EP above is unchanged.
+  const boosts = reward.boost
+    ? grantBoost(pass.boosts, reward.boost.id, reward.boost.charges, at)
+    : (pass.boosts ?? emptyBoosts());
   return {
     ...state,
     balance,
@@ -1003,6 +1017,7 @@ function grantPassReward(state, level, track, at, eventId = null) {
     owned: permanent ? [...(state.owned ?? []), reward.id] : state.owned,
     battlePass: {
       ...pass,
+      boosts,
       claimed: [...pass.claimed, rewardKey(track, level)],
     },
     history: appendHistory(state.history, [
@@ -1015,6 +1030,7 @@ function grantPassReward(state, level, track, at, eventId = null) {
         track,
         name: reward.name ?? `Level ${level} ${track} reward`,
         ep,
+        ...(reward.boost ? { boostId: reward.boost.id } : {}),
         ...(reward.kind !== "ep" ? { productId: reward.id } : {}),
       },
     ]),
@@ -1059,7 +1075,14 @@ function ensurePassSeason(state, at) {
     ].slice(-24);
     next = {
       ...next,
-      battlePass: { ...emptyBattlePass(), seasonId: season.id, archive },
+      battlePass: {
+        ...emptyBattlePass(),
+        seasonId: season.id,
+        // Boosts are consumables, not season rewards: unused charges and a
+        // window still running carry into the new season.
+        boosts: pass.boosts ?? emptyBoosts(),
+        archive,
+      },
     };
   } else {
     next = {
@@ -1067,6 +1090,7 @@ function ensurePassSeason(state, at) {
       battlePass: {
         ...emptyBattlePass(),
         seasonId: season.id,
+        boosts: pass.boosts ?? emptyBoosts(),
         archive: pass.archive ?? [],
       },
     };
@@ -1370,6 +1394,33 @@ function applyEvent(state, action) {
       : ensurePassSeason(state, at);
     return grantPassReward(ready, level, track, at, action.eventId);
   }
+  if (action.type === "activate-boost") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid boost time");
+    const pass = state.battlePass ?? emptyBattlePass();
+    const boost = passBoostById(action.id);
+    if (!boost) throw new Error("That boost does not exist.");
+    if (boostCharges(pass.boosts, boost.id) < 1)
+      throw new Error("You have no charge of that boost.");
+    if (activeBoosts(pass.boosts, at).length)
+      throw new Error("A boost is already running. Let it finish first.");
+    return {
+      ...state,
+      battlePass: { ...pass, boosts: activateBoost(pass.boosts, boost.id, at) },
+      history: appendHistory(state.history, [
+        {
+          id: action.eventId ?? `boost:${boost.id}:${at}`,
+          type: "boost",
+          at,
+          boostId: boost.id,
+          name: boost.name,
+          minutes: boost.minutes,
+          until: at + boost.minutes * 60 * 1000,
+        },
+      ]),
+    };
+  }
   if (action.type === "buy-pass-premium") {
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
@@ -1549,6 +1600,12 @@ function applyEvent(state, action) {
       rollbackMultiplier(state.rollbacks ?? 0) *
       surplusMultiplier(state.surplusBanked ?? 0);
     const skillMultiplier = skillWalletMultiplier(fired);
+    // A running pass boost multiplies what this roll banks. It is counted
+    // separately so the activity log can show it honestly.
+    const boostFactor = boostMultiplier(
+      state.battlePass?.boosts,
+      action.at ?? Date.now(),
+    );
 
     const pending =
       action.source === "offline" || state.pendingRoll?.id !== id
@@ -1565,7 +1622,10 @@ function applyEvent(state, action) {
     const discovered = new Set(state.discovered);
     const paidEvents = paid.map(({ result: scored, skill, key, spent }) => {
       const multiplier =
-        baseMultiplier * skillMultiplier * (key === 0 ? reaperMultiplier : 1);
+        baseMultiplier *
+        skillMultiplier *
+        boostFactor *
+        (key === 0 ? reaperMultiplier : 1);
       const credit =
         multiplier === 1
           ? scored.totalEP
@@ -2361,6 +2421,7 @@ function parseHistory(value) {
         ...(typeof e.productId === "string" && productById.has(e.productId)
           ? { productId: e.productId }
           : {}),
+        ...(passBoostById(e.boostId) ? { boostId: e.boostId } : {}),
       };
     } else if (e.type === "pass-mission") {
       if (
@@ -2380,6 +2441,25 @@ function parseHistory(value) {
         missionId: e.missionId,
         name: e.name,
         bpep: e.bpep,
+      };
+    } else if (e.type === "boost") {
+      if (
+        !passBoostById(e.boostId) ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.minutes) ||
+        e.minutes < 1 ||
+        !validAmount(e.until) ||
+        e.until < 1
+      )
+        return [];
+      next = {
+        ...base,
+        boostId: e.boostId,
+        name: e.name,
+        minutes: e.minutes,
+        until: e.until,
       };
     } else if (e.type === "pass-upgrade") {
       if (

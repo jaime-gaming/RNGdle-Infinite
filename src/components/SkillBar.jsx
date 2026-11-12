@@ -20,6 +20,7 @@ import {
   SparkMark,
 } from "./game-icons.jsx";
 import "../skills.css";
+import { gameNow } from "../game-clock.js";
 
 const CIRCLE_SIZE = 42;
 
@@ -373,7 +374,7 @@ export default function SkillBar({
     };
   }, [progress, collapsed]);
   if (!progress) return null;
-  const report = rackReport(progress);
+  const report = rackReport(progress, gameNow());
   const equipped = report.equipped
     .map((entry) => ({
       ...entry,

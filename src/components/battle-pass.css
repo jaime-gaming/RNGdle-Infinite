@@ -170,27 +170,32 @@
   font-size: 12px;
 }
 .pass-track-scroll {
-  overflow-x: auto;
-  padding-bottom: 8px;
+  overflow: visible;
 }
+/* The track reads top to bottom: level 1 at the top, level 30 at the bottom. */
 .pass-track-grid {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(150px, 1fr);
-  gap: 10px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .pass-level {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   opacity: 0.72;
+}
+.pass-level-number {
+  grid-row: 1 / -1;
+}
+.pass-level .pass-reward {
+  min-height: 0;
 }
 .pass-level.is-reached {
   opacity: 1;
@@ -315,87 +320,115 @@
   padding: 4px 10px;
   font-size: 12px;
 }
-.pass-missions header {
+.pass-reward-boost {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-body, inherit);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--pass-accent) 75%, var(--secondary));
+}
+.pass-reward-ep {
+  flex-wrap: wrap;
+}
+.pass-boosts {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.pass-boosts header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  gap: 12px;
-  margin-bottom: 10px;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 12px;
 }
-.pass-missions h3 {
+.pass-boosts h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.pass-boosts h3 svg {
+  color: var(--pass-accent);
+}
+.pass-boosts header p {
   margin: 0;
-  font-size: 18px;
-}
-.pass-missions header p {
-  margin: 4px 0 0;
+  max-width: 70ch;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.6;
 }
-.pass-missions header > span {
+.pass-boost-mult {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--secondary);
+  color: var(--muted);
 }
-.pass-missions ul {
+.pass-boost-mult.is-on {
+  border-color: color-mix(in srgb, var(--pass-accent) 55%, var(--border));
+  color: var(--pass-accent);
+  background: color-mix(in srgb, var(--pass-accent) 10%, transparent);
+}
+.pass-boosts ul {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.pass-mission {
+.pass-boost {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(140px, 1fr) auto auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px 14px;
   align-items: center;
-  padding: 14px 16px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--bg);
 }
-.pass-mission-copy {
+.pass-boost.is-held {
+  border-color: color-mix(in srgb, var(--pass-accent) 30%, var(--border));
+}
+.pass-boost.is-active {
+  border-color: color-mix(in srgb, var(--pass-accent) 60%, var(--border));
+  background: color-mix(in srgb, var(--pass-accent) 9%, var(--bg));
+}
+.pass-boost-copy {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
-.pass-mission-copy strong {
-  font-size: 14px;
+.pass-boost-copy strong {
+  font-size: 13.5px;
 }
-.pass-mission-copy span {
+.pass-boost-copy span {
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.5;
 }
-.pass-mission-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.pass-mission-progress progress {
-  width: 100%;
-  height: 8px;
-  accent-color: var(--green);
-}
-.pass-mission-progress span {
+.pass-boost-charges,
+.pass-boost-running {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--secondary);
-}
-.pass-mission-reward {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--green);
   white-space: nowrap;
 }
-.pass-mission-actions {
-  display: flex;
-  justify-content: flex-end;
+.pass-boost-running {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--pass-accent);
 }
-.pass-mission-actions .primary-button,
-.pass-mission-actions .secondary-button {
-  min-height: 32px;
-  padding: 5px 12px;
+.pass-boost .secondary-button {
+  min-height: 30px;
+  padding: 4px 12px;
   font-size: 12px;
 }
 .pass-archive header {
@@ -481,18 +514,30 @@
     flex-direction: column;
     align-items: stretch;
   }
-  .pass-mission {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .pass-mission-actions {
-    justify-content: flex-start;
-  }
   .pass-track-head {
     flex-direction: column;
     align-items: flex-start;
   }
-  .pass-track-grid {
-    grid-auto-columns: minmax(132px, 1fr);
+  .pass-level {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 10px;
+  }
+  .pass-level .pass-reward.is-premium {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+    padding-left: 0;
+  }
+  .pass-boosts header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pass-boost {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .pass-boost .secondary-button {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
   .pass-hero-stats {
     gap: 12px 16px;

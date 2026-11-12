@@ -14,6 +14,7 @@ import {
   trimToSlots,
   unlockedSkills,
 } from "./skills.js";
+import { activeBoosts, boostMultiplier } from "./battle-pass.js";
 import { flywheelRequired } from "./flywheel.js";
 import { petById } from "./pets.js";
 import {
@@ -32,7 +33,7 @@ function skillEffectChip(skill) {
   return skillEffectChips(skill)[0] ?? skillEffectSummary(skill);
 }
 
-export function walletParts(progress, armed) {
+export function walletParts(progress, armed, at = null) {
   const parts = [];
   const pet = petById.get(progress.activePet);
   if (pet && pet.multiplier > 1)
@@ -78,10 +79,19 @@ export function walletParts(progress, armed) {
         value: skillById.get(id).value,
       });
   }
+  // A running pass boost is temporary, so it only lists while the clock holds.
+  if (at !== null && activeBoosts(progress.battlePass?.boosts, at).length)
+    parts.push({
+      id: "boost",
+      label: activeBoosts(progress.battlePass?.boosts, at)
+        .map((boost) => boost.name)
+        .join(" + "),
+      value: boostMultiplier(progress.battlePass?.boosts, at),
+    });
   return parts;
 }
 
-export function rackReport(progress = {}) {
+export function rackReport(progress = {}, at = null) {
   const slots = skillSlots(progress.owned ?? []);
 
   const equipped = trimToSlots(
@@ -188,7 +198,7 @@ export function rackReport(progress = {}) {
     });
   const armedIds = equipped.filter((skill) => skill.armed).map((s) => s.id);
   const plan = drawPlanFor(armedIds);
-  const parts = walletParts(progress, armedIds);
+  const parts = walletParts(progress, armedIds, at);
   const walletMultiplier = parts.reduce((total, part) => total * part.value, 1);
   const petLuck = skillPetLuck(armedIds);
   const chargeFactor = skillChargeFactor(armedIds);

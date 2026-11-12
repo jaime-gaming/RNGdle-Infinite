@@ -5,6 +5,7 @@ import { seedProgress } from "./helpers/progress.js";
 import fs from "node:fs";
 import path from "node:path";
 import { CHANGELOG } from "../src/changelog.js";
+import { MONTH_THEMES, SEASON_THEME_OVERRIDE } from "../src/season-config.js";
 import { badges } from "../src/badges.js";
 import { allBadgeMetadata, infiniteBadges } from "../src/infinite-badges.js";
 import {
@@ -12,7 +13,6 @@ import {
   BATTLE_PASS_LEVELS,
   BATTLE_PASS_SEASON_MS,
   BPEP_PER_LEVEL,
-  PASS_SEASON_NAMES,
   battlePassSeason,
   emptyBattlePass,
   passSeasonIdentity,
@@ -104,11 +104,16 @@ test("the v0.6 note names every original the way v0.2 named its two", () => {
   expect(v06.badges).toEqual(originals.map((badge) => badge.id));
 });
 
-test("seasons have names that cycle without ever losing their number", () => {
-  expect(PASS_SEASON_NAMES.length).toBeGreaterThan(1);
-  const names = PASS_SEASON_NAMES.map((entry) => entry.name);
+test("every season wears the theme of the month it opens in", () => {
+  // The config file is the single source of truth: twelve months, all valid.
+  expect(MONTH_THEMES).toHaveLength(12);
+  expect(SEASON_THEME_OVERRIDE).toBe(null);
+  expect(MONTH_THEMES.map((entry) => entry.month)).toEqual([
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+  ]);
+  const names = MONTH_THEMES.map((entry) => entry.name);
   expect(new Set(names).size).toBe(names.length);
-  for (const entry of PASS_SEASON_NAMES) {
+  for (const entry of MONTH_THEMES) {
     expect(entry.name.length).toBeGreaterThan(3);
     expect(entry.theme.length).toBeGreaterThan(10);
     expect(entry.accent).toMatch(/^#[0-9a-f]{6}$/);
@@ -116,34 +121,53 @@ test("seasons have names that cycle without ever losing their number", () => {
 
   const first = battlePassSeason(BATTLE_PASS_FIRST_START);
   expect(first.index).toBe(1);
-  expect(first.name).toBe(names[0]);
+  // Season 1 opens on 16 November 2026, so it wears the November theme.
+  expect(first.month).toBe(11);
+  expect(first.name).toBe(MONTH_THEMES[10].name);
+  expect(first.accent).toBe(MONTH_THEMES[10].accent);
+  expect(first.theme).toBe(MONTH_THEMES[10].theme);
   expect(first.daysLong).toBe(28);
   expect(first.day).toBe(1);
 
-  for (let index = 0; index < names.length * 2 + 3; index++) {
-    const season = battlePassSeason(
-      BATTLE_PASS_FIRST_START + index * BATTLE_PASS_SEASON_MS + 1000,
-    );
-    expect(season.index).toBe(index + 1);
+  // A 28-day season drifts through the calendar, so the theme follows the
+  // month the window actually opens in, not the season number.
+  for (let index = 0; index < 18; index++) {
+    const start = BATTLE_PASS_FIRST_START + index * BATTLE_PASS_SEASON_MS;
+    const season = battlePassSeason(start + 1000);
+    const month = new Date(start).getUTCMonth() + 1;
+    const theme = MONTH_THEMES[month - 1];
+    expect(season.index, `season ${index + 1}`).toBe(index + 1);
     expect(season.id).toBe(`season-${index + 1}`);
-    expect(season.name).toBe(names[index % names.length]);
-    expect(season.nextName).toBe(names[(index + 1) % names.length]);
+    expect(season.month).toBe(month);
+    expect(season.name).toBe(theme.name);
+    expect(season.name).toBe(passSeasonName(index + 1));
+    expect(season.nextName).toBe(
+      MONTH_THEMES[new Date(start + BATTLE_PASS_SEASON_MS).getUTCMonth()].name,
+    );
     expect(seasonNumber(season.id)).toBe(index + 1);
     expect(seasonLabel(season.id)).toBe(
-      `Season ${index + 1} ${"\u00b7"} ${names[index % names.length]}`,
+      `Season ${index + 1} ${"\u00b7"} ${theme.name}`,
     );
   }
 
-  // A returning name is still unambiguous because the number is unique.
-  expect(passSeasonName(1)).toBe(passSeasonName(1 + names.length));
-  expect(seasonLabel("season-1")).not.toBe(
-    seasonLabel(`season-${1 + names.length}`),
+  // 28-day seasons and 30-day months drift, so two seasons can share a theme;
+  // the number still tells them apart.
+  // Seasons 7 and 8 both open in May 2027, twelve days apart.
+  const shared = battlePassSeason(
+    BATTLE_PASS_FIRST_START + 6 * BATTLE_PASS_SEASON_MS + 1000,
   );
+  const sharedNext = battlePassSeason(
+    BATTLE_PASS_FIRST_START + 7 * BATTLE_PASS_SEASON_MS + 1000,
+  );
+  expect([shared.month, sharedNext.month]).toEqual([5, 5]);
+  expect(shared.name).toBe(sharedNext.name);
+  expect(seasonLabel(shared.id)).not.toBe(seasonLabel(sharedNext.id));
+
   expect(passSeasonIdentity(1).lap).toBe(1);
-  expect(passSeasonIdentity(1 + names.length).lap).toBe(2);
-  expect(passSeasonName(0)).toBe(names[0]);
-  expect(passSeasonName(-4)).toBe(names[0]);
-  expect(passSeasonName(NaN)).toBe(names[0]);
+  expect(passSeasonIdentity(13).lap).toBe(2);
+  expect(passSeasonName(0)).toBe(first.name);
+  expect(passSeasonName(-4)).toBe(first.name);
+  expect(passSeasonName(NaN)).toBe(first.name);
   expect(seasonLabel("")).toBe("Unstarted season");
   expect(seasonLabel("nonsense")).toBe("Unstarted season");
 });

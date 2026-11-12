@@ -59,11 +59,18 @@ Moving reveal digits are lighter than landed digits using opacity only, without
 adding backgrounds, borders, underlines or other decorations.
 
 The Battle Pass (`src/battle-pass.js`) runs in 28-day UTC seasons anchored at
-2026-11-16. Every season carries a name, theme and accent from
-`PASS_SEASON_NAMES`; names cycle every twelve seasons while `seasonId` stays
-unique, so the archive is never ambiguous. Missions pay BPEP only; BPEP is not a
-shop wallet. The optional
-premium track is bought with EP, never real money. Reward tracks are visible,
+2026-11-16. Each season wears the theme of the UTC month its window opens in,
+read from `src/season-config.js` — the one file to edit to rename, restyle or
+recolour a month (`SEASON_THEME_OVERRIDE` forces a single theme). Seasons drift
+through the calendar, so two seasons can share a theme; `seasonId` stays unique,
+so the archive is never ambiguous. Every pass mission — daily, weekly and the
+season milestones — is listed on the Tasks page in its own section; `/pass`
+keeps only the reward track. Missions pay BPEP only; BPEP is not a shop wallet.
+The optional premium track is bought with EP, never real money. Levels 5, 15 and
+25 add a consumable boost charge (the premium track pays two) without touching
+their EP; one boost runs at a time and multiplies banked roll EP for a few
+minutes through `walletMultiplier(progress, skills, at)`. Charges survive a
+season change, Rebirth, Prestige, Rollback and Fresh Start. Reward tracks are visible,
 each reward claims once, and earned rewards are delivered automatically when a
 season closes. `progress.battlePass` survives Rebirth, Prestige, Rollback and
 Fresh Start. Dev builds honour `VITE_BATTLE_PASS_PREVIEW_AT`; production ignores
@@ -71,8 +78,9 @@ it. Pass auras and the Prism Axolotl variant are permanent cosmetics once
 claimed. `rebirthKeptPurchases` in `src/rebirth.js` mirrors the reducer's keep
 rule (aura or `passReward`); the Rebirth page and Fresh Start read it instead of
 guessing from product kinds, so a `pet-variant` is never listed as handed back.
-Badge gates round up over `BADGE_TOTAL`, so the ladder prints the real count and
-`badgeGatePercent`, never the nominal slice. Only rolls fund a cycle gate.
+Badge gates round up over `BADGE_TOTAL`, so each rung prints the exact badge
+count beside the round share (`badgeGatePercent`) and never the nominal slice.
+Only rolls fund a cycle gate.
 
 ## Architecture
 

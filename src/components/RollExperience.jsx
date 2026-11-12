@@ -301,7 +301,10 @@ export default function RollExperience({
     (run.skills ?? []).includes(companionSkill.id);
 
   const firedSkills = run?.skills ?? [];
-  const bankedMultiplier = result ? walletMultiplier(session, firedSkills) : 1;
+  // A running consumable boost is part of what the reveal says this roll banks.
+  const bankedMultiplier = result
+    ? walletMultiplier(session, firedSkills, gameNow())
+    : 1;
 
   const keptNumbers = useMemo(
     () =>
@@ -395,7 +398,8 @@ export default function RollExperience({
       : 0;
   const creditedEP = ownEP + extraEP;
   const bonusEP = Math.max(0, creditedEP - (result?.totalEP ?? 0) - extraEP);
-  const bonusParts = bonusEP > 0 ? walletParts(session, firedSkills) : [];
+  const bonusParts =
+    bonusEP > 0 ? walletParts(session, firedSkills, gameNow()) : [];
   const floatingCharges = useMemo(() => {
     if (!result || result.totalEP === null || stacked) return [];
     if (!bonusParts.length) return [{ id: "base", ep: creditedEP, label: "" }];
