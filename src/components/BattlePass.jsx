@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -19,8 +19,10 @@ import {
   BATTLE_PASS_REWARDS,
   BPEP_PER_LEVEL,
   PASS_BOOSTS,
+  PASS_BOOST_PRICE,
   activeBoosts,
   battlePassSeason,
+  boostBuyStatus,
   boostCharges,
   boostMultiplier,
   passBoostById,
@@ -31,6 +33,7 @@ import {
   seasonLabel,
 } from "../battle-pass.js";
 import { waitText } from "../tasks.js";
+import { gameNow } from "../game-clock.js";
 import { useFormatEP } from "../use-settings.jsx";
 import { CreatureIcon } from "./game-icons.jsx";
 import "./battle-pass.css";
@@ -103,8 +106,21 @@ export default function BattlePass({
   const claimedCount = (pass.claimed ?? []).length;
   const trackSlots = BATTLE_PASS_LEVELS * (pass.premium ? 2 : 1);
   const archive = [...(pass.archive ?? [])].reverse();
-  const active = activeBoosts(pass.boosts, now);
-  const multiplier = boostMultiplier(pass.boosts, now);
+  // A boost window is short, so it needs its own second-by-second clock: the
+  // shared page clock only ticks every thirty seconds.
+  const [tick, setTick] = useState(now);
+  const running = activeBoosts(pass.boosts, Math.max(now, tick));
+  useEffect(() => {
+    setTick(now);
+    if (!activeBoosts(pass.boosts, now).length) return undefined;
+    const timer = setInterval(() => setTick(gameNow()), 1000);
+    return () => clearInterval(timer);
+  }, [pass.boosts, now]);
+  const boostClock = Math.max(now, tick);
+  const active = running;
+  const multiplier = boostMultiplier(pass.boosts, boostClock);
+  const buyStatus = boostBuyStatus(pass.boosts, boostClock);
+  const canBuy = buyStatus.waitMs === 0 && progress.balance >= PASS_BOOST_PRICE;
 
   async function run(action, message) {
     if (busy.current) return;
@@ -385,8 +401,11 @@ export default function BattlePass({
           <span
             className={`pass-boost-mult ${active.length ? "is-on" : ""}`}
             data-boost-multiplier={multiplier.toFixed(2)}
+            aria-live="polite"
           >
-            Rolls bank ×{Number(multiplier.toFixed(2))}
+            {active.length
+              ? `${active[0].name} · ×${Number(multiplier.toFixed(2))} · ${waitText(active[0].until - boostClock)}`
+              : "Rolls bank ×1"}
           </span>
         </header>
         <ul>
@@ -407,7 +426,9 @@ export default function BattlePass({
                 <span className="pass-boost-charges">
                   {charges
                     ? `${charges} charge${charges === 1 ? "" : "s"}`
-                    : "No charges"}
+                    : live
+                      ? "In use"
+                      : "No charges"}
                 </span>
                 {live ? (
                   <span className="pass-boost-running">
@@ -419,16 +440,51 @@ export default function BattlePass({
                     className="secondary-button"
                     disabled={busy || charges < 1 || !!active.length || ended}
                     aria-label={`Activate ${boost.name}`}
+                    title={
+                      ended
+                        ? "The season is closed."
+                        : charges < 1
+                          ? "Earn a charge at level 5, 15 or 25."
+                          : active.length
+                            ? `${active[0].name} is already running.`
+                            : `Starts now, for ${boost.minutes} minutes.`
+                    }
                     onClick={() =>
                       run(
                         { type: "activate-boost", id: boost.id },
-                        `${boost.name} is running for ${boost.minutes} minutes.`,
+                        `${boost.name} running for ${boost.minutes} minutes.`,
                       )
                     }
                   >
                     {pending === `activate-boost-${boost.id}`
                       ? "Activating…"
                       : "Activate"}
+                  </button>
+                )}
+                {!live && (
+                  <button
+                    className="pass-boost-buy"
+                    disabled={!!pending || !canBuy || ended}
+                    aria-label={`Buy ${boost.name} with EP`}
+                    title={
+                      ended
+                        ? "The season is closed."
+                        : buyStatus.waitMs > 0
+                          ? `One charge a day. Next in ${waitText(buyStatus.waitMs)}.`
+                          : progress.balance < PASS_BOOST_PRICE
+                            ? "Not enough EP."
+                            : "Adds one charge to this boost."
+                    }
+                    onClick={() =>
+                      run(
+                        { type: "buy-boost", id: boost.id },
+                        `${boost.name} charge bought.`,
+                      )
+                    }
+                  >
+                    {pending === `buy-boost-${boost.id}`
+                      ? "Buying…"
+                      : `Buy · ${formatEP(PASS_BOOST_PRICE)} EP`}
                   </button>
                 )}
               </li>

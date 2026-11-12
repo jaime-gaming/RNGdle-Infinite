@@ -572,14 +572,19 @@ export default function Tasks({
                           <Ticket size={18} />
                         </span>
                         <div className="task-card-title">
-                          <span className="task-kind">
-                            {PASS_SECTION_NAME[cadence]}
-                          </span>
+                          <span className="task-kind">Battle Pass</span>
                           <h3>{mission.title}</h3>
                           <p>{mission.detail}</p>
                         </div>
-                        <span className="task-reward">
+                        <span className="task-reward task-reward-pass">
                           +{count(mission.reward)} BPEP
+                          {mission.boost && (
+                            <span className="task-reward-boost">
+                              <Zap size={11} aria-hidden="true" />+
+                              {mission.boost.charges}{" "}
+                              {passBoostById(mission.boost.id)?.name}
+                            </span>
+                          )}
                         </span>
                       </div>
                       <div className="task-progress">

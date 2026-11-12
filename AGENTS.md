@@ -68,8 +68,10 @@ season milestones — is listed on the Tasks page in its own section; `/pass`
 keeps only the reward track. Missions pay BPEP only; BPEP is not a shop wallet.
 The optional premium track is bought with EP, never real money. Levels 5, 15 and
 25 add a consumable boost charge (the premium track pays two) without touching
-their EP; one boost runs at a time and multiplies banked roll EP for a few
-minutes through `walletMultiplier(progress, skills, at)`. Charges survive a
+their EP, the season milestone `pass-season-boost` pays one more, and one charge
+a day can be bought for `PASS_BOOST_PRICE` EP; one boost runs at a time and
+multiplies banked roll EP for a few minutes through
+`walletMultiplier(progress, skills, at)`. Charges survive a
 season change, Rebirth, Prestige, Rollback and Fresh Start. Reward tracks are visible,
 each reward claims once, and earned rewards are delivered automatically when a
 season closes. `progress.battlePass` survives Rebirth, Prestige, Rollback and

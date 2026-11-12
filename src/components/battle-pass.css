@@ -172,6 +172,9 @@
 .pass-track-scroll {
   overflow: visible;
 }
+.pass-level + .pass-level {
+  margin-top: 8px;
+}
 /* The track reads top to bottom: level 1 at the top, level 30 at the bottom. */
 .pass-track-grid {
   display: grid;
@@ -256,19 +259,26 @@
 .pass-reward {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-height: 74px;
-  padding: 8px;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
   border-radius: 10px;
-  background: var(--bg);
+  background: transparent;
   border: 1px solid transparent;
 }
 .pass-reward.is-claimable {
   border-color: color-mix(in srgb, var(--green) 45%, var(--border));
   background: var(--green-bg);
+  border-radius: 10px;
 }
 .pass-reward.is-premium {
-  border-top: 1px solid var(--border);
+  border-left-color: var(--border);
+  border-radius: 0 10px 10px 0;
+}
+.pass-reward.is-free {
+  border-radius: 10px 0 0 10px;
 }
 .pass-reward.is-claimed {
   opacity: 0.8;
@@ -316,21 +326,27 @@
   color: var(--muted);
 }
 .pass-reward .primary-button {
+  align-self: flex-start;
   min-height: 30px;
-  padding: 4px 10px;
+  padding: 4px 14px;
   font-size: 12px;
 }
 .pass-reward-boost {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-family: var(--font-body, inherit);
+  font-family: inherit;
   font-size: 10.5px;
   font-weight: 600;
   color: color-mix(in srgb, var(--pass-accent) 75%, var(--secondary));
 }
-.pass-reward-ep {
+/* A long reward line (EP plus a boost) wraps instead of widening the row. */
+.pass-reward-ep,
+.pass-reward-name {
   flex-wrap: wrap;
+}
+.pass-reward-aura {
+  min-width: 0;
 }
 .pass-boosts {
   padding: 16px 18px;
@@ -373,8 +389,10 @@
 }
 .pass-boost-mult.is-on {
   border-color: color-mix(in srgb, var(--pass-accent) 55%, var(--border));
-  color: var(--pass-accent);
-  background: color-mix(in srgb, var(--pass-accent) 10%, transparent);
+  /* The month accent is pale, so the text keeps the ink colour. */
+  color: var(--text);
+  background: color-mix(in srgb, var(--pass-accent) 16%, var(--surface));
+  font-weight: 700;
 }
 .pass-boosts ul {
   display: flex;
@@ -386,13 +404,16 @@
 }
 .pass-boost {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 10px 14px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg);
+}
+.pass-boost.is-held {
+  background: color-mix(in srgb, var(--pass-accent) 6%, var(--bg));
 }
 .pass-boost.is-held {
   border-color: color-mix(in srgb, var(--pass-accent) 30%, var(--border));
@@ -413,18 +434,48 @@
   color: var(--muted);
   font-size: 12px;
 }
-.pass-boost-charges,
-.pass-boost-running {
+.pass-boost-charges {
+  min-width: 82px;
   font-family: var(--font-mono);
   font-size: 11px;
+  text-align: right;
   color: var(--secondary);
   white-space: nowrap;
 }
 .pass-boost-running {
+  grid-column: 3 / -1;
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--pass-accent) 30%, var(--text));
+}
+.pass-boost .secondary-button {
+  justify-self: end;
+}
+.pass-boost-buy {
+  justify-self: end;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.pass-boost-buy:hover:not(:disabled) {
   color: var(--pass-accent);
+}
+.pass-boost-buy:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  text-decoration: none;
 }
 .pass-boost .secondary-button {
   min-height: 30px;
@@ -487,6 +538,9 @@
   font-size: 11px;
   font-weight: 650;
 }
+.pass-link-banner {
+  margin-bottom: 0;
+}
 .pass-note {
   margin: 0;
   color: var(--muted);
@@ -518,15 +572,24 @@
     flex-direction: column;
     align-items: flex-start;
   }
+  /* On a phone the level number sits on the top-left corner and both track
+     halves share the column to its right, so nothing hangs outside the card. */
   .pass-level {
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 8px 10px;
+    gap: 2px 10px;
+    padding: 10px;
+  }
+  .pass-level .pass-reward {
+    grid-column: 2;
+    padding: 8px 10px;
+  }
+  .pass-level .pass-reward.is-free {
+    border-radius: 10px 10px 0 0;
   }
   .pass-level .pass-reward.is-premium {
-    grid-column: 1 / -1;
-    border-top: 1px solid var(--border);
-    border-left: 0;
-    padding-left: 0;
+    border-top-color: var(--border);
+    border-left-color: transparent;
+    border-radius: 0 0 10px 10px;
   }
   .pass-boosts header {
     flex-direction: column;
@@ -534,10 +597,17 @@
   }
   .pass-boost {
     grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
   }
-  .pass-boost .secondary-button {
+  .pass-boost .secondary-button,
+  .pass-boost-buy {
     grid-column: 1 / -1;
     justify-self: start;
+  }
+  .pass-boost-charges,
+  .pass-boost-running {
+    min-width: 0;
+    text-align: right;
   }
   .pass-hero-stats {
     gap: 12px 16px;

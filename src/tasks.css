@@ -379,30 +379,44 @@
   animation: tabbar-dot-pulse 2.2s ease-in-out infinite;
 }
 
-/* Pass missions live here now, in their own section under the tasks. */
+/* Pass missions live here now, in their own section under the tasks. They
+   reuse the task card so both lists read the same; the section header and the
+   BPEP chip are the only pass-specific pieces. */
 .task-pass {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-top: 6px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 }
 .task-pass-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   gap: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
 }
 .task-pass-head h2 {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0 0 4px;
-  font-size: 18px;
+  font-size: 20px;
 }
 .task-pass-head h2 svg {
+  flex-shrink: 0;
   color: var(--green);
+}
+.task-pass-status {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--secondary);
+  white-space: nowrap;
 }
 .task-pass-closed {
   margin: 0;
@@ -411,23 +425,52 @@
   border-radius: 12px;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.6;
 }
 .task-group-pass .task-group-head h3 {
   margin: 0;
   font-size: 15px;
+  font-weight: 700;
 }
 .task-group-pass .task-group-head {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
-.task-group-pass .task-list {
-  gap: 8px;
+/* A pass card says BPEP next to its own chip, in the same voice as EP. */
+.task-reward-pass {
+  color: var(--secondary);
+  border-color: color-mix(in srgb, var(--secondary) 35%, var(--border));
 }
-.task-list-pass-season .task-card {
-  border-style: solid;
+.task-list-pass-season {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+  .task-list-pass-season {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 @media (max-width: 760px) {
   .task-pass-head {
     flex-direction: column;
     align-items: flex-start;
   }
+  .task-pass-status {
+    white-space: normal;
+  }
+}
+
+/* A pass milestone can carry a consumable boost next to its BPEP. */
+.task-reward-pass:has(.task-reward-boost) {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 5px 10px;
+  text-align: right;
+}
+.task-reward-boost {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--muted);
 }

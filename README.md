@@ -40,7 +40,7 @@ month it opens in; the first is **First Light**. Every pass mission — daily,
 weekly and season milestones — lives on the **Tasks** page, and pays **BPEP**,
 which only moves the pass; EP remains your shop wallet. The Pass page shows the
 vertical reward track across 30 levels, plus the consumable boosts that levels
-5, 15 and 25 hand out. The optional premium track is bought with EP, never real
+5, 15 and 25 hand out (one charge a day can also be bought with EP). The optional premium track is bought with EP, never real
 money. Earned rewards are kept; unclaimed earned rewards arrive when the season
 closes. Rebirth never resets the pass, and the cosmetics you claim are yours
 forever.

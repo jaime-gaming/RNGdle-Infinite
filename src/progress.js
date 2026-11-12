@@ -119,6 +119,9 @@ import {
   emptyBattlePass,
   activateBoost,
   activeBoosts,
+  boostBuyStatus,
+  boughtBoost,
+  PASS_BOOST_PRICE,
   boostCharges,
   boostMultiplier,
   emptyBoosts,
@@ -1350,7 +1353,19 @@ function applyEvent(state, action) {
       throw new Error("Invalid pass mission time");
     const ready = ensurePassSeason(state, at);
     const mission = passMissionById(action.id);
-    const battlePass = claimPassMission(ready.battlePass, action.id, at);
+    const claimed = claimPassMission(ready.battlePass, action.id, at);
+    // A milestone can pay a boost charge as well as BPEP.
+    const battlePass = mission.boost
+      ? {
+          ...claimed,
+          boosts: grantBoost(
+            claimed.boosts,
+            mission.boost.id,
+            mission.boost.charges,
+            at,
+          ),
+        }
+      : claimed;
     return {
       ...ready,
       battlePass,
@@ -1420,6 +1435,41 @@ function applyEvent(state, action) {
         },
       ]),
     };
+  }
+  if (action.type === "buy-boost") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid boost time");
+    const pass = state.battlePass ?? emptyBattlePass();
+    const boost = passBoostById(action.id);
+    if (!boost) throw new Error("That boost does not exist.");
+    const status = boostBuyStatus(pass.boosts, at);
+    if (status.waitMs > 0)
+      throw new Error("That boost is already on the counter today.");
+    if (state.balance < PASS_BOOST_PRICE)
+      throw new Error("Not enough EP for that boost charge.");
+    return withSaleStamp(
+      {
+        ...state,
+        balance: state.balance - PASS_BOOST_PRICE,
+        battlePass: {
+          ...pass,
+          boosts: boughtBoost(pass.boosts, boost.id, at),
+        },
+        history: appendHistory(state.history, [
+          {
+            id: action.eventId ?? `boost-buy:${boost.id}:${at}`,
+            type: "purchase",
+            at,
+            productId: boost.id,
+            name: `${boost.name} charge`,
+            ep: PASS_BOOST_PRICE,
+          },
+        ]),
+      },
+      at,
+      PASS_BOOST_PRICE,
+    );
   }
   if (action.type === "buy-pass-premium") {
     const at = action.at ?? Math.ceil(Date.now());

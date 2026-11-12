@@ -19,7 +19,10 @@ import {
   BATTLE_PASS_VARIANT,
   BPEP_PER_LEVEL,
   PASS_BOOSTS,
+  PASS_BOOST_PRICE,
+  boostBuyStatus,
   PASS_METRICS,
+  PASS_MISSIONS,
   activeBoosts,
   activePassMissionIds,
   activePassMissions,
@@ -583,6 +586,110 @@ test("a pass boost multiplies banked EP only while its window runs", () => {
     "boost-surge": 2,
   });
   expect(repaired.repairs.join(" ")).not.toMatch(/battle pass/i);
+});
+
+test("a boost charge can also be bought with EP, once a day", () => {
+  const pass = { ...emptyBattlePass(), seasonId: "season-1" };
+  const rich = {
+    ...emptyProgress(),
+    profile: testProfile,
+    battlePass: pass,
+    balance: PASS_BOOST_PRICE * 3,
+    totalEarned: PASS_BOOST_PRICE * 3,
+  };
+  const bought = applyProgress(rich, {
+    type: "buy-boost",
+    id: "boost-surge",
+    at,
+  });
+  expect(bought.balance).toBe(PASS_BOOST_PRICE * 2);
+  expect(bought.battlePass.boosts.charges).toEqual({ "boost-surge": 1 });
+  expect(bought.history.at(-1)).toMatchObject({
+    type: "purchase",
+    productId: "boost-surge",
+    ep: PASS_BOOST_PRICE,
+  });
+  expect(boostBuyStatus(bought.battlePass.boosts, at + 1000).waitMs).toBe(
+    24 * 60 * 60 * 1000 - 1000,
+  );
+
+  // One purchase a day, whatever the balance says.
+  expect(() =>
+    applyProgress(bought, { type: "buy-boost", id: "boost-surge", at }),
+  ).toThrow("already on the counter");
+  expect(() =>
+    applyProgress(
+      { ...bought, balance: 10 },
+      { type: "buy-boost", id: "boost-surge", at: at + 24 * 60 * 60 * 1000 },
+    ),
+  ).toThrow("Not enough EP");
+
+  const nextDay = applyProgress(bought, {
+    type: "buy-boost",
+    id: "boost-spark",
+    at: at + 24 * 60 * 60 * 1000,
+  });
+  expect(nextDay.battlePass.boosts.charges).toEqual({
+    "boost-surge": 1,
+    "boost-spark": 1,
+  });
+  expect(nextDay.balance).toBe(PASS_BOOST_PRICE);
+  // The purchase limit is part of the save contract.
+  const repaired = parseAndRepairProgress(JSON.stringify(nextDay));
+  expect(repaired.progress.battlePass.boosts.boughtAt).toBe(
+    at + 24 * 60 * 60 * 1000,
+  );
+});
+
+test("a season milestone can pay a boost charge on top of its BPEP", () => {
+  const pass = readyPass();
+  const mission = PASS_MISSIONS.find((entry) => entry.boost);
+  expect(mission).toMatchObject({
+    cadence: "season",
+    boost: { id: "boost-surge", charges: 1 },
+  });
+  expect(mission.metric).toBe("claims");
+  // A season deals four of its milestones, so the test brings this one in
+  // through the same swap a daily mission uses.
+  const withBoost = {
+    ...pass,
+    missions: {
+      ...pass.missions,
+      season: {
+        ...pass.missions.season,
+        swaps: [
+          {
+            out: activePassMissionIds(pass, "season", at)[0],
+            in: mission.id,
+            base: 0,
+          },
+        ],
+      },
+    },
+  };
+  expect(activePassMissionIds(withBoost, "season", at)).toContain(mission.id);
+  const state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    battlePass: withBoost,
+  };
+  const claimed = applyProgress(state, {
+    type: "claim-pass-mission",
+    id: mission.id,
+    at,
+  });
+  expect(claimed.battlePass.boosts.charges).toEqual({ "boost-surge": 1 });
+  expect(claimed.battlePass.xp).toBe(mission.reward);
+  expect(claimed.balance).toBe(0);
+
+  // Claiming any mission counts towards that milestone.
+  const other = activePassMissions(pass, "daily", at)[0];
+  const counted = applyProgress(state, {
+    type: "claim-pass-mission",
+    id: other.id,
+    at,
+  });
+  expect(counted.battlePass.missions.season.counts.claims).toBe(1000001);
 });
 
 test("every boost level keeps its EP and the premium track doubles the charge", () => {

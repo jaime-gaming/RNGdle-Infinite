@@ -125,6 +125,28 @@ export const PASS_BOOSTS = [
 ];
 const BOOST_BY_ID = new Map(PASS_BOOSTS.map((boost) => [boost.id, boost]));
 
+// A charge can also be bought with EP, one per day, so a boost is never a
+// lottery only three levels can win.
+export const PASS_BOOST_PRICE = 250_000;
+export const PASS_BOOST_BUY_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+export function boostBuyStatus(boosts, at = Date.now()) {
+  const last = Number.isSafeInteger(boosts?.boughtAt) ? boosts.boughtAt : 0;
+  return {
+    price: PASS_BOOST_PRICE,
+    waitMs: Math.max(0, last + PASS_BOOST_BUY_INTERVAL_MS - at),
+  };
+}
+
+export function boughtBoost(boosts, id, at = Date.now()) {
+  const boost = passBoostById(id);
+  if (!boost) return boosts;
+  return {
+    ...grantBoost(boosts, id, 1, at),
+    boughtAt: at,
+  };
+}
+
 export function passBoostById(id) {
   return BOOST_BY_ID.get(id) ?? null;
 }
@@ -217,6 +239,7 @@ export const PASS_METRICS = [
   "badges",
   "discovered",
   "skills",
+  "claims",
   "high",
   "trash",
 ];
@@ -388,6 +411,16 @@ export const PASS_MISSIONS = [
     goal: 40,
     reward: 2000,
   },
+  {
+    id: "pass-season-boost",
+    cadence: "season",
+    title: "Finish 100 pass missions this season",
+    detail: "Any cadence counts. Pays a Surge Capacitor charge.",
+    metric: "claims",
+    goal: 100,
+    reward: 1000,
+    boost: { id: "boost-surge", charges: 1 },
+  },
 ];
 
 const MISSION_BY_ID = new Map(
@@ -404,7 +437,7 @@ const PERIOD_RE = /^\d{4}-\d{2}-\d{2}$/;
 const validAmount = (value) => Number.isSafeInteger(value) && value >= 0;
 
 export function emptyBoosts() {
-  return { charges: {}, active: [] };
+  return { charges: {}, active: [], boughtAt: 0 };
 }
 
 export function boostCharges(boosts, id) {
@@ -412,6 +445,8 @@ export function boostCharges(boosts, id) {
   return Number.isSafeInteger(value) && value > 0 ? value : 0;
 }
 
+// A window stays listed until the client clock passes it; saves keep their own
+// copy so a slow or fast device never silently deletes a charge in progress.
 export function activeBoosts(boosts, at = Date.now()) {
   const list = Array.isArray(boosts?.active) ? boosts.active : [];
   return list
@@ -526,7 +561,15 @@ export function parseBoosts(value, at = Date.now()) {
       }
       active.push({ id: entry.id, until: entry.until });
     }
-  return { boosts: { charges, active }, repaired };
+  const boughtAt =
+    Number.isSafeInteger(value.boughtAt) &&
+    value.boughtAt > 0 &&
+    value.boughtAt <= 8640000000000000
+      ? value.boughtAt
+      : 0;
+  if (boughtAt !== (value.boughtAt ?? 0) && value.boughtAt !== undefined)
+    repaired = true;
+  return { boosts: { charges, active, boughtAt }, repaired };
 }
 
 export function passNow(at = Date.now()) {
@@ -787,12 +830,21 @@ export function claimPassMission(pass, id, at) {
     throw new Error("This pass mission is already claimed.");
   if (progressOf(slot, mission) < mission.goal)
     throw new Error("Finish this pass mission before claiming it.");
+  // Every claim also counts towards the season's claim milestone.
+  const seasonSlot = currentSlot(pass, "season", at);
   return {
     ...pass,
     xp: Math.min(BATTLE_PASS_MAX_XP, pass.xp + mission.reward),
     missions: {
       ...pass.missions,
       [mission.cadence]: { ...slot, claimed: [...slot.claimed, id] },
+      season: {
+        ...seasonSlot,
+        counts: {
+          ...seasonSlot.counts,
+          claims: addCapped(seasonSlot.counts.claims ?? 0, 1),
+        },
+      },
     },
   };
 }
