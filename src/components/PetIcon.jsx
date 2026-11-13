@@ -41,7 +41,7 @@ export default function PetIcon({
       <span className="pet-figure-spark" aria-hidden="true" />
       <CreatureIcon
         pet={variant ? "axolotl-prism" : pet}
-        size={Math.round(size * 0.52)}
+        size={Math.round(size * 0.68)}
       />
       {name && (
         <span className="sr-only">{`${name} ${petBonusLabel(multiplier)}`}</span>

@@ -1375,11 +1375,7 @@ function App() {
                   </div>
                   <div>
                     <h1>Battle Pass</h1>
-                    <p>
-                      Climb 30 levels and claim visible rewards. The premium
-                      track is optional and paid with EP, and every pass mission
-                      waits on the Tasks page.
-                    </p>
+                    <p>30 levels with an optional premium track, paid in EP.</p>
                   </div>
                 </div>
                 <BattlePass
@@ -1390,7 +1386,6 @@ function App() {
                   onAction={dispatch}
                   notify={notify}
                   openSignup={openAuth}
-                  onOpenTasks={() => navigate("tasks")}
                 />
               </ErrorBoundary>
             )}
@@ -1406,23 +1401,10 @@ function App() {
                   <div>
                     <h1>Tasks</h1>
                     <p>
-                      Daily, weekly and pass missions in one place. Tasks pay EP
-                      into your wallet; pass missions pay BPEP onto the season
-                      track.
+                      Daily and weekly tasks earn EP; pass missions earn BPEP.
                     </p>
                   </div>
                 </div>
-                <button
-                  className="pass-link-banner"
-                  onClick={() => navigate("pass")}
-                >
-                  <Ticket size={16} aria-hidden="true" />
-                  <span>
-                    Daily, weekly and season pass missions pay BPEP and reset
-                    with the season. The pass track is on the Pass page.
-                  </span>
-                  <ChevronRight size={14} aria-hidden="true" />
-                </button>
                 <Tasks
                   key={epoch}
                   progress={session}

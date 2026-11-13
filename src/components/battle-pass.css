@@ -331,6 +331,78 @@
   padding: 4px 14px;
   font-size: 12px;
 }
+.pass-reward-inspect {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 4px;
+  min-height: 23px;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 10px/1.2 var(--font-mono);
+  cursor: pointer;
+}
+.pass-reward-inspect:hover,
+.pass-reward-inspect[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--pass-accent) 12%, transparent);
+  color: var(--text);
+}
+.pass-reward-inspect:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.pass-inspection {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--pass-accent) 45%, var(--border));
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--pass-accent) 9%, transparent),
+      transparent 70%
+    ),
+    var(--surface);
+}
+.pass-inspection-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.pass-inspection-head .eyebrow {
+  color: var(--pass-accent);
+}
+.pass-inspection h4 {
+  margin: 3px 0 0;
+  font-size: 15px;
+}
+.pass-inspection p {
+  margin: 0;
+  max-width: 75ch;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.pass-inspection-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.pass-inspection-close:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 .pass-reward-boost {
   display: inline-flex;
   align-items: center;
@@ -556,9 +628,6 @@
   color: var(--green);
   font-size: 11px;
   font-weight: 650;
-}
-.pass-link-banner {
-  margin-bottom: 0;
 }
 .pass-note {
   margin: 0;

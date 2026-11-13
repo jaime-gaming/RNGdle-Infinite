@@ -8,7 +8,7 @@ export const CHANGELOG = [
       "tasks add daily, weekly and season missions; matching charges extend a running boost.",
       "new originals: Perfect Number (mythic), Narcissistic (anomaly), Triangular (uncommon) and Kaprekar (rare).",
       "also new: Automorphic (epic), Factorion (mythic) and Emirp (uncommon); every one wears its own icon.",
-      "companions bring signature skills, field notes and distinct reveal behaviour: Moss Beetle, Clockwork Crab and Comet Axolotl.",
+      "companions get bolder portraits, species-specific frames and reveal animations: Moss Beetle, Clockwork Crab and Comet Axolotl.",
       "the premium track grants First Light Crown, a sunrise skin in Special & Limiteds; Prism Axolotl remains from the earlier pass.",
       "compact keys shrink saves, old vaults still open; Cloud copies shrink, wallet bonuses add, shop adds filters and Rebirth lists badge counts.",
     ],

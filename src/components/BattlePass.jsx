@@ -4,6 +4,7 @@ import {
   Check,
   Clock,
   Coins,
+  Eye,
   Crown,
   Gift,
   History,
@@ -11,12 +12,15 @@ import {
   Sparkles,
   Ticket,
   Timer,
+  X,
   Zap,
 } from "lucide-react";
 import {
+  BATTLE_PASS_COSMETICS,
   BATTLE_PASS_LEVELS,
   BATTLE_PASS_PREMIUM_PRICE,
   BATTLE_PASS_REWARDS,
+  BATTLE_PASS_VARIANT,
   BPEP_PER_LEVEL,
   PASS_BOOSTS,
   PASS_BOOST_PRICE,
@@ -83,7 +87,6 @@ export default function BattlePass({
   notify,
   cloudUser,
   openSignup,
-  onOpenTasks,
 }) {
   const formatEP = useFormatEP();
   const pass = progress.battlePass ?? {
@@ -99,6 +102,7 @@ export default function BattlePass({
   const intoLevel = passXpIntoLevel(pass.xp);
   const [pending, setPending] = useState("");
   const [confirmPremium, setConfirmPremium] = useState(false);
+  const [inspectedReward, setInspectedReward] = useState(null);
   const busy = useRef(false);
   const owned = progress.owned ?? [];
   const currentSeason = pass.seasonId === season.id;
@@ -121,6 +125,25 @@ export default function BattlePass({
   const multiplier = boostMultiplier(pass.boosts, boostClock);
   const buyStatus = boostBuyStatus(pass.boosts, boostClock);
   const canBuy = buyStatus.waitMs === 0 && progress.balance >= PASS_BOOST_PRICE;
+  const inspectedLevel = inspectedReward
+    ? BATTLE_PASS_REWARDS.find((item) => item.level === inspectedReward.level)
+    : null;
+  const inspectedDefinition = inspectedLevel?.[inspectedReward?.track];
+  const inspectedCosmetic =
+    inspectedDefinition?.kind === "pet-variant"
+      ? BATTLE_PASS_VARIANT
+      : BATTLE_PASS_COSMETICS.find(
+          (item) => item.id === inspectedDefinition?.id,
+        );
+  const inspectedDescription = inspectedDefinition
+    ? inspectedDefinition.kind === "ep"
+      ? `${formatEP(inspectedDefinition.ep)} EP is added to your wallet when claimed.${
+          inspectedDefinition.boost
+            ? ` Includes ${inspectedDefinition.boost.charges} ${inspectedDefinition.boost.name} charge${inspectedDefinition.boost.charges === 1 ? "" : "s"} (${inspectedDefinition.boost.minutes} minutes at ×${inspectedDefinition.boost.mult} banked EP).`
+            : ""
+        }`
+      : (inspectedCosmetic?.description ?? "A permanent cosmetic reward.")
+    : "";
 
   async function run(action, message) {
     if (busy.current) return;
@@ -182,6 +205,26 @@ export default function BattlePass({
             )}
           </span>
         )}
+        <button
+          type="button"
+          className="pass-reward-inspect"
+          aria-label={`Inspect level ${reward.level} ${track} reward`}
+          aria-expanded={
+            inspectedReward?.level === reward.level &&
+            inspectedReward?.track === track
+          }
+          onClick={() =>
+            setInspectedReward(
+              inspectedReward?.level === reward.level &&
+                inspectedReward?.track === track
+                ? null
+                : { level: reward.level, track },
+            )
+          }
+        >
+          <Eye size={13} aria-hidden="true" />
+          <span>Inspect</span>
+        </button>
       </div>
     );
   }
@@ -286,11 +329,9 @@ export default function BattlePass({
             <Crown size={16} aria-hidden="true" /> Premium track
           </h3>
           <p>
-            Optional. Paid with EP, never real money. Extra EP rewards, double
-            the boost charges at levels 5, 15 and 25, the Prism Axolotl variant
-            at level 20 and the Prism Circuit aura at level 30; the free track
-            keeps every core reward. Cosmetics you claim are yours forever, even
-            after a Rebirth.
+            Optional and paid with EP. Earn extra EP, double boost charges at
+            levels 5, 8, 15, 18, 25 and 28, the Prism Axolotl at level 20 and
+            First Light Crown at level 30. Claimed cosmetics stay yours.
           </p>
         </div>
         {pass.premium ? (
@@ -342,8 +383,8 @@ export default function BattlePass({
         <div className="pass-track-head">
           <h3>Reward track</h3>
           <span>
-            Every reward is visible. Claim each one once. Levels 10, 20 and 30
-            carry the season cosmetics.
+            Inspect any reward for details. Claim each one once; levels 10, 20
+            and 30 carry the season cosmetics.
           </span>
         </div>
         <div className="pass-track-legend" aria-hidden="true">
@@ -380,6 +421,35 @@ export default function BattlePass({
             })}
           </ol>
         </div>
+        {inspectedLevel && inspectedDefinition && (
+          <section
+            className="pass-inspection"
+            aria-live="polite"
+            aria-labelledby="pass-inspection-title"
+          >
+            <div className="pass-inspection-head">
+              <div>
+                <span className="eyebrow">
+                  Level {inspectedLevel.level} · {inspectedReward.track}
+                </span>
+                <h4 id="pass-inspection-title">
+                  {inspectedDefinition.kind === "ep"
+                    ? `+${formatEP(inspectedDefinition.ep)} EP`
+                    : inspectedDefinition.name}
+                </h4>
+              </div>
+              <button
+                type="button"
+                className="pass-inspection-close"
+                aria-label="Close reward details"
+                onClick={() => setInspectedReward(null)}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+            <p>{inspectedDescription}</p>
+          </section>
+        )}
       </section>
 
       <section
@@ -393,10 +463,10 @@ export default function BattlePass({
               <Zap size={16} aria-hidden="true" /> Consumable boosts
             </h3>
             <p>
-              Extra rewards from levels 5, 15 and 25. One boost runs at a time;
-              another charge of the same type extends its window without
-              multiplying the bonus again. It changes banked roll EP only, and
-              unused charges carry into the next season and survive every reset.
+              Boosts drop at levels 5, 8, 15, 18, 25 and 28. One boost runs at a
+              time; matching charges extend its window without multiplying the
+              bonus. It affects banked roll EP only, and unused charges carry
+              into the next season.
             </p>
           </div>
           <span
@@ -542,21 +612,9 @@ export default function BattlePass({
         </section>
       )}
 
-      <button className="pass-link-banner" onClick={onOpenTasks}>
-        <Zap size={16} aria-hidden="true" />
-        <span>
-          Daily, weekly and season pass missions now live on the Tasks page.
-        </span>
-      </button>
-
       <p className="pass-note">
-        The same online roll can advance Tasks and the pass. Offline rolls pay
-        EP but do not advance pass missions. BPEP is not spendable. Rewards you
-        earned are kept; when a season closes, any unclaimed earned rewards are
-        delivered on your next online roll. Premium unlocks last for that season
-        only. Rebirth, Prestige and Rollback never touch the pass: your level,
-        missions, boost charges and claimed cosmetics all carry on. Pass
-        missions live on the Tasks page.
+        Online rolls advance pass missions; offline rolls do not. BPEP is not
+        spendable, and earned rewards and boost charges carry through resets.
       </p>
     </div>
   );

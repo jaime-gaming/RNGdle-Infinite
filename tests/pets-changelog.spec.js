@@ -76,10 +76,7 @@ test("companion multipliers stay ordered, and never reach the draw", () => {
     const signature = skillForPet(pet.id);
     expect(signature.source).toBe("pet");
     expect(signature.charges).toBeGreaterThan(0);
-    for (const detail of [pet.appearance, pet.manner, pet.reveal]) {
-      expect(detail).toBeTruthy();
-      expect(detail.length).toBeGreaterThan(70);
-    }
+    expect(pet.accent).toMatch(/^#[0-9a-f]{6}$/);
   }
 
   const weights = PETS.map((p) => p.dropWeight);
@@ -383,6 +380,11 @@ test("every companion wears its own colour and has its own face", async () => {
   }
 
   expect(token).toContain("var(--pet-accent,");
+  expect(token).toContain("pet-species-moth::before");
+  expect(token).toContain("pet-species-axolotl::before");
+  expect(fs.readFileSync("src/pets.css", "utf8")).toContain(
+    "pet-showcase-hover",
+  );
   const icon = await import("node:fs").then((fs) =>
     fs.readFileSync("src/components/PetIcon.jsx", "utf8"),
   );

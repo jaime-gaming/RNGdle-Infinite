@@ -319,6 +319,20 @@ test("the pass page claims a reward and stays vertical on a phone", async ({
   await expect(page.locator(".pass-mission")).toHaveCount(0);
   await expect(page.locator(".pass-missions")).toHaveCount(0);
 
+  await page
+    .getByRole("button", { name: "Inspect level 1 free reward" })
+    .click();
+  await expect(page.locator(".pass-inspection")).toContainText("5,000 EP");
+  await page.getByRole("button", { name: "Close reward details" }).click();
+  await page
+    .getByRole("button", { name: "Inspect level 30 premium reward" })
+    .click();
+  await expect(page.locator(".pass-inspection")).toContainText(
+    "First Light Crown",
+  );
+  await expect(page.locator(".pass-inspection")).toContainText("sunrise halo");
+  await page.getByRole("button", { name: "Close reward details" }).click();
+
   await page.getByRole("button", { name: "Claim free level 1 reward" }).click();
   await expect
     .poll(async () => (await saved(page)).battlePass.claimed)
@@ -449,7 +463,13 @@ test("pass missions are claimed and swapped on the Tasks page", async ({
   await page.goto("/tasks");
   await waitForApp(page);
 
-  // All three pass cadences now live here, each in its own section.
+  await expect(page.getByRole("heading", { name: "Daily" })).toBeVisible();
+  await expect(page.locator(".task-pass")).toHaveCount(0);
+  const passTab = page.getByRole("button", { name: /Battle Pass/ });
+  await passTab.click();
+  await expect(passTab).toHaveAttribute("aria-pressed", "true");
+
+  // Pass cadences appear together only after selecting that task list.
   const section = page.locator(".task-pass");
   await expect(section).toHaveCount(1);
   await expect(section.locator(".task-group-pass")).toHaveCount(3);
@@ -471,6 +491,14 @@ test("pass missions are claimed and swapped on the Tasks page", async ({
   const claim = await saved(page);
   expect(claim.history.at(-1)?.type).toBe("pass-mission");
   expect(claim.balance).toBe(0);
+
+  const taskTab = page
+    .locator(".tasks-view-switch")
+    .getByRole("button", { name: /^Tasks/ });
+  await taskTab.click();
+  await expect(taskTab).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".task-pass")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Daily" })).toBeVisible();
 });
 
 test("a daily pass mission can be swapped once on the Tasks page", async ({
@@ -482,6 +510,7 @@ test("a daily pass mission can be swapped once on the Tasks page", async ({
   await pauseClockAt(page, new Date(at));
   await page.goto("/tasks");
   await waitForApp(page);
+  await page.getByRole("button", { name: /Battle Pass/ }).click();
 
   const swap = activePassMissions(pass, "daily", at)[0];
   await page.getByRole("button", { name: `Swap ${swap.title}` }).click();

@@ -1,8 +1,63 @@
+.tasks-view-switch {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.tasks-view-switch button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--secondary);
+  font: 650 12px/1.2 var(--font-mono);
+  cursor: pointer;
+}
+.tasks-view-switch button:hover {
+  color: var(--text);
+}
+.tasks-view-switch button.is-active {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+  background: color-mix(in srgb, var(--green) 10%, var(--surface));
+  color: var(--text);
+}
+.tasks-view-switch button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.tasks-view-switch button small {
+  color: var(--muted);
+  font: 500 10px/1.3 var(--font-mono);
+}
+.tasks-view-ready {
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--green);
+  color: var(--bg);
+  font: 700 10px/1 var(--font-mono);
+}
 .tasks-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin: 0 0 8px;
+}
+.tasks-summary-pass {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .tasks-stat {
   display: flex;
@@ -420,9 +475,6 @@
 }
 .task-pass-closed {
   margin: 0;
-  padding: 12px 14px;
-  border: 1px dashed var(--border);
-  border-radius: 12px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;

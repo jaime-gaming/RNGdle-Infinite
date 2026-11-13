@@ -93,6 +93,7 @@ export default function Tasks({
 }) {
   const [pending, setPending] = useState("");
   const [confirming, setConfirming] = useState("");
+  const [activeView, setActiveView] = useState("regular");
   const summary = taskSummary(progress.tasks, now);
   const pass = progress.battlePass ?? null;
   const passSeason = battlePassSeason(now);
@@ -277,314 +278,167 @@ export default function Tasks({
           </button>
         </div>
       )}
-      <section className="tasks-summary" aria-label="Task summary">
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Available</span>
-          <strong>
-            <Coins size={15} aria-hidden="true" />
-            {formatEP(progress.balance)} EP
-          </strong>
-        </div>
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Ready</span>
-          <strong>
-            {summary.ready} <small>to claim</small>
-          </strong>
-          <small className="tasks-stat-note">
-            {readyEP > 0
-              ? `Worth +${formatEP(readyEP)} EP together`
-              : "Nothing waiting for you"}
+      <div className="tasks-view-switch" role="group" aria-label="Task list">
+        <button
+          type="button"
+          className={activeView === "regular" ? "is-active" : ""}
+          aria-pressed={activeView === "regular"}
+          onClick={() => setActiveView("regular")}
+        >
+          Tasks{" "}
+          <small>
+            {summary.ready ? `${summary.ready} ready` : "Daily · Weekly"}
           </small>
-        </div>
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Claimed</span>
-          <strong>
-            {summary.claimed} <small>of {summary.total} this reset</small>
-          </strong>
-        </div>
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Pass</span>
-          <strong>
-            {passLevel} <small>of {BATTLE_PASS_LEVELS} levels</small>
-          </strong>
-          <small className="tasks-stat-note">
-            {passReady > 0
-              ? `${passReady} pass mission${passReady === 1 ? "" : "s"} ready · +BPEP`
-              : "BPEP missions pay the pass, never the wallet"}
+        </button>
+        <button
+          type="button"
+          className={activeView === "pass" ? "is-active" : ""}
+          aria-pressed={activeView === "pass"}
+          onClick={() => setActiveView("pass")}
+        >
+          Battle Pass{" "}
+          <small>
+            Level {passLevel} / {BATTLE_PASS_LEVELS}
           </small>
-        </div>
-        <div className="tasks-stat">
-          <span className="tasks-stat-label">Task Skips</span>
-          <strong>
-            {skips.tokens} <small>of {skips.limit} held</small>
-          </strong>
-          <small className="tasks-stat-note">{skipNote}</small>
-        </div>
-      </section>
-      {lists.map((list) => {
-        const { cadence, views, bonus } = list;
-        const allClaimed = bonus.state === "claimed";
-        return (
-          <section
-            className="task-group"
-            key={cadence}
-            aria-labelledby={`task-group-${cadence}`}
-          >
-            <header className="task-group-head">
-              <div>
-                <h2 id={`task-group-${cadence}`}>{CADENCE_NAME[cadence]}</h2>
-                <p className="task-group-sub">
-                  {cadence === "daily"
-                    ? "Three tasks a day, new ones at reset"
-                    : "Four tasks a week, new ones on Monday"}
-                </p>
-              </div>
-              <div className="task-group-meta">
-                <span className="task-segments" aria-hidden="true">
-                  {views.map((view) => (
-                    <span
-                      key={view.task.id}
-                      className={`task-seg is-${view.state}`}
-                    />
-                  ))}
-                </span>
-                <span
-                  className="task-reset"
-                  title="Tasks refresh at the same time worldwide."
-                >
-                  <Timer size={13} aria-hidden="true" />
-                  Resets in {resetCountdown(list.reset)}
-                </span>
-              </div>
-            </header>
-            <ul className={`task-list task-list-${cadence}`}>
-              {views.map((view) => {
-                const { task } = view;
-                const shown = Math.min(view.count, view.goal);
-                const kind = KIND[task.metric] ?? {
-                  name: "Task",
-                  icon: CalendarDays,
-                };
-                const Icon = kind.icon;
-                const asking = confirming === task.id;
-                const percent = Math.round((shown / view.goal) * 100);
-                return (
-                  <li
-                    key={task.id}
-                    className={`task-card is-${view.state}`}
-                    data-task={task.id}
-                    data-state={view.state}
-                  >
-                    <div className="task-card-top">
-                      <span className="task-icon" aria-hidden="true">
-                        <Icon size={18} />
-                      </span>
-                      <div className="task-card-title">
-                        <span className="task-kind">{kind.name}</span>
-                        <h3>{task.title}</h3>
-                        <p>{task.detail}</p>
-                      </div>
-                      <span className="task-reward">
-                        +{formatEP(task.reward)} EP
-                      </span>
-                    </div>
-                    <div className="task-progress">
-                      <progress
-                        className="task-bar"
-                        max={view.goal}
-                        value={shown}
-                        aria-label={task.title}
-                        aria-valuetext={`${count(shown)} of ${count(view.goal)}`}
-                      />
-                      <span className="task-count">
-                        {count(shown)} / {count(view.goal)}
-                        <span className="task-percent"> · {percent}%</span>
-                      </span>
-                    </div>
-                    <div className="task-card-foot">
-                      {view.state === "claimed" && (
-                        <span className="task-claimed">
-                          <Check size={14} aria-hidden="true" /> Claimed
-                        </span>
-                      )}
-                      {view.state === "claimable" && (
-                        <button
-                          className="primary-button task-claim"
-                          disabled={busy}
-                          aria-label={`Claim reward for ${task.title}`}
-                          onClick={() => claim(list, task)}
-                        >
-                          {pending === task.id ? "Claiming…" : "Claim"}
-                        </button>
-                      )}
-                      {view.state === "open" && !asking && (
-                        <button
-                          className="secondary-button task-skip"
-                          disabled={busy || skips.tokens < 1}
-                          aria-label={`Skip ${task.title}`}
-                          title={skipHint()}
-                          onClick={() => setConfirming(task.id)}
-                        >
-                          <ArrowRightLeft size={13} aria-hidden="true" />
-                          {pending === task.id ? "Swapping…" : "Skip"}
-                        </button>
-                      )}
-                      {view.state === "open" && asking && (
-                        <span className="task-confirm">
-                          <span>Swap it for another? Uses a Task Skip.</span>
-                          <button
-                            className="primary-button"
-                            disabled={busy}
-                            aria-label={`Confirm skip of ${task.title}`}
-                            onClick={() => skip(task)}
-                          >
-                            Swap
-                          </button>
-                          <button
-                            className="secondary-button"
-                            onClick={() => setConfirming("")}
-                          >
-                            Keep
-                          </button>
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            <div
-              className={`task-bonus is-${bonus.state}`}
-              data-bonus={cadence}
-              data-state={bonus.state}
-            >
-              <span className="task-bonus-icon" aria-hidden="true">
-                {allClaimed ? <CheckCheck size={16} /> : <Gift size={16} />}
-              </span>
-              <div className="task-bonus-text">
-                <strong>
-                  {CADENCE_NAME[cadence]} list bonus · +{formatEP(bonus.reward)}{" "}
-                  EP
-                </strong>
-                <span>
-                  {allClaimed
-                    ? "Paid. Every task on this list is claimed."
-                    : bonus.state === "claimable"
-                      ? "Ready to collect."
-                      : `${bonus.done} of ${bonus.total} claimed. Claim every task to unlock it.`}
-                </span>
-              </div>
-              {bonus.state === "claimable" && (
-                <button
-                  className="primary-button task-claim"
-                  disabled={busy}
-                  aria-label={`Collect ${cadence} list bonus`}
-                  onClick={() => collect(list)}
-                >
-                  {pending === `bonus-${cadence}` ? "Collecting…" : "Collect"}
-                </button>
-              )}
-            </div>
-          </section>
-        );
-      })}
-      <section className="task-pass" aria-labelledby="task-pass-title">
-        <header className="task-pass-head">
-          <div>
-            <h2 id="task-pass-title">
-              <Ticket size={17} aria-hidden="true" /> Battle Pass missions
-            </h2>
-            <p className="task-group-sub">
-              Every pass mission lives here. They pay BPEP, spend it on the pass
-              track, and share the same online rolls as the tasks above.
-            </p>
+          {passReady > 0 && (
+            <span className="tasks-view-ready">{passReady}</span>
+          )}
+        </button>
+      </div>
+      {activeView === "regular" ? (
+        <section className="tasks-summary" aria-label="Task summary">
+          <div className="tasks-stat">
+            <span className="tasks-stat-label">Available</span>
+            <strong>
+              <Coins size={15} aria-hidden="true" />
+              {formatEP(progress.balance)} EP
+            </strong>
           </div>
-          <div className="task-group-meta">
-            <span className="task-reset">
-              <Ticket size={13} aria-hidden="true" />
+          <div className="tasks-stat">
+            <span className="tasks-stat-label">Ready</span>
+            <strong>
+              {summary.ready} <small>to claim</small>
+            </strong>
+            <small className="tasks-stat-note">
+              {readyEP > 0
+                ? `Worth +${formatEP(readyEP)} EP together`
+                : "Nothing waiting for you"}
+            </small>
+          </div>
+          <div className="tasks-stat">
+            <span className="tasks-stat-label">Claimed</span>
+            <strong>
+              {summary.claimed} <small>of {summary.total} this reset</small>
+            </strong>
+          </div>
+          <div className="tasks-stat">
+            <span className="tasks-stat-label">Task Skips</span>
+            <strong>
+              {skips.tokens} <small>of {skips.limit} held</small>
+            </strong>
+            <small className="tasks-stat-note">{skipNote}</small>
+          </div>
+        </section>
+      ) : (
+        <section
+          className="tasks-summary tasks-summary-pass"
+          aria-label="Battle Pass summary"
+        >
+          <div className="tasks-stat">
+            <span className="tasks-stat-label">Season</span>
+            <strong>{passSeason.name}</strong>
+            <small className="tasks-stat-note">
               {passLive
-                ? `Season ${passSeason.index} · level ${passLevel} of ${BATTLE_PASS_LEVELS}`
+                ? `Season ${passSeason.index}`
                 : passSeason.upcoming
-                  ? `Season ${passSeason.index} starts ${passDateLabel(passSeason.start)}`
-                  : "No open pass season"}
-            </span>
+                  ? `Opens ${passDateLabel(passSeason.start)}`
+                  : "No active season"}
+            </small>
           </div>
-        </header>
-        {!passLive && (
-          <p className="task-pass-closed">
-            Pass missions open with the season. Until then, the tasks above keep
-            paying EP into your wallet.
-          </p>
-        )}
-        {passSections.map((section) => {
-          const { cadence, missions } = section;
-          const swapped =
-            cadence === "daily"
-              ? Math.max(0, PASS_DAILY_REROLLS - section.rerolls)
-              : 0;
+          <div className="tasks-stat">
+            <span className="tasks-stat-label">Progress</span>
+            <strong>
+              {passLevel} <small>of {BATTLE_PASS_LEVELS}</small>
+            </strong>
+            <small className="tasks-stat-note">
+              {count(pass?.xp ?? 0)} BPEP
+            </small>
+          </div>
+          <div className="tasks-stat">
+            <span className="tasks-stat-label">Ready</span>
+            <strong>
+              {passReady} <small>missions</small>
+            </strong>
+            <small className="tasks-stat-note">Claim for BPEP</small>
+          </div>
+        </section>
+      )}
+      {activeView === "regular" &&
+        lists.map((list) => {
+          const { cadence, views, bonus } = list;
+          const allClaimed = bonus.state === "claimed";
           return (
             <section
-              className="task-group task-group-pass"
+              className="task-group"
               key={cadence}
-              aria-labelledby={`task-pass-${cadence}`}
+              aria-labelledby={`task-group-${cadence}`}
             >
               <header className="task-group-head">
                 <div>
-                  <h3 id={`task-pass-${cadence}`}>
-                    {PASS_SECTION_NAME[cadence]}
-                  </h3>
+                  <h2 id={`task-group-${cadence}`}>{CADENCE_NAME[cadence]}</h2>
                   <p className="task-group-sub">
-                    {cadence === "season"
-                      ? "Long goals that stay with the season."
-                      : `Resets in ${resetCountdown(section.reset)} UTC.`}
-                    {cadence === "daily" &&
-                      ` Free swaps left today: ${swapped}.`}
+                    {cadence === "daily"
+                      ? "Three tasks a day, new ones at reset"
+                      : "Four tasks a week, new ones on Monday"}
                   </p>
                 </div>
                 <div className="task-group-meta">
                   <span className="task-segments" aria-hidden="true">
-                    {missions.map((view) => (
+                    {views.map((view) => (
                       <span
-                        key={view.mission.id}
+                        key={view.task.id}
                         className={`task-seg is-${view.state}`}
                       />
                     ))}
                   </span>
-                  <span className="task-reset">
-                    {missions.length} of {PASS_ACTIVE[cadence]} active
+                  <span
+                    className="task-reset"
+                    title="Tasks refresh at the same time worldwide."
+                  >
+                    <Timer size={13} aria-hidden="true" />
+                    Resets in {resetCountdown(list.reset)}
                   </span>
                 </div>
               </header>
-              <ul className={`task-list task-list-pass-${cadence}`}>
-                {missions.map((view) => {
-                  const { mission } = view;
+              <ul className={`task-list task-list-${cadence}`}>
+                {views.map((view) => {
+                  const { task } = view;
                   const shown = Math.min(view.count, view.goal);
+                  const kind = KIND[task.metric] ?? {
+                    name: "Task",
+                    icon: CalendarDays,
+                  };
+                  const Icon = kind.icon;
+                  const asking = confirming === task.id;
                   const percent = Math.round((shown / view.goal) * 100);
                   return (
                     <li
-                      key={mission.id}
+                      key={task.id}
                       className={`task-card is-${view.state}`}
-                      data-pass-mission={mission.id}
+                      data-task={task.id}
                       data-state={view.state}
                     >
                       <div className="task-card-top">
                         <span className="task-icon" aria-hidden="true">
-                          <Ticket size={18} />
+                          <Icon size={18} />
                         </span>
                         <div className="task-card-title">
-                          <span className="task-kind">Battle Pass</span>
-                          <h3>{mission.title}</h3>
-                          <p>{mission.detail}</p>
+                          <span className="task-kind">{kind.name}</span>
+                          <h3>{task.title}</h3>
+                          <p>{task.detail}</p>
                         </div>
-                        <span className="task-reward task-reward-pass">
-                          +{count(mission.reward)} BPEP
-                          {mission.boost && (
-                            <span className="task-reward-boost">
-                              <Zap size={11} aria-hidden="true" />+
-                              {mission.boost.charges}{" "}
-                              {passBoostById(mission.boost.id)?.name}
-                            </span>
-                          )}
+                        <span className="task-reward">
+                          +{formatEP(task.reward)} EP
                         </span>
                       </div>
                       <div className="task-progress">
@@ -592,7 +446,7 @@ export default function Tasks({
                           className="task-bar"
                           max={view.goal}
                           value={shown}
-                          aria-label={mission.title}
+                          aria-label={task.title}
                           aria-valuetext={`${count(shown)} of ${count(view.goal)}`}
                         />
                         <span className="task-count">
@@ -609,39 +463,236 @@ export default function Tasks({
                         {view.state === "claimable" && (
                           <button
                             className="primary-button task-claim"
-                            disabled={busy || !passLive}
-                            aria-label={`Claim BPEP for ${mission.title}`}
-                            onClick={() => claimPass(mission)}
+                            disabled={busy}
+                            aria-label={`Claim reward for ${task.title}`}
+                            onClick={() => claim(list, task)}
                           >
-                            {pending === `pass-${mission.id}`
-                              ? "Claiming…"
-                              : "Claim"}
+                            {pending === task.id ? "Claiming…" : "Claim"}
                           </button>
                         )}
-                        {view.state === "open" &&
-                          cadence === "daily" &&
-                          passLive && (
+                        {view.state === "open" && !asking && (
+                          <button
+                            className="secondary-button task-skip"
+                            disabled={busy || skips.tokens < 1}
+                            aria-label={`Skip ${task.title}`}
+                            title={skipHint()}
+                            onClick={() => setConfirming(task.id)}
+                          >
+                            <ArrowRightLeft size={13} aria-hidden="true" />
+                            {pending === task.id ? "Swapping…" : "Skip"}
+                          </button>
+                        )}
+                        {view.state === "open" && asking && (
+                          <span className="task-confirm">
+                            <span>Swap it for another? Uses a Task Skip.</span>
                             <button
-                              className="secondary-button task-skip"
-                              disabled={
-                                busy || section.rerolls >= PASS_DAILY_REROLLS
-                              }
-                              aria-label={`Swap ${mission.title}`}
-                              onClick={() => swapPass(mission)}
+                              className="primary-button"
+                              disabled={busy}
+                              aria-label={`Confirm skip of ${task.title}`}
+                              onClick={() => skip(task)}
                             >
-                              <ArrowRightLeft size={13} aria-hidden="true" />{" "}
                               Swap
                             </button>
-                          )}
+                            <button
+                              className="secondary-button"
+                              onClick={() => setConfirming("")}
+                            >
+                              Keep
+                            </button>
+                          </span>
+                        )}
                       </div>
                     </li>
                   );
                 })}
               </ul>
+              <div
+                className={`task-bonus is-${bonus.state}`}
+                data-bonus={cadence}
+                data-state={bonus.state}
+              >
+                <span className="task-bonus-icon" aria-hidden="true">
+                  {allClaimed ? <CheckCheck size={16} /> : <Gift size={16} />}
+                </span>
+                <div className="task-bonus-text">
+                  <strong>
+                    {CADENCE_NAME[cadence]} list bonus · +
+                    {formatEP(bonus.reward)} EP
+                  </strong>
+                  <span>
+                    {allClaimed
+                      ? "Paid. Every task on this list is claimed."
+                      : bonus.state === "claimable"
+                        ? "Ready to collect."
+                        : `${bonus.done} of ${bonus.total} claimed. Claim every task to unlock it.`}
+                  </span>
+                </div>
+                {bonus.state === "claimable" && (
+                  <button
+                    className="primary-button task-claim"
+                    disabled={busy}
+                    aria-label={`Collect ${cadence} list bonus`}
+                    onClick={() => collect(list)}
+                  >
+                    {pending === `bonus-${cadence}` ? "Collecting…" : "Collect"}
+                  </button>
+                )}
+              </div>
             </section>
           );
         })}
-      </section>
+      {activeView === "pass" && (
+        <section className="task-pass" aria-labelledby="task-pass-title">
+          <header className="task-pass-head">
+            <h2 id="task-pass-title">Pass missions</h2>
+            <span className="task-pass-status">
+              {passLive
+                ? `${passSeason.name} · level ${passLevel}/${BATTLE_PASS_LEVELS}`
+                : passSeason.upcoming
+                  ? `${passSeason.name} opens ${passDateLabel(passSeason.start)}`
+                  : "No active season"}
+            </span>
+          </header>
+          {!passLive ? (
+            <p className="task-pass-closed" role="status">
+              Pass missions appear when the season opens.
+            </p>
+          ) : (
+            passSections.map((section) => {
+              const { cadence, missions } = section;
+              const swapped =
+                cadence === "daily"
+                  ? Math.max(0, PASS_DAILY_REROLLS - section.rerolls)
+                  : 0;
+              return (
+                <section
+                  className="task-group task-group-pass"
+                  key={cadence}
+                  aria-labelledby={`task-pass-${cadence}`}
+                >
+                  <header className="task-group-head">
+                    <div>
+                      <h3 id={`task-pass-${cadence}`}>
+                        {PASS_SECTION_NAME[cadence]}
+                      </h3>
+                      <p className="task-group-sub">
+                        {cadence === "season"
+                          ? "Long goals that stay with the season."
+                          : `Resets in ${resetCountdown(section.reset)} UTC.`}
+                        {cadence === "daily" &&
+                          ` Free swaps left today: ${swapped}.`}
+                      </p>
+                    </div>
+                    <div className="task-group-meta">
+                      <span className="task-segments" aria-hidden="true">
+                        {missions.map((view) => (
+                          <span
+                            key={view.mission.id}
+                            className={`task-seg is-${view.state}`}
+                          />
+                        ))}
+                      </span>
+                      <span className="task-reset">
+                        {missions.length} of {PASS_ACTIVE[cadence]} active
+                      </span>
+                    </div>
+                  </header>
+                  <ul className={`task-list task-list-pass-${cadence}`}>
+                    {missions.map((view) => {
+                      const { mission } = view;
+                      const shown = Math.min(view.count, view.goal);
+                      const percent = Math.round((shown / view.goal) * 100);
+                      return (
+                        <li
+                          key={mission.id}
+                          className={`task-card is-${view.state}`}
+                          data-pass-mission={mission.id}
+                          data-state={view.state}
+                        >
+                          <div className="task-card-top">
+                            <span className="task-icon" aria-hidden="true">
+                              <Ticket size={18} />
+                            </span>
+                            <div className="task-card-title">
+                              <span className="task-kind">Battle Pass</span>
+                              <h3>{mission.title}</h3>
+                              <p>{mission.detail}</p>
+                            </div>
+                            <span className="task-reward task-reward-pass">
+                              +{count(mission.reward)} BPEP
+                              {mission.boost && (
+                                <span className="task-reward-boost">
+                                  <Zap size={11} aria-hidden="true" />+
+                                  {mission.boost.charges}{" "}
+                                  {passBoostById(mission.boost.id)?.name}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="task-progress">
+                            <progress
+                              className="task-bar"
+                              max={view.goal}
+                              value={shown}
+                              aria-label={mission.title}
+                              aria-valuetext={`${count(shown)} of ${count(view.goal)}`}
+                            />
+                            <span className="task-count">
+                              {count(shown)} / {count(view.goal)}
+                              <span className="task-percent">
+                                {" "}
+                                · {percent}%
+                              </span>
+                            </span>
+                          </div>
+                          <div className="task-card-foot">
+                            {view.state === "claimed" && (
+                              <span className="task-claimed">
+                                <Check size={14} aria-hidden="true" /> Claimed
+                              </span>
+                            )}
+                            {view.state === "claimable" && (
+                              <button
+                                className="primary-button task-claim"
+                                disabled={busy || !passLive}
+                                aria-label={`Claim BPEP for ${mission.title}`}
+                                onClick={() => claimPass(mission)}
+                              >
+                                {pending === `pass-${mission.id}`
+                                  ? "Claiming…"
+                                  : "Claim"}
+                              </button>
+                            )}
+                            {view.state === "open" &&
+                              cadence === "daily" &&
+                              passLive && (
+                                <button
+                                  className="secondary-button task-skip"
+                                  disabled={
+                                    busy ||
+                                    section.rerolls >= PASS_DAILY_REROLLS
+                                  }
+                                  aria-label={`Swap ${mission.title}`}
+                                  onClick={() => swapPass(mission)}
+                                >
+                                  <ArrowRightLeft
+                                    size={13}
+                                    aria-hidden="true"
+                                  />{" "}
+                                  Swap
+                                </button>
+                              )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })
+          )}
+        </section>
+      )}
 
       <p className="task-note">
         A reward is paid into your wallet once, when you claim it. Finishing

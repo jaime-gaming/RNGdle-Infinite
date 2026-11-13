@@ -329,11 +329,8 @@ test("equipping a companion uncages it with an animation", async ({ page }) => {
   await page.goto("/shop/companions");
   await waitForApp(page);
   const slide = page.locator("#shop-companions [data-pet='pebble']");
-  const fieldNotes = slide.locator(".pet-field-notes");
-  await expect(fieldNotes).toBeVisible();
-  await expect(fieldNotes).toContainText("Appearance");
-  await expect(fieldNotes).toContainText("Temperament");
-  await expect(fieldNotes).toContainText("On a reveal");
+  await expect(slide.locator(".pet-field-notes")).toHaveCount(0);
+  await expect(slide.locator(".pet-figure svg")).toBeVisible();
   await slide.getByRole("button", { name: "Equip", exact: true }).click();
 
   const uncaging = page.locator("#shop-companions .pet-slide.is-uncaging");
