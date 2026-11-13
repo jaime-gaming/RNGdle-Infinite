@@ -72,9 +72,14 @@ test("companion multipliers stay ordered, and never reach the draw", () => {
   const signatures = PETS.map((p) => skillForPet(p.id)?.id);
   expect(signatures.every(Boolean)).toBe(true);
   expect(new Set(signatures).size).toBe(PETS.length);
-  for (const signature of PETS.map((p) => skillForPet(p.id))) {
+  for (const pet of PETS) {
+    const signature = skillForPet(pet.id);
     expect(signature.source).toBe("pet");
     expect(signature.charges).toBeGreaterThan(0);
+    for (const detail of [pet.appearance, pet.manner, pet.reveal]) {
+      expect(detail).toBeTruthy();
+      expect(detail.length).toBeGreaterThan(70);
+    }
   }
 
   const weights = PETS.map((p) => p.dropWeight);

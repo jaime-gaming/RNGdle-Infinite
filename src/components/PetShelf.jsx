@@ -256,6 +256,24 @@ export default function PetShelf({
                         </span>
                       </div>
                       <p className="pet-description">{pet.description}</p>
+                      <div
+                        className="pet-field-notes"
+                        aria-label={`${pet.name} field notes`}
+                      >
+                        <span className="pet-field-title">Field notes</span>
+                        <p>
+                          <strong>Appearance</strong>
+                          {pet.appearance}
+                        </p>
+                        <p>
+                          <strong>Temperament</strong>
+                          {pet.manner}
+                        </p>
+                        <p>
+                          <strong>On a reveal</strong>
+                          {pet.reveal}
+                        </p>
+                      </div>
                       {pet.id === "axolotl" && prismAxolotl && (
                         <p className="pet-skill">
                           Prism variant unlocked by the Battle Pass.

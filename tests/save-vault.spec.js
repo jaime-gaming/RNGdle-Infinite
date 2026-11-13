@@ -37,6 +37,8 @@ import {
   PROGRESS_KEY,
 } from "../src/progress.js";
 import { readSavedRaw, readSavedProgress } from "./helpers/save.js";
+import { gzipSync, strToU8 } from "fflate";
+import { LEGACY_SAVE_VAULT_TAG } from "../src/save-codec.js";
 
 function fakeStorage(initial = {}) {
   const map = new Map(Object.entries(initial));
@@ -64,6 +66,26 @@ test("the backup copy is compressed, exact and about twenty times smaller", () =
   expect(isReadableSave("<html>")).toBe(false);
   expect(isReadableSave("[]")).toBe(false);
   expect(isReadableSave(raw)).toBe(true);
+});
+
+test("legacy vault payloads remain readable while new writes use compact keys", () => {
+  const legacyRaw = save(1234);
+  const legacyBytes = gzipSync(strToU8(legacyRaw));
+  const legacyBinary = Array.from(legacyBytes, (byte) =>
+    String.fromCharCode(byte),
+  ).join("");
+  const legacyPacked = `${LEGACY_SAVE_VAULT_TAG}${btoa(legacyBinary)}`;
+  expect(unpackVaultSave(legacyPacked)).toBe(legacyRaw);
+
+  const detailed = JSON.stringify({
+    ...emptyProgress(),
+    history: [
+      { id: "roll-1", type: "roll", number: 42, tier: "common", ep: 5, at: 1 },
+    ],
+  });
+  const packed = packVaultSave(detailed);
+  expect(unpackVaultSave(packed)).toBe(detailed);
+  expect(packed.startsWith(SAVE_VAULT_TAG)).toBe(true);
 });
 
 test("vault decompression refuses a gzip bomb beyond the save-size ceiling", () => {
@@ -442,7 +464,7 @@ test("playing the game keeps a compressed backup in this browser", async ({
     const envelope = JSON.parse(localStorage.getItem(key));
     return {
       packed: typeof envelope.raw === "string",
-      compressed: envelope.raw.startsWith("rngvault1:"),
+      compressed: envelope.raw.startsWith("rngvault2:"),
       bigger: envelope.raw.length,
     };
   }, SAVE_VAULT_KEY);

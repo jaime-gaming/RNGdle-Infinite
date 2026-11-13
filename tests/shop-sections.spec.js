@@ -329,6 +329,11 @@ test("equipping a companion uncages it with an animation", async ({ page }) => {
   await page.goto("/shop/companions");
   await waitForApp(page);
   const slide = page.locator("#shop-companions [data-pet='pebble']");
+  const fieldNotes = slide.locator(".pet-field-notes");
+  await expect(fieldNotes).toBeVisible();
+  await expect(fieldNotes).toContainText("Appearance");
+  await expect(fieldNotes).toContainText("Temperament");
+  await expect(fieldNotes).toContainText("On a reveal");
   await slide.getByRole("button", { name: "Equip", exact: true }).click();
 
   const uncaging = page.locator("#shop-companions .pet-slide.is-uncaging");
@@ -662,6 +667,32 @@ test("owned retired cosmetics remain in the Legacy collection and can still be e
   await expect(
     page.locator('[data-product="hollow-lantern"] button:not(.shop-look-eye)'),
   ).toContainText("Equipped");
+});
+
+test("the First Light exclusive is listed in Special & Limiteds under its pass group", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    ...funded,
+    owned: ["pass-firstlight"],
+    equipped: "pass-firstlight",
+  });
+  await page.goto("/shop/auras");
+  await waitForApp(page);
+  await page.locator('.aura-family-banner[data-family="special"]').click();
+  await expect(page).toHaveURL(/\/shop\/auras\/special$/);
+  const passGroup = page.locator(
+    '.aura-family-banner[data-family="battle-pass"]',
+  );
+  await expect(passGroup).toBeVisible();
+  await passGroup.click();
+  await expect(page).toHaveURL(/\/shop\/auras\/battle-pass$/);
+  const skin = page.locator('[data-product="pass-firstlight"]');
+  await expect(skin).toBeVisible();
+  await expect(skin).toContainText("First Light Crown");
+  await expect(skin).toContainText(
+    "Special & Limited · Permanently owned · Not for sale",
+  );
 });
 
 test("nothing on a shelf waits behind a purchase you have not made", async ({

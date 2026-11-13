@@ -4,13 +4,13 @@ export const CHANGELOG = [
     date: "2026-11-11",
     title: "battle pass, new discoveries and a clearer shop",
     body: [
-      "the Battle Pass arrives: 28-day seasons themed by the month they open in, 30 vertical levels and optional EP premium.",
-      "daily, weekly and season missions move to Tasks; levels 5, 15 and 25 grant boosts, and matching charges extend a running boost.",
+      "the Battle Pass brings month-themed 28-day seasons, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
+      "tasks add daily, weekly and season missions; matching charges extend a running boost.",
       "new originals: Perfect Number (mythic), Narcissistic (anomaly), Triangular (uncommon) and Kaprekar (rare).",
       "also new: Automorphic (epic), Factorion (mythic) and Emirp (uncommon); every one wears its own icon.",
-      "three new companions: Moss Beetle, Clockwork Crab and Comet Axolotl, each with a signature skill and animated orbit.",
-      "the premium track adds a permanent Prism Axolotl look; wallet-skill bonuses now add together instead of multiplying.",
-      "shop shelves gain filters, and the Rebirth ladder prints the exact badge count beside each percentage.",
+      "companions bring signature skills, field notes and distinct reveal behaviour: Moss Beetle, Clockwork Crab and Comet Axolotl.",
+      "the premium track grants First Light Crown, a sunrise skin in Special & Limiteds; Prism Axolotl remains from the earlier pass.",
+      "compact keys shrink saves, old vaults still open; Cloud copies shrink, wallet bonuses add, shop adds filters and Rebirth lists badge counts.",
     ],
     badges: [
       "INFINITE_PERFECT_NUMBER",

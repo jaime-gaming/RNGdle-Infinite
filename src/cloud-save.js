@@ -180,8 +180,8 @@ export function cacheLocalSaveForUser(userId, raw, storage) {
     return false;
   try {
     const target = storageRef(storage);
-    if (!target) return false;
-    target.setItem(cloudCacheKey(userId), raw);
+    if (!target || !isReadableSave(raw)) return false;
+    target.setItem(cloudCacheKey(userId), packVaultSave(unpackVaultSave(raw)));
     return true;
   } catch {
     return false;
@@ -197,11 +197,11 @@ export function readCachedSaveForUser(userId, storage) {
     return null;
   try {
     const target = storageRef(storage);
-    return (
+    const cached =
       target?.getItem(cloudCacheKey(userId)) ??
       target?.getItem(legacyCloudCacheKey(userId)) ??
-      null
-    );
+      null;
+    return cached ? unpackVaultSave(cached) : null;
   } catch {
     return null;
   }

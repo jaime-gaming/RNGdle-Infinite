@@ -287,6 +287,6 @@ test("help links use themed buttons and changelog copy stays lowercase", async (
   await expect(
     page.locator(".changelog-entry").first().locator("p").first(),
   ).toHaveText(
-    "the Battle Pass arrives: 28-day seasons themed by the month they open in, 30 vertical levels and optional EP premium.",
+    "the Battle Pass brings month-themed 28-day seasons, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
   );
 });

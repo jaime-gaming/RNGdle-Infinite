@@ -15,6 +15,8 @@ import {
   BATTLE_PASS_LEVELS,
   BATTLE_PASS_PREMIUM_PRICE,
   BATTLE_PASS_REWARDS,
+  BATTLE_PASS_COSMETICS,
+  PASS_BOOST_GRANTS,
   BATTLE_PASS_SEASON_MS,
   BATTLE_PASS_VARIANT,
   BPEP_PER_LEVEL,
@@ -751,7 +753,23 @@ test("every boost level keeps its EP and the premium track doubles the charge", 
   const levels = BATTLE_PASS_REWARDS.filter((r) => r.free.boost).map(
     (r) => r.level,
   );
-  expect(levels).toEqual([5, 15, 25]);
+  expect(levels).toEqual([5, 8, 15, 18, 25, 28]);
+  expect(PASS_BOOST_GRANTS.free.map(({ id }) => id)).toEqual([
+    "boost-spark",
+    "boost-spark",
+    "boost-surge",
+    "boost-surge",
+    "boost-overdrive",
+    "boost-overdrive",
+  ]);
+  expect(BATTLE_PASS_REWARDS[29].premium.id).toBe("pass-firstlight");
+  expect(
+    BATTLE_PASS_COSMETICS.find((item) => item.id === "pass-firstlight"),
+  ).toMatchObject({
+    family: "battle-pass",
+    eventOnly: true,
+    passReward: true,
+  });
 });
 
 test("a running boost can be extended with a matching charge without stacking it", async ({

@@ -94,7 +94,19 @@ export const BATTLE_PASS_COSMETICS = [
     swatch: ["#f0abfc", "#6366f1"],
     icon: "prism",
     description:
-      "The premium-track season aura: split colour through a precise circuit. Cosmetic only.",
+      "A permanent premium-track look from an earlier season: split colour through a precise circuit. Cosmetic only.",
+  },
+  {
+    id: "pass-firstlight",
+    kind: "aura",
+    name: "First Light Crown",
+    family: "battle-pass",
+    eventOnly: true,
+    passReward: true,
+    swatch: ["#fde68a", "#38bdf8"],
+    icon: "solstice",
+    description:
+      "A sunrise halo draws a bright gold arc over a cool blue horizon, with tiny dawn sparks orbiting the frame. Exclusive to the First Light Battle Pass; cosmetic only.",
   },
 ];
 
@@ -156,13 +168,19 @@ export function passBoostById(id) {
 export const PASS_BOOST_GRANTS = {
   free: [
     { level: 5, id: "boost-spark", charges: 1 },
+    { level: 8, id: "boost-spark", charges: 1 },
     { level: 15, id: "boost-surge", charges: 1 },
+    { level: 18, id: "boost-surge", charges: 1 },
     { level: 25, id: "boost-overdrive", charges: 1 },
+    { level: 28, id: "boost-overdrive", charges: 1 },
   ],
   premium: [
     { level: 5, id: "boost-spark", charges: 2 },
+    { level: 8, id: "boost-spark", charges: 2 },
     { level: 15, id: "boost-surge", charges: 2 },
+    { level: 18, id: "boost-surge", charges: 2 },
     { level: 25, id: "boost-overdrive", charges: 2 },
+    { level: 28, id: "boost-overdrive", charges: 2 },
   ],
 };
 
@@ -207,8 +225,8 @@ export const BATTLE_PASS_REWARDS = Array.from(
       level === 30
         ? {
             kind: "aura",
-            id: "pass-prism",
-            name: "Prism Circuit",
+            id: "pass-firstlight",
+            name: "First Light Crown",
             repeatEP: 250000,
           }
         : level === 20

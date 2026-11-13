@@ -8,6 +8,12 @@ export const PETS = [
     dropWeight: 40,
     description:
       "A small loyal rock. Does very little, extremely reliably. Adds 5% to the EP that reaches your wallet.",
+    appearance:
+      "A smooth river-stone body, flecked with silver mica and a tiny amber core.",
+    manner:
+      "It leans into a slow, patient wobble, then settles with a little dust-ring shadow.",
+    reveal:
+      "On reveal, its core lights in step with each digit before a warm pulse marks the final score.",
   },
   {
     id: "moth",
@@ -18,6 +24,12 @@ export const PETS = [
     dropWeight: 30,
     description:
       "Drawn to bright numbers. Flutters around the reveal and adds 9% to banked EP.",
+    appearance:
+      "Velvet-gold wings carry four moon-eye markings, with pale antennae tipped in light.",
+    manner:
+      "It folds and opens its wings in a lazy figure eight, leaving a brief pollen shimmer.",
+    reveal:
+      "As the number appears, wing scales drift toward matching digits and flare once at the end.",
   },
   {
     id: "moss",
@@ -28,6 +40,12 @@ export const PETS = [
     dropWeight: 26,
     description:
       "Carries a tiny garden on its back and never hurries a number. Adds 11% to banked EP.",
+    appearance:
+      "A round beetle shell is layered with moss, clover leaves and one bright dew bead.",
+    manner:
+      "Its six tiny legs make a steady marching rhythm while the leaf tuft sways behind it.",
+    reveal:
+      "Each revealed badge adds a pinprick of green; the dew bead blooms into a small halo.",
   },
   {
     id: "kit",
@@ -38,6 +56,12 @@ export const PETS = [
     dropWeight: 22,
     description:
       "A fox with a permanent case of bed-hair. Adds 13% to banked EP.",
+    appearance:
+      "A russet fox kit wears dark ear tips, a cream muzzle and a zigzag static tuft.",
+    manner:
+      "Its tail curls like a question mark and occasionally crackles with harmless sparks.",
+    reveal:
+      "During a reveal, the sparks hop along the digits; the tail snaps into a bright lightning curl.",
   },
   {
     id: "snail",
@@ -48,6 +72,12 @@ export const PETS = [
     dropWeight: 16,
     description:
       "Crosses the whole screen during a single cooldown. Adds 17% to banked EP.",
+    appearance:
+      "A lavender shell holds a crescent window, pearl ridges and a cool silver foot.",
+    manner:
+      "It glides slowly, leaving a fading lunar-blue trail rather than a wet smear.",
+    reveal:
+      "The shell turns toward the number; a small moonbeam sweeps across the score as it settles.",
   },
   {
     id: "jelly",
@@ -58,6 +88,12 @@ export const PETS = [
     dropWeight: 12,
     description:
       "Drifts through the cooldown without a care. Adds 21% to banked EP.",
+    appearance:
+      "A translucent turquoise bell frames a softly glowing core and four long ribbon arms.",
+    manner:
+      "It floats with a gentle squash-and-stretch pulse, trailing bubbles that fade before the next roll.",
+    reveal:
+      "Its ribbons curl around the revealed number, then release a ring of bubbles on completion.",
   },
   {
     id: "bee",
@@ -68,6 +104,12 @@ export const PETS = [
     dropWeight: 9,
     description:
       "Counts every digit on the way past, three times. Adds 26% to banked EP.",
+    appearance:
+      "Amber-and-ink stripes, clear veined wings and a tiny brass pollen satchel mark this bee.",
+    manner:
+      "Its wings blur into a warm golden disc while it hovers in short, precise corrections.",
+    reveal:
+      "The satchel glows as digits land; a dotted honey-gold line traces the final number.",
   },
   {
     id: "corvid",
@@ -78,6 +120,12 @@ export const PETS = [
     dropWeight: 7,
     description:
       "Keeps meticulous notes on every number you roll. Adds 31% to banked EP.",
+    appearance:
+      "Glossy blue-black feathers, an indigo throat sheen and a silver tally tag give it a sharp profile.",
+    manner:
+      "It tilts its head as if counting, then taps the tag once with its beak.",
+    reveal:
+      "Each digit writes a tiny glint on the tag; the finished score gets a brief ink-blue flourish.",
   },
   {
     id: "owl",
@@ -88,6 +136,12 @@ export const PETS = [
     dropWeight: 5,
     description:
       "Has read the entire badge catalogue twice. Adds 37% to banked EP.",
+    appearance:
+      "A broad russet face disk sits beneath cream brows, with star-speckled wing edges.",
+    manner:
+      "It blinks one eye at a time and turns its head in a smooth, silent arc.",
+    reveal:
+      "Its pupils follow the digits; a ring of tiny archive-like marks closes around the score.",
   },
   {
     id: "turtle",
@@ -98,6 +152,12 @@ export const PETS = [
     dropWeight: 4,
     description:
       "Slow, unhurried, and never in a rush for a bad number. Adds 43% to banked EP.",
+    appearance:
+      "A jade shell is divided into polished plates, each edged with mint and gold.",
+    manner:
+      "It takes two deliberate steps, pauses, and lets its head peek from the shell.",
+    reveal:
+      "The shell plates light in sequence during the reveal, ending in a calm green shimmer.",
   },
   {
     id: "crab",
@@ -108,6 +168,12 @@ export const PETS = [
     dropWeight: 4,
     description:
       "Winds itself between rolls and keeps the rack moving. Adds 46% to banked EP.",
+    appearance:
+      "Copper claws, clock-face joints and a small winding key sit over a deep orange shell.",
+    manner:
+      "Its legs tick in pairs; the key gives a quarter-turn whenever the rack is ready.",
+    reveal:
+      "Its claws mark the number’s corners while bright gear-teeth spin once at settlement.",
   },
   {
     id: "griffin",
@@ -118,6 +184,12 @@ export const PETS = [
     dropWeight: 3,
     description:
       "Circles the reveal three times before it settles. Adds 50% to banked EP.",
+    appearance:
+      "A slate-blue eagle brow, pale hooked beak and storm-feathered lion shoulders define its silhouette.",
+    manner:
+      "It circles in a compact glide, with two wind-swept feathers always lagging behind.",
+    reveal:
+      "A quiet gust carries each digit into place; a blue-white wing arc closes over the result.",
   },
   {
     id: "unicorn",
@@ -128,6 +200,12 @@ export const PETS = [
     dropWeight: 2,
     description:
       "Rare, radiant and slightly smug about it. Adds 60% to banked EP.",
+    appearance:
+      "A rose-and-pearl coat is traced with fine constellations; the horn has a glassy star tip.",
+    manner:
+      "It steps lightly, mane strands floating upward as if gravity were only a suggestion.",
+    reveal:
+      "The horn draws a thin star path around the number, ending in a soft pink-gold glint.",
   },
   {
     id: "serpent",
@@ -138,6 +216,12 @@ export const PETS = [
     dropWeight: 1,
     description:
       "Swallows whole cooldowns and looks for more. Adds 70% to banked EP.",
+    appearance:
+      "An obsidian body carries violet scale seams, a pale throat and a ringed, comet-like tail.",
+    manner:
+      "It coils and uncoils without touching the ground, its eyes lit like distant stars.",
+    reveal:
+      "A dark-violet ribbon loops around the reveal and opens into a halo when the score lands.",
   },
   {
     id: "axolotl",
@@ -148,6 +232,12 @@ export const PETS = [
     dropWeight: 1,
     description:
       "Swims through the reveal with a tail of cold light. Adds 75% to banked EP.",
+    appearance:
+      "A cool cyan body, feathery coral gills and bright fin-frills give it a comet-fish silhouette.",
+    manner:
+      "It swims through the air with a slow tail beat and a trail of tiny ice-blue motes.",
+    reveal:
+      "Its gills fan with each digit; the tail paints a luminous streak beneath the final score.",
   },
   {
     id: "dragonet",
@@ -158,6 +248,12 @@ export const PETS = [
     dropWeight: 1,
     description:
       "Small, smug and faintly on fire. The largest companion bonus: 80%.",
+    appearance:
+      "A small ember-red dragon has soot-dark horns, brass belly plates and a bright coal at its chest.",
+    manner:
+      "It puffs one harmless ember, then curls its wings around itself to rest.",
+    reveal:
+      "Its chest coal brightens with the reveal; a ribbon of gold flame outlines the score and vanishes.",
   },
 ];
 

@@ -2,6 +2,8 @@ import { expect, test } from "./helpers/clock.js";
 import { waitForApp } from "./helpers/app.js";
 import {
   accountSwitchSnapshot,
+  cacheLocalSaveForUser,
+  readCachedSaveForUser,
   chooseSaveWinner,
   clearCloudDirty,
   cloudAccountOwnsLocalSave,
@@ -29,6 +31,7 @@ import {
   clearCloudSyncMark,
 } from "../src/cloud-save.js";
 import { UNKNOWN_CLOUD_OWNER } from "../src/save-owner.js";
+import { SAVE_VAULT_TAG, unpackVaultSave } from "../src/save-codec.js";
 import { applyProgress, emptyProgress } from "../src/progress.js";
 
 function memoryStorage() {
@@ -51,6 +54,26 @@ function memoryStorage() {
     },
   };
 }
+
+test("per-account device recovery caches use compact encoding and still open", () => {
+  const storage = memoryStorage();
+  const save = {
+    ...emptyProgress(),
+    profile: { id: "cached-profile", username: "CachedPlayer", createdAt: 1 },
+    balance: 42,
+  };
+  expect(
+    cacheLocalSaveForUser("cached-user", JSON.stringify(save), storage),
+  ).toBe(true);
+  expect(
+    storage
+      .getItem("rng-infinite-cloud-cache-v1:uid:cached-user")
+      .startsWith(SAVE_VAULT_TAG),
+  ).toBe(true);
+  expect(
+    JSON.parse(unpackVaultSave(readCachedSaveForUser("cached-user", storage))),
+  ).toEqual(save);
+});
 
 test("Cloud write cooldown waits two seconds from the trusted timestamp", () => {
   expect(
@@ -714,7 +737,7 @@ test("Firestore payloads use the vault compression and round-trip the whole save
   };
   const packed = encodeCloudSave(save);
 
-  expect(packed.startsWith("rngvault1:")).toBe(true);
+  expect(packed.startsWith("rngvault2:")).toBe(true);
   expect(decodeCloudSave(packed)).toEqual(save);
 });
 

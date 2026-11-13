@@ -538,6 +538,14 @@ export function parseAndRepairProgress(raw) {
       }
     }
   }
+  if (
+    battlePass.claimed.includes(rewardKey("premium", 30)) &&
+    !owned.includes("pass-firstlight") &&
+    !owned.includes("pass-prism")
+  ) {
+    owned.push("pass-prism");
+    note("an earlier premium pass aura was restored from its receipt.");
+  }
 
   let petsInput = p.pets;
   if (p.pets != null && !Array.isArray(p.pets)) {
