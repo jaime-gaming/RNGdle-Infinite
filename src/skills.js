@@ -39,7 +39,7 @@ export const SKILLS = [
     charges: 5,
     price: 180000,
     description:
-      "The next roll banks double EP. The number, its badges and its scored EP are untouched.",
+      "The next roll adds 100% to its banked EP. The number, its badges and its scored EP are untouched.",
   },
   {
     id: "trail",
@@ -132,7 +132,7 @@ export const SKILLS = [
     charges: 7,
     price: 9000000,
     description:
-      "The next roll banks triple EP. The number, its badges and its scored EP are untouched.",
+      "The next roll adds 200% to its banked EP. The number, its badges and its scored EP are untouched.",
   },
   {
     id: "triptych",
@@ -171,7 +171,7 @@ export const SKILLS = [
     kind: "wallet",
     value: 1.5,
     charges: 4,
-    description: "The next roll banks 50% more EP.",
+    description: "The next roll adds 50% to its banked EP.",
   },
   {
     id: "kit-spark",
@@ -220,7 +220,7 @@ export const SKILLS = [
     kind: "wallet",
     value: 1.75,
     charges: 5,
-    description: "The next roll banks 75% more EP.",
+    description: "The next roll adds 75% to its banked EP.",
   },
   {
     id: "corvid-ledger",
@@ -286,7 +286,7 @@ export const SKILLS = [
     kind: "wallet",
     value: 2.5,
     charges: 7,
-    description: "The next roll banks two and a half times the EP.",
+    description: "The next roll adds 150% to its banked EP.",
   },
   {
     id: "serpent-maw",
@@ -367,7 +367,7 @@ export const SKILLS = [
     kind: "wallet",
     value: 1.5,
     charges: 5,
-    description: "The next roll banks 50% more EP.",
+    description: "The next roll adds 50% to its banked EP.",
   },
   {
     id: "reborn-tempo",
@@ -534,10 +534,13 @@ export function skillPetLuck(ids = []) {
 }
 
 export function skillWalletMultiplier(ids = []) {
-  return ids.reduce((multiplier, id) => {
-    const skill = skillById.get(id);
-    return skill?.kind === "wallet" ? multiplier * skill.value : multiplier;
-  }, 1);
+  return (
+    1 +
+    ids.reduce((bonus, id) => {
+      const skill = skillById.get(id);
+      return skill?.kind === "wallet" ? bonus + skill.value - 1 : bonus;
+    }, 0)
+  );
 }
 
 export function skillChargeFactor(ids = []) {
@@ -667,7 +670,7 @@ export function skillCombinationWarnings(ids = []) {
 export function skillEffectSummary(skill) {
   switch (skill.kind) {
     case "wallet":
-      return `Next roll banks ×${skill.value} EP (wallet only)`;
+      return `Next roll adds +${Math.round((skill.value - 1) * 100)}% banked EP`;
     case "waive":
       return "Next roll has no cooldown";
     case "best-of":
@@ -686,7 +689,10 @@ export function skillEffectSummary(skill) {
 export function skillEffectChips(skill) {
   switch (skill.kind) {
     case "wallet":
-      return [`×${skill.value} banked EP`, "multiplier, wallet only"];
+      return [
+        `+${Math.round((skill.value - 1) * 100)}% banked EP`,
+        "adds to other wallet bonuses",
+      ];
     case "waive":
       return ["no cooldown", "full reveal still plays"];
     case "best-of":

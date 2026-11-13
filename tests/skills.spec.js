@@ -383,7 +383,10 @@ test("draw skills keep their own budgets and never invent EP", () => {
   );
 
   expect(skillWalletMultiplier(["surge"])).toBe(2);
-  expect(skillWalletMultiplier(["surge", "unicorn-wish"])).toBe(5);
+  expect(skillWalletMultiplier(["surge", "unicorn-wish"])).toBe(3.5);
+  expect(
+    skillWalletMultiplier(["surge", "miser", "unicorn-wish", "reborn-drive"]),
+  ).toBe(6);
   expect(skillWalletMultiplier(["turbo", "bounce"])).toBe(1);
   expect(skillPetLuck(["trail"])).toBe(5);
   expect(skillPetLuck([])).toBe(1);

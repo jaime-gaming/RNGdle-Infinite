@@ -393,9 +393,10 @@ export default function BattlePass({
               <Zap size={16} aria-hidden="true" /> Consumable boosts
             </h3>
             <p>
-              Extra rewards from levels 5, 15 and 25. One boost runs at a time
-              and multiplies what your rolls bank, never your task or pass EP.
-              Unused charges carry into the next season and survive every reset.
+              Extra rewards from levels 5, 15 and 25. One boost runs at a time;
+              another charge of the same type extends its window without
+              multiplying the bonus again. It changes banked roll EP only, and
+              unused charges carry into the next season and survive every reset.
             </p>
           </div>
           <span
@@ -434,6 +435,23 @@ export default function BattlePass({
                   <span className="pass-boost-running">
                     <Clock size={13} aria-hidden="true" />
                     Running · {waitText(live.until - now)}
+                    {charges > 0 && (
+                      <button
+                        type="button"
+                        className="pass-boost-extend"
+                        disabled={busy || ended}
+                        aria-label={`Extend ${boost.name} by ${boost.minutes} minutes`}
+                        title={`Use one charge to add ${boost.minutes} minutes. The multiplier stays the same.`}
+                        onClick={() =>
+                          run(
+                            { type: "activate-boost", id: boost.id },
+                            `${boost.name} extended by ${boost.minutes} minutes.`,
+                          )
+                        }
+                      >
+                        Extend · +{boost.minutes} min
+                      </button>
+                    )}
                   </span>
                 ) : (
                   <button

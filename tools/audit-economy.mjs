@@ -3,6 +3,7 @@ import { gunzipSync } from "node:zlib";
 import manifest from "../src/data/game-index.json" with { type: "json" };
 import { originalsByNumber } from "../src/infinite-badges.js";
 import { flywheelRequired } from "../src/flywheel.js";
+import { skillById, skillWalletMultiplier } from "../src/skills.js";
 import {
   shopProducts,
   rollSettings,
@@ -19,6 +20,11 @@ const scores = Uint32Array.from(
 ).sort();
 const percentile = (p) => scores[Math.floor((scores.length - 1) * p)];
 const median = percentile(0.5);
+const strongestWalletStack = ["surge", "miser", "unicorn-wish", "reborn-drive"];
+const formerMultiplicativeStack = strongestWalletStack.reduce(
+  (total, id) => total * skillById.get(id).value,
+  1,
+);
 console.log(
   JSON.stringify(
     {
@@ -43,6 +49,11 @@ console.log(
         priceEP: p.price,
         medianRollEquivalents: Math.ceil(p.price / median),
       })),
+      strongestWalletSkillStack: {
+        skills: strongestWalletStack,
+        additiveMultiplier: skillWalletMultiplier(strongestWalletStack),
+        oldMultiplicativeMultiplier: formerMultiplicativeStack,
+      },
       onlineCadence: [
         { stage: "Base", owned: [] },
         { stage: "First useful pair", owned: ["quickwind-1", "clockwork-1"] },

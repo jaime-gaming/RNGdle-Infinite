@@ -1418,11 +1418,12 @@ function applyEvent(state, action) {
     if (!boost) throw new Error("That boost does not exist.");
     if (boostCharges(pass.boosts, boost.id) < 1)
       throw new Error("You have no charge of that boost.");
-    if (activeBoosts(pass.boosts, at).length)
-      throw new Error("A boost is already running. Let it finish first.");
+    if (activeBoosts(pass.boosts, at).some((active) => active.id !== boost.id))
+      throw new Error("A different boost is already running.");
+    const boosts = activateBoost(pass.boosts, boost.id, at);
     return {
       ...state,
-      battlePass: { ...pass, boosts: activateBoost(pass.boosts, boost.id, at) },
+      battlePass: { ...pass, boosts },
       history: appendHistory(state.history, [
         {
           id: action.eventId ?? `boost:${boost.id}:${at}`,
@@ -1431,7 +1432,7 @@ function applyEvent(state, action) {
           boostId: boost.id,
           name: boost.name,
           minutes: boost.minutes,
-          until: at + boost.minutes * 60 * 1000,
+          until: boosts.active[0].until,
         },
       ]),
     };

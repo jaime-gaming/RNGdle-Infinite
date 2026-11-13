@@ -60,9 +60,7 @@ export default function Changelog({ onSeen, onBadge }) {
           <h2>
             <span className="changelog-version">{entry.version}</span>
             <span className="changelog-dash">—</span>
-            <span className="changelog-title">
-              {entry.title.charAt(0).toUpperCase() + entry.title.slice(1)}
-            </span>
+            <span className="changelog-title">{entry.title}</span>
             {entry.date && (
               <time className="changelog-date" dateTime={entry.date}>
                 {releaseDate(entry.date)}
@@ -70,13 +68,7 @@ export default function Changelog({ onSeen, onBadge }) {
             )}
           </h2>
           {entry.body.map((paragraph, index) => (
-            <p key={index}>
-              {linkBadges(
-                paragraph.charAt(0).toUpperCase() + paragraph.slice(1),
-                entry.badges,
-                onBadge,
-              )}
-            </p>
+            <p key={index}>{linkBadges(paragraph, entry.badges, onBadge)}</p>
           ))}
         </article>
       ))}

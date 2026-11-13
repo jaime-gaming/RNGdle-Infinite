@@ -7,6 +7,7 @@ import {
   skillCombinationWarnings,
   skillEffectChips,
   skillEffectSummary,
+  skillWalletMultiplier,
   skillPetLuck,
   skillSlots,
   skillTakesSlot,
@@ -72,11 +73,13 @@ export function walletParts(progress, armed, at = null) {
       value: surplusMultiplier(surplus),
     });
   for (const id of armed) {
-    if (skillById.get(id)?.kind === "wallet")
+    const skill = skillById.get(id);
+    if (skill?.kind === "wallet")
       parts.push({
         id,
-        label: skillById.get(id).name,
-        value: skillById.get(id).value,
+        label: skill.name,
+        value: skill.value,
+        additiveSkill: true,
       });
   }
   // A running pass boost is temporary, so it only lists while the clock holds.
@@ -199,7 +202,11 @@ export function rackReport(progress = {}, at = null) {
   const armedIds = equipped.filter((skill) => skill.armed).map((s) => s.id);
   const plan = drawPlanFor(armedIds);
   const parts = walletParts(progress, armedIds, at);
-  const walletMultiplier = parts.reduce((total, part) => total * part.value, 1);
+  const walletMultiplier =
+    parts
+      .filter((part) => !part.additiveSkill)
+      .reduce((total, part) => total * part.value, 1) *
+    skillWalletMultiplier(armedIds);
   const petLuck = skillPetLuck(armedIds);
   const chargeFactor = skillChargeFactor(armedIds);
   const ownsFlywheel = (progress.owned ?? []).includes("flywheel");
@@ -253,9 +260,11 @@ export function rackReport(progress = {}, at = null) {
       parts.length > 0
         ? parts
             .map((part) =>
-              part.value >= 2
-                ? `${part.label} ×${Number(part.value.toFixed(2))}`
-                : `${part.label} +${Math.round((part.value - 1) * 100)}%`,
+              part.additiveSkill
+                ? `${part.label} +${Math.round((part.value - 1) * 100)}%`
+                : part.value >= 2
+                  ? `${part.label} ×${Number(part.value.toFixed(2))}`
+                  : `${part.label} +${Math.round((part.value - 1) * 100)}%`,
             )
             .join(" · ")
         : "No wallet bonuses yet",

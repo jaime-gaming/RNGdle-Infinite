@@ -70,7 +70,7 @@ export default function About({ navigate, progress }) {
         "You choose whether to share a public profile. Its logo appears only when you share it.",
         "To restore an earlier save, open Settings → Restore save and check its progress before choosing it.",
         "Local saves belong to this browser and site address. Clearing site data or using a different browser will not carry them over; use a Cloud Account for a copy across devices.",
-        "Your save is stored compressed so a long history fits on this device. If saving still fails, avoid clearing site data: free space and try again, or review recovery copies in Settings.",
+        "Your save is stored compressed so a long history fits on this device. If storage fills up, older recovery snapshots may be trimmed while keeping the newest earlier copy when possible; your activity history stays in the current save. If saving still fails, free space and review recovery copies in Settings.",
       ],
     },
   ];

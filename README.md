@@ -25,7 +25,7 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 
 - **Badges** for patterns, famous numbers, and mathematical curiosities.
 - **Companions** that boost the EP you earn.
-- **Skills and upgrades** that change the pace of a run, never the odds.
+- **Skills and upgrades** that change the pace of a run, never the odds. Wallet-skill bonuses add together instead of multiplying each other; draw skills share a six-draw limit.
 - **Daily and weekly tasks**, a long-term badge collection, and new milestones.
 - **Auras** to change the look of your game, plus a history of your rolls.
 
@@ -36,14 +36,18 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 ## Battle Pass
 
 The Battle Pass runs in 28-day seasons, each one named and themed after the
-month it opens in; the first is **First Light**. Every pass mission — daily,
-weekly and season milestones — lives on the **Tasks** page, and pays **BPEP**,
-which only moves the pass; EP remains your shop wallet. The Pass page shows the
-vertical reward track across 30 levels, plus the consumable boosts that levels
-5, 15 and 25 hand out (one charge a day can also be bought with EP). The optional premium track is bought with EP, never real
-money. Earned rewards are kept; unclaimed earned rewards arrive when the season
-closes. Rebirth never resets the pass, and the cosmetics you claim are yours
-forever.
+month it opens in. The first, **First Light**, starts November 16, 2026 at
+00:00 UTC. Every pass mission — daily, weekly and season milestones — lives on
+the **Tasks** page and pays **BPEP**, which only moves the pass; EP remains your
+shop wallet. The Pass page shows the vertical reward track across 30 levels.
+Levels 5, 15 and 25 grant consumable boosts: **Spark Injector** banks ×1.5 EP
+for 15 minutes, **Surge Capacitor** ×2 for 10 minutes, and **Overdrive Cell**
+×2.5 for 5 minutes. One
+charge per day can also be bought for 250,000 EP. A matching charge extends a
+running window without multiplying the bonus a second time. The optional
+premium track costs EP, never real money. Earned rewards are kept; unclaimed earned rewards
+arrive when the season closes. Rebirth never resets the pass, and the cosmetics
+you claim are yours forever.
 
 ## Black Friday 2026
 
@@ -65,7 +69,7 @@ You choose whether to share a public profile. A profile logo appears only when t
 
 ![Choose a saved copy to restore](media/save-recovery.png)
 
-Local saves are stored with lossless compression, so a longer activity history fits on this device without deleting recovery copies. If saving still fails, keep your site data and free space before trying again.
+Local saves are stored with lossless compression. If device storage fills up, the game can retire older recovery snapshots while keeping the newest earlier copy and your activity history. If saving still fails, keep your site data and free space before trying again.
 
 ## FAQ
 

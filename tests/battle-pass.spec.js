@@ -30,6 +30,7 @@ import {
   boostMultiplier,
   emptyBattlePass,
   parseBattlePass,
+  parseBoosts,
   passPeriodKey,
   passRewardState,
   rewardKey,
@@ -495,6 +496,24 @@ test("a daily pass mission can be swapped once on the Tasks page", async ({
   ).toBeDisabled();
 });
 
+test("boost saves repair multiple live windows without stacking multipliers", () => {
+  const parsed = parseBoosts(
+    {
+      charges: {},
+      active: [
+        { id: "boost-spark", until: at + 60_000 },
+        { id: "boost-surge", until: at + 90_000 },
+      ],
+    },
+    at,
+  );
+  expect(parsed.repaired).toBe(true);
+  expect(parsed.boosts.active).toEqual([
+    { id: "boost-spark", until: at + 60_000 },
+  ]);
+  expect(boostMultiplier(parsed.boosts, at)).toBe(1.5);
+});
+
 test("a pass boost multiplies banked EP only while its window runs", () => {
   const pass = readyPass();
   pass.xp = BPEP_PER_LEVEL * 5;
@@ -535,7 +554,7 @@ test("a pass boost multiplies banked EP only while its window runs", () => {
     minutes: 15,
   });
 
-  // One window at a time, and a second charge is never spent by mistake.
+  // A matching charge extends the same window without stacking its multiplier.
   const twoCharges = {
     ...running,
     battlePass: {
@@ -546,13 +565,35 @@ test("a pass boost multiplies banked EP only while its window runs", () => {
       },
     },
   };
+  const extended = applyProgress(twoCharges, {
+    type: "activate-boost",
+    id: "boost-spark",
+    at: at + 60_000,
+  });
+  expect(extended.battlePass.boosts.charges).toEqual({});
+  expect(extended.battlePass.boosts.active).toEqual([
+    { id: "boost-spark", until: at + 30 * 60_000 },
+  ]);
+  expect(extended.history.at(-1).until).toBe(at + 30 * 60_000);
+  expect(boostMultiplier(extended.battlePass.boosts, at + 60_000)).toBe(1.5);
+
+  const differentCharge = {
+    ...running,
+    battlePass: {
+      ...running.battlePass,
+      boosts: {
+        charges: { "boost-surge": 1 },
+        active: running.battlePass.boosts.active,
+      },
+    },
+  };
   expect(() =>
-    applyProgress(twoCharges, {
+    applyProgress(differentCharge, {
       type: "activate-boost",
-      id: "boost-spark",
+      id: "boost-surge",
       at,
     }),
-  ).toThrow("already running");
+  ).toThrow("different boost is already running");
 
   // The multiplier is real EP: the same roll banks more inside the window than
   // outside it, while cycle gates still count only the number itself.
@@ -711,6 +752,43 @@ test("every boost level keeps its EP and the premium track doubles the charge", 
     (r) => r.level,
   );
   expect(levels).toEqual([5, 15, 25]);
+});
+
+test("a running boost can be extended with a matching charge without stacking it", async ({
+  page,
+}) => {
+  const pass = readyPass();
+  pass.boosts = {
+    charges: { "boost-spark": 1 },
+    active: [{ id: "boost-spark", until: at + 60_000 }],
+    boughtAt: 0,
+  };
+  await seedProgress(page, { battlePass: pass });
+  await pauseClockAt(page, new Date(at));
+  await page.goto("/pass");
+  await waitForApp(page);
+
+  const spark = page.locator('[data-boost="boost-spark"]');
+  const extend = spark.getByRole("button", {
+    name: "Extend Spark Injector by 15 minutes",
+  });
+  await expect(extend).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Activate Surge Capacitor" }),
+  ).toBeDisabled();
+  await extend.click();
+
+  await expect
+    .poll(async () => (await saved(page)).battlePass.boosts.active[0]?.until)
+    .toBe(at + 16 * 60_000);
+  expect((await saved(page)).battlePass.boosts.charges).toEqual({});
+  await expect(page.locator(".pass-boost-mult")).toContainText("×1.5");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });
 
 test("before the first season the pass shows its opening date and sells nothing", async ({

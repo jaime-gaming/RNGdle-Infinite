@@ -624,7 +624,11 @@ export default function SkillBar({
             {report.next.walletParts.map((part) => (
               <span className="rack-panel-row is-part" key={part.id}>
                 <span>{part.label}</span>
-                <span>×{Number(part.value.toFixed(2))}</span>
+                <span>
+                  {part.additiveSkill
+                    ? `+${Math.round((part.value - 1) * 100)}%`
+                    : `×${Number(part.value.toFixed(2))}`}
+                </span>
               </span>
             ))}
             {!report.next.walletParts.length && (

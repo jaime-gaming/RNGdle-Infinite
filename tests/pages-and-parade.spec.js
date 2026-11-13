@@ -285,7 +285,7 @@ test("equipped skills stand alone while pet and rebirth families stack in the sk
   await expect(bar).toBeVisible();
 
   await expect(bar.locator('[data-skill="surge"]')).toContainText(
-    "×2 banked EP · 2/5",
+    "+100% banked EP · 2/5",
   );
   await expect(bar.locator('[data-skill="trail"]')).toHaveCount(0);
   await expect(bar.locator('[data-stack="pet"]')).toBeVisible();

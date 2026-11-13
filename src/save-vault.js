@@ -373,6 +373,33 @@ export function getRecoveryCopies(storage) {
   return copies.sort((left, right) => right.at - left.at);
 }
 
+export function trimSavedCopyHistoryForQuota(storage, keep = 1) {
+  const store = vaultStore(storage);
+  if (!store) return false;
+  const { records, corrupt } = historyEnvelope(store);
+  if (corrupt || records.length <= keep) return false;
+  const retained = recentHistoryRecords(records).slice(0, Math.max(1, keep));
+  return (
+    retained.length < records.length && writeHistoryEnvelope(store, retained)
+  );
+}
+
+export function writeDeviceSaveWithRecovery(storage, key, raw) {
+  try {
+    writeDeviceSave(storage, key, raw);
+    return true;
+  } catch (error) {
+    const quotaError =
+      error?.name === "QuotaExceededError" ||
+      error?.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      error?.code === 22 ||
+      error?.code === 1014;
+    if (!quotaError || !trimSavedCopyHistoryForQuota(storage, 1)) throw error;
+    writeDeviceSave(storage, key, raw);
+    return true;
+  }
+}
+
 export function writeVault(
   raw,
   {

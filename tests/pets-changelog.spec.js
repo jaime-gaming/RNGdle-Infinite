@@ -348,7 +348,7 @@ test("the badge names in the v0.2 note are links that open the badge window", as
 
   const line = links.first().locator("xpath=..");
   await expect(line).toContainText(
-    "New badges: Pendulum (anomaly) and Last Second (mythic).",
+    "new badges: Pendulum (anomaly) and Last Second (mythic).",
   );
   await expect(line.locator(".emoji img")).toHaveCount(2);
   await links.nth(1).click();

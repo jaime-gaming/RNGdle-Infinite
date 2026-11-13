@@ -28,7 +28,7 @@ export default function PetIcon({
   const accent = variant ? "#c084fc" : petById.get(pet)?.accent;
   return (
     <span
-      className={`pet-figure grade-${grade} ${active ? "is-active" : ""} ${className}`}
+      className={`pet-figure pet-species-${pet} grade-${grade} ${active ? "is-active" : ""} ${className}`}
       style={{
         "--pet-size": `${size}px`,
         ...(accent ? { "--pet-accent": accent } : {}),
@@ -37,6 +37,8 @@ export default function PetIcon({
       {...rest}
     >
       <span className="pet-figure-halo" />
+      <span className="pet-figure-orbit" aria-hidden="true" />
+      <span className="pet-figure-spark" aria-hidden="true" />
       <CreatureIcon
         pet={variant ? "axolotl-prism" : pet}
         size={Math.round(size * 0.52)}

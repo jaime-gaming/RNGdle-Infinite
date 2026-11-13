@@ -499,14 +499,20 @@ export function activateBoost(boosts, id, at) {
   const clean = pruneBoosts(boosts, at);
   if (boostCharges(clean, id) < 1)
     throw new Error("You have no charge of that boost.");
-  if (clean.active.length)
-    throw new Error("A boost is already running. Let it finish first.");
+  const running = clean.active[0] ?? null;
+  if (running && running.id !== id)
+    throw new Error("A different boost is already running.");
   const charges = { ...clean.charges };
   if (boostCharges(clean, id) <= 1) delete charges[id];
   else charges[id] = boostCharges(clean, id) - 1;
   return {
     charges,
-    active: [...clean.active, { id, until: at + boost.minutes * 60 * 1000 }],
+    active: [
+      {
+        id,
+        until: (running?.until ?? at) + boost.minutes * 60 * 1000,
+      },
+    ],
   };
 }
 
@@ -551,7 +557,7 @@ export function parseBoosts(value, at = Date.now()) {
         continue;
       }
       // An expired window is normal bookkeeping, not damage.
-      if (active.length >= 2) {
+      if (active.length >= 1) {
         repaired = true;
         continue;
       }

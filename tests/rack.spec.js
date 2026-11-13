@@ -37,8 +37,8 @@ test("every skill states its contribution in a short, numeric chip", () => {
     expect(chip.length).toBeLessThanOrEqual(34);
   }
   expect(skillEffectChips({ kind: "wallet", value: 2 })).toEqual([
-    "×2 banked EP",
-    "multiplier, wallet only",
+    "+100% banked EP",
+    "adds to other wallet bonuses",
   ]);
   expect(skillEffectChips({ kind: "waive" })).toEqual([
     "no cooldown",
