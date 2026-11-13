@@ -550,11 +550,27 @@ export function useProgress({
       };
     }
 
-    cloudGate.current = { userId, ready: false };
-    updateCloud({ status: "loading", ready: false, userId, error: "" });
+    const ownedLocalSaveIsReady =
+      readCloudOwner() === userId &&
+      Boolean(current.current.profile) &&
+      healthy.current;
+    cloudGate.current = { userId, ready: ownedLocalSaveIsReady };
+    updateCloud({
+      status: "loading",
+      ready: ownedLocalSaveIsReady,
+      userId,
+      error: "",
+      notice: ownedLocalSaveIsReady
+        ? "Using this device’s saved progress while Cloud loads."
+        : "",
+    });
 
     async function restoreCloudSave() {
       const localOwner = readCloudOwner();
+      const trustedLocalSave =
+        localOwner === userId &&
+        Boolean(current.current.profile) &&
+        healthy.current;
       const localRaw = readLocalSave();
       let localProgress = current.current;
       let cachedProgress = null;
@@ -597,12 +613,19 @@ export function useProgress({
       });
       localProgress = localSelection.progress;
 
-      const reconciliation = await reconcileCloudSave(userId, localProgress, {
-        allowLocal: true,
-        localOwner: localSelection.owner,
-        storage: localStorage,
-      });
-      if (!currentRequest()) return;
+      let candidate = localProgress;
+      let reconciliation;
+      while (true) {
+        const candidateSnapshot = current.current;
+        reconciliation = await reconcileCloudSave(userId, candidate, {
+          allowLocal: true,
+          localOwner: localSelection.owner,
+          storage: localStorage,
+        });
+        if (!currentRequest()) return;
+        if (!trustedLocalSave || current.current === candidateSnapshot) break;
+        candidate = current.current;
+      }
 
       if (reconciliation.choiceRequired) {
         showCloudConflict(reconciliation, userId, cacheWarning);
@@ -628,7 +651,11 @@ export function useProgress({
         applyQuotaPause(userId, quotaRemaining);
         return;
       }
-      cloudGate.current = { userId, ready: false };
+      const localCopyIsOwned =
+        ownerOnFailure === userId &&
+        Boolean(current.current.profile) &&
+        healthy.current;
+      cloudGate.current = { userId, ready: localCopyIsOwned };
 
       const detail =
         typeof loadError?.code === "string" && loadError.code
@@ -636,11 +663,15 @@ export function useProgress({
           : "";
       updateCloud({
         status: "error",
-        ready: false,
+        ready: localCopyIsOwned,
         userId,
-        error:
-          "Your online progress could not be loaded. Try again before changing anything." +
-          detail,
+        error: localCopyIsOwned
+          ? ""
+          : "Your online progress could not be loaded. Try again before changing anything." +
+            detail,
+        notice: localCopyIsOwned
+          ? "Your device progress is ready to play. Cloud will try again when available."
+          : "",
       });
     });
 

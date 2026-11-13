@@ -355,49 +355,116 @@
   outline-offset: 1px;
 }
 .pass-inspection {
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--pass-accent) 45%, var(--border));
-  border-radius: 12px;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  width: min(420px, calc(100vw - 32px));
+  max-width: none;
+  max-height: min(620px, calc(100dvh - 32px));
+  margin: auto;
+  padding: 34px 28px 30px;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--pass-accent) 48%, var(--border));
+  border-radius: 22px;
   background:
-    linear-gradient(
-      120deg,
-      color-mix(in srgb, var(--pass-accent) 9%, transparent),
-      transparent 70%
+    radial-gradient(
+      circle at 50% 28%,
+      color-mix(in srgb, var(--pass-accent) 16%, transparent),
+      transparent 48%
     ),
     var(--surface);
+  color: var(--text);
+  text-align: center;
+  box-shadow: 0 24px 90px #0008;
 }
-.pass-inspection-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+.pass-inspection::backdrop {
+  background: rgb(4 7 13 / 72%);
+  backdrop-filter: blur(5px);
 }
-.pass-inspection-head .eyebrow {
+.pass-inspection-track {
   color: var(--pass-accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
-.pass-inspection h4 {
-  margin: 3px 0 0;
-  font-size: 15px;
-}
-.pass-inspection p {
-  margin: 0;
-  max-width: 75ch;
-  color: var(--secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
-.pass-inspection-close {
+.pass-inspection-icon {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 112px;
+  height: 112px;
+  margin: 7px 0 2px;
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--reward-swatch-a, var(--pass-accent)) 60%,
+      white 12%
+    );
+  border-radius: 30px;
+  background:
+    radial-gradient(
+      circle at 30% 20%,
+      color-mix(
+        in srgb,
+        var(--reward-swatch-b, var(--pass-accent)) 50%,
+        transparent
+      ),
+      transparent 67%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--reward-swatch-a, var(--pass-accent)) 25%,
+        var(--surface)
+      ),
+      var(--surface)
+    );
+  color: var(--reward-swatch-a, var(--pass-accent));
+  box-shadow: 0 12px 36px
+    color-mix(
+      in srgb,
+      var(--reward-swatch-a, var(--pass-accent)) 22%,
+      transparent
+    );
+}
+.pass-inspection-icon.is-pet-variant {
+  border-radius: 36px;
+  color: var(--reward-swatch-b, var(--pass-accent));
+}
+.pass-inspection h4 {
+  margin: 2px 0 0;
+  font-size: clamp(20px, 5vw, 26px);
+  line-height: 1.2;
+}
+.pass-inspection p {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.pass-inspection-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
+}
+.pass-inspection-close:hover {
+  color: var(--text);
 }
 .pass-inspection-close:focus-visible {
   outline: 2px solid var(--primary);

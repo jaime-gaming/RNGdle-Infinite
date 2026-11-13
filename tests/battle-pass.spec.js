@@ -322,7 +322,13 @@ test("the pass page claims a reward and stays vertical on a phone", async ({
   await page
     .getByRole("button", { name: "Inspect level 1 free reward" })
     .click();
-  await expect(page.locator(".pass-inspection")).toContainText("5,000 EP");
+  const rewardDialog = page.getByRole("dialog", { name: "+5,000 EP" });
+  await expect(rewardDialog).toBeVisible();
+  await expect(rewardDialog.locator(".pass-inspection-icon")).toBeVisible();
+  await expect(rewardDialog.locator(".pass-inspection-track")).toHaveText(
+    "Level 1 · free track",
+  );
+  await expect(rewardDialog).toContainText("5,000 EP is added to your wallet");
   await page.getByRole("button", { name: "Close reward details" }).click();
   await page
     .getByRole("button", { name: "Inspect level 30 premium reward" })

@@ -39,7 +39,7 @@ import {
 import { waitText } from "../tasks.js";
 import { gameNow } from "../game-clock.js";
 import { useFormatEP } from "../use-settings.jsx";
-import { CreatureIcon } from "./game-icons.jsx";
+import { AuraMark, CreatureIcon } from "./game-icons.jsx";
 import "./battle-pass.css";
 
 const count = (value) => value.toLocaleString("en-US");
@@ -103,6 +103,7 @@ export default function BattlePass({
   const [pending, setPending] = useState("");
   const [confirmPremium, setConfirmPremium] = useState(false);
   const [inspectedReward, setInspectedReward] = useState(null);
+  const inspectionDialog = useRef(null);
   const busy = useRef(false);
   const owned = progress.owned ?? [];
   const currentSeason = pass.seasonId === season.id;
@@ -144,6 +145,20 @@ export default function BattlePass({
         }`
       : (inspectedCosmetic?.description ?? "A permanent cosmetic reward.")
     : "";
+  const inspectedSwatch =
+    inspectedDefinition?.kind === "pet-variant"
+      ? BATTLE_PASS_VARIANT.swatch
+      : inspectedCosmetic?.swatch;
+  const inspectedIconStyle = inspectedSwatch
+    ? {
+        "--reward-swatch-a": inspectedSwatch[0],
+        "--reward-swatch-b": inspectedSwatch[1],
+      }
+    : undefined;
+  useEffect(() => {
+    const dialog = inspectionDialog.current;
+    if (inspectedReward && dialog && !dialog.open) dialog.showModal();
+  }, [inspectedReward]);
 
   async function run(action, message) {
     if (busy.current) return;
@@ -422,33 +437,48 @@ export default function BattlePass({
           </ol>
         </div>
         {inspectedLevel && inspectedDefinition && (
-          <section
+          <dialog
+            ref={inspectionDialog}
             className="pass-inspection"
-            aria-live="polite"
             aria-labelledby="pass-inspection-title"
+            aria-describedby="pass-inspection-subtitle"
+            onClose={() => setInspectedReward(null)}
+            onClick={(event) => {
+              if (event.target === event.currentTarget)
+                inspectionDialog.current?.close();
+            }}
           >
-            <div className="pass-inspection-head">
-              <div>
-                <span className="eyebrow">
-                  Level {inspectedLevel.level} · {inspectedReward.track}
-                </span>
-                <h4 id="pass-inspection-title">
-                  {inspectedDefinition.kind === "ep"
-                    ? `+${formatEP(inspectedDefinition.ep)} EP`
-                    : inspectedDefinition.name}
-                </h4>
-              </div>
-              <button
-                type="button"
-                className="pass-inspection-close"
-                aria-label="Close reward details"
-                onClick={() => setInspectedReward(null)}
-              >
-                <X size={16} aria-hidden="true" />
-              </button>
+            <button
+              type="button"
+              className="pass-inspection-close"
+              aria-label="Close reward details"
+              onClick={() => inspectionDialog.current?.close()}
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+            <span className="pass-inspection-track">
+              Level {inspectedLevel.level} · {inspectedReward.track} track
+            </span>
+            <div
+              className={`pass-inspection-icon is-${inspectedDefinition.kind}`}
+              style={inspectedIconStyle}
+              aria-hidden="true"
+            >
+              {inspectedDefinition.kind === "ep" ? (
+                <Coins size={40} />
+              ) : inspectedDefinition.kind === "pet-variant" ? (
+                <CreatureIcon pet="axolotl-prism" size={52} />
+              ) : (
+                <AuraMark size={42} />
+              )}
             </div>
-            <p>{inspectedDescription}</p>
-          </section>
+            <h4 id="pass-inspection-title">
+              {inspectedDefinition.kind === "ep"
+                ? `+${formatEP(inspectedDefinition.ep)} EP`
+                : inspectedDefinition.name}
+            </h4>
+            <p id="pass-inspection-subtitle">{inspectedDescription}</p>
+          </dialog>
         )}
       </section>
 
