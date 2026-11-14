@@ -114,6 +114,31 @@ test("the vault keeps the newest good save and never rewrites it more than once 
   expect(readVault(local).raw).toBe(save(3));
 });
 
+test("vault, cloud recovery and history snapshots require read-back verification", () => {
+  const local = fakeStorage();
+  const silent = {
+    getItem: (key) => local.getItem(key),
+    setItem: (key, value) => {
+      if ([SAVE_VAULT_KEY, SAVE_HISTORY_KEY, CLOUD_RECOVERY_KEY].includes(key))
+        return;
+      local.setItem(key, value);
+    },
+    removeItem: (key) => local.removeItem(key),
+  };
+  expect(writeVault(save(101), { storage: silent, now: 1000 })).toBe(false);
+  expect(writeCloudRecovery(save(202), { storage: silent, now: 1000 })).toBe(
+    false,
+  );
+  expect(
+    archiveSavedCopy(save(303), {
+      storage: silent,
+      now: 1000,
+      source: "manual",
+    }),
+  ).toBe(false);
+  expect(local.map.size).toBe(0);
+});
+
 test("the local archive keeps daily snapshots within a 20-copy, 90-day window", () => {
   const local = fakeStorage();
   const now = Date.now();

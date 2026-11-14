@@ -131,6 +131,34 @@ test("saved progress is versioned, self-repairing, and cannot equip an unowned i
   expect(p.equipped).toBe("none");
 });
 
+test("profile descriptions save on the profile, cap at 200 characters and repair safely", () => {
+  const state = {
+    ...emptyProgress(),
+    profile: { id: "profile-description", username: "Describer", createdAt: 1 },
+  };
+  const described = applyProgress(state, {
+    type: "profile-description",
+    description: `${"A".repeat(199)}🙂more`,
+  });
+  expect(Array.from(described.profile.description)).toHaveLength(200);
+  expect(described.profile.description).toBe(`${"A".repeat(199)}🙂`);
+
+  const repaired = parseAndRepairProgress(
+    JSON.stringify({
+      ...described,
+      profile: { ...described.profile, description: "B".repeat(201) },
+    }),
+  );
+  expect(repaired.progress.profile.description).toBe("B".repeat(200));
+  expect(repaired.repairs.join(" ")).toContain("profile description");
+
+  const oldSave = parseAndRepairProgress(
+    JSON.stringify({ ...state, profile: { ...state.profile } }),
+  );
+  expect(oldSave.progress.profile.description).toBe("");
+  expect(oldSave.repairs).toEqual([]);
+});
+
 test("cloud profile registration retains local progress for first-login import", () => {
   const local = {
     ...emptyProgress(),

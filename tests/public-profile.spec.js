@@ -49,6 +49,7 @@ test("the public document contains only a sanitized profile summary", () => {
     record: {
       name: "luckyotter41",
       at: "2026-10-27T12:00:00.000Z",
+      description: "",
       rolls: 0,
     },
   });
@@ -69,6 +70,7 @@ test("the public document contains only a sanitized profile summary", () => {
       "badgesTotal",
       "best",
       "companion",
+      "description",
       "earned",
       "favoriteTier",
       "name",
@@ -82,6 +84,18 @@ test("the public document contains only a sanitized profile summary", () => {
   );
   expect(data.record).not.toHaveProperty("history");
   expect(data.record).not.toHaveProperty("balance");
+});
+
+test("public profile descriptions are limited to 200 characters", () => {
+  const described = {
+    ...progress,
+    profile: { ...progress.profile, description: `${"dawn, ".repeat(40)}end` },
+  };
+  const data = publicProfileDocument("firebase-user-42", described);
+  expect(data.record.description).toHaveLength(200);
+  expect(sanitizePublicProfileDocument(data, "LuckyOtter41").description).toBe(
+    data.record.description,
+  );
 });
 
 test("a Cloud logo is omitted unless the caller explicitly publishes it", () => {
@@ -126,8 +140,18 @@ test("public profile reads reject mismatched names and sanitize card fields", ()
   ).toBeNull();
 });
 
-test("rules keep the two profile_id scopes apart", () => {
+test("rules keep the two profile_id scopes apart and accept versioned descriptions", () => {
   const rules = fs.readFileSync("firestore.rules", "utf8");
+  const profileRecord = rules.slice(
+    rules.indexOf("function validProfileRecord("),
+    rules.indexOf(
+      "function validPublicProfile(",
+      rules.indexOf("function validProfileRecord("),
+    ),
+  );
+  expect(profileRecord).toContain("record.v in [3, 4]");
+  expect(profileRecord).toContain("record.description.size() <= 200");
+  expect(profileRecord).toContain("record.v == 3");
   const block = (name) => {
     const start = rules.indexOf(`function ${name}(`);
     expect(start).toBeGreaterThan(-1);

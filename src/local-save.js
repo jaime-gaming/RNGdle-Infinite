@@ -9,4 +9,6 @@ export function writeDeviceSave(storage, key, raw) {
     throw new Error("The save could not be encoded safely.");
 
   storage.setItem(key, packed);
+  if (unpackVaultSave(storage.getItem(key)) !== decoded)
+    throw new Error("The saved copy could not be verified.");
 }

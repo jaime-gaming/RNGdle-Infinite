@@ -437,6 +437,16 @@
   border-radius: 36px;
   color: var(--reward-swatch-b, var(--pass-accent));
 }
+.pass-inspection-icon.is-aura {
+  width: auto;
+  height: auto;
+  min-height: 112px;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
 .pass-inspection h4 {
   margin: 2px 0 0;
   font-size: clamp(20px, 5vw, 26px);
@@ -695,12 +705,6 @@
   color: var(--green);
   font-size: 11px;
   font-weight: 650;
-}
-.pass-note {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.7;
 }
 @media (max-width: 760px) {
   .pass-hero {

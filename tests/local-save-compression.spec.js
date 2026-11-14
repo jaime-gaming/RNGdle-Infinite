@@ -200,6 +200,23 @@ test("a failed compressed write and disabled storage leave the previous save unc
   expect(() => parseAndRepairProgress(`${SAVE_VAULT_TAG}corrupt`)).toThrow();
 });
 
+test("a silent primary-save write is rejected and leaves the previous copy intact", () => {
+  const values = new Map([[PROGRESS_KEY, packVaultSave(raw)]]);
+  const store = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem() {},
+    removeItem: (key) => values.delete(key),
+  };
+  expect(() =>
+    writeDeviceSave(
+      store,
+      PROGRESS_KEY,
+      JSON.stringify({ ...state, balance: 1 }),
+    ),
+  ).toThrow("could not be verified");
+  expect(unpackVaultSave(values.get(PROGRESS_KEY))).toBe(raw);
+});
+
 test("vault and update recovery recognize a compressed primary save instead of replacing it", () => {
   const store = limitedStore(5000);
   writeDeviceSave(store, PROGRESS_KEY, raw);

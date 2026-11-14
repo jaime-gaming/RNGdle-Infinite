@@ -59,7 +59,12 @@ import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
 import Tasks from "./components/Tasks";
 import BattlePass from "./components/BattlePass.jsx";
-import { passMissionReadyCount, passReadyCount } from "./battle-pass.js";
+import {
+  BATTLE_PASS_TEMPORARY_THEMES,
+  battlePassSeason,
+  passMissionReadyCount,
+  passReadyCount,
+} from "./battle-pass.js";
 import { infiniteBadges } from "./infinite-badges.js";
 import { taskSummary } from "./tasks.js";
 import { useGameClock } from "./use-game-clock.js";
@@ -199,6 +204,7 @@ function App() {
         "dark",
         "system",
         ...SALE_THEMES.map((entry) => entry.id),
+        ...BATTLE_PASS_TEMPORARY_THEMES.map((entry) => entry.id),
       ].includes(saved)
         ? saved
         : "light";
@@ -227,6 +233,7 @@ function App() {
 
   const [pickingGoal, setPickingGoal] = useState(false);
   const taskNow = useGameClock();
+  const passSeason = battlePassSeason(taskNow);
   const [modal, setModal] = useState(null);
   const [freshStartOpen, setFreshStartOpen] = useState(false);
   const openFreshStart = useCallback(() => setFreshStartOpen(true), []);
@@ -632,18 +639,25 @@ function App() {
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const saleTheme = SALE_THEMES.find((entry) => entry.id === theme) ?? null;
+    const passTheme = BATTLE_PASS_TEMPORARY_THEMES.find(
+      (entry) => entry.id === theme,
+    );
+    const isPassTheme = passSeason.active && Boolean(passTheme);
     const update = () => {
-      const resolved = saleTheme
-        ? "dark"
-        : theme === "system"
-          ? media.matches
-            ? "dark"
-            : "light"
-          : theme;
+      const resolved =
+        saleTheme || passTheme
+          ? "dark"
+          : theme === "system"
+            ? media.matches
+              ? "dark"
+              : "light"
+            : theme;
       document.documentElement.dataset.theme = resolved;
       if (saleTheme && sale.active)
         document.documentElement.dataset.saleTheme = theme;
       else delete document.documentElement.dataset.saleTheme;
+      if (isPassTheme) document.documentElement.dataset.passTheme = theme;
+      else delete document.documentElement.dataset.passTheme;
       setAppliedTheme(resolved);
     };
     update();
@@ -652,7 +666,7 @@ function App() {
     } catch {}
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme, sale.active]);
+  }, [theme, sale.active, passSeason.active]);
 
   useEffect(() => {
     applySaleBranding(sale.active);
@@ -868,7 +882,11 @@ function App() {
           >
             <SlidersHorizontal size={18} />
           </button>
-          <AppearanceMenu theme={theme} onTheme={setTheme} />
+          <AppearanceMenu
+            theme={theme}
+            onTheme={setTheme}
+            passActive={passSeason.active}
+          />
           <button
             className="sign-in"
             aria-label={
@@ -1421,7 +1439,6 @@ function App() {
                 key={`${epoch}:${shopSection}:${shopFamily}`}
                 progress={session}
                 cloudUser={!!auth.user}
-                cloudSaved={cloudSaved}
                 section={shopSection}
                 family={shopFamily}
                 onOpenShelf={openShelf}

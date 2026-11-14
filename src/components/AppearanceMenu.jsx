@@ -6,9 +6,11 @@ import {
   Moon,
   Square,
   Sun,
+  Sunrise,
   Tag,
 } from "lucide-react";
 import { SALE_THEMES } from "../black-friday.js";
+import { BATTLE_PASS_TEMPORARY_THEMES } from "../battle-pass.js";
 import { useSaleStatus } from "../use-black-friday.js";
 import "../appearance.css";
 
@@ -19,16 +21,26 @@ const THEMES = [
 ];
 
 const SALE_THEME_ICONS = { "ultra-black": Square, "red-sale": Tag };
+const ALL_TEMPORARY_THEME_IDS = new Set([
+  ...SALE_THEMES.map((entry) => entry.id),
+  ...BATTLE_PASS_TEMPORARY_THEMES.map((entry) => entry.id),
+]);
 
-export default function AppearanceMenu({ theme, onTheme }) {
+export default function AppearanceMenu({ theme, onTheme, passActive = false }) {
   const [open, setOpen] = useState(false);
   const host = useRef(null);
   const trigger = useRef(null);
   const menu = useRef(null);
   const id = useId();
   const sale = useSaleStatus();
-  const options = [
-    ...THEMES,
+  const temporaryOptions = [
+    ...(passActive
+      ? BATTLE_PASS_TEMPORARY_THEMES.map((entry) => [
+          entry.id,
+          entry.label,
+          Sunrise,
+        ])
+      : []),
     ...(sale.active
       ? SALE_THEMES.map((entry) => [
           entry.id,
@@ -37,10 +49,11 @@ export default function AppearanceMenu({ theme, onTheme }) {
         ])
       : []),
   ];
+  const options = [...THEMES, ...temporaryOptions];
 
   const effective = options.some(([value]) => value === theme)
     ? theme
-    : SALE_THEMES.some((entry) => entry.id === theme)
+    : ALL_TEMPORARY_THEME_IDS.has(theme)
       ? "dark"
       : theme;
   const [, label, Icon] =
@@ -103,6 +116,9 @@ export default function AppearanceMenu({ theme, onTheme }) {
         data-sale-theme-option={
           SALE_THEMES.some((entry) => entry.id === theme) || undefined
         }
+        data-temporary-theme-option={
+          ALL_TEMPORARY_THEME_IDS.has(theme) || undefined
+        }
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
           if (["ArrowDown", "ArrowUp"].includes(event.key)) {
@@ -127,27 +143,47 @@ export default function AppearanceMenu({ theme, onTheme }) {
           }}
         >
           <p className="appearance-heading">Color theme</p>
-          {options.map(([value, name, ThemeIcon]) => (
-            <React.Fragment key={value}>
-              {value === SALE_THEMES[0]?.id && (
-                <p className="appearance-temporary">TEMPORAL</p>
-              )}
-              <button
-                type="button"
-                role="menuitemradio"
-                aria-checked={effective === value}
-                className="appearance-option"
-                onClick={() => {
-                  onTheme(value);
-                  close(true);
-                }}
-              >
-                <ThemeIcon size={16} aria-hidden="true" />
-                <span>{name} theme</span>
-                {effective === value && <Check size={14} aria-hidden="true" />}
-              </button>
-            </React.Fragment>
+          {THEMES.map(([value, name, ThemeIcon]) => (
+            <button
+              key={value}
+              type="button"
+              role="menuitemradio"
+              aria-checked={effective === value}
+              className="appearance-option"
+              onClick={() => {
+                onTheme(value);
+                close(true);
+              }}
+            >
+              <ThemeIcon size={16} aria-hidden="true" />
+              <span>{name} theme</span>
+              {effective === value && <Check size={14} aria-hidden="true" />}
+            </button>
           ))}
+          {temporaryOptions.length > 0 && (
+            <>
+              <p className="appearance-temporary">TEMPORAL</p>
+              {temporaryOptions.map(([value, name, ThemeIcon]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={effective === value}
+                  className="appearance-option"
+                  onClick={() => {
+                    onTheme(value);
+                    close(true);
+                  }}
+                >
+                  <ThemeIcon size={16} aria-hidden="true" />
+                  <span>{name} theme</span>
+                  {effective === value && (
+                    <Check size={14} aria-hidden="true" />
+                  )}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

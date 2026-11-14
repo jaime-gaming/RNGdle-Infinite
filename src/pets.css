@@ -439,12 +439,6 @@
   color: var(--muted);
   text-align: right;
 }
-.pet-footnote {
-  margin: 14px 0 0;
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--muted);
-}
 @media (max-width: 760px) {
   .pet-slideshow {
     grid-template-columns: minmax(0, 1fr);

@@ -1009,7 +1009,7 @@ export function useProgress({
         message:
           error?.code === "permission-denied" ||
           error?.code === "firestore/permission-denied"
-            ? "Public sharing could not be authorized. Your private save is safe. The service may need its profile rules updated; retry after the update or contact support."
+            ? "Public sharing is blocked by this Firebase project’s Firestore rules. Publish the updated firestore.rules and try again; your private save is safe."
             : error instanceof Error
               ? error.message
               : "Profile privacy could not be changed. Try again.",

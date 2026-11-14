@@ -21,7 +21,7 @@ import {
   seasonNumber,
 } from "../src/battle-pass.js";
 
-const at = Date.UTC(2026, 10, 17, 12);
+const at = Date.UTC(2026, 10, 18, 12);
 const emojiMap = JSON.parse(fs.readFileSync("src/emoji-map.json", "utf8"));
 const originals = infiniteBadges.filter(
   (badge) => !["INFINITE_PENDULUM", "INFINITE_LAST_SECOND"].includes(badge.id),
@@ -121,7 +121,7 @@ test("every season wears the theme of the month it opens in", () => {
 
   const first = battlePassSeason(BATTLE_PASS_FIRST_START);
   expect(first.index).toBe(1);
-  // Season 1 opens on 16 November 2026, so it wears the November theme.
+  // Season 1 opens on 18 November 2026, so it wears the November theme.
   expect(first.month).toBe(11);
   expect(first.name).toBe(MONTH_THEMES[10].name);
   expect(first.accent).toBe(MONTH_THEMES[10].accent);
@@ -150,16 +150,16 @@ test("every season wears the theme of the month it opens in", () => {
     );
   }
 
-  // 28-day seasons and 30-day months drift, so two seasons can share a theme;
-  // the number still tells them apart.
-  // Seasons 7 and 8 both open in May 2027, twelve days apart.
+  // 28-day seasons and calendar months drift, so two seasons can share a
+  // theme; the number still tells them apart. Seasons 8 and 9 both open in
+  // June 2027, four weeks apart.
   const shared = battlePassSeason(
-    BATTLE_PASS_FIRST_START + 6 * BATTLE_PASS_SEASON_MS + 1000,
-  );
-  const sharedNext = battlePassSeason(
     BATTLE_PASS_FIRST_START + 7 * BATTLE_PASS_SEASON_MS + 1000,
   );
-  expect([shared.month, sharedNext.month]).toEqual([5, 5]);
+  const sharedNext = battlePassSeason(
+    BATTLE_PASS_FIRST_START + 8 * BATTLE_PASS_SEASON_MS + 1000,
+  );
+  expect([shared.month, sharedNext.month]).toEqual([6, 6]);
   expect(shared.name).toBe(sharedNext.name);
   expect(seasonLabel(shared.id)).not.toBe(seasonLabel(sharedNext.id));
 
@@ -170,6 +170,42 @@ test("every season wears the theme of the month it opens in", () => {
   expect(passSeasonName(NaN)).toBe(first.name);
   expect(seasonLabel("")).toBe("Unstarted season");
   expect(seasonLabel("nonsense")).toBe("Unstarted season");
+});
+
+test("First Light is a selectable temporary theme only while the pass is active", async ({
+  page,
+}) => {
+  await pauseClockAt(page, new Date(BATTLE_PASS_FIRST_START - 1));
+  await page.goto("/");
+  await waitForApp(page);
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await expect(
+    page.getByRole("menuitemradio", { name: "First Light theme", exact: true }),
+  ).toHaveCount(0);
+
+  await pauseClockAt(page, new Date(BATTLE_PASS_FIRST_START));
+  await page.clock.runFor(30_000);
+  const firstLight = page.getByRole("menuitemradio", {
+    name: "First Light theme",
+    exact: true,
+  });
+  await expect(firstLight).toBeVisible();
+  await expect(page.locator(".appearance-temporary")).toHaveText("TEMPORAL");
+  await firstLight.click();
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-pass-theme",
+    "first-light-pass",
+  );
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await pauseClockAt(page, new Date(BATTLE_PASS_FIRST_START - 1));
+  await page.reload();
+  await waitForApp(page);
+  await expect(page.locator("html")).not.toHaveAttribute("data-pass-theme");
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await expect(
+    page.getByRole("menuitemradio", { name: "First Light theme", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("the pass page shows its season name, milestones and past seasons", async ({

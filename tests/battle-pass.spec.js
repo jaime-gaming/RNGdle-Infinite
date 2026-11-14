@@ -42,7 +42,7 @@ import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { PETS, petDrop, PET_DROP_CHANCE } from "../src/pets.js";
 import { auraProducts, shopProducts } from "../src/shop-data.js";
 
-const at = Date.UTC(2026, 10, 17, 12);
+const at = Date.UTC(2026, 10, 18, 12);
 const ids = allBadgeMetadata.map((badge) => badge.id);
 const saved = (page) => readSavedProgress(page);
 
@@ -337,6 +337,10 @@ test("the pass page claims a reward and stays vertical on a phone", async ({
     "First Light Crown",
   );
   await expect(page.locator(".pass-inspection")).toContainText("sunrise halo");
+  await expect(page.locator(".pass-inspection .number-box")).toHaveAttribute(
+    "data-cosmetic",
+    "pass-firstlight",
+  );
   await page.getByRole("button", { name: "Close reward details" }).click();
 
   await page.getByRole("button", { name: "Claim free level 1 reward" }).click();
@@ -853,6 +857,6 @@ test("before the first season the pass shows its opening date and sells nothing"
   await expect(
     page.getByRole("heading", { name: "The pass opens soon" }),
   ).toBeVisible();
-  await expect(page.locator(".pass-hero")).toContainText("Nov 16, 2026");
+  await expect(page.locator(".pass-hero")).toContainText("Nov 18, 2026");
   await expect(page.getByRole("button", { name: /Unlock ·/ })).toBeDisabled();
 });

@@ -14,6 +14,7 @@ import {
   Gem,
   Gift,
   Layers,
+  ListChecks,
   Medal,
   PawPrint,
   Sparkles,
@@ -37,8 +38,6 @@ import {
 import {
   CADENCE_NAME,
   LIST_BONUS,
-  SKIP_WINDOW_LIMIT,
-  SKIP_WINDOW_MS,
   TASK_CADENCES,
   activeTasks,
   listBonusState,
@@ -285,10 +284,19 @@ export default function Tasks({
           aria-pressed={activeView === "regular"}
           onClick={() => setActiveView("regular")}
         >
-          Tasks{" "}
-          <small>
-            {summary.ready ? `${summary.ready} ready` : "Daily · Weekly"}
-          </small>
+          <ListChecks size={18} aria-hidden="true" />
+          <span className="tasks-view-copy">
+            <strong>Tasks</strong>
+            <small>Daily · Weekly</small>
+          </span>
+          {summary.ready > 0 && (
+            <span
+              className="tasks-view-ready"
+              aria-label={`${summary.ready} ready`}
+            >
+              {summary.ready}
+            </span>
+          )}
         </button>
         <button
           type="button"
@@ -296,12 +304,20 @@ export default function Tasks({
           aria-pressed={activeView === "pass"}
           onClick={() => setActiveView("pass")}
         >
-          Battle Pass{" "}
-          <small>
-            Level {passLevel} / {BATTLE_PASS_LEVELS}
-          </small>
+          <Ticket size={18} aria-hidden="true" />
+          <span className="tasks-view-copy">
+            <strong>Battle Pass</strong>
+            <small>
+              Level {passLevel} of {BATTLE_PASS_LEVELS}
+            </small>
+          </span>
           {passReady > 0 && (
-            <span className="tasks-view-ready">{passReady}</span>
+            <span
+              className="tasks-view-ready"
+              aria-label={`${passReady} ready`}
+            >
+              {passReady}
+            </span>
           )}
         </button>
       </div>
@@ -693,16 +709,6 @@ export default function Tasks({
           )}
         </section>
       )}
-
-      <p className="task-note">
-        A reward is paid into your wallet once, when you claim it. Finishing
-        every task on a list unlocks its list bonus, which you collect with its
-        own button. Unclaimed rewards and bonuses expire when their reset comes.
-        Offline rolls do not count, and task EP never counts towards a rebirth.
-        A Task Skip swaps one open task for another from its pool. You can buy
-        one a day in the Shop, no more than {SKIP_WINDOW_LIMIT} in any{" "}
-        {SKIP_WINDOW_MS / 86400000} days, and hold up to three.
-      </p>
     </>
   );
 }

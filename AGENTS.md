@@ -59,7 +59,7 @@ Moving reveal digits are lighter than landed digits using opacity only, without
 adding backgrounds, borders, underlines or other decorations.
 
 The Battle Pass (`src/battle-pass.js`) runs in 28-day UTC seasons anchored at
-2026-11-16. Each season wears the theme of the UTC month its window opens in,
+2026-11-18. Each season wears the theme of the UTC month its window opens in,
 read from `src/season-config.js` — the one file to edit to rename, restyle or
 recolour a month (`SEASON_THEME_OVERRIDE` forces a single theme). Seasons drift
 through the calendar, so two seasons can share a theme; `seasonId` stays unique,

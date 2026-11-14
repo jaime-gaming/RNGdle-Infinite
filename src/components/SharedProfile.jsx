@@ -47,7 +47,7 @@ export default function SharedProfile({
           )}
         </span>
       </div>
-      <ProfileRecord record={card} shared live={live} />
+      <ProfileRecord record={card} shared />
       <div className="profile-actions">
         <button className="primary-button" onClick={onContinue}>
           Roll a number <ArrowRight size={16} />

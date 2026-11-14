@@ -5,6 +5,7 @@ export const testProfile = {
   id: "test-profile",
   username: "LuckyTester",
   createdAt: 1700000000000,
+  description: "",
 };
 
 export async function seedProgress(page, values = {}) {

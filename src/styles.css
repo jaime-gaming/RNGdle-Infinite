@@ -60,6 +60,31 @@
   background: var(--bg);
   color: var(--text);
 }
+:root[data-pass-theme="first-light-pass"] {
+  --bg: #101923;
+  --surface: #182531;
+  --text: #f1f5ed;
+  --muted: #9eafb4;
+  --secondary: #c4d1d0;
+  --border: #344650;
+  --hover: #233641;
+  --green: #f2c975;
+  --green-bg: #30332e;
+  --danger: #ffaaa0;
+  --danger-border: #ffaaa066;
+  --warning: #ffd27b;
+  --rank-exceptional: #ffdf91;
+  --rank-excellent: #a4e0d4;
+  --rank-above: #76c9c7;
+  --rank-below: #e7a783;
+  --rank-low: #ed918b;
+  --scrim: #000b;
+  --scrim-strong: #0008;
+  --shadow: 0 8px 30px #07131c30;
+  --button: #f1f5ed;
+  background: var(--bg);
+  color: var(--text);
+}
 body {
   margin: 0;
   min-width: 340px;

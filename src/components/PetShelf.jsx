@@ -399,9 +399,6 @@ export default function PetShelf({
       ) : (
         <p className="shop-empty">You have no companions yet.</p>
       )}
-      <p className="pet-footnote">
-        A lucky roll drops a companion you do not own yet, already worn.
-      </p>
     </section>
   );
 }

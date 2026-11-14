@@ -72,9 +72,6 @@ export default function Changelog({ onSeen, onBadge }) {
           ))}
         </article>
       ))}
-      <p className="changelog-note">
-        Rolls stay uniform over 0–1,000,000 and EP scoring never changed.
-      </p>
     </div>
   );
 }

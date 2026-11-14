@@ -280,7 +280,6 @@ function LookRollPreview({ aura, tier }) {
 export default function Shop({
   progress,
   cloudUser = false,
-  cloudSaved = false,
 
   section = "",
 
@@ -2039,15 +2038,6 @@ export default function Shop({
           </div>
         </nav>
       )}
-      <p className="shop-save-note">
-        Every shelf here uses EP. Rebirth resets the run but keeps every aura
-        you own.{" "}
-        {cloudSaved
-          ? "Backed up to your online account."
-          : progress.profile
-            ? `Saved locally as ${progress.profile.username}.`
-            : null}
-      </p>
       <dialog
         className="shop-confirm"
         ref={dialog}

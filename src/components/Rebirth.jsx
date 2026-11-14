@@ -1043,24 +1043,6 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
         </section>
       )}
 
-      {ultras > 0 && (
-        <p className="rebirth-ultra-note">
-          Prestiges: <b>{ultras}</b>
-          {rollbacks > 0
-            ? ` · ${rollbacks} Rollback${rollbacks === 1 ? "" : "s"}`
-            : ""}{" "}
-          · permanent wallet bonus{" "}
-          <b>
-            +
-            {Math.round(
-              ULTRA_BONUS_PER_REBIRTH * 100 * ultras + rollbackPercent,
-            )}
-            % EP
-          </b>{" "}
-          added to every roll you bank.
-        </p>
-      )}
-
       <p className="rebirth-history-note">
         <History size={13} aria-hidden="true" /> A rebirth never erases your
         activity history; only bulk delete does.{" "}

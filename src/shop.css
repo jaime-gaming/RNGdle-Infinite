@@ -927,15 +927,6 @@
 .shop-card.is-owned .upgrade-preview {
   color: var(--green);
 }
-.shop-save-note {
-  max-width: 620px;
-  margin: 30px auto 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 20px;
-  text-align: center;
-}
-
 .aura-preview {
   position: relative;
   isolation: isolate;

@@ -151,12 +151,16 @@ function writeHistoryEnvelope(storage, records, requiredId = null) {
     if (requiredId && !remaining.some((record) => record.id === requiredId))
       return false;
     try {
-      if (!remaining.length) store.removeItem(SAVE_HISTORY_KEY);
-      else
-        store.setItem(
-          SAVE_HISTORY_KEY,
-          JSON.stringify({ version: SAVE_HISTORY_VERSION, copies: remaining }),
-        );
+      if (!remaining.length) {
+        store.removeItem(SAVE_HISTORY_KEY);
+        return store.getItem(SAVE_HISTORY_KEY) === null;
+      }
+      const serialized = JSON.stringify({
+        version: SAVE_HISTORY_VERSION,
+        copies: remaining,
+      });
+      store.setItem(SAVE_HISTORY_KEY, serialized);
+      if (store.getItem(SAVE_HISTORY_KEY) !== serialized) return false;
       return true;
     } catch {
       if (!remaining.length) return false;
@@ -437,7 +441,13 @@ export function writeVault(
         owner: encodeOwnerMetadata(ownerId),
       }),
     );
-    return true;
+    const verified = readVault(store);
+    const expectedOwner = ownerId === undefined ? UNKNOWN_CLOUD_OWNER : ownerId;
+    return (
+      verified?.raw === raw &&
+      verified.ownerId === expectedOwner &&
+      verified.at === now
+    );
   } catch {
     return false;
   }
@@ -483,7 +493,13 @@ export function writeCloudRecovery(
         owner: encodeOwnerMetadata(ownerId),
       }),
     );
-    return true;
+    const verified = readCloudRecovery(store);
+    const expectedOwner = ownerId === undefined ? UNKNOWN_CLOUD_OWNER : ownerId;
+    return (
+      verified?.raw === raw &&
+      verified.ownerId === expectedOwner &&
+      verified.reason === String(reason).slice(0, 500)
+    );
   } catch {
     return false;
   }

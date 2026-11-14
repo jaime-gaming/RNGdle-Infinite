@@ -149,6 +149,7 @@ import {
 } from "./black-friday.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
+export const PROFILE_DESCRIPTION_LIMIT = 200;
 
 export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
 
@@ -619,11 +620,21 @@ export function parseAndRepairProgress(raw) {
     if (createdAt !== stored.createdAt)
       note("profile creation date was unreadable, so it was reset.");
     const avatar = parseAvatar(stored.avatar);
+    const description =
+      typeof stored.description === "string"
+        ? Array.from(stored.description)
+            .slice(0, PROFILE_DESCRIPTION_LIMIT)
+            .join("")
+        : "";
+    if (stored.description !== undefined && description !== stored.description)
+      note(
+        "profile description was unreadable or too long, so it was shortened.",
+      );
     profile = {
       id,
       username,
       createdAt,
-
+      description,
       ...(avatar ? { avatar } : {}),
     };
   }
@@ -1552,6 +1563,17 @@ function applyEvent(state, action) {
     if (state.profile.username === username) return state;
     return { ...state, profile: { ...state.profile, username } };
   }
+  if (action.type === "profile-description") {
+    if (!state.profile) throw new Error("Create a profile first.");
+    const description =
+      typeof action.description === "string"
+        ? Array.from(action.description)
+            .slice(0, PROFILE_DESCRIPTION_LIMIT)
+            .join("")
+        : "";
+    if ((state.profile.description ?? "") === description) return state;
+    return { ...state, profile: { ...state.profile, description } };
+  }
   if (action.type === "avatar") {
     if (!state.profile) throw new Error("Create a local profile first.");
     const avatar = typeof action.avatar === "string" ? action.avatar : "";
@@ -1580,7 +1602,12 @@ function applyEvent(state, action) {
       !validAmount(action.createdAt)
     )
       throw new Error("Invalid profile");
-    const profile = { id: action.id, username, createdAt: action.createdAt };
+    const profile = {
+      id: action.id,
+      username,
+      createdAt: action.createdAt,
+      description: "",
+    };
     if (action.type === "register-cloud" || action.preserveGuest) {
       return { ...state, profile };
     }

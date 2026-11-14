@@ -1,12 +1,15 @@
 import { themeForStart } from "./season-config.js";
 
-export const BATTLE_PASS_FIRST_START = Date.UTC(2026, 10, 16, 0, 0, 0);
+export const BATTLE_PASS_FIRST_START = Date.UTC(2026, 10, 18, 0, 0, 0);
 export const BATTLE_PASS_SEASON_MS = 28 * 24 * 60 * 60 * 1000;
 export const BATTLE_PASS_LEVELS = 30;
 export const BPEP_PER_LEVEL = 500;
 export const BATTLE_PASS_MAX_XP = BATTLE_PASS_LEVELS * BPEP_PER_LEVEL;
 export const BATTLE_PASS_PREMIUM_PRICE = 2_000_000;
 export const BATTLE_PASS_ARCHIVE_LIMIT = 24;
+export const BATTLE_PASS_TEMPORARY_THEMES = [
+  { id: "first-light-pass", label: "First Light" },
+];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PREVIEW_AT = Number(import.meta.env?.VITE_BATTLE_PASS_PREVIEW_AT ?? 0);

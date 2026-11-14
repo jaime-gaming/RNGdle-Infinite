@@ -33,7 +33,7 @@ import { productById, shopProducts } from "../src/shop-data.js";
 import { allBadgeMetadata } from "../src/infinite-badges.js";
 import { PETS } from "../src/pets.js";
 
-const at = Date.UTC(2026, 10, 17, 12);
+const at = Date.UTC(2026, 10, 18, 12);
 const ids = allBadgeMetadata.map((badge) => badge.id);
 const auraIds = shopProducts
   .filter((product) => product.kind === "aura")

@@ -39,7 +39,8 @@ import {
 import { waitText } from "../tasks.js";
 import { gameNow } from "../game-clock.js";
 import { useFormatEP } from "../use-settings.jsx";
-import { AuraMark, CreatureIcon } from "./game-icons.jsx";
+import { CreatureIcon } from "./game-icons.jsx";
+import NumberBox from "./NumberBox.jsx";
 import "./battle-pass.css";
 
 const count = (value) => value.toLocaleString("en-US");
@@ -469,7 +470,12 @@ export default function BattlePass({
               ) : inspectedDefinition.kind === "pet-variant" ? (
                 <CreatureIcon pet="axolotl-prism" size={52} />
               ) : (
-                <AuraMark size={42} />
+                <NumberBox
+                  value="777777"
+                  tier="rare"
+                  aura={inspectedDefinition.id}
+                  compact
+                />
               )}
             </div>
             <h4 id="pass-inspection-title">
@@ -641,11 +647,6 @@ export default function BattlePass({
           </ul>
         </section>
       )}
-
-      <p className="pass-note">
-        Online rolls advance pass missions; offline rolls do not. BPEP is not
-        spendable, and earned rewards and boost charges carry through resets.
-      </p>
     </div>
   );
 }
