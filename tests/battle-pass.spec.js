@@ -75,15 +75,30 @@ function readyPass(time = at) {
   return pass;
 }
 
-test("seasons are 28 UTC days and the pass repair keeps valid progress", () => {
+test("the current season is manually scheduled and never advertises a successor", () => {
   expect(battlePassSeason(BATTLE_PASS_FIRST_START).id).toBe("season-1");
   expect(
     battlePassSeason(BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS - 1).id,
   ).toBe("season-1");
-  expect(
-    battlePassSeason(BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS).id,
-  ).toBe("season-2");
+  const closed = battlePassSeason(
+    BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS,
+  );
+  expect(closed.id).toBe("season-1");
+  expect(closed.active).toBe(false);
+  expect(closed.ended).toBe(true);
+  expect(closed).not.toHaveProperty("nextName");
   expect(battlePassSeason(BATTLE_PASS_FIRST_START - 1).upcoming).toBe(true);
+
+  const noRoll = emptyBattlePass();
+  expect(
+    activePassMissions(noRoll, "daily", BATTLE_PASS_FIRST_START).length,
+  ).toBe(3);
+  expect(
+    applyProgress(emptyProgress(), {
+      type: "initialize-pass-season",
+      at: BATTLE_PASS_FIRST_START,
+    }).battlePass.seasonId,
+  ).toBe("season-1");
 
   const pass = readyPass();
   pass.xp = 750;
@@ -202,22 +217,20 @@ test("premium is an EP purchase, survives reload, and cannot be bought twice", (
   ).toThrow("Not enough");
 });
 
-test("a closed season delivers earned rewards once and archives the season", () => {
+test("the pass does not roll into an unannounced season automatically", () => {
   const pass = readyPass();
   pass.xp = BPEP_PER_LEVEL * 10;
   pass.premium = true;
   const state = { ...emptyProgress(), profile: testProfile, battlePass: pass };
-  const nextSeason = BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS + 1000;
-  const settled = applyProgress(state, roll("next-season", nextSeason));
-  expect(settled.battlePass.seasonId).toBe("season-2");
-  expect(settled.battlePass.xp).toBe(0);
-  expect(settled.battlePass.archive).toHaveLength(1);
-  expect(settled.owned).toContain("pass-signal");
+  const afterWindow = BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS + 1000;
+  const settled = applyProgress(state, roll("after-season", afterWindow));
+  expect(settled.battlePass.seasonId).toBe("season-1");
+  expect(settled.battlePass.xp).toBe(pass.xp);
+  expect(settled.battlePass.archive).toEqual([]);
+  expect(settled.owned).not.toContain("pass-signal");
   expect(
-    settled.history.filter((event) => event.type === "pass-reward").length,
-  ).toBe(20);
-  const replay = applyProgress(settled, roll("next-season", nextSeason));
-  expect(replay).toBe(settled);
+    settled.history.filter((event) => event.type === "pass-reward"),
+  ).toHaveLength(0);
 });
 
 test("rebirth and fresh start keep the pass, and cloud comparison sees pass progress", () => {
@@ -298,6 +311,28 @@ test("malformed pass saves repair without losing the rest of the profile", () =>
   expect(repaired.repairs.join(" ")).toMatch(/battle pass/i);
 });
 
+test("premium purchase from the pass routes to Shop and is completed in More", async ({
+  page,
+}) => {
+  const pass = readyPass();
+  await seedProgress(page, {
+    battlePass: pass,
+    balance: BATTLE_PASS_PREMIUM_PRICE,
+    totalEarned: BATTLE_PASS_PREMIUM_PRICE,
+  });
+  await pauseClockAt(page, new Date(at));
+  await page.goto("/pass");
+  await waitForApp(page);
+  await page.getByRole("button", { name: /Unlock in Shop/ }).click();
+  await expect(page).toHaveURL(/shop\/more/);
+  await expect(page.getByRole("heading", { name: "More" })).toBeVisible();
+  await page.getByRole("button", { name: /Unlock ·/ }).click();
+  await page.getByRole("button", { name: "Confirm unlock" }).click();
+  await expect
+    .poll(async () => (await saved(page)).battlePass.premium)
+    .toBe(true);
+});
+
 test("the pass page claims a reward and stays vertical on a phone", async ({
   page,
 }) => {
@@ -336,7 +371,9 @@ test("the pass page claims a reward and stays vertical on a phone", async ({
   await expect(page.locator(".pass-inspection")).toContainText(
     "First Light Crown",
   );
-  await expect(page.locator(".pass-inspection")).toContainText("sunrise halo");
+  await expect(page.locator(".pass-inspection")).toContainText(
+    "soft amber halo",
+  );
   await expect(page.locator(".pass-inspection .number-box")).toHaveAttribute(
     "data-cosmetic",
     "pass-firstlight",
@@ -848,7 +885,7 @@ test("a running boost can be extended with a matching charge without stacking it
   ).toBe(true);
 });
 
-test("before the first season the pass shows its opening date and sells nothing", async ({
+test("before the first season the pass shows its opening date and locks Shop purchase", async ({
   page,
 }) => {
   await pauseClockAt(page, new Date(Date.UTC(2026, 10, 11, 12)));
@@ -858,5 +895,7 @@ test("before the first season the pass shows its opening date and sells nothing"
     page.getByRole("heading", { name: "The pass opens soon" }),
   ).toBeVisible();
   await expect(page.locator(".pass-hero")).toContainText("Nov 18, 2026");
-  await expect(page.getByRole("button", { name: /Unlock ·/ })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: /Unlock in Shop/ }),
+  ).toBeDisabled();
 });

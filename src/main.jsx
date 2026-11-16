@@ -24,6 +24,7 @@ import "@fontsource-variable/plus-jakarta-sans";
 import "@fontsource/space-mono/400.css";
 import "@fontsource/space-mono/700.css";
 import "./styles.css";
+import "./experience-polish.css";
 import "./ambient.css";
 import Emoji from "./components/Emoji";
 import RollExperience from "./components/RollExperience";
@@ -347,11 +348,28 @@ function App() {
   });
   const localProfileAtLaunch = useRef(Boolean(session.profile));
   useEffect(() => {
+    if (
+      !cloud.ready ||
+      !passSeason.active ||
+      session.battlePass?.seasonId === passSeason.id
+    )
+      return;
+    void dispatch({ type: "initialize-pass-season" });
+  }, [
+    cloud.ready,
+    dispatch,
+    passSeason.active,
+    passSeason.id,
+    session.battlePass?.seasonId,
+  ]);
+  useEffect(() => {
     if (retireLegacyDeviceLink() && localProfileAtLaunch.current)
       setLegacyDeviceLinkNotice(true);
   }, []);
-  const statusIssue = useStatusIssue();
-  const maintenanceActive = maintenanceActiveFor(statusIssue);
+  const { issue: statusIssue, issues: statusIssues = [] } = useStatusIssue();
+  const maintenanceActive = maintenanceActiveFor(
+    statusIssues.length ? statusIssues : statusIssue,
+  );
   const twoFactor = useTwoFactor(auth);
   const playAccess = cloudGameAccess({
     required: cloudAccountRequired,
@@ -505,7 +523,7 @@ function App() {
       history.pushState({ page: target, section }, "", path);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const navigate = (next, focusProduct = null) => {
+  const navigate = (next, focusProduct = null, shopShelf = "") => {
     const target = validPage(next);
     setSettingsSubpage("");
 
@@ -517,9 +535,11 @@ function App() {
     );
 
     const section =
-      target === "shop" && goalItem(focusProduct)
-        ? shelfOfProduct(goalItem(focusProduct))
-        : "";
+      target === "shop" && SHOP_SECTIONS.some((entry) => entry.id === shopShelf)
+        ? shopShelf
+        : target === "shop" && goalItem(focusProduct)
+          ? shelfOfProduct(goalItem(focusProduct))
+          : "";
     setShopFocus(target === "shop" ? focusProduct : null);
     setShopSection(section);
     setShopFamily("");
@@ -656,8 +676,16 @@ function App() {
       if (saleTheme && sale.active)
         document.documentElement.dataset.saleTheme = theme;
       else delete document.documentElement.dataset.saleTheme;
-      if (isPassTheme) document.documentElement.dataset.passTheme = theme;
-      else delete document.documentElement.dataset.passTheme;
+      if (isPassTheme) {
+        document.documentElement.dataset.passTheme = theme;
+        document.documentElement.style.setProperty(
+          "--season-accent",
+          passSeason.accent,
+        );
+      } else {
+        delete document.documentElement.dataset.passTheme;
+        document.documentElement.style.removeProperty("--season-accent");
+      }
       setAppliedTheme(resolved);
     };
     update();
@@ -666,7 +694,7 @@ function App() {
     } catch {}
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme, sale.active, passSeason.active]);
+  }, [theme, sale.active, passSeason.active, passSeason.accent]);
 
   useEffect(() => {
     applySaleBranding(sale.active);
@@ -835,7 +863,12 @@ function App() {
                       : label
                 }
                 aria-current={page === destination ? "page" : undefined}
-                className={page === destination ? "active" : ""}
+                className={`${page === destination ? "active" : ""} ${destination === "pass" && passSeason.active ? "is-pass-live" : ""}`}
+                style={
+                  destination === "pass" && passSeason.active
+                    ? { "--pass-accent": passSeason.accent }
+                    : undefined
+                }
                 onClick={() => navigate(destination)}
               >
                 <Icon size={16} />
@@ -1404,6 +1437,7 @@ function App() {
                   onAction={dispatch}
                   notify={notify}
                   openSignup={openAuth}
+                  navigate={navigate}
                 />
               </ErrorBoundary>
             )}
@@ -1419,7 +1453,8 @@ function App() {
                   <div>
                     <h1>Tasks</h1>
                     <p>
-                      Daily and weekly tasks earn EP; pass missions earn BPEP.
+                      Daily and weekly tasks pay EP; online rolls and pass
+                      missions earn BPEP during the season.
                     </p>
                   </div>
                 </div>

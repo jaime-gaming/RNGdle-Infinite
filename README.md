@@ -35,9 +35,10 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 
 ## Battle Pass
 
-The Battle Pass runs in 28-day seasons, each one named and themed after the
-month it opens in. The first, **First Light**, starts November 16, 2026 at
-00:00 UTC. Every pass mission — daily, weekly and season milestones — lives on
+Battle Pass seasons are explicitly scheduled in code; the game does not infer
+or announce a successor from a repeating calendar. **First Light** starts
+November 18, 2026 at 00:00 UTC. Every pass mission — daily, weekly and season
+milestones — lives on
 the **Tasks** page and pays **BPEP**, which only moves the pass; EP remains your
 shop wallet. The Pass page shows the vertical reward track across 30 levels.
 Levels 5, 15 and 25 grant consumable boosts: **Spark Injector** banks ×1.5 EP

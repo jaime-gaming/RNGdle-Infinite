@@ -96,7 +96,7 @@ export default function Tasks({
   const summary = taskSummary(progress.tasks, now);
   const pass = progress.battlePass ?? null;
   const passSeason = battlePassSeason(now);
-  const passLive = !!pass?.seasonId && pass.seasonId === passSeason.id;
+  const passLive = passSeason.active;
   const passLevel = passLevelForXp(pass?.xp ?? 0);
   const passSections = PASS_CADENCES.map((cadence) => {
     const missions = activePassMissions(pass ?? {}, cadence, now);
@@ -122,7 +122,7 @@ export default function Tasks({
     ? "Full. Use one to swap a task."
     : skips.waitMs > 0
       ? `Next purchase in ${waitText(skips.waitMs)}`
-      : "Buy one in the Shop, Tools shelf";
+      : "Buy one in Shop → More";
 
   const lists = TASK_CADENCES.map((cadence) => {
     const tasks = activeTasks(progress.tasks, cadence, now);
@@ -263,7 +263,7 @@ export default function Tasks({
     if (skips.tokens < 1)
       return skips.waitMs > 0
         ? `No Task Skip left. The next one can be bought in ${waitText(skips.waitMs)}.`
-        : "No Task Skip left. Buy one in the Shop, Tools shelf.";
+        : "No Task Skip left. Buy one in Shop → More.";
     return "Swap this task for another from its pool.";
   }
 

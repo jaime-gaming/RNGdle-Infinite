@@ -1,23 +1,32 @@
 import { useSyncExternalStore } from "react";
-import { STATUS_POLL_INTERVAL_MS, fetchServiceIssue } from "./status-page.js";
+import { STATUS_POLL_INTERVAL_MS, fetchServiceIssues } from "./status-page.js";
 
 const DISMISS_KEY = "rng-infinite-status-banner-dismissed-v1";
 
 function readDismissed() {
   try {
-    return sessionStorage.getItem(DISMISS_KEY) ?? "";
+    const saved = sessionStorage.getItem(DISMISS_KEY) ?? "";
+    if (!saved) return [];
+    try {
+      const value = JSON.parse(saved);
+      return Array.isArray(value)
+        ? value.filter((id) => typeof id === "string")
+        : [saved];
+    } catch {
+      return [saved];
+    }
   } catch {
-    return "";
+    return [];
   }
 }
 
 function writeDismissed(value) {
   try {
-    sessionStorage.setItem(DISMISS_KEY, value);
+    sessionStorage.setItem(DISMISS_KEY, JSON.stringify(value));
   } catch {}
 }
 
-let state = { issue: null, dismissedId: readDismissed() };
+let state = { issue: null, issues: [], dismissedIds: readDismissed() };
 const listeners = new Set();
 let started = false;
 let timer = null;
@@ -36,8 +45,8 @@ async function poll() {
   if (inFlight) return;
   inFlight = true;
   try {
-    const issue = await fetchServiceIssue();
-    setState({ issue });
+    const issues = await fetchServiceIssues();
+    setState({ issues, issue: issues[0] ?? null });
   } finally {
     inFlight = false;
   }
@@ -81,26 +90,19 @@ export function useStatusIssue() {
 }
 
 export function getStatusIssue() {
-  return state.issue;
+  return state.issues.length ? state.issues : state.issue;
 }
 
-export function dismissStatusIssue() {
-  const id = state.issue?.id ?? "";
-  writeDismissed(id);
-  setState({ dismissedId: id });
+export function dismissStatusIssue(id = state.issue?.id) {
+  if (!id) return;
+  const dismissedIds = [...new Set([...state.dismissedIds, id])];
+  writeDismissed(dismissedIds);
+  setState({ dismissedIds });
 }
 
 export function reopenStatusIssue() {
-  writeDismissed("");
-  setState({ dismissedId: "" });
+  writeDismissed([]);
+  setState({ dismissedIds: [] });
 }
 
-export function maintenanceActiveFor(issue) {
-  if (!issue || issue.kind !== "maintenance") return false;
-  const status = String(issue.status ?? "")
-    .trim()
-    .toLowerCase();
-  return (
-    status === "in_progress" || issue.componentStatus === "under_maintenance"
-  );
-}
+export { maintenanceActiveFor } from "./status-page.js";

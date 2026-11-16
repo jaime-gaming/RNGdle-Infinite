@@ -242,7 +242,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
 
     surge: 180000,
 
-    "task-skip": 125000,
+    "task-skip": 250000,
     trail: 160000,
     bounce: 500000,
     twice: 900000,

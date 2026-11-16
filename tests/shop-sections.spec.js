@@ -42,7 +42,7 @@ test("the hub is an index of shelf buttons, and each one is its own page", async
   await waitForApp(page);
   const hub = page.getByRole("navigation", { name: "Shop sections" });
   await expect(hub).toBeVisible();
-  await expect(hub.getByRole("link")).toHaveCount(6);
+  await expect(hub.getByRole("link")).toHaveCount(7);
 
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(0);
   await expect(
@@ -56,6 +56,7 @@ test("the hub is an index of shelf buttons, and each one is its own page", async
     ["auras", "Auras"],
     ["offline", "Offline"],
     ["tools", "Tools"],
+    ["more", "More"],
   ]) {
     await openShelf(page, id, label);
 
@@ -125,6 +126,7 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
     "/shop/offline",
     "/shop/auras/celestial",
     "/shop/tools",
+    "/shop/more",
   ]) {
     await page.goto(path);
     await waitForApp(page);

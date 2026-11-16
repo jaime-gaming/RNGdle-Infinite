@@ -1,0 +1,81 @@
+/* Higher-contrast surfaces and visible keyboard focus in the light theme. */
+:root:not([data-theme="dark"]):not([data-pass-theme]) {
+  --surface: #ffffff;
+  --bg: #f7f8fa;
+  --text: #1b2028;
+  --muted: #535b66;
+  --secondary: #454d58;
+  --border: #cbd1d9;
+  --hover: #eef1f4;
+  --green: #245d49;
+  --green-bg: #e8f2ec;
+  --shadow: 0 4px 18px #1b28350d;
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--green) 78%, #2876bc);
+  outline-offset: 2px;
+}
+
+.toast-reference {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font: 10px/1.4 var(--font-mono, monospace);
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 760px) {
+  .content-main,
+  .shop-page,
+  .settings-page,
+  .profile-page {
+    min-width: 0;
+    max-width: 100vw;
+  }
+
+  .shop-grid,
+  .shop-grid-rows,
+  .shop-jump,
+  .shop-spotlight {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shop-more-pass-actions button,
+  .shop-pass-confirm button {
+    min-height: 42px;
+  }
+
+  .toast-stack {
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    left: max(10px, env(safe-area-inset-left));
+    width: auto;
+  }
+
+  .toast {
+    max-width: 100%;
+  }
+
+  .modal,
+  dialog {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 28px - env(safe-area-inset-top));
+    overflow: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .content-main {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .shop-more-pass {
+    padding: 12px;
+  }
+
+  .shop-pass-confirm {
+    align-items: stretch;
+  }
+}

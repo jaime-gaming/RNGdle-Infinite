@@ -31,6 +31,7 @@ import {
   pauseCloudForQuota,
 } from "./cloud-quota.js";
 import { cloudGameAccess } from "./auth-gate.js";
+import { localSaveUsableForCloudFallback } from "./local-fallback.js";
 import { getStatusIssue, maintenanceActiveFor } from "./use-status-issue.js";
 import {
   archiveSavedCopy,
@@ -210,7 +211,8 @@ export function useProgress({
     cloudQueue = useRef(Promise.resolve()),
     cloudWriteVersion = useRef(0),
     cloudWriteFailure = useRef({ snapshot: null, userId: null, attempts: 0 }),
-    pendingCloudConflict = useRef(null);
+    pendingCloudConflict = useRef(null),
+    cloudLocalOnly = useRef(false);
   const cloudRef = useRef(cloud);
   cloudRef.current = cloud;
   const quotaResumeTimer = useRef(null);
@@ -218,13 +220,18 @@ export function useProgress({
   const applyQuotaPause = useCallback((targetUserId, remainingMs) => {
     if (pendingCloudConflict.current?.userId === targetUserId) return;
     const owner = readCloudOwner();
-    const localCopyIsOwned =
-      (!owner || owner === targetUserId) &&
-      Boolean(current.current.profile) &&
-      healthy.current;
-    if (localCopyIsOwned) ensureCloudOwner(targetUserId);
+    const localCopyIsOwned = localSaveUsableForCloudFallback({
+      owner,
+      userId: targetUserId,
+      profile: current.current.profile,
+      healthy: healthy.current,
+    });
+    cloudLocalOnly.current = localCopyIsOwned && owner !== targetUserId;
+    if (localCopyIsOwned && !cloudLocalOnly.current)
+      ensureCloudOwner(targetUserId);
     cloudGate.current = { userId: targetUserId, ready: localCopyIsOwned };
-    markCloudDirty(targetUserId);
+    if (localCopyIsOwned && !cloudLocalOnly.current)
+      markCloudDirty(targetUserId);
     updateCloud({
       ...cloudRef.current,
       status: "offline",
@@ -463,6 +470,7 @@ export function useProgress({
       pendingCloudConflict.current?.userId !== userId
     )
       pendingCloudConflict.current = null;
+    cloudLocalOnly.current = false;
 
     if (!cloudEnabled) {
       cloudGate.current = { userId: null, ready: true };
@@ -502,10 +510,14 @@ export function useProgress({
     }
 
     if (!online) {
-      const localCopyIsOwned =
-        readCloudOwner() === userId &&
-        Boolean(current.current.profile) &&
-        healthy.current;
+      const localOwner = readCloudOwner();
+      const localCopyIsOwned = localSaveUsableForCloudFallback({
+        owner: localOwner,
+        userId,
+        profile: current.current.profile,
+        healthy: healthy.current,
+      });
+      cloudLocalOnly.current = localCopyIsOwned && localOwner !== userId;
       cloudGate.current = { userId, ready: localCopyIsOwned };
       updateCloud({
         status: "offline",
@@ -515,7 +527,9 @@ export function useProgress({
           ? ""
           : "Cloud progress cannot be checked offline. Reconnect before changing this account.",
         notice: localCopyIsOwned
-          ? "Changes are saved on this device and will sync when you reconnect."
+          ? cloudLocalOnly.current
+            ? "Playing from this unlinked device save. It stays local until you choose to link it."
+            : "Changes are saved on this device and will sync when you reconnect."
           : "",
       });
       return () => {
@@ -524,10 +538,14 @@ export function useProgress({
     }
 
     if (maintenanceActiveFor(getStatusIssue())) {
-      const localCopyIsOwned =
-        readCloudOwner() === userId &&
-        Boolean(current.current.profile) &&
-        healthy.current;
+      const localOwner = readCloudOwner();
+      const localCopyIsOwned = localSaveUsableForCloudFallback({
+        owner: localOwner,
+        userId,
+        profile: current.current.profile,
+        healthy: healthy.current,
+      });
+      cloudLocalOnly.current = localCopyIsOwned && localOwner !== userId;
       cloudGate.current = { userId, ready: localCopyIsOwned };
       updateCloud({
         status: "maintenance",
@@ -644,17 +662,20 @@ export function useProgress({
       const ownerOnFailure = readCloudOwner();
       if (!ownerOnFailure || ownerOnFailure === userId) {
         writeLocalSave(current.current);
-        markCloudDirty(userId);
+        if (ownerOnFailure === userId) markCloudDirty(userId);
       }
       const quotaRemaining = pauseForQuota(loadError);
       if (quotaRemaining > 0) {
         applyQuotaPause(userId, quotaRemaining);
         return;
       }
-      const localCopyIsOwned =
-        ownerOnFailure === userId &&
-        Boolean(current.current.profile) &&
-        healthy.current;
+      const localCopyIsOwned = localSaveUsableForCloudFallback({
+        owner: ownerOnFailure,
+        userId,
+        profile: current.current.profile,
+        healthy: healthy.current,
+      });
+      cloudLocalOnly.current = localCopyIsOwned && ownerOnFailure !== userId;
       cloudGate.current = { userId, ready: localCopyIsOwned };
 
       const detail =
@@ -670,7 +691,9 @@ export function useProgress({
           : "Your online progress could not be loaded. Try again before changing anything." +
             detail,
         notice: localCopyIsOwned
-          ? "Your device progress is ready to play. Cloud will try again when available."
+          ? cloudLocalOnly.current
+            ? "Using this device’s local progress. It is not linked to the signed-in account and will not overwrite another cloud save."
+            : "Your device progress is ready to play. Cloud will try again when available."
           : "",
       });
     });
@@ -681,6 +704,7 @@ export function useProgress({
   }, [userId, authReady, cloudEnabled, cloudRetry, online]);
 
   useEffect(() => {
+    if (cloudLocalOnly.current) return undefined;
     if (
       !cloudEnabled ||
       !authReady ||
@@ -1136,7 +1160,7 @@ export function useProgress({
           auth.userId &&
           (!cloudGate.current.ready ||
             cloudGate.current.userId !== auth.userId ||
-            readCloudOwner() !== auth.userId)
+            (!cloudLocalOnly.current && readCloudOwner() !== auth.userId))
         )
           return {
             ok: false,

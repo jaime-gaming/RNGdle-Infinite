@@ -1,3 +1,9 @@
+.status-banner-stack {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0 12px;
+}
 .status-banner {
   --status-accent: var(--warning);
   position: relative;
@@ -7,8 +13,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 8px 12px 0;
-  padding: 10px 12px;
+  margin: 0;
+  padding: 11px 14px;
   border: 1px solid color-mix(in srgb, var(--status-accent) 45%, var(--border));
   border-radius: 12px;
   background: color-mix(in srgb, var(--status-accent) 10%, var(--surface));
@@ -21,10 +27,13 @@
 .status-banner.is-major {
   --status-accent: var(--warning);
 }
-.status-banner.is-minor,
+.status-banner.is-minor {
+  --status-accent: var(--secondary);
+  background: color-mix(in srgb, var(--secondary) 6%, var(--surface));
+}
 .status-banner.is-maintenance {
-  --status-accent: var(--text);
-  background: color-mix(in srgb, var(--text) 6%, var(--surface));
+  --status-accent: var(--warning);
+  background: color-mix(in srgb, var(--warning) 9%, var(--surface));
 }
 .status-banner-icon {
   flex-shrink: 0;
@@ -102,11 +111,29 @@
   }
 }
 @media (max-width: 760px) {
+  .status-banner-stack {
+    padding: 0 8px;
+    gap: 5px;
+  }
   .status-banner {
-    margin: 8px 10px 0;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
   }
   .status-banner-copy span {
     font-size: 10.5px;
+  }
+  .status-banner-link {
+    font-size: 0;
+  }
+  .status-banner-link svg {
+    width: 16px;
+    height: 16px;
+  }
+  .status-banner-close {
+    width: 28px;
+    height: 28px;
+    margin: -4px -4px 0 0;
   }
 }
 
@@ -134,9 +161,11 @@
 .status-indicator.is-major {
   --status-accent: var(--warning);
 }
-.status-indicator.is-minor,
+.status-indicator.is-minor {
+  --status-accent: var(--secondary);
+}
 .status-indicator.is-maintenance {
-  --status-accent: var(--text);
+  --status-accent: var(--warning);
 }
 .status-indicator-dot {
   position: absolute;
@@ -157,5 +186,11 @@
   50% {
     opacity: 0.45;
     transform: scale(0.8);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-banner,
+  .status-indicator-dot {
+    animation: none;
   }
 }

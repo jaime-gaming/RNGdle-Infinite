@@ -47,7 +47,7 @@ test("the loader covers data, account and unsynced-profile waits only", () => {
     ).toBe(false);
 });
 
-test("while the scoring data loads the chrome stays and one circle fills the content", async ({
+test("while the scoring data loads the chrome stays and the game logo fills the content", async ({
   page,
 }) => {
   await page.route("**/data/*.json", async (route) => {
@@ -57,7 +57,8 @@ test("while the scoring data loads the chrome stays and one circle fills the con
   await page.goto("/");
   const screen = page.locator(".loading-screen");
   await expect(screen).toBeVisible();
-  await expect(page.locator(".loading-circle")).toHaveCount(1);
+  await expect(page.locator(".loading-emblem")).toHaveCount(1);
+  await expect(page.getByRole("img", { name: "Loading" })).toBeVisible();
   expect(await screen.textContent()).toBe("");
   await expect(page.locator(".header")).toBeVisible();
   await expect(page.locator("footer")).toBeVisible();

@@ -6,7 +6,10 @@ import {
   BLACK_FRIDAY_STAMPS,
   RNGWEEN_RESALE_PRICE,
   SALE_STAMP_EVERY,
+  saleDiscountFor,
+  saleDiscountForId,
   salePrice,
+  salePriceOf,
 } from "../src/black-friday.js";
 import { seedProgress } from "./helpers/progress.js";
 import { pauseClockAt } from "./helpers/clock.js";
@@ -605,5 +608,25 @@ test("posters stay put over time regardless of motion preference", async ({
   await expect(first).toHaveAttribute(
     "aria-label",
     "UP TO 50% OFF: Every shelf",
+  );
+});
+
+test("new event products and the premium pass receive individual sale prices", () => {
+  const newEventProduct = {
+    id: "new-season-tool",
+    price: 125000,
+    eventOnly: true,
+  };
+  const basePrice = 250000;
+  const passDiscount = saleDiscountForId("battle-pass-premium");
+  expect(saleDiscountFor(newEventProduct)).toBeGreaterThan(0);
+  expect(salePriceOf(basePrice, "battle-pass-premium", DAY_BEFORE)).toBe(
+    basePrice,
+  );
+  expect(salePriceOf(basePrice, "battle-pass-premium", SALE_DAY)).toBe(
+    Math.max(100, Math.floor((basePrice * (1 - passDiscount)) / 100) * 100),
+  );
+  expect(salePrice(productById.get("task-skip"), SALE_DAY)).toBeLessThan(
+    productById.get("task-skip").price,
   );
 });

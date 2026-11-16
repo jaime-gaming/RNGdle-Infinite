@@ -290,7 +290,8 @@ test("the quiet loader owns the page while scoring data loads, then help and bad
   await page.goto("/");
   await requestSeen;
   await expect(page.locator(".loading-screen")).toBeVisible();
-  await expect(page.locator(".loading-circle")).toHaveCount(1);
+  await expect(page.locator(".loading-emblem")).toHaveCount(1);
+  await expect(page.getByRole("img", { name: "Loading" })).toBeVisible();
   expect(await page.locator(".loading-screen").textContent()).toBe("");
   await expect(page.locator(".header")).toBeVisible();
   await expect(page.locator("footer")).toBeVisible();

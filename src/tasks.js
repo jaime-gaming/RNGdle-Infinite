@@ -33,7 +33,7 @@ export const ACTIVE_PER_PERIOD = { daily: 3, weekly: 4 };
 
 const SKIP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 export const SKIP_WINDOW_MS = 5 * 24 * 60 * 60 * 1000;
-export const SKIP_WINDOW_LIMIT = 3;
+export const SKIP_WINDOW_LIMIT = 2;
 export const SKIP_HOLD_LIMIT = 3;
 
 export const LIST_BONUS = { daily: 100000, weekly: 500000 };

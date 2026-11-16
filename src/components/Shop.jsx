@@ -7,11 +7,13 @@ import {
   Coins,
   Eye,
   LayoutGrid,
+  MoreHorizontal,
   Percent,
   Repeat,
   Search,
   ShoppingBag,
   Target,
+  Ticket,
   X,
 } from "lucide-react";
 import {
@@ -37,6 +39,7 @@ import {
   SPECIAL_AURA_COLLECTION,
 } from "../shop-data";
 import { LOADOUT_LIMIT } from "../progress.js";
+import { BATTLE_PASS_PREMIUM_PRICE, battlePassSeason } from "../battle-pass.js";
 import {
   SKIP_WINDOW_LIMIT,
   SKIP_WINDOW_MS,
@@ -62,6 +65,7 @@ import {
   resaleMissing,
   resalePrice,
   saleDiscountFor,
+  salePriceOf,
   stampsLeft,
 } from "../black-friday.js";
 import { PETS } from "../pets.js";
@@ -205,6 +209,7 @@ const shelfIcons = {
   aura: AuraMark,
   offline: OfflineMark,
   automation: AutomationMark,
+  more: MoreHorizontal,
 };
 
 const LOOK_SAMPLES = {
@@ -299,7 +304,6 @@ export default function Shop({
 
   const sale = useSaleStatus();
   const saleRecord = progress.blackFriday ?? null;
-
   const saleShelf = section === "black-friday";
   const saleItems = sale.active
     ? [BLACK_FRIDAY_SKIN, ...resaleMissing(progress.owned)]
@@ -311,6 +315,7 @@ export default function Shop({
   const { settings: preferences } = useSettings();
   const [previewTier, setPreviewTier] = useState("rare");
   const [lastPurchase, setLastPurchase] = useState(null);
+  const [confirmPassPurchase, setConfirmPassPurchase] = useState(false);
 
   const [lookPreview, setLookPreview] = useState(null);
   const [lookTier, setLookTier] = useState("rare");
@@ -323,6 +328,14 @@ export default function Shop({
     returnFocus = useRef(null),
     returnKind = useRef(null);
   const [clock, setClock] = useState(() => gameNow());
+  const shopPassSeason = battlePassSeason(clock);
+  const premiumPassPrice = sale.active
+    ? salePriceOf(BATTLE_PASS_PREMIUM_PRICE, "battle-pass-premium", clock)
+    : BATTLE_PASS_PREMIUM_PRICE;
+  const premiumPassOwned = Boolean(
+    progress.battlePass?.premium &&
+    progress.battlePass?.seasonId === shopPassSeason.id,
+  );
   const [shopQuery, setShopQuery] = useState("");
   const [onlyAffordable, setOnlyAffordable] = useState(false);
   const [hideOwned, setHideOwned] = useState(false);
@@ -361,7 +374,7 @@ export default function Shop({
   const goalReady = !!goal && progress.balance >= goal.price;
 
   useEffect(() => {
-    if (!["skills", "tools"].includes(shelf?.id)) return;
+    if (!["skills", "tools", "more"].includes(shelf?.id)) return;
     const timer = setInterval(() => setClock(gameNow()), 1000);
     return () => clearInterval(timer);
   }, [shelf?.id]);
@@ -433,7 +446,14 @@ export default function Shop({
         if (type === "buy") setLastPurchase(productById.get(id));
         else {
           setLastPurchase(null);
-          if (type === "goal") {
+          if (type === "buy-pass-premium") {
+            setConfirmPassPurchase(false);
+            notify({
+              kind: "done",
+              title: "Premium track unlocked",
+              text: "First Light Premium is ready to claim.",
+            });
+          } else if (type === "goal") {
             onPickingGoal(false);
             notify({
               kind: "done",
@@ -1944,6 +1964,122 @@ export default function Shop({
           pickingGoal={pickingGoal}
           onPickingGoal={onPickingGoal}
         />
+      )}
+      {shelf?.id === "more" && (
+        <section
+          className="shop-category shop-more-shelf"
+          id="shop-more"
+          tabIndex={-1}
+        >
+          <div className="shop-section-heading">
+            <div>
+              <h2>
+                <MoreHorizontal size={17} /> More
+              </h2>
+              <p>Season pass access and useful task extras.</p>
+            </div>
+          </div>
+          <div className="shop-grid shop-grid-rows shop-more-grid">
+            <article
+              className={`shop-tile shop-more-pass ${premiumPassOwned ? "is-owned" : ""}`}
+            >
+              <span className="shop-tile-icon shop-more-pass-mark">
+                <Ticket size={20} />
+              </span>
+              <div className="shop-tile-body shop-more-pass-main">
+                <strong>First Light · Premium track</strong>
+                {sale.active &&
+                  premiumPassPrice < BATTLE_PASS_PREMIUM_PRICE && (
+                    <small className="shop-pass-sale-price">
+                      <s>{formatEP(BATTLE_PASS_PREMIUM_PRICE)} EP</s>
+                      <span>
+                        −
+                        {Math.round(
+                          (1 - premiumPassPrice / BATTLE_PASS_PREMIUM_PRICE) *
+                            100,
+                        )}
+                        % Black Friday
+                      </span>
+                    </small>
+                  )}
+                <small>
+                  {premiumPassOwned
+                    ? "Premium is unlocked for this season. Claim rewards from the pass track."
+                    : shopPassSeason.active
+                      ? "Unlock the extra reward track. Rewards are claimed on the pass page; claimed cosmetics stay yours."
+                      : shopPassSeason.upcoming
+                        ? `Opens ${new Date(shopPassSeason.start).toLocaleString()} UTC.`
+                        : "This season's premium track is closed. Earned rewards remain claimable on the pass page."}
+                </small>
+                {!premiumPassOwned &&
+                  shopPassSeason.active &&
+                  !confirmPassPurchase &&
+                  progress.balance < premiumPassPrice && (
+                    <small className="shop-pass-shortfall">
+                      {formatEP(premiumPassPrice - progress.balance)} EP more
+                      needed
+                    </small>
+                  )}
+                {confirmPassPurchase && (
+                  <div
+                    className="shop-pass-confirm"
+                    role="group"
+                    aria-label="Confirm premium pass purchase"
+                  >
+                    <span>Spend {formatEP(premiumPassPrice)} EP?</span>
+                    <button
+                      type="button"
+                      className="primary-button"
+                      disabled={
+                        pending ||
+                        progress.balance < premiumPassPrice ||
+                        !shopPassSeason.active
+                      }
+                      onClick={() => perform("buy-pass-premium")}
+                    >
+                      Confirm unlock
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={pending}
+                      onClick={() => setConfirmPassPurchase(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="shop-tile-stat shop-more-pass-actions">
+                {!premiumPassOwned &&
+                  shopPassSeason.active &&
+                  !confirmPassPurchase && (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      disabled={pending || progress.balance < premiumPassPrice}
+                      onClick={() => setConfirmPassPurchase(true)}
+                    >
+                      Unlock · {formatEP(premiumPassPrice)} EP
+                    </button>
+                  )}
+                {premiumPassOwned && (
+                  <span className="shop-pass-owned">
+                    <Check size={14} /> Unlocked
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => navigate("pass")}
+                >
+                  View rewards <ChevronRight size={14} />
+                </button>
+              </div>
+            </article>
+            {shelfItemsNow.map(card)}
+          </div>
+        </section>
       )}
       {shelf?.id === "tools" && (
         <section className="shop-category" id="shop-tools" tabIndex={-1}>

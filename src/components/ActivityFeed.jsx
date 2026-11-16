@@ -650,6 +650,7 @@ export default function ActivityFeed({
                             {event.walletBonus
                               ? ` · +${formatEP(event.walletBonus)} EP extra`
                               : ""}
+                            {event.bpep ? ` · +${count(event.bpep)} BPEP` : ""}
                           </span>
                           {!!event.skills?.length && (
                             <span className="activity-skills">

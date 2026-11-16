@@ -104,7 +104,7 @@ test("the v0.6 note names every original the way v0.2 named its two", () => {
   expect(v06.badges).toEqual(originals.map((badge) => badge.id));
 });
 
-test("every season wears the theme of the month it opens in", () => {
+test("the month palette stays valid while only configured seasons are exposed", () => {
   // The config file is the single source of truth: twelve months, all valid.
   expect(MONTH_THEMES).toHaveLength(12);
   expect(SEASON_THEME_OVERRIDE).toBe(null);
@@ -126,42 +126,24 @@ test("every season wears the theme of the month it opens in", () => {
   expect(first.name).toBe(MONTH_THEMES[10].name);
   expect(first.accent).toBe(MONTH_THEMES[10].accent);
   expect(first.theme).toBe(MONTH_THEMES[10].theme);
-  expect(first.daysLong).toBe(28);
-  expect(first.day).toBe(1);
+  expect(first).not.toHaveProperty("daysLong");
+  expect(first).not.toHaveProperty("endsInMs");
 
-  // A 28-day season drifts through the calendar, so the theme follows the
-  // month the window actually opens in, not the season number.
-  for (let index = 0; index < 18; index++) {
-    const start = BATTLE_PASS_FIRST_START + index * BATTLE_PASS_SEASON_MS;
-    const season = battlePassSeason(start + 1000);
-    const month = new Date(start).getUTCMonth() + 1;
-    const theme = MONTH_THEMES[month - 1];
-    expect(season.index, `season ${index + 1}`).toBe(index + 1);
-    expect(season.id).toBe(`season-${index + 1}`);
-    expect(season.month).toBe(month);
-    expect(season.name).toBe(theme.name);
-    expect(season.name).toBe(passSeasonName(index + 1));
-    expect(season.nextName).toBe(
-      MONTH_THEMES[new Date(start + BATTLE_PASS_SEASON_MS).getUTCMonth()].name,
-    );
-    expect(seasonNumber(season.id)).toBe(index + 1);
-    expect(seasonLabel(season.id)).toBe(
-      `Season ${index + 1} ${"\u00b7"} ${theme.name}`,
-    );
-  }
+  const active = battlePassSeason(BATTLE_PASS_FIRST_START + 1000);
+  expect(active.index).toBe(1);
+  expect(active.id).toBe("season-1");
+  expect(active.name).toBe(MONTH_THEMES[10].name);
+  expect(active.name).toBe(passSeasonName(1));
+  expect(active).not.toHaveProperty("nextName");
+  expect(seasonNumber(active.id)).toBe(1);
+  expect(seasonLabel(active.id)).toBe(`Season 1 ${"\u00b7"} ${active.name}`);
 
-  // 28-day seasons and calendar months drift, so two seasons can share a
-  // theme; the number still tells them apart. Seasons 8 and 9 both open in
-  // June 2027, four weeks apart.
-  const shared = battlePassSeason(
-    BATTLE_PASS_FIRST_START + 7 * BATTLE_PASS_SEASON_MS + 1000,
+  const closed = battlePassSeason(
+    BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS,
   );
-  const sharedNext = battlePassSeason(
-    BATTLE_PASS_FIRST_START + 8 * BATTLE_PASS_SEASON_MS + 1000,
-  );
-  expect([shared.month, sharedNext.month]).toEqual([6, 6]);
-  expect(shared.name).toBe(sharedNext.name);
-  expect(seasonLabel(shared.id)).not.toBe(seasonLabel(sharedNext.id));
+  expect(closed.id).toBe("season-1");
+  expect(closed.active).toBe(false);
+  expect(closed.ended).toBe(true);
 
   expect(passSeasonIdentity(1).lap).toBe(1);
   expect(passSeasonIdentity(13).lap).toBe(2);
@@ -228,7 +210,8 @@ test("the pass page shows its season name, milestones and past seasons", async (
   await expect(hero.getByRole("heading", { name: season.name })).toBeVisible();
   await expect(hero).toContainText(season.theme);
   await expect(hero).toContainText(`Season ${season.index}`);
-  await expect(hero.locator(".pass-hero-next")).toContainText(season.nextName);
+  await expect(hero).not.toContainText("Next season");
+  await expect(hero.locator(".pass-hero-next")).toHaveCount(0);
 
   await expect(page.locator(".pass-level")).toHaveCount(BATTLE_PASS_LEVELS);
   await expect(page.locator(".pass-level.is-milestone")).toHaveCount(3);

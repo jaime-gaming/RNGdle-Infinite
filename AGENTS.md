@@ -40,9 +40,9 @@ themes, the sale favicon and manifest) exists only while
 `blackFridayStatus(at).active`; the event notice is also shown before the day
 and disappears afterward. `progress.blackFriday` is part of the save contract
 and survives every reset, like permanent cosmetics. Dev builds honour
-`VITE_BLACK_FRIDAY_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the sale
-clock for previews; production ignores that variable, and shipped code never
-pretends today is the event day. Spending accumulates across purchases, rather
+`VITE_GAME_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the shared game
+clock for previews; production ignores that variable, and Playwright forces it
+off so date-sensitive tests remain deterministic. Spending accumulates across purchases, rather
 than requiring a single purchase of 100,000 EP. The sale shelf contains a
 25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
 and linked posters occupy the page margins, including on small screens. Posters
@@ -58,14 +58,13 @@ missed looks can be bought from the sale shelf. Aura cards have a rarity preview
 Moving reveal digits are lighter than landed digits using opacity only, without
 adding backgrounds, borders, underlines or other decorations.
 
-The Battle Pass (`src/battle-pass.js`) runs in 28-day UTC seasons anchored at
-2026-11-18. Each season wears the theme of the UTC month its window opens in,
-read from `src/season-config.js` — the one file to edit to rename, restyle or
-recolour a month (`SEASON_THEME_OVERRIDE` forces a single theme). Seasons drift
-through the calendar, so two seasons can share a theme; `seasonId` stays unique,
-so the archive is never ambiguous. Every pass mission — daily, weekly and the
+The Battle Pass (`src/battle-pass.js`) uses explicit 28-day season records.
+Only launched seasons are listed; a successor requires a manual code update,
+and the interface must not reveal its name or date in advance. First Light
+starts on 2026-11-18. Its accent is shared by `/pass`, the temporary theme and
+the active Pass navigation animation. Every pass mission — daily, weekly and
 season milestones — is listed on the Tasks page in its own section; `/pass`
-keeps only the reward track. Missions pay BPEP only; BPEP is not a shop wallet.
+keeps the reward track. Missions pay BPEP only; BPEP is not a shop wallet.
 The optional premium track is bought with EP, never real money. Levels 5, 15 and
 25 add a consumable boost charge (the premium track pays two) without touching
 their EP, the season milestone `pass-season-boost` pays one more, and one charge
@@ -75,8 +74,10 @@ multiplies banked roll EP for a few minutes through
 season change, Rebirth, Prestige, Rollback and Fresh Start. Reward tracks are visible,
 each reward claims once, and earned rewards are delivered automatically when a
 season closes. `progress.battlePass` survives Rebirth, Prestige, Rollback and
-Fresh Start. Dev builds honour `VITE_BATTLE_PASS_PREVIEW_AT`; production ignores
-it. Pass auras and the Prism Axolotl variant are permanent cosmetics once
+Fresh Start. The pass and other dated gameplay use the shared
+`VITE_GAME_PREVIEW_AT` dev clock; production ignores it, and Playwright overrides
+it to keep tests on the real fixture time. Pass auras and the Prism Axolotl
+variant are permanent cosmetics once
 claimed. `rebirthKeptPurchases` in `src/rebirth.js` mirrors the reducer's keep
 rule (aura or `passReward`); the Rebirth page and Fresh Start read it instead of
 guessing from product kinds, so a `pet-variant` is never listed as handed back.

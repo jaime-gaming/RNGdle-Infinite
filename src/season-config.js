@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
 // Season theme configuration
 // ---------------------------------------------------------------------------
-// This is the one file to edit to change how a season looks and reads.
+// Reference palette for month-based/legacy theme helpers.
 //
-// A season is 28 days, so it does not line up with a calendar month. Each season
-// is themed after the month it STARTS in: a season beginning in December wears
-// the December theme, even though it runs into January.
+// Live Battle Pass seasons are explicitly recorded in `battle-pass.js`; do not
+// infer or announce a successor from this palette. Edit a launched season's
+// name, theme and accent in its record there.
 //
 // To rename a month, edit `name`. To change its mood, edit `theme`. To recolour
 // it, edit `accent` (any 6-digit hex). Nothing else needs to change: the season
@@ -83,8 +83,9 @@ export const MONTH_THEMES = [
   {
     month: 11,
     name: "First Light",
-    theme: "A clean signal at dawn. The pass opens here.",
-    accent: "#7dd3fc",
+    theme:
+      "Gold at the horizon, warm light on a quiet field. Begin where the day breaks.",
+    accent: "#fbbf24",
   },
   {
     month: 12,
@@ -106,7 +107,7 @@ export function monthTheme(month) {
   return entry ?? FALLBACK;
 }
 
-// The theme for a season is chosen by the UTC month its window opens in.
+// Legacy lookup helper; the active pass does not generate seasons from it.
 export function themeForStart(start) {
   const at = Number.isFinite(start) ? start : 0;
   return monthTheme(new Date(at).getUTCMonth() + 1);

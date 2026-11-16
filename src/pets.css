@@ -65,6 +65,9 @@
   gap: 20px;
   align-items: center;
   padding: 20px;
+  transition:
+    grid-template-columns 280ms ease,
+    padding 280ms ease;
 }
 
 .pet-cage {
@@ -492,12 +495,14 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .pet-slide.is-current:not(.is-uncaging) .pet-cage .pet-figure {
-    animation: pet-showcase-hover 4.6s ease-in-out infinite;
+  .pet-slide.is-current:not(.is-uncaging)
+    .pet-cage:not(.is-skin-view)
+    .pet-figure {
+    animation: pet-showcase-hover 5.8s ease-in-out infinite;
   }
-}
-.pet-slide.is-active .pet-cage {
-  animation: pet-cage-breathe 3.2s ease-in-out infinite;
+  .pet-slide.is-active .pet-cage:not(.is-skin-view) {
+    animation: pet-cage-breathe 4.8s ease-in-out infinite;
+  }
 }
 @keyframes pet-showcase-hover {
   0%,

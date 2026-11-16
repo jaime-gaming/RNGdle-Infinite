@@ -8,6 +8,7 @@ import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
 import {
   BLACK_FRIDAY_FAMILY,
   BLACK_FRIDAY_SKIN,
+  isResaleCosmetic,
   resalePrice,
   salePrice,
 } from "./black-friday.js";
@@ -590,11 +591,11 @@ export const shopProducts = [
     id: "task-skip",
     kind: "utility",
     name: "Task Skip",
-    price: 125000,
+    price: 250000,
     icon: "skip",
     repeatable: true,
     description:
-      "Swap one open task on your Tasks list for the next one in its pool: one token per use, kept across rebirths. You can buy one a day, no more than three in any five days, and hold up to three.",
+      "Swap one open task on your Tasks list for another from its pool: one token per use, kept across rebirths. One purchase per day, up to two in any five days, and up to three held at once.",
   },
 
   ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({
@@ -698,6 +699,12 @@ export const SHOP_SECTIONS = [
     icon: "automation",
     blurb: "Automation and archive, same rules as always.",
   },
+  {
+    id: "more",
+    label: "More",
+    icon: "more",
+    blurb: "Pass access and task utilities.",
+  },
 ];
 
 const SHELF_KINDS = {
@@ -706,12 +713,14 @@ const SHELF_KINDS = {
   auras: ["aura"],
   offline: ["offline", "offline-cap"],
   tools: ["utility"],
+  more: ["utility"],
 };
 
 export function shelfOfProduct(item) {
   if (!item) return "";
 
   if (item.kind === "companion") return "companions";
+  if (item.id === "task-skip") return "more";
   const shelf = SHOP_SECTIONS.find((section) =>
     (SHELF_KINDS[section.id] ?? []).includes(item.kind),
   );
@@ -721,7 +730,12 @@ export function shelfOfProduct(item) {
 
 export function productsOnShelf(id) {
   const kinds = SHELF_KINDS[id];
-  return kinds ? shopProducts.filter((p) => kinds.includes(p.kind)) : [];
+  if (!kinds) return [];
+  return shopProducts.filter((p) =>
+    id === "more"
+      ? p.id === "task-skip"
+      : kinds.includes(p.kind) && p.id !== "task-skip",
+  );
 }
 
 export const SKILL_STOCK_WINDOW_MS = 300000;
@@ -831,7 +845,11 @@ export function aurasInFamily(id, owned = []) {
 
 export function productPrice(item, at = Date.now()) {
   if (!item) return 0;
-  if (item.eventOnly) return resalePrice(item, at);
+  if (
+    item.eventOnly &&
+    (isResaleCosmetic(item) || item.id === BLACK_FRIDAY_SKIN.id)
+  )
+    return resalePrice(item, at);
   return salePrice(item, at);
 }
 

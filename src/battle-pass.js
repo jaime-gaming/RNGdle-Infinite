@@ -1,9 +1,25 @@
-import { themeForStart } from "./season-config.js";
+import { gameNow } from "./game-clock.js";
 
-export const BATTLE_PASS_FIRST_START = Date.UTC(2026, 10, 18, 0, 0, 0);
+// Keep only launched seasons here. To launch another, add its record and make
+// it current in code; no future pass is inferred from a calendar cadence.
+export const BATTLE_PASS_SEASONS = [
+  {
+    index: 1,
+    id: "season-1",
+    start: Date.UTC(2026, 10, 18, 0, 0, 0),
+    name: "First Light",
+    theme:
+      "Gold at the horizon, warm light on a quiet field. Begin where the day breaks.",
+    accent: "#fbbf24",
+  },
+];
+export const BATTLE_PASS_CURRENT_SEASON = BATTLE_PASS_SEASONS.at(-1);
+export const BATTLE_PASS_FIRST_START = BATTLE_PASS_CURRENT_SEASON.start;
 export const BATTLE_PASS_SEASON_MS = 28 * 24 * 60 * 60 * 1000;
 export const BATTLE_PASS_LEVELS = 30;
 export const BPEP_PER_LEVEL = 500;
+// Each online roll adds a small amount of pass progress; offline rewards never count.
+export const BPEP_PER_ROLL = 5;
 export const BATTLE_PASS_MAX_XP = BATTLE_PASS_LEVELS * BPEP_PER_LEVEL;
 export const BATTLE_PASS_PREMIUM_PRICE = 2_000_000;
 export const BATTLE_PASS_ARCHIVE_LIMIT = 24;
@@ -12,11 +28,6 @@ export const BATTLE_PASS_TEMPORARY_THEMES = [
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const PREVIEW_AT = Number(import.meta.env?.VITE_BATTLE_PASS_PREVIEW_AT ?? 0);
-const PREVIEW_OFFSET =
-  import.meta.env?.DEV && Number.isFinite(PREVIEW_AT) && PREVIEW_AT > 0
-    ? PREVIEW_AT - Date.now()
-    : 0;
 
 const clampIndex = (index) => {
   const value = Number.isFinite(index) ? Math.floor(index) : 1;
@@ -25,21 +36,30 @@ const clampIndex = (index) => {
 
 export function seasonStartFor(index) {
   return (
-    BATTLE_PASS_FIRST_START + (clampIndex(index) - 1) * BATTLE_PASS_SEASON_MS
+    BATTLE_PASS_SEASONS.find((entry) => entry.index === clampIndex(index))
+      ?.start ?? null
   );
 }
 
-// A season wears the theme of the month it opens in. Names come from
-// season-config.js, so editing a month there renames every season that starts
-// in it. The season number stays unique, so a returning name is never ambiguous.
+// Only seasons explicitly listed above have a public identity. Unknown IDs
+// from old or malformed saves receive a neutral label rather than a forecast.
 export function passSeasonIdentity(index) {
   const number = clampIndex(index);
-  const start = seasonStartFor(number);
-  const theme = themeForStart(start);
+  const configured = BATTLE_PASS_SEASONS.find(
+    (entry) => entry.index === number,
+  );
+  if (!configured)
+    return {
+      number,
+      name: `Season ${number}`,
+      theme: "",
+      accent: BATTLE_PASS_CURRENT_SEASON.accent,
+      month: null,
+      lap: Math.ceil(number / 12),
+    };
   return {
-    ...theme,
-    number,
-    month: new Date(start).getUTCMonth() + 1,
+    ...configured,
+    month: new Date(configured.start).getUTCMonth() + 1,
     lap: Math.ceil(number / 12),
   };
 }
@@ -82,10 +102,10 @@ export const BATTLE_PASS_COSMETICS = [
     family: "battle-pass",
     eventOnly: true,
     passReward: true,
-    swatch: ["#7dd3fc", "#0284c7"],
+    swatch: ["#fde68a", "#d97706"],
     icon: "circuit",
     description:
-      "A free-track season aura: a clean blue signal with a bright carrier line. Cosmetic only.",
+      "A free-track First Light aura: a warm gold signal with a bright carrier line. Cosmetic only.",
   },
   {
     id: "pass-prism",
@@ -106,10 +126,10 @@ export const BATTLE_PASS_COSMETICS = [
     family: "battle-pass",
     eventOnly: true,
     passReward: true,
-    swatch: ["#fde68a", "#38bdf8"],
+    swatch: ["#fff0ad", "#c66c12"],
     icon: "solstice",
     description:
-      "A sunrise halo draws a bright gold arc over a cool blue horizon, with tiny dawn sparks orbiting the frame. Exclusive to the First Light Battle Pass; cosmetic only.",
+      "A soft amber halo draws a gold arc above the horizon, with tiny dawn sparks orbiting the frame. Exclusive to the First Light Battle Pass; cosmetic only.",
   },
 ];
 
@@ -145,7 +165,7 @@ const BOOST_BY_ID = new Map(PASS_BOOSTS.map((boost) => [boost.id, boost]));
 export const PASS_BOOST_PRICE = 250_000;
 export const PASS_BOOST_BUY_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-export function boostBuyStatus(boosts, at = Date.now()) {
+export function boostBuyStatus(boosts, at = gameNow()) {
   const last = Number.isSafeInteger(boosts?.boughtAt) ? boosts.boughtAt : 0;
   return {
     price: PASS_BOOST_PRICE,
@@ -153,7 +173,7 @@ export function boostBuyStatus(boosts, at = Date.now()) {
   };
 }
 
-export function boughtBoost(boosts, id, at = Date.now()) {
+export function boughtBoost(boosts, id, at = gameNow()) {
   const boost = passBoostById(id);
   if (!boost) return boosts;
   return {
@@ -265,7 +285,7 @@ export const PASS_METRICS = [
   "trash",
 ];
 
-export const PASS_ACTIVE = { daily: 3, weekly: 2, season: 4 };
+export const PASS_ACTIVE = { daily: 3, weekly: 3, season: 5 };
 export const PASS_CADENCES = ["daily", "weekly", "season"];
 export const PASS_DAILY_REROLLS = 1;
 
@@ -397,6 +417,24 @@ export const PASS_MISSIONS = [
     reward: 600,
   },
   {
+    id: "pass-weekly-epic",
+    cadence: "weekly",
+    title: "Roll 2 Epic or better",
+    detail: "Epic, Anomaly, Mythic or GODLY rolls count.",
+    metric: "epic",
+    goal: 2,
+    reward: 700,
+  },
+  {
+    id: "pass-weekly-trash",
+    cadence: "weekly",
+    title: "Roll 12 Trash numbers",
+    detail: "The low rolls still make progress.",
+    metric: "trash",
+    goal: 12,
+    reward: 500,
+  },
+  {
     id: "pass-season-rolls",
     cadence: "season",
     title: "Roll 250 numbers this season",
@@ -431,6 +469,24 @@ export const PASS_MISSIONS = [
     metric: "discovered",
     goal: 40,
     reward: 2000,
+  },
+  {
+    id: "pass-milestone-rolls",
+    cadence: "season",
+    title: "Milestone · Roll 1,000 numbers",
+    detail: "A season-long marker for steady progress.",
+    metric: "rolls",
+    goal: 1000,
+    reward: 2500,
+  },
+  {
+    id: "pass-milestone-rare",
+    cadence: "season",
+    title: "Milestone · Roll 100 Rare or better",
+    detail: "Every Rare, Epic, Anomaly, Mythic or GODLY roll counts.",
+    metric: "rare",
+    goal: 100,
+    reward: 2500,
   },
   {
     id: "pass-season-boost",
@@ -468,7 +524,7 @@ export function boostCharges(boosts, id) {
 
 // A window stays listed until the client clock passes it; saves keep their own
 // copy so a slow or fast device never silently deletes a charge in progress.
-export function activeBoosts(boosts, at = Date.now()) {
+export function activeBoosts(boosts, at = gameNow()) {
   const list = Array.isArray(boosts?.active) ? boosts.active : [];
   return list
     .filter(
@@ -481,7 +537,7 @@ export function activeBoosts(boosts, at = Date.now()) {
     .map((entry) => ({ ...passBoostById(entry.id), until: entry.until }));
 }
 
-export function boostMultiplier(boosts, at = Date.now()) {
+export function boostMultiplier(boosts, at = gameNow()) {
   return activeBoosts(boosts, at).reduce(
     (total, boost) => total * boost.mult,
     1,
@@ -501,7 +557,7 @@ function pruneBoosts(boosts, at, keepExpired = false) {
   return { charges: { ...(boosts?.charges ?? {}) }, active };
 }
 
-export function grantBoost(boosts, id, charges, at = Date.now()) {
+export function grantBoost(boosts, id, charges, at = gameNow()) {
   const boost = passBoostById(id);
   if (!boost || !Number.isSafeInteger(charges) || charges < 1) return boosts;
   const clean = pruneBoosts(boosts, at, true);
@@ -537,7 +593,7 @@ export function activateBoost(boosts, id, at) {
   };
 }
 
-export function parseBoosts(value, at = Date.now()) {
+export function parseBoosts(value, at = gameNow()) {
   if (value == null) return { boosts: emptyBoosts(), repaired: false };
   if (typeof value !== "object" || Array.isArray(value))
     return { boosts: emptyBoosts(), repaired: true };
@@ -599,39 +655,31 @@ export function parseBoosts(value, at = Date.now()) {
   return { boosts: { charges, active, boughtAt }, repaired };
 }
 
-export function passNow(at = Date.now()) {
-  const value = Number.isFinite(at) ? at : Date.now();
-  return PREVIEW_OFFSET ? value + PREVIEW_OFFSET : value;
+export function passNow(at = gameNow()) {
+  return Number.isFinite(at) ? at : gameNow();
 }
 
-export function battlePassSeason(at = Date.now()) {
+export function battlePassSeason(at = gameNow()) {
   const now = passNow(at);
-  const index = Math.max(
-    0,
-    Math.floor((now - BATTLE_PASS_FIRST_START) / BATTLE_PASS_SEASON_MS),
-  );
-  const start = BATTLE_PASS_FIRST_START + index * BATTLE_PASS_SEASON_MS;
+  const index = BATTLE_PASS_CURRENT_SEASON.index;
+  const start = BATTLE_PASS_CURRENT_SEASON.start;
   const end = start + BATTLE_PASS_SEASON_MS;
-  const identity = passSeasonIdentity(index + 1);
+  const identity = passSeasonIdentity(index);
+  const upcoming = now < start;
+  const active = now >= start && now < end;
   return {
-    index: index + 1,
-    id: `season-${index + 1}`,
+    index,
+    id: `season-${index}`,
     name: identity.name,
     theme: identity.theme,
     accent: identity.accent,
     month: identity.month,
-    nextName: passSeasonName(index + 2),
-    daysLong: BATTLE_PASS_SEASON_MS / DAY_MS,
-    day: Math.min(
-      BATTLE_PASS_SEASON_MS / DAY_MS,
-      Math.floor((now - start) / DAY_MS) + 1,
-    ),
     start,
     end,
     now,
-    upcoming: now < BATTLE_PASS_FIRST_START,
-    active: now >= BATTLE_PASS_FIRST_START && now < end,
-    endsInMs: Math.max(0, end - now),
+    upcoming,
+    active,
+    ended: now >= end,
   };
 }
 
@@ -643,7 +691,10 @@ export function seasonNumber(id) {
 export function seasonLabel(id) {
   const number = seasonNumber(id);
   if (!number) return "Unstarted season";
-  return `Season ${number} · ${passSeasonName(number)}`;
+  const name = passSeasonName(number);
+  return name === `Season ${number}`
+    ? `Season ${number}`
+    : `Season ${number} · ${name}`;
 }
 
 export function passLevelForXp(xp) {
@@ -988,7 +1039,7 @@ function parseSlot(value, cadence) {
   return { slot: { period, counts, claimed, swaps, rerolls }, repaired };
 }
 
-export function parseBattlePass(value, at = Date.now()) {
+export function parseBattlePass(value, at = gameNow()) {
   if (value == null) return { pass: emptyBattlePass(), repaired: false };
   if (typeof value !== "object" || Array.isArray(value))
     return { pass: emptyBattlePass(), repaired: true };

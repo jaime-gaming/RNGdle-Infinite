@@ -1,4 +1,5 @@
 import { unpackVaultSave } from "./save-codec.js";
+import { salePriceOf } from "./black-friday.js";
 
 import { reaperAct } from "./rngween-legacy.js";
 import { allTimeTally } from "./profile-stats.js";
@@ -112,7 +113,9 @@ import {
 } from "./rngween-limited.js";
 import {
   BATTLE_PASS_LEVELS,
+  BATTLE_PASS_MAX_XP,
   BATTLE_PASS_PREMIUM_PRICE,
+  BPEP_PER_ROLL,
   BATTLE_PASS_REWARDS,
   battlePassSeason,
   claimPassMission,
@@ -253,6 +256,7 @@ export function emptyProgress() {
     cooldownWindow: null,
     pets: [],
     activePet: "none",
+    petSkins: {},
     skills: [],
     equippedSkills: [],
     skillCharge: {},
@@ -562,6 +566,10 @@ export function parseAndRepairProgress(raw) {
   ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
 
   const activePet = pets.includes(p.activePet) ? p.activePet : "none";
+  const petSkins =
+    owned.includes("pass-axolotl") && p.petSkins?.axolotl === "prism"
+      ? { axolotl: "prism" }
+      : {};
   let skillsInput = p.skills;
   if (p.skills != null && !Array.isArray(p.skills)) {
     note(
@@ -697,6 +705,7 @@ export function parseAndRepairProgress(raw) {
         : "none",
     pets: pets,
     activePet,
+    petSkins,
     skills,
     equippedSkills,
     loadouts: parseLoadouts(p.loadouts),
@@ -1138,6 +1147,12 @@ export function applyProgress(state, action) {
 }
 
 function applyEvent(state, action) {
+  if (action.type === "initialize-pass-season") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass season time");
+    return ensurePassSeason(state, at);
+  }
   if (action.type === "rebirth") {
     const count = state.rebirths ?? 0;
     if (action.expectedRebirths !== count)
@@ -1423,9 +1438,7 @@ function applyEvent(state, action) {
       throw new Error("That pass reward does not exist.");
     if (track !== "free" && track !== "premium")
       throw new Error("That pass track does not exist.");
-    const ready = state.battlePass?.seasonId
-      ? state
-      : ensurePassSeason(state, at);
+    const ready = ensurePassSeason(state, at);
     return grantPassReward(ready, level, track, at, action.eventId);
   }
   if (action.type === "activate-boost") {
@@ -1501,12 +1514,17 @@ function applyEvent(state, action) {
       throw new Error("The pass season is not open for upgrades.");
     if (ready.battlePass.premium)
       throw new Error("This season's premium track is already unlocked.");
-    if (ready.balance < BATTLE_PASS_PREMIUM_PRICE)
+    const premiumPrice = salePriceOf(
+      BATTLE_PASS_PREMIUM_PRICE,
+      "battle-pass-premium",
+      at,
+    );
+    if (ready.balance < premiumPrice)
       throw new Error("Not enough EP for the premium track.");
     return withSaleStamp(
       {
         ...ready,
-        balance: ready.balance - BATTLE_PASS_PREMIUM_PRICE,
+        balance: ready.balance - premiumPrice,
         battlePass: { ...ready.battlePass, premium: true },
         history: appendHistory(ready.history, [
           {
@@ -1515,12 +1533,12 @@ function applyEvent(state, action) {
             at,
             seasonId: ready.battlePass.seasonId,
             name: "Premium track",
-            ep: BATTLE_PASS_PREMIUM_PRICE,
+            ep: premiumPrice,
           },
         ]),
       },
       at,
-      BATTLE_PASS_PREMIUM_PRICE,
+      premiumPrice,
     );
   }
 
@@ -1755,6 +1773,14 @@ function applyEvent(state, action) {
           )
         : 0;
     const at = action.at ?? Math.ceil(Date.now());
+    const season = battlePassSeason(at);
+    const pass = state.battlePass ?? emptyBattlePass();
+    const rollBpep =
+      action.source !== "offline" &&
+      season.active &&
+      pass.seasonId === season.id
+        ? Math.min(BPEP_PER_ROLL, Math.max(0, BATTLE_PASS_MAX_XP - pass.xp))
+        : 0;
 
     const events = paidEvents.flatMap(
       ({
@@ -1781,6 +1807,7 @@ function applyEvent(state, action) {
             number: scored.number,
             tier: scored.tier,
             ep: scored.totalEP,
+            ...(first && rollBpep ? { bpep: rollBpep } : {}),
             ...(ownPetBonus
               ? { petBonus: ownPetBonus, pet: state.activePet }
               : {}),
@@ -1860,10 +1887,15 @@ function applyEvent(state, action) {
       action.source === "offline"
         ? (state.tasks ?? emptyTasks())
         : recordTally(state.tasks, tally, at);
-    const battlePass =
+    let battlePass =
       action.source === "offline"
         ? (state.battlePass ?? emptyBattlePass())
         : recordPassTally(state.battlePass ?? emptyBattlePass(), tally, at);
+    if (rollBpep)
+      battlePass = {
+        ...battlePass,
+        xp: Math.min(BATTLE_PASS_MAX_XP, battlePass.xp + rollBpep),
+      };
     if (droppedPet)
       events.push({
         id: `${id}:pet`,
@@ -2062,6 +2094,24 @@ function applyEvent(state, action) {
       at,
     );
   }
+  if (action.type === "equip-pet-skin") {
+    if (
+      action.petId !== "axolotl" ||
+      !(state.pets ?? []).includes(action.petId)
+    )
+      throw new Error("Find this companion before changing its appearance.");
+    if (
+      action.skinId === "prism" &&
+      !(state.owned ?? []).includes("pass-axolotl")
+    )
+      throw new Error("Unlock the Prism Axolotl skin before equipping it.");
+    if (action.skinId !== "original" && action.skinId !== "prism")
+      throw new Error("That companion skin is not available.");
+    const petSkins = { ...(state.petSkins ?? {}) };
+    if (action.skinId === "original") delete petSkins.axolotl;
+    else petSkins.axolotl = "prism";
+    return { ...state, petSkins };
+  }
   if (action.type === "equip-pet") {
     if (action.id !== "none" && !(state.pets ?? []).includes(action.id))
       throw new Error("Find or buy this companion before equipping it.");
@@ -2249,6 +2299,7 @@ function parseHistory(value) {
         next = {
           ...next,
           ep: e.ep,
+          ...(validAmount(e.bpep) && e.bpep > 0 ? { bpep: e.bpep } : {}),
           tier:
             manifest.tiers.findLast((tier) => e.ep >= tier.minEP)?.id ?? e.tier,
           ...(e.source === "offline" ? { source: "offline" } : {}),

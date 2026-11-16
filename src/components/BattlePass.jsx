@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  CalendarDays,
   Check,
   Clock,
   Coins,
@@ -22,6 +21,7 @@ import {
   BATTLE_PASS_REWARDS,
   BATTLE_PASS_VARIANT,
   BPEP_PER_LEVEL,
+  BPEP_PER_ROLL,
   PASS_BOOSTS,
   PASS_BOOST_PRICE,
   activeBoosts,
@@ -88,6 +88,7 @@ export default function BattlePass({
   notify,
   cloudUser,
   openSignup,
+  navigate,
 }) {
   const formatEP = useFormatEP();
   const pass = progress.battlePass ?? {
@@ -102,13 +103,13 @@ export default function BattlePass({
   const level = passLevelForXp(pass.xp);
   const intoLevel = passXpIntoLevel(pass.xp);
   const [pending, setPending] = useState("");
-  const [confirmPremium, setConfirmPremium] = useState(false);
   const [inspectedReward, setInspectedReward] = useState(null);
   const inspectionDialog = useRef(null);
   const busy = useRef(false);
   const owned = progress.owned ?? [];
-  const currentSeason = pass.seasonId === season.id;
-  const ended = !!pass.seasonId && !currentSeason && !season.upcoming;
+  const currentSeason = season.active;
+  const ended =
+    season.ended || (!!pass.seasonId && !currentSeason && !season.upcoming);
   const claimedCount = (pass.claimed ?? []).length;
   const trackSlots = BATTLE_PASS_LEVELS * (pass.premium ? 2 : 1);
   const archive = [...(pass.archive ?? [])].reverse();
@@ -246,7 +247,7 @@ export default function BattlePass({
   }
 
   return (
-    <div className="battle-pass">
+    <div className="battle-pass" style={{ "--pass-accent": season.accent }}>
       {!cloudUser && !progress.profile && (
         <div className="guest-save-notice">
           <p>Guest pass progress is temporary. Name a profile to keep it.</p>
@@ -264,12 +265,7 @@ export default function BattlePass({
           <Ticket size={28} />
         </div>
         <div className="pass-hero-copy">
-          <span className="eyebrow">
-            Season {season.index}
-            {!season.upcoming &&
-              !ended &&
-              ` · day ${season.day} of ${season.daysLong}`}
-          </span>
+          <span className="eyebrow">Season {season.index}</span>
           <h2>
             {season.upcoming
               ? "The pass opens soon"
@@ -284,8 +280,8 @@ export default function BattlePass({
             {season.upcoming
               ? `${season.name} starts ${passDateLabel(season.start)} UTC.`
               : ended
-                ? `Claim any rewards you earned. Your next online roll opens ${season.name} and delivers anything still waiting.`
-                : `${passDateLabel(season.start)} – ${passDateLabel(season.end)} UTC. BPEP moves the pass; EP stays your shop wallet.`}
+                ? "This season is complete. You can still claim any rewards you earned."
+                : `Season rewards are active. Every online roll earns ${BPEP_PER_ROLL} BPEP; EP stays your shop wallet.`}
           </p>
         </div>
         <div className="pass-hero-stats">
@@ -306,13 +302,28 @@ export default function BattlePass({
             </strong>
           </div>
           <div>
-            <span>{season.upcoming ? "Opens in" : "Ends in"}</span>
-            <strong>
-              <Timer size={14} aria-hidden="true" />
+            <span>
               {season.upcoming
-                ? waitText(season.start - season.now)
-                : waitText(season.endsInMs)}
+                ? "Opens in"
+                : ended
+                  ? "Season ended"
+                  : "Season ends"}
+            </span>
+            <strong>
+              {season.upcoming ? (
+                <>
+                  <Timer size={14} aria-hidden="true" />
+                  {waitText(season.start - season.now)}
+                </>
+              ) : (
+                `${passDateLabel(season.end)} UTC`
+              )}
             </strong>
+            {season.upcoming && (
+              <small className="pass-season-end">
+                Ends {passDateLabel(season.end)} UTC
+              </small>
+            )}
           </div>
         </div>
         <div className="pass-level-progress">
@@ -328,12 +339,6 @@ export default function BattlePass({
               : `${count(BPEP_PER_LEVEL - intoLevel)} BPEP to level ${level + 1}`}
           </span>
         </div>
-        {!season.upcoming && (
-          <p className="pass-hero-next">
-            <CalendarDays size={13} aria-hidden="true" />
-            Next season: <strong>{season.nextName}</strong>
-          </p>
-        )}
       </section>
 
       <section
@@ -345,52 +350,23 @@ export default function BattlePass({
             <Crown size={16} aria-hidden="true" /> Premium track
           </h3>
           <p>
-            Optional and paid with EP. Earn extra EP, double boost charges at
-            levels 5, 8, 15, 18, 25 and 28, the Prism Axolotl at level 20 and
-            First Light Crown at level 30. Claimed cosmetics stay yours.
+            Optional, purchased in Shop with EP. Earn extra EP, double boost
+            charges at levels 5, 8, 15, 18, 25 and 28, the Prism Axolotl at
+            level 20 and First Light Crown at level 30. Claimed cosmetics stay
+            yours.
           </p>
         </div>
         {pass.premium ? (
           <span className="pass-premium-owned">
             <Check size={14} aria-hidden="true" /> Unlocked for {season.name}
           </span>
-        ) : confirmPremium ? (
-          <div className="pass-confirm">
-            <span>Unlock for {formatEP(BATTLE_PASS_PREMIUM_PRICE)} EP?</span>
-            <button
-              className="primary-button"
-              disabled={
-                !!pending ||
-                progress.balance < BATTLE_PASS_PREMIUM_PRICE ||
-                !season.active
-              }
-              onClick={() =>
-                run(
-                  { type: "buy-pass-premium" },
-                  "Premium track unlocked for this season.",
-                ).then(() => setConfirmPremium(false))
-              }
-            >
-              Confirm unlock
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() => setConfirmPremium(false)}
-            >
-              Cancel
-            </button>
-          </div>
         ) : (
           <button
-            className="primary-button"
-            disabled={
-              !!pending ||
-              !season.active ||
-              progress.balance < BATTLE_PASS_PREMIUM_PRICE
-            }
-            onClick={() => setConfirmPremium(true)}
+            className="primary-button pass-shop-link"
+            disabled={!season.active}
+            onClick={() => navigate?.("shop", null, "more")}
           >
-            Unlock · {formatEP(BATTLE_PASS_PREMIUM_PRICE)} EP
+            Unlock in Shop · {formatEP(BATTLE_PASS_PREMIUM_PRICE)} EP
           </button>
         )}
       </section>
@@ -501,8 +477,8 @@ export default function BattlePass({
             <p>
               Boosts drop at levels 5, 8, 15, 18, 25 and 28. One boost runs at a
               time; matching charges extend its window without multiplying the
-              bonus. It affects banked roll EP only, and unused charges carry
-              into the next season.
+              bonus. It affects banked roll EP only, and unused charges stay
+              saved between pass seasons.
             </p>
           </div>
           <span

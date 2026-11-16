@@ -3,7 +3,8 @@
 The event is already date-gated: it runs from **2026-11-27 00:00 UTC** to
 **2026-11-28 00:00 UTC** (exclusive). No removal or deployment should happen
 before the event has finished and the owner has requested it. The production
-clock is real; `VITE_BLACK_FRIDAY_PREVIEW_AT` shifts only development builds.
+clock is real; `VITE_GAME_PREVIEW_AT` shifts the shared game clock in development
+previews only. Playwright explicitly disables the preview offset.
 
 ## Never remove player-owned data or history
 
