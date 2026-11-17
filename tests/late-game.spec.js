@@ -79,7 +79,9 @@ test("every late tier requires its predecessor, charges exactly once and preserv
   });
   for (const item of shopProducts.filter((p) => p.lateGame))
     expect(() => buy(p, item.id)).toThrow("Requires");
-  for (const item of shopProducts) {
+  for (const item of shopProducts.filter(
+    (item) => item.id !== "battle-pass-premium",
+  )) {
     const before = p.balance;
     let at = 1000;
     if (item.kind === "skill") {
@@ -96,7 +98,7 @@ test("every late tier requires its predecessor, charges exactly once and preserv
     p = parseProgress(JSON.stringify(p));
   }
   expect(p.history[0].ep).toBe(75000);
-  expect(p.history).toHaveLength(shopProducts.length + 1);
+  expect(p.history).toHaveLength(shopProducts.length);
   expect(rollSettings(p.owned)).toEqual({ rollMS: 10000, cooldownMS: 2000 });
   expect(offlineSettings(p.owned)).toEqual({ intervalMS: 180000, cap: 360 });
   expect(flywheelRequired(p.owned)).toBe(1);

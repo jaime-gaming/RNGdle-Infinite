@@ -52,6 +52,17 @@ export const SkillMark = (props) => (
   </Mark>
 );
 
+export const PassMark = (props) => (
+  <Mark {...props}>
+    <path d="M5 4.5h14v4a2.5 2.5 0 0 0 0 5v6H5v-6a2.5 2.5 0 0 0 0-5Z" />
+    <path d="M9 7.5v2m0 2v2m0 2v2" />
+    <path
+      className="tone"
+      d="m14.5 8.2.8 1.65 1.8.26-1.3 1.27.3 1.8-1.6-.85-1.6.85.3-1.8-1.3-1.27 1.8-.26Z"
+    />
+  </Mark>
+);
+
 export const AuraMark = (props) => (
   <Mark {...props}>
     <circle className="tone" cx="12" cy="12" r="2.9" />

@@ -58,9 +58,10 @@ missed looks can be bought from the sale shelf. Aura cards have a rarity preview
 Moving reveal digits are lighter than landed digits using opacity only, without
 adding backgrounds, borders, underlines or other decorations.
 
-The Battle Pass (`src/battle-pass.js`) uses explicit 28-day season records.
-Only launched seasons are listed; a successor requires a manual code update,
-and the interface must not reveal its name or date in advance. First Light
+The Battle Pass (`src/battle-pass.js`) uses individually configured season
+end dates or durations. Only launched seasons are listed; a successor requires
+an explicit code update, and the interface must not reveal its name or date in
+advance. First Light
 starts on 2026-11-18. Its accent is shared by `/pass`, the temporary theme and
 the active Pass navigation animation. Every pass mission — daily, weekly and
 season milestones — is listed on the Tasks page in its own section; `/pass`
@@ -174,8 +175,8 @@ Only rolls fund a cycle gate.
   `getUTC*`, `timeZone: "UTC"`). Gameplay timers use `gameNow()` in
   `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The event-gated
   systems are the one-day Black Friday sale (`src/black-friday.js`) and the
-  28-day Battle Pass season (`src/battle-pass.js`). Nothing else gates gameplay
-  by calendar date.
+  individually scheduled Battle Pass seasons (`src/battle-pass.js`). Nothing
+  else gates gameplay by calendar date.
 - **Routes are client paths.** `src/router.js` owns paths such as `/shop/auras`
   and `/profile/<username>`. The Worker serves the app at the domain root; its `assets.not_found_handling: single-page-application` serves
   `index.html` for direct route loads, and `public/_headers` keeps HTML and the
@@ -425,7 +426,7 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.6`; do not change it
+  flow. The current label is exactly `v0.6fix0`; do not change it
   until the next session or an explicit user request. Public release notes
   live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR

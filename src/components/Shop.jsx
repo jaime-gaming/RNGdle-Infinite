@@ -13,7 +13,6 @@ import {
   Search,
   ShoppingBag,
   Target,
-  Ticket,
   X,
 } from "lucide-react";
 import {
@@ -104,6 +103,7 @@ import {
   OfflineMark,
   OrbitMark,
   PaceMark,
+  PassMark,
   PrismMark,
   QuarryMark,
   SingularityMark,
@@ -169,7 +169,7 @@ const icons = {
   monolith: MonolithMark,
   chrono: ChronoMark,
   offline: OfflineMark,
-  pass: Ticket,
+  pass: PassMark,
   vault: VaultMark,
   auto: AutomationMark,
   core: CoreMark,

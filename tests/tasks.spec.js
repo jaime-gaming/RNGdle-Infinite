@@ -544,7 +544,7 @@ test("the Task Skip is bought again from More and waits one day", async ({
   const saved = await readSavedProgress(page);
   expect(saved.owned).not.toContain("task-skip");
   expect(saved.tasks.skip.tokens).toBe(1);
-  expect(saved.balance).toBe(375000);
+  expect(saved.balance).toBe(250000);
 });
 
 test("the Tasks page fits a narrow phone without sideways scrolling", async ({

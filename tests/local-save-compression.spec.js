@@ -304,6 +304,6 @@ test("help links use themed buttons and changelog copy stays lowercase", async (
   await expect(
     page.locator(".changelog-entry").first().locator("p").first(),
   ).toHaveText(
-    "the Battle Pass brings named seasons with individually scheduled end dates, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
+    "the Battle Pass has a schedule for each season, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
   );
 });

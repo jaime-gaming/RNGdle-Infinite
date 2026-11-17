@@ -95,7 +95,7 @@ test("deep links and legacy shelf hashes land on the right shelf", async ({
 
   await page.getByRole("link", { name: "Auras", exact: true }).click();
   const others = page.getByRole("navigation", { name: "Other shelves" });
-  await expect(others.getByRole("link")).toHaveCount(5);
+  await expect(others.getByRole("link")).toHaveCount(6);
   await others.getByRole("link", { name: "Offline", exact: true }).click();
   await expect(page).toHaveURL(/\/shop\/offline$/);
 
