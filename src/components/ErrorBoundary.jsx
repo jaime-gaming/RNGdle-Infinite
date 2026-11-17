@@ -1,5 +1,6 @@
 import React from "react";
 import { errorReference } from "../error-codes.js";
+import { reportIncident } from "../incident-report.js";
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -12,6 +13,10 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    reportIncident({
+      code: errorReference(error?.message || "", "UI101"),
+      source: "render-boundary",
+    });
     try {
       console.error(
         "[RNGdle] Render error caught by boundary:",

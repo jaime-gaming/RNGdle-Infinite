@@ -34,6 +34,9 @@ test("premium pass purchases use the live Black Friday price in the wallet and r
     at,
   );
   const initial = { ...emptyProgress(), balance: BATTLE_PASS_PREMIUM_PRICE };
+  expect(() =>
+    applyProgress(initial, { type: "buy", id: "battle-pass-premium", at }),
+  ).toThrow("season pass purchase action");
   const upgraded = applyProgress(initial, {
     type: "buy-pass-premium",
     at,
@@ -88,6 +91,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   state = applyProgress(state, action);
   state = applyProgress(state, { ...action, id: "second-test-roll" });
   for (const item of shopProducts) {
+    if (item.id === "battle-pass-premium") continue;
     const before = state.balance;
 
     const at =

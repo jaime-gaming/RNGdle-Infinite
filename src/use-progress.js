@@ -31,6 +31,8 @@ import {
   pauseCloudForQuota,
 } from "./cloud-quota.js";
 import { cloudGameAccess } from "./auth-gate.js";
+import { errorReference } from "./error-codes.js";
+import { reportIncident } from "./incident-report.js";
 import { localSaveUsableForCloudFallback } from "./local-fallback.js";
 import { getStatusIssue, maintenanceActiveFor } from "./use-status-issue.js";
 import {
@@ -287,6 +289,11 @@ export function useProgress({
     ready: !cloudEnabled || (authReady && !userId),
   });
   function updateCloud(next) {
+    if (next.status === "error" && next.error)
+      reportIncident({
+        code: errorReference(next.error, "CL302"),
+        source: "ui-notice",
+      });
     cloudRef.current = next;
     setCloudState(next);
   }

@@ -7,6 +7,7 @@ export const BATTLE_PASS_SEASONS = [
     index: 1,
     id: "season-1",
     start: Date.UTC(2026, 10, 18, 0, 0, 0),
+    end: Date.UTC(2026, 11, 16, 0, 0, 0),
     name: "First Light",
     theme:
       "Gold at the horizon, warm light on a quiet field. Begin where the day breaks.",
@@ -14,7 +15,9 @@ export const BATTLE_PASS_SEASONS = [
   },
 ];
 export const BATTLE_PASS_CURRENT_SEASON = BATTLE_PASS_SEASONS.at(-1);
-export const BATTLE_PASS_FIRST_START = BATTLE_PASS_CURRENT_SEASON.start;
+export const BATTLE_PASS_FIRST_START = BATTLE_PASS_SEASONS[0].start;
+// Compatibility fallback for legacy records without an explicit season end.
+// Live seasons should declare their own `end` or `durationMs` in the table.
 export const BATTLE_PASS_SEASON_MS = 28 * 24 * 60 * 60 * 1000;
 export const BATTLE_PASS_LEVELS = 30;
 export const BPEP_PER_LEVEL = 500;
@@ -38,6 +41,32 @@ export function seasonStartFor(index) {
   return (
     BATTLE_PASS_SEASONS.find((entry) => entry.index === clampIndex(index))
       ?.start ?? null
+  );
+}
+
+export function passSeasonEnd(entry, nextEntry = null) {
+  if (!entry || !Number.isFinite(entry.start)) return null;
+  const start = entry.start;
+  const explicitEnd = Number.isFinite(entry.end)
+    ? entry.end
+    : Number.isFinite(entry.durationMs) && entry.durationMs > 0
+      ? start + entry.durationMs
+      : start + BATTLE_PASS_SEASON_MS;
+  const nextStart = Number.isFinite(nextEntry?.start)
+    ? nextEntry.start
+    : Infinity;
+  const end = Math.min(explicitEnd, nextStart);
+  return end > start ? end : null;
+}
+
+export function seasonEndFor(index) {
+  const position = BATTLE_PASS_SEASONS.findIndex(
+    (entry) => entry.index === clampIndex(index),
+  );
+  if (position < 0) return null;
+  return passSeasonEnd(
+    BATTLE_PASS_SEASONS[position],
+    BATTLE_PASS_SEASONS[position + 1] ?? null,
   );
 }
 
@@ -661,15 +690,26 @@ export function passNow(at = gameNow()) {
 
 export function battlePassSeason(at = gameNow()) {
   const now = passNow(at);
-  const index = BATTLE_PASS_CURRENT_SEASON.index;
-  const start = BATTLE_PASS_CURRENT_SEASON.start;
-  const end = start + BATTLE_PASS_SEASON_MS;
+  const configured = [...BATTLE_PASS_SEASONS].sort((a, b) => a.start - b.start);
+  const activeEntry = configured.find((entry, index) => {
+    const end = passSeasonEnd(entry, configured[index + 1] ?? null);
+    return now >= entry.start && Number.isFinite(end) && now < end;
+  });
+  const upcomingEntry = configured.find((entry) => now < entry.start);
+  const selected =
+    activeEntry ??
+    upcomingEntry ??
+    configured.at(-1) ??
+    BATTLE_PASS_CURRENT_SEASON;
+  const index = selected.index;
+  const start = selected.start;
+  const end = seasonEndFor(index) ?? start + BATTLE_PASS_SEASON_MS;
   const identity = passSeasonIdentity(index);
-  const upcoming = now < start;
-  const active = now >= start && now < end;
+  const active = selected === activeEntry;
+  const upcoming = !active && now < start;
   return {
     index,
-    id: `season-${index}`,
+    id: selected.id ?? `season-${index}`,
     name: identity.name,
     theme: identity.theme,
     accent: identity.accent,
@@ -679,7 +719,7 @@ export function battlePassSeason(at = gameNow()) {
     now,
     upcoming,
     active,
-    ended: now >= end,
+    ended: !active && !upcoming,
   };
 }
 

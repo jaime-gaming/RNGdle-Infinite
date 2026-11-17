@@ -27,21 +27,20 @@ test("pass premium purchase is routed through Shop, and More owns the transactio
   const shop = read("components/Shop.jsx");
   expect(pass).toContain('navigate?.("shop", null, "more")');
   expect(pass).not.toContain('type: "buy-pass-premium"');
-  expect(shop).toContain('perform("buy-pass-premium")');
-  expect(shop).toContain("BATTLE_PASS_PREMIUM_PRICE");
+  expect(shop).toContain('premiumPass ? "buy-pass-premium" : "buy"');
+  expect(shop).toContain("data-product={item.id}");
+  expect(read("shop-data.js")).toContain('id: "battle-pass-premium"');
   expect(read("shop-data.js")).toContain('id: "more"');
 });
 
 test("pass UI shows the season end, avoids a Season Status label and uses a compact shop item", () => {
   const pass = read("components/BattlePass.jsx");
-  const shopCss = read("shop.css");
+  const shop = read("components/Shop.jsx");
   const changelog = read("changelog.js");
   expect(pass).not.toContain("Season status");
   expect(pass).toContain("passDateLabel(season.end)");
-  expect(shopCss).toContain(".shop-more-pass {");
-  expect(read("components/Shop.jsx")).toContain(
-    'shop-tile shop-more-pass ${premiumPassOwned ? "is-owned" : ""}',
-  );
+  expect(shop).toContain('className={`shop-card ${aura ? "is-aura" : ""}');
+  expect(shop).toContain("{shelfItemsNow.map(card)}");
   expect(changelog).toContain('date: "2026-11-18"');
 });
 
@@ -56,11 +55,12 @@ test("the pass theme and skin transitions respect reduced motion", () => {
 test("the loader uses the game infinity mark and a blurred traveling light", () => {
   const loader = read("components/LoadingScreen.jsx");
   const loaderCss = read("loading-screen.css");
-  expect(loader).toContain("import { InfinityMark }");
-  expect(loader).toContain("loading-light-halo");
-  expect(loader).toContain("loading-logo-back");
-  expect(loader).toContain("loading-logo-glow");
-  expect(loaderCss).toContain("filter: blur(3.1px)");
+  expect(loader).toContain("loading-infinity-line");
+  expect(loader).toContain("loading-orbit-light");
+  expect(loader).toContain('dur="3.4s"');
+  expect(loaderCss).toContain(
+    "filter: drop-shadow(0 0 2px currentColor) blur(0.7px)",
+  );
   expect(loaderCss).toContain("prefers-reduced-motion: reduce");
 });
 

@@ -1,6 +1,10 @@
 import { test, expect } from "./helpers/clock.js";
 import { waitForApp } from "./helpers/app.js";
-import { productById } from "../src/shop-data.js";
+import {
+  productById,
+  productsOnShelf,
+  shelfOfProduct,
+} from "../src/shop-data.js";
 import {
   BLACK_FRIDAY_SKIN,
   BLACK_FRIDAY_STAMPS,
@@ -620,6 +624,10 @@ test("new event products and the premium pass receive individual sale prices", (
   const basePrice = 250000;
   const passDiscount = saleDiscountForId("battle-pass-premium");
   expect(saleDiscountFor(newEventProduct)).toBeGreaterThan(0);
+  const passProduct = productById.get("battle-pass-premium");
+  expect(passProduct.kind).toBe("utility");
+  expect(shelfOfProduct(passProduct)).toBe("more");
+  expect(productsOnShelf("more")).toContainEqual(passProduct);
   expect(salePriceOf(basePrice, "battle-pass-premium", DAY_BEFORE)).toBe(
     basePrice,
   );

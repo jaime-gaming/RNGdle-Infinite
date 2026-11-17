@@ -124,6 +124,7 @@ const classifiers = [
   [/privacy/i, "CL311"],
   [/cloud.*delet|online save.*removed/i, "CL312"],
   [/timed? ?out|timeout/i, "NT603"],
+  [/firebase|firestore|cloud|online save|online progress/i, "CL304"],
   [/still loading|loading.*progress/i, "CL314"],
   [/paused.*maintenance|maintenance/i, "GM518"],
   [/storage.*(?:full|unavailable)|quotaexceeded/i, "SV210"],
@@ -152,6 +153,10 @@ const classifiers = [
   [/purchase|buy|shop/i, "GM509"],
   [/skill/i, "GM507"],
   [/game data/i, "GM506"],
+  [
+    /could not be completed|unexpected internal|progress could not be updated/i,
+    "IN710",
+  ],
   [/network|connection|request|server/i, "NT601"],
   [/invalid|unexpected|invariant/i, "IN710"],
 ];

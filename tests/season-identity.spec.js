@@ -15,6 +15,7 @@ import {
   BPEP_PER_LEVEL,
   battlePassSeason,
   emptyBattlePass,
+  passSeasonEnd,
   passSeasonIdentity,
   passSeasonName,
   seasonLabel,
@@ -152,6 +153,21 @@ test("the month palette stays valid while only configured seasons are exposed", 
   expect(passSeasonName(NaN)).toBe(first.name);
   expect(seasonLabel("")).toBe("Unstarted season");
   expect(seasonLabel("nonsense")).toBe("Unstarted season");
+});
+
+test("each Battle Pass season accepts its own scheduled duration", () => {
+  const start = Date.UTC(2027, 0, 1);
+  const day = 24 * 60 * 60 * 1000;
+  expect(passSeasonEnd({ start, end: start + 14 * day })).toBe(
+    start + 14 * day,
+  );
+  expect(passSeasonEnd({ start, durationMs: 42 * day })).toBe(start + 42 * day);
+  expect(
+    passSeasonEnd(
+      { start, end: start + 42 * day },
+      { start: start + 21 * day },
+    ),
+  ).toBe(start + 21 * day);
 });
 
 test("First Light is a selectable temporary theme only while the pass is active", async ({

@@ -4,7 +4,7 @@ export const CHANGELOG = [
     date: "2026-11-18",
     title: "battle pass, new discoveries and a clearer shop",
     body: [
-      "the Battle Pass brings month-themed 28-day seasons, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
+      "the Battle Pass brings named seasons with individually scheduled end dates, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
       "tasks add daily, weekly and season missions; each online roll also adds BPEP during an active season. Matching charges extend a running boost.",
       "new originals: Perfect Number (mythic), Narcissistic (anomaly), Triangular (uncommon) and Kaprekar (rare).",
       "also new: Automorphic (epic), Factorion (mythic) and Emirp (uncommon); every one wears its own icon.",

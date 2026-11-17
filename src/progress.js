@@ -1532,7 +1532,8 @@ function applyEvent(state, action) {
             type: "pass-upgrade",
             at,
             seasonId: ready.battlePass.seasonId,
-            name: "Premium track",
+            productId: "battle-pass-premium",
+            name: "Premium Pass Track",
             ep: premiumPrice,
           },
         ]),
@@ -1952,6 +1953,8 @@ function applyEvent(state, action) {
   if (action.type === "buy") {
     const item = productById.get(action.id);
     if (!item) throw new Error("That item is not available.");
+    if (item.id === "battle-pass-premium")
+      throw new Error("Use the season pass purchase action for this item.");
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid purchase time");

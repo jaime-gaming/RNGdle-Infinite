@@ -326,8 +326,10 @@ test("premium purchase from the pass routes to Shop and is completed in More", a
   await page.getByRole("button", { name: /Unlock in Shop/ }).click();
   await expect(page).toHaveURL(/shop\/more/);
   await expect(page.getByRole("heading", { name: "More" })).toBeVisible();
-  await page.getByRole("button", { name: /Unlock ·/ }).click();
-  await page.getByRole("button", { name: "Confirm unlock" }).click();
+  const passCard = page.locator('[data-product="battle-pass-premium"]');
+  await expect(passCard).toBeVisible();
+  await passCard.getByRole("button", { name: /Buy for/ }).click();
+  await page.getByRole("button", { name: "Confirm purchase" }).click();
   await expect
     .poll(async () => (await saved(page)).battlePass.premium)
     .toBe(true);

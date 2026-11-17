@@ -2,6 +2,7 @@ import { SKILLS, SKILL_SLOTS } from "./skills.js";
 import {
   BATTLE_PASS_COSMETICS,
   BATTLE_PASS_FAMILY,
+  BATTLE_PASS_PREMIUM_PRICE,
   BATTLE_PASS_VARIANT,
 } from "./battle-pass.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
@@ -597,6 +598,15 @@ export const shopProducts = [
     description:
       "Swap one open task on your Tasks list for another from its pool: one token per use, kept across rebirths. One purchase per day, up to two in any five days, and up to three held at once.",
   },
+  {
+    id: "battle-pass-premium",
+    kind: "utility",
+    name: "Premium Pass Track",
+    price: BATTLE_PASS_PREMIUM_PRICE,
+    icon: "pass",
+    description:
+      "Unlock this season’s extra reward track. Claim rewards from the Pass page; already claimed cosmetics stay yours.",
+  },
 
   ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({
     id: skill.id,
@@ -720,7 +730,7 @@ export function shelfOfProduct(item) {
   if (!item) return "";
 
   if (item.kind === "companion") return "companions";
-  if (item.id === "task-skip") return "more";
+  if (["task-skip", "battle-pass-premium"].includes(item.id)) return "more";
   const shelf = SHOP_SECTIONS.find((section) =>
     (SHELF_KINDS[section.id] ?? []).includes(item.kind),
   );
@@ -733,7 +743,7 @@ export function productsOnShelf(id) {
   if (!kinds) return [];
   return shopProducts.filter((p) =>
     id === "more"
-      ? p.id === "task-skip"
+      ? ["task-skip", "battle-pass-premium"].includes(p.id)
       : kinds.includes(p.kind) && p.id !== "task-skip",
   );
 }
