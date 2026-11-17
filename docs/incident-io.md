@@ -19,5 +19,18 @@ The route is dormant until an incident.io alert-source URL is configured. If it 
 
 3. Deploy the Worker/static assets using the normal production deploy process. The Worker routes `/api/client-errors`; the rest of the site is served from the `ASSETS` binding. For a separate HTTPS staging host, set the non-secret Worker variable `INCIDENT_IO_ALLOWED_ORIGIN` to that exact origin on the staging environment.
 4. First attach a test alert source and confirm a test event appears in incident.io. Then replace its URL with the production alert source URL in the production Worker secret.
+5. To send a smoke-test event from the deployed app, open its origin in a browser console and run:
+
+   ```js
+   const response = await fetch("/api/client-errors", {
+     method: "POST",
+     credentials: "omit",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ code: "UI101", source: "ui-notice" }),
+   });
+   console.log(response.status, await response.json());
+   ```
+
+   `202` with `accepted: true` means incident.io accepted the event. `reason: "not-configured"` means the Worker secret is missing; `incident-source-unavailable` or `incident-source-rejected` means its URL or source needs attention. This creates a real firing alert; use a test source/staging Worker first, or resolve the smoke-test alert in incident.io afterward. Reports for the same code are rate-limited and deduplicated.
 
 The event title contains the diagnostic reference, and its metadata includes only the app name, reference, and broad source category. incident.io routing and severity policy remain under your control.
