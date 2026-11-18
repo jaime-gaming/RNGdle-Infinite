@@ -1,4 +1,5 @@
 import { unpackVaultSave } from "./save-codec.js";
+import { salePriceOf } from "./black-friday.js";
 
 import { reaperAct } from "./rngween-legacy.js";
 import { allTimeTally } from "./profile-stats.js";
@@ -111,6 +112,35 @@ import {
   parseRngweenLimited,
 } from "./rngween-limited.js";
 import {
+  BATTLE_PASS_LEVELS,
+  BATTLE_PASS_MAX_XP,
+  BATTLE_PASS_PREMIUM_PRICE,
+  BPEP_PER_ROLL,
+  BATTLE_PASS_REWARDS,
+  battlePassSeason,
+  claimPassMission,
+  emptyBattlePass,
+  activateBoost,
+  activeBoosts,
+  boostBuyStatus,
+  boughtBoost,
+  PASS_BOOST_PRICE,
+  boostCharges,
+  boostMultiplier,
+  emptyBoosts,
+  grantBoost,
+  parseBattlePass,
+  passBoostById,
+  passLevelForXp,
+  passMissionById,
+  passRewardEP,
+  passRewardState,
+  recordPassTally,
+  rerollPassDaily,
+  rewardKey,
+  seasonNumber,
+} from "./battle-pass.js";
+import {
   BLACK_FRIDAY_SKIN,
   blackFridayActive,
   emptyBlackFriday,
@@ -122,6 +152,7 @@ import {
 } from "./black-friday.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
+export const PROFILE_DESCRIPTION_LIMIT = 200;
 
 export const GUEST_ROLL_KEY = "rng-infinite-guest-roll-v1";
 
@@ -159,6 +190,7 @@ function freshProfileId() {
 export function walletMultiplier(
   progress,
   skillIds = progress.pendingRoll?.skills,
+  at = null,
 ) {
   return (
     petMultiplier(progress.activePet) *
@@ -166,7 +198,9 @@ export function walletMultiplier(
     ultraRebirthMultiplier(progress.ultraRebirths ?? 0) *
     rollbackMultiplier(progress.rollbacks ?? 0) *
     surplusMultiplier(progress.surplusBanked ?? 0) *
-    skillWalletMultiplier(skillIds ?? [])
+    skillWalletMultiplier(skillIds ?? []) *
+    // Consumable pass boosts are the only temporary factor in the wallet.
+    (at === null ? 1 : boostMultiplier(progress.battlePass?.boosts, at))
   );
 }
 
@@ -222,6 +256,7 @@ export function emptyProgress() {
     cooldownWindow: null,
     pets: [],
     activePet: "none",
+    petSkins: {},
     skills: [],
     equippedSkills: [],
     skillCharge: {},
@@ -231,6 +266,7 @@ export function emptyProgress() {
     rngweenLimited: emptyRngweenLimited(),
     // RETIREMENT: keep parsing the Black Friday save record.
     blackFriday: emptyBlackFriday(),
+    battlePass: emptyBattlePass(),
 
     events: {},
   };
@@ -490,6 +526,31 @@ export function parseAndRepairProgress(raw) {
     owned.push(BLACK_FRIDAY_SKIN.id);
     note("your limited Black Friday 2026 skin was restored from its stamps.");
   }
+  const passRead = parseBattlePass(p.battlePass);
+  if (p.battlePass != null && passRead.repaired)
+    note("battle pass progress was unreadable, so it was reset.");
+  const battlePass = passRead.pass;
+  for (const reward of BATTLE_PASS_REWARDS) {
+    for (const track of ["free", "premium"]) {
+      const definition = reward[track];
+      if (
+        definition.kind !== "ep" &&
+        battlePass.claimed.includes(rewardKey(track, reward.level)) &&
+        !owned.includes(definition.id)
+      ) {
+        owned.push(definition.id);
+        note("a claimed battle pass reward was restored from its receipt.");
+      }
+    }
+  }
+  if (
+    battlePass.claimed.includes(rewardKey("premium", 30)) &&
+    !owned.includes("pass-firstlight") &&
+    !owned.includes("pass-prism")
+  ) {
+    owned.push("pass-prism");
+    note("an earlier premium pass aura was restored from its receipt.");
+  }
 
   let petsInput = p.pets;
   if (p.pets != null && !Array.isArray(p.pets)) {
@@ -505,6 +566,10 @@ export function parseAndRepairProgress(raw) {
   ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
 
   const activePet = pets.includes(p.activePet) ? p.activePet : "none";
+  const petSkins =
+    owned.includes("pass-axolotl") && p.petSkins?.axolotl === "prism"
+      ? { axolotl: "prism" }
+      : {};
   let skillsInput = p.skills;
   if (p.skills != null && !Array.isArray(p.skills)) {
     note(
@@ -563,11 +628,21 @@ export function parseAndRepairProgress(raw) {
     if (createdAt !== stored.createdAt)
       note("profile creation date was unreadable, so it was reset.");
     const avatar = parseAvatar(stored.avatar);
+    const description =
+      typeof stored.description === "string"
+        ? Array.from(stored.description)
+            .slice(0, PROFILE_DESCRIPTION_LIMIT)
+            .join("")
+        : "";
+    if (stored.description !== undefined && description !== stored.description)
+      note(
+        "profile description was unreadable or too long, so it was shortened.",
+      );
     profile = {
       id,
       username,
       createdAt,
-
+      description,
       ...(avatar ? { avatar } : {}),
     };
   }
@@ -630,6 +705,7 @@ export function parseAndRepairProgress(raw) {
         : "none",
     pets: pets,
     activePet,
+    petSkins,
     skills,
     equippedSkills,
     loadouts: parseLoadouts(p.loadouts),
@@ -638,6 +714,7 @@ export function parseAndRepairProgress(raw) {
     tasks: tasksRead.tasks,
     rngweenLimited,
     blackFriday,
+    battlePass,
     skillCharge,
     cooldownUntil,
     receipts: [
@@ -667,7 +744,10 @@ export function preservePermanentCosmetics(previous, next) {
       ...(previous.owned ?? []),
       ...limitedRewardIds(previous.rngweenLimited),
     ]),
-  ].filter((id) => productById.get(id)?.kind === "aura");
+  ].filter((id) => {
+    const item = productById.get(id);
+    return item?.kind === "aura" || item?.passReward;
+  });
   const missing = known.filter(
     (id) =>
       !next.owned.includes(id) ||
@@ -769,9 +849,10 @@ function startNewCycle(
   state,
   { granted = null, starter = 0, resetLadder = false } = {},
 ) {
-  const owned = [...new Set(state.owned ?? [])].filter(
-    (id) => productById.get(id)?.kind === "aura",
-  );
+  const owned = [...new Set(state.owned ?? [])].filter((id) => {
+    const item = productById.get(id);
+    return item?.kind === "aura" || item?.passReward;
+  });
 
   const kept = (state.skills ?? []).filter(
     (id) =>
@@ -941,6 +1022,113 @@ function collectBonus(state, cadence, at, eventId = null) {
   };
 }
 
+function grantPassReward(state, level, track, at, eventId = null) {
+  const pass = state.battlePass ?? emptyBattlePass();
+  const reward = BATTLE_PASS_REWARDS.find((entry) => entry.level === level)?.[
+    track
+  ];
+  if (!reward) throw new Error("That pass reward does not exist.");
+  if (passRewardState(pass, level, track) !== "claimable")
+    throw new Error("This pass reward is not ready to claim.");
+  const ep = passRewardEP(reward, state.owned ?? []);
+  const balance = state.balance + ep;
+  const totalEarned = state.totalEarned + ep;
+  if (!validAmount(balance) || !validAmount(totalEarned))
+    throw new Error("EP balance limit reached.");
+  const permanent =
+    reward.kind !== "ep" && !(state.owned ?? []).includes(reward.id);
+  // Some levels also hand out consumable boosts; the EP above is unchanged.
+  const boosts = reward.boost
+    ? grantBoost(pass.boosts, reward.boost.id, reward.boost.charges, at)
+    : (pass.boosts ?? emptyBoosts());
+  return {
+    ...state,
+    balance,
+    totalEarned,
+    owned: permanent ? [...(state.owned ?? []), reward.id] : state.owned,
+    battlePass: {
+      ...pass,
+      boosts,
+      claimed: [...pass.claimed, rewardKey(track, level)],
+    },
+    history: appendHistory(state.history, [
+      {
+        id: eventId ?? `pass-reward:${pass.seasonId}:${track}-${level}`,
+        type: "pass-reward",
+        at,
+        seasonId: pass.seasonId,
+        level,
+        track,
+        name: reward.name ?? `Level ${level} ${track} reward`,
+        ep,
+        ...(reward.boost ? { boostId: reward.boost.id } : {}),
+        ...(reward.kind !== "ep" ? { productId: reward.id } : {}),
+      },
+    ]),
+  };
+}
+
+function ensurePassSeason(state, at) {
+  const season = battlePassSeason(at);
+  const pass = state.battlePass ?? emptyBattlePass();
+  if (!season.active)
+    return state.battlePass ? state : { ...state, battlePass: pass };
+  if (pass.seasonId === season.id)
+    return state.battlePass ? state : { ...state, battlePass: pass };
+  if (pass.seasonId && seasonNumber(pass.seasonId) >= season.index)
+    return state.battlePass ? state : { ...state, battlePass: pass };
+  let next = { ...state, battlePass: pass };
+  if (pass.seasonId) {
+    const level = passLevelForXp(pass.xp);
+    for (const reward of BATTLE_PASS_REWARDS) {
+      if (reward.level > level) continue;
+      for (const track of ["free", "premium"]) {
+        if (
+          passRewardState(next.battlePass, reward.level, track) === "claimable"
+        )
+          next = grantPassReward(
+            next,
+            reward.level,
+            track,
+            at,
+            `pass-auto:${pass.seasonId}:${track}-${reward.level}`,
+          );
+      }
+    }
+    const archive = [
+      ...(next.battlePass.archive ?? []),
+      {
+        seasonId: pass.seasonId,
+        xp: pass.xp,
+        premium: pass.premium,
+        claimed: next.battlePass.claimed.length,
+      },
+    ].slice(-24);
+    next = {
+      ...next,
+      battlePass: {
+        ...emptyBattlePass(),
+        seasonId: season.id,
+        // Boosts are consumables, not season rewards: unused charges and a
+        // window still running carry into the new season.
+        boosts: pass.boosts ?? emptyBoosts(),
+        archive,
+      },
+    };
+  } else {
+    next = {
+      ...next,
+      battlePass: {
+        ...emptyBattlePass(),
+        seasonId: season.id,
+        boosts: pass.boosts ?? emptyBoosts(),
+        archive: pass.archive ?? [],
+      },
+    };
+  }
+  return next;
+}
+
 export function applyProgress(state, action) {
   const next = applyEvent(state, action);
   if (next === state || !Array.isArray(next.history)) return next;
@@ -959,6 +1147,12 @@ export function applyProgress(state, action) {
 }
 
 function applyEvent(state, action) {
+  if (action.type === "initialize-pass-season") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass season time");
+    return ensurePassSeason(state, at);
+  }
   if (action.type === "rebirth") {
     const count = state.rebirths ?? 0;
     if (action.expectedRebirths !== count)
@@ -1113,9 +1307,10 @@ function applyEvent(state, action) {
       },
     };
 
-    const cosmetics = [...new Set(state.owned ?? [])].filter(
-      (id) => productById.get(id)?.kind === "aura",
-    );
+    const cosmetics = [...new Set(state.owned ?? [])].filter((id) => {
+      const item = productById.get(id);
+      return item?.kind === "aura" || item?.passReward;
+    });
     const next = {
       ...emptyProgress(),
       profile: state.profile,
@@ -1126,6 +1321,7 @@ function applyEvent(state, action) {
       rngweenLimited: state.rngweenLimited,
 
       blackFriday: state.blackFriday ?? emptyBlackFriday(),
+      battlePass: state.battlePass ?? emptyBattlePass(),
       loadouts: state.loadouts ?? [],
       goalId: state.goalId ?? null,
       events: state.events ?? {},
@@ -1185,6 +1381,168 @@ function applyEvent(state, action) {
     return collectBonus(state, action.cadence, at, action.eventId);
   }
 
+  if (action.type === "claim-pass-mission") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass mission time");
+    const ready = ensurePassSeason(state, at);
+    const mission = passMissionById(action.id);
+    const claimed = claimPassMission(ready.battlePass, action.id, at);
+    // A milestone can pay a boost charge as well as BPEP.
+    const battlePass = mission.boost
+      ? {
+          ...claimed,
+          boosts: grantBoost(
+            claimed.boosts,
+            mission.boost.id,
+            mission.boost.charges,
+            at,
+          ),
+        }
+      : claimed;
+    return {
+      ...ready,
+      battlePass,
+      history: appendHistory(ready.history, [
+        {
+          id:
+            action.eventId ??
+            `pass-mission:${battlePass.seasonId}:${action.id}`,
+          type: "pass-mission",
+          at,
+          seasonId: battlePass.seasonId,
+          missionId: action.id,
+          name: mission.title,
+          bpep: mission.reward,
+        },
+      ]),
+    };
+  }
+  if (action.type === "reroll-pass-mission") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass mission time");
+    const ready = ensurePassSeason(state, at);
+    return {
+      ...ready,
+      battlePass: rerollPassDaily(ready.battlePass, action.id, at),
+    };
+  }
+  if (action.type === "claim-pass-reward") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass reward time");
+    const level = Number(action.level);
+    const track = action.track;
+    if (!Number.isInteger(level) || level < 1 || level > BATTLE_PASS_LEVELS)
+      throw new Error("That pass reward does not exist.");
+    if (track !== "free" && track !== "premium")
+      throw new Error("That pass track does not exist.");
+    const ready = ensurePassSeason(state, at);
+    return grantPassReward(ready, level, track, at, action.eventId);
+  }
+  if (action.type === "activate-boost") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid boost time");
+    const pass = state.battlePass ?? emptyBattlePass();
+    const boost = passBoostById(action.id);
+    if (!boost) throw new Error("That boost does not exist.");
+    if (boostCharges(pass.boosts, boost.id) < 1)
+      throw new Error("You have no charge of that boost.");
+    if (activeBoosts(pass.boosts, at).some((active) => active.id !== boost.id))
+      throw new Error("A different boost is already running.");
+    const boosts = activateBoost(pass.boosts, boost.id, at);
+    return {
+      ...state,
+      battlePass: { ...pass, boosts },
+      history: appendHistory(state.history, [
+        {
+          id: action.eventId ?? `boost:${boost.id}:${at}`,
+          type: "boost",
+          at,
+          boostId: boost.id,
+          name: boost.name,
+          minutes: boost.minutes,
+          until: boosts.active[0].until,
+        },
+      ]),
+    };
+  }
+  if (action.type === "buy-boost") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid boost time");
+    const pass = state.battlePass ?? emptyBattlePass();
+    const boost = passBoostById(action.id);
+    if (!boost) throw new Error("That boost does not exist.");
+    const status = boostBuyStatus(pass.boosts, at);
+    if (status.waitMs > 0)
+      throw new Error("That boost is already on the counter today.");
+    if (state.balance < PASS_BOOST_PRICE)
+      throw new Error("Not enough EP for that boost charge.");
+    return withSaleStamp(
+      {
+        ...state,
+        balance: state.balance - PASS_BOOST_PRICE,
+        battlePass: {
+          ...pass,
+          boosts: boughtBoost(pass.boosts, boost.id, at),
+        },
+        history: appendHistory(state.history, [
+          {
+            id: action.eventId ?? `boost-buy:${boost.id}:${at}`,
+            type: "purchase",
+            at,
+            productId: boost.id,
+            name: `${boost.name} charge`,
+            ep: PASS_BOOST_PRICE,
+          },
+        ]),
+      },
+      at,
+      PASS_BOOST_PRICE,
+    );
+  }
+  if (action.type === "buy-pass-premium") {
+    const at = action.at ?? Math.ceil(Date.now());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid pass purchase time");
+    const ready = ensurePassSeason(state, at);
+    const season = battlePassSeason(at);
+    if (!season.active || ready.battlePass.seasonId !== season.id)
+      throw new Error("The pass season is not open for upgrades.");
+    if (ready.battlePass.premium)
+      throw new Error("This season's premium track is already unlocked.");
+    const premiumPrice = salePriceOf(
+      BATTLE_PASS_PREMIUM_PRICE,
+      "battle-pass-premium",
+      at,
+    );
+    if (ready.balance < premiumPrice)
+      throw new Error("Not enough EP for the premium track.");
+    return withSaleStamp(
+      {
+        ...ready,
+        balance: ready.balance - premiumPrice,
+        battlePass: { ...ready.battlePass, premium: true },
+        history: appendHistory(ready.history, [
+          {
+            id: action.eventId ?? `pass-upgrade:${ready.battlePass.seasonId}`,
+            type: "pass-upgrade",
+            at,
+            seasonId: ready.battlePass.seasonId,
+            productId: "battle-pass-premium",
+            name: "Premium Pass Track",
+            ep: premiumPrice,
+          },
+        ]),
+      },
+      at,
+      premiumPrice,
+    );
+  }
+
   if (action.type === "history-prune") {
     const bookmarks = state.bookmarks ?? [];
     const history = state.history ?? [];
@@ -1224,6 +1582,17 @@ function applyEvent(state, action) {
     if (state.profile.username === username) return state;
     return { ...state, profile: { ...state.profile, username } };
   }
+  if (action.type === "profile-description") {
+    if (!state.profile) throw new Error("Create a profile first.");
+    const description =
+      typeof action.description === "string"
+        ? Array.from(action.description)
+            .slice(0, PROFILE_DESCRIPTION_LIMIT)
+            .join("")
+        : "";
+    if ((state.profile.description ?? "") === description) return state;
+    return { ...state, profile: { ...state.profile, description } };
+  }
   if (action.type === "avatar") {
     if (!state.profile) throw new Error("Create a local profile first.");
     const avatar = typeof action.avatar === "string" ? action.avatar : "";
@@ -1252,7 +1621,12 @@ function applyEvent(state, action) {
       !validAmount(action.createdAt)
     )
       throw new Error("Invalid profile");
-    const profile = { id: action.id, username, createdAt: action.createdAt };
+    const profile = {
+      id: action.id,
+      username,
+      createdAt: action.createdAt,
+      description: "",
+    };
     if (action.type === "register-cloud" || action.preserveGuest) {
       return { ...state, profile };
     }
@@ -1301,6 +1675,8 @@ function applyEvent(state, action) {
     )
       return state;
 
+    if (action.source !== "offline")
+      state = ensurePassSeason(state, action.at ?? Math.ceil(Date.now()));
     const extra = (action.extras ?? []).map((entry, index) => {
       const scored = entry?.result ?? entry;
       if (!validRollResult(scored)) throw new Error("Invalid roll");
@@ -1329,6 +1705,12 @@ function applyEvent(state, action) {
       rollbackMultiplier(state.rollbacks ?? 0) *
       surplusMultiplier(state.surplusBanked ?? 0);
     const skillMultiplier = skillWalletMultiplier(fired);
+    // A running pass boost multiplies what this roll banks. It is counted
+    // separately so the activity log can show it honestly.
+    const boostFactor = boostMultiplier(
+      state.battlePass?.boosts,
+      action.at ?? Date.now(),
+    );
 
     const pending =
       action.source === "offline" || state.pendingRoll?.id !== id
@@ -1345,7 +1727,10 @@ function applyEvent(state, action) {
     const discovered = new Set(state.discovered);
     const paidEvents = paid.map(({ result: scored, skill, key, spent }) => {
       const multiplier =
-        baseMultiplier * skillMultiplier * (key === 0 ? reaperMultiplier : 1);
+        baseMultiplier *
+        skillMultiplier *
+        boostFactor *
+        (key === 0 ? reaperMultiplier : 1);
       const credit =
         multiplier === 1
           ? scored.totalEP
@@ -1389,6 +1774,14 @@ function applyEvent(state, action) {
           )
         : 0;
     const at = action.at ?? Math.ceil(Date.now());
+    const season = battlePassSeason(at);
+    const pass = state.battlePass ?? emptyBattlePass();
+    const rollBpep =
+      action.source !== "offline" &&
+      season.active &&
+      pass.seasonId === season.id
+        ? Math.min(BPEP_PER_ROLL, Math.max(0, BATTLE_PASS_MAX_XP - pass.xp))
+        : 0;
 
     const events = paidEvents.flatMap(
       ({
@@ -1415,6 +1808,7 @@ function applyEvent(state, action) {
             number: scored.number,
             tier: scored.tier,
             ep: scored.totalEP,
+            ...(first && rollBpep ? { bpep: rollBpep } : {}),
             ...(ownPetBonus
               ? { petBonus: ownPetBonus, pet: state.activePet }
               : {}),
@@ -1465,39 +1859,44 @@ function applyEvent(state, action) {
         ? action.petDrop
         : null;
 
+    const tally = {
+      rolls: 1,
+      rare: RARE_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+      epic: EPIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+      mythic: MYTHIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
+      multi: paidEvents.length > 1 ? 1 : 0,
+      discovered: paidEvents.reduce(
+        (total, paid) => total + paid.unlocked.length,
+        0,
+      ),
+      banked: credited,
+      skills: fired.length ? 1 : 0,
+      pets: droppedPet ? 1 : 0,
+      peakEP: committed.scored.totalEP,
+      peakBadges: committed.scored.badges.length,
+      anomaly: committed.scored.tier === "anomaly" ? 1 : 0,
+      trash: committed.scored.tier === "trash" ? 1 : 0,
+      high: committed.scored.number >= HIGH_ROLL_MIN ? 1 : 0,
+      low: committed.scored.number <= LOW_ROLL_MAX ? 1 : 0,
+      low1k: committed.scored.number <= 1000 ? 1 : 0,
+      badges: paidEvents.reduce(
+        (total, paid) => total + paid.scored.badges.length,
+        0,
+      ),
+    };
     const tasks =
       action.source === "offline"
         ? (state.tasks ?? emptyTasks())
-        : recordTally(
-            state.tasks,
-            {
-              rolls: 1,
-              rare: RARE_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
-              epic: EPIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
-              mythic: MYTHIC_OR_BETTER.includes(committed.scored.tier) ? 1 : 0,
-
-              multi: paidEvents.length > 1 ? 1 : 0,
-              discovered: paidEvents.reduce(
-                (total, paid) => total + paid.unlocked.length,
-                0,
-              ),
-              banked: credited,
-              skills: fired.length ? 1 : 0,
-              pets: droppedPet ? 1 : 0,
-              peakEP: committed.scored.totalEP,
-              peakBadges: committed.scored.badges.length,
-              anomaly: committed.scored.tier === "anomaly" ? 1 : 0,
-              trash: committed.scored.tier === "trash" ? 1 : 0,
-              high: committed.scored.number >= HIGH_ROLL_MIN ? 1 : 0,
-              low: committed.scored.number <= LOW_ROLL_MAX ? 1 : 0,
-              low1k: committed.scored.number <= 1000 ? 1 : 0,
-              badges: paidEvents.reduce(
-                (total, paid) => total + paid.scored.badges.length,
-                0,
-              ),
-            },
-            at,
-          );
+        : recordTally(state.tasks, tally, at);
+    let battlePass =
+      action.source === "offline"
+        ? (state.battlePass ?? emptyBattlePass())
+        : recordPassTally(state.battlePass ?? emptyBattlePass(), tally, at);
+    if (rollBpep)
+      battlePass = {
+        ...battlePass,
+        xp: Math.min(BATTLE_PASS_MAX_XP, battlePass.xp + rollBpep),
+      };
     if (droppedPet)
       events.push({
         id: `${id}:pet`,
@@ -1510,6 +1909,7 @@ function applyEvent(state, action) {
       ...state,
       history: appendHistory(state.history, events),
       tasks,
+      battlePass,
       pendingRoll: null,
       flywheelCharge: flywheelAfterSettlement(
         state,
@@ -1553,6 +1953,8 @@ function applyEvent(state, action) {
   if (action.type === "buy") {
     const item = productById.get(action.id);
     if (!item) throw new Error("That item is not available.");
+    if (item.id === "battle-pass-premium")
+      throw new Error("Use the season pass purchase action for this item.");
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid purchase time");
@@ -1694,6 +2096,24 @@ function applyEvent(state, action) {
       },
       at,
     );
+  }
+  if (action.type === "equip-pet-skin") {
+    if (
+      action.petId !== "axolotl" ||
+      !(state.pets ?? []).includes(action.petId)
+    )
+      throw new Error("Find this companion before changing its appearance.");
+    if (
+      action.skinId === "prism" &&
+      !(state.owned ?? []).includes("pass-axolotl")
+    )
+      throw new Error("Unlock the Prism Axolotl skin before equipping it.");
+    if (action.skinId !== "original" && action.skinId !== "prism")
+      throw new Error("That companion skin is not available.");
+    const petSkins = { ...(state.petSkins ?? {}) };
+    if (action.skinId === "original") delete petSkins.axolotl;
+    else petSkins.axolotl = "prism";
+    return { ...state, petSkins };
   }
   if (action.type === "equip-pet") {
     if (action.id !== "none" && !(state.pets ?? []).includes(action.id))
@@ -1882,6 +2302,7 @@ function parseHistory(value) {
         next = {
           ...next,
           ep: e.ep,
+          ...(validAmount(e.bpep) && e.bpep > 0 ? { bpep: e.bpep } : {}),
           tier:
             manifest.tiers.findLast((tier) => e.ep >= tier.minEP)?.id ?? e.tier,
           ...(e.source === "offline" ? { source: "offline" } : {}),
@@ -2117,6 +2538,80 @@ function parseHistory(value) {
       )
         return [];
       next = { ...base, name: e.name, productId: e.productId };
+    } else if (e.type === "pass-reward") {
+      if (
+        !/^season-[1-9]\d*$/.test(e.seasonId ?? "") ||
+        !validAmount(e.level) ||
+        e.level < 1 ||
+        e.level > BATTLE_PASS_LEVELS ||
+        !["free", "premium"].includes(e.track) ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.ep)
+      )
+        return [];
+      next = {
+        ...base,
+        seasonId: e.seasonId,
+        level: e.level,
+        track: e.track,
+        name: e.name,
+        ep: e.ep,
+        ...(typeof e.productId === "string" && productById.has(e.productId)
+          ? { productId: e.productId }
+          : {}),
+        ...(passBoostById(e.boostId) ? { boostId: e.boostId } : {}),
+      };
+    } else if (e.type === "pass-mission") {
+      if (
+        !/^season-[1-9]\d*$/.test(e.seasonId ?? "") ||
+        typeof e.missionId !== "string" ||
+        !passMissionById(e.missionId) ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.bpep) ||
+        e.bpep < 1
+      )
+        return [];
+      next = {
+        ...base,
+        seasonId: e.seasonId,
+        missionId: e.missionId,
+        name: e.name,
+        bpep: e.bpep,
+      };
+    } else if (e.type === "boost") {
+      if (
+        !passBoostById(e.boostId) ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.minutes) ||
+        e.minutes < 1 ||
+        !validAmount(e.until) ||
+        e.until < 1
+      )
+        return [];
+      next = {
+        ...base,
+        boostId: e.boostId,
+        name: e.name,
+        minutes: e.minutes,
+        until: e.until,
+      };
+    } else if (e.type === "pass-upgrade") {
+      if (
+        !/^season-[1-9]\d*$/.test(e.seasonId ?? "") ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100 ||
+        !validAmount(e.ep) ||
+        e.ep < 1
+      )
+        return [];
+      next = { ...base, seasonId: e.seasonId, name: e.name, ep: e.ep };
     } else if (e.type === "task") {
       if (
         !TASK_CADENCES.includes(e.cadence) ||

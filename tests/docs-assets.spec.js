@@ -54,6 +54,7 @@ test("the README is a short, player-friendly guide with current screenshots", ()
   for (const section of [
     "## How to play",
     "## What you can discover",
+    "## Battle Pass",
     "## Keep your progress",
     "## FAQ",
     "## Privacy & contact",
@@ -123,6 +124,14 @@ test("the shop hub links match the shelf pages it renders", () => {
     expect(shop).toContain('id="shop-hub"');
   }
   expect(seen).toEqual(
-    new Set(["skills", "pace", "companions", "auras", "offline", "tools"]),
+    new Set([
+      "skills",
+      "pace",
+      "companions",
+      "auras",
+      "offline",
+      "tools",
+      "more",
+    ]),
   );
 });

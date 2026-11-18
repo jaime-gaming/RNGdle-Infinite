@@ -232,6 +232,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
     singularity: 3500000,
     "archive-lens": 120000,
     "auto-roll": 1600000,
+    "battle-pass-premium": 2000000,
     "persistence-core": 4800000,
     "offline-roller": 2600000,
     "offline-clock-1": 3600000,
@@ -242,7 +243,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
 
     surge: 180000,
 
-    "task-skip": 125000,
+    "task-skip": 250000,
     trail: 160000,
     bounce: 500000,
     twice: 900000,
@@ -275,7 +276,7 @@ test("rebalanced catalogue preserves product IDs, premium progression and monoto
   expect(Object.fromEntries(shopProducts.map((p) => [p.id, p.price]))).toEqual(
     prices,
   );
-  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(61);
+  expect(new Set(shopProducts.map((p) => p.id)).size).toBe(62);
 
   for (const product of shopProducts.filter((p) => p.kind === "skill")) {
     expect(typeof product.skillId).toBe("string");

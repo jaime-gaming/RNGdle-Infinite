@@ -1,8 +1,15 @@
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
+import {
+  BATTLE_PASS_COSMETICS,
+  BATTLE_PASS_FAMILY,
+  BATTLE_PASS_PREMIUM_PRICE,
+  BATTLE_PASS_VARIANT,
+} from "./battle-pass.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
 import {
   BLACK_FRIDAY_FAMILY,
   BLACK_FRIDAY_SKIN,
+  isResaleCosmetic,
   resalePrice,
   salePrice,
 } from "./black-friday.js";
@@ -585,11 +592,20 @@ export const shopProducts = [
     id: "task-skip",
     kind: "utility",
     name: "Task Skip",
-    price: 125000,
+    price: 250000,
     icon: "skip",
     repeatable: true,
     description:
-      "Swap one open task on your Tasks list for the next one in its pool: one token per use, kept across rebirths. You can buy one a day, no more than three in any five days, and hold up to three.",
+      "Swap one open task on your Tasks list for another from its pool: one token per use, kept across rebirths. One purchase per day, up to two in any five days, and up to three held at once.",
+  },
+  {
+    id: "battle-pass-premium",
+    kind: "utility",
+    name: "Premium Pass Track",
+    price: BATTLE_PASS_PREMIUM_PRICE,
+    icon: "pass",
+    description:
+      "Unlock this season’s extra reward track. Claim rewards from the Pass page; already claimed cosmetics stay yours.",
   },
 
   ...SKILLS.filter((skill) => skill.source === "shop").map((skill) => ({
@@ -693,6 +709,12 @@ export const SHOP_SECTIONS = [
     icon: "automation",
     blurb: "Automation and archive, same rules as always.",
   },
+  {
+    id: "more",
+    label: "More",
+    icon: "more",
+    blurb: "Pass access and task utilities.",
+  },
 ];
 
 const SHELF_KINDS = {
@@ -701,12 +723,14 @@ const SHELF_KINDS = {
   auras: ["aura"],
   offline: ["offline", "offline-cap"],
   tools: ["utility"],
+  more: ["utility"],
 };
 
 export function shelfOfProduct(item) {
   if (!item) return "";
 
   if (item.kind === "companion") return "companions";
+  if (["task-skip", "battle-pass-premium"].includes(item.id)) return "more";
   const shelf = SHOP_SECTIONS.find((section) =>
     (SHELF_KINDS[section.id] ?? []).includes(item.kind),
   );
@@ -716,7 +740,12 @@ export function shelfOfProduct(item) {
 
 export function productsOnShelf(id) {
   const kinds = SHELF_KINDS[id];
-  return kinds ? shopProducts.filter((p) => kinds.includes(p.kind)) : [];
+  if (!kinds) return [];
+  return shopProducts.filter((p) =>
+    id === "more"
+      ? ["task-skip", "battle-pass-premium"].includes(p.id)
+      : kinds.includes(p.kind) && p.id !== "task-skip",
+  );
 }
 
 export const SKILL_STOCK_WINDOW_MS = 300000;
@@ -767,15 +796,19 @@ export function nextUpgrade(owned, kind) {
   return track.find((p) => !owned.includes(p.id)) ?? track.at(-1);
 }
 export const auraProducts = [
+  ...BATTLE_PASS_COSMETICS,
   ...shopProducts.filter((item) => item.kind === "aura"),
   ...RNGWEEN_COSMETICS,
   BLACK_FRIDAY_SKIN,
 ];
 export const productById = new Map(
-  [...shopProducts, ...RNGWEEN_COSMETICS, BLACK_FRIDAY_SKIN].map((item) => [
-    item.id,
-    item,
-  ]),
+  [
+    ...shopProducts,
+    ...RNGWEEN_COSMETICS,
+    BLACK_FRIDAY_SKIN,
+    ...BATTLE_PASS_COSMETICS,
+    BATTLE_PASS_VARIANT,
+  ].map((item) => [item.id, item]),
 );
 
 export const SPECIAL_AURA_COLLECTION = {
@@ -789,7 +822,11 @@ export const SPECIAL_AURA_COLLECTION = {
   weight: 600,
 };
 
-export const EVENT_AURA_FAMILIES = [RNGWEEN_FAMILY, BLACK_FRIDAY_FAMILY];
+export const EVENT_AURA_FAMILIES = [
+  RNGWEEN_FAMILY,
+  BLACK_FRIDAY_FAMILY,
+  BATTLE_PASS_FAMILY,
+];
 
 export function auraFamilyById(id) {
   return (
@@ -804,6 +841,8 @@ export function visibleAuraFamilies(owned = []) {
   if (RNGWEEN_COSMETICS.some((aura) => owned.includes(aura.id)))
     families.push(RNGWEEN_FAMILY);
   if (owned.includes(BLACK_FRIDAY_SKIN.id)) families.push(BLACK_FRIDAY_FAMILY);
+  if (BATTLE_PASS_COSMETICS.some((aura) => owned.includes(aura.id)))
+    families.push(BATTLE_PASS_FAMILY);
   return families;
 }
 
@@ -816,7 +855,11 @@ export function aurasInFamily(id, owned = []) {
 
 export function productPrice(item, at = Date.now()) {
   if (!item) return 0;
-  if (item.eventOnly) return resalePrice(item, at);
+  if (
+    item.eventOnly &&
+    (isResaleCosmetic(item) || item.id === BLACK_FRIDAY_SKIN.id)
+  )
+    return resalePrice(item, at);
   return salePrice(item, at);
 }
 

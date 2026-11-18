@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Coins, Target } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Coins,
+  Lock,
+  Shirt,
+  Target,
+} from "lucide-react";
 import {
   PETS,
   petById,
@@ -15,6 +23,121 @@ import { useFormatEP } from "../use-settings.jsx";
 import PetIcon from "./PetIcon.jsx";
 import { CompanionMark, SkillIcon } from "./game-icons.jsx";
 import "../pets.css";
+import "../pet-skin-picker.css";
+
+function PetSkinPicker({
+  pet,
+  isOwned,
+  unlocked,
+  selectedSkin,
+  pending,
+  onSelect,
+}) {
+  const hasPrismSkin = pet.id === "axolotl";
+  const [preview, setPreview] = useState(selectedSkin);
+  useEffect(() => setPreview(selectedSkin), [selectedSkin]);
+  const options = [
+    {
+      id: "original",
+      label: "Original",
+      owned: isOwned,
+      description: `The original ${pet.name.toLowerCase()} look, just as it appears in the wild.`,
+    },
+    ...(hasPrismSkin
+      ? [
+          {
+            id: "prism",
+            label: "Prism",
+            owned: isOwned && unlocked,
+            description:
+              "A luminous spectrum finish, unlocked from the First Light season pass.",
+          },
+        ]
+      : []),
+    {
+      id: "mystery",
+      label: "???",
+      owned: false,
+      description: "A hidden appearance that has not been discovered yet.",
+    },
+  ];
+  const previewOption =
+    options.find((option) => option.id === preview) ?? options[0];
+  return (
+    <div
+      className="pet-skin-picker"
+      role="group"
+      aria-label={`${pet.name} skins`}
+    >
+      <div className="pet-skin-preview">
+        <PetIcon
+          pet={pet.id}
+          name={
+            preview === "mystery"
+              ? "Unknown companion skin preview"
+              : `${pet.name} ${preview}`
+          }
+          multiplier={pet.multiplier}
+          size={96}
+          prism={preview === "prism"}
+          className={preview === "mystery" ? "is-mystery-silhouette" : ""}
+        />
+      </div>
+      <div className="pet-skin-description" aria-live="polite">
+        <strong>{previewOption.label} skin</strong>
+        <p>{previewOption.description}</p>
+      </div>
+      <div className="pet-skin-options">
+        {options.map((option) => {
+          const isSelected = selectedSkin === option.id;
+          const isPreview = preview === option.id;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              className={`pet-skin-option ${isSelected ? "is-selected" : ""} ${isPreview ? "is-preview" : ""} ${!option.owned ? "is-locked" : ""}`}
+              aria-label={`${option.label} ${pet.name} skin${isSelected ? ", equipped" : option.owned ? "" : ", preview only"}`}
+              aria-pressed={isPreview}
+              data-equipped={isSelected || undefined}
+              title={
+                option.owned
+                  ? option.label
+                  : "Preview only — this skin is not unlocked"
+              }
+              disabled={
+                !!pending ||
+                option.id === "mystery" ||
+                (isSelected && option.owned)
+              }
+              onClick={() => {
+                if (option.id === "mystery") return;
+                setPreview(option.id);
+                if (option.owned && option.id !== selectedSkin)
+                  onSelect(option.id);
+              }}
+            >
+              <PetIcon
+                pet={pet.id}
+                name=""
+                multiplier={pet.multiplier}
+                size={48}
+                prism={option.id === "prism"}
+                className={
+                  option.id === "mystery" ? "is-mystery-silhouette" : ""
+                }
+              />
+              <span>{option.label}</span>
+              {!option.owned && option.id !== "mystery" && (
+                <Lock size={11} aria-hidden="true" />
+              )}
+              {option.id === "mystery" && <small>unknown</small>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function PetShelf({
   progress,
@@ -34,6 +157,7 @@ export default function PetShelf({
   const [onlyMine, setOnlyMine] = useState(false);
   const [index, setIndex] = useState(0);
   const [uncaged, setUncaged] = useState(null);
+  const [skinView, setSkinView] = useState(null);
   const busy = useRef(false);
   const uncageTimer = useRef(null);
   const slideshow = useRef(null);
@@ -41,6 +165,8 @@ export default function PetShelf({
     PETS.some((pet) => pet.id === id),
   );
   const active = progress.activePet ?? "none";
+  const prismAxolotl = (progress.owned ?? []).includes("pass-axolotl");
+  const activeAxolotlSkin = progress.petSkins?.axolotl ?? "original";
 
   const tracked = validGoal(progress.goalId, progress.owned, owned)
     ? progress.goalId
@@ -64,12 +190,12 @@ export default function PetShelf({
     return () => cancelAnimationFrame(frame);
   }, [focus]);
 
-  async function run(action, id, message) {
+  async function run(action, id, message, extra = {}) {
     if (busy.current) return false;
     busy.current = true;
     setPending(id ?? action);
     try {
-      const result = await onAction({ type: action, id });
+      const result = await onAction({ type: action, id, ...extra });
       if (result.ok) {
         notify?.({ kind: "done", text: message });
 
@@ -197,6 +323,11 @@ export default function PetShelf({
                 const affordable = progress.balance >= price;
                 const signature = skillForPet(pet.id);
                 const current = i === at;
+                const hasPrismSkin = pet.id === "axolotl";
+                const selectedSkin =
+                  hasPrismSkin && activeAxolotlSkin === "prism"
+                    ? "prism"
+                    : "original";
 
                 const pickable = pickingGoal && !isOwned;
                 return (
@@ -208,7 +339,9 @@ export default function PetShelf({
                       isActive ? "is-active" : ""
                     } ${isOwned ? "is-owned" : ""} ${
                       uncaged === pet.id ? "is-uncaging" : ""
-                    } ${pickable ? "is-pickable" : ""}`}
+                    } ${pickable ? "is-pickable" : ""} ${
+                      skinView === pet.id ? "has-skin-view" : ""
+                    }`}
                     style={{ "--pet-accent": pet.accent }}
                     aria-hidden={current ? undefined : "true"}
                     inert={current ? undefined : true}
@@ -219,35 +352,87 @@ export default function PetShelf({
                       setGoal(isGoal ? null : pet);
                     }}
                   >
-                    <div className="pet-cage">
-                      <span className="pet-cage-hanger" aria-hidden="true" />
-                      <PetIcon
-                        pet={pet.id}
-                        name={pet.name}
-                        multiplier={pet.multiplier}
-                        size={124}
-                        active={isActive}
-                      />
-                      <span className="pet-cage-door" aria-hidden="true" />
-                      <span className="pet-cage-tray" aria-hidden="true" />
-                      <span className="pet-cage-label">
-                        {isActive
-                          ? "walking with you"
-                          : isOwned
-                            ? "in your collection"
-                            : isGoal
-                              ? "your goal"
-                              : "in the wild"}
-                      </span>
-                      {pickable && (
-                        <span className="pet-pick" aria-hidden="true">
-                          <Target size={15} />
-                        </span>
+                    <div
+                      className={`pet-cage ${skinView === pet.id ? "is-skin-view" : ""}`}
+                    >
+                      {skinView === pet.id ? (
+                        <>
+                          <PetSkinPicker
+                            pet={pet}
+                            isOwned={isOwned}
+                            unlocked={prismAxolotl}
+                            selectedSkin={selectedSkin}
+                            pending={pending}
+                            onSelect={(skinId) =>
+                              run(
+                                "equip-pet-skin",
+                                pet.id,
+                                `${skinId === "prism" ? "Prism" : "Original"} ${pet.name} skin equipped.`,
+                                { petId: pet.id, skinId },
+                              )
+                            }
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <span
+                            className="pet-cage-hanger"
+                            aria-hidden="true"
+                          />
+                          <PetIcon
+                            pet={pet.id}
+                            name={pet.name}
+                            multiplier={pet.multiplier}
+                            size={124}
+                            active={isActive}
+                            prism={
+                              hasPrismSkin &&
+                              prismAxolotl &&
+                              selectedSkin === "prism"
+                            }
+                          />
+                          <span className="pet-cage-door" aria-hidden="true" />
+                          <span className="pet-cage-tray" aria-hidden="true" />
+                          <span className="pet-cage-label">
+                            {isActive
+                              ? "walking with you"
+                              : isOwned
+                                ? "in your collection"
+                                : isGoal
+                                  ? "your goal"
+                                  : "in the wild"}
+                          </span>
+                          {pickable && (
+                            <span className="pet-pick" aria-hidden="true">
+                              <Target size={15} />
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
-                    <div className="pet-body">
+                    <div
+                      className={`pet-body ${skinView === pet.id ? "is-skin-view" : ""}`}
+                    >
                       <div className="pet-title">
                         <strong>{pet.name}</strong>
+                        <button
+                          type="button"
+                          className={`pet-skin-toggle icon-button ${skinView === pet.id ? "is-active" : ""}`}
+                          aria-label={`${skinView === pet.id ? "Close" : "Preview"} ${pet.name} skins`}
+                          aria-expanded={skinView === pet.id}
+                          title={
+                            skinView === pet.id
+                              ? "Close skin preview"
+                              : "Preview skins"
+                          }
+                          onClick={() =>
+                            setSkinView((value) =>
+                              value === pet.id ? null : pet.id,
+                            )
+                          }
+                        >
+                          <Shirt size={16} />
+                        </button>
                         <span className="pet-multiplier">
                           {petBonusLabel(pet.multiplier)}
                           <small>{formatMultiplier(pet.multiplier)}</small>
@@ -376,6 +561,7 @@ export default function PetShelf({
                     multiplier={pet.multiplier}
                     size={34}
                     active={active === pet.id}
+                    prism={prismAxolotl}
                   />
                   {owned.includes(pet.id) && (
                     <span className="pet-rail-owned" aria-hidden="true">
@@ -391,9 +577,6 @@ export default function PetShelf({
       ) : (
         <p className="shop-empty">You have no companions yet.</p>
       )}
-      <p className="pet-footnote">
-        A lucky roll drops a companion you do not own yet, already worn.
-      </p>
     </section>
   );
 }

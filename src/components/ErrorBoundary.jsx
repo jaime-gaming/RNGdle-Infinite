@@ -1,4 +1,6 @@
 import React from "react";
+import { errorReference } from "../error-codes.js";
+import { reportIncident } from "../incident-report.js";
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -11,6 +13,10 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    reportIncident({
+      code: errorReference(error?.message || "", "UI101"),
+      source: "render-boundary",
+    });
     try {
       console.error(
         "[RNGdle] Render error caught by boundary:",
@@ -40,6 +46,7 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       const message = this.state.error?.message || "Unknown error";
+      const reference = errorReference(message, "UI101");
       return (
         <div
           style={{
@@ -59,6 +66,9 @@ export default class ErrorBoundary extends React.Component {
           <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>
             Something went wrong
           </h2>
+          <p role="status" style={{ margin: 0, fontSize: 12, opacity: 0.7 }}>
+            Reference {reference}
+          </p>
           <p style={{ maxWidth: 520, opacity: 0.8, lineHeight: 1.5 }}>
             The page encountered an error and could not be displayed. Your
             progress and profile are saved in this browser and won't be lost

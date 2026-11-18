@@ -869,15 +869,6 @@
   font-size: 11.5px;
   color: var(--secondary);
 }
-.rebirth-ultra-note {
-  margin: 0;
-  font-size: 11.5px;
-  line-height: 1.8;
-  color: var(--secondary);
-}
-.rebirth-ultra-note b {
-  font-family: var(--roll-font);
-}
 .rebirth-history-note {
   display: flex;
   align-items: center;

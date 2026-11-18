@@ -91,6 +91,14 @@
   margin: 0 0 12px;
   font-size: 14px;
 }
+.profile-description {
+  margin: 0 0 14px;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .profile-history dl {
   display: grid;
 
@@ -119,7 +127,6 @@
   color: var(--text);
   overflow-wrap: anywhere;
 }
-.profile-history-note,
 .profile-export-note {
   margin: 12px 0 0;
   font-size: 11.5px;
@@ -175,6 +182,48 @@
 }
 .profile-rename {
   margin: 12px 0;
+}
+.profile-description-editor {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.profile-description-editor > label {
+  font-size: 12px;
+  font-weight: 650;
+}
+.profile-description-editor textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 13px/1.5 var(--body-font, inherit);
+}
+.profile-description-editor textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.profile-description-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.profile-description-actions > small,
+.profile-description-note {
+  color: var(--muted);
+  font-size: 11px;
+}
+.profile-description-note {
+  margin: 0;
 }
 .profile-rename-form {
   display: grid;

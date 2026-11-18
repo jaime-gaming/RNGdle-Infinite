@@ -38,29 +38,29 @@ test("the one percentage is the mean of the badge share and the EP share, rounde
     rebirthProgress(
       save({ discovered: badgeIds.slice(0, 47), history: earned(125000) }),
     ).percent,
-  ).toBe(75);
-  expect(blendedPercent(47, 125000, rebirthRequirement(0))).toBe(75);
+  ).toBe(72);
+  expect(blendedPercent(47, 125000, rebirthRequirement(0))).toBe(72);
   expect(
     rebirthProgress(save({ discovered: badgeIds.slice(0, 47) })).percent,
-  ).toBe(50);
+  ).toBe(47);
   expect(rebirthProgress(save({ history: earned(250000) })).percent).toBe(50);
 
   expect(
     rebirthProgress(
       save({ discovered: badgeIds.slice(0, 47), history: earned(249999) }),
     ).percent,
-  ).toBe(99);
+  ).toBe(97);
   expect(
     rebirthProgress(
       save({ discovered: badgeIds.slice(0, 47), history: earned(250000) }),
     ).percent,
-  ).toBe(100);
+  ).toBe(97);
 });
 
 test("the Rollback asks for 65% of the collection and 60 million EP, above the prestige gate", () => {
   expect(rollbackRequirement()).toEqual({
     percent: 65,
-    badges: 153,
+    badges: 158,
     ep: 60000000,
   });
   expect(ROLLBACK_STEP.ep).toBeGreaterThan(30000000);
@@ -106,16 +106,16 @@ test("the gauge, the top-bar ring and the current rung show the same number", as
   await waitForApp(page);
   await expect(page.locator(".rebirth-gauge")).toHaveAttribute(
     "aria-label",
-    /^75% of this step/,
+    /^72% of this step/,
   );
-  await expect(page.locator(".rebirth-gauge > span")).toHaveText("75%");
+  await expect(page.locator(".rebirth-gauge > span")).toHaveText("72%");
   await expect(page.locator(".rebirth-nav")).toHaveAttribute(
     "aria-label",
-    /75% overall/,
+    /72% overall/,
   );
   await expect(
     page.locator(".rebirth-ladder > li.is-current .rebirth-rung-bar > span"),
-  ).toHaveAttribute("style", /width: 75%/);
+  ).toHaveAttribute("style", /width: 72%/);
 });
 
 test("no screen names Prestige before the sixth rebirth", async ({ page }) => {

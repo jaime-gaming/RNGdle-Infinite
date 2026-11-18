@@ -16,6 +16,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev:test -- --port 5174",
     url: "http://127.0.0.1:5174",
+    env: { ...process.env, VITE_GAME_PREVIEW_AT: "0" },
     reuseExistingServer: !process.env.CI,
   },
 });

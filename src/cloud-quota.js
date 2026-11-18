@@ -52,8 +52,7 @@ export function clearCloudQuotaPause({ storage } = {}) {
 
 export function isCloudQuotaNotice(notice) {
   return (
-    typeof notice === "string" &&
-    notice.startsWith("Online backup is paused")
+    typeof notice === "string" && notice.startsWith("Online backup is paused")
   );
 }
 

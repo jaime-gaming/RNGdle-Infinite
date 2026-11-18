@@ -20,6 +20,7 @@ import {
   SparkMark,
 } from "./game-icons.jsx";
 import "../skills.css";
+import { gameNow } from "../game-clock.js";
 
 const CIRCLE_SIZE = 42;
 
@@ -373,7 +374,7 @@ export default function SkillBar({
     };
   }, [progress, collapsed]);
   if (!progress) return null;
-  const report = rackReport(progress);
+  const report = rackReport(progress, gameNow());
   const equipped = report.equipped
     .map((entry) => ({
       ...entry,
@@ -587,6 +588,16 @@ export default function SkillBar({
                 {hasAutoRoll ? " · Auto-Roll" : ""}
               </span>
             </span>
+            {report.warnings?.length ? (
+              <ul
+                className="skill-rack-warnings"
+                aria-label="Skill combination warnings"
+              >
+                {report.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            ) : null}
             {report.next.chips.length ? (
               <>
                 <span className="rack-panel-label">Next roll gets</span>
@@ -613,7 +624,11 @@ export default function SkillBar({
             {report.next.walletParts.map((part) => (
               <span className="rack-panel-row is-part" key={part.id}>
                 <span>{part.label}</span>
-                <span>×{Number(part.value.toFixed(2))}</span>
+                <span>
+                  {part.additiveSkill
+                    ? `+${Math.round((part.value - 1) * 100)}%`
+                    : `×${Number(part.value.toFixed(2))}`}
+                </span>
               </span>
             ))}
             {!report.next.walletParts.length && (

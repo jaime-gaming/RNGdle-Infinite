@@ -46,6 +46,7 @@ test("More opens the rest of the destinations; Escape, a tap outside, or a choic
   const menu = page.getByRole("menu", { name: "More destinations" });
   await more.click();
   await expect(menu.getByRole("menuitem")).toHaveText([
+    "Pass",
     "History",
     "Rebirth",
     "Settings",
@@ -81,5 +82,5 @@ test("Rebirth joins the More menu only once the ladder is in view", async ({
   await bar(page).getByRole("button", { name: "More", exact: true }).click();
   await expect(
     page.getByRole("menu", { name: "More destinations" }).getByRole("menuitem"),
-  ).toHaveText(["History", "Settings"]);
+  ).toHaveText(["Pass", "History", "Settings"]);
 });

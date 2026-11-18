@@ -1,0 +1,628 @@
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Check,
+  Clock,
+  Coins,
+  Eye,
+  Crown,
+  Gift,
+  History,
+  Lock,
+  Sparkles,
+  Ticket,
+  Timer,
+  X,
+  Zap,
+} from "lucide-react";
+import {
+  BATTLE_PASS_COSMETICS,
+  BATTLE_PASS_LEVELS,
+  BATTLE_PASS_PREMIUM_PRICE,
+  BATTLE_PASS_REWARDS,
+  BATTLE_PASS_VARIANT,
+  BPEP_PER_LEVEL,
+  BPEP_PER_ROLL,
+  PASS_BOOSTS,
+  PASS_BOOST_PRICE,
+  activeBoosts,
+  battlePassSeason,
+  boostBuyStatus,
+  boostCharges,
+  boostMultiplier,
+  passBoostById,
+  passDateLabel,
+  passLevelForXp,
+  passRewardState,
+  passXpIntoLevel,
+  seasonLabel,
+} from "../battle-pass.js";
+import { waitText } from "../tasks.js";
+import { gameNow } from "../game-clock.js";
+import { useFormatEP } from "../use-settings.jsx";
+import { CreatureIcon } from "./game-icons.jsx";
+import NumberBox from "./NumberBox.jsx";
+import "./battle-pass.css";
+
+const count = (value) => value.toLocaleString("en-US");
+
+function RewardLabel({ reward, owned, formatEP }) {
+  if (reward.kind !== "ep")
+    return (
+      <span className="pass-reward-aura">
+        <span className="pass-reward-name">
+          {reward.kind === "pet-variant" ? (
+            <CreatureIcon pet="axolotl-prism" size={16} aria-hidden="true" />
+          ) : (
+            <Sparkles size={14} aria-hidden="true" />
+          )}
+          {reward.name}
+        </span>
+        <small>
+          {reward.kind === "pet-variant"
+            ? "Comet Axolotl look · yours forever"
+            : "Aura · yours forever"}
+        </small>
+        {owned.includes(reward.id) && (
+          <small>Already owned · +{formatEP(reward.repeatEP)} EP</small>
+        )}
+      </span>
+    );
+  return (
+    <span className="pass-reward-ep">
+      <Coins size={13} aria-hidden="true" />+{formatEP(reward.ep)} EP
+      {reward.boost && (
+        <small className="pass-reward-boost">
+          <Zap size={11} aria-hidden="true" />+{reward.boost.charges}{" "}
+          {reward.boost.charges === 1 ? "charge" : "charges"} ·{" "}
+          {reward.boost.name}
+        </small>
+      )}
+    </span>
+  );
+}
+
+export default function BattlePass({
+  progress,
+  now,
+  onAction,
+  notify,
+  cloudUser,
+  openSignup,
+  navigate,
+}) {
+  const formatEP = useFormatEP();
+  const pass = progress.battlePass ?? {
+    seasonId: "",
+    xp: 0,
+    premium: false,
+    claimed: [],
+    missions: {},
+    archive: [],
+  };
+  const season = battlePassSeason(now);
+  const level = passLevelForXp(pass.xp);
+  const intoLevel = passXpIntoLevel(pass.xp);
+  const [pending, setPending] = useState("");
+  const [inspectedReward, setInspectedReward] = useState(null);
+  const inspectionDialog = useRef(null);
+  const busy = useRef(false);
+  const owned = progress.owned ?? [];
+  const currentSeason = season.active;
+  const ended =
+    season.ended || (!!pass.seasonId && !currentSeason && !season.upcoming);
+  const claimedCount = (pass.claimed ?? []).length;
+  const trackSlots = BATTLE_PASS_LEVELS * (pass.premium ? 2 : 1);
+  const archive = [...(pass.archive ?? [])].reverse();
+  // A boost window is short, so it needs its own second-by-second clock: the
+  // shared page clock only ticks every thirty seconds.
+  const [tick, setTick] = useState(now);
+  const running = activeBoosts(pass.boosts, Math.max(now, tick));
+  useEffect(() => {
+    setTick(now);
+    if (!activeBoosts(pass.boosts, now).length) return undefined;
+    const timer = setInterval(() => setTick(gameNow()), 1000);
+    return () => clearInterval(timer);
+  }, [pass.boosts, now]);
+  const boostClock = Math.max(now, tick);
+  const active = running;
+  const multiplier = boostMultiplier(pass.boosts, boostClock);
+  const buyStatus = boostBuyStatus(pass.boosts, boostClock);
+  const canBuy = buyStatus.waitMs === 0 && progress.balance >= PASS_BOOST_PRICE;
+  const inspectedLevel = inspectedReward
+    ? BATTLE_PASS_REWARDS.find((item) => item.level === inspectedReward.level)
+    : null;
+  const inspectedDefinition = inspectedLevel?.[inspectedReward?.track];
+  const inspectedCosmetic =
+    inspectedDefinition?.kind === "pet-variant"
+      ? BATTLE_PASS_VARIANT
+      : BATTLE_PASS_COSMETICS.find(
+          (item) => item.id === inspectedDefinition?.id,
+        );
+  const inspectedDescription = inspectedDefinition
+    ? inspectedDefinition.kind === "ep"
+      ? `${formatEP(inspectedDefinition.ep)} EP is added to your wallet when claimed.${
+          inspectedDefinition.boost
+            ? ` Includes ${inspectedDefinition.boost.charges} ${inspectedDefinition.boost.name} charge${inspectedDefinition.boost.charges === 1 ? "" : "s"} (${inspectedDefinition.boost.minutes} minutes at ×${inspectedDefinition.boost.mult} banked EP).`
+            : ""
+        }`
+      : (inspectedCosmetic?.description ?? "A permanent cosmetic reward.")
+    : "";
+  const inspectedSwatch =
+    inspectedDefinition?.kind === "pet-variant"
+      ? BATTLE_PASS_VARIANT.swatch
+      : inspectedCosmetic?.swatch;
+  const inspectedIconStyle = inspectedSwatch
+    ? {
+        "--reward-swatch-a": inspectedSwatch[0],
+        "--reward-swatch-b": inspectedSwatch[1],
+      }
+    : undefined;
+  useEffect(() => {
+    const dialog = inspectionDialog.current;
+    if (inspectedReward && dialog && !dialog.open) dialog.showModal();
+  }, [inspectedReward]);
+
+  async function run(action, message) {
+    if (busy.current) return;
+    busy.current = true;
+    setPending(
+      action.id ?? `${action.type}-${action.level ?? ""}-${action.track ?? ""}`,
+    );
+    try {
+      const result = await onAction(action);
+      if (result?.ok)
+        notify?.({ kind: "done", title: "Pass updated", text: message });
+      else
+        notify?.({
+          kind: "error",
+          text: result?.message ?? "That pass action could not be saved.",
+        });
+    } finally {
+      busy.current = false;
+      setPending("");
+    }
+  }
+
+  function rewardButton(reward, track) {
+    const state = passRewardState(pass, reward.level, track);
+    const definition = reward[track];
+    const key = `${track}-${reward.level}`;
+    return (
+      <div className={`pass-reward is-${state} is-${track}`} data-reward={key}>
+        <div className="pass-reward-label">
+          {track === "premium" && state === "premium-locked" && (
+            <Lock size={12} aria-hidden="true" />
+          )}
+          <RewardLabel reward={definition} owned={owned} formatEP={formatEP} />
+        </div>
+        {state === "claimable" ? (
+          <button
+            className="primary-button"
+            disabled={!!pending}
+            aria-label={`Claim ${track} level ${reward.level} reward`}
+            onClick={() =>
+              run(
+                { type: "claim-pass-reward", level: reward.level, track },
+                `Level ${reward.level} ${track} reward claimed.`,
+              )
+            }
+          >
+            Claim
+          </button>
+        ) : (
+          <span className="pass-reward-state">
+            {state === "claimed" ? (
+              <>
+                <Check size={12} aria-hidden="true" /> Claimed
+              </>
+            ) : state === "premium-locked" ? (
+              "Premium"
+            ) : (
+              `Level ${reward.level}`
+            )}
+          </span>
+        )}
+        <button
+          type="button"
+          className="pass-reward-inspect"
+          aria-label={`Inspect level ${reward.level} ${track} reward`}
+          aria-expanded={
+            inspectedReward?.level === reward.level &&
+            inspectedReward?.track === track
+          }
+          onClick={() =>
+            setInspectedReward(
+              inspectedReward?.level === reward.level &&
+                inspectedReward?.track === track
+                ? null
+                : { level: reward.level, track },
+            )
+          }
+        >
+          <Eye size={13} aria-hidden="true" />
+          <span>Inspect</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="battle-pass" style={{ "--pass-accent": season.accent }}>
+      {!cloudUser && !progress.profile && (
+        <div className="guest-save-notice">
+          <p>Guest pass progress is temporary. Name a profile to keep it.</p>
+          <button className="secondary-button" onClick={openSignup}>
+            Name profile
+          </button>
+        </div>
+      )}
+      <section
+        className="pass-hero"
+        aria-label="Season summary"
+        style={{ "--pass-accent": season.accent }}
+      >
+        <div className="pass-hero-mark" aria-hidden="true">
+          <Ticket size={28} />
+        </div>
+        <div className="pass-hero-copy">
+          <span className="eyebrow">Season {season.index}</span>
+          <h2>
+            {season.upcoming
+              ? "The pass opens soon"
+              : ended
+                ? "Season complete"
+                : season.name}
+          </h2>
+          {!season.upcoming && !ended && (
+            <p className="pass-hero-theme">{season.theme}</p>
+          )}
+          <p>
+            {season.upcoming
+              ? `${season.name} starts ${passDateLabel(season.start)} UTC.`
+              : ended
+                ? "This season is complete. You can still claim any rewards you earned."
+                : `Season rewards are active. Every online roll earns ${BPEP_PER_ROLL} BPEP; EP stays your shop wallet.`}
+          </p>
+        </div>
+        <div className="pass-hero-stats">
+          <div>
+            <span>Level</span>
+            <strong>
+              {level} / {BATTLE_PASS_LEVELS}
+            </strong>
+          </div>
+          <div>
+            <span>BPEP</span>
+            <strong>{count(pass.xp)}</strong>
+          </div>
+          <div>
+            <span>Claimed</span>
+            <strong>
+              {claimedCount} / {trackSlots}
+            </strong>
+          </div>
+          <div>
+            <span>
+              {season.upcoming
+                ? "Opens in"
+                : ended
+                  ? "Season ended"
+                  : "Season ends"}
+            </span>
+            <strong>
+              {season.upcoming ? (
+                <>
+                  <Timer size={14} aria-hidden="true" />
+                  {waitText(season.start - season.now)}
+                </>
+              ) : (
+                `${passDateLabel(season.end)} UTC`
+              )}
+            </strong>
+            {season.upcoming && (
+              <small className="pass-season-end">
+                Ends {passDateLabel(season.end)} UTC
+              </small>
+            )}
+          </div>
+        </div>
+        <div className="pass-level-progress">
+          <progress
+            max={BPEP_PER_LEVEL}
+            value={intoLevel}
+            aria-label="Progress to the next pass level"
+            aria-valuetext={`${count(intoLevel)} of ${count(BPEP_PER_LEVEL)} BPEP`}
+          />
+          <span>
+            {level >= BATTLE_PASS_LEVELS
+              ? "Track complete"
+              : `${count(BPEP_PER_LEVEL - intoLevel)} BPEP to level ${level + 1}`}
+          </span>
+        </div>
+      </section>
+
+      <section
+        className={`pass-premium ${pass.premium ? "is-owned" : ""}`}
+        aria-label="Premium track"
+      >
+        <div>
+          <h3>
+            <Crown size={16} aria-hidden="true" /> Premium track
+          </h3>
+          <p>
+            Optional, purchased in Shop with EP. Earn extra EP, double boost
+            charges at levels 5, 8, 15, 18, 25 and 28, the Prism Axolotl at
+            level 20 and First Light Crown at level 30. Claimed cosmetics stay
+            yours.
+          </p>
+        </div>
+        {pass.premium ? (
+          <span className="pass-premium-owned">
+            <Check size={14} aria-hidden="true" /> Unlocked for {season.name}
+          </span>
+        ) : (
+          <button
+            className="primary-button pass-shop-link"
+            disabled={!season.active}
+            onClick={() => navigate?.("shop", null, "more")}
+          >
+            Unlock in Shop · {formatEP(BATTLE_PASS_PREMIUM_PRICE)} EP
+          </button>
+        )}
+      </section>
+
+      <section className="pass-track" aria-label="Reward track">
+        <div className="pass-track-head">
+          <h3>Reward track</h3>
+          <span>
+            Inspect any reward for details. Claim each one once; levels 10, 20
+            and 30 carry the season cosmetics.
+          </span>
+        </div>
+        <div className="pass-track-legend" aria-hidden="true">
+          <span className="pass-legend-free">
+            <Gift size={12} /> Free
+          </span>
+          <span className="pass-legend-premium">
+            <Crown size={12} /> Premium
+          </span>
+        </div>
+        <div className="pass-track-scroll">
+          <ol className="pass-track-grid">
+            {BATTLE_PASS_REWARDS.map((reward) => {
+              const milestone =
+                reward.free.kind !== "ep" || reward.premium.kind !== "ep";
+              const isNext = reward.level === level + 1;
+              return (
+                <li
+                  key={reward.level}
+                  className={[
+                    "pass-level",
+                    level >= reward.level ? "is-reached" : "",
+                    milestone ? "is-milestone" : "",
+                    isNext ? "is-next" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <span className="pass-level-number">{reward.level}</span>
+                  {rewardButton(reward, "free")}
+                  {rewardButton(reward, "premium")}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+        {inspectedLevel && inspectedDefinition && (
+          <dialog
+            ref={inspectionDialog}
+            className="pass-inspection"
+            aria-labelledby="pass-inspection-title"
+            aria-describedby="pass-inspection-subtitle"
+            onClose={() => setInspectedReward(null)}
+            onClick={(event) => {
+              if (event.target === event.currentTarget)
+                inspectionDialog.current?.close();
+            }}
+          >
+            <button
+              type="button"
+              className="pass-inspection-close"
+              aria-label="Close reward details"
+              onClick={() => inspectionDialog.current?.close()}
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+            <span className="pass-inspection-track">
+              Level {inspectedLevel.level} · {inspectedReward.track} track
+            </span>
+            <div
+              className={`pass-inspection-icon is-${inspectedDefinition.kind}`}
+              style={inspectedIconStyle}
+              aria-hidden="true"
+            >
+              {inspectedDefinition.kind === "ep" ? (
+                <Coins size={40} />
+              ) : inspectedDefinition.kind === "pet-variant" ? (
+                <CreatureIcon pet="axolotl-prism" size={52} />
+              ) : (
+                <NumberBox
+                  value="777777"
+                  tier="rare"
+                  aura={inspectedDefinition.id}
+                  compact
+                />
+              )}
+            </div>
+            <h4 id="pass-inspection-title">
+              {inspectedDefinition.kind === "ep"
+                ? `+${formatEP(inspectedDefinition.ep)} EP`
+                : inspectedDefinition.name}
+            </h4>
+            <p id="pass-inspection-subtitle">{inspectedDescription}</p>
+          </dialog>
+        )}
+      </section>
+
+      <section
+        className="pass-boosts"
+        aria-labelledby="pass-boosts-title"
+        style={{ "--pass-accent": season.accent }}
+      >
+        <header>
+          <div>
+            <h3 id="pass-boosts-title">
+              <Zap size={16} aria-hidden="true" /> Consumable boosts
+            </h3>
+            <p>
+              Boosts drop at levels 5, 8, 15, 18, 25 and 28. One boost runs at a
+              time; matching charges extend its window without multiplying the
+              bonus. It affects banked roll EP only, and unused charges stay
+              saved between pass seasons.
+            </p>
+          </div>
+          <span
+            className={`pass-boost-mult ${active.length ? "is-on" : ""}`}
+            data-boost-multiplier={multiplier.toFixed(2)}
+            aria-live="polite"
+          >
+            {active.length
+              ? `${active[0].name} · ×${Number(multiplier.toFixed(2))} · ${waitText(active[0].until - boostClock)}`
+              : "Rolls bank ×1"}
+          </span>
+        </header>
+        <ul>
+          {PASS_BOOSTS.map((boost) => {
+            const charges = boostCharges(pass.boosts, boost.id);
+            const live = active.find((entry) => entry.id === boost.id);
+            const busy = !!pending;
+            return (
+              <li
+                key={boost.id}
+                className={`pass-boost ${live ? "is-active" : ""} ${charges ? "is-held" : ""}`}
+                data-boost={boost.id}
+              >
+                <div className="pass-boost-copy">
+                  <strong>{boost.name}</strong>
+                  <span>{boost.blurb}</span>
+                </div>
+                <span className="pass-boost-charges">
+                  {charges
+                    ? `${charges} charge${charges === 1 ? "" : "s"}`
+                    : live
+                      ? "In use"
+                      : "No charges"}
+                </span>
+                {live ? (
+                  <span className="pass-boost-running">
+                    <Clock size={13} aria-hidden="true" />
+                    Running · {waitText(live.until - now)}
+                    {charges > 0 && (
+                      <button
+                        type="button"
+                        className="pass-boost-extend"
+                        disabled={busy || ended}
+                        aria-label={`Extend ${boost.name} by ${boost.minutes} minutes`}
+                        title={`Use one charge to add ${boost.minutes} minutes. The multiplier stays the same.`}
+                        onClick={() =>
+                          run(
+                            { type: "activate-boost", id: boost.id },
+                            `${boost.name} extended by ${boost.minutes} minutes.`,
+                          )
+                        }
+                      >
+                        Extend · +{boost.minutes} min
+                      </button>
+                    )}
+                  </span>
+                ) : (
+                  <button
+                    className="secondary-button"
+                    disabled={busy || charges < 1 || !!active.length || ended}
+                    aria-label={`Activate ${boost.name}`}
+                    title={
+                      ended
+                        ? "The season is closed."
+                        : charges < 1
+                          ? "Earn a charge at level 5, 15 or 25."
+                          : active.length
+                            ? `${active[0].name} is already running.`
+                            : `Starts now, for ${boost.minutes} minutes.`
+                    }
+                    onClick={() =>
+                      run(
+                        { type: "activate-boost", id: boost.id },
+                        `${boost.name} running for ${boost.minutes} minutes.`,
+                      )
+                    }
+                  >
+                    {pending === `activate-boost-${boost.id}`
+                      ? "Activating…"
+                      : "Activate"}
+                  </button>
+                )}
+                {!live && (
+                  <button
+                    className="pass-boost-buy"
+                    disabled={!!pending || !canBuy || ended}
+                    aria-label={`Buy ${boost.name} with EP`}
+                    title={
+                      ended
+                        ? "The season is closed."
+                        : buyStatus.waitMs > 0
+                          ? `One charge a day. Next in ${waitText(buyStatus.waitMs)}.`
+                          : progress.balance < PASS_BOOST_PRICE
+                            ? "Not enough EP."
+                            : "Adds one charge to this boost."
+                    }
+                    onClick={() =>
+                      run(
+                        { type: "buy-boost", id: boost.id },
+                        `${boost.name} charge bought.`,
+                      )
+                    }
+                  >
+                    {pending === `buy-boost-${boost.id}`
+                      ? "Buying…"
+                      : `Buy · ${formatEP(PASS_BOOST_PRICE)} EP`}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {archive.length > 0 && (
+        <section className="pass-archive" aria-labelledby="pass-archive-title">
+          <header>
+            <h3 id="pass-archive-title">
+              <History size={16} aria-hidden="true" /> Past seasons
+            </h3>
+            <span>{archive.length} closed</span>
+          </header>
+          <ul>
+            {archive.map((entry) => (
+              <li key={entry.seasonId}>
+                <span className="pass-archive-name">
+                  {seasonLabel(entry.seasonId)}
+                </span>
+                <span className="pass-archive-level">
+                  Level {passLevelForXp(entry.xp)} / {BATTLE_PASS_LEVELS}
+                </span>
+                <span className="pass-archive-claimed">
+                  {entry.claimed} reward{entry.claimed === 1 ? "" : "s"} claimed
+                </span>
+                {entry.premium && (
+                  <span className="pass-archive-premium">
+                    <Crown size={12} aria-hidden="true" /> Premium
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}

@@ -9,7 +9,7 @@ import {
   Share2,
   UserRound,
 } from "lucide-react";
-import { validUsername } from "../progress.js";
+import { PROFILE_DESCRIPTION_LIMIT, validUsername } from "../progress.js";
 import { ROLLBACK_AFTER_PRESTIGES } from "../rebirth.js";
 import { AVATAR_ACCEPT, compactAvatar, fileToAvatar } from "../avatar.js";
 import { exportFileName, renderExportPngBlob } from "../profile-stats.js";
@@ -62,7 +62,7 @@ const NAME_PARTS = [
   ["Comet", "Otter", "Pigeon", "Cipher", "Marble", "Falcon", "Ember", "Badger"],
 ];
 const PUBLIC_PROFILE_FIELDS =
-  "your username and avatar; profile creation and update dates; your best roll (number, tier, EP and date); up to ten pinned rolls (number, tier and EP); total rolls and all-time EP; badges discovered (out of the total); rebirth and prestige counts; your favorite roll tier, aura and companion.";
+  "your username, description and avatar; profile creation and update dates; your best roll (number, tier, EP and date); up to ten pinned rolls (number, tier and EP); total rolls and all-time EP; badges discovered (out of the total); rebirth and prestige counts; your favorite roll tier, aura and companion.";
 function suggestName() {
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
   return `${pick(NAME_PARTS[0])}${pick(NAME_PARTS[1])}${Math.floor(
@@ -137,6 +137,15 @@ export default function LocalProfile({
     : "";
   const [logoNote, setLogoNote] = useState("");
   const [shareNote, setShareNote] = useState("");
+  const [descriptionDraft, setDescriptionDraft] = useState(
+    profile?.description ?? "",
+  );
+  const [descriptionBusy, setDescriptionBusy] = useState(false);
+  const [descriptionNote, setDescriptionNote] = useState("");
+  useEffect(() => {
+    setDescriptionDraft(profile?.description ?? "");
+    setDescriptionNote("");
+  }, [profile?.id, profile?.description]);
 
   const [shareLink, setShareLink] = useState("");
   async function copyProfileLink() {
@@ -194,6 +203,27 @@ export default function LocalProfile({
       setShareNote("Profile privacy could not be changed. Try again.");
     } finally {
       setPublishingProfile(false);
+    }
+  }
+
+  async function saveDescription() {
+    if (descriptionBusy || !profile) return;
+    setDescriptionBusy(true);
+    setDescriptionNote("");
+    try {
+      const result = await onAction({
+        type: "profile-description",
+        description: descriptionDraft,
+      });
+      setDescriptionNote(
+        result?.ok
+          ? "Description saved."
+          : (result?.message ?? "Could not save."),
+      );
+    } catch {
+      setDescriptionNote("Could not save the description. Try again.");
+    } finally {
+      setDescriptionBusy(false);
     }
   }
 
@@ -596,6 +626,48 @@ export default function LocalProfile({
                 </p>
               )}
             </div>
+          )}
+          {canEdit && (
+            <section className="profile-description-editor">
+              <label htmlFor="profile-description">Profile description</label>
+              <textarea
+                id="profile-description"
+                value={descriptionDraft}
+                maxLength={PROFILE_DESCRIPTION_LIMIT * 2}
+                rows={3}
+                placeholder="A short introduction for your profile"
+                onChange={(event) => {
+                  setDescriptionDraft(
+                    Array.from(event.target.value)
+                      .slice(0, PROFILE_DESCRIPTION_LIMIT)
+                      .join(""),
+                  );
+                  setDescriptionNote("");
+                }}
+              />
+              <div className="profile-description-actions">
+                <small>
+                  {Array.from(descriptionDraft).length}/
+                  {PROFILE_DESCRIPTION_LIMIT}
+                </small>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={
+                    descriptionBusy ||
+                    descriptionDraft === (profile.description ?? "")
+                  }
+                  onClick={saveDescription}
+                >
+                  {descriptionBusy ? "Saving…" : "Save description"}
+                </button>
+              </div>
+              {descriptionNote && (
+                <p className="profile-description-note" role="status">
+                  {descriptionNote}
+                </p>
+              )}
+            </section>
           )}
           <div className="profile-actions">
             {canContinue ? (

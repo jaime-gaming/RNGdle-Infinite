@@ -265,7 +265,7 @@ test("corrupt delivery awards nothing; retry loads the text-safe scoring data", 
   await expect(page.locator(".percentile")).toHaveText("Top <1%");
   await expect(page.locator(".percentile")).toHaveAttribute(
     "title",
-    /1 of 1,000,001 possible numbers score at least 186,186,584 EP/,
+    /1 of 1,000,001 possible numbers score at least 186,188,084 EP/,
   );
   await expect(page.locator(".number-artifact")).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
@@ -290,7 +290,8 @@ test("the quiet loader owns the page while scoring data loads, then help and bad
   await page.goto("/");
   await requestSeen;
   await expect(page.locator(".loading-screen")).toBeVisible();
-  await expect(page.locator(".loading-circle")).toHaveCount(1);
+  await expect(page.locator(".loading-emblem")).toHaveCount(1);
+  await expect(page.getByRole("img", { name: "Loading" })).toBeVisible();
   expect(await page.locator(".loading-screen").textContent()).toBe("");
   await expect(page.locator(".header")).toBeVisible();
   await expect(page.locator("footer")).toBeVisible();

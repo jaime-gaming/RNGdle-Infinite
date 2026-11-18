@@ -149,10 +149,6 @@ export default function AuraWardrobe({ progress, onAction, navigate, notify }) {
               </li>
             ))}
           </ul>
-          <p className="wardrobe-note">
-            Equipping is free and purely cosmetic. Rarity colours, scores and
-            odds are unchanged underneath.
-          </p>
         </>
       ) : (
         <div className="wardrobe-empty">

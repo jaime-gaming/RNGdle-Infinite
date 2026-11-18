@@ -33,6 +33,7 @@ test("every app page has a direct path, not a hash fragment", () => {
   expect(PAGES).toEqual([
     "roll",
     "tasks",
+    "pass",
     "shop",
     "badges",
     "history",
@@ -268,14 +269,21 @@ test("rebalanced prices keep the catalogue shape and every chain affordable", ()
     "offline-vault-3",
   ];
 
-  const addedLater = ["task-skip", "static", "bitstorm", "scramble", "hexdump"];
+  const addedLater = [
+    "task-skip",
+    "static",
+    "bitstorm",
+    "scramble",
+    "hexdump",
+    "battle-pass-premium",
+  ];
   const before = shopProducts.filter(
     (p) => !addedInV05.includes(p.id) && !addedLater.includes(p.id),
   );
   expect(before).toHaveLength(49);
   expect(before.reduce((sum, p) => sum + p.price, 0)).toBe(107090000);
   expect(107090000).toBeLessThan(131145000);
-  expect(shopProducts).toHaveLength(61);
+  expect(shopProducts).toHaveLength(62);
 
   expect(price["quickwind-1"]).toBeLessThanOrEqual(30000);
   expect(price["clockwork-1"]).toBeLessThanOrEqual(50000);

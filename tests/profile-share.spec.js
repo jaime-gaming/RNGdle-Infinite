@@ -33,6 +33,7 @@ function played() {
       id: "p1",
       username: "LuckyOtter41",
       createdAt: at(1),
+      description: "Number enjoyer, mostly for the surprises.",
       avatar: LOGO,
     },
     balance: 125000,
@@ -76,6 +77,7 @@ function played() {
 test("a profile card survives the trip through the address and rejects damage", () => {
   const card = shareCardData(played(), new Date(at(5)));
   expect(card.name).toBe("LuckyOtter41");
+  expect(card.description).toBe("Number enjoyer, mostly for the surprises.");
   expect(card.best).toMatchObject({
     number: 999999,
     tier: "godly",
@@ -89,6 +91,7 @@ test("a profile card survives the trip through the address and rejects damage", 
   const back = decodeShareCard(token);
   expect(back).toMatchObject({
     name: "LuckyOtter41",
+    description: "Number enjoyer, mostly for the surprises.",
     at: iso(5),
     since: iso(1),
     rolls: 3,
@@ -204,6 +207,26 @@ test("share-card tokens and expanded data stay within fixed limits", () => {
   const decoded = decodeShareCard(token);
   expect(decoded.avatar).toBe(avatar);
   expect(decoded.best.number).toBe("1000000");
+});
+
+test("a profile description saves locally and appears on its profile card", async ({
+  page,
+}) => {
+  await seedProgress(page, { profile: testProfile });
+  await page.goto("/profile");
+  await waitForApp(page);
+
+  const description = "Here for strange numbers and good surprises.";
+  await page.getByLabel("Profile description").fill(description);
+  await page.getByRole("button", { name: "Save description" }).click();
+  await expect(page.locator(".profile-description-note")).toContainText(
+    "Description saved.",
+  );
+  await expect(page.locator(".profile-description")).toHaveText(description);
+
+  await page.reload();
+  await waitForApp(page);
+  await expect(page.getByLabel("Profile description")).toHaveValue(description);
 });
 
 test("the profile link opens as a read-only card anywhere, and never touches the game there", async ({

@@ -151,12 +151,16 @@ function writeHistoryEnvelope(storage, records, requiredId = null) {
     if (requiredId && !remaining.some((record) => record.id === requiredId))
       return false;
     try {
-      if (!remaining.length) store.removeItem(SAVE_HISTORY_KEY);
-      else
-        store.setItem(
-          SAVE_HISTORY_KEY,
-          JSON.stringify({ version: SAVE_HISTORY_VERSION, copies: remaining }),
-        );
+      if (!remaining.length) {
+        store.removeItem(SAVE_HISTORY_KEY);
+        return store.getItem(SAVE_HISTORY_KEY) === null;
+      }
+      const serialized = JSON.stringify({
+        version: SAVE_HISTORY_VERSION,
+        copies: remaining,
+      });
+      store.setItem(SAVE_HISTORY_KEY, serialized);
+      if (store.getItem(SAVE_HISTORY_KEY) !== serialized) return false;
       return true;
     } catch {
       if (!remaining.length) return false;
@@ -373,6 +377,33 @@ export function getRecoveryCopies(storage) {
   return copies.sort((left, right) => right.at - left.at);
 }
 
+export function trimSavedCopyHistoryForQuota(storage, keep = 1) {
+  const store = vaultStore(storage);
+  if (!store) return false;
+  const { records, corrupt } = historyEnvelope(store);
+  if (corrupt || records.length <= keep) return false;
+  const retained = recentHistoryRecords(records).slice(0, Math.max(1, keep));
+  return (
+    retained.length < records.length && writeHistoryEnvelope(store, retained)
+  );
+}
+
+export function writeDeviceSaveWithRecovery(storage, key, raw) {
+  try {
+    writeDeviceSave(storage, key, raw);
+    return true;
+  } catch (error) {
+    const quotaError =
+      error?.name === "QuotaExceededError" ||
+      error?.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      error?.code === 22 ||
+      error?.code === 1014;
+    if (!quotaError || !trimSavedCopyHistoryForQuota(storage, 1)) throw error;
+    writeDeviceSave(storage, key, raw);
+    return true;
+  }
+}
+
 export function writeVault(
   raw,
   {
@@ -410,7 +441,13 @@ export function writeVault(
         owner: encodeOwnerMetadata(ownerId),
       }),
     );
-    return true;
+    const verified = readVault(store);
+    const expectedOwner = ownerId === undefined ? UNKNOWN_CLOUD_OWNER : ownerId;
+    return (
+      verified?.raw === raw &&
+      verified.ownerId === expectedOwner &&
+      verified.at === now
+    );
   } catch {
     return false;
   }
@@ -456,7 +493,13 @@ export function writeCloudRecovery(
         owner: encodeOwnerMetadata(ownerId),
       }),
     );
-    return true;
+    const verified = readCloudRecovery(store);
+    const expectedOwner = ownerId === undefined ? UNKNOWN_CLOUD_OWNER : ownerId;
+    return (
+      verified?.raw === raw &&
+      verified.ownerId === expectedOwner &&
+      verified.reason === String(reason).slice(0, 500)
+    );
   } catch {
     return false;
   }

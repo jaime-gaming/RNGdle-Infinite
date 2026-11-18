@@ -20,6 +20,16 @@ export const PETS = [
       "Drawn to bright numbers. Flutters around the reveal and adds 9% to banked EP.",
   },
   {
+    id: "moss",
+    name: "Moss Beetle",
+    accent: "#84cc16",
+    multiplier: 1.11,
+    price: 450000,
+    dropWeight: 26,
+    description:
+      "Carries a tiny garden on its back and never hurries a number. Adds 11% to banked EP.",
+  },
+  {
     id: "kit",
     name: "Static Kit",
     accent: "#fb923c",
@@ -90,6 +100,16 @@ export const PETS = [
       "Slow, unhurried, and never in a rush for a bad number. Adds 43% to banked EP.",
   },
   {
+    id: "crab",
+    name: "Clockwork Crab",
+    accent: "#f97316",
+    multiplier: 1.46,
+    price: 3400000,
+    dropWeight: 4,
+    description:
+      "Winds itself between rolls and keeps the rack moving. Adds 46% to banked EP.",
+  },
+  {
     id: "griffin",
     name: "Storm Griffin",
     accent: "#60a5fa",
@@ -118,6 +138,16 @@ export const PETS = [
     dropWeight: 1,
     description:
       "Swallows whole cooldowns and looks for more. Adds 70% to banked EP.",
+  },
+  {
+    id: "axolotl",
+    name: "Comet Axolotl",
+    accent: "#22d3ee",
+    multiplier: 1.75,
+    price: 8500000,
+    dropWeight: 1,
+    description:
+      "Swims through the reveal with a tail of cold light. Adds 75% to banked EP.",
   },
   {
     id: "dragonet",

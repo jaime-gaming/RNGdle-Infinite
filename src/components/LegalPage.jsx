@@ -5,7 +5,7 @@ import "../legal.css";
 
 const CONTACT_EMAIL = "jaimegamingpro@gmail.com";
 const REPOSITORY_URL = "https://github.com/jaime-gaming/RNGdle-Infinite";
-const UPDATED = "Last updated 3 November 2026.";
+const UPDATED = "Last updated 11 November 2026.";
 
 function ContactLink() {
   return <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
@@ -48,7 +48,10 @@ export default function LegalPage({ page, navigate }) {
               A local profile, game progress, appearance choices, settings and
               earlier save copies are stored in this browser. Those copies stay
               on this device for a limited time and are not uploaded as cloud
-              history. Clearing this site’s storage removes them. You can review
+              history. If device storage fills up, older recovery snapshots may
+              be trimmed while keeping the newest earlier copy when possible;
+              this does not remove activity history from your current save.
+              Clearing this site’s storage removes local copies. You can review
               available copies in Settings → Restore save. If you link a Cloud
               Account, Firebase handles sign-in and stores your game save and
               account settings so you can continue on another device. Account

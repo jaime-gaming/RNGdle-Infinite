@@ -91,12 +91,6 @@
 .wardrobe-slot.is-equipped .wardrobe-name {
   color: var(--green);
 }
-.wardrobe-note {
-  margin: 14px 0 0;
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--muted);
-}
 .wardrobe-empty {
   display: flex;
   flex-direction: column;

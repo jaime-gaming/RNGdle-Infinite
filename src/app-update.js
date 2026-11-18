@@ -15,19 +15,19 @@ const APP_UPDATE_CACHE_TIMEOUT_MS = 1500;
 
 const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 
-export const APP_INTERNAL_VERSION = "v0.5.2fix4";
+export const APP_INTERNAL_VERSION = "v0.6fix0";
 
 export function isNewerVersion(candidate, baseline) {
   const parse = (label) => {
     const normalized = String(label ?? "")
       .trim()
       .replace(/^RNGdle-Infinite/i, "");
-    const match = /^v?(\d+)\.(\d+)\.(\d+)(?:fix(\d+))?$/.exec(normalized);
+    const match = /^v?(\d+)\.(\d+)(?:\.(\d+))?(?:fix(\d+))?$/.exec(normalized);
     if (!match) throw new Error(`Unrecognised internal version: ${label}`);
     return [
       Number(match[1]),
       Number(match[2]),
-      Number(match[3]),
+      Number(match[3] ?? 0),
       Number(match[4] ?? 0),
     ];
   };

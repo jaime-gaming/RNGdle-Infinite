@@ -1,3 +1,5 @@
+import { errorReference, isErrorReference } from "./error-codes.js";
+
 const TOAST_KINDS = ["info", "done", "reward", "milestone", "warning", "error"];
 
 export const TOAST_LIMIT = 3;
@@ -40,7 +42,13 @@ export function toastFrom(input) {
     typeof input.action.onSelect === "function"
       ? { label: input.action.label, onSelect: input.action.onSelect }
       : null;
-  return { kind, title, text, icon: input.icon ?? null, action };
+  const reference =
+    kind === "error"
+      ? isErrorReference(input.reference)
+        ? input.reference
+        : errorReference(text)
+      : "";
+  return { kind, title, text, reference, icon: input.icon ?? null, action };
 }
 
 export function pushToast(list, input, id) {

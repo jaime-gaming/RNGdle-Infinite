@@ -15,11 +15,14 @@ import {
   ScrollText,
   Shirt,
   Volume2,
+  Wrench,
 } from "lucide-react";
 import AuraWardrobe from "./AuraWardrobe";
 import { useSettings } from "../use-settings.jsx";
 import { APP_INTERNAL_VERSION } from "../app-update.js";
 import { NOTIFICATION_RANKS } from "../settings.js";
+import { useStatusIssue } from "../use-status-issue.js";
+import { maintenanceSettingsVisible, STATUS_PAGE_URL } from "../status-page.js";
 import {
   notificationPermission,
   playReadyChime,
@@ -28,6 +31,7 @@ import {
 } from "../notifications.js";
 import { openInstallBanner } from "./InstallApp.jsx";
 import "../settings.css";
+import "../settings-footer.css";
 
 function rankLabel(rank) {
   return rank ? rank[0].toUpperCase() + rank.slice(1) : "";
@@ -70,6 +74,10 @@ export default function Settings({
   vault,
 }) {
   const { settings, update, reset, saveError } = useSettings();
+  const { issues = [], issue: statusIssue } = useStatusIssue();
+  const longRangeMaintenance = (
+    issues.length ? issues : statusIssue ? [statusIssue] : []
+  ).filter((issue) => maintenanceSettingsVisible(issue));
   const [permission, setPermission] = useState(notificationPermission);
 
   const [backup, setBackup] = useState(() => vault?.get?.() ?? null);
@@ -472,9 +480,34 @@ export default function Settings({
             "Refreshes the game to get the latest version. Your progress, profile and settings stay saved."}
         </p>
       </div>
-      <p className="settings-version" data-testid="settings-internal-version">
-        {APP_INTERNAL_VERSION}
-      </p>
+      <div className="settings-version-row">
+        <p className="settings-version" data-testid="settings-internal-version">
+          {APP_INTERNAL_VERSION}
+        </p>
+        <div
+          className="settings-maintenance-list"
+          aria-label="Scheduled maintenance"
+        >
+          {longRangeMaintenance.map((maintenance) => (
+            <a
+              className="settings-maintenance"
+              href={maintenance.url ?? STATUS_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="settings-maintenance"
+              key={maintenance.id}
+            >
+              <Wrench size={12} aria-hidden="true" />
+              <span>
+                {maintenance.title ?? "Scheduled maintenance"}
+                {maintenance.scheduledFor &&
+                  ` · ${new Date(maintenance.scheduledFor).toLocaleString()}`}
+              </span>
+              <ArrowUpRight size={11} aria-hidden="true" />
+            </a>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }

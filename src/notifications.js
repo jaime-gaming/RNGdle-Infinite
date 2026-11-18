@@ -7,6 +7,31 @@ function notificationsSupported() {
   return typeof Notification !== "undefined";
 }
 
+// Notification actions are only legal on a persistent notification shown by a
+// ServiceWorkerRegistration. Passing `actions` to the Notification constructor
+// throws, so the registration is captured once and reused.
+let registration = null;
+
+export function setNotificationRegistration(value) {
+  registration =
+    value && typeof value.showNotification === "function" ? value : null;
+  return registration;
+}
+
+export function notificationRegistration() {
+  return registration;
+}
+
+export const NOTIFICATION_ACTION_MESSAGE = "rngdle-notification-action";
+
+export function rankNotificationActions({ autoRoll = false } = {}) {
+  const actions = [];
+  if (autoRoll)
+    actions.push({ action: "stop-auto-roll", title: "Stop auto roll" });
+  actions.push({ action: "dismiss", title: "Dismiss" });
+  return actions;
+}
+
 export function notificationPermission() {
   if (!notificationsSupported()) return "unsupported";
   return Notification.permission;
@@ -59,34 +84,74 @@ export function showRankNotification(
   { onClick, onStopAutoRoll, autoRoll } = {},
 ) {
   if (!NOTIFICATION_RANKS.includes(rank)) return null;
-  if (Notification.permission !== "granted") return null;
+  if (!notificationsSupported() || Notification.permission !== "granted")
+    return null;
   const label = rank[0].toUpperCase() + rank.slice(1);
-  const actions = [];
-  if (autoRoll)
-    actions.push({ action: "stop-auto-roll", title: "Stop auto roll" });
-  actions.push({ action: "dismiss", title: "Dismiss" });
-  const notification = new Notification(`${label} rank reached`, {
+  const title = `${label} rank reached`;
+  const options = {
     body: "Return to RNGdle Infinite to review this roll.",
     tag: RANK_NOTIFICATION_TAG,
     renotify: true,
     silent: true,
-    actions,
-  });
-  notification.onclick = () => {
+  };
+  const focus = () => {
     try {
       window.focus();
     } catch {}
-    notification.close();
     onClick?.();
   };
-  notification.onaction = (event) => {
-    notification.close();
-    if (event.action === "stop-auto-roll") {
-      onStopAutoRoll?.();
-      onClick?.();
+
+  // Preferred path: a persistent notification, which may carry actions. The
+  // service worker forwards the chosen action back to the page.
+  if (registration) {
+    try {
+      const shown = registration.showNotification(title, {
+        ...options,
+        actions: rankNotificationActions({ autoRoll }),
+        data: { onClick: true, stopAutoRoll: !!autoRoll },
+      });
+      shown?.catch?.(() => {});
+      stopAutoRollHandler = autoRoll ? (onStopAutoRoll ?? null) : null;
+      clickHandler = focus;
+      return { title, options, persistent: true, close() {} };
+    } catch {
+      // Fall through to a plain notification without actions.
     }
-  };
-  return notification;
+  }
+
+  try {
+    const notification = new Notification(title, options);
+    notification.onclick = () => {
+      try {
+        window.focus();
+      } catch {}
+      notification.close();
+      onClick?.();
+    };
+    return notification;
+  } catch {
+    return null;
+  }
+}
+
+let stopAutoRollHandler = null;
+let clickHandler = null;
+
+// Called by the service-worker message bridge in main.jsx.
+export function handleNotificationAction(action) {
+  if (action === "stop-auto-roll") {
+    const stop = stopAutoRollHandler;
+    stopAutoRollHandler = null;
+    stop?.();
+    clickHandler?.();
+    return true;
+  }
+  if (action === "dismiss") return true;
+  if (action === "click" || action === "") {
+    clickHandler?.();
+    return true;
+  }
+  return false;
 }
 
 export function playReadyChime() {

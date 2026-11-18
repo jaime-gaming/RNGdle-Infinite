@@ -8,7 +8,7 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
   <a href="https://rngdle-infinite.jaime-gaming.com/"><strong>▶ Play now</strong></a>
 </p>
 
-**In this README:** [How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Black Friday 2026](#black-friday-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Credits](#credits) · [Project layout](#project-layout)
+[How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Battle Pass](#battle-pass) · [Black Friday 2026](#black-friday-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Credits](#credits)
 
 ![The game, ready for a roll](media/roll.png)
 
@@ -25,13 +25,29 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 
 - **Badges** for patterns, famous numbers, and mathematical curiosities.
 - **Companions** that boost the EP you earn.
-- **Skills and upgrades** that change the pace of a run, never the odds.
+- **Skills and upgrades** that change the pace of a run, never the odds. Wallet-skill bonuses add together instead of multiplying each other; draw skills share a six-draw limit.
 - **Daily and weekly tasks**, a long-term badge collection, and new milestones.
 - **Auras** to change the look of your game, plus a history of your rolls.
 
 ![The shop and its upgrades](media/shop.png)
 
 ![The Rebirth ladder](media/rebirth.png)
+
+## Battle Pass
+
+Each Battle Pass season has its own published dates. **First Light** starts
+November 18, 2026 at 00:00 UTC. Every pass mission — daily, weekly and season
+milestones — lives on
+the **Tasks** page and pays **BPEP**, which only moves the pass; EP remains your
+shop wallet. The Pass page shows the vertical reward track across 30 levels.
+Levels 5, 15 and 25 grant consumable boosts: **Spark Injector** banks ×1.5 EP
+for 15 minutes, **Surge Capacitor** ×2 for 10 minutes, and **Overdrive Cell**
+×2.5 for 5 minutes. One
+charge per day can also be bought for 250,000 EP. A matching charge extends a
+running window without multiplying the bonus a second time. The optional
+premium track costs EP, never real money. Earned rewards are kept; unclaimed earned rewards
+arrive when the season closes. Rebirth never resets the pass, and the cosmetics
+you claim are yours forever.
 
 ## Black Friday 2026
 
@@ -53,7 +69,7 @@ You choose whether to share a public profile. A profile logo appears only when t
 
 ![Choose a saved copy to restore](media/save-recovery.png)
 
-Local saves are stored with lossless compression, so a longer activity history fits on this device without deleting recovery copies. If saving still fails, keep your site data and free space before trying again.
+Your progress is saved in this browser. Keep the site data on this device; if saving stops, check that the device has available storage.
 
 ## FAQ
 
@@ -78,15 +94,4 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
-## Project layout
-
-| Path       | What lives here                                   |
-| ---------- | ------------------------------------------------- |
-| `src/`     | The game: screens, styles, saves and cloud sync.  |
-| `public/`  | Static assets and the generated scoring tables.   |
-| `tests/`   | Playwright specs and shared test helpers.         |
-| `tools/`   | Builds, data preparation, audits and smoke tests. |
-| `archive/` | QA notes, developer guides and retired history.   |
-| `docs/`    | The published GitHub Pages mirror (generated).    |
-
-_Documentation updated November 8, 2026._
+_Documentation updated November 18, 2026._

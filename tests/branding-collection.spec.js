@@ -23,13 +23,13 @@ test("the original RNGdle Infinite wordmark links home and navigation keeps keyb
     await nav
       .getByRole("button")
       .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("aria-label"))),
-  ).toEqual(["Shop", "Tasks", "Badges", "History"]);
+  ).toEqual(["Shop", "Pass", "Tasks", "Badges", "History"]);
   await logo.focus();
-  for (const name of ["Shop", "Tasks", "Badges", "History"]) {
+  for (const name of ["Shop", "Pass", "Tasks", "Badges", "History"]) {
     await page.keyboard.press("Tab");
     await expect(nav.getByRole("button", { name, exact: true })).toBeFocused();
   }
-  for (const name of ["Shop", "Tasks", "Badges", "History"]) {
+  for (const name of ["Shop", "Pass", "Tasks", "Badges", "History"]) {
     await nav.getByRole("button", { name, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/${name.toLowerCase()}$`));
     await expect(
