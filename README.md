@@ -35,8 +35,7 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
 
 ## Battle Pass
 
-Battle Pass seasons are explicitly scheduled in code; the game does not infer
-or announce a successor from a repeating calendar. **First Light** starts
+Each Battle Pass season has its own published dates. **First Light** starts
 November 18, 2026 at 00:00 UTC. Every pass mission — daily, weekly and season
 milestones — lives on
 the **Tasks** page and pays **BPEP**, which only moves the pass; EP remains your
@@ -70,7 +69,7 @@ You choose whether to share a public profile. A profile logo appears only when t
 
 ![Choose a saved copy to restore](media/save-recovery.png)
 
-Local saves are stored with lossless compression. If device storage fills up, the game can retire older recovery snapshots while keeping the newest earlier copy and your activity history. If saving still fails, keep your site data and free space before trying again.
+Your progress is saved in this browser. Keep the site data on this device; if saving stops, check that the device has available storage.
 
 ## FAQ
 
