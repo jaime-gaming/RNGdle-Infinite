@@ -83,7 +83,7 @@ function seededSave(logo) {
     ...emptyProgress(),
     profile: {
       id: "shot-profile",
-      username: "LuckyOtter41",
+      username: "Player",
       createdAt: at,
       avatar: logo,
     },

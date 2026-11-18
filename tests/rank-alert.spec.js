@@ -23,11 +23,19 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     window.__rankNotifications = [];
+    window.__constructedNotifications = [];
     class TestNotification {
       static permission = "granted";
       constructor(title, options) {
+        // The platform throws when a constructor is handed actions. Mirror
+        // that here so a regression fails the test instead of shipping.
+        if (options?.actions)
+          throw new TypeError(
+            "Actions are only supported for persistent notifications",
+          );
         this.title = title;
         this.options = options;
+        window.__constructedNotifications.push({ title, ...options });
         window.__rankNotifications.push({ title, ...options });
       }
       close() {}
@@ -36,6 +44,21 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
       configurable: true,
       value: TestNotification,
     });
+    if ("serviceWorker" in navigator) {
+      const capture = (registration) => {
+        if (!registration?.showNotification) return;
+        const original = registration.showNotification.bind(registration);
+        registration.showNotification = (title, options) => {
+          window.__rankNotifications.push({ title, ...options });
+          return original(title, options).catch(() => {});
+        };
+      };
+      navigator.serviceWorker
+        .getRegistration()
+        .then(capture)
+        .catch(() => {});
+      navigator.serviceWorker.ready.then(capture).catch(() => {});
+    }
   });
 
   await page.goto("/settings");
@@ -103,10 +126,17 @@ test("a rank alert stops Auto-Roll and keeps the roll's stats on screen", async 
     silent: true,
   });
 
-  expect(notification.actions).toEqual([
-    { action: "stop-auto-roll", title: "Stop auto roll" },
-    { action: "dismiss", title: "Dismiss" },
-  ]);
+  // Actions are only legal on the persistent path. Either they rode a
+  // service-worker notification, or the alert went out without them.
+  const constructed = await page.evaluate(
+    () => window.__constructedNotifications,
+  );
+  for (const entry of constructed) expect(entry.actions).toBeUndefined();
+  if (notification.actions)
+    expect(notification.actions).toEqual([
+      { action: "stop-auto-roll", title: "Stop auto roll" },
+      { action: "dismiss", title: "Dismiss" },
+    ]);
   expect(notification.title).not.toContain(String(ROLL_NUMBER));
   expect(notification.body).not.toContain(String(ROLL_NUMBER));
   expect((await rolls(page)).map((entry) => entry.number)).toEqual([

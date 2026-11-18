@@ -314,11 +314,15 @@ function makeCommit(staged) {
       "aura",
       "companion",
       "avatar",
+      ...(record.v === 4 ? ["description"] : []),
     ];
     if (!sameKeys(record, recordKeys)) return false;
     return (
-      record.v === 3 &&
+      [3, 4].includes(record.v) &&
       record.name === key &&
+      (record.v === 3 ||
+        (typeof record.description === "string" &&
+          record.description.length <= 200)) &&
       Array.isArray(record.pins) &&
       record.pins.length <= 10
     );

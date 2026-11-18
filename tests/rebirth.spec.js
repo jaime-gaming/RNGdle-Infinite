@@ -103,9 +103,9 @@ async function start(p, extra = {}) {
 }
 
 test("the ladder climbs in badges and in EP, from a fifth of the collection", () => {
-  expect(BADGE_TOTAL).toBe(235);
+  expect(BADGE_TOTAL).toBe(242);
 
-  expect(REBIRTH_VISIBLE_AT).toBe(36);
+  expect(REBIRTH_VISIBLE_AT).toBe(37);
   expect(REBIRTH_STEPS).toEqual([
     { badges: 0.2, ep: 250000 },
     { badges: 0.25, ep: 600000 },
@@ -118,29 +118,29 @@ test("the ladder climbs in badges and in EP, from a fifth of the collection", ()
   expect(rebirthRequirement(0)).toEqual({
     rebirth: 1,
     percent: 20,
-    badges: 47,
+    badges: 49,
     ep: 250000,
   });
   expect(rebirthRequirement(1)).toEqual({
     rebirth: 2,
     percent: 25,
-    badges: 59,
+    badges: 61,
     ep: 600000,
   });
-  expect(rebirthRequirement(2).badges).toBe(71);
-  expect(rebirthRequirement(3).badges).toBe(83);
-  expect(rebirthRequirement(4).badges).toBe(94);
+  expect(rebirthRequirement(2).badges).toBe(73);
+  expect(rebirthRequirement(3).badges).toBe(85);
+  expect(rebirthRequirement(4).badges).toBe(97);
   expect(rebirthRequirement(5)).toEqual({
     rebirth: 6,
     percent: 45,
-    badges: 106,
+    badges: 109,
     ep: 15000000,
   });
   expect(rebirthRequirement(6)).toBeNull();
 
   expect(ultraRebirthRequirement()).toEqual({
     percent: 50,
-    badges: 118,
+    badges: 121,
     ep: 30000000,
   });
 
@@ -154,16 +154,16 @@ test("the ladder climbs in badges and in EP, from a fifth of the collection", ()
   }
 
   expect(
-    discoveredCount({ ...state(), discovered: Array(235).fill(ids[0]) }),
+    discoveredCount({ ...state(), discovered: Array(242).fill(ids[0]) }),
   ).toBe(1);
 
-  const below = { ...funded(), discovered: ids.slice(0, 46) };
-  expect(rebirthBlocker(below, 200000)).toMatch(/Discover 47 badges \(20%\)/);
+  const below = { ...funded(), discovered: ids.slice(0, 48) };
+  expect(rebirthBlocker(below, 200000)).toMatch(/Discover 49 badges \(20%\)/);
   expect(() => applyProgress(below, action)).toThrow(/Discover/);
 
   const short = {
     ...state(),
-    discovered: ids.slice(0, 47),
+    discovered: ids.slice(0, 49),
     history: earned(40000),
   };
   expect(cycleEarnedEp(short)).toBe(40000);
@@ -174,7 +174,7 @@ test("the ladder climbs in badges and in EP, from a fifth of the collection", ()
 
   const met = {
     ...state(),
-    discovered: ids.slice(0, 47),
+    discovered: ids.slice(0, 49),
     history: earned(250000),
     balance: 0,
   };
@@ -194,16 +194,16 @@ test("the ladder climbs in badges and in EP, from a fifth of the collection", ()
   ).toThrow("cooldown");
   expect(() =>
     applyProgress(
-      { ...funded(), rebirths: 1, discovered: ids.slice(0, 58) },
+      { ...funded(), rebirths: 1, discovered: ids.slice(0, 60) },
       {
         ...action,
         expectedRebirths: 1,
       },
     ),
-  ).toThrow(/Discover 59 badges \(25%\)/);
+  ).toThrow(/Discover 61 badges \(25%\)/);
   expect(() =>
     applyProgress(
-      { ...state(), rebirths: 1, discovered: ids.slice(0, 59) },
+      { ...state(), rebirths: 1, discovered: ids.slice(0, 61) },
       {
         ...action,
         expectedRebirths: 1,
@@ -680,13 +680,14 @@ test("bar maths starts at zero after the reveal, reaches one only at readiness, 
 
 for (const [count, rebirths, ep, expected] of [
   [35, 0, 0, "hidden"],
-  [36, 0, 0, "disabled"],
-  [46, 0, 250000, "disabled"],
-  [47, 0, 250000, "ready"],
-  [58, 1, 600000, "disabled"],
-  [59, 1, 600000, "ready"],
+  [36, 0, 0, "hidden"],
+  [37, 0, 0, "disabled"],
+  [48, 0, 250000, "disabled"],
+  [49, 0, 250000, "ready"],
+  [60, 1, 600000, "disabled"],
+  [61, 1, 600000, "ready"],
 ])
-  test(`rebirth at ${count} of 235 badges, ${ep} EP and ${rebirths} rebirths reads "${expected}" on its own page`, async ({
+  test(`rebirth at ${count} of 242 badges, ${ep} EP and ${rebirths} rebirths reads "${expected}" on its own page`, async ({
     page,
   }) => {
     await seedProgress(page, {
@@ -1102,7 +1103,7 @@ test("registered rebirth fails closed without Web Locks", async ({ page }) => {
     "Update it or try another browser.",
   );
   expect((await saved(page)).rebirths).toBe(0);
-  expect((await saved(page)).discovered).toHaveLength(235);
+  expect((await saved(page)).discovered).toHaveLength(242);
 });
 
 test("guest rebirth refuses a failed guard write instead of partially resetting memory", async ({
@@ -1139,7 +1140,7 @@ test("guest rebirth refuses a failed guard write instead of partially resetting 
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(page.locator(".roll-progress-links")).toContainText(
-    "0 / 235 badges",
+    "0 / 242 badges",
   );
   await expect(page.locator(".roll-progress-links")).toContainText("1 rebirth");
 });
@@ -1189,7 +1190,7 @@ test("the rebirth page animates its gauge and ladder, and reduced motion leaves 
 }) => {
   await seedProgress(page, {
     profile: testProfile,
-    discovered: ids.slice(0, 71),
+    discovered: ids.slice(0, 73),
     cycleEarnedEP: 2_000_000,
     history: earned(2_000_000),
     rebirths: 2,

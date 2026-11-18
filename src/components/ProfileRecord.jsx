@@ -18,11 +18,7 @@ export function when(at) {
   });
 }
 
-export default function ProfileRecord({
-  record,
-  shared = false,
-  live = false,
-}) {
+export default function ProfileRecord({ record, shared = false }) {
   const best = record.best;
   const items = [
     ["Rolls completed", record.rolls.toLocaleString("en-US")],
@@ -45,6 +41,9 @@ export default function ProfileRecord({
         <History size={15} aria-hidden="true" />{" "}
         {shared ? `${record.name}'s record` : "Your record"}
       </h3>
+      {record.description && (
+        <p className="profile-description">{record.description}</p>
+      )}
       <div className="profile-best" data-best-roll={best?.number ?? ""}>
         <NumberBox
           compact
@@ -124,13 +123,6 @@ export default function ProfileRecord({
           ) : null}
           .
         </span>
-      </p>
-      <p className="profile-history-note">
-        {shared
-          ? live
-            ? `Latest public profile from ${when(record.at)}. Your full progress and email are private.`
-            : `Saved copy from ${when(record.at)}. It may not include more recent progress.`
-          : "These figures come from your progress. Clearing history does not change them."}
       </p>
     </section>
   );

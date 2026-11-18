@@ -1,9 +1,12 @@
+import { gameNow } from "./game-clock.js";
+
 export const STATUS_PAGE_URL = "https://status.jaime-gaming.com/";
 export const STATUS_SUMMARY_URL =
   "https://status.jaime-gaming.com/api/v2/summary.json";
 export const STATUS_SERVICE_NAME = "RNGdle Infinite";
 export const STATUS_POLL_INTERVAL_MS = 60_000;
 export const STATUS_FETCH_TIMEOUT_MS = 8_000;
+export const MAINTENANCE_NOTICE_LEAD_MS = 24 * 60 * 60 * 1000;
 
 const RESOLVED_INCIDENT_STATUSES = new Set([
   "resolved",
@@ -32,8 +35,93 @@ function normalize(value) {
     .toLowerCase();
 }
 
+export function maintenanceNoticeVisible(issue, at = gameNow()) {
+  if (!issue || issue.kind !== "maintenance" || !Number.isFinite(at))
+    return false;
+  const start = Date.parse(issue.scheduledFor ?? "");
+  const end = Date.parse(issue.scheduledUntil ?? "");
+  const status = normalize(issue.status);
+  const componentStatus = normalize(issue.componentStatus);
+  const active =
+    status === "in_progress" || componentStatus === UNDER_MAINTENANCE;
+
+  if (Number.isFinite(start)) {
+    if (at < start) return start - at < MAINTENANCE_NOTICE_LEAD_MS;
+    if (Number.isFinite(end)) return at < end;
+    return active;
+  }
+  return active;
+}
+
+// Long-range schedules stay discreetly in Settings; the final 24 hours and
+// active maintenance are promoted to the same live notice stack as incidents.
+export function maintenanceSettingsVisible(issue, at = gameNow()) {
+  if (!issue || issue.kind !== "maintenance" || !Number.isFinite(at))
+    return false;
+  const start = Date.parse(issue.scheduledFor ?? "");
+  if (!Number.isFinite(start) || start <= at) return false;
+  return start - at >= MAINTENANCE_NOTICE_LEAD_MS;
+}
+
+export function maintenanceActiveFor(issueOrIssues, at = gameNow()) {
+  const issues = Array.isArray(issueOrIssues) ? issueOrIssues : [issueOrIssues];
+  return issues.some((issue) => {
+    if (!issue || issue.kind !== "maintenance") return false;
+    const start = Date.parse(issue.scheduledFor ?? "");
+    // Status providers can publish an in-progress flag ahead of the window;
+    // never gate gameplay before its explicitly scheduled start.
+    if (Number.isFinite(start) && Number.isFinite(at) && at < start)
+      return false;
+    const status = normalize(issue.status);
+    return (
+      status === "in_progress" ||
+      normalize(issue.componentStatus) === UNDER_MAINTENANCE
+    );
+  });
+}
+
 function matchesService(text) {
   return normalize(text).includes("rngdle");
+}
+
+function matchesServiceRecord(record, serviceComponent, componentCount) {
+  if (matchesService(record?.name)) return true;
+  const linked = [
+    ...(Array.isArray(record?.components) ? record.components : []),
+    ...(Array.isArray(record?.component_ids) ? record.component_ids : []),
+    ...(record?.component_id ? [record.component_id] : []),
+  ];
+  if (
+    serviceComponent &&
+    linked.some((entry) => {
+      const id = typeof entry === "object" ? entry?.id : entry;
+      const name =
+        typeof entry === "object"
+          ? entry?.name
+          : typeof entry === "string"
+            ? entry
+            : "";
+      return (
+        (serviceComponent.id != null &&
+          String(id ?? "") === String(serviceComponent.id)) ||
+        matchesService(name)
+      );
+    })
+  )
+    return true;
+  // Some Statuspage payloads omit component references when the page has only
+  // one service; in that case its scheduled windows still belong to this game.
+  const genericName = [
+    "maintenance",
+    "scheduled maintenance",
+    "upcoming maintenance",
+  ].includes(normalize(record?.name));
+  return (
+    linked.length === 0 &&
+    Boolean(serviceComponent) &&
+    componentCount === 1 &&
+    genericName
+  );
 }
 
 function severityOf({ incident, componentStatus }) {
@@ -59,9 +147,42 @@ export function plainSnippet(text, maxLength = 160) {
   return `${plain.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
-export function serviceIssueFromSummary(summary) {
+function latestUpdate(source) {
+  return Array.isArray(source?.incident_updates)
+    ? [...source.incident_updates].sort((a, b) =>
+        String(b?.created_at ?? "").localeCompare(String(a?.created_at ?? "")),
+      )[0]
+    : null;
+}
+
+function issueRecord(source, { kind, component, componentStatus }) {
+  const update = latestUpdate(source);
+  const maintenance = kind === "maintenance";
+  return {
+    kind,
+    severity: maintenance
+      ? "maintenance"
+      : severityOf({ incident: source, componentStatus }),
+    id: source?.id ?? `component:${component?.id ?? "unknown"}`,
+    componentName: component?.name ?? STATUS_SERVICE_NAME,
+    componentStatus: componentStatus ?? OPERATIONAL,
+    title: source?.name ?? null,
+    status: source?.status ?? null,
+    impact: source?.impact ?? null,
+    description: plainSnippet(update?.body ?? source?.description ?? ""),
+    scheduledFor: source?.scheduled_for ?? null,
+    scheduledUntil: source?.scheduled_until ?? null,
+    url: source?.id
+      ? maintenance
+        ? STATUS_PAGE_URL
+        : `https://status.jaime-gaming.com/incidents/${source.id}`
+      : STATUS_PAGE_URL,
+  };
+}
+
+export function serviceIssuesFromSummary(summary, at = gameNow()) {
   try {
-    if (!summary || typeof summary !== "object") return null;
+    if (!summary || typeof summary !== "object") return [];
     const components = Array.isArray(summary.components)
       ? summary.components
       : [];
@@ -69,7 +190,6 @@ export function serviceIssueFromSummary(summary) {
     const maintenances = Array.isArray(summary.scheduled_maintenances)
       ? summary.scheduled_maintenances
       : [];
-
     const component = components.find(
       (entry) => normalize(entry?.name) === normalize(STATUS_SERVICE_NAME),
     );
@@ -79,73 +199,83 @@ export function serviceIssueFromSummary(summary) {
         ? component
         : null;
 
-    const activeIncident = incidents.find((incident) => {
-      if (RESOLVED_INCIDENT_STATUSES.has(normalize(incident?.status)))
+    const activeIncidents = incidents.filter(
+      (incident) =>
+        !RESOLVED_INCIDENT_STATUSES.has(normalize(incident?.status)) &&
+        matchesService(incident?.name),
+    );
+    const activeMaintenances = maintenances.filter((maintenance) => {
+      if (
+        RESOLVED_MAINTENANCE_STATUSES.has(normalize(maintenance?.status)) ||
+        !matchesServiceRecord(maintenance, component, components.length)
+      )
         return false;
-      return matchesService(incident?.name);
+      const end = Date.parse(maintenance?.scheduled_until ?? "");
+      const isActive = normalize(maintenance?.status) === "in_progress";
+      return isActive || !Number.isFinite(end) || end > at;
     });
 
-    const activeMaintenance = maintenances.find((maintenance) => {
-      if (RESOLVED_MAINTENANCE_STATUSES.has(normalize(maintenance?.status)))
-        return false;
-      return matchesService(maintenance?.name);
-    });
-
-    if (!componentDown && !activeIncident && !activeMaintenance) return null;
-
-    const source = activeIncident ?? activeMaintenance ?? null;
-    const isMaintenance =
-      !activeIncident &&
-      (activeMaintenance || componentStatus === UNDER_MAINTENANCE);
-    const latestUpdate = Array.isArray(source?.incident_updates)
-      ? [...source.incident_updates].sort((a, b) =>
-          String(b?.created_at ?? "").localeCompare(
-            String(a?.created_at ?? ""),
-          ),
-        )[0]
-      : null;
-
-    return {
-      kind: isMaintenance ? "maintenance" : "incident",
-      severity: isMaintenance
-        ? "maintenance"
-        : severityOf({ incident: activeIncident, componentStatus }),
-      id: source?.id ?? `component:${component?.id ?? "unknown"}`,
-      componentName: component?.name ?? STATUS_SERVICE_NAME,
-      componentStatus: componentDown ? component.status : OPERATIONAL,
-      title: source?.name ?? null,
-      status: source?.status ?? null,
-      impact: source?.impact ?? null,
-      description: plainSnippet(latestUpdate?.body ?? ""),
-      scheduledFor: source?.scheduled_for ?? null,
-      scheduledUntil: source?.scheduled_until ?? null,
-      url: source?.id
-        ? `https://status.jaime-gaming.com/incidents/${source.id}`
-        : STATUS_PAGE_URL,
-    };
+    const issues = activeIncidents.map((incident) =>
+      issueRecord(incident, { kind: "incident", component, componentStatus }),
+    );
+    // A component-level degradation is useful only when the incident feed did
+    // not already explain it, avoiding duplicate notices for the same outage.
+    if (
+      componentDown &&
+      !activeIncidents.length &&
+      !(componentStatus === UNDER_MAINTENANCE && activeMaintenances.length)
+    )
+      issues.push(
+        issueRecord(null, {
+          kind:
+            componentStatus === UNDER_MAINTENANCE ? "maintenance" : "incident",
+          component,
+          componentStatus,
+        }),
+      );
+    issues.push(
+      ...activeMaintenances.map((maintenance) =>
+        issueRecord(maintenance, {
+          kind: "maintenance",
+          component,
+          componentStatus,
+        }),
+      ),
+    );
+    return issues;
   } catch {
-    return null;
+    return [];
   }
 }
 
-export async function fetchServiceIssue({
+// Backwards-compatible first-issue helper for consumers that need one status.
+export function serviceIssueFromSummary(summary, at = gameNow()) {
+  return serviceIssuesFromSummary(summary, at)[0] ?? null;
+}
+
+export async function fetchServiceIssues({
   summaryUrl = STATUS_SUMMARY_URL,
   timeoutMs = STATUS_FETCH_TIMEOUT_MS,
   fetchImpl = globalThis.fetch?.bind(globalThis),
 } = {}) {
-  if (!fetchImpl) return null;
+  if (!fetchImpl) return [];
+  let timer;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    timer = setTimeout(() => controller.abort(), timeoutMs);
     const response = await fetchImpl(summaryUrl, {
       signal: controller.signal,
       cache: "no-store",
     });
-    clearTimeout(timer);
-    if (!response?.ok) return null;
-    const summary = await response.json();
-    return serviceIssueFromSummary(summary);
+    if (!response?.ok) return [];
+    return serviceIssuesFromSummary(await response.json());
   } catch {
-    return null;
+    return [];
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+export async function fetchServiceIssue(options) {
+  return (await fetchServiceIssues(options))[0] ?? null;
 }

@@ -42,7 +42,7 @@ test("the hub is an index of shelf buttons, and each one is its own page", async
   await waitForApp(page);
   const hub = page.getByRole("navigation", { name: "Shop sections" });
   await expect(hub).toBeVisible();
-  await expect(hub.getByRole("link")).toHaveCount(6);
+  await expect(hub.getByRole("link")).toHaveCount(7);
 
   await expect(page.locator(".shop-card[data-product]")).toHaveCount(0);
   await expect(
@@ -56,6 +56,7 @@ test("the hub is an index of shelf buttons, and each one is its own page", async
     ["auras", "Auras"],
     ["offline", "Offline"],
     ["tools", "Tools"],
+    ["more", "More"],
   ]) {
     await openShelf(page, id, label);
 
@@ -94,7 +95,7 @@ test("deep links and legacy shelf hashes land on the right shelf", async ({
 
   await page.getByRole("link", { name: "Auras", exact: true }).click();
   const others = page.getByRole("navigation", { name: "Other shelves" });
-  await expect(others.getByRole("link")).toHaveCount(5);
+  await expect(others.getByRole("link")).toHaveCount(6);
   await others.getByRole("link", { name: "Offline", exact: true }).click();
   await expect(page).toHaveURL(/\/shop\/offline$/);
 
@@ -125,6 +126,7 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
     "/shop/offline",
     "/shop/auras/celestial",
     "/shop/tools",
+    "/shop/more",
   ]) {
     await page.goto(path);
     await waitForApp(page);
@@ -137,7 +139,7 @@ test("the shelf's status line counts the cards on screen, and the exit is a bloc
 
   await page.goto("/shop/companions");
   await waitForApp(page);
-  await expect(page.locator(".shop-count")).toHaveText(/^\d+ \/ 13 found$/);
+  await expect(page.locator(".shop-count")).toHaveText(/^\d+ \/ 16 found$/);
 });
 
 test("a locked shelf reads Locked, and the header's nav rules stay in the header", async ({
@@ -329,6 +331,8 @@ test("equipping a companion uncages it with an animation", async ({ page }) => {
   await page.goto("/shop/companions");
   await waitForApp(page);
   const slide = page.locator("#shop-companions [data-pet='pebble']");
+  await expect(slide.locator(".pet-field-notes")).toHaveCount(0);
+  await expect(slide.locator(".pet-figure svg")).toBeVisible();
   await slide.getByRole("button", { name: "Equip", exact: true }).click();
 
   const uncaging = page.locator("#shop-companions .pet-slide.is-uncaging");
@@ -662,6 +666,32 @@ test("owned retired cosmetics remain in the Legacy collection and can still be e
   await expect(
     page.locator('[data-product="hollow-lantern"] button:not(.shop-look-eye)'),
   ).toContainText("Equipped");
+});
+
+test("the First Light exclusive is listed in Special & Limiteds under its pass group", async ({
+  page,
+}) => {
+  await seedProgress(page, {
+    ...funded,
+    owned: ["pass-firstlight"],
+    equipped: "pass-firstlight",
+  });
+  await page.goto("/shop/auras");
+  await waitForApp(page);
+  await page.locator('.aura-family-banner[data-family="special"]').click();
+  await expect(page).toHaveURL(/\/shop\/auras\/special$/);
+  const passGroup = page.locator(
+    '.aura-family-banner[data-family="battle-pass"]',
+  );
+  await expect(passGroup).toBeVisible();
+  await passGroup.click();
+  await expect(page).toHaveURL(/\/shop\/auras\/battle-pass$/);
+  const skin = page.locator('[data-product="pass-firstlight"]');
+  await expect(skin).toBeVisible();
+  await expect(skin).toContainText("First Light Crown");
+  await expect(skin).toContainText(
+    "Special & Limited · Permanently owned · Not for sale",
+  );
 });
 
 test("nothing on a shelf waits behind a purchase you have not made", async ({

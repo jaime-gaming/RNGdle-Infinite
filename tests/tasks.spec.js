@@ -71,7 +71,18 @@ function readyBothLists(time) {
   );
 }
 
-test("task periods follow daily boundaries and Monday-start weeks", () => {
+test("task periods follow daily boundaries and tasks exist before the first roll", () => {
+  const empty = emptyTasks();
+  const initialTime = at(2026, 9, 7, 12);
+  expect(activeTaskIds(empty, "daily", initialTime)).toHaveLength(
+    ACTIVE_PER_PERIOD.daily,
+  );
+  expect(activeTaskIds(empty, "weekly", initialTime)).toHaveLength(
+    ACTIVE_PER_PERIOD.weekly,
+  );
+  expect(taskSummary(empty, initialTime).total).toBe(
+    ACTIVE_PER_PERIOD.daily + ACTIVE_PER_PERIOD.weekly,
+  );
   expect(periodKey("daily", at(2026, 9, 7, 23, 59))).toBe("2026-09-07");
   expect(periodKey("daily", at(2026, 9, 8, 0, 0))).toBe("2026-09-08");
   expect(periodKey("weekly", at(2026, 9, 13, 23, 59))).toBe("2026-09-07");
@@ -119,6 +130,22 @@ test("a finished task pays once and records the claim", () => {
   expect(() =>
     applyProgress(paid, { type: "claim-task", id, at: time }),
   ).toThrow("already claimed");
+});
+
+test("normal task claims pay EP only, even during an active pass season", () => {
+  const time = at(2026, 11, 20);
+  const [id] = activeTaskIds(emptyTasks(), "daily", time);
+  const task = taskById(id);
+  const claimed = applyProgress(
+    {
+      ...emptyProgress(),
+      tasks: readyOneTask("daily", time, id),
+    },
+    { type: "claim-task", id, at: time },
+  );
+  expect(claimed.balance).toBe(task.reward);
+  expect(claimed.battlePass?.xp ?? 0).toBe(0);
+  expect(claimed.history.at(-1)).not.toHaveProperty("bpep");
 });
 
 test("a new period starts with zero task progress", () => {
@@ -391,19 +418,19 @@ test("a claimed task cannot be skipped", () => {
   ).toThrow("claimed task cannot be skipped");
 });
 
-test("Task Skips cost 125,000 EP, are limited to one a day and three per five days", () => {
+test("Task Skips cost 250,000 EP, are limited to one a day and two per five days", () => {
   const start = at(2026, 9, 1);
   let state = {
     ...emptyProgress(),
     balance: 1500000,
     totalEarned: 1500000,
   };
-  const buy = (when) =>
+  const buyAt = (when) =>
     applyProgress(state, { type: "buy", id: "task-skip", at: when });
-  state = buy(start);
-  expect(state.balance).toBe(1375000);
+  state = buyAt(start);
+  expect(state.balance).toBe(1250000);
   expect(skipStatus(state.tasks, start).tokens).toBe(1);
-  expect(() => buy(start + DAY - 1)).toThrow("next Task Skip");
+  expect(() => buyAt(start + DAY - 1)).toThrow("next Task Skip");
 
   let open = activeTaskIds(state.tasks, "daily", start)[0];
   state = applyProgress(state, { type: "skip-task", id: open, at: start });
@@ -418,26 +445,28 @@ test("Task Skips cost 125,000 EP, are limited to one a day and three per five da
     id: open,
     at: start + DAY,
   });
-  state = applyProgress(state, {
-    type: "buy",
-    id: "task-skip",
-    at: start + 2 * DAY,
-  });
-  open = activeTaskIds(state.tasks, "daily", start + 2 * DAY)[0];
-  state = applyProgress(state, {
-    type: "skip-task",
-    id: open,
-    at: start + 2 * DAY,
-  });
-  expect(skipStatus(state.tasks, start + 2 * DAY).tokens).toBe(0);
+  expect(skipStatus(state.tasks, start + DAY).tokens).toBe(0);
   expect(() =>
     applyProgress(state, {
       type: "buy",
       id: "task-skip",
-      at: start + 3 * DAY,
+      at: start + 2 * DAY,
     }),
   ).toThrow("next Task Skip");
-  expect(state.balance).toBe(1125000);
+  state = applyProgress(state, {
+    type: "buy",
+    id: "task-skip",
+    at: start + 5 * DAY,
+  });
+  expect(state.balance).toBe(750000);
+});
+
+test("a legacy three-token Task Skip balance is not truncated by the new shop balance", () => {
+  const time = at(2026, 9, 1);
+  expect(
+    skipStatus({ ...emptyTasks(), skip: { tokens: 3, bought: [] } }, time)
+      .tokens,
+  ).toBe(3);
 });
 
 test("Task Skip purchases and swaps survive reload, while forged swaps are removed", () => {
@@ -495,18 +524,18 @@ test("the Tasks page confirms before spending a Skip", async ({ page }) => {
   expect(saved.tasks.daily.swaps).toHaveLength(1);
 });
 
-test("the Task Skip is bought again from Tools and waits one day", async ({
+test("the Task Skip is bought again from More and waits one day", async ({
   page,
 }) => {
   await seedProgress(page, {
     balance: 500000,
     totalEarned: 500000,
   });
-  await page.goto("/shop/tools");
+  await page.goto("/shop/more");
   await waitForApp(page);
   const card = page.locator('[data-product="task-skip"]');
   await expect(card).toBeVisible();
-  await card.getByRole("button", { name: "Buy for 125,000 EP" }).click();
+  await card.getByRole("button", { name: "Buy for 250,000 EP" }).click();
   await page
     .getByRole("button", { name: "Confirm purchase", exact: true })
     .click();
@@ -515,7 +544,7 @@ test("the Task Skip is bought again from Tools and waits one day", async ({
   const saved = await readSavedProgress(page);
   expect(saved.owned).not.toContain("task-skip");
   expect(saved.tasks.skip.tokens).toBe(1);
-  expect(saved.balance).toBe(375000);
+  expect(saved.balance).toBe(250000);
 });
 
 test("the Tasks page fits a narrow phone without sideways scrolling", async ({

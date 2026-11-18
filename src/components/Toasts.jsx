@@ -70,6 +70,9 @@ function Notice({ item, onDismiss }) {
       <div className="toast-body">
         {item.title && <strong className="toast-title">{item.title}</strong>}
         {item.text && <span className="toast-text">{item.text}</span>}
+        {item.reference && (
+          <small className="toast-reference">Reference {item.reference}</small>
+        )}
       </div>
       {item.count > 1 && (
         <span className="toast-count" title={`Repeated ${item.count} times`}>

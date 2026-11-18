@@ -5,10 +5,16 @@ import { accountStats, profileHighlights } from "./profile-stats.js";
 import { pathForProfile } from "./router.js";
 import { AVATAR_LIMIT, validAvatar } from "./progress.js";
 
-const CARD_VERSION = 3;
+const CARD_VERSION = 4;
+const PROFILE_DESCRIPTION_LIMIT = 200;
 const MAX_CARD_OUTPUT_BYTES = AVATAR_LIMIT + 16_384;
 const MAX_CARD_TOKEN_CHARS = 400_000;
-const KNOWN_VERSIONS = new Set([1, 2, CARD_VERSION]);
+const KNOWN_VERSIONS = new Set([1, 2, 3, CARD_VERSION]);
+
+const profileDescription = (value) =>
+  typeof value === "string"
+    ? Array.from(value).slice(0, PROFILE_DESCRIPTION_LIMIT).join("")
+    : "";
 
 const TOKEN_TAG = "z1";
 const NAME_MAX = 20;
@@ -21,6 +27,7 @@ export function shareCardData(progress = {}, now = new Date()) {
   return {
     v: CARD_VERSION,
     name: progress.profile?.username ?? "Guest",
+    description: profileDescription(progress.profile?.description),
     at: now.toISOString(),
     since: progress.profile?.createdAt ?? null,
     best: best
@@ -92,8 +99,9 @@ const unpackRoll = (text, withDate) => {
 };
 
 export function encodeShareCard(card) {
+  const version = Number(card?.v ?? CARD_VERSION);
   const line = [
-    String(card?.v ?? CARD_VERSION),
+    String(version),
     plain(card?.name),
     seconds(card?.at),
     seconds(card?.since),
@@ -111,6 +119,9 @@ export function encodeShareCard(card) {
     plain(card?.aura),
     plain(card?.companion),
     avatarText(card?.avatar),
+    ...(version >= 4
+      ? [toBase64Url(strToU8(profileDescription(card?.description)))]
+      : []),
   ].join(FIELD);
 
   return TOKEN_TAG + toBase64Url(deflateSync(strToU8(line), { level: 9 }));
@@ -130,6 +141,15 @@ function fromBase64Url(token) {
   const padded = token.replace(/-/g, "+").replace(/_/g, "/");
   const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function decodeProfileDescription(value) {
+  if (!value) return "";
+  try {
+    return profileDescription(new TextDecoder().decode(fromBase64Url(value)));
+  } catch {
+    return "";
+  }
 }
 
 function inflateCard(bytes) {
@@ -170,7 +190,7 @@ export function decodeShareCard(token) {
   } else {
     const f = text.split(FIELD);
 
-    if (f.length !== 15 && f.length !== 16) return null;
+    if (f.length !== 15 && f.length !== 16 && f.length !== 17) return null;
     raw = {
       v: Number(f[0]),
       name: f[1],
@@ -188,6 +208,7 @@ export function decodeShareCard(token) {
       aura: f[13],
       companion: f[14],
       avatar: f[15] ?? "",
+      description: decodeProfileDescription(f[16] ?? ""),
     };
   }
   return sanitizeShareCard(raw);
@@ -222,6 +243,7 @@ export function sanitizeShareCard(raw) {
   return {
     v: CARD_VERSION,
     name,
+    description: profileDescription(raw.description),
     at,
     since: isoDate(raw.since),
     best: roll(raw.best, true),

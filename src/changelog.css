@@ -53,6 +53,9 @@
 }
 
 .changelog-badge-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 0;
   border: 0;
   background: none;
@@ -63,6 +66,9 @@
   text-decoration-color: var(--muted);
   cursor: pointer;
 }
+.changelog-badge-link .emoji {
+  font-size: 1.05em;
+}
 .changelog-badge-link:hover {
   color: var(--text);
   text-decoration-color: currentColor;
@@ -70,15 +76,6 @@
 .changelog-entry p:last-child {
   margin-bottom: 0;
 }
-.changelog-note {
-  margin: 18px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-  font-size: 10.5px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-
 .version-flag {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,3 @@
-import { writeDeviceSave } from "./local-save.js";
 import { unpackVaultSave } from "./save-codec.js";
 import { gameNow } from "./game-clock";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -32,6 +31,9 @@ import {
   pauseCloudForQuota,
 } from "./cloud-quota.js";
 import { cloudGameAccess } from "./auth-gate.js";
+import { errorReference } from "./error-codes.js";
+import { reportIncident } from "./incident-report.js";
+import { localSaveUsableForCloudFallback } from "./local-fallback.js";
 import { getStatusIssue, maintenanceActiveFor } from "./use-status-issue.js";
 import {
   archiveSavedCopy,
@@ -41,6 +43,7 @@ import {
   readCloudRecovery,
   readVault,
   writePreRepairOwner,
+  writeDeviceSaveWithRecovery,
   writeVault,
 } from "./save-vault.js";
 import {
@@ -110,7 +113,7 @@ function readLocalCandidateForCloudUser(userId) {
 function writeLocalSave(progress, ownerId = readCloudOwner()) {
   try {
     const raw = JSON.stringify(progress);
-    writeDeviceSave(localStorage, PROGRESS_KEY, raw);
+    writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, raw);
     writeVault(raw, { storage: localStorage, ownerId });
     return true;
   } catch {
@@ -159,7 +162,7 @@ function load() {
         const saveOwner = readCloudOwner();
         writePreRepairOwner(saveOwner, localStorage);
         const repairedRaw = JSON.stringify(progress);
-        writeDeviceSave(localStorage, PROGRESS_KEY, repairedRaw);
+        writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, repairedRaw);
         writeVault(repairedRaw, {
           storage: localStorage,
           ownerId: saveOwner,
@@ -210,7 +213,8 @@ export function useProgress({
     cloudQueue = useRef(Promise.resolve()),
     cloudWriteVersion = useRef(0),
     cloudWriteFailure = useRef({ snapshot: null, userId: null, attempts: 0 }),
-    pendingCloudConflict = useRef(null);
+    pendingCloudConflict = useRef(null),
+    cloudLocalOnly = useRef(false);
   const cloudRef = useRef(cloud);
   cloudRef.current = cloud;
   const quotaResumeTimer = useRef(null);
@@ -218,13 +222,18 @@ export function useProgress({
   const applyQuotaPause = useCallback((targetUserId, remainingMs) => {
     if (pendingCloudConflict.current?.userId === targetUserId) return;
     const owner = readCloudOwner();
-    const localCopyIsOwned =
-      (!owner || owner === targetUserId) &&
-      Boolean(current.current.profile) &&
-      healthy.current;
-    if (localCopyIsOwned) ensureCloudOwner(targetUserId);
+    const localCopyIsOwned = localSaveUsableForCloudFallback({
+      owner,
+      userId: targetUserId,
+      profile: current.current.profile,
+      healthy: healthy.current,
+    });
+    cloudLocalOnly.current = localCopyIsOwned && owner !== targetUserId;
+    if (localCopyIsOwned && !cloudLocalOnly.current)
+      ensureCloudOwner(targetUserId);
     cloudGate.current = { userId: targetUserId, ready: localCopyIsOwned };
-    markCloudDirty(targetUserId);
+    if (localCopyIsOwned && !cloudLocalOnly.current)
+      markCloudDirty(targetUserId);
     updateCloud({
       ...cloudRef.current,
       status: "offline",
@@ -280,6 +289,11 @@ export function useProgress({
     ready: !cloudEnabled || (authReady && !userId),
   });
   function updateCloud(next) {
+    if (next.status === "error" && next.error)
+      reportIncident({
+        code: errorReference(next.error, "CL302"),
+        source: "ui-notice",
+      });
     cloudRef.current = next;
     setCloudState(next);
   }
@@ -418,7 +432,11 @@ export function useProgress({
           if (merged !== next) {
             try {
               const mergedRaw = JSON.stringify(merged);
-              writeDeviceSave(localStorage, PROGRESS_KEY, mergedRaw);
+              writeDeviceSaveWithRecovery(
+                localStorage,
+                PROGRESS_KEY,
+                mergedRaw,
+              );
               writeVault(mergedRaw, {
                 storage: localStorage,
                 ownerId: readCloudOwner(),
@@ -459,6 +477,7 @@ export function useProgress({
       pendingCloudConflict.current?.userId !== userId
     )
       pendingCloudConflict.current = null;
+    cloudLocalOnly.current = false;
 
     if (!cloudEnabled) {
       cloudGate.current = { userId: null, ready: true };
@@ -498,10 +517,14 @@ export function useProgress({
     }
 
     if (!online) {
-      const localCopyIsOwned =
-        readCloudOwner() === userId &&
-        Boolean(current.current.profile) &&
-        healthy.current;
+      const localOwner = readCloudOwner();
+      const localCopyIsOwned = localSaveUsableForCloudFallback({
+        owner: localOwner,
+        userId,
+        profile: current.current.profile,
+        healthy: healthy.current,
+      });
+      cloudLocalOnly.current = localCopyIsOwned && localOwner !== userId;
       cloudGate.current = { userId, ready: localCopyIsOwned };
       updateCloud({
         status: "offline",
@@ -511,7 +534,9 @@ export function useProgress({
           ? ""
           : "Cloud progress cannot be checked offline. Reconnect before changing this account.",
         notice: localCopyIsOwned
-          ? "Changes are saved on this device and will sync when you reconnect."
+          ? cloudLocalOnly.current
+            ? "Playing from this unlinked device save. It stays local until you choose to link it."
+            : "Changes are saved on this device and will sync when you reconnect."
           : "",
       });
       return () => {
@@ -520,10 +545,14 @@ export function useProgress({
     }
 
     if (maintenanceActiveFor(getStatusIssue())) {
-      const localCopyIsOwned =
-        readCloudOwner() === userId &&
-        Boolean(current.current.profile) &&
-        healthy.current;
+      const localOwner = readCloudOwner();
+      const localCopyIsOwned = localSaveUsableForCloudFallback({
+        owner: localOwner,
+        userId,
+        profile: current.current.profile,
+        healthy: healthy.current,
+      });
+      cloudLocalOnly.current = localCopyIsOwned && localOwner !== userId;
       cloudGate.current = { userId, ready: localCopyIsOwned };
       updateCloud({
         status: "maintenance",
@@ -546,11 +575,27 @@ export function useProgress({
       };
     }
 
-    cloudGate.current = { userId, ready: false };
-    updateCloud({ status: "loading", ready: false, userId, error: "" });
+    const ownedLocalSaveIsReady =
+      readCloudOwner() === userId &&
+      Boolean(current.current.profile) &&
+      healthy.current;
+    cloudGate.current = { userId, ready: ownedLocalSaveIsReady };
+    updateCloud({
+      status: "loading",
+      ready: ownedLocalSaveIsReady,
+      userId,
+      error: "",
+      notice: ownedLocalSaveIsReady
+        ? "Using this device’s saved progress while Cloud loads."
+        : "",
+    });
 
     async function restoreCloudSave() {
       const localOwner = readCloudOwner();
+      const trustedLocalSave =
+        localOwner === userId &&
+        Boolean(current.current.profile) &&
+        healthy.current;
       const localRaw = readLocalSave();
       let localProgress = current.current;
       let cachedProgress = null;
@@ -593,12 +638,19 @@ export function useProgress({
       });
       localProgress = localSelection.progress;
 
-      const reconciliation = await reconcileCloudSave(userId, localProgress, {
-        allowLocal: true,
-        localOwner: localSelection.owner,
-        storage: localStorage,
-      });
-      if (!currentRequest()) return;
+      let candidate = localProgress;
+      let reconciliation;
+      while (true) {
+        const candidateSnapshot = current.current;
+        reconciliation = await reconcileCloudSave(userId, candidate, {
+          allowLocal: true,
+          localOwner: localSelection.owner,
+          storage: localStorage,
+        });
+        if (!currentRequest()) return;
+        if (!trustedLocalSave || current.current === candidateSnapshot) break;
+        candidate = current.current;
+      }
 
       if (reconciliation.choiceRequired) {
         showCloudConflict(reconciliation, userId, cacheWarning);
@@ -617,14 +669,21 @@ export function useProgress({
       const ownerOnFailure = readCloudOwner();
       if (!ownerOnFailure || ownerOnFailure === userId) {
         writeLocalSave(current.current);
-        markCloudDirty(userId);
+        if (ownerOnFailure === userId) markCloudDirty(userId);
       }
       const quotaRemaining = pauseForQuota(loadError);
       if (quotaRemaining > 0) {
         applyQuotaPause(userId, quotaRemaining);
         return;
       }
-      cloudGate.current = { userId, ready: false };
+      const localCopyIsOwned = localSaveUsableForCloudFallback({
+        owner: ownerOnFailure,
+        userId,
+        profile: current.current.profile,
+        healthy: healthy.current,
+      });
+      cloudLocalOnly.current = localCopyIsOwned && ownerOnFailure !== userId;
+      cloudGate.current = { userId, ready: localCopyIsOwned };
 
       const detail =
         typeof loadError?.code === "string" && loadError.code
@@ -632,11 +691,17 @@ export function useProgress({
           : "";
       updateCloud({
         status: "error",
-        ready: false,
+        ready: localCopyIsOwned,
         userId,
-        error:
-          "Your online progress could not be loaded. Try again before changing anything." +
-          detail,
+        error: localCopyIsOwned
+          ? ""
+          : "Your online progress could not be loaded. Try again before changing anything." +
+            detail,
+        notice: localCopyIsOwned
+          ? cloudLocalOnly.current
+            ? "Using this device’s local progress. It is not linked to the signed-in account and will not overwrite another cloud save."
+            : "Your device progress is ready to play. Cloud will try again when available."
+          : "",
       });
     });
 
@@ -646,6 +711,7 @@ export function useProgress({
   }, [userId, authReady, cloudEnabled, cloudRetry, online]);
 
   useEffect(() => {
+    if (cloudLocalOnly.current) return undefined;
     if (
       !cloudEnabled ||
       !authReady ||
@@ -974,7 +1040,7 @@ export function useProgress({
         message:
           error?.code === "permission-denied" ||
           error?.code === "firestore/permission-denied"
-            ? "Public sharing could not be authorized. Your private save is safe. The service may need its profile rules updated; retry after the update or contact support."
+            ? "Public sharing is blocked by this Firebase project’s Firestore rules. Publish the updated firestore.rules and try again; your private save is safe."
             : error instanceof Error
               ? error.message
               : "Profile privacy could not be changed. Try again.",
@@ -1101,7 +1167,7 @@ export function useProgress({
           auth.userId &&
           (!cloudGate.current.ready ||
             cloudGate.current.userId !== auth.userId ||
-            readCloudOwner() !== auth.userId)
+            (!cloudLocalOnly.current && readCloudOwner() !== auth.userId))
         )
           return {
             ok: false,
@@ -1928,7 +1994,7 @@ export function useProgress({
               throw new Error(
                 "The local save owner could not be cleared safely.",
               );
-            writeDeviceSave(localStorage, PROGRESS_KEY, saved);
+            writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, saved);
             writeVault(saved, {
               storage: localStorage,
               ownerId: localRegistration ? null : readCloudOwner(),
@@ -1989,7 +2055,13 @@ export function useProgress({
                                   ? renameUserId
                                     ? "The online profile name changed, but this device could not save its matching copy. The previous copy is available in Settings → Restore save; free up space and reload before continuing."
                                     : "The profile name could not be saved. Your previous name and progress are unchanged."
-                                  : "Your purchase or equipment change could not be saved. No EP was spent.",
+                                  : action.type === "claim-pass-mission"
+                                    ? "Your pass mission could not be saved. No BPEP was claimed."
+                                    : action.type === "claim-pass-reward"
+                                      ? "Your pass reward could not be saved. No EP or reward was claimed."
+                                      : action.type === "buy-pass-premium"
+                                        ? "The premium track could not be saved. No EP was spent."
+                                        : "Your purchase or equipment change could not be saved. No EP was spent.",
               };
           }
         }
@@ -2158,7 +2230,7 @@ export function useProgress({
           "The copy could not be safely associated with its account on this device. Free up space and try again.",
       };
     try {
-      writeDeviceSave(localStorage, PROGRESS_KEY, copy.raw);
+      writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, copy.raw);
     } catch {
       writeCloudOwner(UNKNOWN_CLOUD_OWNER);
       return {

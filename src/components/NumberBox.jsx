@@ -50,6 +50,9 @@ const cosmetics = new Set([
   "hexbound",
   "hollow-lantern",
   "blackout-2026",
+  "pass-signal",
+  "pass-prism",
+  "pass-firstlight",
 ]);
 
 const stars = [

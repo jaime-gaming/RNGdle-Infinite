@@ -1,5 +1,28 @@
 export const CHANGELOG = [
   {
+    version: "v0.6",
+    date: "2026-11-18",
+    title: "battle pass, new discoveries and a clearer shop",
+    body: [
+      "the Battle Pass has a schedule for each season, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
+      "daily, weekly and season missions add BPEP; online rolls add more in season. Matching charges extend boosts.",
+      "new originals: Perfect Number (mythic), Narcissistic (anomaly), Triangular (uncommon) and Kaprekar (rare).",
+      "also new: Automorphic (epic), Factorion (mythic) and Emirp (uncommon); every one wears its own icon.",
+      "companions get bolder portraits, species-specific frames and reveal animations: Moss Beetle, Clockwork Crab and Comet Axolotl.",
+      "the premium track grants First Light Crown, a sunrise skin in Special & Limiteds; Prism Axolotl remains from the earlier pass.",
+      "compact keys shrink saves, old vaults still open; Cloud copies shrink, wallet bonuses add, shop adds filters and Rebirth lists badge counts.",
+    ],
+    badges: [
+      "INFINITE_PERFECT_NUMBER",
+      "INFINITE_NARCISSISTIC",
+      "INFINITE_TRIANGULAR",
+      "INFINITE_KAPREKAR",
+      "INFINITE_AUTOMORPHIC",
+      "INFINITE_FACTORION",
+      "INFINITE_EMIRP",
+    ],
+  },
+  {
     version: "v0.5.2",
     date: "2026-11-03",
     title: "cloud accounts and easier save recovery",
@@ -82,7 +105,7 @@ export const CHANGELOG = [
       "you can bookmark a shelf or page and open it again later.",
       "sharing a result copies the link as well as the text.",
       "guest play is not saved, and the interface now says so plainly.",
-      "new badges: ↕️ Pendulum (anomaly) and ⏳ Last Second (mythic).",
+      "new badges: Pendulum (anomaly) and Last Second (mythic).",
     ],
 
     badges: ["INFINITE_PENDULUM", "INFINITE_LAST_SECOND"],

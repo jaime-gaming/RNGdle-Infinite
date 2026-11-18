@@ -1,3 +1,24 @@
+.shop-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.shop-filters .search-field {
+  flex: 1 1 220px;
+}
+.shop-filters label:not(.search-field) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--secondary);
+}
 .shop-wallet {
   display: flex;
   align-items: center;
@@ -906,15 +927,6 @@
 .shop-card.is-owned .upgrade-preview {
   color: var(--green);
 }
-.shop-save-note {
-  max-width: 620px;
-  margin: 30px auto 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 20px;
-  text-align: center;
-}
-
 .aura-preview {
   position: relative;
   isolation: isolate;
@@ -1737,4 +1749,10 @@
   color: var(--muted);
   font-size: 12px;
   line-height: 1.55;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-tile,
+  .spotlight {
+    transition: none;
+  }
 }

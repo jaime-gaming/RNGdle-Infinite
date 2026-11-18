@@ -7,9 +7,10 @@
   width: var(--pet-size, 42px);
   height: var(--pet-size, 42px);
   border: 1px solid var(--pet-accent, var(--pet-grade, var(--border)));
-  border-radius: 50%;
+  border-radius: 38% 44% 40% 46%;
   color: var(--pet-grade, var(--secondary));
   background:
+    radial-gradient(circle at 28% 18%, rgb(255 255 255 / 42%), transparent 32%),
     radial-gradient(
       circle at 50% 18%,
       color-mix(
@@ -23,6 +24,88 @@
   transition:
     border-color 0.2s ease,
     color 0.2s ease;
+}
+.pet-figure::before {
+  content: "";
+  position: absolute;
+  inset: 7%;
+  z-index: 0;
+  border: 1px solid
+    color-mix(in srgb, var(--pet-accent, var(--pet-grade)) 58%, transparent);
+  border-radius: 46%;
+  opacity: 0.72;
+  pointer-events: none;
+}
+.pet-figure::after {
+  content: "";
+  position: absolute;
+  top: 7%;
+  left: 15%;
+  z-index: 2;
+  width: 7%;
+  aspect-ratio: 1;
+  background: color-mix(in srgb, white 75%, var(--pet-accent));
+  clip-path: polygon(
+    50% 0,
+    62% 38%,
+    100% 50%,
+    62% 62%,
+    50% 100%,
+    38% 62%,
+    0 50%,
+    38% 38%
+  );
+  filter: drop-shadow(0 0 4px var(--pet-accent));
+  pointer-events: none;
+}
+.pet-figure.pet-species-pebble::before {
+  border-style: dotted;
+  transform: rotate(-22deg) scale(0.9);
+}
+.pet-figure.pet-species-moth::before,
+.pet-figure.pet-species-unicorn::before,
+.pet-figure.pet-species-griffin::before {
+  border-radius: 50% 8%;
+  transform: rotate(45deg) scale(0.86);
+}
+.pet-figure.pet-species-moss::before,
+.pet-figure.pet-species-turtle::before {
+  inset: 11% 7% 4%;
+  border-radius: 24% 24% 46% 46%;
+  border-style: dashed;
+}
+.pet-figure.pet-species-kit::before,
+.pet-figure.pet-species-dragonet::before {
+  border-radius: 48% 48% 12% 12%;
+  transform: rotate(-8deg) scale(0.94);
+}
+.pet-figure.pet-species-snail::before {
+  inset: 12% 5% 8% 16%;
+  border-radius: 50% 30% 50% 30%;
+  transform: rotate(-25deg);
+}
+.pet-figure.pet-species-jelly::before,
+.pet-figure.pet-species-axolotl::before {
+  border-radius: 45%;
+  border-style: double;
+  transform: scaleX(0.82) rotate(8deg);
+}
+.pet-figure.pet-species-bee::before,
+.pet-figure.pet-species-crab::before {
+  inset: 13% 4%;
+  border-radius: 50%;
+  border-style: dashed;
+  transform: scaleY(0.78);
+}
+.pet-figure.pet-species-corvid::before,
+.pet-figure.pet-species-owl::before {
+  border-radius: 44% 44% 18% 18%;
+  transform: scale(0.88);
+}
+.pet-figure.pet-species-serpent::before {
+  inset: 14% 2%;
+  border-radius: 50%;
+  transform: rotate(-35deg) scaleX(0.68);
 }
 .pet-figure-halo {
   position: absolute;
@@ -41,9 +124,46 @@
   opacity: 0.55;
   pointer-events: none;
 }
+.pet-figure-orbit {
+  position: absolute;
+  inset: -4px;
+  border: 1px solid
+    color-mix(in srgb, var(--pet-accent, var(--pet-grade)) 42%, transparent);
+  border-radius: 44% 50% 46% 52%;
+  transform: rotate(-24deg) scaleX(0.82);
+  pointer-events: none;
+}
+.pet-figure-spark {
+  position: absolute;
+  top: 7%;
+  right: 4%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, white 80%, var(--pet-accent));
+  box-shadow: 0 0 9px 2px color-mix(in srgb, var(--pet-accent) 62%, transparent);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.pet-figure.pet-species-moth .pet-figure-orbit,
+.pet-figure.pet-species-axolotl .pet-figure-orbit {
+  border-style: dashed;
+}
+.pet-figure.pet-species-crab .pet-figure-orbit,
+.pet-figure.pet-species-bee .pet-figure-orbit {
+  border-radius: 28% 28% 46% 46%;
+}
+.pet-figure.is-active .pet-figure-spark {
+  opacity: 1;
+}
 .pet-figure svg {
+  position: relative;
+  z-index: 1;
   display: block;
   stroke-width: 1.6;
+  filter: drop-shadow(
+    0 1px 2px color-mix(in srgb, var(--pet-accent) 36%, transparent)
+  );
 }
 .pet-figure.grade-1 {
   --pet-grade: var(--secondary);
@@ -82,6 +202,28 @@
 @media (prefers-reduced-motion: no-preference) {
   .pet-figure.is-active .pet-figure-halo {
     animation: pet-halo 3.4s ease-in-out infinite;
+  }
+  .pet-figure.is-active .pet-figure-orbit {
+    animation: pet-orbit 12s linear infinite;
+  }
+  .pet-figure.is-active .pet-figure-spark {
+    animation: pet-sparkle 2.6s ease-in-out infinite;
+  }
+  @keyframes pet-orbit {
+    to {
+      transform: rotate(336deg) scaleX(0.82);
+    }
+  }
+  @keyframes pet-sparkle {
+    0%,
+    100% {
+      transform: scale(0.72);
+      opacity: 0.55;
+    }
+    50% {
+      transform: scale(1.3);
+      opacity: 1;
+    }
   }
   @keyframes pet-halo {
     0%,

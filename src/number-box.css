@@ -621,6 +621,41 @@ button.number-box.number-box:hover {
   position: absolute;
   pointer-events: none;
 }
+.number-box[data-cosmetic="pass-firstlight"] .box-ornament {
+  inset: -11px -7px;
+  border: 1px solid #fde68a88;
+  border-radius: 50% 50% 18% 18%;
+  box-shadow:
+    0 -4px 22px #fde68a2e,
+    0 4px 18px #38bdf82e;
+  background: radial-gradient(ellipse at 50% 0%, #fff7c433, transparent 56%);
+  animation: firstlight-orbit 12s ease-in-out infinite alternate;
+}
+.number-box[data-cosmetic="pass-firstlight"] .box-ornament::before {
+  inset: 9px 18% auto;
+  height: 42%;
+  border-top: 2px solid #fff1a8;
+  border-radius: 50% 50% 0 0;
+  filter: drop-shadow(0 0 5px #fde68a);
+}
+.number-box[data-cosmetic="pass-firstlight"] .box-ornament::after {
+  inset: 1px 8%;
+  border-inline: 1px solid #7dd3fc80;
+  border-radius: 50%;
+  transform: rotate(-18deg);
+}
+.number-box[data-cosmetic="pass-firstlight"] .box-particles i {
+  background: #fff1a8;
+  box-shadow: 0 0 8px #fde68a;
+}
+@keyframes firstlight-orbit {
+  from {
+    transform: rotate(-2deg) scale(0.98);
+  }
+  to {
+    transform: rotate(2deg) scale(1.025);
+  }
+}
 .number-box[data-cosmetic="starfall"] .box-ornament {
   border: 1px dashed #eab30860;
   box-shadow: 0 0 18px #fbbf2420;

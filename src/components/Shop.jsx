@@ -7,8 +7,10 @@ import {
   Coins,
   Eye,
   LayoutGrid,
+  MoreHorizontal,
   Percent,
   Repeat,
+  Search,
   ShoppingBag,
   Target,
   X,
@@ -36,6 +38,7 @@ import {
   SPECIAL_AURA_COLLECTION,
 } from "../shop-data";
 import { LOADOUT_LIMIT } from "../progress.js";
+import { battlePassSeason } from "../battle-pass.js";
 import {
   SKIP_WINDOW_LIMIT,
   SKIP_WINDOW_MS,
@@ -100,6 +103,7 @@ import {
   OfflineMark,
   OrbitMark,
   PaceMark,
+  PassMark,
   PrismMark,
   QuarryMark,
   SingularityMark,
@@ -165,6 +169,7 @@ const icons = {
   monolith: MonolithMark,
   chrono: ChronoMark,
   offline: OfflineMark,
+  pass: PassMark,
   vault: VaultMark,
   auto: AutomationMark,
   core: CoreMark,
@@ -204,6 +209,7 @@ const shelfIcons = {
   aura: AuraMark,
   offline: OfflineMark,
   automation: AutomationMark,
+  more: MoreHorizontal,
 };
 
 const LOOK_SAMPLES = {
@@ -279,7 +285,6 @@ function LookRollPreview({ aura, tier }) {
 export default function Shop({
   progress,
   cloudUser = false,
-  cloudSaved = false,
 
   section = "",
 
@@ -299,7 +304,6 @@ export default function Shop({
 
   const sale = useSaleStatus();
   const saleRecord = progress.blackFriday ?? null;
-
   const saleShelf = section === "black-friday";
   const saleItems = sale.active
     ? [BLACK_FRIDAY_SKIN, ...resaleMissing(progress.owned)]
@@ -323,6 +327,14 @@ export default function Shop({
     returnFocus = useRef(null),
     returnKind = useRef(null);
   const [clock, setClock] = useState(() => gameNow());
+  const shopPassSeason = battlePassSeason(clock);
+  const premiumPassOwned = Boolean(
+    progress.battlePass?.premium &&
+    progress.battlePass?.seasonId === shopPassSeason.id,
+  );
+  const [shopQuery, setShopQuery] = useState("");
+  const [onlyAffordable, setOnlyAffordable] = useState(false);
+  const [hideOwned, setHideOwned] = useState(false);
   const currentPrice = (item) => productPrice(item, clock);
   const shelf = SHOP_SECTIONS.find((entry) => entry.id === section) ?? null;
   const auraFamilies = visibleAuraFamilies(progress.owned, clock);
@@ -358,7 +370,7 @@ export default function Shop({
   const goalReady = !!goal && progress.balance >= goal.price;
 
   useEffect(() => {
-    if (!["skills", "tools"].includes(shelf?.id)) return;
+    if (!["skills", "tools", "more"].includes(shelf?.id)) return;
     const timer = setInterval(() => setClock(gameNow()), 1000);
     return () => clearInterval(timer);
   }, [shelf?.id]);
@@ -427,10 +439,17 @@ export default function Shop({
       const result = await onAction({ type, id, ...(extra ?? {}) });
       if (result.ok) {
         setSelected(null);
-        if (type === "buy") setLastPurchase(productById.get(id));
-        else {
-          setLastPurchase(null);
-          if (type === "goal") {
+        if (type === "buy" || type === "buy-pass-premium")
+          setLastPurchase(productById.get(id));
+        if (type !== "buy") {
+          if (type !== "buy-pass-premium") setLastPurchase(null);
+          if (type === "buy-pass-premium") {
+            notify({
+              kind: "done",
+              title: "Premium track unlocked",
+              text: `${shopPassSeason.name} Premium is ready to claim.`,
+            });
+          } else if (type === "goal") {
             onPickingGoal(false);
             notify({
               kind: "done",
@@ -453,7 +472,10 @@ export default function Shop({
   }
 
   function stateOf(item) {
-    const owned = progress.owned.includes(item.id);
+    const owned =
+      item.id === "battle-pass-premium"
+        ? premiumPassOwned
+        : progress.owned.includes(item.id);
     const price = currentPrice(item);
 
     const onCounter = resalePrice(item, clock) !== null;
@@ -466,6 +488,8 @@ export default function Shop({
     const repeat = item.repeatable ? skipStatus(progress.tasks, clock) : null;
     const blocked =
       !!repeat && (repeat.waitMs > 0 || repeat.tokens >= repeat.limit);
+    const seasonOpen =
+      item.id !== "battle-pass-premium" || shopPassSeason.active;
     return {
       owned,
       requires,
@@ -481,13 +505,15 @@ export default function Shop({
         !requires &&
         !profileGated &&
         stocked &&
-        !blocked,
+        !blocked &&
+        seasonOpen,
       affordableNow:
         (!item.eventOnly || onCounter) &&
         !owned &&
         !requires &&
         stocked &&
         !blocked &&
+        seasonOpen &&
         progress.balance >= price,
     };
   }
@@ -581,7 +607,9 @@ export default function Shop({
                 ? "AUTO-ROLL · REMEMBERED · BACKGROUND"
                 : item.id === "offline-roller"
                   ? `${ownedNow ? offlineInterval / 60000 : 10} MIN / ROLL · ${ownedNow ? offlineCap : 144} MAX`
-                  : "SEARCH · FILTER · DISCOVER"}
+                  : item.id === "battle-pass-premium"
+                    ? `${shopPassSeason.name.toUpperCase()} · PREMIUM TRACK`
+                    : "SEARCH · FILTER · DISCOVER"}
           </small>
         </>
       );
@@ -599,6 +627,7 @@ export default function Shop({
   }
   function card(item, index = 0) {
     const state = stateOf(item);
+    const premiumPass = item.id === "battle-pass-premium";
     const aura = item.kind === "aura",
       skill = item.kind === "skill",
       equipped = aura
@@ -719,9 +748,17 @@ export default function Shop({
             )}
           </div>
           <p className="shop-card-desc">
-            {item.id === "offline-roller" && state.owned
-              ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum ${offlineCap} rolls per absence; unused fractions do not carry over.`
-              : item.description}
+            {premiumPass
+              ? state.owned
+                ? `${shopPassSeason.name} Premium is unlocked. Claim rewards on the Pass page; claimed cosmetics stay yours.`
+                : shopPassSeason.active
+                  ? `Unlock the extra ${shopPassSeason.name} reward track. Claim rewards on the Pass page; claimed cosmetics stay yours.`
+                  : shopPassSeason.upcoming
+                    ? `${shopPassSeason.name} opens ${new Date(shopPassSeason.start).toLocaleString()} UTC.`
+                    : `${shopPassSeason.name} is closed. Any earned rewards remain claimable on the Pass page.`
+              : item.id === "offline-roller" && state.owned
+                ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum ${offlineCap} rolls per absence; unused fractions do not carry over.`
+                : item.description}
           </p>
 
           {skill && definition && (
@@ -781,6 +818,7 @@ export default function Shop({
             disabled={
               pending ||
               (item.eventOnly && !state.owned && !onCounter) ||
+              (premiumPass && !shopPassSeason.active && !state.owned) ||
               restocking ||
               (equipped && aura) ||
               (state.owned && !aura && !skill) ||
@@ -794,7 +832,7 @@ export default function Shop({
               if (!state.owned)
                 return preferences.confirmPurchases
                   ? setSelected(item)
-                  : perform("buy", item.id);
+                  : perform(premiumPass ? "buy-pass-premium" : "buy", item.id);
               if (aura) return perform("equip", item.id);
               if (skill)
                 return perform("equip-skill", item.id, { equipped: !equipped });
@@ -818,6 +856,12 @@ export default function Shop({
                 <>
                   <Check size={14} /> Purchased
                 </>
+              )
+            ) : premiumPass && !shopPassSeason.active ? (
+              shopPassSeason.upcoming ? (
+                "Opens with the season"
+              ) : (
+                "Season closed"
               )
             ) : limited && !state.owned ? (
               saleRecord?.skinEarned ? (
@@ -912,6 +956,12 @@ export default function Shop({
     return item.requires ? productById.get(item.requires)?.name : "";
   }
   function noteFor(item, state) {
+    if (item.id === "battle-pass-premium") {
+      if (state.owned) return "Open the Pass page to claim your rewards.";
+      if (shopPassSeason.upcoming)
+        return `Opens ${new Date(shopPassSeason.start).toLocaleString()} UTC.`;
+      if (shopPassSeason.ended) return "This season has ended.";
+    }
     if (state.profileGated) return "Needs a saved game profile.";
     if (state.requires) return `Requires ${requiresName(item)} first.`;
     if (!state.owned && !state.affordable)
@@ -987,9 +1037,7 @@ export default function Shop({
       return progress.owned.includes("offline-roller")
         ? `${offlineInterval / 60000} min / roll`
         : "Locked";
-    const owned = items.filter((item) =>
-      progress.owned.includes(item.id),
-    ).length;
+    const owned = items.filter((item) => stateOf(item).owned).length;
     return `${owned} / ${items.length} owned`;
   }
 
@@ -1003,7 +1051,12 @@ export default function Shop({
       const state = stateOf(item);
 
       if (item.kind === "skill" && !stock.includes(item.id)) return false;
-      return !state.owned && !state.requires && !state.profileGated;
+      return (
+        !state.owned &&
+        !state.requires &&
+        !state.profileGated &&
+        state.available
+      );
     });
 
     const unpicked = (items) =>
@@ -1064,7 +1117,20 @@ export default function Shop({
 
     if (shelf.id === "companions") return [];
     return productsOnShelf(shelf.id).slice().sort(byPrice);
-  })().filter(unlockedNow);
+  })()
+    .filter(unlockedNow)
+    .filter((item) => {
+      if (!shelf || ["auras", "companions"].includes(shelf.id)) return true;
+      const state = stateOf(item);
+      if (
+        shopQuery &&
+        !item.name.toLowerCase().includes(shopQuery.toLowerCase())
+      )
+        return false;
+      if (onlyAffordable && !state.owned && !state.affordableNow) return false;
+      if (hideOwned && state.owned) return false;
+      return true;
+    });
 
   const loadouts = progress.loadouts ?? [];
   const rackIds = [...new Set(progress.equippedSkills ?? [])].filter((id) =>
@@ -1607,6 +1673,35 @@ export default function Shop({
           )}
         </section>
       )}
+      {shelf && !["auras", "companions"].includes(shelf.id) && (
+        <div className="shop-filters" aria-label="Shelf filters">
+          <label className="search-field">
+            <Search size={15} aria-hidden="true" />
+            <input
+              aria-label="Search this shelf"
+              value={shopQuery}
+              onChange={(event) => setShopQuery(event.target.value)}
+              placeholder="Search this shelf…"
+            />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={onlyAffordable}
+              onChange={(event) => setOnlyAffordable(event.target.checked)}
+            />
+            Within reach
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={hideOwned}
+              onChange={(event) => setHideOwned(event.target.checked)}
+            />
+            Hide owned
+          </label>
+        </div>
+      )}
       {shelf?.id === "skills" && (
         <section
           className="shop-category skill-shelf"
@@ -1900,6 +1995,25 @@ export default function Shop({
           onPickingGoal={onPickingGoal}
         />
       )}
+      {shelf?.id === "more" && (
+        <section
+          className="shop-category shop-more-shelf"
+          id="shop-more"
+          tabIndex={-1}
+        >
+          <div className="shop-section-heading">
+            <div>
+              <h2>
+                <MoreHorizontal size={17} /> More
+              </h2>
+              <p>Season pass access and useful task extras.</p>
+            </div>
+          </div>
+          <div className="shop-grid shop-grid-rows">
+            {shelfItemsNow.map(card)}
+          </div>
+        </section>
+      )}
       {shelf?.id === "tools" && (
         <section className="shop-category" id="shop-tools" tabIndex={-1}>
           <div className="shop-section-heading">
@@ -1993,15 +2107,6 @@ export default function Shop({
           </div>
         </nav>
       )}
-      <p className="shop-save-note">
-        Every shelf here uses EP. Rebirth resets the run but keeps every aura
-        you own.{" "}
-        {cloudSaved
-          ? "Backed up to your online account."
-          : progress.profile
-            ? `Saved locally as ${progress.profile.username}.`
-            : null}
-      </p>
       <dialog
         className="shop-confirm"
         ref={dialog}
@@ -2025,47 +2130,53 @@ export default function Shop({
               <ShoppingBag size={26} />
             </div>
             <p className="eyebrow">
-              {selected.repeatable
-                ? "USED ON TASKS"
+              {selected.id === "battle-pass-premium"
+                ? "SEASON PASS"
+                : selected.repeatable
+                  ? "USED ON TASKS"
+                  : selected.kind === "aura"
+                    ? "KEPT THROUGH REBIRTH"
+                    : "KEPT TILL REBIRTH"}{" "}
+              {selected.id === "battle-pass-premium"
+                ? ""
                 : selected.kind === "aura"
-                  ? "KEPT THROUGH REBIRTH"
-                  : "KEPT TILL REBIRTH"}{" "}
-              {selected.kind === "aura"
-                ? "COSMETIC"
-                : selected.kind === "skill"
-                  ? "SKILL"
-                  : selected.kind === "skill-slot"
-                    ? "SKILL RACK"
-                    : selected.kind === "utility"
-                      ? "TOOL"
-                      : "UPGRADE"}
+                  ? "COSMETIC"
+                  : selected.kind === "skill"
+                    ? "SKILL"
+                    : selected.kind === "skill-slot"
+                      ? "SKILL RACK"
+                      : selected.kind === "utility"
+                        ? "TOOL"
+                        : "UPGRADE"}
             </p>
             <h2 id="purchase-title">Buy {selected.name}?</h2>
             <p>
               This spends <strong>{formatEP(selectedPrice)} EP</strong> and{" "}
-              {selected.kind === "aura"
-                ? "equips your new aura."
-                : selected.kind === "skill"
-                  ? `unlocks ${selected.name} until you rebirth — it charges over ${selected.charges} online rolls, then fires once.`
-                  : selected.kind === "skill-slot"
-                    ? `widens your rack to ${selected.slots} slots; existing charge is kept.`
-                    : selected.kind === "utility"
-                      ? selected.id === "task-skip"
-                        ? "swaps one open task on your Tasks list for the next one in its pool, using one token. Tokens are kept across rebirths."
-                        : selected.id === "auto-roll"
-                          ? "adds Auto-Roll to the rack: one click arms it, one stands it down."
-                          : selected.id === "persistence-core"
-                            ? "lets Auto-Roll remember its switch and run in background tabs."
-                            : selected.id === "offline-roller"
-                              ? "earns one roll per 10 minutes away, up to 144 per absence. A saved game profile is required."
-                              : "unlocks advanced history search."
-                      : selected.kind === "pace"
-                        ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge.`
-                        : selected.kind === "offline"
-                          ? `earns one offline roll per ${selected.value / 60000} minutes; the ${offlineCap}-roll cap stays.`
-                          : selected.kind === "offline-cap"
-                            ? `stores up to ${selected.value} offline rolls per absence.`
-                            : "applies the upgrade to future rolls."}
+              {selected.id === "battle-pass-premium"
+                ? `unlocks the ${shopPassSeason.name} premium reward track; earned rewards are claimed on the Pass page.`
+                : selected.kind === "aura"
+                  ? "equips your new aura."
+                  : selected.kind === "skill"
+                    ? `unlocks ${selected.name} until you rebirth — it charges over ${selected.charges} online rolls, then fires once.`
+                    : selected.kind === "skill-slot"
+                      ? `widens your rack to ${selected.slots} slots; existing charge is kept.`
+                      : selected.kind === "utility"
+                        ? selected.id === "task-skip"
+                          ? "swaps one open task on your Tasks list for the next one in its pool, using one token. Tokens are kept across rebirths."
+                          : selected.id === "auto-roll"
+                            ? "adds Auto-Roll to the rack: one click arms it, one stands it down."
+                            : selected.id === "persistence-core"
+                              ? "lets Auto-Roll remember its switch and run in background tabs."
+                              : selected.id === "offline-roller"
+                                ? "earns one roll per 10 minutes away, up to 144 per absence. A saved game profile is required."
+                                : "unlocks advanced history search."
+                        : selected.kind === "pace"
+                          ? `sets Flywheel to ${selected.charges} online ${selected.charges === 1 ? "roll" : "rolls"} per charge.`
+                          : selected.kind === "offline"
+                            ? `earns one offline roll per ${selected.value / 60000} minutes; the ${offlineCap}-roll cap stays.`
+                            : selected.kind === "offline-cap"
+                              ? `stores up to ${selected.value} offline rolls per absence.`
+                              : "applies the upgrade to future rolls."}
             </p>
             {!!skillEffectChips(
               skillById.get(selected.skillId ?? selected.id) ?? {},
@@ -2105,13 +2216,22 @@ export default function Shop({
                 disabled={
                   pending ||
                   progress.balance < selectedPrice ||
-                  progress.owned.includes(selected.id) ||
+                  stateOf(selected).owned ||
+                  (selected.id === "battle-pass-premium" &&
+                    !shopPassSeason.active) ||
                   !!(
                     selected.requires &&
                     !progress.owned.includes(selected.requires)
                   )
                 }
-                onClick={() => perform("buy", selected.id)}
+                onClick={() =>
+                  perform(
+                    selected.id === "battle-pass-premium"
+                      ? "buy-pass-premium"
+                      : "buy",
+                    selected.id,
+                  )
+                }
               >
                 {pending ? "Applying…" : "Confirm purchase"}
               </button>

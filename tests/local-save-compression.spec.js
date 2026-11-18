@@ -1,7 +1,11 @@
 import { test, expect } from "./helpers/clock.js";
 import { waitForApp } from "./helpers/app.js";
 import { writeDeviceSave } from "../src/local-save.js";
-import { unpackVaultSave, SAVE_VAULT_TAG } from "../src/save-codec.js";
+import {
+  packVaultSave,
+  unpackVaultSave,
+  SAVE_VAULT_TAG,
+} from "../src/save-codec.js";
 import {
   emptyProgress,
   parseAndRepairProgress,
@@ -12,6 +16,8 @@ import {
   writeVault,
   readVault,
   restoreVaultIfNeeded,
+  writeDeviceSaveWithRecovery,
+  SAVE_HISTORY_KEY,
   SAVE_VAULT_KEY,
 } from "../src/save-vault.js";
 import {
@@ -76,6 +82,56 @@ test("a compressed save survives a quota-limited store and never deletes history
     JSON.stringify({ ...state, balance: 1900 }),
   );
   expect(store.getItem(PROGRESS_KEY).startsWith(SAVE_VAULT_TAG)).toBe(true);
+});
+
+test("a full device retries a primary save after pruning only older backup copies", () => {
+  const values = new Map();
+  let limit = Infinity;
+  const store = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem(key, value) {
+      const next = new Map(values);
+      next.set(key, String(value));
+      const bytes = [...next.values()].reduce(
+        (sum, entry) => sum + entry.length,
+        0,
+      );
+      if (bytes > limit) throw new DOMException("Full", "QuotaExceededError");
+      values.set(key, String(value));
+    },
+    removeItem: (key) => values.delete(key),
+  };
+  const oldRaw = JSON.stringify({ ...state, balance: 1000 });
+  const nextRaw = JSON.stringify({
+    ...state,
+    balance: 900,
+    username: "A longer saved profile name",
+  });
+  const at = Date.now();
+  store.setItem(PROGRESS_KEY, packVaultSave(oldRaw));
+  const copies = Array.from({ length: 4 }, (_, index) => ({
+    id: `copy-${index}`,
+    at: at - index * 60_000,
+    profileId: state.profile.id,
+    owner: null,
+    reason: "Older automatic copy",
+    source: "daily",
+    raw: packVaultSave(JSON.stringify({ ...state, balance: index })),
+  }));
+  store.setItem(SAVE_HISTORY_KEY, JSON.stringify({ version: 1, copies }));
+  const existingSize = [...values.values()].reduce(
+    (sum, entry) => sum + entry.length,
+    0,
+  );
+  const replacementDelta =
+    packVaultSave(nextRaw).length - packVaultSave(oldRaw).length;
+  limit = existingSize + replacementDelta - 1;
+
+  expect(writeDeviceSaveWithRecovery(store, PROGRESS_KEY, nextRaw)).toBe(true);
+  expect(unpackVaultSave(store.getItem(PROGRESS_KEY))).toBe(nextRaw);
+  const archived = JSON.parse(store.getItem(SAVE_HISTORY_KEY));
+  expect(archived.copies).toHaveLength(1);
+  expect(archived.copies[0].id).toBe("copy-0");
 });
 
 test("every primary write is compressed, even with free storage", () => {
@@ -144,6 +200,23 @@ test("a failed compressed write and disabled storage leave the previous save unc
   expect(() => parseAndRepairProgress(`${SAVE_VAULT_TAG}corrupt`)).toThrow();
 });
 
+test("a silent primary-save write is rejected and leaves the previous copy intact", () => {
+  const values = new Map([[PROGRESS_KEY, packVaultSave(raw)]]);
+  const store = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem() {},
+    removeItem: (key) => values.delete(key),
+  };
+  expect(() =>
+    writeDeviceSave(
+      store,
+      PROGRESS_KEY,
+      JSON.stringify({ ...state, balance: 1 }),
+    ),
+  ).toThrow("could not be verified");
+  expect(unpackVaultSave(values.get(PROGRESS_KEY))).toBe(raw);
+});
+
 test("vault and update recovery recognize a compressed primary save instead of replacing it", () => {
   const store = limitedStore(5000);
   writeDeviceSave(store, PROGRESS_KEY, raw);
@@ -208,7 +281,7 @@ test("a compressed rename syncs to another tab and survives a tight quota and re
   await other.close();
 });
 
-test("help links use the themed buttons and historical notes are capitalized only on screen", async ({
+test("help links use themed buttons and changelog copy stays lowercase", async ({
   page,
 }) => {
   await page.goto("/about");
@@ -225,9 +298,12 @@ test("help links use the themed buttons and historical notes are capitalized onl
   await expect(
     page.getByRole("heading", { name: "Changelog", exact: true }),
   ).toBeVisible();
+  await expect(page.locator(".changelog-title").first()).toHaveText(
+    "battle pass, new discoveries and a clearer shop",
+  );
   await expect(
     page.locator(".changelog-entry").first().locator("p").first(),
   ).toHaveText(
-    "Name a local profile to keep progress on this device, or sign in to a Cloud Account and keep it in step on every device.",
+    "the Battle Pass has a schedule for each season, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
   );
 });

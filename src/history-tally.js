@@ -117,7 +117,10 @@ export function tallyEntries(entries = []) {
           badges.add(id);
           discovered.add(id);
         }
-    } else if (entry.type === "rngween-exchange") {
+    } else if (
+      entry.type === "rngween-exchange" ||
+      entry.type === "pass-upgrade"
+    ) {
       tally.spent += entry.ep ?? 0;
     } else if (entry.type === "purchase") {
       tally.spent += entry.ep ?? 0;

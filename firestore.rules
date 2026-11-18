@@ -270,10 +270,10 @@ service cloud.firestore {
         && record.keys().hasOnly([
           'v', 'name', 'at', 'since', 'best', 'rolls', 'earned', 'badges',
           'badgesTotal', 'rebirths', 'prestiges', 'pins', 'favoriteTier',
-          'aura', 'companion', 'avatar'
+          'aura', 'companion', 'avatar', 'description'
         ])
         && record.v is int
-        && record.v == 3
+        && record.v in [3, 4]
         && record.name is string
         && record.name == username
         && validCloudNameKey(record.name)
@@ -293,7 +293,11 @@ service cloud.firestore {
         && (record.favoriteTier == null || validTier(record.favoriteTier))
         && validOptionalText(record.aura)
         && validOptionalText(record.companion)
-        && validAvatar(record.avatar);
+        && validAvatar(record.avatar)
+        && ((record.v == 3 && !record.keys().hasAny(['description']))
+          || (record.v == 4
+            && record.description is string
+            && record.description.size() <= 200));
     }
 
     function validPublicProfile(profileId) {

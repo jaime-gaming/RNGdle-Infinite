@@ -37,6 +37,8 @@ import {
   PROGRESS_KEY,
 } from "../src/progress.js";
 import { readSavedRaw, readSavedProgress } from "./helpers/save.js";
+import { gzipSync, strToU8 } from "fflate";
+import { LEGACY_SAVE_VAULT_TAG } from "../src/save-codec.js";
 
 function fakeStorage(initial = {}) {
   const map = new Map(Object.entries(initial));
@@ -66,6 +68,26 @@ test("the backup copy is compressed, exact and about twenty times smaller", () =
   expect(isReadableSave(raw)).toBe(true);
 });
 
+test("legacy vault payloads remain readable while new writes use compact keys", () => {
+  const legacyRaw = save(1234);
+  const legacyBytes = gzipSync(strToU8(legacyRaw));
+  const legacyBinary = Array.from(legacyBytes, (byte) =>
+    String.fromCharCode(byte),
+  ).join("");
+  const legacyPacked = `${LEGACY_SAVE_VAULT_TAG}${btoa(legacyBinary)}`;
+  expect(unpackVaultSave(legacyPacked)).toBe(legacyRaw);
+
+  const detailed = JSON.stringify({
+    ...emptyProgress(),
+    history: [
+      { id: "roll-1", type: "roll", number: 42, tier: "common", ep: 5, at: 1 },
+    ],
+  });
+  const packed = packVaultSave(detailed);
+  expect(unpackVaultSave(packed)).toBe(detailed);
+  expect(packed.startsWith(SAVE_VAULT_TAG)).toBe(true);
+});
+
 test("vault decompression refuses a gzip bomb beyond the save-size ceiling", () => {
   const bomb = packVaultSave("x".repeat(MAX_SAVE_OUTPUT_BYTES + 1));
   expect(bomb.startsWith(SAVE_VAULT_TAG)).toBe(true);
@@ -90,6 +112,31 @@ test("the vault keeps the newest good save and never rewrites it more than once 
     false,
   );
   expect(readVault(local).raw).toBe(save(3));
+});
+
+test("vault, cloud recovery and history snapshots require read-back verification", () => {
+  const local = fakeStorage();
+  const silent = {
+    getItem: (key) => local.getItem(key),
+    setItem: (key, value) => {
+      if ([SAVE_VAULT_KEY, SAVE_HISTORY_KEY, CLOUD_RECOVERY_KEY].includes(key))
+        return;
+      local.setItem(key, value);
+    },
+    removeItem: (key) => local.removeItem(key),
+  };
+  expect(writeVault(save(101), { storage: silent, now: 1000 })).toBe(false);
+  expect(writeCloudRecovery(save(202), { storage: silent, now: 1000 })).toBe(
+    false,
+  );
+  expect(
+    archiveSavedCopy(save(303), {
+      storage: silent,
+      now: 1000,
+      source: "manual",
+    }),
+  ).toBe(false);
+  expect(local.map.size).toBe(0);
 });
 
 test("the local archive keeps daily snapshots within a 20-copy, 90-day window", () => {
@@ -442,7 +489,7 @@ test("playing the game keeps a compressed backup in this browser", async ({
     const envelope = JSON.parse(localStorage.getItem(key));
     return {
       packed: typeof envelope.raw === "string",
-      compressed: envelope.raw.startsWith("rngvault1:"),
+      compressed: envelope.raw.startsWith("rngvault2:"),
       bigger: envelope.raw.length,
     };
   }, SAVE_VAULT_KEY);

@@ -1,4 +1,5 @@
 // RETIREMENT: see archive/qa/black-friday-retirement.md before removing event UI.
+import { gameNow } from "./game-clock.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_WORLD_SKIN } from "./rngween.js";
 
 export const BLACK_FRIDAY_ID = "black-friday-2026";
@@ -55,23 +56,16 @@ export const SALE_THEMES = [
   },
 ];
 
-const PREVIEW_AT = Number(import.meta.env?.VITE_BLACK_FRIDAY_PREVIEW_AT ?? 0);
-const PREVIEW_OFFSET =
-  import.meta.env?.DEV && Number.isFinite(PREVIEW_AT) && PREVIEW_AT > 0
-    ? PREVIEW_AT - Date.now()
-    : 0;
-
-export function saleNow(at = Date.now()) {
-  const value = Number.isFinite(at) ? at : Date.now();
-  return PREVIEW_OFFSET ? value + PREVIEW_OFFSET : value;
+export function saleNow(at = gameNow()) {
+  return Number.isFinite(at) ? at : gameNow();
 }
 
-export function blackFridayActive(at = Date.now()) {
+export function blackFridayActive(at = gameNow()) {
   const now = saleNow(at);
   return now >= BLACK_FRIDAY_START && now < BLACK_FRIDAY_END;
 }
 
-export function blackFridayStatus(at = Date.now()) {
+export function blackFridayStatus(at = gameNow()) {
   const now = saleNow(at);
   const active = now >= BLACK_FRIDAY_START && now < BLACK_FRIDAY_END;
   return {
@@ -109,10 +103,18 @@ export function saleDiscountForId(id) {
 }
 
 export function saleDiscountFor(item) {
-  return item?.eventOnly ? 0 : saleDiscountForId(item?.id);
+  if (!item?.id) return 0;
+  // Legacy one-off counter cosmetics retain their special fixed resale price;
+  // other newly added event products participate in the current sale.
+  if (
+    item.eventOnly &&
+    (isResaleCosmetic(item) || item.id === BLACK_FRIDAY_SKIN.id)
+  )
+    return 0;
+  return saleDiscountForId(item.id);
 }
 
-export function salePriceOf(price, id, at = Date.now()) {
+export function salePriceOf(price, id, at = gameNow()) {
   const base = Number.isFinite(price) ? Math.max(0, Math.trunc(price)) : 0;
   if (!base || !blackFridayActive(at)) return base;
   const discount = saleDiscountForId(id);
@@ -120,11 +122,11 @@ export function salePriceOf(price, id, at = Date.now()) {
   return Math.max(1, Math.floor((base * (1 - discount)) / 100) * 100);
 }
 
-export function salePrice(item, at = Date.now()) {
+export function salePrice(item, at = gameNow()) {
   return salePriceOf(item?.price ?? 0, item?.id, at);
 }
 
-export function saleCompanionPrice(pet, at = Date.now()) {
+export function saleCompanionPrice(pet, at = gameNow()) {
   return salePriceOf(pet?.price ?? 0, pet?.id, at);
 }
 
@@ -134,13 +136,13 @@ export function isResaleCosmetic(item) {
   return !!item?.eventOnly && RESALE_IDS.has(item.id);
 }
 
-export function resalePrice(item, at = Date.now()) {
+export function resalePrice(item, at = gameNow()) {
   return isResaleCosmetic(item) && blackFridayActive(at)
     ? RNGWEEN_RESALE_PRICE
     : null;
 }
 
-export function resaleOpen(at = Date.now()) {
+export function resaleOpen(at = gameNow()) {
   return blackFridayActive(at);
 }
 
@@ -178,7 +180,7 @@ export function parseBlackFriday(value, receipts = {}) {
   };
 }
 
-export function stampForPurchase(record, ep, at = Date.now()) {
+export function stampForPurchase(record, ep, at = gameNow()) {
   const base = record ?? emptyBlackFriday();
   const price = Number.isFinite(ep) && ep > 0 ? Math.floor(ep) : 0;
   if (!blackFridayActive(at) || price <= 0)

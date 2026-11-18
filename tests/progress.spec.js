@@ -14,12 +14,40 @@ import {
   SKILL_STOCK_WINDOW_MS,
 } from "../src/shop-data.js";
 import { formatEP } from "../src/roll-data.js";
+import {
+  BPEP_PER_ROLL,
+  BATTLE_PASS_PREMIUM_PRICE,
+} from "../src/battle-pass.js";
+import { salePriceOf } from "../src/black-friday.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom, showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
 import { readSavedProgress } from "./helpers/save.js";
 
 const saved = (page) => readSavedProgress(page);
+
+test("premium pass purchases use the live Black Friday price in the wallet and receipt", () => {
+  const at = Date.UTC(2026, 10, 27, 12);
+  const price = salePriceOf(
+    BATTLE_PASS_PREMIUM_PRICE,
+    "battle-pass-premium",
+    at,
+  );
+  const initial = { ...emptyProgress(), balance: BATTLE_PASS_PREMIUM_PRICE };
+  expect(() =>
+    applyProgress(initial, { type: "buy", id: "battle-pass-premium", at }),
+  ).toThrow("season pass purchase action");
+  const upgraded = applyProgress(initial, {
+    type: "buy-pass-premium",
+    at,
+    eventId: "pass-sale-test",
+  });
+  expect(upgraded.balance).toBe(BATTLE_PASS_PREMIUM_PRICE - price);
+  expect(
+    upgraded.history.find((entry) => entry.type === "pass-upgrade").ep,
+  ).toBe(price);
+  expect(upgraded.battlePass.premium).toBe(true);
+});
 
 test("wallet rules: one credit per roll, all earned badges unlocked, no duplicate or unaffordable purchases", () => {
   const result = evaluate(1337),
@@ -63,6 +91,7 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   state = applyProgress(state, action);
   state = applyProgress(state, { ...action, id: "second-test-roll" });
   for (const item of shopProducts) {
+    if (item.id === "battle-pass-premium") continue;
     const before = state.balance;
 
     const at =
@@ -97,6 +126,42 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   expect(reset.equipped).toBe("none");
 });
 
+test("online rolls grant rounded BPEP during an active season, but offline rolls do not", () => {
+  const at = Date.UTC(2026, 10, 20, 12);
+  expect(BPEP_PER_ROLL).toBe(5);
+  const initialized = applyProgress(emptyProgress(), {
+    type: "initialize-pass-season",
+    at,
+  });
+  const result = evaluate(1337);
+  const online = applyProgress(initialized, {
+    type: "complete",
+    id: "season-online-roll",
+    result,
+    at,
+    cooldownUntil: at + 1000,
+  });
+  expect(online.battlePass.xp).toBe(BPEP_PER_ROLL);
+  expect(
+    online.history.find((event) => event.id === "season-online-roll"),
+  ).toMatchObject({
+    bpep: BPEP_PER_ROLL,
+  });
+
+  const offline = applyProgress(initialized, {
+    type: "complete",
+    id: "season-offline-roll",
+    result,
+    source: "offline",
+    at,
+    cooldownUntil: at + 1000,
+  });
+  expect(offline.battlePass.xp).toBe(0);
+  expect(
+    offline.history.find((event) => event.id === "season-offline-roll"),
+  ).not.toHaveProperty("bpep");
+});
+
 test("saved progress is versioned, self-repairing, and cannot equip an unowned item", () => {
   expect(parseProgress(null)).toEqual(emptyProgress());
 
@@ -129,6 +194,84 @@ test("saved progress is versioned, self-repairing, and cannot equip an unowned i
   expect(p.discovered).toEqual(["PRIME"]);
   expect(p.owned).toEqual(["starfall"]);
   expect(p.equipped).toBe("none");
+});
+
+test("profile descriptions save on the profile, cap at 200 characters and repair safely", () => {
+  const state = {
+    ...emptyProgress(),
+    profile: { id: "profile-description", username: "Describer", createdAt: 1 },
+  };
+  const described = applyProgress(state, {
+    type: "profile-description",
+    description: `${"A".repeat(199)}🙂more`,
+  });
+  expect(Array.from(described.profile.description)).toHaveLength(200);
+  expect(described.profile.description).toBe(`${"A".repeat(199)}🙂`);
+
+  const repaired = parseAndRepairProgress(
+    JSON.stringify({
+      ...described,
+      profile: { ...described.profile, description: "B".repeat(201) },
+    }),
+  );
+  expect(repaired.progress.profile.description).toBe("B".repeat(200));
+  expect(repaired.repairs.join(" ")).toContain("profile description");
+
+  const oldSave = parseAndRepairProgress(
+    JSON.stringify({ ...state, profile: { ...state.profile } }),
+  );
+  expect(oldSave.progress.profile.description).toBe("");
+  expect(oldSave.repairs).toEqual([]);
+});
+
+test("companion skins are persisted safely and require the unlocked cosmetic", () => {
+  const base = {
+    ...emptyProgress(),
+    pets: ["axolotl"],
+    owned: ["pass-axolotl"],
+  };
+  const prism = applyProgress(base, {
+    type: "equip-pet-skin",
+    petId: "axolotl",
+    skinId: "prism",
+  });
+  expect(prism.petSkins).toEqual({ axolotl: "prism" });
+  expect(parseProgress(JSON.stringify(prism)).petSkins).toEqual({
+    axolotl: "prism",
+  });
+  expect(
+    parseProgress(JSON.stringify({ ...base, petSkins: { axolotl: "unknown" } }))
+      .petSkins,
+  ).toEqual({});
+  expect(
+    parseProgress(JSON.stringify({ ...base, petSkins: { axolotl: "prism" } })),
+  ).toMatchObject({ petSkins: { axolotl: "prism" } });
+  expect(
+    parseProgress(
+      JSON.stringify({
+        ...base,
+        pets: [],
+        petSkins: { axolotl: "prism" },
+      }),
+    ).petSkins,
+  ).toEqual({ axolotl: "prism" });
+  expect(() =>
+    applyProgress(
+      { ...base, owned: [] },
+      {
+        type: "equip-pet-skin",
+        petId: "axolotl",
+        skinId: "prism",
+      },
+    ),
+  ).toThrow("Unlock the Prism Axolotl skin");
+  expect(
+    applyProgress(prism, {
+      type: "equip-pet-skin",
+      petId: "axolotl",
+      skinId: "original",
+    }).petSkins,
+  ).toEqual({});
 });
 
 test("cloud profile registration retains local progress for first-login import", () => {

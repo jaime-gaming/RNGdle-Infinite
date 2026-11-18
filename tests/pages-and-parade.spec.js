@@ -92,7 +92,7 @@ test("companions are uncaged with an animation, on the shelf and on arrival", ()
 test("the roll animates each wallet bonus charge instead of showing a static extra line", () => {
   const roll = read("components/RollExperience.jsx");
 
-  expect(roll).toContain("walletMultiplier(session, firedSkills)");
+  expect(roll).toContain("walletMultiplier(session, firedSkills, gameNow())");
   expect(roll).toContain("creditedEP");
   expect(roll).toContain("floatingCharges");
   expect(roll).toContain("is-bonus-charge");
@@ -285,7 +285,7 @@ test("equipped skills stand alone while pet and rebirth families stack in the sk
   await expect(bar).toBeVisible();
 
   await expect(bar.locator('[data-skill="surge"]')).toContainText(
-    "×2 banked EP · 2/5",
+    "+100% banked EP · 2/5",
   );
   await expect(bar.locator('[data-skill="trail"]')).toHaveCount(0);
   await expect(bar.locator('[data-stack="pet"]')).toBeVisible();
