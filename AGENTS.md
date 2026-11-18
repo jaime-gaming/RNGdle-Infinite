@@ -1,0 +1,460 @@
+# AGENTS.md
+
+Context for coding agents working on RNGdle Infinite. Read this before changing
+anything. The player-facing overview and cloud setup are in `README.md`.
+
+## Project overview
+
+A React + Vite browser game. Players roll a uniformly random whole number from
+0 to 1,000,000, score EP from its digit patterns, collect badges, and spend EP
+on companions, skills, tasks, rebirths and cosmetics. A Cloudflare Worker with
+static assets serves the Vite build from `dist/` at the custom-domain root.
+
+Gameplay remains available without an online account. Local profiles live in
+browser storage. When a build is configured, Firebase Authentication provides
+Google and email/password sign-in, and Cloud Firestore stores one compressed
+progress snapshot at `player_saves/{uid}`. The Cloudflare Worker serves the
+root-domain build from `dist/`; legacy GitHub Pages serves the repository-path
+build from `docs/`. The configured Firebase project is
+`rngdle-infinite-jg`; its public Web config is in `.env.production` for
+production builds and `.env.example` for local setup. Firestore rules—not API-key
+secrecy—protect each user's save. The old Supabase project and
+its data are not used or migrated by this app; leave them untouched. Do not use
+or change the connected “Better Discovery” project, and never put a Firebase
+service-account key in client code or a `VITE_` variable.
+
+RNGween 2026 gameplay and its seasonal interface have retired. Old permanent
+aura ownership, Hexbound, attendance timestamps and `rngween-*` history are
+still part of the save contract. Do not remove those records or reintroduce
+event progression/UI. The old RNGween changelog entry is historical and stays.
+
+Black Friday 2026 and the Battle Pass are the event exceptions. Black Friday is
+one UTC day — Friday 27 November 2026, `src/black-friday.js` — during which the whole shop is
+discounted 20–50% per product, every 100,000 EP spent awards one sale stamp
+(`SALE_STAMP_EVERY`), 25 stamps unlock the limited `blackout-2026` skin, and
+the RNGween looks a save missed return to the counter at 10,000,000 EP each.
+While the day is on the calendar the hub grows a `black-friday` shelf
+(`/shop/black-friday`) with the stamp card, the skin and the counter. Its
+interface (sale ticker, event notice, stamp card, the Ultra-Black and Red Sale
+themes, the sale favicon and manifest) exists only while
+`blackFridayStatus(at).active`; the event notice is also shown before the day
+and disappears afterward. `progress.blackFriday` is part of the save contract
+and survives every reset, like permanent cosmetics. Dev builds honour
+`VITE_GAME_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the shared game
+clock for previews; production ignores that variable, and Playwright forces it
+off so date-sensitive tests remain deterministic. Spending accumulates across purchases, rather
+than requiring a single purchase of 100,000 EP. The sale shelf contains a
+25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
+and linked posters occupy the page margins, including on small screens. Posters
+stay in the document as it scrolls; offers rotate every 15 seconds, pausing on
+hover, focus, hidden tabs and reduced motion. Whole posters fit within the main
+area and are hidden rather than cut off at the footer. See
+`archive/qa/black-friday-retirement.md` before retiring event code. The stamp
+book remembers which stamps were seen per local profile and animates only newly
+seen stamps when the book enters view; this presentation marker never affects
+progress or rewards. Special & Limiteds banners and wardrobe filters appear
+only when the save owns an event aura, even during the sale;
+missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
+Moving reveal digits are lighter than landed digits using opacity only, without
+adding backgrounds, borders, underlines or other decorations.
+
+The Battle Pass (`src/battle-pass.js`) uses individually configured season
+end dates or durations. Only launched seasons are listed; a successor requires
+an explicit code update, and the interface must not reveal its name or date in
+advance. First Light
+starts on 2026-11-18. Its accent is shared by `/pass`, the temporary theme and
+the active Pass navigation animation. Every pass mission — daily, weekly and
+season milestones — is listed on the Tasks page in its own section; `/pass`
+keeps the reward track. Missions pay BPEP only; BPEP is not a shop wallet.
+The optional premium track is bought with EP, never real money. Levels 5, 15 and
+25 add a consumable boost charge (the premium track pays two) without touching
+their EP, the season milestone `pass-season-boost` pays one more, and one charge
+a day can be bought for `PASS_BOOST_PRICE` EP; one boost runs at a time and
+multiplies banked roll EP for a few minutes through
+`walletMultiplier(progress, skills, at)`. Charges survive a
+season change, Rebirth, Prestige, Rollback and Fresh Start. Reward tracks are visible,
+each reward claims once, and earned rewards are delivered automatically when a
+season closes. `progress.battlePass` survives Rebirth, Prestige, Rollback and
+Fresh Start. The pass and other dated gameplay use the shared
+`VITE_GAME_PREVIEW_AT` dev clock; production ignores it, and Playwright overrides
+it to keep tests on the real fixture time. Pass auras and the Prism Axolotl
+variant are permanent cosmetics once
+claimed. `rebirthKeptPurchases` in `src/rebirth.js` mirrors the reducer's keep
+rule (aura or `passReward`); the Rebirth page and Fresh Start read it instead of
+guessing from product kinds, so a `pet-variant` is never listed as handed back.
+Badge gates round up over `BADGE_TOTAL`, so each rung prints the exact badge
+count beside the round share (`badgeGatePercent`) and never the nominal slice.
+Only rolls fund a cycle gate.
+
+## Architecture
+
+- **One reducer owns progress.** `applyProgress(state, action)` in
+  `src/progress.js` validates and returns save changes. Components dispatch
+  actions through `src/use-progress.js`; do not mutate progress in a component.
+- **A roll is committed before animation.** The reducer stores `pendingRoll`
+  before the UI reveals it, then `complete` settles it. Reloading during a
+  reveal resumes the same result; it must never reroll or credit twice.
+- **Scoring is data, not UI code.** Badge values and ranks come from prepared
+  tables in `public/data/` (generated by `tools/prepare-game-data.mjs`). Do not
+  hand-edit those tables.
+- **Repair saves instead of losing them.** `parseAndRepairProgress` keeps valid
+  data, records repairs and backs up original bytes. New fields need a default
+  in `emptyProgress()`, defensive parsing, and a malformed-save test.
+- **Compressed primary saves.** `writeDeviceSave` always writes the bounded
+  gzip envelope (plain JSON only when gzip is unavailable); a failed write
+  leaves the previous save untouched. Old JSON saves stay readable. Always read
+  via `parseProgress`/`parseAndRepairProgress` (or decode with
+  `unpackVaultSave` for raw JSON consumers). Never delete history, recovery
+  slots or owner markers to fit a new save. The activity log keeps 10,000
+  entries and warns at 7,500.
+- **Cloud save precedence is deliberate, and asks as rarely as possible.** On
+  first Firebase sign-in, import an unowned local save only when that user's
+  Firestore document is missing. Never copy a save marked as belonging to
+  another auth user. Compare durable game progress, not file size, log length,
+  timestamps, preferences, or auxiliary records, and compare the current reset
+  generation before that. The player is interrupted only when the copies really
+  compete:
+  - **A copy this device already synced continues automatically.** After every
+    successful reconciliation, `writeCloudSyncMark` stores that account's
+    document fingerprint, profile ID and alias in local storage. If the online
+    document still matches that mark, no other device changed it, so the local
+    copy is this save's own continuation: a rebirth, a settled roll or a
+    preference change simply uploads, and a local copy behind the mark is simply
+    replaced by the online one. Keep using the mark rather than adding new
+    heuristics; without it, fall back to the conservative rules below.
+  - **Never ask about copies with nothing at stake.** Equal durable progress
+    (only preferences, log notes or auxiliary records differ) keeps this
+    device's copy silently; a named-but-never-played profile never blocks a
+    copy that holds progress, whatever its profile ID.
+  - **An unsettled roll is not missing progress.** A roll still pending online
+    that this device has already settled must not count as the online copy
+    being ahead.
+  - **Still ask for real competition.** Different profile IDs that both hold
+    progress are never merged; same-profile copies with an untrusted different
+    reset generation or mixed/incomparable progress still require one explicit
+    choice, and a changed _online_ copy invalidates a pending choice. A local
+    copy that merely advanced between the review and the click does not: the
+    choice applies to the same profile, only fresher.
+  - **An explicit restore is authoritative.** Restoring a copy from Settings
+    writes `authoritative` into the sync mark so the next sync uploads it
+    instead of undoing it.
+  - **`profile_id` has two scopes.** The owner pointer (`public_profile_owners`)
+    and the name claim are keyed by the public name, and the owner's
+    `profile_id` repeats that key; the settings document and the claim's
+    `profile_id` hold the game profile id. Rules tie the two scopes together by
+    comparing the claim with the settings, never with the owner. Comparing them
+    made every public publish and public read fail with `permission-denied`.
+  - **Rebinding a profile unpublishes its alias.** Rules require the private
+    save, the name claim and the owner pointer to describe one game profile, so
+    a resolution that switches the account to a different profile must clear
+    `public_profile_id`/`public_profile_enabled` and delete the alias documents
+    in the same transaction. Never point an existing public alias at different
+    progress.
+
+  Reconcile in a Firestore transaction and persist the displaced snapshot to the
+  separate local cloud-recovery slot before replacing either copy. The rolling
+  local save and vault remain active. Signing out keeps local progress; deleting
+  the game save removes its Firestore document, not the Firebase auth identity.
+
+- **Link sign-in providers, don't fork saves.** Email/password users can sign
+  in directly. Google users must add a password after Google authentication;
+  link Email/Password to the same Firebase UID before enabling gameplay or cloud
+  sync. Use Firebase credential linking, never create another UID or merge its
+  save. If an email account already exists, the player signs in with that method
+  first and connects Google from the same authenticated account.
+- **Cloud security is database-enforced.** `firestore.rules` restricts each
+  private save to its Firebase UID. Public profile summaries contain no UID and
+  exist only after explicit opt-in; a private ownership map ties each alias to
+  its save, and direct reads are allowed only while consent remains enabled.
+  Collection listing is denied, and opt-out, rename and account deletion remove
+  the summary and ownership map with the corresponding save update. Publish
+  those rules in the configured Firebase project before enabling cloud play.
+  Browser config in `.env.production` and `.env.example` is public; never put
+  service-account credentials in source or build output.
+- **UTC for calendar labels.** Daily/weekly task periods use UTC (`Date.UTC`,
+  `getUTC*`, `timeZone: "UTC"`). Gameplay timers use `gameNow()` in
+  `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The event-gated
+  systems are the one-day Black Friday sale (`src/black-friday.js`) and the
+  individually scheduled Battle Pass seasons (`src/battle-pass.js`). Nothing
+  else gates gameplay by calendar date.
+- **Routes are client paths.** `src/router.js` owns paths such as `/shop/auras`
+  and `/profile/<username>`. The Worker serves the app at the domain root; its `assets.not_found_handling: single-page-application` serves
+  `index.html` for direct route loads, and `public/_headers` keeps HTML and the
+  update manifest fresh while allowing long-lived caching for hashed bundles.
+
+## Legacy save data that must remain readable
+
+- `tasks.rngween` is parsed only to restore aura receipts; it is not an active
+  task collection.
+- `rngweenLimited` keeps the permanent aura and Hexbound ownership receipts;
+  currency, temporary purchases and retired gameplay state are discarded.
+- `events` attendance stamps are parse-only historical data. The game does not
+  create new attendance records.
+- `rngween-*` activity rows stay parseable, visible in history and included in
+  historical totals. Their event modules, shops and actions are retired.
+- `preservePermanentCosmetics` protects owned cosmetics when same-profile
+  local/cloud snapshots are reconciled. Different profiles never inherit each
+  other's cosmetics.
+- `blackFriday` records (`{ id, spent, stamps, skinEarned }`) keep the sale-day
+  EP total; stamps are always derived from it (`stampsForSpend`), so a
+  hand-edited card cannot invent any. The limited skin also lives in `owned`
+  like any permanent cosmetic. Junk or foreign records are repaired to an
+  empty one.
+- `sale-reward` activity rows stay parseable and visible in history; they carry
+  no EP and never count as spending.
+- `battlePass` keeps the current season, BPEP, premium flag, claimed rewards,
+  mission tallies and a bounded archive. `pass-reward`, `pass-mission` and
+  `pass-upgrade` activity rows stay parseable and visible in history.
+
+## Firebase setup and implementation
+
+- Copy `.env.example` to ignored `.env.local` for local development. Production
+  builds use the public Web config in `.env.production`. The four
+  `VITE_FIREBASE_*` values are not secrets; never put a service-account JSON/key
+  in the browser build.
+- Enable Email/Password and Google in Firebase Authentication; Google is
+  already enabled for `rngdle-infinite-jg`. Add
+  `rngdle-infinite.jaime-gaming.com` and `localhost` to authorized domains.
+  This Firebase Console change is required before cloud sign-in works on the
+  custom host; it is separate from the Cloudflare Worker/DNS setup. Create
+  Firestore in a European location and publish `firestore.rules` before testing
+  cloud saves.
+- App Check and reCAPTCHA Enterprise are intentionally disabled in the
+  client to protect the free quota. `.env.production` carries no site key and
+  `src/firebase.js` never imports `firebase/app-check`. Firestore rules remain
+  the security boundary. Do not reintroduce per-request attestation; a visible
+  CAPTCHA, if ever needed, must be limited to sign-in only.
+- Saves use one Firestore document per UID at `player_saves/{uid}`. The JSON
+  snapshot is compressed with the existing vault codec to stay below Firestore's
+  1 MiB document limit. Rules are the security boundary.
+- `src/firebase.js` creates the app/Auth/Firestore clients;
+  `src/use-firebase-auth.js` handles email/password, Google popup/redirect and
+  required password linking after Google sign-in; `src/cloud-save.js` owns
+  Firestore CRUD, progress comparison, and ownership/cache/recovery markers;
+  `src/use-progress.js` coordinates the local save with transactional
+  reconciliation. Do not initialize Analytics unless explicitly requested.
+- **The loading screen stays quiet until a wait becomes long.**
+  `src/components/LoadingScreen.jsx` renders one small grey circle; after six
+  seconds it adds only `wait for it...`. Header, status notice and footer stay
+  visible, while roll controls and banners do not appear. States that need a
+  player decision (conflict, load error, offline, maintenance) still show the
+  normal interface. The local save is read and persisted before any cloud
+  request, and written again on a failed load, so waiting never costs local
+  progress.
+- Cloud loading gates progress actions for an authenticated user. On a load
+  error, retain local data and require an explicit retry before changing the
+  save. On sync failure, retain local progress, mark it dirty and offer retry.
+  Never replace a conflicted version unless its recovery copy was persisted.
+- The app starts with Firebase as a new provider; it does not migrate accounts
+  or saves from the archived Supabase project. Never merge different game
+  profile IDs that both hold progress; surface the mismatch and let the player
+  choose one complete save. For the same profile, compare durable game
+  progress—not file size, timestamps, history length or preferences. A device's
+  own already-synced copy continues automatically (see the sync mark), and
+  equal or empty copies never ask; an untrusted different reset generation or
+  mixed progress still requires the player's choice. Unowned local progress may
+  be imported when the cloud document is missing, and a save owned by another
+  auth user is never a candidate.
+
+## Security and UI baseline
+
+- `public/_headers` sets `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
+  `Cross-Origin-Resource-Policy` and HSTS. Do not add frame-ancestor or
+  `X-Frame-Options` denial headers: the game is shown in preview iframes.
+- Every `target="_blank"` link uses `rel="noopener noreferrer"`.
+- The loader is a small, grey circle inside `<main aria-busy>`; the header,
+  status notice and footer stay visible. A long wait adds only `wait for it...`.
+- `src/cloud-quota.js` pauses Firestore reads and writes for 15 minutes after
+  `resource-exhausted` or another quota signal. Local play stays available, the
+  save stays dirty, and cloud work resumes automatically after the cooldown or
+  on an explicit retry. The reconcile debounce is 10 seconds, not a tight loop.
+- Status notices poll every 60 seconds and also on focus, visibility and
+  reconnection. The banner is a normal-flow sibling between the header and
+  `main`, so the interface shifts down instead of being covered.
+- Black Friday side posters are ordered by the current page, never by a timer
+  or a random pick.
+
+## Tool-call budget
+
+- Tool calls are a limited per-turn resource. Arena.ai does not publish an
+  exact per-turn figure in this repository; do not invent one. Treat every
+  call as part of a small budget.
+- Batch related work: one read that collects the needed context, one script
+  that applies several file edits, one validation command that covers the
+  affected specs, and one multi-tool response for independent calls. Avoid a
+  separate tool call for each file or each tiny edit.
+- Prefer targeted validation over a long full-suite run when a batch touches a
+  known area; record the exact specs and results in a QA note.
+
+## Source map
+
+| Path                                             | Responsibility                                                              |
+| ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `src/main.jsx`                                   | App shell, routes, roll wiring and account/profile presentation.            |
+| `src/progress.js`                                | Save format, migrations, repair, reducer and legacy receipt parsing.        |
+| `src/use-progress.js`                            | Local persistence and transactional cloud reconciliation.                   |
+| `src/firebase.js`, `src/use-firebase-auth.js`    | Firebase clients, email/Google auth and provider linking.                   |
+| `src/cloud-save.js`                              | Firestore CRUD, save comparison and browser ownership/cache/recovery.       |
+| `firestore.rules`                                | Per-UID Firestore access policy.                                            |
+| `src/roll.worker.js`, `src/random.js`            | Worker-based roll scoring and random source.                                |
+| `src/badges.js`, `src/infinite-badges.js`        | Badge definitions, families and metadata.                                   |
+| `src/pets.js`, `src/skills.js`, `src/rebirth.js` | Companions, skills, rebirth, prestige and rollback rules.                   |
+| `src/tasks.js`, `src/history-tally.js`           | Daily/weekly tasks and historical profile totals.                           |
+| `src/shop-data.js`                               | Products, shelves, aura families and timing upgrades.                       |
+| `src/changelog.js`, `src/app-update.js`          | Release notes, unseen-version marker and update identity.                   |
+| `src/components/`                                | Game, account and profile UI.                                               |
+| `src/*.css`                                      | Feature styles; `src/mobile.css` is loaded last.                            |
+| `tests/`                                         | Playwright specs; `tests/helpers/` contains shared test setup.              |
+| `tools/`                                         | Worker/GitHub Pages builds and smoke tests, data preparation and audits.    |
+| `wrangler.jsonc`                                 | Cloudflare Worker name, `dist/` static assets, SPA fallback, custom domain. |
+| `public/_headers`                                | Update-safe static caching and security headers on the Worker.              |
+| `archive/DEPLOYMENT.md`                          | Worker deploy, custom-domain setup, verification and rollback.              |
+| `media/`                                         | README screenshots generated by `tools/screenshots.mjs`.                    |
+
+## Commands
+
+```sh
+npm install
+npm run dev              # configured Firebase dev build on 0.0.0.0:5173
+npm run dev:test -- --port 5174 # local-only mode for tests/screenshots
+npm test                 # Playwright suite (starts dev:test on port 5174)
+npx playwright test tests/roll.spec.js
+npm run build            # production build into dist/ for Cloudflare Workers
+npm run build:github-pages # production build into docs/ for legacy GitHub Pages
+npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
+npm run verify:cloud     # two-device Cloud Accounts simulation against firestore.rules
+npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
+npm run deploy:worker    # build and deploy the Worker (production is guarded)
+npm run audit:economy    # price ladder and roll-distribution audit
+npm run format           # Prettier over src, tests, root configs and README
+```
+
+For local cloud development, copy `.env.example` to `.env.local`. Local
+gameplay and tests should also work with no Firebase development variables;
+the checked-in `.env.production` is used only for production builds.
+
+`npm run verify:cloud` needs no Firebase: it runs real app sessions on simulated
+devices that share a fake Firestore which evaluates every commit against a model
+of `firestore.rules`, so a client write the real rules would reject fails there.
+It covers the first upload, a second device adopting the online save, both-way
+sync, a stale device never overwriting newer progress, publishing, unpublishing
+and the two-profile conflict. Re-run it after changing `src/cloud-save.js`,
+`src/use-progress.js` or `firestore.rules`; it is the only automated check of the
+rules/contract pair, because Firebase itself is never reached from CI.
+
+Playwright uses `CHROMIUM_PATH` when provided. Some environments need
+`--no-sandbox`; `playwright.config.js` already passes the flag for a supplied
+Chromium binary. Keep realistic reveal/cooldown timing in tests; set a longer
+test timeout rather than changing game timers.
+
+Shop prices are date-gated by the Black Friday sale, so on 27 November (UTC)
+the shelves show discounted prices, the counter and the stamp card. Specs that
+assert exact prices or stock pin the virtual clock — `page.clock.install()`
+with a fixed time away from the sale day, or `pauseClockAt` inside
+`tests/black-friday.spec.js` for the sale day itself — and must never depend on
+the real calendar date.
+
+## Product rules
+
+- **Honest rolls.** Skills may change draw count or the kept number, but never
+  the scoring table, badge values or rank. Wallet multipliers affect banked EP
+  only.
+- **Companions do not alter the roll.** They multiply EP. Trail and Drift use
+  their own independent random sample.
+- **Rollback** stays hidden until three prestiges, starts from 0 EP and can be
+  repeated. Prestige and Rollback reset the ladder; only the documented
+  permanent bonuses and surplus bank survive.
+- **Fresh start** is offered after three prestiges. It keeps the profile,
+  permanent auras and a keepsake row; run-bound progress resets.
+- **Profile cards are one-way exports.** `src/profile-card.js` reads old token
+  formats and encodes the current format. A card/link must never overwrite a
+  game save.
+- **Aura finish.** New aura definitions need a `swatch`; the shared finish in
+  `src/number-box.css` uses it. Keep bespoke aura art intact.
+- **Tiers** come from `src/data/game-index.json` and the generator in
+  `tools/prepare-game-data.mjs`. Updating tiers touches progress/history
+  validation, presentation and pinned tests.
+- **Profile URLs** use `/profile/<username>`; bare `/profile` is the guest or
+  account setup page. The profile logo is uploaded by clicking its picture.
+- **History remains valuable.** Bulk deletion honors bookmarks and preserves
+  archived totals. Legacy event rows are read-only historical records.
+- **Presentation settings do not affect odds, EP, prices or timings.** Offline
+  rolls pay EP and enter history; skills charge online only.
+- **English copy and formatting.** Use `formatEP`/`toLocaleString("en-US")`;
+  do not let browser locale leak into player-facing numbers.
+
+If a request conflicts with one of these save/security contracts, stop and ask
+rather than guessing.
+
+## Economy and content
+
+- Companion prices/multipliers: `src/pets.js`; skills and stall rotation:
+  `src/skills.js`; rebirth rules: `src/rebirth.js`; products/timing upgrades:
+  `src/shop-data.js`; tasks: `src/tasks.js`; Battle Pass: `src/battle-pass.js`.
+- Run `npm run audit:economy` after changing economy values. Check that nothing
+  becomes free or unreachable and the ladder still climbs.
+- Badge data comes from `src/badges.js` and `src/infinite-badges.js`; artwork
+  is vendored by `tools/vendor-emoji.mjs`.
+- Mobile Playwright specs use 390×844; the phone breakpoint is 760px.
+
+## Publishing and versioning
+
+- Cloudflare **Workers** (static assets, no script) serves the root-domain Vite
+  build from `dist/`. `wrangler.jsonc` holds the Worker name, the assets
+  directory, the `single-page-application` fallback and the
+  `rngdle-infinite.jaime-gaming.com` custom domain; `npm run deploy:worker`
+  builds and deploys it. A hostname can belong to only one Cloudflare service,
+  so the old Pages project must not keep that custom domain. Never claim the
+  live domain is updated until the deploy, DNS and HTTPS are verified
+  independently; see `archive/DEPLOYMENT.md`.
+- GitHub Pages currently uses the legacy `main` branch `/docs` source at
+  `jaime-gaming.github.io/RNGdle-Infinite`. Run
+  `npm run build:github-pages` before the release PR so `docs/` contains the
+  `/RNGdle-Infinite/` base-path build, SPA `404.html`, and `.nojekyll` file.
+  A squash-merge to `main` causes GitHub Pages to publish those committed files.
+  GitHub Pages is a mirror whose base path is `/RNGdle-Infinite/`; it is not the
+  custom domain.
+- `npm run deploy:worker` builds and deploys the Worker `rngdle-infinite` with
+  `wrangler deploy`, which also claims the custom domain. Deploying the
+  production branch `main` requires the explicit `CF_ALLOW_PRODUCTION=true`
+  opt-in. `-- --dry-run` builds and validates without uploading. Do not run a
+  live deploy without the user's instruction.
+- After a hosting change, run `npm run build` and `npm run test:worker`. The
+  Worker smoke test exercises root assets, headers, direct client routes, the
+  version manifest and (when Chromium is available) local gameplay; it does not
+  verify Cloudflare settings, DNS, Firebase authorized domains, or a production
+  deployment.
+- `src/app-update.js` tracks the internal label for the reload-until-updated
+  flow. The current label is exactly `v0.6fix0`; do not change it
+  until the next session or an explicit user request. Public release notes
+  live in `src/changelog.js` and keep historical entries.
+- Work on the session branch; do not push to `main` directly. Do not open a PR
+  until the user asks. Use `gh` for PRs and checks.
+- **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
+  name the squashed commit after the release it publishes: `v0.5.2 bug fix 2`
+  when the merge carries bug fixes (the number matches the internal `fixN`
+  label), otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
+  when the branch is verified: `npm run build`, `npm run test:worker`,
+  `npm run verify:cloud`, the Playwright suite and `prettier --check`.
+- A change to `firestore.rules` only takes effect after
+  `npm run deploy:rules`. Say so explicitly in the merge summary; the app cannot
+  deploy rules for the user, and the client must stay compatible with the rules
+  that are actually deployed.
+
+## Style
+
+- Prettier is the formatter. Format files changed by a task.
+- Source, tests, comments and generated output are English only; leave no
+  Spanish strings or copy.
+- Only event-retirement markers such as `RETIREMENT` or `DELETE EVENT` may
+  remain as comments. Remove comments that narrate or describe code, CSS or
+  markup; keep the code self-explanatory.
+- Player-facing copy should be plain and friendly.
+
+## Required Git workflow
+
+- Always finish completed changes with a commit and push to the session branch.
+- After a requested merge succeeds, delete the merged remote branch (use `gh pr merge <number> --squash --delete-branch`). Never switch branches or delete the active checkout; respect session branch restrictions.
+
+- **Bug fixes never rewrite release notes.** Preserve all existing `src/changelog.js` entries verbatim during a bug fix. Record implementation/QA notes separately. Presentation-only capitalization is fine; add release notes only for an explicitly requested new release.
