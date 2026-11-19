@@ -241,11 +241,19 @@ function makeCommit(staged) {
       !oldClaimedByUser ||
       (!existsAfter(claimPath(oldName)) &&
         profileNoLongerPublicAfter(oldName, uid));
+    const privateRecoveryRelease =
+      newName === null &&
+      typeof oldName === "string" &&
+      sameStamp(next.username_changed_at, previous.username_changed_at) &&
+      !oldClaimedByUser &&
+      !raw(savePath(uid)) &&
+      profileNoLongerPublicAfter(oldName, uid);
     return Boolean(
-      typeof newName === "string" &&
-      isStamp(next.username_changed_at) &&
-      cooldownPassed &&
-      oldClaimReleased,
+      privateRecoveryRelease ||
+      (typeof newName === "string" &&
+        isStamp(next.username_changed_at) &&
+        cooldownPassed &&
+        oldClaimReleased),
     );
   }
 
@@ -314,17 +322,81 @@ function makeCommit(staged) {
       "aura",
       "companion",
       "avatar",
-      ...(record.v === 4 ? ["description"] : []),
+      ...(record?.v === 4 ? ["description"] : []),
     ];
     if (!sameKeys(record, recordKeys)) return false;
+    const validDate = (value, max = 40) =>
+      typeof value === "string" && value.length >= 20 && value.length <= max;
+    const validCount = (value) =>
+      Number.isSafeInteger(value) &&
+      value >= 0 &&
+      value <= Number.MAX_SAFE_INTEGER;
+    const validTier = (value) =>
+      [
+        "trash",
+        "common",
+        "uncommon",
+        "rare",
+        "epic",
+        "anomaly",
+        "mythic",
+        "godly",
+      ].includes(value);
+    const validRollNumber = (value) =>
+      typeof value === "string" &&
+      (/^[0-9]{1,6}$/.test(value) || value === "1000000");
+    const validBest = (roll) =>
+      roll === null ||
+      (sameKeys(roll, ["number", "ep", "tier", "at"]) &&
+        validRollNumber(roll.number) &&
+        validCount(roll.ep) &&
+        validTier(roll.tier) &&
+        validDate(roll.at));
+    const validPin = (roll) =>
+      roll &&
+      Object.keys(roll).every((field) =>
+        ["number", "ep", "tier", "dejaVu"].includes(field),
+      ) &&
+      ["number", "ep", "tier"].every((field) => field in roll) &&
+      (!("dejaVu" in roll) || typeof roll.dejaVu === "boolean") &&
+      validRollNumber(roll.number) &&
+      validCount(roll.ep) &&
+      validTier(roll.tier);
+    const validAvatar =
+      record.avatar === null ||
+      (typeof record.avatar === "string" &&
+        record.avatar.length <= 240000 &&
+        /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(
+          record.avatar,
+        ));
     return (
       [3, 4].includes(record.v) &&
       record.name === key &&
-      (record.v === 3 ||
-        (typeof record.description === "string" &&
-          record.description.length <= 200)) &&
+      validDate(record.at) &&
+      (record.since === null ||
+        (typeof record.since === "string" && record.since.length <= 40)) &&
+      validBest(record.best) &&
+      [
+        record.rolls,
+        record.earned,
+        record.badges,
+        record.badgesTotal,
+        record.rebirths,
+        record.prestiges,
+      ].every(validCount) &&
       Array.isArray(record.pins) &&
-      record.pins.length <= 10
+      record.pins.length <= 10 &&
+      record.pins.every(validPin) &&
+      (record.favoriteTier === null || validTier(record.favoriteTier)) &&
+      [record.aura, record.companion].every(
+        (value) =>
+          value === null || (typeof value === "string" && value.length <= 40),
+      ) &&
+      validAvatar &&
+      (record.v === 3
+        ? !("description" in record)
+        : typeof record.description === "string" &&
+          record.description.length <= 200)
     );
   }
 

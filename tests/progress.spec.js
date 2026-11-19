@@ -126,9 +126,9 @@ test("wallet rules: one credit per roll, all earned badges unlocked, no duplicat
   expect(reset.equipped).toBe("none");
 });
 
-test("online rolls grant rounded BPEP during an active season, but offline rolls do not", () => {
+test("online rolls grant one BPEP during an active season, but offline rolls do not", () => {
   const at = Date.UTC(2026, 10, 20, 12);
-  expect(BPEP_PER_ROLL).toBe(5);
+  expect(BPEP_PER_ROLL).toBe(1);
   const initialized = applyProgress(emptyProgress(), {
     type: "initialize-pass-season",
     at,

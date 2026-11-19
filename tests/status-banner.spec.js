@@ -74,6 +74,43 @@ test("scheduled maintenance moves from the Settings footer to live notices at 24
   );
 });
 
+test("scheduled maintenance in its time window is live before Statuspage flips its status", () => {
+  const startsAt = Date.UTC(2026, 10, 10, 12);
+  const endsAt = startsAt + 60 * 60 * 1000;
+  const issue = {
+    kind: "maintenance",
+    status: "scheduled",
+    componentStatus: "operational",
+    scheduledFor: new Date(startsAt).toISOString(),
+    scheduledUntil: new Date(endsAt).toISOString(),
+  };
+  expect(maintenanceNoticeVisible(issue, startsAt + 1)).toBe(true);
+  expect(maintenanceActiveFor(issue, startsAt + 1)).toBe(true);
+  expect(maintenanceActiveFor(issue, endsAt)).toBe(false);
+});
+
+test("page-level maintenance is attributed to the single service component", () => {
+  const startsAt = Date.UTC(2026, 10, 10, 12);
+  const data = {
+    components: [{ id: "game", name: "Game", status: "operational" }],
+    incidents: [],
+    scheduled_maintenances: [
+      {
+        id: "maintenance-page-level",
+        name: "Scheduled maintenance",
+        status: "scheduled",
+        scheduled_for: new Date(startsAt).toISOString(),
+        scheduled_until: new Date(startsAt + 3600000).toISOString(),
+      },
+    ],
+  };
+  expect(serviceIssuesFromSummary(data, startsAt)[0]).toMatchObject({
+    id: "maintenance-page-level",
+    kind: "maintenance",
+    componentName: "Game",
+  });
+});
+
 test("all active matching incidents and future maintenance windows are preserved", () => {
   const now = Date.UTC(2026, 10, 10);
   const data = summary("Database delay", "Backups may be slow.");

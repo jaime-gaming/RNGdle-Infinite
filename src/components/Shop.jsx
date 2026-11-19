@@ -282,6 +282,13 @@ function LookRollPreview({ aura, tier }) {
   );
 }
 
+const formatUtcDateTime = (timestamp) =>
+  new Date(timestamp).toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  });
+
 export default function Shop({
   progress,
   cloudUser = false,
@@ -754,7 +761,7 @@ export default function Shop({
                 : shopPassSeason.active
                   ? `Unlock the extra ${shopPassSeason.name} reward track. Claim rewards on the Pass page; claimed cosmetics stay yours.`
                   : shopPassSeason.upcoming
-                    ? `${shopPassSeason.name} opens ${new Date(shopPassSeason.start).toLocaleString()} UTC.`
+                    ? `${shopPassSeason.name} opens ${formatUtcDateTime(shopPassSeason.start)} UTC.`
                     : `${shopPassSeason.name} is closed. Any earned rewards remain claimable on the Pass page.`
               : item.id === "offline-roller" && state.owned
                 ? `One ordinary roll per ${offlineInterval / 60000} minutes away. Maximum ${offlineCap} rolls per absence; unused fractions do not carry over.`
@@ -959,7 +966,7 @@ export default function Shop({
     if (item.id === "battle-pass-premium") {
       if (state.owned) return "Open the Pass page to claim your rewards.";
       if (shopPassSeason.upcoming)
-        return `Opens ${new Date(shopPassSeason.start).toLocaleString()} UTC.`;
+        return `Opens ${formatUtcDateTime(shopPassSeason.start)} UTC.`;
       if (shopPassSeason.ended) return "This season has ended.";
     }
     if (state.profileGated) return "Needs a saved game profile.";

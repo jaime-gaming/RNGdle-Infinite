@@ -240,13 +240,18 @@ export function sanitizeShareCard(raw) {
     if (withDate) entry.at = isoDate(value.at);
     return entry;
   };
+  const best = roll(raw.best, true);
+  // Firestore rules require a real timestamp string for best-roll records.
+  // Old imports can contain epoch zero or malformed dates; omit that highlight
+  // rather than making the entire public-profile transaction fail validation.
+  if (best && !best.at) best.at = null;
   return {
     v: CARD_VERSION,
     name,
     description: profileDescription(raw.description),
     at,
     since: isoDate(raw.since),
-    best: roll(raw.best, true),
+    best: best?.at ? best : null,
     rolls: count(raw.rolls),
     earned: count(raw.earned),
     badges: count(raw.badges),

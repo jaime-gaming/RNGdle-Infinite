@@ -7,7 +7,11 @@ import path from "node:path";
 import { CHANGELOG } from "../src/changelog.js";
 import { MONTH_THEMES, SEASON_THEME_OVERRIDE } from "../src/season-config.js";
 import { badges } from "../src/badges.js";
-import { allBadgeMetadata, infiniteBadges } from "../src/infinite-badges.js";
+import {
+  allBadgeMetadata,
+  infiniteBadges,
+  infiniteOriginalRarityForCount,
+} from "../src/infinite-badges.js";
 import {
   BATTLE_PASS_FIRST_START,
   BATTLE_PASS_LEVELS,
@@ -44,6 +48,43 @@ test("every v0.6 original wears a glyph no other badge uses", () => {
     const listed = badges.find((entry) => entry.canonicalId === badge.id);
     expect(listed, `${badge.name} is listed`).toBeTruthy();
     expect(listed.emoji, `${badge.name} matches the shelf`).toBe(badge.emoji);
+  }
+});
+
+test("Infinite Original rarity follows actual appearance frequency", () => {
+  const expected = {
+    INFINITE_PENDULUM: "anomaly",
+    INFINITE_LAST_SECOND: "anomaly",
+    INFINITE_PERFECT_NUMBER: "mythic",
+    INFINITE_NARCISSISTIC: "anomaly",
+    INFINITE_TRIANGULAR: "rare",
+    INFINITE_KAPREKAR: "anomaly",
+    INFINITE_AUTOMORPHIC: "mythic",
+    INFINITE_FACTORION: "mythic",
+    INFINITE_EMIRP: "uncommon",
+  };
+  for (const badge of infiniteBadges) {
+    expect(badge.rarity, badge.name).toBe(expected[badge.id]);
+    const listed = badges.find((entry) => entry.canonicalId === badge.id);
+    expect(listed.rarity.toLowerCase(), `${badge.name} shelf rarity`).toBe(
+      badge.rarity,
+    );
+    expect(badge.rarity, `${badge.name} uses the frequency rule`).toBe(
+      infiniteOriginalRarityForCount(badge.matchingNumbers),
+    );
+    expect(badge.probabilityPercent).toBeCloseTo(
+      (badge.matchingNumbers / 1_000_001) * 100,
+      10,
+    );
+  }
+
+  // More matching rolls can never produce a rarer tier.
+  const tiers = ["mythic", "anomaly", "epic", "rare", "uncommon", "common"];
+  let previous = -1;
+  for (const count of [1, 10, 11, 100, 1_000, 10_000, 100_000, 1_000_001]) {
+    const current = tiers.indexOf(infiniteOriginalRarityForCount(count));
+    expect(current).toBeGreaterThanOrEqual(previous);
+    previous = current;
   }
 });
 

@@ -87,6 +87,7 @@ export default function LocalProfile({
   preserveGuestProgress = false,
   canContinue = true,
   canEdit = true,
+  onlinePaused = false,
   profileLinkAvailable = false,
   publicProfileEnabled = false,
   cloudProfileIdentity = null,
@@ -536,9 +537,9 @@ export default function LocalProfile({
           )}
           {cloudAccount && cloudProfileIdentity?.reserved === false && (
             <p className="profile-rename-note" role="status">
-              This profile name is not reserved for this Cloud account. Your
-              progress remains private and safe; choose a free name before
-              enabling public sharing.
+              {cloudProfileIdentity.reservationBlocked
+                ? "This Cloud profile name could not be reserved. It may already be in use, or the Firebase Firestore rules may need to be updated. Your progress remains private and safe."
+                : "This profile name is not reserved for this Cloud account. Your progress remains private and safe; choose a free name before enabling public sharing."}
             </p>
           )}
           {canEdit && (
@@ -691,9 +692,15 @@ export default function LocalProfile({
                 type="button"
                 className="secondary-button"
                 data-testid="profile-visibility"
+                title={
+                  onlinePaused
+                    ? "Online profile publishing is paused during maintenance."
+                    : undefined
+                }
                 aria-pressed={Boolean(publicProfileEnabled)}
                 disabled={
                   publishingProfile ||
+                  onlinePaused ||
                   typeof onSetPublicProfile !== "function" ||
                   (!publicProfileEnabled &&
                     cloudProfileIdentity?.reserved === false)

@@ -22,7 +22,7 @@ export const BATTLE_PASS_SEASON_MS = 28 * 24 * 60 * 60 * 1000;
 export const BATTLE_PASS_LEVELS = 30;
 export const BPEP_PER_LEVEL = 500;
 // Each online roll adds a small amount of pass progress; offline rewards never count.
-export const BPEP_PER_ROLL = 5;
+export const BPEP_PER_ROLL = 1;
 export const BATTLE_PASS_MAX_XP = BATTLE_PASS_LEVELS * BPEP_PER_LEVEL;
 export const BATTLE_PASS_PREMIUM_PRICE = 2_000_000;
 export const BATTLE_PASS_ARCHIVE_LIMIT = 24;
@@ -376,19 +376,19 @@ export const PASS_MISSIONS = [
   {
     id: "pass-daily-high",
     cadence: "daily",
-    title: "Roll 3 numbers of 900,000 or more",
+    title: "Roll a number of 900,000 or more",
     detail: "The number itself, not its EP.",
     metric: "high",
-    goal: 3,
+    goal: 1,
     reward: 100,
   },
   {
-    id: "pass-daily-trash",
+    id: "pass-daily-badges-50",
     cadence: "daily",
-    title: "Roll 5 Trash numbers",
-    detail: "Bad luck still moves the pass.",
-    metric: "trash",
-    goal: 5,
+    title: "Collect 50 badges across rolls",
+    detail: "Every badge on every paid number counts.",
+    metric: "badges",
+    goal: 50,
     reward: 100,
   },
   {
@@ -457,11 +457,11 @@ export const PASS_MISSIONS = [
   {
     id: "pass-weekly-trash",
     cadence: "weekly",
-    title: "Roll 12 Trash numbers",
-    detail: "The low rolls still make progress.",
+    title: "Roll a Trash number",
+    detail: "One unlucky roll is enough to complete this mission.",
     metric: "trash",
-    goal: 12,
-    reward: 500,
+    goal: 1,
+    reward: 350,
   },
   {
     id: "pass-season-rolls",
@@ -520,10 +520,10 @@ export const PASS_MISSIONS = [
   {
     id: "pass-season-boost",
     cadence: "season",
-    title: "Finish 100 pass missions this season",
+    title: "Finish 60 pass missions this season",
     detail: "Any cadence counts. Pays a Surge Capacitor charge.",
     metric: "claims",
-    goal: 100,
+    goal: 60,
     reward: 1000,
     boost: { id: "boost-surge", charges: 1 },
   },

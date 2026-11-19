@@ -1,21 +1,5 @@
-const SAVE_DECISION_STATUSES = new Set([
-  "needs-choice",
-  "error",
-  "offline",
-  "maintenance",
-]);
-
-export function shouldShowLoadingScreen({
-  gameDataReady,
-  cloudStatus,
-  cloudReady,
-  hasAccount,
-}) {
-  if (!gameDataReady) return true;
-  if (cloudStatus === "checking-auth" || cloudStatus === "loading") return true;
-  return (
-    Boolean(hasAccount) &&
-    !cloudReady &&
-    !SAVE_DECISION_STATUSES.has(cloudStatus)
-  );
+export function shouldShowLoadingScreen({ gameDataReady }) {
+  // Game data is needed to play. Authentication and cloud recovery happen in
+  // the background; they must never hold the whole game behind a spinner.
+  return !gameDataReady;
 }

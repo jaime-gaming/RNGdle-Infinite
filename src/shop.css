@@ -1075,7 +1075,8 @@
   margin: auto;
   max-width: 440px;
   width: calc(100% - 32px);
-  max-height: 86svh;
+  max-height: 86vh;
+  max-height: 86dvh;
   overflow: auto;
   padding: 30px;
   border: 1px solid var(--border);

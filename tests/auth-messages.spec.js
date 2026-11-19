@@ -1,11 +1,26 @@
 import { expect, test } from "./helpers/clock.js";
 import { waitForApp } from "./helpers/app.js";
 import {
+  AUTH_INITIALIZATION_TIMEOUT_MESSAGE,
+  AUTH_INITIALIZATION_TIMEOUT_MS,
+  authInitializationTimeoutState,
   authMessage,
   isAuthReadyForCloud,
   isEmailPasswordOnlyUser,
   requiresPasswordSetup,
 } from "../src/use-firebase-auth.js";
+
+test("stalled Firebase initialization falls back safely instead of loading forever", () => {
+  expect(AUTH_INITIALIZATION_TIMEOUT_MS).toBe(3_000);
+  expect(authInitializationTimeoutState({ ready: false, user: null })).toEqual({
+    ready: true,
+    user: null,
+    error: AUTH_INITIALIZATION_TIMEOUT_MESSAGE,
+  });
+  const signedIn = { ready: true, user: { id: "account-1" }, error: "" };
+  expect(authInitializationTimeoutState(signedIn)).toBe(signedIn);
+  expect(AUTH_INITIALIZATION_TIMEOUT_MESSAGE).toContain("play locally now");
+});
 
 test("Google account collisions guide players to link the existing account", () => {
   expect(

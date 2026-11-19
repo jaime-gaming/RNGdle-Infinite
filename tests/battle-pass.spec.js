@@ -75,6 +75,26 @@ function readyPass(time = at) {
   return pass;
 }
 
+test("pass progression targets a season-long pace and avoids extreme mission goals", () => {
+  expect(BPEP_PER_LEVEL).toBe(500);
+  expect(BATTLE_PASS_LEVELS * BPEP_PER_LEVEL).toBe(15_000);
+  const high = PASS_MISSIONS.find(
+    (mission) => mission.id === "pass-daily-high",
+  );
+  const weeklyTrash = PASS_MISSIONS.find(
+    (mission) => mission.id === "pass-weekly-trash",
+  );
+  const seasonBoost = PASS_MISSIONS.find(
+    (mission) => mission.id === "pass-season-boost",
+  );
+  expect(high.goal).toBe(1);
+  expect(weeklyTrash.goal).toBe(1);
+  expect(
+    PASS_MISSIONS.some((mission) => mission.id === "pass-daily-trash"),
+  ).toBe(false);
+  expect(seasonBoost.goal).toBe(60);
+});
+
 test("the current season is manually scheduled and never advertises a successor", () => {
   expect(battlePassSeason(BATTLE_PASS_FIRST_START).id).toBe("season-1");
   expect(

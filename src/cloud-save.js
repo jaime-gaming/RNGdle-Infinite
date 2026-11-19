@@ -1096,6 +1096,7 @@ async function ensureCloudProfileSettings(userId, progress) {
         profileIdentity: {
           ...cloudProfileIdentity(settings, usernameKey),
           reserved: false,
+          reservationBlocked: true,
         },
       };
     }
@@ -1148,7 +1149,12 @@ async function ensureCloudProfileSettings(userId, progress) {
     return {
       reserved: settings?.username_key === usernameKey,
       settings,
-      profileIdentity: cloudProfileIdentity(settings, usernameKey),
+      profileIdentity: {
+        ...cloudProfileIdentity(settings, usernameKey),
+        ...(!reserveName && settings?.username_key !== usernameKey
+          ? { reservationBlocked: true }
+          : {}),
+      },
     };
   };
 

@@ -775,36 +775,98 @@
   }
 }
 
-/* First Light keeps its light-on-paper character without a loud neon wash. */
+/* First Light is a warm dawn palette, carried through the shell and the pass. */
 :root[data-pass-theme="first-light-pass"] .battle-pass {
-  --pass-accent: #fbbf24;
+  --pass-accent: #f7c65d;
+}
+:root[data-pass-theme="first-light-pass"] .header {
+  border-bottom-color: #f7c65d26;
+  background: color-mix(in srgb, #11191b 90%, transparent);
+}
+:root[data-pass-theme="first-light-pass"] .mobile-tabbar {
+  border-top-color: #f7c65d35;
+  background: color-mix(in srgb, #1a2727 92%, transparent);
 }
 :root[data-pass-theme="first-light-pass"] .pass-hero {
   background:
-    linear-gradient(
-      125deg,
-      color-mix(in srgb, var(--pass-accent) 5%, var(--surface)),
-      var(--surface) 58%
+    radial-gradient(
+      ellipse at 92% 100%,
+      color-mix(in srgb, #f5a742 23%, transparent),
+      transparent 36%
     ),
-    var(--surface);
-  box-shadow: inset 3px 0
-    color-mix(in srgb, var(--pass-accent) 65%, transparent);
+    radial-gradient(
+      ellipse at 73% 10%,
+      color-mix(in srgb, #f7c65d 13%, transparent),
+      transparent 38%
+    ),
+    linear-gradient(125deg, #1d2b28, #1a2727 58%, #202b28);
+  box-shadow:
+    inset 3px 0 #f7c65d99,
+    0 12px 34px #070d0b42;
 }
 :root[data-pass-theme="first-light-pass"] .pass-level.is-milestone {
-  background: color-mix(in srgb, var(--pass-accent) 5%, var(--surface));
+  border-color: color-mix(in srgb, #f7c65d 54%, var(--border));
+  background:
+    linear-gradient(110deg, #f7c65d12, transparent 75%), var(--surface);
 }
-
+:root[data-pass-theme="first-light-pass"] .pass-level.is-next {
+  border-color: #f7c65d80;
+  background: linear-gradient(100deg, #f7c65d0d, var(--surface) 55%);
+}
 :root[data-pass-theme="first-light-pass"] .pass-hero-mark {
-  border-color: color-mix(in srgb, var(--pass-accent) 50%, var(--border));
-  background: color-mix(in srgb, var(--pass-accent) 8%, var(--bg));
-  color: color-mix(in srgb, var(--pass-accent) 82%, #a34b08);
+  border-color: #f7c65d88;
+  background:
+    radial-gradient(circle at 50% 70%, #f7c65d40, transparent 58%),
+    linear-gradient(145deg, #fff1c5, #f4c362 72%, #e69a3d);
+  color: #553b18;
+  box-shadow:
+    0 0 0 5px #f7c65d12,
+    0 8px 24px #f7c65d22;
+}
+:root[data-pass-theme="first-light-pass"] .pass-hero-mark svg {
+  filter: drop-shadow(0 1px 1px #ffffff80);
 }
 :root[data-pass-theme="first-light-pass"] .pass-track-head {
-  border-bottom-color: color-mix(
-    in srgb,
-    var(--pass-accent) 20%,
-    var(--border)
-  );
+  border-bottom-color: #f7c65d35;
+}
+:root[data-pass-theme="first-light-pass"] .pass-premium {
+  border-color: #f7c65d45;
+  background:
+    radial-gradient(ellipse at 0 50%, #f7c65d18, transparent 55%),
+    var(--surface);
+  box-shadow: inset 3px 0 #f7c65d88;
+}
+:root[data-pass-theme="first-light-pass"] .pass-premium h3 svg,
+:root[data-pass-theme="first-light-pass"] .pass-premium-owned {
+  color: #f7c65d;
+}
+:root[data-pass-theme="first-light-pass"] .pass-reward.is-claimable {
+  border-color: #f7c65d88;
+  background: linear-gradient(110deg, #f7c65d22, #d9913718);
+}
+:root[data-pass-theme="first-light-pass"] .pass-level-progress progress {
+  accent-color: #f7c65d;
+}
+:root[data-pass-theme="first-light-pass"]
+  .pass-level-progress
+  progress::-webkit-progress-bar {
+  border: 1px solid #f7c65d35;
+  border-radius: 99px;
+  background: #0c1414;
+}
+:root[data-pass-theme="first-light-pass"]
+  .pass-level-progress
+  progress::-webkit-progress-value {
+  border-radius: 99px;
+  background: linear-gradient(90deg, #d99137, #f7c65d, #ffe6a0);
+  box-shadow: 0 0 12px #f7c65d70;
+}
+:root[data-pass-theme="first-light-pass"]
+  .pass-level-progress
+  progress::-moz-progress-bar {
+  border-radius: 99px;
+  background: linear-gradient(90deg, #d99137, #f7c65d, #ffe6a0);
+  box-shadow: 0 0 12px #f7c65d70;
 }
 
 /* Seasonal pass presentation: warm, editorial, and deliberately restrained. */
@@ -892,10 +954,11 @@
   transition:
     border-color 180ms ease,
     background 180ms ease,
-    transform 180ms ease;
+    box-shadow 180ms ease;
 }
 .pass-level:hover {
-  transform: translateX(2px);
+  border-color: color-mix(in srgb, var(--pass-accent) 55%, var(--border));
+  box-shadow: 0 3px 16px color-mix(in srgb, var(--pass-accent) 8%, transparent);
 }
 .pass-level.is-next {
   border-style: solid;
@@ -1021,13 +1084,114 @@
       color-mix(in srgb, var(--pass-accent) 14%, transparent);
   }
 }
+.pass-level.is-reached .pass-level-number {
+  border-color: color-mix(in srgb, var(--pass-accent) 48%, var(--border));
+  background: color-mix(in srgb, var(--pass-accent) 8%, var(--bg));
+}
+.pass-reward {
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.pass-reward:hover {
+  border-color: color-mix(in srgb, var(--pass-accent) 35%, var(--border));
+  background-color: color-mix(in srgb, var(--pass-accent) 5%, var(--surface));
+}
+.pass-reward.is-claimable {
+  position: relative;
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  background-image: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--green) 11%, var(--surface)),
+    color-mix(in srgb, var(--pass-accent) 9%, var(--surface))
+  );
+}
+.pass-reward.is-claimable::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 24%,
+    color-mix(in srgb, white 13%, transparent) 48%,
+    transparent 72%
+  );
+  content: "";
+  pointer-events: none;
+  transform: translateX(-110%);
+}
+.pass-boost {
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.pass-boost:hover,
+.pass-boost.is-held {
+  border-color: color-mix(in srgb, var(--pass-accent) 32%, var(--border));
+}
+.pass-inspection-icon {
+  transition:
+    box-shadow 240ms ease,
+    filter 240ms ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pass-reward.is-claimable::after {
+    animation: pass-reward-sheen 4.8s ease-in-out infinite;
+  }
+  .pass-boost.is-active {
+    animation: pass-boost-pulse 2.8s ease-in-out infinite;
+  }
+  .pass-inspection-icon {
+    animation: pass-inspection-arrive 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+@keyframes pass-reward-sheen {
+  0%,
+  28% {
+    transform: translateX(-110%);
+  }
+  72%,
+  100% {
+    transform: translateX(110%);
+  }
+}
+@keyframes pass-boost-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--pass-accent) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--pass-accent) 14%, transparent);
+  }
+}
+@keyframes pass-inspection-arrive {
+  from {
+    opacity: 0.7;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .pass-level,
+  .pass-reward,
+  .pass-reward::after,
   .pass-reward-inspect,
   .pass-hero,
   .pass-hero::after,
+  .pass-boost,
+  .pass-inspection-icon,
   .pass-reward.is-claimable {
     transition: none;
     animation: none;
+    scale: none;
+    transform: none;
   }
 }

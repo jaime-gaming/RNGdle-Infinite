@@ -234,7 +234,17 @@ export default function ActivityFeed({
           available
         </span>
         <span>
-          {history.filter((e) => e.type === "roll").length.toLocaleString()}{" "}
+          {history
+            .filter((event) => event.type === "roll")
+            .reduce(
+              (total, event) =>
+                total +
+                (Number.isSafeInteger(event.draws) && event.draws > 0
+                  ? event.draws
+                  : 1),
+              0,
+            )
+            .toLocaleString("en-US")}{" "}
           recorded rolls
         </span>
         <span>

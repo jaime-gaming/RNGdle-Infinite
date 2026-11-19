@@ -8,35 +8,21 @@ const ready = {
   hasAccount: false,
 };
 
-test("the loader covers data, account and unsynced-profile waits only", () => {
+test("the full-screen loader waits only for game data, never account or Cloud", () => {
   expect(shouldShowLoadingScreen(ready)).toBe(false);
   expect(shouldShowLoadingScreen({ ...ready, gameDataReady: false })).toBe(
     true,
   );
-  expect(
-    shouldShowLoadingScreen({
-      ...ready,
-      cloudStatus: "checking-auth",
-      cloudReady: false,
-    }),
-  ).toBe(true);
-  expect(
-    shouldShowLoadingScreen({
-      ...ready,
-      cloudStatus: "loading",
-      cloudReady: false,
-    }),
-  ).toBe(true);
-  expect(
-    shouldShowLoadingScreen({
-      ...ready,
-      hasAccount: true,
-      cloudStatus: "saving",
-      cloudReady: false,
-    }),
-  ).toBe(true);
 
-  for (const cloudStatus of ["needs-choice", "error", "offline", "maintenance"])
+  for (const cloudStatus of [
+    "checking-auth",
+    "loading",
+    "saving",
+    "needs-choice",
+    "error",
+    "offline",
+    "maintenance",
+  ])
     expect(
       shouldShowLoadingScreen({
         ...ready,

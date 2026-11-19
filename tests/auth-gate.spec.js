@@ -81,6 +81,22 @@ test("cloud play requires a configured, ready account unless local play was chos
   ).toBe(true);
 });
 
+test("maintenance pauses online features without blocking gameplay", () => {
+  expect(
+    cloudGameAccess({
+      required: true,
+      configured: true,
+      authReady: true,
+      userId: "uid-1",
+      maintenance: true,
+    }),
+  ).toEqual({
+    allowed: true,
+    message:
+      "Online features are paused during maintenance; progress on this device keeps working.",
+  });
+});
+
 test("deployments that allow local play do not need an extra opt-in", () => {
   expect(
     cloudGameAccess({

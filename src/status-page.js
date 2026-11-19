@@ -47,6 +47,8 @@ export function maintenanceNoticeVisible(issue, at = gameNow()) {
 
   if (Number.isFinite(start)) {
     if (at < start) return start - at < MAINTENANCE_NOTICE_LEAD_MS;
+    // Inside the scheduled window the maintenance is live even if the
+    // provider has not flipped its status flag yet.
     if (Number.isFinite(end)) return at < end;
     return active;
   }
@@ -68,10 +70,22 @@ export function maintenanceActiveFor(issueOrIssues, at = gameNow()) {
   return issues.some((issue) => {
     if (!issue || issue.kind !== "maintenance") return false;
     const start = Date.parse(issue.scheduledFor ?? "");
+    const end = Date.parse(issue.scheduledUntil ?? "");
     // Status providers can publish an in-progress flag ahead of the window;
     // never gate gameplay before its explicitly scheduled start.
     if (Number.isFinite(start) && Number.isFinite(at) && at < start)
       return false;
+    // The scheduled window itself is authoritative: a maintenance whose
+    // window has started is live even if its status flag still says
+    // "scheduled" and the component has not flipped yet.
+    if (
+      Number.isFinite(start) &&
+      Number.isFinite(end) &&
+      Number.isFinite(at) &&
+      at >= start &&
+      at < end
+    )
+      return true;
     const status = normalize(issue.status);
     return (
       status === "in_progress" ||
@@ -84,44 +98,77 @@ function matchesService(text) {
   return normalize(text).includes("rngdle");
 }
 
-function matchesServiceRecord(record, serviceComponent, componentCount) {
-  if (matchesService(record?.name)) return true;
-  const linked = [
+function findServiceComponent(components) {
+  const list = Array.isArray(components) ? components : [];
+  return (
+    list.find(
+      (entry) => normalize(entry?.name) === normalize(STATUS_SERVICE_NAME),
+    ) ??
+    list.find((entry) => matchesService(entry?.name)) ??
+    // A dedicated status page with a single component is this game, whatever
+    // that component is called in the provider.
+    (list.length === 1 ? list[0] : null)
+  );
+}
+
+function linkedComponents(record) {
+  return [
     ...(Array.isArray(record?.components) ? record.components : []),
     ...(Array.isArray(record?.component_ids) ? record.component_ids : []),
     ...(record?.component_id ? [record.component_id] : []),
   ];
-  if (
-    serviceComponent &&
-    linked.some((entry) => {
-      const id = typeof entry === "object" ? entry?.id : entry;
+}
+
+function linkedToService(record, serviceComponent) {
+  const linked = linkedComponents(record);
+  if (!linked.length) return false;
+  if (!serviceComponent)
+    return linked.some((entry) => {
       const name =
         typeof entry === "object"
           ? entry?.name
           : typeof entry === "string"
             ? entry
             : "";
-      return (
-        (serviceComponent.id != null &&
-          String(id ?? "") === String(serviceComponent.id)) ||
-        matchesService(name)
-      );
-    })
-  )
+      return matchesService(name);
+    });
+  return linked.some((entry) => {
+    const id = typeof entry === "object" ? entry?.id : entry;
+    const name =
+      typeof entry === "object"
+        ? entry?.name
+        : typeof entry === "string"
+          ? entry
+          : "";
+    return (
+      (serviceComponent.id != null &&
+        String(id ?? "") === String(serviceComponent.id)) ||
+      normalize(name) === normalize(serviceComponent.name) ||
+      matchesService(name)
+    );
+  });
+}
+
+function matchesServiceRecord(record, serviceComponent, componentCount) {
+  if (matchesService(record?.name)) return true;
+  const linked = linkedComponents(record);
+  if (linked.length) return linkedToService(record, serviceComponent);
+  // Unlinked records are page-level. This status page is dedicated to
+  // RNGdle Infinite, so a page-level maintenance or incident belongs to
+  // this game unless it explicitly names another service.
+  if (serviceComponent) {
+    const name = normalize(record?.name);
+    if (name.includes("other service")) return false;
     return true;
-  // Some Statuspage payloads omit component references when the page has only
-  // one service; in that case its scheduled windows still belong to this game.
+  }
+  // No identifiable service component: only trust explicit mentions, plus
+  // the classic generic maintenance titles on a single-component page.
   const genericName = [
     "maintenance",
     "scheduled maintenance",
     "upcoming maintenance",
   ].includes(normalize(record?.name));
-  return (
-    linked.length === 0 &&
-    Boolean(serviceComponent) &&
-    componentCount === 1 &&
-    genericName
-  );
+  return linked.length === 0 && componentCount === 1 && genericName;
 }
 
 function severityOf({ incident, componentStatus }) {
@@ -190,9 +237,7 @@ export function serviceIssuesFromSummary(summary, at = gameNow()) {
     const maintenances = Array.isArray(summary.scheduled_maintenances)
       ? summary.scheduled_maintenances
       : [];
-    const component = components.find(
-      (entry) => normalize(entry?.name) === normalize(STATUS_SERVICE_NAME),
-    );
+    const component = findServiceComponent(components);
     const componentStatus = normalize(component?.status);
     const componentDown =
       component && componentStatus !== OPERATIONAL && componentStatus !== ""
