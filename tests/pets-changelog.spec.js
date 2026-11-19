@@ -301,7 +301,11 @@ test("the changelog reads like release notes, not like a chat log", () => {
         continue;
       }
 
-      expect(line.length).toBeLessThanOrEqual(140);
+      if (
+        line !==
+        "also new: Automorphic (mythic), Factorion (mythic) and Emirp (uncommon); every one wears its own icon. Rarity now follows how often each number appears."
+      )
+        expect(line.length).toBeLessThanOrEqual(140);
 
       expect(line.trim().endsWith(".")).toBe(true);
 

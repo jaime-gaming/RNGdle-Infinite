@@ -143,9 +143,13 @@ export default function LocalProfile({
   );
   const [descriptionBusy, setDescriptionBusy] = useState(false);
   const [descriptionNote, setDescriptionNote] = useState("");
+  const descriptionProfileId = useRef(profile?.id);
   useEffect(() => {
     setDescriptionDraft(profile?.description ?? "");
-    setDescriptionNote("");
+    if (descriptionProfileId.current !== profile?.id) {
+      descriptionProfileId.current = profile?.id;
+      setDescriptionNote("");
+    }
   }, [profile?.id, profile?.description]);
 
   const [shareLink, setShareLink] = useState("");

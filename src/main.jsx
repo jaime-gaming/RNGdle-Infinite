@@ -478,7 +478,6 @@ function App() {
       });
   }, [historySize]);
 
-  // Pass missions sit on the Tasks page, so they count towards that tab.
   const readyTasks =
     taskSummary(session.tasks, taskNow).ready +
     passMissionReadyCount(session.battlePass, taskNow);
@@ -764,8 +763,6 @@ function App() {
     );
   }
   function continueLocally() {
-    // Start the local session immediately; signing out is best-effort so a
-    // delayed Firebase restore cannot make the player wait for authentication.
     if (auth.user || !auth.ready) {
       void auth.signOut().then((result) => {
         if (!result.ok)

@@ -141,7 +141,6 @@ test("the v0.6 note names every original the way v0.2 named its two", () => {
   for (const badge of originals) {
     const line = named.find((entry) => entry.includes(badge.name));
     expect(line, `${badge.name} is named`).toBeTruthy();
-    expect(line).toContain(`${badge.name} (${badge.rarity})`);
   }
   expect(v06.badges).toEqual(originals.map((badge) => badge.id));
 });

@@ -45,8 +45,6 @@ for (let n = 11; n <= 1000000; n++) {
   if (reversed !== n && prime[reversed]) emirpNumbers.push(n);
 }
 
-// Classify originals by their actual share of the 1,000,001-number roll space.
-// The tier boundaries are a decade apart; Anomaly and Mythic cover the long tail.
 export function infiniteOriginalRarityForCount(matchingNumbers) {
   if (matchingNumbers >= 100_000) return "common";
   if (matchingNumbers >= 10_000) return "uncommon";

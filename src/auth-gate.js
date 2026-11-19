@@ -19,8 +19,6 @@ export function cloudGameAccess({
 
   if (maintenance) {
     return {
-      // Maintenance pauses cloud operations, not the game. The cloud sync
-      // layer independently queues local changes until service returns.
       allowed: true,
       message:
         "Online features are paused during maintenance; progress on this device keeps working.",

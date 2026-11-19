@@ -775,7 +775,6 @@
   }
 }
 
-/* First Light is a warm dawn palette, carried through the shell and the pass. */
 :root[data-pass-theme="first-light-pass"] .battle-pass {
   --pass-accent: #f7c65d;
 }
@@ -869,7 +868,6 @@
   box-shadow: 0 0 12px #f7c65d70;
 }
 
-/* Seasonal pass presentation: warm, editorial, and deliberately restrained. */
 .pass-hero {
   position: relative;
   overflow: hidden;
