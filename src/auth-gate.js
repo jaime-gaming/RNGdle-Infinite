@@ -18,17 +18,11 @@ export function cloudGameAccess({
   }
 
   if (maintenance) {
-    return required
-      ? {
-          allowed: false,
-          message:
-            "RNGdle Infinite is under maintenance right now. Online features are unavailable until it ends — see the status page for details.",
-        }
-      : {
-          allowed: true,
-          message:
-            "Online features are paused during maintenance; progress on this device keeps working.",
-        };
+    return {
+      allowed: true,
+      message:
+        "Online features are paused during maintenance; progress on this device keeps working.",
+    };
   }
   if (userId && passwordRequired)
     return {

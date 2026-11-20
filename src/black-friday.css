@@ -160,7 +160,8 @@
   margin: auto;
   width: calc(100% - 32px);
   max-width: 520px;
-  max-height: 86svh;
+  max-height: 86vh;
+  max-height: 86dvh;
   overflow: auto;
   padding: 28px;
   border: 1px solid #26262b;

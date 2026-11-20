@@ -268,6 +268,8 @@ test("a valid save loads silently and byte-for-byte unchanged", () => {
 test("booting with a damaged save repairs it, says so, and keeps a backup", async ({
   page,
 }) => {
+  await page.clock.install();
+  await page.clock.setFixedTime(new Date("2026-11-17T12:00:00Z"));
   await seedProgress(page, {
     balance: 500,
     totalEarned: 500,
