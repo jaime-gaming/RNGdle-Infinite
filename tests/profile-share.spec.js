@@ -216,7 +216,7 @@ test("a profile description saves locally and appears on its profile card", asyn
   await page.goto("/profile");
   await waitForApp(page);
 
-  const description = "Here for strange numbers and good surprises.";
+  const description = "Collecting numbers, one surprise at a time.";
   await page.getByLabel("Profile description").fill(description);
   await page.getByRole("button", { name: "Save description" }).click();
   await expect(page.locator(".profile-description-note")).toContainText(

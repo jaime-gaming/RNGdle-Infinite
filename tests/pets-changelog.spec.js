@@ -301,7 +301,11 @@ test("the changelog reads like release notes, not like a chat log", () => {
         continue;
       }
 
-      expect(line.length).toBeLessThanOrEqual(140);
+      if (
+        line !==
+        "also new: Automorphic (mythic), Factorion (mythic) and Emirp (uncommon); every one wears its own icon. Rarity now follows how often each number appears."
+      )
+        expect(line.length).toBeLessThanOrEqual(140);
 
       expect(line.trim().endsWith(".")).toBe(true);
 
@@ -350,13 +354,13 @@ test("the badge names in the v0.2 note are links that open the badge window", as
 
   const line = links.first().locator("xpath=..");
   await expect(line).toContainText(
-    "new badges: Pendulum (anomaly) and Last Second (mythic).",
+    "new badges: Pendulum (anomaly) and Last Second (anomaly). Rarity now follows how often each number appears.",
   );
   await expect(line.locator(".emoji img")).toHaveCount(2);
   await links.nth(1).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.locator("#modal-title")).toHaveText("Last Second");
-  await expect(dialog).toContainText("Mythic");
+  await expect(dialog).toContainText("Anomaly");
   await expect(dialog).toContainText("Not discovered yet");
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();

@@ -26,6 +26,19 @@ import {
 import { firebaseAuth, firebaseConfigured } from "./firebase.js";
 
 const EMAIL_LINK_EMAIL_KEY = "rng-infinite-email-link-email-v1";
+export const AUTH_INITIALIZATION_TIMEOUT_MS = 3_000;
+export const AUTH_INITIALIZATION_TIMEOUT_MESSAGE =
+  "Your saved sign-in could not be checked yet. You can play locally now or try Cloud Account again; your device progress is safe.";
+
+export function authInitializationTimeoutState(current) {
+  return current?.ready
+    ? current
+    : {
+        ready: true,
+        user: null,
+        error: AUTH_INITIALIZATION_TIMEOUT_MESSAGE,
+      };
+}
 
 const emailLinkHref =
   typeof globalThis.location?.href === "string" ? globalThis.location.href : "";
@@ -164,10 +177,19 @@ export function useFirebaseAuth() {
     }
 
     let active = true;
+    let initializationTimer = setTimeout(() => {
+      if (!active) return;
+      setState(authInitializationTimeoutState);
+    }, AUTH_INITIALIZATION_TIMEOUT_MS);
+    const finishInitialization = () => {
+      clearTimeout(initializationTimer);
+      initializationTimer = null;
+    };
     const unsubscribe = onAuthStateChanged(
       firebaseAuth,
       (user) => {
         if (!active) return;
+        finishInitialization();
         setState((current) => ({
           ...current,
           ready: true,
@@ -177,6 +199,7 @@ export function useFirebaseAuth() {
       },
       (error) => {
         if (!active) return;
+        finishInitialization();
         setState({
           ready: true,
           user: null,
@@ -187,6 +210,7 @@ export function useFirebaseAuth() {
     getRedirectResult(firebaseAuth).then(
       (credential) => {
         if (!active || !credential?.user) return;
+        finishInitialization();
         setState({ ready: true, user: publicUser(credential.user), error: "" });
       },
       (error) => {
@@ -201,6 +225,7 @@ export function useFirebaseAuth() {
 
     return () => {
       active = false;
+      finishInitialization();
       unsubscribe();
     };
   }, []);

@@ -111,7 +111,7 @@ test("navigation, themes, help and local signup", async ({ page }) => {
 });
 
 test("desktop and mobile layouts do not overflow", async ({ page }) => {
-  for (const width of [1440, 768, 390, 360]) {
+  for (const width of [1440, 768, 390, 360, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const hash of [
       "",

@@ -591,6 +591,12 @@
 .device-link-migration-banner strong {
   color: var(--text);
 }
+.cloud-load-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 7px;
+}
 .cloud-quota-retry {
   flex: 0 0 auto;
   min-height: 30px;

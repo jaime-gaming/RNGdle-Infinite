@@ -45,6 +45,15 @@ for (let n = 11; n <= 1000000; n++) {
   if (reversed !== n && prime[reversed]) emirpNumbers.push(n);
 }
 
+export function infiniteOriginalRarityForCount(matchingNumbers) {
+  if (matchingNumbers >= 100_000) return "common";
+  if (matchingNumbers >= 10_000) return "uncommon";
+  if (matchingNumbers >= 1_000) return "rare";
+  if (matchingNumbers >= 100) return "epic";
+  if (matchingNumbers >= 11) return "anomaly";
+  return "mythic";
+}
+
 const definitions = [
   {
     id: "INFINITE_PENDULUM",
@@ -53,7 +62,6 @@ const definitions = [
       "Six digits swing between two different digits: ABABAB. A cannot be zero.",
     emoji: "↕️",
     ep: 25000,
-    rarity: "anomaly",
     numbers: pendulums,
   },
   {
@@ -63,7 +71,6 @@ const definitions = [
       "A six-digit 24-hour time at its final second: HH5959, with hours from 10 through 23. No leading zeroes.",
     emoji: "⏳",
     ep: 75000,
-    rarity: "mythic",
     numbers: lastSeconds,
   },
   {
@@ -73,7 +80,6 @@ const definitions = [
       "A positive number equal to the sum of its proper divisors, such as 28 = 1 + 2 + 4 + 7 + 14.",
     emoji: "➗",
     ep: 150000,
-    rarity: "mythic",
     numbers: perfectNumbers,
   },
   {
@@ -83,7 +89,6 @@ const definitions = [
       "Each digit is raised to the number of digits, and the powers add back to the number. Single-digit cases are excluded.",
     emoji: "🤳",
     ep: 30000,
-    rarity: "anomaly",
     numbers: narcissisticNumbers,
   },
   {
@@ -93,7 +98,6 @@ const definitions = [
       "A sum of consecutive whole numbers starting at 1, such as 500500 = 1 + 2 + ... + 1000.",
     emoji: "🔻",
     ep: 1500,
-    rarity: "uncommon",
     numbers: triangularNumbers,
   },
   {
@@ -103,7 +107,6 @@ const definitions = [
       "Square the number, split the square into a right-hand part with the same digit count and the remaining left-hand part, then add the parts to recover the number. The right-hand part is positive.",
     emoji: "✂️",
     ep: 6000,
-    rarity: "rare",
     numbers: kaprekarNumbers,
   },
   {
@@ -113,7 +116,6 @@ const definitions = [
       "The square ends in the number itself, such as 76² = 5776. Trivial 0 and 1 are excluded.",
     emoji: "🔚",
     ep: 18000,
-    rarity: "epic",
     numbers: automorphicNumbers,
   },
   {
@@ -123,7 +125,6 @@ const definitions = [
       "The sum of the factorials of its digits equals the number, such as 145 = 1! + 4! + 5!. Trivial 1 and 2 are excluded.",
     emoji: "🧾",
     ep: 120000,
-    rarity: "mythic",
     numbers: factorionNumbers,
   },
   {
@@ -133,7 +134,6 @@ const definitions = [
       "A prime that becomes a different prime when its digits are reversed, such as 13 and 31. Palindromic primes are excluded.",
     emoji: "🔄",
     ep: 800,
-    rarity: "uncommon",
     numbers: emirpNumbers,
   },
 ];
@@ -141,6 +141,7 @@ export const infiniteBadges = definitions.map(({ numbers, ...badge }) => ({
   ...badge,
   family: null,
   matchingNumbers: numbers.length,
+  rarity: infiniteOriginalRarityForCount(numbers.length),
   probabilityPercent: (100 * numbers.length) / POPULATION,
   probability: `${formatPercent((100 * numbers.length) / POPULATION)}%`,
 }));

@@ -382,10 +382,11 @@ function App() {
     maintenance: maintenanceActive,
     twoFactorPending: twoFactor.pending,
   });
+  const localSessionAvailable = localPlay && !auth.user;
   useEffect(() => {
-    if (localPlay && !auth.user && !session.profile && page !== "profile")
+    if (localSessionAvailable && !session.profile && page !== "profile")
       navigate("profile");
-  }, [localPlay, auth.user?.id, session.profile?.id, page]);
+  }, [localSessionAvailable, session.profile?.id, page]);
   const cloudSaved = Boolean(
     auth.user &&
     !auth.user.passwordRequired &&
@@ -477,7 +478,6 @@ function App() {
       });
   }, [historySize]);
 
-  // Pass missions sit on the Tasks page, so they count towards that tab.
   const readyTasks =
     taskSummary(session.tasks, taskNow).ready +
     passMissionReadyCount(session.battlePass, taskNow);
@@ -763,6 +763,15 @@ function App() {
     );
   }
   function continueLocally() {
+    if (auth.user || !auth.ready) {
+      void auth.signOut().then((result) => {
+        if (!result.ok)
+          notify({
+            kind: "error",
+            text: result.message || "Could not finish switching to local play.",
+          });
+      });
+    }
     chooseLocalPlay(true);
     setLocalPlay(true);
     if (!session.profile) navigate("profile");
@@ -770,14 +779,14 @@ function App() {
   const offlineState = useOffline(
     session,
     dispatch,
-    isAuthReadyForCloud(auth) && cloud.ready,
+    (isAuthReadyForCloud(auth) && cloud.ready) || localSessionAvailable,
   );
 
   useReadyAlert(session.cooldownUntil, {
     blocked:
       !playAccess.allowed ||
-      !isAuthReadyForCloud(auth) ||
-      !cloud.ready ||
+      (!isAuthReadyForCloud(auth) && !localSessionAvailable) ||
+      (!cloud.ready && !localSessionAvailable) ||
       !!session.pendingRoll ||
       !!session.offline?.batch,
   });
@@ -1020,6 +1029,69 @@ function App() {
                 </button>
               </div>
             )}
+          {auth.configured && !auth.user && (!auth.ready || auth.error) && (
+            <div
+              className="offline-save-banner cloud-load-fallback"
+              role="status"
+              data-testid="auth-load-fallback"
+            >
+              <span>
+                {auth.error || "Checking your saved sign-in in the background."}{" "}
+                You can start a local game now or try Cloud Account again.
+              </span>
+              <div className="cloud-load-actions">
+                <button
+                  type="button"
+                  className="secondary-button cloud-quota-retry"
+                  onClick={continueLocally}
+                >
+                  Continue locally
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button cloud-quota-retry"
+                  onClick={openAuth}
+                >
+                  Try sign-in again
+                </button>
+              </div>
+            </div>
+          )}
+          {auth.user &&
+            !auth.user.passwordRequired &&
+            !cloud.ready &&
+            ["loading", "error"].includes(cloud.status) && (
+              <div
+                className="offline-save-banner cloud-load-fallback"
+                role="status"
+                data-testid="cloud-load-fallback"
+              >
+                <span>
+                  {cloud.status === "error"
+                    ? cloud.error ||
+                      "Cloud progress is unavailable right now. Your online save is safe."
+                    : "Cloud progress is checking in the background. You can start locally now."}
+                </span>
+                <div className="cloud-load-actions">
+                  {cloud.status === "error" && (
+                    <button
+                      type="button"
+                      className="secondary-button cloud-quota-retry"
+                      onClick={retryCloudLoad}
+                    >
+                      Try again
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="secondary-button cloud-quota-retry"
+                    onClick={continueLocally}
+                  >
+                    Sign out &amp; play locally
+                  </button>
+                </div>
+              </div>
+            )}
           {legacyDeviceLinkNotice && session.profile && (
             <div className="device-link-migration-banner" role="status">
               <div>
@@ -1104,8 +1176,8 @@ function App() {
                 cloudSaved={cloudSaved}
                 active={
                   playAccess.allowed &&
-                  isAuthReadyForCloud(auth) &&
-                  cloud.ready &&
+                  (isAuthReadyForCloud(auth) || localSessionAvailable) &&
+                  (cloud.ready || localSessionAvailable) &&
                   page === "roll" &&
                   !modal &&
                   !offlineState.busy &&
@@ -1313,24 +1385,27 @@ function App() {
                     />
                   ) : (
                     <>
-                      {!auth.user && !session.profile && !localPlay && (
-                        <section
-                          className="panel"
-                          aria-label="Choose where to save"
-                        >
-                          <h2>Play on this device</h2>
-                          <p>
-                            Keep your progress locally, or open Cloud Account
-                            for an online backup.
-                          </p>
-                          <button
-                            className="secondary-button"
-                            onClick={continueLocally}
+                      {auth.ready &&
+                        !auth.user &&
+                        !session.profile &&
+                        !localPlay && (
+                          <section
+                            className="panel"
+                            aria-label="Choose where to save"
                           >
-                            Continue locally
-                          </button>
-                        </section>
-                      )}
+                            <h2>Play on this device</h2>
+                            <p>
+                              Keep your progress locally, or open Cloud Account
+                              for an online backup.
+                            </p>
+                            <button
+                              className="secondary-button"
+                              onClick={continueLocally}
+                            >
+                              Continue locally
+                            </button>
+                          </section>
+                        )}
                       {(!cloudAccountRequired ||
                         session.profile ||
                         (localPlay && !auth.user)) &&
@@ -1351,8 +1426,19 @@ function App() {
                             }}
                             cloudAccount={auth.user}
                             preserveGuestProgress={localPlay}
-                            canContinue={playAccess.allowed && cloud.ready}
-                            canEdit={playAccess.allowed && cloud.ready}
+                            canContinue={
+                              playAccess.allowed &&
+                              (cloud.ready ||
+                                maintenanceActive ||
+                                localSessionAvailable)
+                            }
+                            canEdit={
+                              playAccess.allowed &&
+                              (cloud.ready ||
+                                maintenanceActive ||
+                                localSessionAvailable)
+                            }
+                            onlinePaused={maintenanceActive}
                             profileLinkAvailable={cloud.publicProfileAvailable}
                             publicProfileEnabled={cloud.publicProfileEnabled}
                             cloudProfileIdentity={cloud.profileIdentity}

@@ -64,15 +64,15 @@
   --pass-accent: var(--season-accent, #fbbf24);
   --primary: var(--pass-accent);
   --accent: var(--pass-accent);
-  --bg: #101923;
-  --surface: #182531;
-  --text: #f1f5ed;
-  --muted: #9eafb4;
-  --secondary: #c4d1d0;
-  --border: #344650;
-  --hover: #233641;
-  --green: var(--pass-accent);
-  --green-bg: color-mix(in srgb, var(--pass-accent) 13%, #182531);
+  --bg: #11191b;
+  --surface: #1a2727;
+  --text: #fff5df;
+  --muted: #b7ad96;
+  --secondary: #d4c9ad;
+  --border: #3c4a40;
+  --hover: #293a36;
+  --green: #efc05a;
+  --green-bg: color-mix(in srgb, var(--pass-accent) 15%, #1a2727);
   --danger: #ffaaa0;
   --danger-border: #ffaaa066;
   --warning: #ffd27b;
@@ -83,14 +83,20 @@
   --rank-low: #ed918b;
   --scrim: #000b;
   --scrim-strong: #0008;
-  --shadow: 0 8px 30px #07131c30;
-  --button: #f1f5ed;
+  --button: #fff5df;
+  --shadow: 0 10px 34px #07110f55;
   background: var(--bg);
   color: var(--text);
 }
+:root[data-pass-theme="first-light-pass"] {
+  background:
+    radial-gradient(ellipse at 12% 0%, #fbbf2418, transparent 34rem),
+    radial-gradient(ellipse at 92% 48%, #f49f3510, transparent 42rem),
+    linear-gradient(160deg, #11191b, #131f20 62%, #171f1d);
+}
 body {
   margin: 0;
-  min-width: 340px;
+  min-width: 320px;
 }
 button,
 input,
@@ -145,7 +151,8 @@ svg {
   stroke-width: 1.7;
 }
 #root {
-  min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -1380,7 +1387,8 @@ footer button:hover,
   position: relative;
   width: 430px;
   max-width: 100%;
-  max-height: 90svh;
+  max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1808,7 +1816,7 @@ footer button:hover,
 }
 @media (max-width: 480px) {
   .header {
-    padding: 0 15px;
+    padding: env(safe-area-inset-top) 15px 0;
   }
   .header-left {
     gap: 17px;
@@ -1823,7 +1831,7 @@ footer button:hover,
     padding: 8px;
   }
   .home-main {
-    padding: 47px 19px 40px;
+    padding: 47px clamp(12px, 4.75vw, 19px) 40px;
   }
   .roll-number {
     font-size: 79px;
@@ -1841,7 +1849,7 @@ footer button:hover,
     font-size: 12px;
   }
   .generate {
-    width: 305px;
+    width: min(305px, 100%);
     height: 60px;
     font-size: 21px;
     margin-top: 27px;
@@ -1947,7 +1955,7 @@ footer button:hover,
 @media (max-width: 360px) {
   .header {
     gap: 8px;
-    padding: 0 10px;
+    padding: env(safe-area-inset-top) 10px 0;
   }
   .header-left {
     gap: 10px;

@@ -136,6 +136,8 @@ test("guest rewards and purchases stay in memory and disappear on reload", async
 test("signup names a clean account and never invents guest earnings", async ({
   page,
 }) => {
+  await page.clock.install();
+  await page.clock.setFixedTime(new Date("2026-11-17T12:00:00Z"));
   await showRoll(page, 1337);
   await nav(page, "Shop");
   await buy(page, "quickwind-1");

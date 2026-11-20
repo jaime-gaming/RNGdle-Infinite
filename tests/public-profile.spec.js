@@ -86,6 +86,29 @@ test("the public document contains only a sanitized profile summary", () => {
   expect(data.record).not.toHaveProperty("balance");
 });
 
+test("a best roll with an invalid timestamp cannot invalidate profile publishing", () => {
+  const legacyBest = {
+    ...progress,
+    history: [
+      {
+        id: "legacy-epoch-roll",
+        type: "roll",
+        at: 0,
+        number: 1337,
+        ep: 20,
+        tier: "common",
+        badges: [],
+      },
+    ],
+  };
+  const data = publicProfileDocument(
+    "firebase-user-42",
+    legacyBest,
+    new Date("2026-10-27T12:00:00.000Z"),
+  );
+  expect(data.record.best).toBeNull();
+});
+
 test("public profile descriptions are limited to 200 characters", () => {
   const described = {
     ...progress,

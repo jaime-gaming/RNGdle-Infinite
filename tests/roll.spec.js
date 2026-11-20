@@ -130,7 +130,7 @@ test("completed rolls persist EP exactly once and enforce the saved cooldown", a
     page.getByRole("button", { name: /NEXT ROLL IN/ }),
   ).toBeDisabled();
   await page.clock.fastForward(105100);
-  await page.getByRole("button", { name: "GENERATE", exact: true }).click();
+  await page.getByRole("button", { name: /^(GENERATE|ROLL AGAIN)$/ }).click();
   await expect(page.locator(".roll-experience")).toHaveAttribute(
     "data-phase",
     "digits",

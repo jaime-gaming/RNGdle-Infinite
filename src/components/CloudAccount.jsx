@@ -824,7 +824,9 @@ export default function CloudAccount({
                     {cloud.conflict
                       ? " Resolve the save choice above before playing."
                       : cloudIsLoading
-                        ? " Wait until your progress is ready before playing."
+                        ? cloud.ready
+                          ? " Cloud is checking in the background; this device’s progress is ready to play."
+                          : " Cloud is checking in the background. Start local play below any time."
                         : ""}
                   </p>
                 )}

@@ -84,6 +84,8 @@ import {
   clearPresence,
 } from "./offline.js";
 
+const CLOUD_INITIAL_LOAD_TIMEOUT_MS = 5_000;
+
 function repairWarning(repairs) {
   if (!repairs.length) return "";
   return "Some saved details needed fixing. Your readable progress was kept.";
@@ -589,6 +591,34 @@ export function useProgress({
         ? "Using this device’s saved progress while Cloud loads."
         : "",
     });
+    const cloudLoadTimer = setTimeout(() => {
+      if (
+        !currentRequest() ||
+        cloudRef.current.userId !== userId ||
+        cloudRef.current.status !== "loading"
+      )
+        return;
+      const owner = readCloudOwner();
+      const localCopyIsOwned = localSaveUsableForCloudFallback({
+        owner,
+        userId,
+        profile: current.current.profile,
+        healthy: healthy.current,
+      });
+      cloudGate.current = { userId, ready: localCopyIsOwned };
+      updateCloud({
+        ...cloudRef.current,
+        status: "error",
+        ready: localCopyIsOwned,
+        userId,
+        error: localCopyIsOwned
+          ? ""
+          : "Cloud progress could not be loaded yet. Try again, or sign out to start playing locally; your online save is safe.",
+        notice: localCopyIsOwned
+          ? "Your device progress is ready. Cloud is taking longer than expected; try again from Cloud Account."
+          : "",
+      });
+    }, CLOUD_INITIAL_LOAD_TIMEOUT_MS);
 
     async function restoreCloudSave() {
       const localOwner = readCloudOwner();
@@ -652,6 +682,7 @@ export function useProgress({
         candidate = current.current;
       }
 
+      clearTimeout(cloudLoadTimer);
       if (reconciliation.choiceRequired) {
         showCloudConflict(reconciliation, userId, cacheWarning);
         return;
@@ -664,6 +695,7 @@ export function useProgress({
       return restoreCloudSave();
     });
     loadTask.catch((loadError) => {
+      clearTimeout(cloudLoadTimer);
       if (!currentRequest()) return;
 
       const ownerOnFailure = readCloudOwner();
@@ -707,6 +739,7 @@ export function useProgress({
 
     return () => {
       active = false;
+      clearTimeout(cloudLoadTimer);
     };
   }, [userId, authReady, cloudEnabled, cloudRetry, online]);
 
@@ -979,6 +1012,12 @@ export function useProgress({
 
   async function setPublicProfileVisibility(enabled) {
     const activeUserId = authRef.current.userId;
+    if (maintenanceActiveFor(getStatusIssue()))
+      return {
+        ok: false,
+        message:
+          "Online profile publishing is paused during maintenance. Your local progress remains available.",
+      };
     if (
       !activeUserId ||
       !authRef.current.authReady ||
@@ -1146,6 +1185,15 @@ export function useProgress({
         const auth = authRef.current;
         const deletingCloudAccount =
           action.type === "delete" && action.deleteCloudAccount === true;
+        const deletingCloudSave =
+          action.type === "delete" && Boolean(auth.userId);
+        const maintenance = maintenanceActiveFor(getStatusIssue());
+        if (maintenance && deletingCloudSave)
+          return {
+            ok: false,
+            message:
+              "Cloud save and account deletion are unavailable during maintenance. Your local progress remains available.",
+          };
         const accountAccess = cloudGameAccess({
           required: auth.requireCloudAccount,
           configured: auth.cloudEnabled,
@@ -1157,11 +1205,12 @@ export function useProgress({
             auth.localProfileRequired &&
             !current.current.profile &&
             action.type !== "register",
-          maintenance: maintenanceActiveFor(getStatusIssue()),
+          maintenance,
         });
         if (!deletingCloudAccount && !accountAccess.allowed)
           return { ok: false, message: accountAccess.message };
         if (
+          !maintenance &&
           !deletingCloudAccount &&
           auth.cloudEnabled &&
           auth.userId &&
@@ -1219,6 +1268,12 @@ export function useProgress({
         let cloudRegistration = false;
         let renameNotice = "";
         if (cloudProfileMutation && auth.cloudEnabled && auth.userId) {
+          if (maintenance)
+            return {
+              ok: false,
+              message:
+                "Online profile changes are paused during maintenance. You can keep playing locally.",
+            };
           const activeUserId = auth.userId;
           const mutationLabel =
             action.type === "rename-profile" ? "profile name" : "profile logo";
@@ -1789,6 +1844,12 @@ export function useProgress({
                 : action;
           next = applyProgress(previous, progressAction);
           if (action.type === "register-cloud" && auth.userId) {
+            if (maintenance)
+              return {
+                ok: false,
+                message:
+                  "Creating an online profile is paused during maintenance. You can continue with local play.",
+              };
             const activeUserId = auth.userId;
             if (
               !auth.cloudEnabled ||
