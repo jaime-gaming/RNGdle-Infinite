@@ -114,6 +114,12 @@ Only rolls fund a cycle gate.
   timestamps, preferences, or auxiliary records, and compare the current reset
   generation before that. The player is interrupted only when the copies really
   compete:
+  - **The copy with more progress wins on its own.** When two same-profile
+    copies are both trusted lineage but hold mixed progress, `saveProgressScore`
+    ranks durable progress (rolls, badges, upgrades, companions, skills, reset
+    generation, best roll and earned EP) and `compareSaveScore` lets a copy that
+    leads by `RICHER_COPY_SHARE` win without interrupting the player. Only copies
+    that stay close keep asking.
   - **A copy this device already synced continues automatically.** After every
     successful reconciliation, `writeCloudSyncMark` stores that account's
     document fingerprint, profile ID and alias in local storage. If the online
@@ -381,6 +387,11 @@ the real calendar date.
   archived totals. Legacy event rows are read-only historical records.
 - **Presentation settings do not affect odds, EP, prices or timings.** Offline
   rolls pay EP and enter history; skills charge online only.
+- **A background tab is not a visible player.** `src/tab-activity.js` reports a
+  tab as away once it is hidden, or once it loses focus for `AWAY_GRACE_MS`.
+  Offline presence uses that state, so a tab left in the background stops
+  earning and stops suppressing offline rolls in the other tab. Presence writes
+  a heartbeat only while the tab is really active.
 - **English copy and formatting.** Use `formatEP`/`toLocaleString("en-US")`;
   do not let browser locale leak into player-facing numbers.
 
@@ -426,7 +437,7 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.6fix1`; do not change it
+  flow. The current label is exactly `v0.6fix2`; do not change it
   until the next session or an explicit user request. Public release notes
   live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR

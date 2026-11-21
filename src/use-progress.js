@@ -1,4 +1,5 @@
 import { unpackVaultSave } from "./save-codec.js";
+import { packDeviceSave } from "./local-save.js";
 import { gameNow } from "./game-clock";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { drainSerialQueue, enqueueSerial } from "./serial-queue.js";
@@ -64,7 +65,12 @@ import {
   parsePending,
   recoverUnsavedRolls,
 } from "./progress.js";
-import { generateRoll, restoreRoll } from "./roll-client.js";
+import {
+  generateRoll,
+  generateRollNumbers,
+  restoreRoll,
+  restoreRolls,
+} from "./roll-client.js";
 import { runDrawPicks } from "./draw-plan.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
@@ -85,6 +91,7 @@ import {
 } from "./offline.js";
 
 const CLOUD_INITIAL_LOAD_TIMEOUT_MS = 5_000;
+const OFFLINE_SETTLE_CHUNK = 48;
 
 function repairWarning(repairs) {
   if (!repairs.length) return "";
@@ -115,8 +122,13 @@ function readLocalCandidateForCloudUser(userId) {
 function writeLocalSave(progress, ownerId = readCloudOwner()) {
   try {
     const raw = JSON.stringify(progress);
-    writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, raw);
-    writeVault(raw, { storage: localStorage, ownerId });
+    const save = packDeviceSave(raw);
+    writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, raw, save.packed);
+    writeVault(raw, {
+      storage: localStorage,
+      ownerId,
+      packed: save.packed,
+    });
     return true;
   } catch {
     return false;
@@ -434,14 +446,17 @@ export function useProgress({
           if (merged !== next) {
             try {
               const mergedRaw = JSON.stringify(merged);
+              const mergedSave = packDeviceSave(mergedRaw);
               writeDeviceSaveWithRecovery(
                 localStorage,
                 PROGRESS_KEY,
                 mergedRaw,
+                mergedSave.packed,
               );
               writeVault(mergedRaw, {
                 storage: localStorage,
                 ownerId: readCloudOwner(),
+                packed: mergedSave.packed,
               });
               persisted = true;
               markLocalCloudDirty();
@@ -821,7 +836,9 @@ export function useProgress({
 
     let active = true;
     let retryTimer = null;
-    const timer = setTimeout(() => {
+    const flush = () => {
+      globalThis.removeEventListener?.("focus", flush);
+      document.removeEventListener?.("visibilitychange", onFlushVisibility);
       if (
         !active ||
         cloudWriteVersion.current !== version ||
@@ -989,13 +1006,29 @@ export function useProgress({
             notice: "",
           });
         });
-    }, 10_000);
+    };
+    const onFlushVisibility = () => {
+      if (document.visibilityState === "visible") flush();
+    };
+    const timer = tabActive ? setTimeout(flush, 10_000) : undefined;
+    globalThis.addEventListener?.("focus", flush);
+    document.addEventListener?.("visibilitychange", onFlushVisibility);
     return () => {
       active = false;
       clearTimeout(timer);
       if (retryTimer) clearTimeout(retryTimer);
+      globalThis.removeEventListener?.("focus", flush);
+      document.removeEventListener?.("visibilitychange", onFlushVisibility);
     };
-  }, [progress, userId, authReady, cloudEnabled, online, cloudWriteRetry]);
+  }, [
+    progress,
+    userId,
+    authReady,
+    cloudEnabled,
+    online,
+    tabActive,
+    cloudWriteRetry,
+  ]);
 
   function retryCloudLoad() {
     clearCloudQuotaPause();
@@ -1638,9 +1671,9 @@ export function useProgress({
               cap,
             );
             if (action.checkAbsence === false) plan.count = 0;
-            const numbers = [];
-            for (let i = 0; i < plan.count; i++)
-              numbers.push((await generateRoll()).number);
+            const numbers = plan.count
+              ? await generateRollNumbers(plan.count)
+              : [];
             next = {
               ...previous,
               offline: {
@@ -1668,14 +1701,17 @@ export function useProgress({
             const batch = offline.batch;
             if (!batch) return { ok: true, offlineRemaining: 0 };
             next = previous;
-            const stop = Math.min(batch.index + 10, batch.numbers.length);
-            while (next.offline.batch && next.offline.batch.index < stop) {
-              const currentBatch = next.offline.batch;
-              const result = await restoreRoll(
-                currentBatch.numbers[currentBatch.index],
-              );
-              next = settleOfflineRoll(next, result, now);
-            }
+            const stop = Math.min(
+              batch.index + OFFLINE_SETTLE_CHUNK,
+              batch.numbers.length,
+            );
+            const pendingNumbers = batch.numbers.slice(batch.index, stop);
+            if (!pendingNumbers.length)
+              return { ok: true, offlineRemaining: 0 };
+            const results = await restoreRolls(pendingNumbers);
+            for (const result of results)
+              if (next.offline.batch)
+                next = settleOfflineRoll(next, result, now);
           } else if (action.type === "offline-dismiss")
             next = { ...previous, offline: { ...offline, report: null } };
           else throw new Error("That action is not available right now.");
@@ -2055,10 +2091,17 @@ export function useProgress({
               throw new Error(
                 "The local save owner could not be cleared safely.",
               );
-            writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, saved);
+            const packedSave = packDeviceSave(saved);
+            writeDeviceSaveWithRecovery(
+              localStorage,
+              PROGRESS_KEY,
+              saved,
+              packedSave.packed,
+            );
             writeVault(saved, {
               storage: localStorage,
               ownerId: localRegistration ? null : readCloudOwner(),
+              packed: packedSave.packed,
             });
             if (localRegistration) {
               if (typeof previousCloudOwner === "string" && previousCloudOwner)

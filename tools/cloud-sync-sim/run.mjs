@@ -23,6 +23,8 @@ const plan = [
   ["A", "unpublish"],
   ["C", "conflict-profile"],
   ["B", "cloud-state"],
+  ["A", "richer-device"],
+  ["B", "resync"],
 ];
 
 console.log(`Cloud sync simulation (device state in ${stateDir})\n`);

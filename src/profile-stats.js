@@ -108,12 +108,28 @@ function removedTotalsOf(progress) {
   return Array.isArray(progress.removedTotals) ? progress.removedTotals : [];
 }
 
+const tallyCache = new WeakMap();
+let emptyTallyCache = null;
+
 export function allTimeTally(progress) {
-  const history = Array.isArray(progress.history) ? progress.history : [];
-  return removedTotalsOf(progress).reduce(
-    (sum, tally) => (tally ? mergeTallies(sum, tally) : sum),
-    tallyEntries(history),
-  );
+  const history = Array.isArray(progress?.history) ? progress.history : [];
+  const removed = removedTotalsOf(progress ?? {});
+  if (!history.length && !removed.length) {
+    emptyTallyCache ??= tallyEntries([]);
+    return emptyTallyCache;
+  }
+  let entry = tallyCache.get(history);
+  if (!entry || entry.removed !== removed) {
+    entry = {
+      removed,
+      tally: removed.reduce(
+        (sum, tally) => (tally ? mergeTallies(sum, tally) : sum),
+        tallyEntries(history),
+      ),
+    };
+    tallyCache.set(history, entry);
+  }
+  return entry.tally;
 }
 
 function cycleTally(progress, events, cycle) {

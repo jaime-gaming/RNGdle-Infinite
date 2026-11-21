@@ -9,6 +9,8 @@ const OFFLINE_CAP_BY_PRODUCT = {
   "offline-vault-3": 360,
 };
 export const PRESENCE_PREFIX = "rng-infinite-presence-v1:";
+export const PRESENCE_STALE_MS = 45000;
+export const OFFLINE_BATCH_MAX = 360;
 const amount = (n) => Number.isSafeInteger(n) && n >= 0;
 const timestamp = (n) => amount(n) && n <= 8640000000000000;
 export function parseOffline(value, owned) {
@@ -108,7 +110,7 @@ export function offlinePlan(
     ...presences.map((p) => p.at),
   );
   const online = presences.some(
-    (p) => p.id !== tabId && p.visible && now - p.at < 45000,
+    (p) => p.id !== tabId && p.visible && now - p.at < PRESENCE_STALE_MS,
   );
   return {
     since,
@@ -139,9 +141,15 @@ export function readPresence(profileId) {
 export function writePresence(profileId, tabId, at, visible) {
   const prefix = PRESENCE_PREFIX + profileId + ":";
   for (const p of readPresence(profileId))
-    if (p.id !== tabId && at - p.at > 45000)
+    if (p.id !== tabId && at - p.at > PRESENCE_STALE_MS)
       localStorage.removeItem(prefix + p.id);
   localStorage.setItem(prefix + tabId, JSON.stringify({ at, visible }));
+}
+export function markPresenceHidden(profileId, tabId, at = Date.now()) {
+  if (!profileId || !tabId) return;
+  try {
+    writePresence(profileId, tabId, at, false);
+  } catch {}
 }
 export function clearPresence(profileId) {
   for (const p of readPresence(profileId))

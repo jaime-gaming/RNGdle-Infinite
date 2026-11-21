@@ -413,6 +413,37 @@ function passLifetimePremium(progress) {
   );
 }
 
+export function saveProgressScore(progress) {
+  if (!progress?.profile) return 0;
+  const tally = allTimeTally(progress);
+  const badges = new Set([
+    ...uniqueIds(progress.discovered),
+    ...uniqueIds(tally.discovered),
+  ]);
+  let score = 0;
+  score += safeAmount(tally.rolls) * 120;
+  score += badges.size * 200;
+  score += uniqueIds(tally.badges).size * 20;
+  score += uniqueIds(progress.owned).size * 60;
+  score += uniqueIds(progress.pets).size * 300;
+  score += uniqueIds(progress.skills).size * 300;
+  score += safeAmount(progress.rebirths) * 1500;
+  score += safeAmount(progress.ultraRebirths) * 6000;
+  score += safeAmount(progress.rollbacks) * 9000;
+  score += safeAmount(progress.freshStarts) * 25000;
+  score += safeAmount(tally.best?.ep);
+  score += Math.round(
+    Math.log10(
+      safeAmount(progress.totalEarned) + safeAmount(progress.balance) + 10,
+    ) * 600,
+  );
+  score += safeAmount(progress.blackFriday?.stamps) * 40;
+  score += uniqueIds(progress.rngweenLimited?.auras).size * 120;
+  score += passLifetimeClaims(progress) * 30;
+  score += Math.round(passLifetimeXp(progress) / 10);
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.round(score));
+}
+
 export function compareSaveRichness(local, cloud) {
   if (!local?.profile && !cloud?.profile) return "equal";
   if (!local?.profile) return "cloud";
@@ -676,21 +707,44 @@ export function chooseSaveWinner(
       winner: comparison,
       comparison,
     };
+  const richer = richerSaveCopy(local, cloud);
+  if (richer) return richer;
   if (comparison === "equal" && sameSave(local, cloud))
     return { progress: cloud, winner: "cloud", comparison };
 
-  if (comparison === "equal")
-    return {
-      progress: local,
-      winner: "local",
-      comparison,
-      preferencesOnly: true,
-    };
   return {
-    progress: null,
-    winner: "choice",
+    progress: local,
+    winner: "local",
     comparison,
-    choiceReason: "incomparable",
+    preferencesOnly: true,
+  };
+}
+
+export const RICHER_COPY_SHARE = 1.25;
+
+export function compareSaveScore(local, cloud) {
+  const localScore = saveProgressScore(local);
+  const cloudScore = saveProgressScore(cloud);
+  const richer =
+    localScore >= cloudScore * RICHER_COPY_SHARE
+      ? "local"
+      : cloudScore >= localScore * RICHER_COPY_SHARE
+        ? "cloud"
+        : "even";
+  return { localScore, cloudScore, richer };
+}
+
+function richerSaveCopy(local, cloud) {
+  if (!local?.profile || !cloud?.profile) return null;
+  const { localScore, cloudScore, richer } = compareSaveScore(local, cloud);
+  if (richer === "even") return null;
+  return {
+    progress: richer === "local" ? local : cloud,
+    winner: richer,
+    comparison: "richer-copy",
+    richerCopy: true,
+    localScore,
+    cloudScore,
   };
 }
 
@@ -2415,6 +2469,11 @@ export async function reconcileCloudSave(
         !sameSave(localProgress, remoteProgress)
           ? "The online copy had newer progress, so it was loaded. This device's previous copy is saved in Settings."
           : "";
+    } else if (choice.richerCopy) {
+      notice =
+        choice.winner === "local"
+          ? "This device holds more progress, so it was backed up online. The other copy is saved in Settings."
+          : "The online copy holds more progress, so it was loaded. The other copy is saved in Settings.";
     } else if (choice.winner === "local" && remoteProgress) {
       notice =
         "This device had more progress, so it was backed up online. The previous online copy is saved in Settings.";

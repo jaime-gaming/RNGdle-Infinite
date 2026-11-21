@@ -15,6 +15,7 @@ import {
   cloudSyncTrust,
   compareSaveEpoch,
   compareSaveRichness,
+  saveProgressScore,
   decodeCloudSave,
   encodeCloudSave,
   isCloudDirty,
@@ -174,7 +175,7 @@ test("same-profile local progress wins only by strict dominance", () => {
   });
 });
 
-test("a tie keeps this device's copy while mixed progress asks the player", () => {
+test("a tie keeps this device's copy while the copy with more progress wins", () => {
   const cloud = progress({ balance: 100, totalEarned: 200 });
   const tie = progress({
     profile: { id: "profile-a", username: "another-name", createdAt: 1 },
@@ -193,9 +194,10 @@ test("a tie keeps this device's copy while mixed progress asks the player", () =
     preferencesOnly: true,
   });
   expect(compareSaveRichness(incomparable, cloud)).toBe("incomparable");
+  expect(saveProgressScore(incomparable)).toBe(saveProgressScore(cloud));
   expect(chooseSaveWinner(incomparable, cloud)).toMatchObject({
-    winner: "choice",
-    choiceReason: "incomparable",
+    winner: "local",
+    preferencesOnly: true,
   });
   expect(compareSaveRichness(anotherProfile, cloud)).toBe("incomparable");
   expect(chooseSaveWinner(anotherProfile, cloud)).toMatchObject({
@@ -208,6 +210,37 @@ test("a tie keeps this device's copy while mixed progress asks the player", () =
   expect(
     chooseSaveWinner(anotherProfile, cloud, { decision: "cloud" }),
   ).toMatchObject({ winner: "cloud", selectedByUser: true });
+});
+
+test("mixed progress across devices keeps the copy that holds more things", () => {
+  const cloud = progress({
+    balance: 900,
+    totalEarned: 4_000,
+    owned: ["eclipse", "prism"],
+    discovered: ["A", "B", "C"],
+    pets: ["cat"],
+  });
+  const local = progress({
+    balance: 100,
+    totalEarned: 3_000,
+    owned: ["eclipse"],
+    discovered: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"],
+    pets: ["cat", "fox"],
+    skills: ["lucky-charm"],
+  });
+
+  expect(compareSaveRichness(local, cloud)).toBe("incomparable");
+  expect(saveProgressScore(local)).toBeGreaterThan(saveProgressScore(cloud));
+  expect(chooseSaveWinner(local, cloud)).toMatchObject({
+    winner: "local",
+    richerCopy: true,
+  });
+  expect(chooseSaveWinner(cloud, local)).toMatchObject({
+    winner: "cloud",
+    richerCopy: true,
+  });
+  expect(compareSaveRichness(local, local)).toBe("equal");
+  expect(saveProgressScore({ profile: null })).toBe(0);
 });
 
 test("a player can explicitly keep either save in a same-generation conflict", () => {

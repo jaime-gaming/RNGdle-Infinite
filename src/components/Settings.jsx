@@ -350,8 +350,8 @@ export default function Settings({
           <Cloud size={16} aria-hidden="true" /> Cloud Account
         </h2>
         <p className="settings-group-note">
-          Link a Cloud Account for an online backup. If this device and your
-          online account have different progress, you choose which to keep; the
+          Link a Cloud Account for an online backup. When this device and your
+          online account differ, the copy with more progress is kept and the
           other copy stays safe here.
         </p>
         <button
