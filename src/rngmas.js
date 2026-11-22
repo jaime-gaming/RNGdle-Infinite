@@ -217,14 +217,9 @@ export const RNGMAS_WEEKS = [
 
 export const RNGMAS_TEMPORARY_THEMES = [
   {
-    id: "rngmas-lights",
-    label: "RNGmas Lights",
-    blurb: "Warm lights, red ribbon and gold.",
-  },
-  {
     id: "rngmas-frost",
     label: "Frostfall",
-    blurb: "Blue ice and white snow.",
+    blurb: "Blue ice, white snow and winter light.",
   },
 ];
 

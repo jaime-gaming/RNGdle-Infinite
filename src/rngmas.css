@@ -858,28 +858,7 @@
   line-height: 1.6;
 }
 
-/* Winter themes */
-:root[data-rngmas-theme="rngmas-lights"] {
-  --bg: #1a0f0a;
-  --surface: #23140d;
-  --text: #fff7ed;
-  --muted: #d6b8a3;
-  --secondary: #f3dcc8;
-  --border: #4a2a1a;
-  --hover: #2e1a10;
-  --green: #fbbf24;
-  --green-bg: #3a2410;
-  --danger: #ff8a80;
-  --danger-border: #ff8a8066;
-  --warning: #fbbf24;
-  --button: #fbbf24;
-  --scrim: #1a0f0acc;
-  --scrim-strong: #1a0f0a99;
-  --shadow: none;
-}
-:root[data-rngmas-theme="rngmas-lights"] .primary-button {
-  color: #1c1004;
-}
+/* The winter theme */
 :root[data-rngmas-theme="rngmas-frost"] {
   --bg: #06121c;
   --surface: #0b1e2c;
@@ -908,206 +887,6 @@
     background-color 0.35s ease,
     color 0.35s ease,
     border-color 0.35s ease;
-}
-
-/* RNGmas aura finishes */
-.number-box[data-cosmetic="rngmas-frost"] {
-  --box-background: linear-gradient(150deg, #082f49, #0c4a6e 55%, #082f49);
-  --box-border: #a5f3fc;
-  --box-ink: #f0fdff;
-  --box-shadow: 0 0 22px #38bdf866, inset 0 0 0 1px #a5f3fc44;
-}
-.number-box[data-cosmetic="rngmas-frost"] .box-halo {
-  display: block;
-  inset: -14px;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(ellipse, #7dd3fc55, transparent 72%);
-  filter: blur(6px);
-}
-.number-box[data-cosmetic="rngmas-frost"] .box-particles i {
-  background: #e0f2fe;
-  clip-path: polygon(
-    50% 0%,
-    61% 39%,
-    100% 50%,
-    61% 61%,
-    50% 100%,
-    39% 61%,
-    0 50%,
-    39% 39%
-  );
-  filter: drop-shadow(0 0 3px #38bdf8);
-}
-.number-box[data-cosmetic="rngmas-ember"] {
-  --box-background: linear-gradient(150deg, #1c0a01, #431407 55%, #1c0a01);
-  --box-border: #fb923c;
-  --box-ink: #fff7ed;
-  --box-shadow: 0 0 22px #ea580c66, inset 0 0 0 1px #fdba7444;
-}
-.number-box[data-cosmetic="rngmas-ember"] .box-halo {
-  display: block;
-  inset: -16px;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(ellipse at bottom, #f9731666, transparent 75%);
-  filter: blur(8px);
-  animation: box-halo-pulse 5s ease-in-out infinite;
-}
-.number-box[data-cosmetic="rngmas-ember"] .box-particles i {
-  background: #fdba74;
-  clip-path: none;
-  border-radius: 50%;
-  filter: drop-shadow(0 0 4px #ea580c);
-}
-.number-box[data-cosmetic="rngmas-hollow"] {
-  --box-background: radial-gradient(
-    circle at 50% 50%,
-    #022c22 0 30%,
-    #042f2e 31%,
-    #065f46 100%
-  );
-  --box-border: #5eead4;
-  --box-ink: #f0fdfa;
-  --box-shadow: 0 0 22px #14b8a666, inset 0 0 0 1px #5eead444;
-}
-.number-box[data-cosmetic="rngmas-hollow"] .box-halo {
-  display: block;
-  inset: -14px;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    transparent 40%,
-    #2dd4bf44 70%,
-    transparent 72%
-  );
-}
-.number-box[data-cosmetic="rngmas-hollow"] .box-particles i {
-  background: #99f6e4;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  filter: drop-shadow(0 0 3px #14b8a6);
-}
-.number-box[data-cosmetic="rngmas-golem"] {
-  --box-background:
-    radial-gradient(circle at 50% 50%, #fbbf24 0 8%, transparent 9%),
-    linear-gradient(150deg, #1c1410, #292524 55%, #1c1410);
-  --box-border: #fbbf24;
-  --box-ink: #fefce8;
-  --box-shadow: 0 0 22px #fbbf2455, inset 0 0 0 1px #fbbf2444;
-}
-.number-box[data-cosmetic="rngmas-golem"] .box-particles i {
-  background: #fde68a;
-  clip-path: polygon(
-    50% 0%,
-    61% 39%,
-    100% 50%,
-    61% 61%,
-    50% 100%,
-    39% 61%,
-    0 50%,
-    39% 39%
-  );
-  filter: drop-shadow(0 0 3px #f59e0b);
-}
-.number-box[data-cosmetic="rngmas-newyear"] {
-  --box-background: linear-gradient(150deg, #1e1b4b, #312e81 55%, #1e1b4b);
-  --box-border: #f0abfc;
-  --box-ink: #fdf4ff;
-  --box-shadow: 0 0 22px #a855f766, inset 0 0 0 1px #f0abfc44;
-}
-.number-box[data-cosmetic="rngmas-newyear"] .box-halo {
-  display: block;
-  inset: -14px;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(ellipse, #e879f955, transparent 72%);
-  filter: blur(6px);
-}
-.number-box[data-cosmetic="rngmas-newyear"] .box-particles i {
-  background: #f5d0fe;
-  clip-path: polygon(
-    50% 0%,
-    61% 39%,
-    100% 50%,
-    61% 61%,
-    50% 100%,
-    39% 61%,
-    0 50%,
-    39% 39%
-  );
-  filter: drop-shadow(0 0 3px #d946ef);
-}
-.number-box[data-cosmetic="rngmas-gingerbread"] {
-  --box-background: linear-gradient(150deg, #3b1d0f, #78350f 55%, #3b1d0f);
-  --box-border: #fcd34d;
-  --box-ink: #fffbeb;
-  --box-shadow: 0 0 22px #f59e0b55, inset 0 0 0 1px #fcd34d44;
-}
-.number-box[data-cosmetic="rngmas-gingerbread"] .box-ribbon {
-  display: block;
-  inset: 0;
-  border-radius: inherit;
-  background: repeating-linear-gradient(
-    135deg,
-    transparent 0 16px,
-    #fffbeb26 17px 20px,
-    transparent 21px 34px
-  );
-}
-.number-box[data-cosmetic="rngmas-gingerbread"] .box-particles i {
-  background: #fef3c7;
-  border-radius: 50%;
-  clip-path: none;
-  filter: drop-shadow(0 0 3px #f59e0b);
-}
-.number-box[data-cosmetic="rngmas-star"] {
-  --box-background:
-    radial-gradient(circle at 50% 40%, #fefce8 0 12%, transparent 13%),
-    linear-gradient(150deg, #3f1d0b, #b45309 55%, #3f1d0b);
-  --box-border: #fef08a;
-  --box-ink: #fffdf5;
-  --box-shadow: 0 0 26px #fbbf2477, inset 0 0 0 1px #fef08a55;
-}
-.number-box[data-cosmetic="rngmas-star"] .box-halo {
-  display: block;
-  inset: -18px;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    #fef08a66,
-    #c1121f22 55%,
-    transparent 72%
-  );
-  filter: blur(8px);
-  animation: box-halo-pulse 4s ease-in-out infinite;
-}
-.number-box[data-cosmetic="rngmas-star"] .box-ribbon {
-  display: block;
-  inset: 0;
-  border-radius: inherit;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 22px,
-    #c1121f33 23px 26px,
-    transparent 27px 44px
-  );
-  animation: box-sweep 8s ease-in-out infinite;
-}
-.number-box[data-cosmetic="rngmas-star"] .box-particles i {
-  background: #fef08a;
-  clip-path: polygon(
-    50% 0%,
-    61% 39%,
-    100% 50%,
-    61% 61%,
-    50% 100%,
-    39% 61%,
-    0 50%,
-    39% 39%
-  );
-  filter: drop-shadow(0 0 4px #fbbf24);
 }
 
 @media (max-width: 760px) {
@@ -1183,14 +962,393 @@
 @media (prefers-reduced-motion: reduce) {
   .rngmas-dialog[open],
   .advent-door.is-open::after,
-  .rngmas-star,
-  .number-box[data-cosmetic="rngmas-ember"] .box-halo,
-  .number-box[data-cosmetic="rngmas-star"] .box-halo,
-  .number-box[data-cosmetic="rngmas-star"] .box-ribbon {
+  .advent-door.is-ready::before,
+  .advent-star,
+  .rngmas-hero::after,
+  .golem-figure,
+  .golem-hp::after,
+  .rngmas-week-timeline li.is-current .rngmas-week-dot {
     animation: none;
   }
   .rngmas-flag,
-  .advent-door {
+  .advent-door,
+  .advent-star,
+  .golem-card {
     transition: none;
   }
+  .golem-card.is-hit .golem-figure {
+    transform: rotate(-3deg);
+  }
+}
+
+/* ── Season decoration ────────────────────────────────────────────────────
+   A fixed, non-interactive layer behind the page canvas: snow banks in the
+   lower corners, pines, gifts and lights along both edges, and a slow
+   snowfall across the whole page. */
+:root[data-season="rngmas"] {
+  --rngmas-ice: #7dd3fc;
+  --rngmas-pine: #047857;
+  --rngmas-ribbon: #fbbf24;
+  --rngmas-snow: #f0f9ff;
+  --rngmas-snow-shadow: #dbeafe;
+}
+/* Keep the negative decoration layer above the page canvas in every browser. */
+:root[data-season="rngmas"] #root {
+  isolation: isolate;
+}
+
+.rngmas-decor {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--rngmas-ice);
+  z-index: -1;
+}
+.rngmas-aurora {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 58% 42% at 6% 4%, #7dd3fc2e, transparent 68%),
+    radial-gradient(ellipse 46% 34% at 96% 10%, #f0abfc24, transparent 70%);
+  animation: rngmas-aurora-breathe 18s ease-in-out infinite alternate;
+}
+.rngmas-snowbank {
+  position: absolute;
+  bottom: -8px;
+  width: clamp(150px, 21vw, 320px);
+  height: clamp(64px, 9vw, 132px);
+  color: var(--rngmas-snow);
+  filter: drop-shadow(0 -3px 10px #7dd3fc4d);
+  opacity: 0.96;
+}
+.rngmas-snowbank-left {
+  left: -26px;
+  transform: rotate(-2deg);
+}
+.rngmas-snowbank-right {
+  right: -26px;
+  transform: rotate(2deg) scaleX(-1);
+}
+.rngmas-pine,
+.rngmas-gift,
+.rngmas-bell,
+.rngmas-flake-mark,
+.rngmas-star-mark {
+  position: absolute;
+  filter: drop-shadow(0 0 6px #7dd3fc40);
+}
+.rngmas-pine {
+  color: var(--rngmas-pine);
+  opacity: 0.55;
+}
+.rngmas-pine-left {
+  top: 7%;
+  left: 1.2%;
+  transform: rotate(-9deg);
+  animation: rngmas-sway 11s ease-in-out infinite alternate;
+}
+.rngmas-pine-right {
+  top: 30%;
+  right: 1.6%;
+  opacity: 0.32;
+  transform: rotate(7deg);
+  animation: rngmas-sway 13s ease-in-out infinite alternate-reverse;
+}
+.rngmas-pine-low {
+  top: 62%;
+  left: 3.4%;
+  opacity: 0.24;
+  transform: rotate(4deg);
+}
+.rngmas-gift {
+  color: var(--rngmas-ribbon);
+  opacity: 0.5;
+}
+.rngmas-gift-left {
+  top: 46%;
+  left: 1.8%;
+  animation: rngmas-sway 9s ease-in-out infinite alternate;
+}
+.rngmas-gift-right {
+  top: 12%;
+  right: 2.4%;
+  opacity: 0.3;
+  animation: rngmas-sway 10s ease-in-out infinite alternate-reverse;
+}
+.rngmas-bell {
+  color: var(--rngmas-ribbon);
+  opacity: 0.42;
+}
+.rngmas-bell-right {
+  top: 56%;
+  right: 1.4%;
+  animation: rngmas-sway 12s ease-in-out infinite alternate;
+}
+.rngmas-flake-mark {
+  color: var(--rngmas-ice);
+  opacity: 0.5;
+}
+.rngmas-flake-mark-left {
+  top: 24%;
+  left: 4.2%;
+  animation: rngmas-twinkle-mark 5s ease-in-out infinite;
+}
+.rngmas-flake-mark-right {
+  top: 78%;
+  right: 4.6%;
+  animation: rngmas-twinkle-mark 6.5s ease-in-out infinite;
+}
+.rngmas-star-mark {
+  color: #fbbf24;
+  opacity: 0.55;
+}
+.rngmas-star-mark-left {
+  top: 84%;
+  left: 1.6%;
+  animation: rngmas-twinkle-mark 4s ease-in-out infinite;
+}
+.rngmas-star-mark-right {
+  top: 42%;
+  right: 5.4%;
+  animation: rngmas-twinkle-mark 5.5s ease-in-out infinite;
+}
+.rngmas-snowfield {
+  position: absolute;
+  inset: 0;
+}
+.rngmas-snowfield i {
+  position: absolute;
+  top: -6%;
+  left: var(--left);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: var(--rngmas-snow);
+  box-shadow: 0 0 6px #ffffffcc;
+  opacity: 0;
+  animation: rngmas-snowfall var(--duration) linear infinite;
+  animation-delay: var(--delay);
+}
+.rngmas-garland {
+  position: absolute;
+  top: 16%;
+  width: 2px;
+  height: 44%;
+  background: repeating-linear-gradient(
+    180deg,
+    #fbbf24b3 0 3px,
+    transparent 3px 15px
+  );
+  filter: drop-shadow(0 0 5px #fbbf24);
+  opacity: 0.55;
+  animation: rngmas-garland-glow 7s ease-in-out infinite alternate;
+}
+.rngmas-garland-left {
+  left: 2.2%;
+}
+.rngmas-garland-right {
+  right: 2.2%;
+  animation-delay: -3.5s;
+}
+
+/* ── Shelf motion ──────────────────────────────────────────────────────── */
+.advent-door:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px #fbbf2460,
+    0 6px 20px #fbbf2433;
+}
+.advent-door.is-ready::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: rngmas-ready-ring 2.8s ease-out infinite;
+}
+.advent-star.is-open .advent-star-art {
+  animation: rngmas-twinkle-mark 3.4s ease-in-out infinite;
+}
+.rngmas-hero::after {
+  background-size: 24px 3px;
+  animation: rngmas-ribbon-run 7s linear infinite;
+}
+.golem-figure {
+  animation: rngmas-golem-idle 4.6s ease-in-out infinite alternate;
+}
+.golem-card.is-hit {
+  box-shadow:
+    0 0 0 1px var(--golem-accent, #7dd3fc),
+    0 0 34px color-mix(in srgb, var(--golem-accent, #7dd3fc) 45%, transparent);
+}
+.golem-card.is-hit .golem-figure {
+  animation: rngmas-golem-hit 0.42s ease;
+}
+.golem-hp::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 32%,
+    #ffffff2b 48%,
+    transparent 64%
+  );
+  background-size: 220% 100%;
+  animation: rngmas-hp-shimmer 3.6s linear infinite;
+}
+.rngmas-week-timeline li.is-current .rngmas-week-dot {
+  animation: rngmas-week-pulse 2.6s ease-in-out infinite;
+}
+.rngmas-week-timeline li.is-current .rngmas-week-copy strong {
+  color: var(--week-accent);
+}
+
+@keyframes rngmas-snowfall {
+  0% {
+    transform: translate3d(0, -6vh, 0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.85;
+  }
+  88% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate3d(var(--drift, 20px), 110vh, 0);
+    opacity: 0;
+  }
+}
+@keyframes rngmas-sway {
+  from {
+    translate: 0 0;
+    rotate: -2deg;
+  }
+  to {
+    translate: 0 -7px;
+    rotate: 2deg;
+  }
+}
+@keyframes rngmas-twinkle-mark {
+  0%,
+  100% {
+    opacity: 0.28;
+    scale: 0.92;
+  }
+  50% {
+    opacity: 0.75;
+    scale: 1.05;
+  }
+}
+@keyframes rngmas-aurora-breathe {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rngmas-garland-glow {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0.62;
+  }
+}
+@keyframes rngmas-ready-ring {
+  0% {
+    box-shadow: 0 0 0 0 #fbbf2499;
+  }
+  70% {
+    box-shadow: 0 0 0 8px #fbbf2400;
+  }
+  100% {
+    box-shadow: 0 0 0 0 #fbbf2400;
+  }
+}
+@keyframes rngmas-ribbon-run {
+  to {
+    background-position: 24px 0;
+  }
+}
+@keyframes rngmas-golem-idle {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 -3px;
+  }
+}
+@keyframes rngmas-golem-hit {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  20% {
+    translate: -4px 1px;
+    rotate: -2deg;
+  }
+  45% {
+    translate: 4px -1px;
+    rotate: 2deg;
+  }
+  70% {
+    translate: -2px 0;
+    rotate: -1deg;
+  }
+}
+@keyframes rngmas-hp-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes rngmas-week-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--week-accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px
+      color-mix(in srgb, var(--week-accent) 12%, transparent);
+  }
+}
+
+@media (max-width: 900px) {
+  .rngmas-pine,
+  .rngmas-gift,
+  .rngmas-bell,
+  .rngmas-flake-mark,
+  .rngmas-star-mark,
+  .rngmas-garland {
+    display: none;
+  }
+  .rngmas-snowbank {
+    opacity: 0.7;
+  }
+}
+
+/* Reduced motion: keep the winter picture, drop the movement. */
+.rngmas-decor.is-reduced-motion .rngmas-aurora,
+.rngmas-decor.is-reduced-motion .rngmas-pine,
+.rngmas-decor.is-reduced-motion .rngmas-gift,
+.rngmas-decor.is-reduced-motion .rngmas-bell,
+.rngmas-decor.is-reduced-motion .rngmas-flake-mark,
+.rngmas-decor.is-reduced-motion .rngmas-star-mark,
+.rngmas-decor.is-reduced-motion .rngmas-garland {
+  animation: none;
+}
+.rngmas-decor.is-reduced-motion .rngmas-snowfield i {
+  animation: none;
+  opacity: 0.35;
+  transform: translate3d(0, 62vh, 0);
 }

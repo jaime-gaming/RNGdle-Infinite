@@ -73,6 +73,7 @@ import { taskSummary } from "./tasks.js";
 import { useGameClock } from "./use-game-clock.js";
 import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
 import AppearanceMenu from "./components/AppearanceMenu.jsx";
+import RngmasDecor from "./components/RngmasDecor.jsx";
 import { freshRareBadges, newlyReady } from "./notice-rules.js";
 import { badgeMetadata } from "./roll-data.js";
 import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
@@ -833,6 +834,7 @@ function App() {
 
   return (
     <>
+      <RngmasDecor />
       {isLegacyMirrorBuild() && <MirrorNotice />}
       <header className="header">
         <div className="header-left">

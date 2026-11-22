@@ -7,6 +7,7 @@ export const CHANGELOG = [
       "rngmas runs from december 1 to january 2: a temporary winter theme, an advent calendar and five weekly golems.",
       "the advent calendar opens one door a day; missed doors stay claimable for three days, and christmas day holds the rngmas star.",
       "golem smash: spend ep on strikes, each strike rolls a random multiplier, and every defeated golem pays a permanent aura.",
+      "snow drifts past the page edges while the season is on, and the seven winter auras wear their own animated art.",
       "black friday 2026 is retired: prices return to normal, and the blackouts and stamps you already earned stay yours.",
     ],
   },

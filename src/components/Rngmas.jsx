@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -143,8 +143,8 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
             <small>one each week</small>
           </span>
           <span>
-            <strong>{RNGMAS_TEMPORARY_THEMES.length} themes</strong>
-            <small>winter looks</small>
+            <strong>{RNGMAS_TEMPORARY_THEMES.length} theme</strong>
+            <small>winter look</small>
           </span>
         </div>
 
@@ -180,13 +180,13 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
 
         <section className="rngmas-block">
           <h3>
-            <Sparkles size={14} aria-hidden="true" /> Two winter looks
+            <Sparkles size={14} aria-hidden="true" /> The winter look
           </h3>
           <p>
             While RNGmas is on, the Appearance menu offers{" "}
-            {RNGMAS_TEMPORARY_THEMES.map((entry) => entry.label).join(" and ")}.
-            They leave the menu when the season ends; a selected winter theme
-            falls back to the regular dark theme.
+            {RNGMAS_TEMPORARY_THEMES.map((entry) => entry.label).join(" and ")},
+            with snow drifting past the page edges. It leaves the menu when the
+            season ends and falls back to the regular dark theme.
           </p>
         </section>
 
@@ -304,7 +304,7 @@ export function AdventCalendar({ record, status, onClaim, pending }) {
               type="button"
               key={door.day}
               className={`advent-door ${isClaimed ? "is-claimed" : ""} ${
-                canClaim ? "is-open" : ""
+                canClaim ? "is-open is-ready" : ""
               } ${state.missed && !isClaimed ? "is-missed" : ""}`}
               disabled={!canClaim || pending}
               onClick={() => onClaim(door.day)}
@@ -394,6 +394,14 @@ function lastStrikeOf(progress, golemId) {
 }
 
 export function GolemSmash({ progress, status, onSmash, pending }) {
+  const [hit, setHit] = useState(false);
+  const hitTimer = useRef(0);
+  useEffect(
+    () => () => {
+      clearTimeout(hitTimer.current);
+    },
+    [],
+  );
   const week = status.week;
   if (!week) {
     return (
@@ -418,7 +426,9 @@ export function GolemSmash({ progress, status, onSmash, pending }) {
   const ended = status.now >= week.end;
   return (
     <section
-      className={`golem-card ${record.defeated ? "is-defeated" : ""}`}
+      className={`golem-card ${record.defeated ? "is-defeated" : ""} ${
+        hit ? "is-hit" : ""
+      }`}
       style={{ "--golem-accent": week.accent }}
       aria-labelledby="golem-title"
     >
@@ -476,7 +486,12 @@ export function GolemSmash({ progress, status, onSmash, pending }) {
                 type="button"
                 className="primary-button golem-smash-button"
                 disabled={pending || !affordable}
-                onClick={onSmash}
+                onClick={() => {
+                  setHit(true);
+                  clearTimeout(hitTimer.current);
+                  hitTimer.current = setTimeout(() => setHit(false), 460);
+                  onSmash?.();
+                }}
               >
                 <Hammer size={16} />
                 {affordable

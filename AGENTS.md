@@ -34,16 +34,31 @@ Black Friday 2026 is retired. `src/black-friday.js` keeps only the limited
 left. `sale-reward` history rows stay parseable and visible.
 
 RNGmas 2026 and the Battle Pass are the live event exceptions. RNGmas runs from
-1 December 2026 to 2 January 2027 (UTC) in `src/rngmas.js`: a temporary winter
-theme in the Appearance menu, a 24-door advent calendar on `/shop/rngmas`, and
-five weekly golems. A door opens on its December day and stays claimable for
+1 December 2026 to 2 January 2027 (UTC) in `src/rngmas.js`: the temporary
+Frostfall theme in the Appearance menu, a 24-door advent calendar on
+`/shop/rngmas`, and five weekly golems. A door opens on its December day and stays claimable for
 three days (`ADVENT_CATCH_UP_DAYS`); door 24 pays the Gingerbread aura and the
 Christmas Day star pays the RNGmas Star aura. Golem Smash spends
 `GOLEM_SMASH_COST` EP on a strike whose damage is `GOLEM_SMASH_BASE_DAMAGE`
 times a deterministic random multiplier (`golemStrikeFor`), carries between
 strikes, and pays a permanent aura when the week's golem is defeated.
 `progress.rngmas` (`{ id, claimed, finale, golems }`) is part of the save
-contract and survives every reset, like permanent cosmetics. Dev builds honour
+contract and survives every reset, like permanent cosmetics.
+
+RNGmas follows the RNGween pattern, not the retired Black Friday one. The page
+decoration is `src/components/RngmasDecor.jsx`: a fixed, `aria-hidden`,
+`pointer-events: none` layer behind `#root` (which gets `isolation: isolate`),
+aligned under the header, that sets `data-season="rngmas"` while the season is
+live and takes it away afterwards. It draws snow banks, pines, gifts, bells,
+garlands and a 22-flake snowfall; `is-reduced-motion` keeps the picture and
+drops every animation. The seven winter auras use
+`src/components/RngmasAura.jsx` plus `src/rngmas-auras.css`, which reuse the
+shared `.aura-*` ornament rules from `rngween-auras.css` (seal, filigree,
+crest, guardians, motes) instead of Black Friday's flat box paint. Keep new
+event art in that shape: hand-drawn marks in `game-icons.jsx`, SVG ornaments,
+CSS keyframes, and a reduced-motion path for each.
+
+Dev builds honour
 `VITE_GAME_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the shared game
 clock for previews; production ignores that variable, and Playwright forces it
 off so date-sensitive tests remain deterministic. Special & Limiteds banners
@@ -302,6 +317,7 @@ Only rolls fund a cycle gate.
 | `src/tasks.js`, `src/history-tally.js`           | Daily/weekly tasks and historical profile totals.                           |
 | `src/shop-data.js`                               | Products, shelves, aura families and timing upgrades.                       |
 | `src/rngmas.js`, `src/use-rngmas.js`             | RNGmas schedule, advent calendar, golems and rewards.                       |
+| `src/rngmas.css`, `src/rngmas-auras.css`         | RNGmas shelf, snow decoration and winter aura art.                          |
 | `src/changelog.js`, `src/app-update.js`          | Release notes, unseen-version marker and update identity.                   |
 | `src/components/`                                | Game, account and profile UI.                                               |
 | `src/*.css`                                      | Feature styles; `src/mobile.css` is loaded last.                            |

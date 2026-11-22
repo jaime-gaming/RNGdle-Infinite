@@ -1,0 +1,406 @@
+/* RNGmas 2026 auras: the permanent winter looks and their number-box finishes.
+   The ornament layer reuses the shared .aura-* rules from rngween-auras.css. */
+/* RNGmas aura art: the RNGween ornament layer with a winter seal, crest,
+   guardians and rising snow motes. */
+.rngmas-aura {
+  --aura-primary: #7dd3fc;
+  --aura-secondary: #0c4a6e;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  color: var(--aura-primary);
+  pointer-events: none;
+}
+.aura-winter .aura-atmosphere {
+  inset: -26px -22px;
+  background:
+    radial-gradient(
+      ellipse at 50% 92%,
+      color-mix(in srgb, var(--aura-primary) 34%, transparent),
+      transparent 66%
+    ),
+    radial-gradient(
+      ellipse at 50% 4%,
+      color-mix(in srgb, var(--aura-secondary) 26%, transparent),
+      transparent 62%
+    );
+  animation-duration: 7s;
+}
+.aura-winter .aura-seal {
+  opacity: 0.42;
+  stroke-width: 1.1;
+  animation-duration: 64s;
+  filter: drop-shadow(
+    0 0 5px color-mix(in srgb, var(--aura-primary) 45%, transparent)
+  );
+}
+.aura-winter .aura-seal-outer {
+  stroke-dasharray: 22 7;
+}
+.aura-winter .aura-filigree {
+  color: var(--aura-primary);
+  opacity: 0.55;
+}
+.aura-winter .aura-crest {
+  border-radius: 14px 14px 46% 46%;
+  background: color-mix(in srgb, var(--surface) 84%, var(--aura-primary));
+  animation: aura-breathe 5s ease-in-out infinite;
+}
+.aura-winter .aura-guardian {
+  color: color-mix(in srgb, var(--aura-primary) 72%, var(--aura-secondary));
+  animation-name: aura-guardian-float;
+  animation-duration: 7s;
+}
+.aura-winter .aura-guardian-left {
+  left: -24px;
+  transform: rotate(-14deg);
+}
+.aura-winter .aura-guardian-right {
+  right: -24px;
+  animation-delay: -3.5s;
+  transform: rotate(14deg);
+}
+.aura-winter .aura-orbit-dot {
+  background: #f0fdff;
+  box-shadow: 0 0 7px 2px
+    color-mix(in srgb, var(--aura-primary) 55%, transparent);
+}
+.aura-winter .aura-orbit-dot-second {
+  animation-duration: 5s;
+}
+.aura-winter .aura-motes i {
+  width: 4px;
+  height: 4px;
+  background: #f0fdff;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--aura-primary) 60%, transparent);
+  animation-name: rngmas-mote-fall;
+  animation-duration: 6s;
+}
+
+.aura-frost {
+  --aura-primary: #7dd3fc;
+  --aura-secondary: #0c4a6e;
+}
+.aura-ember {
+  --aura-primary: #fdba74;
+  --aura-secondary: #7c2d12;
+}
+.aura-hollow {
+  --aura-primary: #5eead4;
+  --aura-secondary: #134e4a;
+}
+.aura-golem {
+  --aura-primary: #fbbf24;
+  --aura-secondary: #78350f;
+}
+.aura-newyear {
+  --aura-primary: #f0abfc;
+  --aura-secondary: #4c1d95;
+}
+.aura-gingerbread {
+  --aura-primary: #fcd34d;
+  --aura-secondary: #92400e;
+}
+.aura-star {
+  --aura-primary: #fef08a;
+  --aura-secondary: #b45309;
+}
+.aura-star .aura-seal {
+  opacity: 0.75;
+  stroke-width: 1.4;
+  animation-duration: 40s;
+}
+.aura-star .aura-crest {
+  top: -29px;
+  width: 44px;
+  height: 44px;
+  margin-left: -22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #fef9c3, #b45309);
+  color: #431407;
+  box-shadow: 0 0 18px #fbbf2480;
+}
+.aura-star .aura-motes i {
+  animation-name: rngmas-twinkle;
+  animation-duration: 3.2s;
+}
+.aura-ember .aura-motes i,
+.aura-golem .aura-motes i,
+.aura-gingerbread .aura-motes i {
+  background: var(--aura-primary);
+  animation-name: rngmas-mote-rise;
+}
+.aura-hollow .aura-seal {
+  transform: rotateX(48deg);
+  animation-name: rngmas-seal-tilt;
+  animation-duration: 18s;
+}
+.aura-hollow .aura-crest {
+  opacity: 0.8;
+}
+.aura-newyear .aura-orbit-dot {
+  background: #f5d0fe;
+}
+
+@keyframes rngmas-mote-fall {
+  0% {
+    translate: 0 -14px;
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    translate: 0 12px;
+    opacity: 0;
+  }
+}
+@keyframes rngmas-mote-rise {
+  0% {
+    translate: 0 8px;
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.85;
+  }
+  100% {
+    translate: 0 -16px;
+    opacity: 0;
+  }
+}
+@keyframes rngmas-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    scale: 0.7;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.25;
+  }
+}
+@keyframes rngmas-seal-tilt {
+  from {
+    transform: rotateX(48deg) rotate(0deg);
+  }
+  to {
+    transform: rotateX(48deg) rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rngmas-aura .aura-seal,
+  .rngmas-aura .aura-atmosphere,
+  .rngmas-aura .aura-crest,
+  .rngmas-aura .aura-guardian,
+  .rngmas-aura .aura-orbit-dot,
+  .rngmas-aura .aura-motes i,
+  .number-box[data-cosmetic="rngmas-ember"] .box-halo,
+  .number-box[data-cosmetic="rngmas-star"] .box-halo,
+  .number-box[data-cosmetic="rngmas-star"] .box-ribbon {
+    animation: none;
+  }
+  .rngmas-aura .aura-motes i {
+    opacity: 0.4;
+  }
+}
+
+/* RNGmas aura finishes */
+.number-box[data-cosmetic="rngmas-frost"] {
+  --box-background: linear-gradient(150deg, #082f49, #0c4a6e 55%, #082f49);
+  --box-border: #a5f3fc;
+  --box-ink: #f0fdff;
+  --box-shadow: 0 0 22px #38bdf866, inset 0 0 0 1px #a5f3fc44;
+}
+.number-box[data-cosmetic="rngmas-frost"] .box-halo {
+  display: block;
+  inset: -14px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(ellipse, #7dd3fc55, transparent 72%);
+  filter: blur(6px);
+}
+.number-box[data-cosmetic="rngmas-frost"] .box-particles i {
+  background: #e0f2fe;
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0 50%,
+    39% 39%
+  );
+  filter: drop-shadow(0 0 3px #38bdf8);
+}
+.number-box[data-cosmetic="rngmas-ember"] {
+  --box-background: linear-gradient(150deg, #1c0a01, #431407 55%, #1c0a01);
+  --box-border: #fb923c;
+  --box-ink: #fff7ed;
+  --box-shadow: 0 0 22px #ea580c66, inset 0 0 0 1px #fdba7444;
+}
+.number-box[data-cosmetic="rngmas-ember"] .box-halo {
+  display: block;
+  inset: -16px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at bottom, #f9731666, transparent 75%);
+  filter: blur(8px);
+  animation: box-halo-pulse 5s ease-in-out infinite;
+}
+.number-box[data-cosmetic="rngmas-ember"] .box-particles i {
+  background: #fdba74;
+  clip-path: none;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 4px #ea580c);
+}
+.number-box[data-cosmetic="rngmas-hollow"] {
+  --box-background: radial-gradient(
+    circle at 50% 50%,
+    #022c22 0 30%,
+    #042f2e 31%,
+    #065f46 100%
+  );
+  --box-border: #5eead4;
+  --box-ink: #f0fdfa;
+  --box-shadow: 0 0 22px #14b8a666, inset 0 0 0 1px #5eead444;
+}
+.number-box[data-cosmetic="rngmas-hollow"] .box-halo {
+  display: block;
+  inset: -14px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    transparent 40%,
+    #2dd4bf44 70%,
+    transparent 72%
+  );
+}
+.number-box[data-cosmetic="rngmas-hollow"] .box-particles i {
+  background: #99f6e4;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  filter: drop-shadow(0 0 3px #14b8a6);
+}
+.number-box[data-cosmetic="rngmas-golem"] {
+  --box-background:
+    radial-gradient(circle at 50% 50%, #fbbf24 0 8%, transparent 9%),
+    linear-gradient(150deg, #1c1410, #292524 55%, #1c1410);
+  --box-border: #fbbf24;
+  --box-ink: #fefce8;
+  --box-shadow: 0 0 22px #fbbf2455, inset 0 0 0 1px #fbbf2444;
+}
+.number-box[data-cosmetic="rngmas-golem"] .box-particles i {
+  background: #fde68a;
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0 50%,
+    39% 39%
+  );
+  filter: drop-shadow(0 0 3px #f59e0b);
+}
+.number-box[data-cosmetic="rngmas-newyear"] {
+  --box-background: linear-gradient(150deg, #1e1b4b, #312e81 55%, #1e1b4b);
+  --box-border: #f0abfc;
+  --box-ink: #fdf4ff;
+  --box-shadow: 0 0 22px #a855f766, inset 0 0 0 1px #f0abfc44;
+}
+.number-box[data-cosmetic="rngmas-newyear"] .box-halo {
+  display: block;
+  inset: -14px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(ellipse, #e879f955, transparent 72%);
+  filter: blur(6px);
+}
+.number-box[data-cosmetic="rngmas-newyear"] .box-particles i {
+  background: #f5d0fe;
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0 50%,
+    39% 39%
+  );
+  filter: drop-shadow(0 0 3px #d946ef);
+}
+.number-box[data-cosmetic="rngmas-gingerbread"] {
+  --box-background: linear-gradient(150deg, #3b1d0f, #78350f 55%, #3b1d0f);
+  --box-border: #fcd34d;
+  --box-ink: #fffbeb;
+  --box-shadow: 0 0 22px #f59e0b55, inset 0 0 0 1px #fcd34d44;
+}
+.number-box[data-cosmetic="rngmas-gingerbread"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 16px,
+    #fffbeb26 17px 20px,
+    transparent 21px 34px
+  );
+}
+.number-box[data-cosmetic="rngmas-gingerbread"] .box-particles i {
+  background: #fef3c7;
+  border-radius: 50%;
+  clip-path: none;
+  filter: drop-shadow(0 0 3px #f59e0b);
+}
+.number-box[data-cosmetic="rngmas-star"] {
+  --box-background:
+    radial-gradient(circle at 50% 40%, #fefce8 0 12%, transparent 13%),
+    linear-gradient(150deg, #3f1d0b, #b45309 55%, #3f1d0b);
+  --box-border: #fef08a;
+  --box-ink: #fffdf5;
+  --box-shadow: 0 0 26px #fbbf2477, inset 0 0 0 1px #fef08a55;
+}
+.number-box[data-cosmetic="rngmas-star"] .box-halo {
+  display: block;
+  inset: -18px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fef08a66,
+    #c1121f22 55%,
+    transparent 72%
+  );
+  filter: blur(8px);
+  animation: box-halo-pulse 4s ease-in-out infinite;
+}
+.number-box[data-cosmetic="rngmas-star"] .box-ribbon {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 22px,
+    #c1121f33 23px 26px,
+    transparent 27px 44px
+  );
+  animation: box-sweep 8s ease-in-out infinite;
+}
+.number-box[data-cosmetic="rngmas-star"] .box-particles i {
+  background: #fef08a;
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0 50%,
+    39% 39%
+  );
+  filter: drop-shadow(0 0 4px #fbbf24);
+}

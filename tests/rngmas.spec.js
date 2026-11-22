@@ -310,7 +310,7 @@ test("after the season the shop shows no RNGmas", async ({ page }) => {
   await expect(page.locator('[data-shelf="rngmas"]')).toHaveCount(0);
 });
 
-test("the winter themes appear in the Appearance menu during the season", async ({
+test("the winter theme appears in the Appearance menu during the season", async ({
   page,
 }) => {
   await seedProgress(page, { ...emptyProgress(), profile: testProfile });
@@ -318,17 +318,86 @@ test("the winter themes appear in the Appearance menu during the season", async 
   await page.goto("/");
   await waitForApp(page);
   await page.getByRole("button", { name: "Appearance" }).click();
-  const lights = page.getByRole("menuitemradio", {
-    name: /RNGmas Lights theme/,
-  });
   const frost = page.getByRole("menuitemradio", { name: /Frostfall theme/ });
-  await expect(lights).toBeVisible();
   await expect(frost).toBeVisible();
+  await expect(
+    page.getByRole("menuitemradio", { name: /Lights theme/ }),
+  ).toHaveCount(0);
   await frost.click();
   await expect(page.locator("html")).toHaveAttribute(
     "data-rngmas-theme",
     "rngmas-frost",
   );
+});
+
+test("the season brings a snow decoration layer behind the page", async ({
+  page,
+}) => {
+  await seedProgress(page, { ...emptyProgress(), profile: testProfile });
+  await pauseClockAt(page, SEASON);
+  await page.goto("/");
+  await waitForApp(page);
+  const decor = page.locator(".rngmas-decor");
+  await expect(decor).toHaveCount(1);
+  await expect(page.locator("html")).toHaveAttribute("data-season", "rngmas");
+  await expect(decor).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator(".rngmas-snowfield i")).toHaveCount(22);
+  await expect(page.locator(".rngmas-snowbank")).toHaveCount(2);
+  const style = await decor.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return {
+      pointerEvents: computed.pointerEvents,
+      position: computed.position,
+      zIndex: computed.zIndex,
+    };
+  });
+  expect(style).toEqual({
+    pointerEvents: "none",
+    position: "fixed",
+    zIndex: "-1",
+  });
+});
+
+test("the snow decoration honours reduced motion and leaves after the season", async ({
+  page,
+}) => {
+  await seedProgress(page, { ...emptyProgress(), profile: testProfile });
+  await pauseClockAt(page, SEASON);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await waitForApp(page);
+  await expect(page.locator(".rngmas-decor")).toHaveClass(/is-reduced-motion/);
+  const animated = await page
+    .locator(".rngmas-snowfield i")
+    .first()
+    .evaluate((element) => getComputedStyle(element).animationName);
+  expect(animated).toBe("none");
+
+  await pauseClockAt(page, AFTER);
+  await page.goto("/shop");
+  await waitForApp(page);
+  await expect(page.locator(".rngmas-decor")).toHaveCount(0);
+  await expect(page.locator("html")).not.toHaveAttribute("data-season");
+});
+
+test("a winter aura draws the shared ornament layer", async ({ page }) => {
+  await seedProgress(page, {
+    ...emptyProgress(),
+    profile: testProfile,
+    balance: 4_000_000,
+    totalEarned: 4_000_000,
+    owned: ["rngmas-star"],
+  });
+  await pauseClockAt(page, SEASON);
+  await page.goto("/shop/auras/rngmas");
+  await waitForApp(page);
+  const aura = page.locator(".rngmas-aura").first();
+  await expect(aura).toBeVisible();
+  await expect(aura).toHaveClass(/aura-winter/);
+  await expect(aura.locator(".aura-seal")).toHaveCount(1);
+  await expect(aura.locator(".aura-crest")).toHaveCount(1);
+  await expect(aura.locator(".aura-guardian")).toHaveCount(2);
+  await expect(aura.locator(".aura-motes i")).toHaveCount(8);
 });
 
 test("every week has a golem and a distinct permanent aura", () => {

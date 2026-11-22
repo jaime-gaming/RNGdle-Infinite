@@ -9,6 +9,8 @@ import {
   RngmasEventNotice,
   RngmasWeeks,
 } from "../../src/components/Rngmas.jsx";
+import RngmasAura from "../../src/components/RngmasAura.jsx";
+import RngmasDecor from "../../src/components/RngmasDecor.jsx";
 import { RNGMAS_WEEKS, emptyRngmas } from "../../src/rngmas.js";
 
 const results = [];
@@ -181,6 +183,68 @@ export async function run() {
     check(
       host.querySelector('[data-testid="rngmas-event-button"]') !== null,
       "the event banner renders outside the season",
+    );
+    act(() => root.unmount());
+  }
+
+  {
+    const { root, host } = mount(<RngmasAura aura="rngmas-star" />);
+    await settle();
+    const aura = host.querySelector(".rngmas-aura");
+    check(Boolean(aura), "a winter aura draws its ornament");
+    check(
+      aura?.querySelectorAll(".aura-seal").length === 1 &&
+        aura?.querySelectorAll(".aura-filigree").length === 1,
+      "the winter aura has a seal and filigree",
+    );
+    check(
+      aura?.querySelectorAll(".aura-crest").length === 1 &&
+        aura?.querySelectorAll(".aura-guardian").length === 2,
+      "the winter aura has a crest and two guardians",
+    );
+    check(
+      aura?.querySelectorAll(".aura-motes i").length === 8,
+      "the winter aura has eight motes",
+    );
+    act(() => root.unmount());
+  }
+
+  {
+    const { root, host } = mount(<RngmasAura aura="jack-o-glow" />);
+    await settle();
+    check(
+      host.querySelector(".rngmas-aura") === null,
+      "other events keep their own aura art",
+    );
+    act(() => root.unmount());
+  }
+
+  {
+    const { root, host } = mount(
+      <RngmasDecor
+        status={{
+          active: true,
+          shown: true,
+          over: false,
+          now: SEASON,
+        }}
+      />,
+    );
+    await settle();
+    const decor = host.querySelector(".rngmas-decor");
+    check(Boolean(decor), "the snow decoration layer renders");
+    check(
+      decor?.querySelectorAll(".rngmas-snowfield i").length === 22,
+      "the snow field has its flakes",
+    );
+    check(
+      decor?.querySelectorAll(".rngmas-snowbank").length === 2,
+      "both snow banks are drawn",
+    );
+    check(
+      decor?.querySelectorAll(".rngmas-pine, .rngmas-gift, .rngmas-bell")
+        .length >= 5,
+      "the side ornaments are drawn",
     );
     act(() => root.unmount());
   }

@@ -2,8 +2,9 @@ import React from "react";
 import "../number-box.css";
 import "../number-box-palettes.css";
 import "../rngween-auras.css";
-import "../rngmas.css";
+import "../rngmas-auras.css";
 import RngweenAura from "./RngweenAura.jsx";
+import RngmasAura from "./RngmasAura.jsx";
 import { productById } from "../shop-data.js";
 
 const tiers = new Set([
@@ -131,6 +132,7 @@ export default function NumberBox({
         <span className="box-cosmetic" aria-hidden="true">
           <span className="box-finish" />
           <RngweenAura aura={cosmetic} />
+          <RngmasAura aura={cosmetic} />
           <span className="box-halo" />
           <span className="box-ornament">
             <span className="aura-trace" />
