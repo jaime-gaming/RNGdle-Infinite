@@ -19,6 +19,11 @@ export function installDom(url = "http://localhost/") {
     setTimeout(() => callback(Date.now()), 0);
   globalThis.cancelAnimationFrame = clearTimeout;
   globalThis.localStorage = win.localStorage;
+  globalThis.sessionStorage = win.sessionStorage;
+  globalThis.location = win.location;
+  globalThis.history = win.history;
+  globalThis.matchMedia = win.matchMedia.bind(win);
+  globalThis.CSS = win.CSS;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   return win;
 }

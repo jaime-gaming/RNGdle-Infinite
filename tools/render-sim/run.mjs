@@ -4,6 +4,7 @@ import { buildAndRun } from "./build.mjs";
 
 installDom();
 const suites = [
+  new URL("./app-shell.mjs", import.meta.url).pathname,
   new URL("./offline-overlay.mjs", import.meta.url).pathname,
   new URL("./profile-privacy.mjs", import.meta.url).pathname,
 ];
