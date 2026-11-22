@@ -1,4 +1,5 @@
 import { unpackVaultSave } from "./save-codec.js";
+import { packDeviceSave } from "./local-save.js";
 import { gameNow } from "./game-clock";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { drainSerialQueue, enqueueSerial } from "./serial-queue.js";
@@ -16,6 +17,7 @@ import {
   writeCloudSyncMark,
   renameCloudProfile,
   removeCachedSaveForUser,
+  reserveCloudProfileName,
   restoreCloudSaveSnapshot,
   restoredSaveOwner,
   selectLocalSaveForCloudUser,
@@ -64,7 +66,12 @@ import {
   parsePending,
   recoverUnsavedRolls,
 } from "./progress.js";
-import { generateRoll, restoreRoll } from "./roll-client.js";
+import {
+  generateRoll,
+  generateRollNumbers,
+  restoreRoll,
+  restoreRolls,
+} from "./roll-client.js";
 import { runDrawPicks } from "./draw-plan.js";
 import { clearAutoRoll } from "./auto-roll.js";
 import { flywheelForDraw } from "./flywheel.js";
@@ -85,6 +92,7 @@ import {
 } from "./offline.js";
 
 const CLOUD_INITIAL_LOAD_TIMEOUT_MS = 5_000;
+const OFFLINE_SETTLE_CHUNK = 48;
 
 function repairWarning(repairs) {
   if (!repairs.length) return "";
@@ -115,8 +123,15 @@ function readLocalCandidateForCloudUser(userId) {
 function writeLocalSave(progress, ownerId = readCloudOwner()) {
   try {
     const raw = JSON.stringify(progress);
-    writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, raw);
-    writeVault(raw, { storage: localStorage, ownerId });
+    // The string was just built here, so packing does not need to decompress it
+    // first, and verification would decompress the save a second time per write.
+    const { packed } = packDeviceSave(raw, { verify: false });
+    writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, raw, packed);
+    writeVault(raw, {
+      storage: localStorage,
+      ownerId,
+      packed,
+    });
     return true;
   } catch {
     return false;
@@ -434,14 +449,17 @@ export function useProgress({
           if (merged !== next) {
             try {
               const mergedRaw = JSON.stringify(merged);
+              const mergedSave = packDeviceSave(mergedRaw);
               writeDeviceSaveWithRecovery(
                 localStorage,
                 PROGRESS_KEY,
                 mergedRaw,
+                mergedSave.packed,
               );
               writeVault(mergedRaw, {
                 storage: localStorage,
                 ownerId: readCloudOwner(),
+                packed: mergedSave.packed,
               });
               persisted = true;
               markLocalCloudDirty();
@@ -821,7 +839,9 @@ export function useProgress({
 
     let active = true;
     let retryTimer = null;
-    const timer = setTimeout(() => {
+    const flush = () => {
+      globalThis.removeEventListener?.("focus", flush);
+      document.removeEventListener?.("visibilitychange", onFlushVisibility);
       if (
         !active ||
         cloudWriteVersion.current !== version ||
@@ -989,13 +1009,29 @@ export function useProgress({
             notice: "",
           });
         });
-    }, 10_000);
+    };
+    const onFlushVisibility = () => {
+      if (document.visibilityState === "visible") flush();
+    };
+    const timer = tabActive ? setTimeout(flush, 10_000) : undefined;
+    globalThis.addEventListener?.("focus", flush);
+    document.addEventListener?.("visibilitychange", onFlushVisibility);
     return () => {
       active = false;
       clearTimeout(timer);
       if (retryTimer) clearTimeout(retryTimer);
+      globalThis.removeEventListener?.("focus", flush);
+      document.removeEventListener?.("visibilitychange", onFlushVisibility);
     };
-  }, [progress, userId, authReady, cloudEnabled, online, cloudWriteRetry]);
+  }, [
+    progress,
+    userId,
+    authReady,
+    cloudEnabled,
+    online,
+    tabActive,
+    cloudWriteRetry,
+  ]);
 
   function retryCloudLoad() {
     clearCloudQuotaPause();
@@ -1008,6 +1044,68 @@ export function useProgress({
       setCloudWriteRetry((retry) => retry + 1);
       setCloudRetry((retry) => retry + 1);
     }
+  }
+
+  // Failures here used to be indistinguishable (or silent); each one now says
+  // what happened.
+  function publicationOutcome(publication, enabled) {
+    if (!publication) {
+      return {
+        ok: false,
+        enabled: false,
+        message:
+          "Profile privacy could not be changed because the online profile did not answer. Reload and try again.",
+      };
+    }
+    if (publication.conflict) {
+      const blocked = publication.identityConflict
+        ? "Your profile name is not reserved for this Cloud account, so it cannot be published."
+        : "That profile name is already used by another Cloud account.";
+      return {
+        ok: false,
+        enabled: publication.enabled === true,
+        available: false,
+        message: `${blocked} Choose a different profile name, then turn public sharing on again.`,
+      };
+    }
+    if (enabled === true && publication.published !== true) {
+      return {
+        ok: false,
+        enabled: publication.enabled === true,
+        available: false,
+        message:
+          "Public sharing was turned on, but your profile summary could not be published. Try again in a moment.",
+      };
+    }
+    return {
+      ok: true,
+      enabled: publication.enabled === true,
+      available: publication.published === true,
+      message: enabled
+        ? "Your profile is public. Anyone who knows the name or link can view its summary."
+        : "Your public profile was removed. Your private cloud save is unchanged.",
+    };
+  }
+
+  function publicProfileErrorNotice(error) {
+    const code = String(error?.code ?? "");
+    const message = String(error?.message ?? "");
+    if (/wait a couple of seconds/i.test(message))
+      return "Cloud saves have a two-second write limit. Wait a moment, then try changing profile privacy again.";
+    if (/account changed|signed-in account changed/i.test(message))
+      return "The signed-in account changed before the change finished. Reload and try again.";
+    if (
+      code.endsWith("permission-denied") ||
+      /missing or insufficient permissions/i.test(message)
+    )
+      return "Public sharing is blocked by this Firebase project’s Firestore rules. Publish the updated firestore.rules, then turn public sharing on again; your private save is safe.";
+    if (code.endsWith("unavailable") || /network|offline/i.test(message))
+      return "The online profile could not be reached. Check your connection and try again; your private save is safe.";
+    if (code.endsWith("deadline-exceeded") || /timed? ?out/i.test(message))
+      return "Changing profile privacy took too long. Try again; your private save is safe.";
+    return message
+      ? `Profile privacy could not be changed: ${message}`
+      : "Profile privacy could not be changed. Reload and try again.";
   }
 
   async function setPublicProfileVisibility(enabled) {
@@ -1037,7 +1135,7 @@ export function useProgress({
       };
 
     try {
-      const publication = await enqueueSerial(cloudQueue, () => {
+      let publication = await enqueueSerial(cloudQueue, () => {
         if (
           authRef.current.userId !== activeUserId ||
           !cloudGate.current.ready ||
@@ -1047,42 +1145,40 @@ export function useProgress({
           throw new Error("The signed-in account changed. Try again.");
         return setCloudProfileVisibility(activeUserId, enabled === true);
       });
+      // A missing name reservation used to make this a no-op; claim it and retry.
+      if (enabled === true && publication?.conflict && !publication.enabled) {
+        const claimed = await enqueueSerial(cloudQueue, () =>
+          reserveCloudProfileName(activeUserId, current.current),
+        );
+        if (claimed?.reserved)
+          publication = await enqueueSerial(cloudQueue, () =>
+            setCloudProfileVisibility(activeUserId, true),
+          );
+      }
       if (authRef.current.userId !== activeUserId)
         return {
           ok: false,
           message:
             "The signed-in account changed. Try again from the active account.",
         };
-      const notice = publication.conflict
-        ? "Your profile could not be made public because that name is reserved by another Cloud account. Your progress is safe; choose a different profile name before sharing it."
-        : enabled
-          ? "Your profile is public. Anyone who knows the name or link can view its summary."
-          : "Your public profile was removed. Your private cloud save is unchanged.";
+      const outcome = publicationOutcome(publication, enabled);
       updateCloud({
         ...cloudRef.current,
         publicProfileEnabled: publication.enabled,
         publicProfileAvailable: publication.published,
         profileIdentity: publication.profileIdentity ?? null,
-        notice,
+        notice: outcome.ok
+          ? outcome.message
+          : `${outcome.message} Your private cloud save is unchanged.`,
       });
-      return publication.conflict
-        ? { ok: false, message: notice, enabled: publication.enabled }
-        : {
-            ok: true,
-            enabled: publication.enabled,
-            available: publication.published,
-            message: notice,
-          };
+      return outcome;
     } catch (error) {
+      const notice = publicProfileErrorNotice(error);
+      updateCloud({ ...cloudRef.current, notice });
       return {
         ok: false,
-        message:
-          error?.code === "permission-denied" ||
-          error?.code === "firestore/permission-denied"
-            ? "Public sharing is blocked by this Firebase project’s Firestore rules. Publish the updated firestore.rules and try again; your private save is safe."
-            : error instanceof Error
-              ? error.message
-              : "Profile privacy could not be changed. Try again.",
+        message: notice,
+        enabled: cloudRef.current.publicProfileEnabled === true,
       };
     }
   }
@@ -1638,9 +1734,9 @@ export function useProgress({
               cap,
             );
             if (action.checkAbsence === false) plan.count = 0;
-            const numbers = [];
-            for (let i = 0; i < plan.count; i++)
-              numbers.push((await generateRoll()).number);
+            const numbers = plan.count
+              ? await generateRollNumbers(plan.count)
+              : [];
             next = {
               ...previous,
               offline: {
@@ -1668,14 +1764,17 @@ export function useProgress({
             const batch = offline.batch;
             if (!batch) return { ok: true, offlineRemaining: 0 };
             next = previous;
-            const stop = Math.min(batch.index + 10, batch.numbers.length);
-            while (next.offline.batch && next.offline.batch.index < stop) {
-              const currentBatch = next.offline.batch;
-              const result = await restoreRoll(
-                currentBatch.numbers[currentBatch.index],
-              );
-              next = settleOfflineRoll(next, result, now);
-            }
+            const stop = Math.min(
+              batch.index + OFFLINE_SETTLE_CHUNK,
+              batch.numbers.length,
+            );
+            const pendingNumbers = batch.numbers.slice(batch.index, stop);
+            if (!pendingNumbers.length)
+              return { ok: true, offlineRemaining: 0 };
+            const results = await restoreRolls(pendingNumbers);
+            for (const result of results)
+              if (next.offline.batch)
+                next = settleOfflineRoll(next, result, now);
           } else if (action.type === "offline-dismiss")
             next = { ...previous, offline: { ...offline, report: null } };
           else throw new Error("That action is not available right now.");
@@ -2055,10 +2154,17 @@ export function useProgress({
               throw new Error(
                 "The local save owner could not be cleared safely.",
               );
-            writeDeviceSaveWithRecovery(localStorage, PROGRESS_KEY, saved);
+            const packedSave = packDeviceSave(saved);
+            writeDeviceSaveWithRecovery(
+              localStorage,
+              PROGRESS_KEY,
+              saved,
+              packedSave.packed,
+            );
             writeVault(saved, {
               storage: localStorage,
               ownerId: localRegistration ? null : readCloudOwner(),
+              packed: packedSave.packed,
             });
             if (localRegistration) {
               if (typeof previousCloudOwner === "string" && previousCloudOwner)

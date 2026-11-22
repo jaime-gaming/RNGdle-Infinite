@@ -172,8 +172,9 @@ test("offline catch-up behind the watermark recovers after a failed chunk save a
   expect(paid.balance).toBe(sum);
   expect(paid.offline.report.ep).toBe(sum);
   await expect(
-    page.getByRole("region", { name: "Offline rewards" }),
+    page.getByRole("dialog", { name: "Offline rewards" }),
   ).not.toContainText("+0 EP");
+  await page.getByRole("button", { name: "Keep playing" }).click();
   await page.reload();
   await waitForApp(page);
   expect((await saved(page)).balance).toBe(sum);

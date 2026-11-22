@@ -54,7 +54,7 @@ import { cloudAccountRequired } from "./firebase.js";
 import { isCloudQuotaNotice } from "./cloud-quota.js";
 import { normalizedProfileName } from "./public-profile.js";
 import { useOffline } from "./use-offline";
-import { useOnlineStatus } from "./use-online-status.js";
+import { useOnlineStatus, useTabActive } from "./use-online-status.js";
 import { retireLegacyDeviceLink } from "./device-link-migration.js";
 import OfflineRewards from "./components/OfflineRewards";
 import ActivityFeed from "./components/ActivityFeed";
@@ -325,6 +325,7 @@ function App() {
   const [arrivalPet, setArrivalPet] = useState(null);
   const auth = useFirebaseAuth();
   const isOnline = useOnlineStatus();
+  const isForeground = useTabActive();
   const {
     progress: session,
     warning: progressWarning,
@@ -344,6 +345,7 @@ function App() {
     localPlay,
     localProfileRequired: localPlay && !auth.user,
     online: isOnline,
+    tabActive: isForeground,
     deleteAuthUser: auth.deleteAccount,
   });
   const localProfileAtLaunch = useRef(Boolean(session.profile));
@@ -1098,7 +1100,8 @@ function App() {
                 <strong>Device linking has changed.</strong> Your previous
                 device link is no longer active. Sign in to the same Cloud
                 Account on each device to use one backed-up save; if copies
-                differ, you will choose which full save to keep.
+                differ for long enough to matter, the copy with more progress is
+                kept automatically.
               </div>
               <div className="device-link-migration-actions">
                 <button type="button" onClick={() => navigate("settings")}>
@@ -1157,12 +1160,6 @@ function App() {
           <>
             {/* RETIREMENT: event-only chrome. */}
             <SaleSideAds status={sale} page={page} onOpenShelf={openShelf} />
-            <OfflineRewards
-              progress={session}
-              status={offlineState}
-              onDismiss={() => dispatch({ type: "offline-dismiss" })}
-              onHistory={() => navigate("history")}
-            />
             <div
               className="roll-view"
               hidden={page !== "roll"}
@@ -1912,6 +1909,12 @@ function App() {
               </section>
             </div>
           )}
+          <OfflineRewards
+            progress={session}
+            status={offlineState}
+            onDismiss={() => dispatch({ type: "offline-dismiss" })}
+            onHistory={() => navigate("history")}
+          />
           <Toasts items={toasts} onDismiss={dismissToast} />
 
           {ultraCeremony && (

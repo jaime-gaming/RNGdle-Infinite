@@ -5,7 +5,11 @@ export {
   SAVE_VAULT_TAG,
   MAX_SAVE_OUTPUT_BYTES,
 } from "./save-codec.js";
-import { writeDeviceSave } from "./local-save.js";
+import {
+  packDeviceSave,
+  writeDeviceSave,
+  writePackedDeviceSave,
+} from "./local-save.js";
 import { PRE_REPAIR_BACKUP_KEY, PROGRESS_KEY } from "./progress.js";
 import {
   UNKNOWN_CLOUD_OWNER,
@@ -388,9 +392,10 @@ export function trimSavedCopyHistoryForQuota(storage, keep = 1) {
   );
 }
 
-export function writeDeviceSaveWithRecovery(storage, key, raw) {
+export function writeDeviceSaveWithRecovery(storage, key, raw, packed = null) {
   try {
-    writeDeviceSave(storage, key, raw);
+    if (packed) writePackedDeviceSave(storage, key, { packed });
+    else writeDeviceSave(storage, key, raw);
     return true;
   } catch (error) {
     const quotaError =
@@ -399,7 +404,8 @@ export function writeDeviceSaveWithRecovery(storage, key, raw) {
       error?.code === 22 ||
       error?.code === 1014;
     if (!quotaError || !trimSavedCopyHistoryForQuota(storage, 1)) throw error;
-    writeDeviceSave(storage, key, raw);
+    if (packed) writePackedDeviceSave(storage, key, { packed });
+    else writeDeviceSave(storage, key, raw);
     return true;
   }
 }
@@ -411,6 +417,7 @@ export function writeVault(
     now = Date.now(),
     minGapMs = SAVE_VAULT_MIN_GAP_MS,
     ownerId = null,
+    packed = null,
   } = {},
 ) {
   raw = unpackVaultSave(raw);
@@ -433,14 +440,14 @@ export function writeVault(
       })
     )
       return false;
-    store.setItem(
-      SAVE_VAULT_KEY,
-      JSON.stringify({
-        at: now,
-        raw: packVaultSave(raw),
-        owner: encodeOwnerMetadata(ownerId),
-      }),
-    );
+    const packedRaw = packed ?? packVaultSave(raw);
+    const envelope = JSON.stringify({
+      at: now,
+      raw: packedRaw,
+      owner: encodeOwnerMetadata(ownerId),
+    });
+    store.setItem(SAVE_VAULT_KEY, envelope);
+    if (store.getItem(SAVE_VAULT_KEY) !== envelope) return false;
     const verified = readVault(store);
     const expectedOwner = ownerId === undefined ? UNKNOWN_CLOUD_OWNER : ownerId;
     return (

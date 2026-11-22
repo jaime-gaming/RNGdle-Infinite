@@ -63,6 +63,13 @@ async function collected(page, n) {
     .toBe(n);
   await expect.poll(async () => (await saved(page)).offline.batch).toBeNull();
 }
+async function keepPlaying(p) {
+  const dismiss = p.getByRole("button", { name: "Keep playing" });
+  if (await dismiss.isVisible().catch(() => false)) await dismiss.click();
+  await expect(p.getByRole("dialog", { name: "Offline rewards" })).toHaveCount(
+    0,
+  );
+}
 
 test("every late tier requires its predecessor, charges exactly once and preserves old transaction prices", () => {
   let p = rich({
@@ -490,6 +497,7 @@ for (const owned of [clocks.slice(0, 2), clocks]) {
 
     const intervalMS = offlineSettings(owned).intervalMS;
     await collected(page, count);
+    await keepPlaying(page);
     const p = await saved(page);
     expect(p.balance).toBe(count * 4663);
     expect(p.flywheelCharge).toBe(1);
@@ -546,8 +554,9 @@ test("final offline clock reaches the same 144-roll cap in 12 hours and cannot d
   await page.reload();
   await waitForApp(page);
   await expect(
-    page.getByRole("region", { name: "Offline rewards" }),
+    page.getByRole("dialog", { name: "Offline rewards" }),
   ).toContainText("144 rolls");
+  await keepPlaying(page);
   expect(rows(await saved(page))).toHaveLength(144);
 });
 

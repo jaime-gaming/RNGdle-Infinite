@@ -548,7 +548,7 @@ export default function CloudAccount({
       {profile && !auth.user && (
         <p className="cloud-migration-note" data-testid="cloud-migration-note">
           {auth.configured
-            ? "Your profile is saved on this device. Link a Cloud Account to back it up. If it already has different progress, you’ll choose which copy to keep."
+            ? "Your profile is saved on this device. Link a Cloud Account to back it up. If both copies have different progress, the one with more progress is kept."
             : "Your profile is saved on this device."}
         </p>
       )}
@@ -755,9 +755,10 @@ export default function CloudAccount({
                       </button>
                     )}
                   <p className="cloud-account-note">
-                    This only appears when both copies hold real progress of
-                    their own. The copy you don’t choose stays on this device;
-                    find it later in Settings → Restore save.
+                    Each device picks the copy that holds more progress on its
+                    own. This only appears when both copies are equally far
+                    along. The copy you don’t choose stays on this device; find
+                    it later in Settings → Restore save.
                   </p>
                 </div>
               )}

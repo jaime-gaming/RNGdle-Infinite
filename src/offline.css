@@ -1,89 +1,307 @@
-.offline-rewards {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  width: min(100%, 980px);
-  margin: 24px auto;
-  padding: 22px;
+/* Full-screen offline roll summary: the dialog owns the viewport so the game
+   cannot paint (or be scrolled) underneath the reward. */
+.offline-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.offline-overlay[open] {
+  display: grid;
+  place-items: center;
+}
+.offline-overlay[open] {
+  animation: offline-overlay-in 260ms ease both;
+}
+.offline-overlay::backdrop {
+  background: var(--bg);
+}
+.offline-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 60% 45% at 50% 0%,
+      color-mix(in srgb, var(--green) 22%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 50% 100%,
+      color-mix(in srgb, var(--green) 14%, transparent),
+      transparent 72%
+    );
+}
+.offline-star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--green);
+  opacity: 0;
+  animation: offline-twinkle 4.8s ease-in-out infinite;
+}
+.offline-star--1 {
+  top: 18%;
+  left: 14%;
+  animation-delay: 0.2s;
+}
+.offline-star--2 {
+  top: 27%;
+  left: 78%;
+  width: 4px;
+  height: 4px;
+  animation-delay: 1.1s;
+}
+.offline-star--3 {
+  top: 68%;
+  left: 22%;
+  width: 2px;
+  height: 2px;
+  animation-delay: 2s;
+}
+.offline-star--4 {
+  top: 76%;
+  left: 68%;
+  animation-delay: 2.7s;
+}
+.offline-star--5 {
+  top: 44%;
+  left: 47%;
+  width: 2px;
+  height: 2px;
+  animation-delay: 3.4s;
+}
+
+.offline-card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 34px 28px 26px;
+  text-align: center;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: linear-gradient(120deg, var(--green-bg), var(--surface) 70%);
-  box-shadow: var(--shadow);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 30px 90px -30px rgb(0 0 0 / 0.55);
+}
+.offline-card > * {
+  min-width: 0;
+}
+.offline-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--muted);
+}
+.offline-close:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
 }
 .offline-symbol {
   display: grid;
   place-items: center;
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
   background: var(--green-bg);
   color: var(--green);
-  border: 1px solid var(--border);
+  animation: offline-symbol-float 3.6s ease-in-out infinite;
 }
-.offline-content {
-  flex: 1;
-  min-width: 0;
-}
-.offline-content h2 {
-  font-size: 21px;
-  margin: 5px 0 12px;
-  letter-spacing: -0.5px;
-}
-.offline-content .eyebrow {
+.offline-card .eyebrow {
   margin: 0;
-  font-size: 8px;
+  font-size: 9px;
+  letter-spacing: 0.16em;
 }
-.offline-content p:not(.eyebrow) {
-  font-size: 11px;
+.offline-title {
+  margin: 0;
+  font-size: clamp(22px, 5vw, 30px);
+  line-height: 1.15;
+  letter-spacing: -0.6px;
+}
+.offline-batch {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+.offline-batch p {
+  margin: 0;
+  font-size: 12px;
   line-height: 1.7;
   color: var(--secondary);
-  margin: 8px 0;
+}
+.offline-progress {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--hover);
+}
+.offline-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green), var(--accent));
+  transition: width 320ms ease;
 }
 .offline-totals {
-  display: flex;
-  align-items: baseline;
-  gap: 18px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
 }
-.offline-totals strong {
+.offline-total {
+  display: grid;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+}
+.offline-total-label {
+  font-size: 9px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.offline-total strong {
   font:
-    700 24px "Space Mono",
+    700 18px "Space Mono",
     monospace;
   color: var(--green);
+  overflow-wrap: anywhere;
 }
-.offline-totals span {
-  font-size: 12px;
+.offline-total:first-child strong {
+  font-size: 20px;
+}
+.offline-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.7;
   color: var(--secondary);
 }
-.offline-history {
+.offline-copy svg {
+  flex: none;
+  color: var(--green);
+}
+.offline-card .offline-error {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--warning);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+.offline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+.offline-actions .primary-button,
+.offline-actions .secondary-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
-  padding: 6px 0;
-  color: var(--green);
-  font-size: 11px;
-  font-weight: 650;
 }
-.offline-content .offline-error {
-  color: var(--warning);
+
+@keyframes offline-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-.offline-error button {
-  text-decoration: underline;
-  padding: 0;
+@keyframes offline-symbol-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
+@keyframes offline-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  45% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+}
+
 @media (max-width: 480px) {
-  .offline-rewards {
-    padding: 16px;
-    gap: 10px;
+  .offline-card {
+    width: calc(100vw - 24px);
+    padding: 30px 18px 22px;
+    gap: 12px;
+    border-radius: 18px;
   }
-  .offline-symbol {
-    display: none;
+  .offline-totals {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
-  .offline-totals strong {
-    font-size: 21px;
+  .offline-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 9px 12px;
   }
-  .offline-content h2 {
-    font-size: 19px;
+  .offline-total strong,
+  .offline-total:first-child strong {
+    font-size: 17px;
+  }
+  .offline-actions > button {
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offline-overlay[open] {
+    animation: none;
+  }
+  .offline-symbol,
+  .offline-star {
+    animation: none;
+  }
+  .offline-star {
+    opacity: 0.4;
+  }
+  .offline-progress span {
+    transition: none;
   }
 }

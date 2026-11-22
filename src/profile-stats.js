@@ -66,8 +66,30 @@ export function cycleStats(progress = {}) {
   };
 }
 
+// Reused while the same history array and the fields it reads stay identical.
+const highlightCache = new WeakMap();
+
 export function profileHighlights(progress = {}) {
   const history = Array.isArray(progress.history) ? progress.history : [];
+  const cached = highlightCache.get(history);
+  if (
+    cached &&
+    cached.bookmarks === progress.bookmarks &&
+    cached.equipped === progress.equipped &&
+    cached.activePet === progress.activePet
+  )
+    return cached.value;
+  const value = computeProfileHighlights(progress, history);
+  highlightCache.set(history, {
+    bookmarks: progress.bookmarks,
+    equipped: progress.equipped,
+    activePet: progress.activePet,
+    value,
+  });
+  return value;
+}
+
+function computeProfileHighlights(progress, history) {
   const stats = accountStats(progress);
   const rolls = new Map(
     history
@@ -108,12 +130,28 @@ function removedTotalsOf(progress) {
   return Array.isArray(progress.removedTotals) ? progress.removedTotals : [];
 }
 
+const tallyCache = new WeakMap();
+let emptyTallyCache = null;
+
 export function allTimeTally(progress) {
-  const history = Array.isArray(progress.history) ? progress.history : [];
-  return removedTotalsOf(progress).reduce(
-    (sum, tally) => (tally ? mergeTallies(sum, tally) : sum),
-    tallyEntries(history),
-  );
+  const history = Array.isArray(progress?.history) ? progress.history : [];
+  const removed = removedTotalsOf(progress ?? {});
+  if (!history.length && !removed.length) {
+    emptyTallyCache ??= tallyEntries([]);
+    return emptyTallyCache;
+  }
+  let entry = tallyCache.get(history);
+  if (!entry || entry.removed !== removed) {
+    entry = {
+      removed,
+      tally: removed.reduce(
+        (sum, tally) => (tally ? mergeTallies(sum, tally) : sum),
+        tallyEntries(history),
+      ),
+    };
+    tallyCache.set(history, entry);
+  }
+  return entry.tally;
 }
 
 function cycleTally(progress, events, cycle) {

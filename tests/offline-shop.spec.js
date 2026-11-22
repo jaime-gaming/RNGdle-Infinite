@@ -40,6 +40,15 @@ async function collected(page, count) {
 }
 const nav = (p, name) =>
   p.getByRole("navigation").getByRole("button", { name, exact: true }).click();
+// The offline summary is a full-screen modal, so the rest of the test closes it
+// once the reward has been credited.
+async function keepPlaying(p) {
+  const dismiss = p.getByRole("button", { name: "Keep playing" });
+  if (await dismiss.isVisible().catch(() => false)) await dismiss.click();
+  await expect(p.getByRole("dialog", { name: "Offline rewards" })).toHaveCount(
+    0,
+  );
+}
 
 test("offline accounting uses whole ten-minute periods, caps at 144, and excludes other visible tabs", () => {
   const now = 100000000;
@@ -108,9 +117,16 @@ test("returning credits six real scores, discoveries and an automatic summary wi
   const result = evaluate(604827);
   expect((await saved(page)).balance).toBe(result.totalEP * 6);
   expect((await saved(page)).discovered).toHaveLength(result.badges.length);
-  await expect(
-    page.getByRole("region", { name: "Offline rewards" }),
-  ).toContainText("6 rolls");
+  const overlay = page.getByRole("dialog", { name: "Offline rewards" });
+  await expect(overlay).toContainText("6 rolls");
+  // The summary owns the whole viewport so the game cannot glitch underneath.
+  const box = await overlay.boundingBox();
+  const viewport = page.viewportSize();
+  expect(Math.round(box.width)).toBeGreaterThanOrEqual(viewport.width - 2);
+  expect(Math.round(box.height)).toBeGreaterThanOrEqual(viewport.height - 2);
+  await page.getByRole("button", { name: "Explore your rewards" }).click();
+  await expect(overlay).toHaveCount(0);
+  await expect(page).toHaveURL(/\/history$/);
   await nav(page, "History");
   await page.getByRole("button", { name: "Offline", exact: true }).click();
   await expect(page.locator('[data-event-type="roll"]')).toHaveCount(6);
@@ -119,11 +135,12 @@ test("returning credits six real scores, discoveries and an automatic summary wi
   );
   await page.getByRole("button", { name: "Dismiss offline summary" }).click();
   await expect.poll(async () => (await saved(page)).offline.report).toBeNull();
+  await expect(page.locator("dialog.offline-overlay")).toHaveCount(0);
   await page.reload();
   await waitForApp(page);
   expect(await rows(page)).toHaveLength(6);
   await expect(
-    page.getByRole("region", { name: "Offline rewards" }),
+    page.getByRole("dialog", { name: "Offline rewards" }),
   ).toHaveCount(0);
 });
 
@@ -134,6 +151,7 @@ test("a long absence pays at most 144 rolls and refresh cannot award them again"
   await page.goto("/");
   await waitForApp(page);
   await collected(page, 144);
+  await keepPlaying(page);
   const before = await saved(page);
   expect(before.balance).toBe(144 * 4663);
   expect(before.receipts).toHaveLength(128);
@@ -175,6 +193,8 @@ test("simultaneous returning tabs share a single offline commitment", async ({
       .reduce((s, e) => s + evaluate(e.number).totalEP, 0),
   );
   expect(result.offline.report.rolls).toBe(6);
+  await keepPlaying(a);
+  await keepPlaying(b);
   await a.close();
   await b.close();
 });
@@ -234,6 +254,7 @@ test("a hidden tab earns on return but a visible Shop page does not count as off
     document.dispatchEvent(new Event("visibilitychange"));
   });
   await collected(page, 2);
+  await keepPlaying(page);
 });
 
 test("failed settlement retains the exact committed numbers and retries without rerolling or losing a manual commitment", async ({
@@ -277,6 +298,7 @@ test("failed settlement retains the exact committed numbers and retries without 
   });
   await page.getByRole("button", { name: "Retry offline rewards" }).click();
   await collected(page, 6);
+  await keepPlaying(page);
   expect((await saved(page)).pendingRoll).toEqual(pending);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator(".roll-experience")).toHaveAttribute(
@@ -311,6 +333,7 @@ test("an interrupted saved batch resumes its IDs and numbers across reload with 
   await waitForApp(page);
   expect(await rows(page)).toHaveLength(2);
   expect((await saved(page)).discovered).toContain("INFINITE_LAST_SECOND");
+  await keepPlaying(page);
 });
 
 test("new premium cosmetics share rarity previews, preserve ownership and respect reduced motion on mobile", async ({
@@ -381,6 +404,7 @@ test("deletion removes offline earnings, commitments and presence without later 
   await page.goto("/");
   await waitForApp(page);
   await collected(page, 6);
+  await keepPlaying(page);
   await page.getByRole("button", { name: /^Local profile,/ }).click();
   await page
     .getByRole("button", { name: "Delete profile & game save", exact: true })

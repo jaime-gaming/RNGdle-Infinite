@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowRight,
@@ -191,7 +191,7 @@ export default function Rebirth({ progress, onAction, onDone, navigate }) {
       surplusBanked,
   );
 
-  const cycle = cycleStats(progress);
+  const cycle = useMemo(() => cycleStats(progress), [progress]);
   const cycleEp = cycle.earned;
   const epRemaining = Math.max(0, epTarget - cycleEp);
   const epPercent = Math.min(
