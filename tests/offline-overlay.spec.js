@@ -50,7 +50,7 @@ test("the offline summary stays inside a phone viewport and honours reduced moti
 }) => {
   await page.setViewportSize({ width: 360, height: 640 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await seedProgress(page, away(12 * 60));
+  await seedProgress(page, away(24 * 60 + 1));
   await mockRandom(page, [604827]);
   await page.goto("/");
   await waitForApp(page);

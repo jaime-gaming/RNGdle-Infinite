@@ -13,6 +13,15 @@ export const BATTLE_PASS_SEASONS = [
       "Gold at the horizon, warm light on a quiet field. Begin where the day breaks.",
     accent: "#fbbf24",
   },
+  {
+    index: 2,
+    id: "season-2",
+    start: Date.UTC(2026, 11, 16),
+    end: Date.UTC(2027, 0, 2),
+    name: "RNGmas 2026",
+    theme: "Frostfall settles over the winter reward track.",
+    accent: "#7dd3fc",
+  },
 ];
 export const BATTLE_PASS_CURRENT_SEASON = BATTLE_PASS_SEASONS.at(-1);
 export const BATTLE_PASS_FIRST_START = BATTLE_PASS_SEASONS[0].start;

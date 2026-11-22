@@ -50,8 +50,8 @@ test("RNGmas opens on December 1 and closes on January 2", () => {
   expect(rngmasWeekAt(AFTER)).toBeNull();
 });
 
-test("a door opens on its day and stays open for three days", () => {
-  expect(adventDoorAt(8, SEASON).openNow).toBe(true);
+test("a door is only claimable on its UTC day", () => {
+  expect(adventDoorAt(8, SEASON).openNow).toBe(false);
   expect(adventDoorAt(7, SEASON).openNow).toBe(false);
   expect(adventDoorAt(10, SEASON).openNow).toBe(true);
   expect(adventDoorAt(11, SEASON).openNow).toBe(false);
@@ -60,10 +60,10 @@ test("a door opens on its day and stays open for three days", () => {
   expect(adventDoorAt(8, AFTER).missed).toBe(true);
 });
 
-test("the Christmas star opens on December 25 and stays until the season ends", () => {
+test("the Christmas star is only claimable on December 25", () => {
   expect(adventFinaleAt(Date.UTC(2026, 11, 24, 23)).openNow).toBe(false);
   expect(adventFinaleAt(CHRISTMAS).openNow).toBe(true);
-  expect(adventFinaleAt(Date.UTC(2027, 0, 1, 23)).openNow).toBe(true);
+  expect(adventFinaleAt(Date.UTC(2027, 0, 1, 23)).openNow).toBe(false);
   expect(adventFinaleAt(AFTER).openNow).toBe(false);
 });
 
@@ -82,7 +82,7 @@ test("an open advent door pays its EP exactly once", () => {
   const claimed = applyProgress(start, {
     type: "claim-advent",
     day: 8,
-    at: SEASON,
+    at: Date.UTC(2026, 11, 8, 12),
   });
   expect(claimed.balance).toBe(300000);
   expect(claimed.totalEarned).toBe(300000);
@@ -93,7 +93,11 @@ test("an open advent door pays its EP exactly once", () => {
     ep: 300000,
   });
   expect(() =>
-    applyProgress(claimed, { type: "claim-advent", day: 8, at: SEASON }),
+    applyProgress(claimed, {
+      type: "claim-advent",
+      day: 8,
+      at: Date.UTC(2026, 11, 8, 12),
+    }),
   ).toThrow(/already opened/);
 });
 
@@ -249,7 +253,7 @@ test("an open advent door pays EP from the calendar", async ({ page }) => {
     balance: 0,
     totalEarned: 0,
   });
-  await pauseClockAt(page, SEASON);
+  await pauseClockAt(page, Date.UTC(2026, 11, 8, 12));
   await page.goto("/shop/rngmas");
   await waitForApp(page);
   const door = page.getByRole("button", { name: /Advent door 8/ });
@@ -314,7 +318,7 @@ test("the winter theme appears in the Appearance menu during the season", async 
   page,
 }) => {
   await seedProgress(page, { ...emptyProgress(), profile: testProfile });
-  await pauseClockAt(page, SEASON);
+  await pauseClockAt(page, Date.UTC(2026, 11, 16, 12));
   await page.goto("/");
   await waitForApp(page);
   await page.getByRole("button", { name: "Appearance" }).click();
@@ -409,4 +413,48 @@ test("every week has a golem and a distinct permanent aura", () => {
     rewards.add(week.reward);
   }
   expect(rewards.size).toBe(RNGMAS_WEEKS.length);
+});
+
+test("Christmas mode defaults defensively and preserves explicit opt-out", async () => {
+  const { parseSettings } = await import("../src/settings.js");
+  expect(parseSettings(null).christmasMode).toBe(true);
+  expect(parseSettings('{"christmasMode":"false"}').christmasMode).toBe(true);
+  expect(parseSettings('{"christmasMode":false}').christmasMode).toBe(false);
+});
+
+test("Frostfall starts at the First Light handover and expires with RNGmas", async () => {
+  const { rngmasThemeActive, RNGMAS_THEME_START, RNGMAS_END } =
+    await import("../src/rngmas.js");
+  const { seasonEndFor, battlePassSeason } =
+    await import("../src/battle-pass.js");
+  expect(RNGMAS_THEME_START).toBe(seasonEndFor(1));
+  expect(rngmasThemeActive(RNGMAS_THEME_START - 1)).toBe(false);
+  expect(rngmasThemeActive(RNGMAS_THEME_START)).toBe(true);
+  expect(rngmasThemeActive(RNGMAS_END - 1)).toBe(true);
+  expect(rngmasThemeActive(RNGMAS_END)).toBe(false);
+  expect(battlePassSeason(RNGMAS_THEME_START).name).toBe("RNGmas 2026");
+  expect(battlePassSeason(RNGMAS_END).active).toBe(false);
+});
+
+test("every tenth golem strike guarantees at least tenfold damage", () => {
+  for (let i = 9; i < 100; i += 10)
+    expect(golemStrikeFor("p:frost", i).multiplier).toBeGreaterThanOrEqual(10);
+});
+
+test("Christmas mode can be toggled from Themes and survives reload", async ({
+  page,
+}) => {
+  await seedProgress(page, { ...emptyProgress(), profile: testProfile });
+  await pauseClockAt(page, SEASON);
+  await page.goto("/");
+  await waitForApp(page);
+  await page.getByRole("button", { name: "Appearance" }).click();
+  const toggle = page.getByRole("menuitemcheckbox", { name: "christmas mode" });
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  await toggle.click();
+  await expect(page.locator(".rngmas-decor")).toHaveCount(0);
+  await page.reload();
+  await waitForApp(page);
+  await page.getByRole("button", { name: "Appearance" }).click();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
 });

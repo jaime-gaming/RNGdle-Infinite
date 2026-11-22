@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { markPresenceHidden, writePresence } from "./offline.js";
+import {
+  markPresenceHidden,
+  removePresence,
+  writePresence,
+} from "./offline.js";
 import { watchTabActivity } from "./tab-activity.js";
 
 export function useOffline(progress, dispatch, enabled = true) {
@@ -117,7 +121,7 @@ export function useOffline(progress, dispatch, enabled = true) {
       stop();
       window.removeEventListener("pagehide", onLeave);
       window.removeEventListener("beforeunload", onLeave);
-      presence(false);
+      removePresence(profileId, tabId);
     };
   }, [profileId, owned, enabled]);
   return { busy, error, retry: () => runner.current() };

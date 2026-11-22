@@ -1,3 +1,4 @@
+import { rngmasThemeActive } from "./rngmas.js";
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -663,8 +664,9 @@ function App() {
     const rngmasTheme = RNGMAS_TEMPORARY_THEMES.find(
       (entry) => entry.id === theme,
     );
-    const isPassTheme = passSeason.active && Boolean(passTheme);
-    const isRngmasTheme = rngmas.active && Boolean(rngmasTheme);
+    const isPassTheme =
+      passSeason.active && passSeason.index === 1 && Boolean(passTheme);
+    const isRngmasTheme = rngmasThemeActive(rngmas.now) && Boolean(rngmasTheme);
     const update = () => {
       const resolved =
         passTheme || rngmasTheme
@@ -695,7 +697,14 @@ function App() {
     } catch {}
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme, passSeason.active, passSeason.accent, rngmas.active]);
+  }, [
+    theme,
+    passSeason.index,
+    passSeason.active,
+    passSeason.accent,
+    rngmas.active,
+    rngmas.now,
+  ]);
   useEffect(
     () => () => {
       clearTimeout(arrivalTimer.current);
@@ -924,8 +933,8 @@ function App() {
           <AppearanceMenu
             theme={theme}
             onTheme={setTheme}
-            passActive={passSeason.active}
-            rngmasActive={rngmas.active}
+            passActive={passSeason.active && passSeason.index === 1}
+            rngmasActive={rngmasThemeActive(rngmas.now)}
           />
           <button
             className="sign-in"

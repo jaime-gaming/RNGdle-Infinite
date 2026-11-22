@@ -72,12 +72,12 @@ export async function run() {
       "the Christmas star is on the calendar",
     );
     const open = [...doors].filter((door) => !door.disabled);
-    check(open.length === 3, "exactly the last three days are claimable");
+    check(open.length === 1, "only today is claimable");
     check(
       open.every((door) =>
-        /Advent door (8|9|10),/.test(door.getAttribute("aria-label") ?? ""),
+        /Advent door 10,/.test(door.getAttribute("aria-label") ?? ""),
       ),
-      "the open doors are days 8, 9 and 10",
+      "the only open door is day 10",
     );
     act(() => root.unmount());
   }
@@ -99,7 +99,7 @@ export async function run() {
       (entry) => !entry.disabled,
     );
     act(() => door.click());
-    check(claimed === 8, "clicking an open door claims it");
+    check(claimed === 10, "clicking an open door claims it");
     act(() => root.unmount());
   }
 

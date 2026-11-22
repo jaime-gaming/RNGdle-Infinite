@@ -103,9 +103,10 @@ test("the current season is manually scheduled and never advertises a successor"
   const closed = battlePassSeason(
     BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS,
   );
-  expect(closed.id).toBe("season-1");
-  expect(closed.active).toBe(false);
-  expect(closed.ended).toBe(true);
+  expect(closed.id).toBe("season-2");
+  expect(closed.active).toBe(true);
+  expect(closed.name).toBe("RNGmas 2026");
+  expect(battlePassSeason(Date.UTC(2027, 0, 2)).active).toBe(false);
   expect(closed).not.toHaveProperty("nextName");
   expect(battlePassSeason(BATTLE_PASS_FIRST_START - 1).upcoming).toBe(true);
 
@@ -242,7 +243,7 @@ test("the pass does not roll into an unannounced season automatically", () => {
   pass.xp = BPEP_PER_LEVEL * 10;
   pass.premium = true;
   const state = { ...emptyProgress(), profile: testProfile, battlePass: pass };
-  const afterWindow = BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS + 1000;
+  const afterWindow = Date.UTC(2027, 0, 2) + 1000;
   const settled = applyProgress(state, roll("after-season", afterWindow));
   expect(settled.battlePass.seasonId).toBe("season-1");
   expect(settled.battlePass.xp).toBe(pass.xp);

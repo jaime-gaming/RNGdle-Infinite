@@ -51,15 +51,14 @@ you claim are yours forever.
 
 ## RNGmas 2026
 
-From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: a temporary winter theme, an advent calendar and five weekly golems.
+From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly golems. Frostfall and the RNGmas pass run from December 16, after First Light, until January 2. Toggle decorations with **christmas mode** in Themes.
 
-**Advent calendar.** A new door opens every day from December 1, and missed
-doors stay claimable for three days. The last door holds the Gingerbread aura,
-and on Christmas Day the RNGmas Star opens its own door.
+**Advent calendar.** A new door opens every day from December 1. Claim it on that UTC day or lose it; there is no catch-up. The last door holds the Gingerbread aura,
+and the RNGmas Star is claimable only on Christmas Day.
 
 **Golem Smash.** Each week a golem wakes with an EP health bar. Spend EP on a
 strike, roll a random multiplier from ×1 to ×100, and defeat the golem to keep
-its permanent aura. The golems: Frost, Ember, Hollow, RNGmas and New Year.
+its permanent aura. Four armor phases track damage; every tenth hit guarantees at least ×10. The golems: Frost, Ember, Hollow, RNGmas and New Year.
 
 Nothing here changes roll odds, scoring tables, badge values or cooldowns; earned auras stay in your collection forever.
 

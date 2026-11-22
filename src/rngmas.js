@@ -13,7 +13,11 @@ export const RNGMAS_ANNOUNCE_DAYS = 14;
 export const RNGMAS_ANNOUNCE_AT = RNGMAS_START - RNGMAS_ANNOUNCE_DAYS * DAY_MS;
 
 export const ADVENT_DAYS = 24;
-export const ADVENT_CATCH_UP_DAYS = 3;
+export const RNGMAS_THEME_START = Date.UTC(2026, 11, 16, 0, 0, 0);
+
+export function rngmasThemeActive(at = gameNow()) {
+  return at >= RNGMAS_THEME_START && at < RNGMAS_END;
+}
 
 export const GOLEM_SMASH_COST = 25000;
 export const GOLEM_SMASH_BASE_DAMAGE = 20000;
@@ -257,7 +261,7 @@ export function rngmasWeekById(id) {
 export function adventDoorAt(day, at = gameNow()) {
   const now = rngmasNow(at);
   const open = RNGMAS_START + (day - 1) * DAY_MS;
-  const closes = open + ADVENT_CATCH_UP_DAYS * DAY_MS;
+  const closes = open + DAY_MS;
   return {
     day,
     open,
@@ -274,10 +278,10 @@ export function adventFinaleAt(at = gameNow()) {
   return {
     day: ADVENT_FINALE.day,
     open,
-    closes: RNGMAS_END,
-    openNow: now >= open && now < RNGMAS_END,
+    closes: open + DAY_MS,
+    openNow: now >= open && now < open + DAY_MS,
     upcoming: now < open,
-    missed: now >= RNGMAS_END,
+    missed: now >= open + DAY_MS,
   };
 }
 
@@ -333,6 +337,8 @@ export function golemStrikeFor(seedKey, strikeIndex) {
       break;
     }
   }
+  if ((strikeIndex + 1) % 10 === 0 && chosen.multiplier < 10)
+    chosen = STRIKE_TABLE.find((entry) => entry.multiplier === 10);
   return {
     multiplier: chosen.multiplier,
     tier: chosen.tier,

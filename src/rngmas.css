@@ -1352,3 +1352,137 @@
   opacity: 0.35;
   transform: translate3d(0, 62vh, 0);
 }
+
+.golem-stage {
+  padding: 32px 20px;
+  margin-top: 18px;
+  border-radius: 18px;
+  background: radial-gradient(
+    ellipse at 18% 50%,
+    color-mix(in srgb, var(--golem-accent) 18%, transparent),
+    transparent 70%
+  );
+  gap: 36px;
+}
+.golem-figure {
+  width: 132px;
+  height: 168px;
+  border-radius: 38px 38px 24px 24px;
+  transition:
+    filter 0.3s,
+    border-radius 0.3s;
+}
+.golem-figure::before,
+.golem-figure::after {
+  height: 78px;
+  width: 25px;
+  top: 48px;
+}
+.golem-core {
+  position: absolute;
+  width: 34px;
+  height: 42px;
+  top: 95px;
+  background: var(--golem-accent);
+  clip-path: polygon(50% 0, 100% 40%, 70% 100%, 30% 100%, 0 40%);
+  box-shadow: 0 0 32px var(--golem-accent);
+}
+.golem-crown {
+  position: absolute;
+  top: -30px;
+  color: var(--golem-accent);
+  font-size: 36px;
+}
+.golem-phase {
+  display: block;
+  font: 700 12px var(--font-mono);
+  margin-bottom: 12px;
+}
+.golem-phase-track {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.golem-phase-track span {
+  flex: 1;
+  text-align: center;
+  border-bottom: 3px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  padding: 4px;
+}
+.golem-phase-track .is-cleared,
+.golem-phase-track .is-current {
+  border-color: var(--golem-accent);
+  color: var(--text);
+}
+.golem-hp {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 24%,
+    #ffffff30 24% 25%
+  );
+}
+.golem-breakthrough {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.golem-odds {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 12px 0;
+  line-height: 1.7;
+}
+.golem-odds summary {
+  cursor: pointer;
+}
+.golem-card[data-phase="2"] .golem-figure,
+.golem-card[data-phase="3"] .golem-figure {
+  border-style: dashed;
+  filter: brightness(1.3);
+}
+.golem-card[data-phase="3"] .golem-core {
+  transform: scale(1.4);
+}
+.golem-shard {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--golem-accent);
+}
+.is-hit .golem-shard {
+  display: block;
+  animation: golem-shards 0.46s ease-out both;
+}
+@keyframes golem-shards {
+  to {
+    transform: rotate(calc(var(--shard) * 45deg)) translateY(110px);
+    opacity: 0;
+  }
+}
+@media (max-width: 600px) {
+  .golem-stage {
+    flex-direction: column;
+    padding: 36px 12px 18px;
+  }
+  .golem-body {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .golem-card .golem-figure,
+  .golem-card.is-hit .golem-figure {
+    animation: none;
+  }
+  .golem-figure {
+    transition: none;
+  }
+  .is-hit .golem-shard {
+    animation: none;
+    display: none;
+  }
+}

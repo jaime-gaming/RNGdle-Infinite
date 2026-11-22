@@ -35,10 +35,9 @@ left. `sale-reward` history rows stay parseable and visible.
 
 RNGmas 2026 and the Battle Pass are the live event exceptions. RNGmas runs from
 1 December 2026 to 2 January 2027 (UTC) in `src/rngmas.js`: the temporary
-Frostfall theme in the Appearance menu, a 24-door advent calendar on
-`/shop/rngmas`, and five weekly golems. A door opens on its December day and stays claimable for
-three days (`ADVENT_CATCH_UP_DAYS`); door 24 pays the Gingerbread aura and the
-Christmas Day star pays the RNGmas Star aura. Golem Smash spends
+Frostfall theme in the Appearance menu (December 16–January 2, after First Light), a 24-door advent calendar on
+`/shop/rngmas`, and five weekly golems. A door is claimable only on its December UTC day; door 24 pays the Gingerbread aura and the
+Christmas Day-only star pays the RNGmas Star aura. Golem Smash spends
 `GOLEM_SMASH_COST` EP on a strike whose damage is `GOLEM_SMASH_BASE_DAMAGE`
 times a deterministic random multiplier (`golemStrikeFor`), carries between
 strikes, and pays a permanent aura when the week's golem is defeated.
@@ -496,3 +495,8 @@ rather than guessing.
 - After a requested merge succeeds, delete the merged remote branch (use `gh pr merge <number> --squash --delete-branch`). Never switch branches or delete the active checkout; respect session branch restrictions.
 
 - **Bug fixes never rewrite release notes.** Preserve all existing `src/changelog.js` entries verbatim during a bug fix. Record implementation/QA notes separately. Presentation-only capitalization is fine; add release notes only for an explicitly requested new release.
+
+Christmas decorations respect the persisted `christmasMode` setting in Themes.
+Every tenth golem strike guarantees at least ×10 damage; four visual armor phases
+are derived from saved damage and never reset progression. RNGmas 2026 is pass
+season 2, December 16–January 2 UTC.

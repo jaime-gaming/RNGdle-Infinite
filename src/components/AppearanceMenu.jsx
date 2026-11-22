@@ -11,6 +11,7 @@ import {
 import { BATTLE_PASS_TEMPORARY_THEMES } from "../battle-pass.js";
 import { RNGMAS_TEMPORARY_THEMES } from "../rngmas.js";
 import "../appearance.css";
+import { useSettings } from "../use-settings.jsx";
 
 const THEMES = [
   ["light", "Light", Sun],
@@ -29,6 +30,7 @@ export default function AppearanceMenu({
   passActive = false,
   rngmasActive = false,
 }) {
+  const { settings, update } = useSettings();
   const [open, setOpen] = useState(false);
   const host = useRef(null);
   const trigger = useRef(null);
@@ -140,6 +142,17 @@ export default function AppearanceMenu({
             if (!host.current?.contains(event.relatedTarget)) close();
           }}
         >
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={settings.christmasMode}
+            className="appearance-option"
+            onClick={() => update({ christmasMode: !settings.christmasMode })}
+          >
+            <Snowflake size={16} aria-hidden="true" />
+            <span>christmas mode</span>
+            {settings.christmasMode && <Check size={14} aria-hidden="true" />}
+          </button>
           <p className="appearance-heading">Color theme</p>
           {THEMES.map(([value, name, ThemeIcon]) => (
             <button

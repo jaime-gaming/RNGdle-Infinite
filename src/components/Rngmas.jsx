@@ -13,7 +13,6 @@ import {
   X,
 } from "lucide-react";
 import {
-  ADVENT_CATCH_UP_DAYS,
   ADVENT_DAYS,
   ADVENT_DOORS,
   ADVENT_FINALE,
@@ -153,10 +152,10 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
             <CalendarDays size={14} aria-hidden="true" /> The advent calendar
           </h3>
           <p>
-            A new door opens every day from December 1. Missed doors stay open
-            for {ADVENT_CATCH_UP_DAYS} days, so a quiet week never costs you the
-            whole calendar. The last door holds the Gingerbread aura, and on
-            December 25 the RNGmas Star opens its own door.
+            A new door opens every day from December 1. Claim it before midnight
+            UTC or lose it forever. No catch-up. The last door holds the
+            Gingerbread aura, and on December 25 the RNGmas Star opens its own
+            door.
           </p>
         </section>
 
@@ -283,8 +282,8 @@ export function AdventCalendar({ record, status, onClaim, pending }) {
             <CalendarDays size={16} /> Advent calendar
           </h3>
           <p>
-            One door a day from December 1. A missed door stays open for{" "}
-            {ADVENT_CATCH_UP_DAYS} days.
+            One door a day from December 1. Claim before midnight UTC or lose
+            it.
           </p>
         </div>
         <span className="rngmas-section-stat">
@@ -424,12 +423,24 @@ export function GolemSmash({ progress, status, onSmash, pending }) {
   const lastStrike = lastStrikeOf(progress, week.id);
   const affordable = progress.balance >= GOLEM_SMASH_COST;
   const ended = status.now >= week.end;
+  const phase = record.defeated
+    ? 4
+    : Math.min(3, Math.floor(record.fraction * 4));
+  const phases = [
+    "Armored",
+    "Fractured",
+    "Core exposed",
+    "Last stand",
+    "Vanquished",
+  ];
+  const untilBreakthrough = 10 - (record.strikes % 10);
   return (
     <section
       className={`golem-card ${record.defeated ? "is-defeated" : ""} ${
         hit ? "is-hit" : ""
       }`}
       style={{ "--golem-accent": week.accent }}
+      data-phase={phase}
       aria-labelledby="golem-title"
     >
       <div className="rngmas-section-heading">
@@ -450,8 +461,28 @@ export function GolemSmash({ progress, status, onSmash, pending }) {
           <span className="golem-eye" />
           <span className="golem-eye" />
           <span className="golem-mouth" />
+          <span className="golem-core" />
+          <span className="golem-crown">✦</span>
+          {Array.from({ length: 8 }, (_, i) => (
+            <i key={i} className="golem-shard" style={{ "--shard": i }} />
+          ))}
         </div>
         <div className="golem-body">
+          <strong className="golem-phase">
+            Phase {Math.min(4, phase + 1)} / 4 · {phases[phase]}
+          </strong>
+          <div className="golem-phase-track" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className={
+                  phase > i ? "is-cleared" : phase === i ? "is-current" : ""
+                }
+              >
+                {i + 1}
+              </span>
+            ))}
+          </div>
           <div
             className="golem-hp"
             role="img"
@@ -485,7 +516,7 @@ export function GolemSmash({ progress, status, onSmash, pending }) {
               <button
                 type="button"
                 className="primary-button golem-smash-button"
-                disabled={pending || !affordable}
+                disabled={pending || hit || !affordable || ended}
                 onClick={() => {
                   setHit(true);
                   clearTimeout(hitTimer.current);
@@ -498,9 +529,24 @@ export function GolemSmash({ progress, status, onSmash, pending }) {
                   ? `Smash for ${formatEP(GOLEM_SMASH_COST)} EP`
                   : `${formatEP(GOLEM_SMASH_COST - progress.balance)} EP to go`}
               </button>
+              <p className="golem-breakthrough">
+                {untilBreakthrough === 1
+                  ? "Next hit: guaranteed ×10 or better!"
+                  : `${untilBreakthrough} strikes to a guaranteed ×10+ breakthrough`}{" "}
+                · {record.strikes} strikes landed
+              </p>
+              <details className="golem-odds">
+                <summary>Damage odds & strategy</summary>
+                <p>
+                  ×1 50% · ×2 25% · ×3 12% · ×5 7% · ×10 3.5% · ×25 1.5% · ×50
+                  0.8% · ×100 0.2%. Every tenth hit upgrades results below ×10.
+                  Four armor phases mark your progress; the final blow awards
+                  the permanent aura. Finish before the weekly deadline.
+                </p>
+              </details>
               <p className="rngmas-note">
-                Each strike rolls a random multiplier, from ×1 to ×100. The
-                golem keeps its damage between strikes
+                Roll → earn EP → smash. Random damage from ×1 to ×100. Every
+                tenth strike guarantees at least ×10. Damage is saved
                 {ended ? ", but this week is over." : "."}
               </p>
             </>

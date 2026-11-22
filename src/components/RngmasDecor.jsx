@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { useMotionPreference } from "../use-settings.jsx";
+import { useSettings, useMotionPreference } from "../use-settings.jsx";
 import { useRngmasStatus } from "../use-rngmas.js";
 import {
   BellMark,
@@ -53,7 +53,8 @@ export default function RngmasDecor({ status: statusOverride } = {}) {
   const live = useRngmasStatus();
   const status = statusOverride ?? live;
   const reduced = useMotionPreference();
-  const enabled = status.active;
+  const { settings } = useSettings();
+  const enabled = status.active && settings.christmasMode;
   const [headerHeight, setHeaderHeight] = useState(48);
 
   useLayoutEffect(() => {
