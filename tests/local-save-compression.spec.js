@@ -299,11 +299,11 @@ test("help links use themed buttons and changelog copy stays lowercase", async (
     page.getByRole("heading", { name: "Changelog", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".changelog-title").first()).toHaveText(
-    "battle pass, new discoveries and a clearer shop",
+    "rngmas, the advent calendar and golem smash",
   );
   await expect(
     page.locator(".changelog-entry").first().locator("p").first(),
   ).toHaveText(
-    "the Battle Pass has a schedule for each season, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
+    "rngmas runs from december 1 to january 2: a temporary winter theme, an advent calendar and five weekly golems.",
   );
 });

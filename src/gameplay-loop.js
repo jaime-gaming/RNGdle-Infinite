@@ -1,5 +1,4 @@
 import { productById, productPrice, shopProducts } from "./shop-data.js";
-import { saleCompanionPrice } from "./black-friday.js";
 import { isCycleMarker } from "./history-log.js";
 import { petById } from "./pets.js";
 
@@ -31,7 +30,7 @@ export function goalItem(id, at = Date.now()) {
     return {
       id: pet.id,
       name: pet.name,
-      price: saleCompanionPrice(pet, at),
+      price: pet.price,
       description: pet.description,
       kind: "companion",
       icon: "companion",

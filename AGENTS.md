@@ -28,35 +28,29 @@ aura ownership, Hexbound, attendance timestamps and `rngween-*` history are
 still part of the save contract. Do not remove those records or reintroduce
 event progression/UI. The old RNGween changelog entry is historical and stays.
 
-Black Friday 2026 and the Battle Pass are the event exceptions. Black Friday is
-one UTC day — Friday 27 November 2026, `src/black-friday.js` — during which the whole shop is
-discounted 20–50% per product, every 100,000 EP spent awards one sale stamp
-(`SALE_STAMP_EVERY`), 25 stamps unlock the limited `blackout-2026` skin, and
-the RNGween looks a save missed return to the counter at 10,000,000 EP each.
-While the day is on the calendar the hub grows a `black-friday` shelf
-(`/shop/black-friday`) with the stamp card, the skin and the counter. Its
-interface (sale ticker, event notice, stamp card, the Ultra-Black and Red Sale
-themes, the sale favicon and manifest) exists only while
-`blackFridayStatus(at).active`; the event notice is also shown before the day
-and disappears afterward. `progress.blackFriday` is part of the save contract
-and survives every reset, like permanent cosmetics. Dev builds honour
+Black Friday 2026 is retired. `src/black-friday.js` keeps only the limited
+`blackout-2026` aura, its family and the `progress.blackFriday` save record
+(`{ id, spent, stamps, skinEarned }`); there is no sale UI, pricing or branding
+left. `sale-reward` history rows stay parseable and visible.
+
+RNGmas 2026 and the Battle Pass are the live event exceptions. RNGmas runs from
+1 December 2026 to 2 January 2027 (UTC) in `src/rngmas.js`: a temporary winter
+theme in the Appearance menu, a 24-door advent calendar on `/shop/rngmas`, and
+five weekly golems. A door opens on its December day and stays claimable for
+three days (`ADVENT_CATCH_UP_DAYS`); door 24 pays the Gingerbread aura and the
+Christmas Day star pays the RNGmas Star aura. Golem Smash spends
+`GOLEM_SMASH_COST` EP on a strike whose damage is `GOLEM_SMASH_BASE_DAMAGE`
+times a deterministic random multiplier (`golemStrikeFor`), carries between
+strikes, and pays a permanent aura when the week's golem is defeated.
+`progress.rngmas` (`{ id, claimed, finale, golems }`) is part of the save
+contract and survives every reset, like permanent cosmetics. Dev builds honour
 `VITE_GAME_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the shared game
 clock for previews; production ignores that variable, and Playwright forces it
-off so date-sensitive tests remain deterministic. Spending accumulates across purchases, rather
-than requiring a single purchase of 100,000 EP. The sale shelf contains a
-25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
-and linked posters occupy the page margins, including on small screens. Posters
-stay in the document as it scrolls; offers rotate every 15 seconds, pausing on
-hover, focus, hidden tabs and reduced motion. Whole posters fit within the main
-area and are hidden rather than cut off at the footer. See
-`archive/qa/black-friday-retirement.md` before retiring event code. The stamp
-book remembers which stamps were seen per local profile and animates only newly
-seen stamps when the book enters view; this presentation marker never affects
-progress or rewards. Special & Limiteds banners and wardrobe filters appear
-only when the save owns an event aura, even during the sale;
-missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
-Moving reveal digits are lighter than landed digits using opacity only, without
-adding backgrounds, borders, underlines or other decorations.
+off so date-sensitive tests remain deterministic. Special & Limiteds banners
+and wardrobe filters appear only when the save owns an event aura. Aura cards
+have a rarity preview. Moving reveal digits are lighter than landed digits
+using opacity only, without adding backgrounds, borders, underlines or other
+decorations.
 
 The Battle Pass (`src/battle-pass.js`) uses individually configured season
 end dates or durations. Only launched seasons are listed; a successor requires
@@ -174,9 +168,9 @@ Only rolls fund a cycle gate.
 - **UTC for calendar labels.** Daily/weekly task periods use UTC (`Date.UTC`,
   `getUTC*`, `timeZone: "UTC"`). Gameplay timers use `gameNow()` in
   `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The event-gated
-  systems are the one-day Black Friday sale (`src/black-friday.js`) and the
-  individually scheduled Battle Pass seasons (`src/battle-pass.js`). Nothing
-  else gates gameplay by calendar date.
+  systems are RNGmas (`src/rngmas.js`) and the individually scheduled Battle
+  Pass seasons (`src/battle-pass.js`). Nothing else gates gameplay by calendar
+  date.
 - **Routes are client paths.** `src/router.js` owns paths such as `/shop/auras`
   and `/profile/<username>`. The Worker serves the app at the domain root; its `assets.not_found_handling: single-page-application` serves
   `index.html` for direct route loads, and `public/_headers` keeps HTML and the
@@ -202,6 +196,13 @@ Only rolls fund a cycle gate.
   empty one.
 - `sale-reward` activity rows stay parseable and visible in history; they carry
   no EP and never count as spending.
+- `rngmas` records (`{ id, claimed, finale, golems }`) keep the advent doors
+  opened, the Christmas Day star and each golem's damage, strikes and defeat.
+  Rewards are always re-derived from the record (`rngmasRewardIds`), so a
+  hand-edited save cannot invent a calendar aura. Junk or foreign records are
+  repaired to an empty one.
+- `advent-claim`, `golem-smash` and `golem-reward` activity rows stay parseable
+  and visible in history.
 - `battlePass` keeps the current season, BPEP, premium flag, claimed rewards,
   mission tallies and a bounded archive. `pass-reward`, `pass-mission` and
   `pass-upgrade` activity rows stay parseable and visible in history.
@@ -272,8 +273,6 @@ Only rolls fund a cycle gate.
 - Status notices poll every 60 seconds and also on focus, visibility and
   reconnection. The banner is a normal-flow sibling between the header and
   `main`, so the interface shifts down instead of being covered.
-- Black Friday side posters are ordered by the current page, never by a timer
-  or a random pick.
 
 ## Tool-call budget
 
@@ -302,6 +301,7 @@ Only rolls fund a cycle gate.
 | `src/pets.js`, `src/skills.js`, `src/rebirth.js` | Companions, skills, rebirth, prestige and rollback rules.                   |
 | `src/tasks.js`, `src/history-tally.js`           | Daily/weekly tasks and historical profile totals.                           |
 | `src/shop-data.js`                               | Products, shelves, aura families and timing upgrades.                       |
+| `src/rngmas.js`, `src/use-rngmas.js`             | RNGmas schedule, advent calendar, golems and rewards.                       |
 | `src/changelog.js`, `src/app-update.js`          | Release notes, unseen-version marker and update identity.                   |
 | `src/components/`                                | Game, account and profile UI.                                               |
 | `src/*.css`                                      | Feature styles; `src/mobile.css` is loaded last.                            |
@@ -324,7 +324,7 @@ npm run build            # production build into dist/ for Cloudflare Workers
 npm run build:github-pages # production build into docs/ for legacy GitHub Pages
 npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
 npm run verify:cloud     # Cloud Accounts simulation against firestore.rules
-npm run test:render      # render the offline overlay and profile privacy in Node
+npm run test:render      # mount the app shell plus offline overlay and profile privacy in Node
 npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
 npm run deploy:worker    # build and deploy the Worker (production is guarded)
 npm run audit:economy    # price ladder and roll-distribution audit
@@ -345,9 +345,12 @@ checks the enable path alone: a healthy account, an account whose name was
 never reserved (it must be claimed before publishing) and a name another account
 owns (it must stay private and report a conflict).
 
-`npm run test:render` bundles the offline overlay and the profile privacy
-control with esbuild and renders them over `happy-dom`, so that UI can be
-checked without a downloaded browser. Playwright stays the end-to-end check.
+`npm run test:render` bundles the app shell, the offline overlay and the profile
+privacy control with esbuild and renders them over `happy-dom`, so a component
+that fails to render (an undefined identifier in a hook, for example) fails
+without a downloaded browser. Playwright stays the end-to-end check, but it
+cannot catch an error that only appears at runtime, so run `test:render` after
+touching `src/main.jsx`, `src/use-progress.js` or the overlay.
 
 Re-run `verify:cloud` after changing `src/cloud-save.js`,
 `src/use-progress.js` or `firestore.rules`; it is the only automated check of the
@@ -358,12 +361,10 @@ Playwright uses `CHROMIUM_PATH` when provided. Some environments need
 Chromium binary. Keep realistic reveal/cooldown timing in tests; set a longer
 test timeout rather than changing game timers.
 
-Shop prices are date-gated by the Black Friday sale, so on 27 November (UTC)
-the shelves show discounted prices, the counter and the stamp card. Specs that
-assert exact prices or stock pin the virtual clock — `page.clock.install()`
-with a fixed time away from the sale day, or `pauseClockAt` inside
-`tests/black-friday.spec.js` for the sale day itself — and must never depend on
-the real calendar date.
+RNGmas gates calendar doors and golem weeks by date. Specs that assert exact
+advent windows, golem HP or rewards pin the virtual clock — `page.clock.install()`
+with a fixed time, or `pauseClockAt` inside `tests/rngmas.spec.js` — and must
+never depend on the real calendar date.
 
 ## Product rules
 
@@ -447,7 +448,7 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.6fix1`; do not change it
+  flow. The current label is exactly `v0.6.1`; do not change it
   until the next session or an explicit user request. Public release notes
   live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR

@@ -17,8 +17,6 @@ import {
 } from "../pets.js";
 import { skillForPet, skillEffectSummary } from "../skills.js";
 import { validGoal } from "../gameplay-loop.js";
-import { saleCompanionPrice, saleDiscountForId } from "../black-friday.js";
-import { useSaleStatus } from "../use-black-friday.js";
 import { useFormatEP } from "../use-settings.jsx";
 import PetIcon from "./PetIcon.jsx";
 import { CompanionMark, SkillIcon } from "./game-icons.jsx";
@@ -151,8 +149,7 @@ export default function PetShelf({
 }) {
   const formatEP = useFormatEP();
 
-  const sale = useSaleStatus();
-  const priceOf = (pet) => saleCompanionPrice(pet, sale.now);
+  const priceOf = (pet) => pet.price;
   const [pending, setPending] = useState("");
   const [onlyMine, setOnlyMine] = useState(false);
   const [index, setIndex] = useState(0);
@@ -319,7 +316,6 @@ export default function PetShelf({
                 const isActive = active === pet.id;
                 const isGoal = tracked === pet.id;
                 const price = priceOf(pet);
-                const discount = sale.active ? saleDiscountForId(pet.id) : 0;
                 const affordable = progress.balance >= price;
                 const signature = skillForPet(pet.id);
                 const current = i === at;
@@ -483,11 +479,6 @@ export default function PetShelf({
                           >
                             <Coins size={13} /> {formatEP(price)} EP
                           </button>
-                        )}
-                        {discount > 0 && !isOwned && (
-                          <span className="sale-tag" aria-hidden="true">
-                            −{Math.round(discount * 100)}%
-                          </span>
                         )}
                         {!isOwned && isGoal && (
                           <>

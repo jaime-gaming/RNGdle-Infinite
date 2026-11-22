@@ -371,6 +371,10 @@ export function saveHasProgress(progress) {
   if (progress.rngweenLimited?.finaleEarned) return true;
   if (safeAmount(progress.blackFriday?.stamps) > 0) return true;
   if (progress.blackFriday?.skinEarned) return true;
+  if (uniqueIds(progress.rngmas?.claimed).size > 0) return true;
+  if (progress.rngmas?.finale) return true;
+  for (const record of Object.values(progress.rngmas?.golems ?? {}))
+    if (record?.defeated || safeAmount(record?.damage) > 0) return true;
   if (passLifetimeXp(progress) > 0) return true;
   if (passLifetimeClaims(progress) > 0) return true;
   if (passLifetimePremium(progress) > 0) return true;
@@ -438,6 +442,12 @@ export function saveProgressScore(progress) {
     ) * 600,
   );
   score += safeAmount(progress.blackFriday?.stamps) * 40;
+  score += uniqueIds(progress.rngmas?.claimed).size * 25;
+  if (progress.rngmas?.finale) score += 100;
+  for (const record of Object.values(progress.rngmas?.golems ?? {})) {
+    if (record?.defeated) score += 200;
+    score += Math.min(200, Math.round(safeAmount(record?.damage) / 10000));
+  }
   score += uniqueIds(progress.rngweenLimited?.auras).size * 120;
   score += passLifetimeClaims(progress) * 30;
   score += Math.round(passLifetimeXp(progress) / 10);
@@ -503,6 +513,20 @@ export function compareSaveRichness(local, cloud) {
 
   compareNumber(local.blackFriday?.stamps, cloud.blackFriday?.stamps);
   compareFlag(local.blackFriday?.skinEarned, cloud.blackFriday?.skinEarned);
+  compareNumber(
+    uniqueIds(local.rngmas?.claimed).size,
+    uniqueIds(cloud.rngmas?.claimed).size,
+  );
+  compareFlag(local.rngmas?.finale, cloud.rngmas?.finale);
+  const localGolems = local.rngmas?.golems ?? {};
+  const cloudGolems = cloud.rngmas?.golems ?? {};
+  for (const id of new Set([
+    ...Object.keys(localGolems),
+    ...Object.keys(cloudGolems),
+  ])) {
+    compareNumber(localGolems[id]?.damage, cloudGolems[id]?.damage);
+    compareFlag(localGolems[id]?.defeated, cloudGolems[id]?.defeated);
+  }
   compareNumber(passLifetimeXp(local), passLifetimeXp(cloud));
   compareNumber(passLifetimeClaims(local), passLifetimeClaims(cloud));
   compareNumber(passLifetimePremium(local), passLifetimePremium(cloud));

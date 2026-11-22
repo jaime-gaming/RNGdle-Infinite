@@ -4,14 +4,12 @@ import {
   ChevronDown,
   Monitor,
   Moon,
-  Square,
+  Snowflake,
   Sun,
   Sunrise,
-  Tag,
 } from "lucide-react";
-import { SALE_THEMES } from "../black-friday.js";
 import { BATTLE_PASS_TEMPORARY_THEMES } from "../battle-pass.js";
-import { useSaleStatus } from "../use-black-friday.js";
+import { RNGMAS_TEMPORARY_THEMES } from "../rngmas.js";
 import "../appearance.css";
 
 const THEMES = [
@@ -20,19 +18,22 @@ const THEMES = [
   ["dark", "Dark", Moon],
 ];
 
-const SALE_THEME_ICONS = { "ultra-black": Square, "red-sale": Tag };
 const ALL_TEMPORARY_THEME_IDS = new Set([
-  ...SALE_THEMES.map((entry) => entry.id),
   ...BATTLE_PASS_TEMPORARY_THEMES.map((entry) => entry.id),
+  ...RNGMAS_TEMPORARY_THEMES.map((entry) => entry.id),
 ]);
 
-export default function AppearanceMenu({ theme, onTheme, passActive = false }) {
+export default function AppearanceMenu({
+  theme,
+  onTheme,
+  passActive = false,
+  rngmasActive = false,
+}) {
   const [open, setOpen] = useState(false);
   const host = useRef(null);
   const trigger = useRef(null);
   const menu = useRef(null);
   const id = useId();
-  const sale = useSaleStatus();
   const temporaryOptions = [
     ...(passActive
       ? BATTLE_PASS_TEMPORARY_THEMES.map((entry) => [
@@ -41,11 +42,11 @@ export default function AppearanceMenu({ theme, onTheme, passActive = false }) {
           Sunrise,
         ])
       : []),
-    ...(sale.active
-      ? SALE_THEMES.map((entry) => [
+    ...(rngmasActive
+      ? RNGMAS_TEMPORARY_THEMES.map((entry) => [
           entry.id,
           entry.label,
-          SALE_THEME_ICONS[entry.id] ?? Moon,
+          Snowflake,
         ])
       : []),
   ];
@@ -113,9 +114,6 @@ export default function AppearanceMenu({ theme, onTheme, passActive = false }) {
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         title={`${label} theme`}
-        data-sale-theme-option={
-          SALE_THEMES.some((entry) => entry.id === theme) || undefined
-        }
         data-temporary-theme-option={
           ALL_TEMPORARY_THEME_IDS.has(theme) || undefined
         }

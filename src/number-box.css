@@ -2026,3 +2026,100 @@ button.number-box.number-box:hover {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* RETIREMENT: the Blackout 2026 aura stays owned and keeps its finish. */
+.number-box[data-cosmetic="blackout-2026"] {
+  --box-background: #080809;
+  --box-border: #c52f39;
+  --box-shadow:
+    0 10px 28px -10px #a80c1b88, inset 0 0 0 1px #ff6a6a22,
+    inset 0 1px 0 #ffffff20;
+  --box-ink: #fafafa;
+  border-width: 2px;
+  border-radius: 12px;
+}
+:root[data-theme="dark"] .number-box[data-cosmetic="blackout-2026"] {
+  --box-background: #080809;
+  --box-border: #e3424d;
+  --box-ink: #fafafa;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-finish::before {
+  background: conic-gradient(
+    from var(--aura-turn),
+    #141416,
+    #e32d3f,
+    #161619,
+    #fff 45%,
+    #121214 65%,
+    #b9001c,
+    #141416
+  );
+  opacity: 0.85;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-finish::after {
+  background: radial-gradient(ellipse, #e7223c55, transparent 70%);
+}
+.number-box[data-cosmetic="blackout-2026"] .box-gloss {
+  background: linear-gradient(
+    125deg,
+    #fff2,
+    transparent 30%,
+    #ff263520 55%,
+    transparent 72%
+  );
+}
+
+.number-box[data-cosmetic="blackout-2026"] .box-gloss::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    110deg,
+    transparent 42%,
+    #ff4d5a22 49%,
+    #ffb5b51c 51%,
+    transparent 58%
+  );
+  transform: translateX(-70%);
+  animation: blackout-foil 7s ease-in-out infinite;
+}
+.number-box[data-cosmetic="blackout-2026"] .box-particles i {
+  background: #ff6872;
+  filter: drop-shadow(0 0 4px #ff1b34);
+  opacity: 0.65;
+}
+@keyframes blackout-foil {
+  0%,
+  32% {
+    transform: translateX(-70%);
+  }
+  70%,
+  100% {
+    transform: translateX(70%);
+  }
+}
+.number-box[data-cosmetic="blackout-2026"] .box-gloss::after {
+  content: "BF";
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #fae9e9;
+  color: #111;
+  font: 800 7px/1 var(--font-mono);
+  box-shadow: 0 0 10px #ff425466;
+}
+.number-box[data-cosmetic="blackout-2026"] .number-box-content {
+  --aura-ink-a: #fff !important;
+  --aura-ink-b: #ffc4c4 !important;
+  filter: drop-shadow(0 0 6px #ff344b88);
+}
+@media (prefers-reduced-motion: reduce) {
+  .number-box[data-cosmetic="blackout-2026"] .box-finish::before,
+  .number-box[data-cosmetic="blackout-2026"] .box-finish::after,
+  .number-box[data-cosmetic="blackout-2026"] .box-gloss::before,
+  .number-box[data-cosmetic="blackout-2026"] .box-particles i {
+    animation: none;
+  }
+}

@@ -8,7 +8,7 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
   <a href="https://rngdle-infinite.jaime-gaming.com/"><strong>▶ Play now</strong></a>
 </p>
 
-[How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Battle Pass](#battle-pass) · [Black Friday 2026](#black-friday-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Credits](#credits)
+[How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Battle Pass](#battle-pass) · [RNGmas 2026](#rngmas-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Credits](#credits)
 
 ![The game, ready for a roll](media/roll.png)
 
@@ -49,17 +49,19 @@ premium track costs EP, never real money. Earned rewards are kept; unclaimed ear
 arrive when the season closes. Rebirth never resets the pass, and the cosmetics
 you claim are yours forever.
 
-## Black Friday 2026
+## RNGmas 2026
 
-On **November 27, 2026 (00:00–24:00 UTC)**, the shop offers product-specific
-20–50% discounts. Spending accumulates across purchases: every 100,000 EP spent
-during the event earns a stamp. At 25 stamps, the permanent Blackout 2026 aura
-is unlocked. Missing RNGween looks are also available on the event shelf for
-10,000,000 EP each. The sale does not change roll odds or scoring.
+From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: a temporary winter theme, an advent calendar and five weekly golems.
 
-The event shelf, posters, temporary themes and sale branding are available only
-on the day. Event information is shown in advance; earned auras and their
-history remain after the event.
+**Advent calendar.** A new door opens every day from December 1, and missed
+doors stay claimable for three days. The last door holds the Gingerbread aura,
+and on Christmas Day the RNGmas Star opens its own door.
+
+**Golem Smash.** Each week a golem wakes with an EP health bar. Spend EP on a
+strike, roll a random multiplier from ×1 to ×100, and defeat the golem to keep
+its permanent aura. The golems: Frost, Ember, Hollow, RNGmas and New Year.
+
+Nothing here changes roll odds, scoring tables, badge values or cooldowns; earned auras stay in your collection forever.
 
 ## Keep your progress
 
@@ -94,4 +96,4 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
-_Documentation updated November 18, 2026._
+_Documentation updated November 22, 2026._

@@ -1,5 +1,16 @@
 export const CHANGELOG = [
   {
+    version: "v0.6.1",
+    date: "2026-11-22",
+    title: "rngmas, the advent calendar and golem smash",
+    body: [
+      "rngmas runs from december 1 to january 2: a temporary winter theme, an advent calendar and five weekly golems.",
+      "the advent calendar opens one door a day; missed doors stay claimable for three days, and christmas day holds the rngmas star.",
+      "golem smash: spend ep on strikes, each strike rolls a random multiplier, and every defeated golem pays a permanent aura.",
+      "black friday 2026 is retired: prices return to normal, and the blackouts and stamps you already earned stay yours.",
+    ],
+  },
+  {
     version: "v0.6",
     date: "2026-11-18",
     title: "battle pass, new discoveries and a clearer shop",

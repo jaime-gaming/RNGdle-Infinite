@@ -6,13 +6,8 @@ import {
   BATTLE_PASS_VARIANT,
 } from "./battle-pass.js";
 import { RNGWEEN_COSMETICS, RNGWEEN_FAMILY } from "./rngween.js";
-import {
-  BLACK_FRIDAY_FAMILY,
-  BLACK_FRIDAY_SKIN,
-  isResaleCosmetic,
-  resalePrice,
-  salePrice,
-} from "./black-friday.js";
+import { BLACK_FRIDAY_FAMILY, BLACK_FRIDAY_SKIN } from "./black-friday.js";
+import { RNGMAS_COSMETICS, RNGMAS_FAMILY } from "./rngmas.js";
 
 export const BASE_ROLL_MS = 45000;
 export const BASE_COOLDOWN_MS = 60000;
@@ -800,12 +795,14 @@ export const auraProducts = [
   ...shopProducts.filter((item) => item.kind === "aura"),
   ...RNGWEEN_COSMETICS,
   BLACK_FRIDAY_SKIN,
+  ...RNGMAS_COSMETICS,
 ];
 export const productById = new Map(
   [
     ...shopProducts,
     ...RNGWEEN_COSMETICS,
     BLACK_FRIDAY_SKIN,
+    ...RNGMAS_COSMETICS,
     ...BATTLE_PASS_COSMETICS,
     BATTLE_PASS_VARIANT,
   ].map((item) => [item.id, item]),
@@ -825,6 +822,7 @@ export const SPECIAL_AURA_COLLECTION = {
 export const EVENT_AURA_FAMILIES = [
   RNGWEEN_FAMILY,
   BLACK_FRIDAY_FAMILY,
+  RNGMAS_FAMILY,
   BATTLE_PASS_FAMILY,
 ];
 
@@ -841,6 +839,8 @@ export function visibleAuraFamilies(owned = []) {
   if (RNGWEEN_COSMETICS.some((aura) => owned.includes(aura.id)))
     families.push(RNGWEEN_FAMILY);
   if (owned.includes(BLACK_FRIDAY_SKIN.id)) families.push(BLACK_FRIDAY_FAMILY);
+  if (RNGMAS_COSMETICS.some((aura) => owned.includes(aura.id)))
+    families.push(RNGMAS_FAMILY);
   if (BATTLE_PASS_COSMETICS.some((aura) => owned.includes(aura.id)))
     families.push(BATTLE_PASS_FAMILY);
   return families;
@@ -853,14 +853,9 @@ export function aurasInFamily(id, owned = []) {
   );
 }
 
-export function productPrice(item, at = Date.now()) {
-  if (!item) return 0;
-  if (
-    item.eventOnly &&
-    (isResaleCosmetic(item) || item.id === BLACK_FRIDAY_SKIN.id)
-  )
-    return resalePrice(item, at);
-  return salePrice(item, at);
+export function productPrice(item) {
+  const price = item?.price;
+  return Number.isFinite(price) ? Math.max(0, Math.trunc(price)) : 0;
 }
 
 export function rollSettings(owned = []) {

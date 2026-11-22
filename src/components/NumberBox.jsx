@@ -2,6 +2,7 @@ import React from "react";
 import "../number-box.css";
 import "../number-box-palettes.css";
 import "../rngween-auras.css";
+import "../rngmas.css";
 import RngweenAura from "./RngweenAura.jsx";
 import { productById } from "../shop-data.js";
 
@@ -50,6 +51,13 @@ const cosmetics = new Set([
   "hexbound",
   "hollow-lantern",
   "blackout-2026",
+  "rngmas-frost",
+  "rngmas-ember",
+  "rngmas-hollow",
+  "rngmas-golem",
+  "rngmas-newyear",
+  "rngmas-gingerbread",
+  "rngmas-star",
   "pass-signal",
   "pass-prism",
   "pass-firstlight",
