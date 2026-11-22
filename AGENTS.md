@@ -324,7 +324,7 @@ npm run build            # production build into dist/ for Cloudflare Workers
 npm run build:github-pages # production build into docs/ for legacy GitHub Pages
 npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
 npm run verify:cloud     # Cloud Accounts simulation against firestore.rules
-npm run test:render      # render the offline overlay and profile privacy in Node
+npm run test:render      # mount the app shell plus offline overlay and profile privacy in Node
 npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
 npm run deploy:worker    # build and deploy the Worker (production is guarded)
 npm run audit:economy    # price ladder and roll-distribution audit
@@ -345,9 +345,12 @@ checks the enable path alone: a healthy account, an account whose name was
 never reserved (it must be claimed before publishing) and a name another account
 owns (it must stay private and report a conflict).
 
-`npm run test:render` bundles the offline overlay and the profile privacy
-control with esbuild and renders them over `happy-dom`, so that UI can be
-checked without a downloaded browser. Playwright stays the end-to-end check.
+`npm run test:render` bundles the app shell, the offline overlay and the profile
+privacy control with esbuild and renders them over `happy-dom`, so a component
+that fails to render (an undefined identifier in a hook, for example) fails
+without a downloaded browser. Playwright stays the end-to-end check, but it
+cannot catch an error that only appears at runtime, so run `test:render` after
+touching `src/main.jsx`, `src/use-progress.js` or the overlay.
 
 Re-run `verify:cloud` after changing `src/cloud-save.js`,
 `src/use-progress.js` or `firestore.rules`; it is the only automated check of the

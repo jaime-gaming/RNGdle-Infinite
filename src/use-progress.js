@@ -204,6 +204,7 @@ export function useProgress({
   localPlay = false,
   localProfileRequired = false,
   online = true,
+  tabActive = true,
   deleteAuthUser = null,
 } = {}) {
   const [initial] = useState(load),
