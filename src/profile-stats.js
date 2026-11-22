@@ -66,8 +66,30 @@ export function cycleStats(progress = {}) {
   };
 }
 
+// Reused while the same history array and the fields it reads stay identical.
+const highlightCache = new WeakMap();
+
 export function profileHighlights(progress = {}) {
   const history = Array.isArray(progress.history) ? progress.history : [];
+  const cached = highlightCache.get(history);
+  if (
+    cached &&
+    cached.bookmarks === progress.bookmarks &&
+    cached.equipped === progress.equipped &&
+    cached.activePet === progress.activePet
+  )
+    return cached.value;
+  const value = computeProfileHighlights(progress, history);
+  highlightCache.set(history, {
+    bookmarks: progress.bookmarks,
+    equipped: progress.equipped,
+    activePet: progress.activePet,
+    value,
+  });
+  return value;
+}
+
+function computeProfileHighlights(progress, history) {
   const stats = accountStats(progress);
   const rolls = new Map(
     history

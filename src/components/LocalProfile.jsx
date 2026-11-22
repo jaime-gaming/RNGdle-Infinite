@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   ArrowRight,
@@ -153,6 +153,12 @@ export default function LocalProfile({
   }, [profile?.id, profile?.description]);
 
   const [shareLink, setShareLink] = useState("");
+  const [shareFailed, setShareFailed] = useState(false);
+  // Rebuilt from the whole history, so it must not follow unrelated re-renders.
+  const record = useMemo(
+    () => (progress ? shareCardData(progress) : null),
+    [progress],
+  );
   async function copyProfileLink() {
     let url;
     if (cloudAccount) {
@@ -190,22 +196,37 @@ export default function LocalProfile({
   }
 
   async function changePublicVisibility(enabled) {
-    if (publishingProfile || typeof onSetPublicProfile !== "function") return;
-    setPublishingProfile(true);
+    if (publishingProfile) return;
     setShareLink("");
+    if (typeof onSetPublicProfile !== "function") {
+      setShareFailed(true);
+      setShareNote(
+        "Profile privacy cannot be changed from this screen because online accounts are not ready here. Open your profile while signed in and try again.",
+      );
+      return;
+    }
+    setPublishingProfile(true);
+    setShareFailed(false);
     setShareNote("");
     try {
       const result = await onSetPublicProfile(enabled);
+      const ok = Boolean(result?.ok);
+      setShareFailed(!ok);
       setShareNote(
         result?.message ??
-          (result?.ok
+          (ok
             ? enabled
               ? "Your public profile is enabled."
               : "Your public profile was removed."
-            : "Profile privacy could not be changed. Try again."),
+            : "Profile privacy could not be changed. Reload and try again."),
       );
-    } catch {
-      setShareNote("Profile privacy could not be changed. Try again.");
+    } catch (error) {
+      setShareFailed(true);
+      setShareNote(
+        error instanceof Error && error.message
+          ? `Profile privacy could not be changed: ${error.message}`
+          : "Profile privacy could not be changed. Reload and try again.",
+      );
     } finally {
       setPublishingProfile(false);
     }
@@ -702,13 +723,8 @@ export default function LocalProfile({
                     : undefined
                 }
                 aria-pressed={Boolean(publicProfileEnabled)}
-                disabled={
-                  publishingProfile ||
-                  onlinePaused ||
-                  typeof onSetPublicProfile !== "function" ||
-                  (!publicProfileEnabled &&
-                    cloudProfileIdentity?.reserved === false)
-                }
+                aria-busy={publishingProfile}
+                disabled={publishingProfile || onlinePaused}
                 onClick={() => changePublicVisibility(!publicProfileEnabled)}
               >
                 <Share2 size={15} aria-hidden="true" />
@@ -732,7 +748,10 @@ export default function LocalProfile({
             )}
           </div>
           {shareNote && (
-            <p className="profile-share-note" role="status">
+            <p
+              className={`profile-share-note${shareFailed ? " profile-share-note--error" : ""}`}
+              role={shareFailed ? "alert" : "status"}
+            >
               {shareNote}
               {shareLink && (
                 <input
@@ -749,7 +768,7 @@ export default function LocalProfile({
               ? "Export a profile card, or enable public sharing before copying a cloud profile link."
               : "Download or share a copy of your progress card."}
           </p>
-          {progress && <ProfileRecord record={shareCardData(progress)} />}
+          {progress && <ProfileRecord record={record} />}
           {canEdit && (
             <div className="account-danger">
               <button

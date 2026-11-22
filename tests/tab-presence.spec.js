@@ -34,6 +34,14 @@ test("a tab left in the background stops advertising itself as a visible player"
     .poll(async () => (await readSavedProgress(page)).offline.lastSeenAt)
     .toBeGreaterThan(Date.now() - 30_000);
 
+  // Coming back after an hour pays offline rolls on a full-screen summary; the
+  // tab visibility checks below need the game itself.
+  const dismiss = page.getByRole("button", { name: "Keep playing" });
+  if (await dismiss.isVisible().catch(() => false)) await dismiss.click();
+  await expect(
+    page.getByRole("dialog", { name: "Offline rewards" }),
+  ).toHaveCount(0);
+
   await setVisibility(page, "hidden");
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));
   await page.waitForTimeout(50);

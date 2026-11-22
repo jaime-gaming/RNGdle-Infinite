@@ -114,12 +114,6 @@ Only rolls fund a cycle gate.
   timestamps, preferences, or auxiliary records, and compare the current reset
   generation before that. The player is interrupted only when the copies really
   compete:
-  - **The copy with more progress wins on its own.** When two same-profile
-    copies are both trusted lineage but hold mixed progress, `saveProgressScore`
-    ranks durable progress (rolls, badges, upgrades, companions, skills, reset
-    generation, best roll and earned EP) and `compareSaveScore` lets a copy that
-    leads by `RICHER_COPY_SHARE` win without interrupting the player. Only copies
-    that stay close keep asking.
   - **A copy this device already synced continues automatically.** After every
     successful reconciliation, `writeCloudSyncMark` stores that account's
     document fingerprint, profile ID and alias in local storage. If the online
@@ -329,7 +323,8 @@ npx playwright test tests/roll.spec.js
 npm run build            # production build into dist/ for Cloudflare Workers
 npm run build:github-pages # production build into docs/ for legacy GitHub Pages
 npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
-npm run verify:cloud     # two-device Cloud Accounts simulation against firestore.rules
+npm run verify:cloud     # Cloud Accounts simulation against firestore.rules
+npm run test:render      # render the offline overlay and profile privacy in Node
 npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
 npm run deploy:worker    # build and deploy the Worker (production is guarded)
 npm run audit:economy    # price ladder and roll-distribution audit
@@ -345,7 +340,16 @@ devices that share a fake Firestore which evaluates every commit against a model
 of `firestore.rules`, so a client write the real rules would reject fails there.
 It covers the first upload, a second device adopting the online save, both-way
 sync, a stale device never overwriting newer progress, publishing, unpublishing
-and the two-profile conflict. Re-run it after changing `src/cloud-save.js`,
+and the two-profile conflict. `tools/cloud-sync-sim/public-profile.mjs` then
+checks the enable path alone: a healthy account, an account whose name was
+never reserved (it must be claimed before publishing) and a name another account
+owns (it must stay private and report a conflict).
+
+`npm run test:render` bundles the offline overlay and the profile privacy
+control with esbuild and renders them over `happy-dom`, so that UI can be
+checked without a downloaded browser. Playwright stays the end-to-end check.
+
+Re-run `verify:cloud` after changing `src/cloud-save.js`,
 `src/use-progress.js` or `firestore.rules`; it is the only automated check of the
 rules/contract pair, because Firebase itself is never reached from CI.
 
@@ -387,11 +391,17 @@ the real calendar date.
   archived totals. Legacy event rows are read-only historical records.
 - **Presentation settings do not affect odds, EP, prices or timings.** Offline
   rolls pay EP and enter history; skills charge online only.
-- **A background tab is not a visible player.** `src/tab-activity.js` reports a
-  tab as away once it is hidden, or once it loses focus for `AWAY_GRACE_MS`.
-  Offline presence uses that state, so a tab left in the background stops
-  earning and stops suppressing offline rolls in the other tab. Presence writes
-  a heartbeat only while the tab is really active.
+- **Offline Roller pays on its own screen.** `src/components/OfflineRewards.jsx`
+  is a full-screen modal `<dialog>` (portal + `useModalDialog`); it must not go
+  back to an in-page card, because the roll view and ads kept painting
+  underneath it. Its accessible name stays `Offline rewards`, a running batch
+  cannot be dismissed halfway, and closing it dispatches `offline-dismiss`
+  (`status.retry()` when that fails).
+- **Public sharing never fails silently.** `reserveCloudProfileName` repairs an
+  account whose settings never claimed its name; `setPublicProfileVisibility`
+  reports the conflict, the publish failure and the rules/network error as text.
+  Do not disable the privacy button for an unreserved name: that state is
+  recoverable and the player must see the result of the click.
 - **English copy and formatting.** Use `formatEP`/`toLocaleString("en-US")`;
   do not let browser locale leak into player-facing numbers.
 
@@ -437,7 +447,7 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.6fix2`; do not change it
+  flow. The current label is exactly `v0.6fix1`; do not change it
   until the next session or an explicit user request. Public release notes
   live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR

@@ -1160,12 +1160,6 @@ function App() {
           <>
             {/* RETIREMENT: event-only chrome. */}
             <SaleSideAds status={sale} page={page} onOpenShelf={openShelf} />
-            <OfflineRewards
-              progress={session}
-              status={offlineState}
-              onDismiss={() => dispatch({ type: "offline-dismiss" })}
-              onHistory={() => navigate("history")}
-            />
             <div
               className="roll-view"
               hidden={page !== "roll"}
@@ -1915,6 +1909,12 @@ function App() {
               </section>
             </div>
           )}
+          <OfflineRewards
+            progress={session}
+            status={offlineState}
+            onDismiss={() => dispatch({ type: "offline-dismiss" })}
+            onHistory={() => navigate("history")}
+          />
           <Toasts items={toasts} onDismiss={dismissToast} />
 
           {ultraCeremony && (

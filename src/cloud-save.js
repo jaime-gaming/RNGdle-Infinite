@@ -1225,6 +1225,78 @@ async function ensureCloudProfileSettings(userId, progress) {
   }
 }
 
+// Recovers a Cloud account whose settings document never reserved its name
+// (the first save landed while the claim write was denied). Only the
+// name-reservation-only settings update can repair that state, and without it
+// every publish attempt returned an unexplained conflict.
+export async function reserveCloudProfileName(userId, progress) {
+  if (!userId) throw new Error("Sign in before reserving a Cloud name.");
+  if (!progress?.profile)
+    throw new Error("Create a profile before reserving a Cloud name.");
+  const usernameKey = publicProfileId(progress.profile.username);
+  if (!usernameKey) throw new Error("Choose a valid Cloud profile name.");
+  const profileId = progress.profile.id;
+  if (typeof profileId !== "string" || !profileId)
+    throw new Error("Choose a profile before reserving a Cloud name.");
+
+  const database = requireFirestore();
+  const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
+  const settingsReference = profileSettingsRef(database, userId);
+  const nameReference = profileNameRef(database, usernameKey);
+
+  const reserve = () =>
+    runCloudTransaction(database, async (transaction) => {
+      const [settingsSnapshot, saveSnapshot] = await Promise.all([
+        transaction.get(settingsReference),
+        transaction.get(saveReference),
+      ]);
+      if (!settingsSnapshot.exists() || !saveSnapshot.exists())
+        throw new Error("The online profile changed. Reload and try again.");
+      const settings = settingsSnapshot.data();
+      if (settings.profile_id !== profileId)
+        throw new Error(
+          "The online profile changed. Reload and try again before sharing it.",
+        );
+      if (settings.username_key === usernameKey) return;
+      if (settings.username_key != null)
+        throw new Error(
+          "This Cloud account already reserved a different name. Choose that name or rename the profile.",
+        );
+      transaction.set(nameReference, {
+        owner_uid: userId,
+        profile_id: profileId,
+      });
+      transaction.set(settingsReference, {
+        ...settings,
+        username_key: usernameKey,
+        username_changed_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      });
+    });
+
+  try {
+    await reserve();
+  } catch (error) {
+    const denied =
+      error?.code === "permission-denied" ||
+      error?.code === "firestore/permission-denied";
+    if (!denied)
+      throw new Error(
+        "This Cloud profile name could not be reserved. Choose a different name and try again.",
+      );
+    const latest = await getDoc(settingsReference);
+    const settings = latest.exists() ? latest.data() : null;
+    if (settings?.username_key === usernameKey) return;
+    throw new Error(
+      "This Cloud profile name is already reserved by another account. Choose a different name before sharing it.",
+    );
+  }
+
+  const latest = await getDoc(settingsReference);
+  const settings = latest.exists() ? latest.data() : null;
+  return { reserved: settings?.username_key === usernameKey, settings };
+}
+
 export async function writeCloudSave(userId, progress) {
   if (!userId) throw new Error("Sign in before backing up progress online.");
   if (!progress?.profile)

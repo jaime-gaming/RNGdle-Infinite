@@ -65,7 +65,7 @@ history remain after the event.
 
 Open **Profile → Continue locally**, then give your local profile a name to keep your progress on this device. A Cloud Account is optional if you want to continue on another device. If you play offline, progress is saved locally and a Cloud Account syncs again when you reconnect.
 
-When two devices hold different progress for the same profile, the copy with more progress is kept automatically and the other copy stays safe here; you are asked only when both copies are equally far along. You choose whether to share a public profile. A profile logo appears only when that profile is shared. To go back to an earlier saved copy, open **Settings → Restore save**; you can check the copy's progress before choosing it.
+When two devices hold different progress for the same profile, the copy with more progress is kept automatically and the other copy stays safe here; you are asked only when both copies are equally far along. You choose whether to share a public profile: **Make profile public** either publishes the summary or explains what stopped it, and a name that belongs to another Cloud account is reported instead of failing quietly. A profile logo appears only when that profile is shared. To go back to an earlier saved copy, open **Settings → Restore save**; you can check the copy's progress before choosing it.
 
 ![Choose a saved copy to restore](media/save-recovery.png)
 
@@ -77,7 +77,7 @@ Your progress is saved in this browser. Keep the site data on this device; if sa
 
 **Can I choose a number?** No. Each roll is random; repeats are part of the game.
 
-**Can I play offline?** Yes. Your named local profile keeps progress on this device; cloud progress syncs after you reconnect.
+**Can I play offline?** Yes. Your named local profile keeps progress on this device; cloud progress syncs after you reconnect. Offline Roller rewards are shown on their own full-screen summary when you come back, and they stay readable until you close it.
 
 **What happens to old event rewards?** Rewards already earned remain in your collection and activity history.
 
