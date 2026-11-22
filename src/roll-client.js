@@ -10,7 +10,7 @@ function reset(message) {
   }
   pending.clear();
 }
-function request(type, number) {
+function request(type, payload = {}) {
   return new Promise((resolve, reject) => {
     try {
       if (!worker) {
@@ -41,7 +41,7 @@ function request(type, number) {
         60000,
       );
       pending.set(id, { resolve, reject, timer });
-      worker.postMessage({ id, type, number });
+      worker.postMessage({ id, type, ...payload });
     } catch (error) {
       reset("Unable to load scoring data. Please retry.");
       reject(error);
@@ -51,4 +51,6 @@ function request(type, number) {
 export const prepareRolls = () => request("init");
 export const generateRoll = () => request("roll");
 
-export const restoreRoll = (number) => request("restore", number);
+export const restoreRoll = (number) => request("restore", { number });
+export const generateRollNumbers = (count) => request("roll-many", { count });
+export const restoreRolls = (numbers) => request("restore-many", { numbers });

@@ -19,18 +19,39 @@ function load() {
   return indexPromise;
 }
 
+const BATCH_MAX = 360;
+function validCount(count) {
+  return Number.isSafeInteger(count) && count >= 1 && count <= BATCH_MAX;
+}
+function validNumbers(numbers) {
+  return (
+    Array.isArray(numbers) &&
+    numbers.length >= 1 &&
+    numbers.length <= BATCH_MAX &&
+    numbers.every((n) => Number.isSafeInteger(n) && n >= 0 && n < 1000001)
+  );
+}
+
 self.onmessage = async ({ data }) => {
   const { id, type } = data;
   try {
-    if (!["init", "roll", "restore"].includes(type))
+    if (
+      !["init", "roll", "restore", "roll-many", "restore-many"].includes(type)
+    )
       throw new Error("Unknown request");
     const index = await load();
-    const result =
-      type === "roll"
-        ? index.evaluate(randomNumber())
-        : type === "restore"
-          ? index.evaluate(data.number)
-          : null;
+    let result;
+    if (type === "roll") result = index.evaluate(randomNumber());
+    else if (type === "restore") result = index.evaluate(data.number);
+    else if (type === "roll-many") {
+      if (!validCount(data.count)) throw new Error("Invalid batch size");
+      const numbers = [];
+      for (let i = 0; i < data.count; i++) numbers.push(randomNumber());
+      result = numbers;
+    } else if (type === "restore-many") {
+      if (!validNumbers(data.numbers)) throw new Error("Invalid batch numbers");
+      result = data.numbers.map((number) => index.evaluate(number));
+    } else result = null;
     self.postMessage({ id, result });
   } catch (error) {
     self.postMessage({

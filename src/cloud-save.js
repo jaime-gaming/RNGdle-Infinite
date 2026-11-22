@@ -413,6 +413,37 @@ function passLifetimePremium(progress) {
   );
 }
 
+export function saveProgressScore(progress) {
+  if (!progress?.profile) return 0;
+  const tally = allTimeTally(progress);
+  const badges = new Set([
+    ...uniqueIds(progress.discovered),
+    ...uniqueIds(tally.discovered),
+  ]);
+  let score = 0;
+  score += safeAmount(tally.rolls) * 120;
+  score += badges.size * 200;
+  score += uniqueIds(tally.badges).size * 20;
+  score += uniqueIds(progress.owned).size * 60;
+  score += uniqueIds(progress.pets).size * 300;
+  score += uniqueIds(progress.skills).size * 300;
+  score += safeAmount(progress.rebirths) * 1500;
+  score += safeAmount(progress.ultraRebirths) * 6000;
+  score += safeAmount(progress.rollbacks) * 9000;
+  score += safeAmount(progress.freshStarts) * 25000;
+  score += safeAmount(tally.best?.ep);
+  score += Math.round(
+    Math.log10(
+      safeAmount(progress.totalEarned) + safeAmount(progress.balance) + 10,
+    ) * 600,
+  );
+  score += safeAmount(progress.blackFriday?.stamps) * 40;
+  score += uniqueIds(progress.rngweenLimited?.auras).size * 120;
+  score += passLifetimeClaims(progress) * 30;
+  score += Math.round(passLifetimeXp(progress) / 10);
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.round(score));
+}
+
 export function compareSaveRichness(local, cloud) {
   if (!local?.profile && !cloud?.profile) return "equal";
   if (!local?.profile) return "cloud";
@@ -676,21 +707,44 @@ export function chooseSaveWinner(
       winner: comparison,
       comparison,
     };
+  const richer = richerSaveCopy(local, cloud);
+  if (richer) return richer;
   if (comparison === "equal" && sameSave(local, cloud))
     return { progress: cloud, winner: "cloud", comparison };
 
-  if (comparison === "equal")
-    return {
-      progress: local,
-      winner: "local",
-      comparison,
-      preferencesOnly: true,
-    };
   return {
-    progress: null,
-    winner: "choice",
+    progress: local,
+    winner: "local",
     comparison,
-    choiceReason: "incomparable",
+    preferencesOnly: true,
+  };
+}
+
+export const RICHER_COPY_SHARE = 1.25;
+
+export function compareSaveScore(local, cloud) {
+  const localScore = saveProgressScore(local);
+  const cloudScore = saveProgressScore(cloud);
+  const richer =
+    localScore >= cloudScore * RICHER_COPY_SHARE
+      ? "local"
+      : cloudScore >= localScore * RICHER_COPY_SHARE
+        ? "cloud"
+        : "even";
+  return { localScore, cloudScore, richer };
+}
+
+function richerSaveCopy(local, cloud) {
+  if (!local?.profile || !cloud?.profile) return null;
+  const { localScore, cloudScore, richer } = compareSaveScore(local, cloud);
+  if (richer === "even") return null;
+  return {
+    progress: richer === "local" ? local : cloud,
+    winner: richer,
+    comparison: "richer-copy",
+    richerCopy: true,
+    localScore,
+    cloudScore,
   };
 }
 
@@ -1169,6 +1223,78 @@ async function ensureCloudProfileSettings(userId, progress) {
 
     return tryCreateSettings(false);
   }
+}
+
+// Recovers a Cloud account whose settings document never reserved its name
+// (the first save landed while the claim write was denied). Only the
+// name-reservation-only settings update can repair that state, and without it
+// every publish attempt returned an unexplained conflict.
+export async function reserveCloudProfileName(userId, progress) {
+  if (!userId) throw new Error("Sign in before reserving a Cloud name.");
+  if (!progress?.profile)
+    throw new Error("Create a profile before reserving a Cloud name.");
+  const usernameKey = publicProfileId(progress.profile.username);
+  if (!usernameKey) throw new Error("Choose a valid Cloud profile name.");
+  const profileId = progress.profile.id;
+  if (typeof profileId !== "string" || !profileId)
+    throw new Error("Choose a profile before reserving a Cloud name.");
+
+  const database = requireFirestore();
+  const saveReference = doc(database, CLOUD_SAVE_COLLECTION, userId);
+  const settingsReference = profileSettingsRef(database, userId);
+  const nameReference = profileNameRef(database, usernameKey);
+
+  const reserve = () =>
+    runCloudTransaction(database, async (transaction) => {
+      const [settingsSnapshot, saveSnapshot] = await Promise.all([
+        transaction.get(settingsReference),
+        transaction.get(saveReference),
+      ]);
+      if (!settingsSnapshot.exists() || !saveSnapshot.exists())
+        throw new Error("The online profile changed. Reload and try again.");
+      const settings = settingsSnapshot.data();
+      if (settings.profile_id !== profileId)
+        throw new Error(
+          "The online profile changed. Reload and try again before sharing it.",
+        );
+      if (settings.username_key === usernameKey) return;
+      if (settings.username_key != null)
+        throw new Error(
+          "This Cloud account already reserved a different name. Choose that name or rename the profile.",
+        );
+      transaction.set(nameReference, {
+        owner_uid: userId,
+        profile_id: profileId,
+      });
+      transaction.set(settingsReference, {
+        ...settings,
+        username_key: usernameKey,
+        username_changed_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      });
+    });
+
+  try {
+    await reserve();
+  } catch (error) {
+    const denied =
+      error?.code === "permission-denied" ||
+      error?.code === "firestore/permission-denied";
+    if (!denied)
+      throw new Error(
+        "This Cloud profile name could not be reserved. Choose a different name and try again.",
+      );
+    const latest = await getDoc(settingsReference);
+    const settings = latest.exists() ? latest.data() : null;
+    if (settings?.username_key === usernameKey) return;
+    throw new Error(
+      "This Cloud profile name is already reserved by another account. Choose a different name before sharing it.",
+    );
+  }
+
+  const latest = await getDoc(settingsReference);
+  const settings = latest.exists() ? latest.data() : null;
+  return { reserved: settings?.username_key === usernameKey, settings };
 }
 
 export async function writeCloudSave(userId, progress) {
@@ -2415,6 +2541,11 @@ export async function reconcileCloudSave(
         !sameSave(localProgress, remoteProgress)
           ? "The online copy had newer progress, so it was loaded. This device's previous copy is saved in Settings."
           : "";
+    } else if (choice.richerCopy) {
+      notice =
+        choice.winner === "local"
+          ? "This device holds more progress, so it was backed up online. The other copy is saved in Settings."
+          : "The online copy holds more progress, so it was loaded. The other copy is saved in Settings.";
     } else if (choice.winner === "local" && remoteProgress) {
       notice =
         "This device had more progress, so it was backed up online. The previous online copy is saved in Settings.";

@@ -4,6 +4,7 @@ import {
   readCloudOwner,
   readCloudSave,
   reconcileCloudSave,
+  clearCloudSyncMark,
   selectLocalSaveForCloudUser,
   setCloudProfileVisibility,
   writeCloudOwner,
@@ -216,6 +217,36 @@ const steps = {
     report("choice required", Boolean(choice));
     if (!choice) fail("two different profiles with progress never asked");
     report("notice", JSON.stringify(result.notice ?? "").slice(0, 120));
+  },
+
+  async "richer-device"() {
+    const local = readLocal();
+    const next = {
+      ...local,
+      totalEarned: local.totalEarned + 200,
+      balance: local.balance + 180,
+      discovered: ["101", "202", "303", "404", "505", "606"],
+      skills: ["lucky-charm", "second-wind"],
+      owned: [...local.owned, "eclipse"],
+      history: [
+        ...local.history,
+        rollEntry(40, 777),
+        rollEntry(41, 888),
+        rollEntry(42, 999),
+        rollEntry(43, 111),
+      ],
+    };
+    writeLocal(next);
+    clearCloudSyncMark(UID, storage);
+    await new Promise((resolve) => setTimeout(resolve, 2100));
+    const { result, choice } = await appSession(next);
+    if (choice) fail("the device holding more progress still asked the player");
+    report("winner", result.winner);
+    report("comparison", result.comparison);
+    if (result.winner !== "local")
+      fail("the copy with more progress did not win");
+    if ((result.progress?.history?.length ?? 0) < next.history.length)
+      fail("the copy with more progress was not kept");
   },
 
   async "cloud-state"() {

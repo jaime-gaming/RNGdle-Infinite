@@ -29,7 +29,7 @@ test("only the legacy GitHub Pages build shows the mirror notice", () => {
 
 test("internal version labels compare by release and fix number", () => {
   expect(isNewerVersion("v0.5.2fix5", "v0.5.2fix4")).toBe(true);
-  expect(isNewerVersion("v0.6fix1", "v0.6fix0")).toBe(true);
+  expect(isNewerVersion("v0.6fix2", "v0.6fix0")).toBe(true);
   expect(isNewerVersion("v0.6fix0", "v0.6")).toBe(false);
   expect(isNewerVersion("v0.5.3", "v0.5.2fix9")).toBe(true);
   expect(isNewerVersion("v0.5.2fix4", "v0.5.2fix4")).toBe(false);
@@ -48,7 +48,7 @@ test("build identity is read from the page and version checks use the app base p
     getAppInternalVersion({
       querySelector: () => ({ content: APP_INTERNAL_VERSION }),
     }),
-  ).toBe("v0.6fix1");
+  ).toBe("v0.6fix2");
   expect(
     makeVersionUrl({
       base: "/preview/",
@@ -102,7 +102,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     new URL("/version.json", page.url()).toString(),
   );
   expect(liveVersion.ok()).toBeTruthy();
-  expect(APP_INTERNAL_VERSION).toBe("v0.6fix1");
+  expect(APP_INTERNAL_VERSION).toBe("v0.6fix2");
   expect(await liveVersion.json()).toMatchObject({
     buildId,
     internalVersion: APP_INTERNAL_VERSION,
