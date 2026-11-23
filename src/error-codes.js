@@ -161,10 +161,31 @@ const classifiers = [
   [/invalid|unexpected|invariant/i, "IN710"],
 ];
 
+const GAME_AUTHORITY_REFERENCES = Object.freeze({
+  "cloud-restricted": "CL303",
+  "restriction-pending": "CL303",
+  "sign-in-required": "AC402",
+  "account-changed": "CL307",
+  "request-not-secure": "NT606",
+  "game-security-unavailable": "NT605",
+  "cloud-save-unavailable": "CL304",
+  "cloud-save-not-ready": "CL314",
+  "cloud-profile-changed": "CL314",
+  "roll-not-ready": "GM504",
+  "idempotency-conflict": "GM515",
+  "invalid-game-response": "NT604",
+});
+
 export function errorReference(message = "", fallback = "GM503") {
   for (const [pattern, id] of classifiers)
     if (pattern.test(String(message))) return id;
   return byId.has(fallback) ? fallback : "GM503";
+}
+
+export function gameAuthorityErrorReference(code, message = "") {
+  if (Object.hasOwn(GAME_AUTHORITY_REFERENCES, code))
+    return GAME_AUTHORITY_REFERENCES[code];
+  return errorReference(message, "GM516");
 }
 
 export function isErrorReference(value) {

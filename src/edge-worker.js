@@ -228,12 +228,20 @@ export function createIncidentEndpoint({
   };
 }
 
+import { createGameEndpoint } from "./game-api.js";
+import { GameSessionDurableObject } from "./game-session.js";
+
+export { GameSessionDurableObject };
+
 const handleIncidentReport = createIncidentEndpoint();
+const handleGameRequest = createGameEndpoint();
 
 export default {
   async fetch(request, env) {
-    if (new URL(request.url).pathname === REPORT_PATH)
-      return handleIncidentReport(request, env);
+    const pathname = new URL(request.url).pathname;
+    if (pathname === REPORT_PATH) return handleIncidentReport(request, env);
+    if (pathname.startsWith("/api/game"))
+      return handleGameRequest(request, env);
     return env.ASSETS.fetch(request);
   },
 };

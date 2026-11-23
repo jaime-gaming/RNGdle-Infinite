@@ -1,5 +1,6 @@
 import { flywheelForDraw } from "../flywheel";
 import { gameNow } from "../game-clock";
+import { errorReference, isErrorReference } from "../error-codes.js";
 import RollProgress from "./RollProgress";
 import GoalRecap from "./GoalRecap";
 import CooldownFill from "./CooldownFill";
@@ -228,7 +229,36 @@ export default function RollExperience({
   const [localCooldownUntil, setLocalCooldownUntil] = useState(0);
   const mounted = useRef(false);
   const [error, setError] = useState("");
+  const [errorReferenceCode, setErrorReferenceCode] = useState("");
   const [settleError, setSettleError] = useState("");
+  const [settleErrorReferenceCode, setSettleErrorReferenceCode] = useState("");
+  function recordRollError(value) {
+    const message =
+      value instanceof Error ? value.message : String(value ?? "");
+    setError(message);
+    setErrorReferenceCode(
+      message
+        ? isErrorReference(value?.reference)
+          ? value.reference
+          : errorReference(message)
+        : "",
+    );
+  }
+  function clearRollError() {
+    setError("");
+    setErrorReferenceCode("");
+  }
+  function recordSettlementError(outcome) {
+    const message = outcome.ok ? "" : (outcome.message ?? "");
+    setSettleError(message);
+    setSettleErrorReferenceCode(
+      message
+        ? isErrorReference(outcome.reference)
+          ? outcome.reference
+          : errorReference(message)
+        : "",
+    );
+  }
   const [copied, setCopied] = useState(false);
   const [cooldown, setCooldown] = useState(() =>
     displayedCooldownSeconds(
@@ -606,7 +636,7 @@ export default function RollExperience({
       );
       creditCallback.current(run.result, run.id, until).then((outcome) => {
         if (mounted.current && activeRun.current === run.id)
-          setSettleError(outcome.ok ? "" : outcome.message);
+          recordSettlementError(outcome);
       });
     };
     if (reducedMotion || alreadyElapsed >= timeline.end) finish(reducedMotion);
@@ -636,7 +666,7 @@ export default function RollExperience({
     let active = true;
     prepareRolls()
       .catch((error) => {
-        if (active) setError(error.message);
+        if (active) recordRollError(error);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -661,13 +691,26 @@ export default function RollExperience({
       return;
     drawPending.current = true;
     setDrawing(true);
-    setError("");
+    clearRollError();
     try {
       const outcome = await onDraw();
-      if (!outcome.ok) throw new Error(outcome.message);
+      if (!outcome.ok) {
+        if (
+          Number.isSafeInteger(outcome.retryAfterMs) &&
+          outcome.retryAfterMs > 0
+        ) {
+          const until = gameNow() + outcome.retryAfterMs;
+          localCooldown.current = Math.max(localCooldown.current, until);
+          setLocalCooldownUntil(localCooldown.current);
+        }
+        const failure = new Error(outcome.message);
+        if (isErrorReference(outcome.reference))
+          failure.reference = outcome.reference;
+        throw failure;
+      }
       if (mounted.current) begin(outcome.run);
     } catch (error) {
-      if (mounted.current) setError(error.message);
+      if (mounted.current) recordRollError(error);
     } finally {
       drawPending.current = false;
       if (mounted.current) setDrawing(false);
@@ -701,10 +744,11 @@ export default function RollExperience({
       }
     }
     activeRun.current = committed.id;
-    setError("");
+    clearRollError();
     clearTimeout(copiedTimer.current);
     setCopied(false);
     setSettleError("");
+    setSettleErrorReferenceCode("");
     setInstantCompletion(reducedMotion);
     setElapsed(
       reducedMotion
@@ -727,7 +771,7 @@ export default function RollExperience({
         if (!cancelled && mounted.current) begin({ ...pending, result });
       })
       .catch((error) => {
-        if (!cancelled) setError(error.message);
+        if (!cancelled) recordRollError(error);
       })
       .finally(() => {
         if (!cancelled) setDrawing(false);
@@ -741,10 +785,15 @@ export default function RollExperience({
     setDrawing(true);
     try {
       const outcome = await onDraw();
-      if (!outcome.ok) throw new Error(outcome.message);
+      if (!outcome.ok) {
+        const failure = new Error(outcome.message);
+        if (isErrorReference(outcome.reference))
+          failure.reference = outcome.reference;
+        throw failure;
+      }
       if (mounted.current) begin(outcome.run);
     } catch (error) {
-      if (mounted.current) setError(error.message);
+      if (mounted.current) recordRollError(error);
     } finally {
       if (mounted.current) setDrawing(false);
     }
@@ -756,7 +805,7 @@ export default function RollExperience({
       run.startedAt + run.rollMS + run.cooldownMS,
     );
     if (mounted.current && activeRun.current === run.id)
-      setSettleError(outcome.ok ? "" : outcome.message);
+      recordSettlementError(outcome);
   }
   async function share(shared = result) {
     const sharedRun = run.id;
@@ -975,6 +1024,11 @@ export default function RollExperience({
               {session.pendingRoll
                 ? "Your committed roll is retained; resume it below."
                 : "No roll or EP was awarded. Use Retry & Roll to try again."}
+              {errorReferenceCode && (
+                <small className="roll-error-reference">
+                  Reference {errorReferenceCode}
+                </small>
+              )}
             </p>
           )}
           <p className="roll-hint">
@@ -1147,11 +1201,21 @@ export default function RollExperience({
               <p className="roll-load-error" role="alert">
                 {error} No roll or EP was awarded. Use Retry &amp; Roll to try
                 again.
+                {errorReferenceCode && (
+                  <small className="roll-error-reference">
+                    Reference {errorReferenceCode}
+                  </small>
+                )}
               </p>
             )}
             {settleError && (
               <div className="roll-load-error" role="alert">
                 {settleError} Your committed number is retained.{" "}
+                {settleErrorReferenceCode && (
+                  <small className="roll-error-reference">
+                    Reference {settleErrorReferenceCode}
+                  </small>
+                )}
                 <button className="secondary-button" onClick={retrySettlement}>
                   Retry result settlement
                 </button>

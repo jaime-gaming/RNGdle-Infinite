@@ -13,6 +13,16 @@ service cloud.firestore {
       return /databases/$(database)/documents/cloud_profile_settings/$(uid);
     }
 
+    function cloudSecurityStatusPath(uid) {
+      return /databases/$(database)/documents/cloud_security_status/$(uid);
+    }
+
+    function cloudGameplayAllowed(uid) {
+      let statusPath = cloudSecurityStatusPath(uid);
+      return !exists(statusPath)
+        || get(statusPath).data.get('cloud_access', false) == true;
+    }
+
     function profileNamePath(nameKey) {
       return /databases/$(database)/documents/cloud_profile_names/$(nameKey);
     }
@@ -606,11 +616,13 @@ service cloud.firestore {
       allow get: if signedInAs(uid);
       allow list: if false;
       allow create: if signedInAs(uid)
+        && cloudGameplayAllowed(uid)
         && validSaveEnvelope()
         && cloudProfileSettingsReadyAfter(uid, true)
         && validSavePublicLinkAfter(uid)
         && saveWriteAllowed(uid);
       allow update: if signedInAs(uid)
+        && cloudGameplayAllowed(uid)
         && validSaveEnvelope()
         && cloudProfileSettingsReadyAfter(uid, true)
         && validSavePublicLinkAfter(uid)
@@ -766,6 +778,13 @@ service cloud.firestore {
         && exists(publicProfilePath(profileId))
         && publicProfileIsOwnedByUser(profileId, request.auth.uid)
         && profileNoLongerPublicAfter(profileId, request.auth.uid);
+    }
+
+    // Only the verified game Worker may manage Cloud-game restrictions. An
+    // Admin SDK service account bypasses rules; player clients cannot inspect,
+    // forge, clear or delete this enforcement record.
+    match /cloud_security_status/{uid} {
+      allow read, write: if false;
     }
 
     match /public_profile_owners/{profileId} {

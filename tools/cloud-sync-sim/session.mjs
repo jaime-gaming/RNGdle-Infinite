@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { emptyProgress, PROGRESS_KEY } from "../../src/progress.js";
+import { readCloudRecovery } from "../../src/save-vault.js";
 import {
   readCloudOwner,
   readCloudSave,
@@ -115,6 +116,31 @@ const steps = {
     if (!result.uploaded) fail("the first sync did not upload the save");
   },
 
+  async "trusted-richer-device"() {
+    const local = readLocal();
+    const next = {
+      ...local,
+      totalEarned: local.totalEarned + 200,
+      balance: local.balance + 80,
+      history: [...local.history, rollEntry(50, 505)],
+    };
+    writeLocal(next);
+    await new Promise((resolve) => setTimeout(resolve, 2100));
+    const { result, choice } = await appSession(next);
+    if (choice || result.winner !== "local")
+      fail("the trusted same-profile local copy did not win automatically");
+    const displaced = readCloudRecovery(storage);
+    const saved = displaced ? JSON.parse(displaced.raw) : null;
+    report("winner", result.winner);
+    report("displaced Cloud progress", saved?.totalEarned ?? "missing");
+    if (
+      displaced?.ownerId !== UID ||
+      displaced?.profileId !== next.profile.id ||
+      saved?.totalEarned !== local.totalEarned
+    )
+      fail("the automatically displaced Cloud copy was not recoverable");
+  },
+
   async adopt() {
     const { result, choice } = await appSession(emptyProgress());
     if (choice) fail("a fresh device asked the player to choose");
@@ -153,6 +179,10 @@ const steps = {
       fail("the stale device overwrote newer online progress");
     if ((result.progress?.totalEarned ?? 0) < 900)
       fail("the stale device did not pick up the newer progress");
+    const displaced = readCloudRecovery(storage);
+    const archived = displaced ? JSON.parse(displaced.raw) : null;
+    if (result.winner === "cloud" && archived?.totalEarned !== local.totalEarned)
+      fail("the automatically displaced device copy was not recoverable");
   },
 
   async publish() {

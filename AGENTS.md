@@ -110,37 +110,39 @@ Only rolls fund a cycle gate.
   `unpackVaultSave` for raw JSON consumers). Never delete history, recovery
   slots or owner markers to fit a new save. The activity log keeps 10,000
   entries and warns at 7,500.
-- **Cloud save precedence is deliberate, and asks as rarely as possible.** On
-  first Firebase sign-in, import an unowned local save only when that user's
-  Firestore document is missing. Never copy a save marked as belonging to
-  another auth user. Compare durable game progress, not file size, log length,
-  timestamps, preferences, or auxiliary records, and compare the current reset
-  generation before that. The player is interrupted only when the copies really
-  compete:
+- **Cloud save precedence is deliberate.** On first Firebase sign-in, import an
+  unowned local save only when that user's Firestore document is missing. Never
+  copy a save marked as belonging to another auth user. Reconcile durable game
+  progress, not file size, log length, timestamps, preferences or auxiliary
+  records:
+  - **Same game-profile ID: resolve automatically.** A later reset generation
+    wins first (`freshStarts`, `rollbacks`, `ultraRebirths`, then `rebirths`).
+    Within the same generation, strict durable-progress dominance wins; mixed
+    progress uses `saveProgressScore` across EP, rolls, unlocks/cosmetics, Pass
+    progress, event rewards and other retained game progress. For an exact score
+    tie, keep local-only preferences when durable progress is equal; when the
+    durable progress is mixed, keep the current online copy for a stable
+    cross-device result. Never ask the player to choose between same-profile
+    copies solely because the values are mixed or reset generations differ.
+  - **Different game-profile IDs: ask.** When both copies have profile IDs and
+    they differ, require confirmation even if one looks empty or has less
+    progress. Never merge profiles or transfer one profile's cosmetics to the
+    other. A candidate with no profile ID is not a competing profile.
   - **A copy this device already synced continues automatically.** After every
     successful reconciliation, `writeCloudSyncMark` stores that account's
-    document fingerprint, profile ID and alias in local storage. If the online
-    document still matches that mark, no other device changed it, so the local
-    copy is this save's own continuation: a rebirth, a settled roll or a
-    preference change simply uploads, and a local copy behind the mark is simply
-    replaced by the online one. Keep using the mark rather than adding new
-    heuristics; without it, fall back to the conservative rules below.
-  - **Never ask about copies with nothing at stake.** Equal durable progress
-    (only preferences, log notes or auxiliary records differ) keeps this
-    device's copy silently; a named-but-never-played profile never blocks a
-    copy that holds progress, whatever its profile ID.
+    document fingerprint, profile ID and alias in local storage. An unchanged
+    online document is a known continuation, not a competing branch; the local
+    copy can upload normal progress or adopt the online copy when it is ahead.
+    A local authoritative restore still takes precedence. Without a matching
+    mark, apply the same profile-ID, reset-generation and progress-score rules.
   - **An unsettled roll is not missing progress.** A roll still pending online
-    that this device has already settled must not count as the online copy
-    being ahead.
-  - **Still ask for real competition.** Different profile IDs that both hold
-    progress are never merged; same-profile copies with an untrusted different
-    reset generation or mixed/incomparable progress still require one explicit
-    choice, and a changed _online_ copy invalidates a pending choice. A local
-    copy that merely advanced between the review and the click does not: the
-    choice applies to the same profile, only fresher.
-  - **An explicit restore is authoritative.** Restoring a copy from Settings
-    writes `authoritative` into the sync mark so the next sync uploads it
-    instead of undoing it.
+    that this device has already settled must not count as the online copy being
+    ahead.
+  - **Invalidate stale profile choices.** A changed _online_ copy invalidates
+    a pending cross-profile choice; a local copy that merely advanced during the
+    review may still be selected if it remains the same profile. Preserve an
+    explicit player's selection when they confirm which different profile to
+    keep.
   - **`profile_id` has two scopes.** The owner pointer (`public_profile_owners`)
     and the name claim are keyed by the public name, and the owner's
     `profile_id` repeats that key; the settings document and the claim's
@@ -149,15 +151,16 @@ Only rolls fund a cycle gate.
     made every public publish and public read fail with `permission-denied`.
   - **Rebinding a profile unpublishes its alias.** Rules require the private
     save, the name claim and the owner pointer to describe one game profile, so
-    a resolution that switches the account to a different profile must clear
-    `public_profile_id`/`public_profile_enabled` and delete the alias documents
-    in the same transaction. Never point an existing public alias at different
-    progress.
+    a resolution that switches the account to a different game profile must
+    clear `public_profile_id`/`public_profile_enabled` and delete the alias
+    documents in the same transaction. Never point an existing public alias at
+    different progress.
 
-  Reconcile in a Firestore transaction and persist the displaced snapshot to the
-  separate local cloud-recovery slot before replacing either copy. The rolling
-  local save and vault remain active. Signing out keeps local progress; deleting
-  the game save removes its Firestore document, not the Firebase auth identity.
+  Reconcile in a Firestore transaction. Before a competing copy is displaced,
+  persist it to the separate local cloud-recovery slot; routine continuation of
+  the same sync-marked save is not a conflict. Keep the rolling local save and
+  vault active. Signing out keeps local progress; deleting the game save removes
+  its Firestore document, not the Firebase auth identity.
 
 - **Link sign-in providers, don't fork saves.** Email/password users can sign
   in directly. Google users must add a password after Google authentication;

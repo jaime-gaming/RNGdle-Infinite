@@ -27,13 +27,18 @@ import {
 } from "./cloud-save.js";
 import { firebaseConfigured } from "./firebase.js";
 import {
+  acknowledgeServerRoll,
+  requestGameStatus,
+  requestServerRoll,
+} from "./game-authority-client.js";
+import {
   clearCloudQuotaPause,
   cloudQuotaNotice,
   cloudQuotaPauseRemaining,
   pauseCloudForQuota,
 } from "./cloud-quota.js";
 import { cloudGameAccess } from "./auth-gate.js";
-import { errorReference } from "./error-codes.js";
+import { errorReference, isErrorReference } from "./error-codes.js";
 import { reportIncident } from "./incident-report.js";
 import { localSaveUsableForCloudFallback } from "./local-fallback.js";
 import { getStatusIssue, maintenanceActiveFor } from "./use-status-issue.js";
@@ -212,7 +217,8 @@ export function useProgress({
     [warning, setWarning] = useState(initial.warning),
     [epoch, setEpoch] = useState(0),
     [cloudRetry, setCloudRetry] = useState(0),
-    [cloudWriteRetry, setCloudWriteRetry] = useState(0);
+    [cloudWriteRetry, setCloudWriteRetry] = useState(0),
+    [gameSecurity, setGameSecurity] = useState(null);
   const [cloud, setCloudState] = useState(() =>
     !cloudEnabled
       ? { status: "unconfigured", ready: true, userId: null, error: "" }
@@ -302,6 +308,20 @@ export function useProgress({
     localProfileRequired,
     deleteAuthUser,
   };
+  useEffect(() => {
+    let active = true;
+    setGameSecurity(null);
+    if (!(cloudEnabled && authReady && userId && !localPlay && online))
+      return () => {
+        active = false;
+      };
+    void requestGameStatus(userId, (security) => {
+      if (active) setGameSecurity(security);
+    });
+    return () => {
+      active = false;
+    };
+  }, [authReady, cloudEnabled, localPlay, online, userId]);
   const cloudGate = useRef({
     userId: null,
     ready: !cloudEnabled || (authReady && !userId),
@@ -1698,7 +1718,10 @@ export function useProgress({
             };
           }
         }
-        let next, committed, presence;
+        let next,
+          committed,
+          presence,
+          serverRollRequestKey = null;
         if (action.type.startsWith("offline-")) {
           if (!previous.profile || !previous.owned.includes("offline-roller"))
             throw new Error(
@@ -1797,6 +1820,7 @@ export function useProgress({
               "Your saved progress could not be opened. No new roll was started.",
             );
           if (previous.pendingRoll) {
+            acknowledgeServerRoll();
             const result = await restoreRoll(previous.pendingRoll.number);
             if (token !== generation.current)
               throw new Error("This game was reset. The roll was cancelled.");
@@ -1811,11 +1835,10 @@ export function useProgress({
               "Your next roll is not ready yet. The timer is the same in every open tab.",
             );
           }
-          const timing = rollSettings(previous.owned);
-          const flywheel = flywheelForDraw(previous);
-
+          let timing = rollSettings(previous.owned);
+          let flywheel = flywheelForDraw(previous);
           const armed = armedSkills(previous);
-          const plan = drawPlanFor(armed);
+          const localPlan = drawPlanFor(armed);
           if (flywheel === "boost" || skillWaivesCooldown(armed))
             timing.cooldownMS = 0;
 
@@ -1823,8 +1846,43 @@ export function useProgress({
             draws = null,
             picks = null,
             winnerSkill = null,
-            winnerIndex = null;
-          if (!plan) result = await generateRoll();
+            winnerIndex = null,
+            serverRoll = null,
+            drawArmed = armed;
+          const serverAuthoritative = Boolean(
+            previous.profile &&
+            auth.cloudEnabled &&
+            auth.userId &&
+            !auth.localPlay,
+          );
+          if (serverAuthoritative) {
+            serverRoll = await requestServerRoll(
+              auth.userId,
+              previous.profile.id,
+              setGameSecurity,
+            );
+            serverRollRequestKey = serverRoll.requestKey;
+            timing = { ...serverRoll.timing };
+            flywheel = serverRoll.flywheel;
+            drawArmed = serverRoll.armedSkills;
+            let index = 0;
+            const nextServerNumber = async () => {
+              const number = serverRoll.numbers[index++];
+              if (!Number.isSafeInteger(number))
+                throw new Error("The server roll response was incomplete.");
+              return number;
+            };
+            if (!drawPlanFor(drawArmed))
+              result = await restoreRoll(await nextServerNumber());
+            else
+              ({ draws, result, picks, winnerSkill, winnerIndex } =
+                await runDrawPicks(
+                  drawPicksFor(drawArmed),
+                  nextServerNumber,
+                  restoreRoll,
+                  { ordinary: true },
+                ));
+          } else if (!localPlan) result = await generateRoll();
           else
             ({ draws, result, picks, winnerSkill, winnerIndex } =
               await runDrawPicks(
@@ -1847,11 +1905,13 @@ export function useProgress({
             );
           }
           const firedPicks = new Set((picks ?? []).map((pick) => pick.skill));
-          const fired = armed.filter(
-            (id) => !drawPicksFor([id]).length || firedPicks.has(id),
-          );
+          const fired = serverRoll
+            ? serverRoll.firedSkills
+            : armed.filter(
+                (id) => !drawPicksFor([id]).length || firedPicks.has(id),
+              );
           const pendingRoll = {
-            id: crypto.randomUUID(),
+            id: serverRoll?.rollId ?? crypto.randomUUID(),
             number: result.number,
             startedAt: Math.ceil(gameNow()),
             ...timing,
@@ -2167,6 +2227,8 @@ export function useProgress({
               ownerId: localRegistration ? null : readCloudOwner(),
               packed: packedSave.packed,
             });
+            if (serverRollRequestKey)
+              acknowledgeServerRoll(serverRollRequestKey);
             if (localRegistration) {
               if (typeof previousCloudOwner === "string" && previousCloudOwner)
                 clearCloudDirty(previousCloudOwner);
@@ -2321,6 +2383,14 @@ export function useProgress({
             message && !technical
               ? message
               : "This action could not be completed. Please try again.",
+          ...(isErrorReference(error?.reference)
+            ? { reference: error.reference }
+            : {}),
+          ...(action.type === "draw" &&
+          Number.isSafeInteger(error?.retryAfterMs) &&
+          error.retryAfterMs >= 0
+            ? { retryAfterMs: error.retryAfterMs }
+            : {}),
         };
       }
     };
@@ -2460,6 +2530,7 @@ export function useProgress({
   return {
     progress,
     warning,
+    gameSecurity,
     dispatch,
     epoch,
     cloud,

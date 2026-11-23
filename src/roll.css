@@ -1119,6 +1119,12 @@ nav button.active {
   line-height: 20px;
   text-align: center;
 }
+.roll-error-reference {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+}
 
 .roll-experience .godly {
   --rarity: #b45309;

@@ -75,8 +75,14 @@ function SaveSummary({ title, summary }) {
     ["Best roll EP", summary?.bestRollEP],
     ["Badges", summary?.badges],
     ["Upgrades", summary?.upgrades],
+    ["Owned cosmetics", summary?.cosmetics],
     ["Skills", summary?.skills],
     ["Companions", summary?.companions],
+    ["Battle Pass level", summary?.battlePass?.level],
+    ["Battle Pass XP", summary?.battlePass?.xp],
+    ["Pass reward claims", summary?.battlePass?.claimed],
+    ["Archived pass seasons", summary?.battlePass?.archivedSeasons],
+    ["Premium Pass", summary?.battlePass?.premium, "boolean"],
     ["Roll in progress", summary?.pendingRoll, "boolean"],
   ];
   return (
