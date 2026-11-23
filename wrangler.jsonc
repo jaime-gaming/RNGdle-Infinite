@@ -3,6 +3,23 @@
   "name": "rngdle-infinite",
   "main": "src/edge-worker.js",
   "compatibility_date": "2026-10-30",
+  "vars": {
+    "FIREBASE_PROJECT_ID": "rngdle-infinite-jg",
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "GAME_SESSIONS",
+        "class_name": "GameSessionDurableObject",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["GameSessionDurableObject"],
+    },
+  ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

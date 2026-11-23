@@ -30,6 +30,7 @@ test("only the legacy GitHub Pages build shows the mirror notice", () => {
 test("internal version labels compare by release and fix number", () => {
   expect(isNewerVersion("v0.5.2fix5", "v0.5.2fix4")).toBe(true);
   expect(isNewerVersion("v0.6fix2", "v0.6fix0")).toBe(true);
+  expect(isNewerVersion("v0.6fix3", "v0.6fix2")).toBe(true);
   expect(isNewerVersion("v0.6fix0", "v0.6")).toBe(false);
   expect(isNewerVersion("v0.5.3", "v0.5.2fix9")).toBe(true);
   expect(isNewerVersion("v0.5.2fix4", "v0.5.2fix4")).toBe(false);

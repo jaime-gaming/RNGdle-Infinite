@@ -33,7 +33,15 @@ export const BPEP_PER_LEVEL = 500;
 // Each online roll adds a small amount of pass progress; offline rewards never count.
 export const BPEP_PER_ROLL = 1;
 export const BATTLE_PASS_MAX_XP = BATTLE_PASS_LEVELS * BPEP_PER_LEVEL;
+export const BATTLE_PASS_OVERFLOW_EP_PER_BPEP = 100;
 export const BATTLE_PASS_PREMIUM_PRICE = 2_000_000;
+
+export function passOverflowEP(xp, bpep) {
+  const current = Number.isSafeInteger(xp) && xp > 0 ? xp : 0;
+  const incoming = Number.isSafeInteger(bpep) && bpep > 0 ? bpep : 0;
+  const remaining = Math.max(0, BATTLE_PASS_MAX_XP - current);
+  return Math.max(0, incoming - remaining) * BATTLE_PASS_OVERFLOW_EP_PER_BPEP;
+}
 export const BATTLE_PASS_ARCHIVE_LIMIT = 24;
 export const BATTLE_PASS_TEMPORARY_THEMES = [
   { id: "first-light-pass", label: "First Light" },
@@ -957,22 +965,25 @@ export function claimPassMission(pass, id, at) {
     throw new Error("This pass mission is already claimed.");
   if (progressOf(slot, mission) < mission.goal)
     throw new Error("Finish this pass mission before claiming it.");
-  // Every claim also counts towards the season's claim milestone.
   const seasonSlot = currentSlot(pass, "season", at);
+  const seasonCounts = {
+    ...seasonSlot.counts,
+    claims: addCapped(seasonSlot.counts.claims ?? 0, 1),
+  };
+  const claimedSlot = { ...slot, claimed: [...slot.claimed, id] };
+  const missions = {
+    ...pass.missions,
+    [mission.cadence]:
+      mission.cadence === "season"
+        ? { ...claimedSlot, counts: seasonCounts }
+        : claimedSlot,
+  };
+  if (mission.cadence !== "season")
+    missions.season = { ...seasonSlot, counts: seasonCounts };
   return {
     ...pass,
     xp: Math.min(BATTLE_PASS_MAX_XP, pass.xp + mission.reward),
-    missions: {
-      ...pass.missions,
-      [mission.cadence]: { ...slot, claimed: [...slot.claimed, id] },
-      season: {
-        ...seasonSlot,
-        counts: {
-          ...seasonSlot.counts,
-          claims: addCapped(seasonSlot.counts.claims ?? 0, 1),
-        },
-      },
-    },
+    missions,
   };
 }
 

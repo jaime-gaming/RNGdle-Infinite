@@ -13,6 +13,8 @@ import {
 import {
   BATTLE_PASS_FIRST_START,
   BATTLE_PASS_LEVELS,
+  BATTLE_PASS_MAX_XP,
+  BATTLE_PASS_OVERFLOW_EP_PER_BPEP,
   BATTLE_PASS_PREMIUM_PRICE,
   BATTLE_PASS_REWARDS,
   BATTLE_PASS_COSMETICS,
@@ -34,6 +36,7 @@ import {
   parseBattlePass,
   parseBoosts,
   passPeriodKey,
+  passOverflowEP,
   passRewardState,
   rewardKey,
 } from "../src/battle-pass.js";
@@ -75,9 +78,24 @@ function readyPass(time = at) {
   return pass;
 }
 
+function activateSeasonMission(pass, mission, time = at) {
+  const active = activePassMissionIds(pass, "season", time);
+  if (!active.includes(mission.id))
+    pass.missions.season.swaps = [
+      ...pass.missions.season.swaps,
+      { out: active[0], in: mission.id, base: 0 },
+    ];
+  return pass;
+}
+
 test("pass progression targets a season-long pace and avoids extreme mission goals", () => {
   expect(BPEP_PER_LEVEL).toBe(500);
   expect(BATTLE_PASS_LEVELS * BPEP_PER_LEVEL).toBe(15_000);
+  expect(BATTLE_PASS_MAX_XP).toBe(15_000);
+  expect(BATTLE_PASS_OVERFLOW_EP_PER_BPEP).toBe(100);
+  expect(passOverflowEP(BATTLE_PASS_MAX_XP - 1, 1)).toBe(0);
+  expect(passOverflowEP(BATTLE_PASS_MAX_XP - 1, 2)).toBe(100);
+  expect(passOverflowEP(BATTLE_PASS_MAX_XP, 2)).toBe(200);
   const high = PASS_MISSIONS.find(
     (mission) => mission.id === "pass-daily-high",
   );
@@ -211,6 +229,95 @@ test("pass missions pay BPEP once and rewards claim once per track", () => {
       at,
     }),
   ).toThrow("not ready");
+});
+
+test("season milestones are claimed once and old repeated claims are recovered", () => {
+  const mission = PASS_MISSIONS.find(
+    (entry) => entry.id === "pass-milestone-rolls",
+  );
+  const pass = activateSeasonMission(readyPass(), mission);
+  const action = { type: "claim-pass-mission", id: mission.id, at };
+  let state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    battlePass: pass,
+  };
+  state = applyProgress(state, action);
+  expect(state.battlePass.missions.season.claimed).toContain(mission.id);
+  expect(state.battlePass.missions.season.counts.claims).toBe(1_000_001);
+  expect(state.battlePass.xp).toBe(mission.reward);
+  expect(state.balance).toBe(0);
+  expect(() => applyProgress(state, action)).toThrow("already claimed");
+
+  const oldSave = {
+    ...state,
+    battlePass: {
+      ...state.battlePass,
+      missions: {
+        ...state.battlePass.missions,
+        season: { ...state.battlePass.missions.season, claimed: [] },
+      },
+    },
+  };
+  const recovered = parseProgress(JSON.stringify(oldSave));
+  expect(recovered.battlePass.missions.season.claimed).toContain(mission.id);
+  expect(() => applyProgress(recovered, action)).toThrow("already claimed");
+});
+
+test("only BPEP beyond the finished track converts into EP", () => {
+  const mission = PASS_MISSIONS.find(
+    (entry) => entry.id === "pass-milestone-rolls",
+  );
+  const pass = activateSeasonMission(readyPass(), mission);
+  pass.xp = BATTLE_PASS_MAX_XP - 100;
+  const claimed = applyProgress(
+    { ...emptyProgress(), profile: testProfile, battlePass: pass },
+    { type: "claim-pass-mission", id: mission.id, at },
+  );
+  const overflowBpep = mission.reward - 100;
+  const bonusEP = overflowBpep * BATTLE_PASS_OVERFLOW_EP_PER_BPEP;
+  expect(claimed.battlePass.xp).toBe(BATTLE_PASS_MAX_XP);
+  expect(claimed.balance).toBe(bonusEP);
+  expect(claimed.totalEarned).toBe(bonusEP);
+  expect(claimed.cycleEarnedEP).toBe(0);
+  expect(claimed.history.at(-1)).toMatchObject({
+    type: "pass-mission",
+    bpep: mission.reward,
+    ep: bonusEP,
+  });
+  expect(parseProgress(JSON.stringify(claimed)).history.at(-1)).toMatchObject({
+    bpep: mission.reward,
+    ep: bonusEP,
+  });
+});
+
+test("online rolls convert post-track BPEP into EP exactly once", () => {
+  const pass = readyPass();
+  pass.xp = BATTLE_PASS_MAX_XP;
+  const state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    battlePass: pass,
+  };
+  const action = roll("post-track-roll", at);
+  const settled = applyProgress(state, action);
+  const rollEP = evaluate(1337).totalEP;
+  expect(settled.battlePass.xp).toBe(BATTLE_PASS_MAX_XP);
+  expect(settled.balance).toBe(rollEP + BATTLE_PASS_OVERFLOW_EP_PER_BPEP);
+  expect(settled.totalEarned).toBe(rollEP + BATTLE_PASS_OVERFLOW_EP_PER_BPEP);
+  expect(settled.cycleEarnedEP).toBe(rollEP);
+  expect(settled.history.find((event) => event.id === action.id)).toMatchObject(
+    {
+      bpep: 1,
+      passEP: BATTLE_PASS_OVERFLOW_EP_PER_BPEP,
+    },
+  );
+  expect(
+    parseProgress(JSON.stringify(settled)).history.find(
+      (event) => event.id === action.id,
+    ),
+  ).toMatchObject({ passEP: BATTLE_PASS_OVERFLOW_EP_PER_BPEP });
+  expect(applyProgress(settled, action).balance).toBe(settled.balance);
 });
 
 test("premium is an EP purchase, survives reload, and cannot be bought twice", () => {
@@ -354,6 +461,23 @@ test("premium purchase from the pass routes to Shop and is completed in More", a
   await expect
     .poll(async () => (await saved(page)).battlePass.premium)
     .toBe(true);
+});
+
+test("the completed pass shows its automatic BPEP to EP bonus", async ({
+  page,
+}) => {
+  const pass = readyPass();
+  pass.xp = BATTLE_PASS_MAX_XP;
+  await seedProgress(page, { battlePass: pass });
+  await pauseClockAt(page, new Date(at));
+  await page.goto("/pass");
+  await waitForApp(page);
+
+  const bonus = page.getByTestId("pass-overflow-reward");
+  await expect(bonus).toHaveClass(/is-active/);
+  await expect(bonus).toContainText("After level 30");
+  await expect(bonus).toContainText("+100 EP per BPEP");
+  await expect(bonus).toContainText("automatically adds 100 EP");
 });
 
 test("the pass page claims a reward and stays vertical on a phone", async ({

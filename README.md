@@ -86,7 +86,7 @@ Your progress is saved in this browser. Keep the site data on this device; if sa
 
 ## Privacy & contact
 
-Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and the [Terms of Service](https://rngdle-infinite.jaime-gaming.com/tos). Questions? Email [jaimegamingpro@gmail.com](mailto:jaimegamingpro@gmail.com).
+Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and the [Terms of Service](https://rngdle-infinite.jaime-gaming.com/tos). Implementation notes on Cloud roll verification, its current limits, reference codes, and deployment are in [Cloud game security](docs/cloud-game-security.md). Questions? Email [jaimegamingpro@gmail.com](mailto:jaimegamingpro@gmail.com).
 
 ## Credits
 
@@ -95,4 +95,4 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
-_Documentation updated November 22, 2026._
+_Documentation updated November 23, 2026._

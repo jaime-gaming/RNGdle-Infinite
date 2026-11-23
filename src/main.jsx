@@ -46,6 +46,7 @@ import CloudProfile from "./components/CloudProfile.jsx";
 import LegalPage from "./components/LegalPage.jsx";
 import { shareCardFromLocation } from "./profile-card.js";
 import { cloudGameAccess } from "./auth-gate.js";
+import { gameAuthorityErrorReference } from "./error-codes.js";
 import {
   chooseLocalPlay,
   localPlayEnabled,
@@ -327,6 +328,7 @@ function App() {
   const {
     progress: session,
     warning: progressWarning,
+    gameSecurity,
     dispatch,
     epoch,
     cloud,
@@ -1146,6 +1148,39 @@ function App() {
                 <button type="button" onClick={() => navigate("settings")}>
                   Set password
                 </button>
+              </div>
+            )}
+          {gameSecurity &&
+            ["warning", "pending", "restricted"].includes(
+              gameSecurity.status,
+            ) && (
+              <div
+                className="progress-warning game-security-warning"
+                role={gameSecurity.status === "warning" ? "status" : "alert"}
+                data-testid="game-security-status"
+              >
+                <span>{gameSecurity.message}</span>
+                {gameSecurity.status !== "warning" && (
+                  <small className="game-security-reference">
+                    Reference{" "}
+                    {gameAuthorityErrorReference(
+                      gameSecurity.status === "restricted"
+                        ? "cloud-restricted"
+                        : "restriction-pending",
+                    )}
+                  </small>
+                )}
+                {gameSecurity.status === "restricted" &&
+                  auth.user &&
+                  !localPlay && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={continueLocally}
+                    >
+                      Continue locally
+                    </button>
+                  )}
               </div>
             )}
           {progressWarning && (

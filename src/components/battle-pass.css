@@ -158,6 +158,55 @@
 .pass-track-scroll {
   overflow: visible;
 }
+.pass-overflow-reward {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 12px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border: 1px dashed color-mix(in srgb, var(--pass-accent) 40%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--pass-accent) 5%, var(--surface));
+  opacity: 0.78;
+}
+.pass-overflow-reward.is-active {
+  border-style: solid;
+  opacity: 1;
+}
+.pass-overflow-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid color-mix(in srgb, var(--pass-accent) 40%, var(--border));
+  border-radius: 10px;
+  color: var(--pass-accent);
+  background: var(--surface);
+}
+.pass-overflow-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.pass-overflow-copy > span {
+  color: var(--pass-accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pass-overflow-copy strong {
+  font-size: 12px;
+}
+.pass-overflow-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
 .pass-level + .pass-level {
   margin-top: 8px;
 }

@@ -77,6 +77,11 @@ function makeCommit(staged) {
   const ownerPath = (key) => `public_profile_owners/${key}`;
   const saveLimitPath = (uid) => `cloud_save_write_limits/${uid}`;
   const publicLimitPath = (uid) => `cloud_public_profile_write_limits/${uid}`;
+  const securityStatusPath = (uid) => `cloud_security_status/${uid}`;
+  const cloudGameplayAllowed = (uid) => {
+    const status = raw(securityStatusPath(uid));
+    return !status || status.cloud_access === true;
+  };
 
   function profileIsPublicAfter(key, uid) {
     if (!NAME_KEY.test(key)) return false;
@@ -432,6 +437,7 @@ function makeCommit(staged) {
       case "player_saves": {
         if (id !== uid) return denial("save owner");
         if (!validSaveEnvelope(data)) return denial("save envelope");
+        if (!cloudGameplayAllowed(uid)) return denial("Cloud rolls are paused");
         if (!cloudProfileSettingsReadyAfter(uid, true))
           return denial("save without ready settings/claim");
         if (!validSavePublicLinkAfter(uid, data))

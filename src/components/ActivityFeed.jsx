@@ -679,6 +679,9 @@ export default function ActivityFeed({
                               ? ` · +${formatEP(event.walletBonus)} EP extra`
                               : ""}
                             {event.bpep ? ` · +${count(event.bpep)} BPEP` : ""}
+                            {event.passEP
+                              ? ` · +${formatEP(event.passEP)} EP from the completed pass`
+                              : ""}
                           </span>
                           {!!event.skills?.length && (
                             <span className="activity-skills">
@@ -824,6 +827,9 @@ export default function ActivityFeed({
                     <p className="activity-transaction">
                       <strong>+{count(event.bpep)} BPEP</strong> · season pass
                       progress
+                      {event.ep
+                        ? ` · +${formatEP(event.ep)} EP from the completed pass`
+                        : ""}
                     </p>
                   ) : event.type === "pass-reward" ? (
                     <p className="activity-transaction">
