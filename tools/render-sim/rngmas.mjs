@@ -104,63 +104,46 @@ export async function run() {
   }
 
   {
-    let smashed = 0;
+    let prepared = 0;
     const { root, host } = mount(
       <GolemSmash
         progress={progress()}
-        status={status}
-        onSmash={() => {
-          smashed += 1;
+        status={{
+          ...status,
+          now: Date.UTC(2026, 11, 17),
+          week: RNGMAS_WEEKS[2],
         }}
+        onSmash={() => prepared++}
         pending={false}
       />,
     );
     await settle();
     check(
-      host.textContent.includes("Ember Golem"),
-      "the weekly golem is named",
+      host.textContent.includes("25,000,000"),
+      "golem damage target is explicit",
     );
-    check(
-      host.textContent.includes("1,500,000") &&
-        host.textContent.includes("1,500,000"),
-      "the golem health is shown",
+    const button = [...host.querySelectorAll("button")].find((node) =>
+      node.textContent.includes("Prepare strike"),
     );
-    const button = host.querySelector(".golem-smash-button");
-    check(Boolean(button) && !button.disabled, "the smash button is enabled");
+    check(Boolean(button) && !button.disabled, "a strike can be prepared");
     act(() => button.click());
-    check(smashed === 1, "clicking smash calls the action");
+    check(prepared === 1, "preparation is wired");
     act(() => root.unmount());
   }
-
   {
+    const state = progress();
+    state.rngmas.golems.ember.defeated = true;
     const { root, host } = mount(
-      <GolemSmash
-        progress={progress({
-          rngmas: {
-            ...emptyRngmas(),
-            golems: {
-              ...emptyRngmas().golems,
-              ember: { damage: 1_500_000, strikes: 25, defeated: true },
-            },
-          },
-        })}
-        status={status}
-        onSmash={() => {}}
-        pending={false}
-      />,
+      <GolemSmash progress={state} status={status} pending={false} />,
     );
     await settle();
     check(
-      host.textContent.includes("defeated"),
-      "a defeated golem shows its state",
+      host.textContent.includes("In your collection"),
+      "claimed activity shows its receipt",
     );
     check(
       host.textContent.includes("Emberlight"),
-      "the defeated golem names its aura",
-    );
-    check(
-      !host.querySelector(".golem-smash-button"),
-      "a defeated golem cannot be smashed again",
+      "the reward is named before and after collection",
     );
     act(() => root.unmount());
   }

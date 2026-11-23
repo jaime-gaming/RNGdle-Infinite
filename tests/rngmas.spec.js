@@ -1,3 +1,4 @@
+import { evaluate } from "./helpers/index.js";
 import { test, expect, pauseClockAt } from "./helpers/clock.js";
 import { waitForApp } from "./helpers/app.js";
 import {
@@ -7,7 +8,7 @@ import {
 } from "../src/progress.js";
 import {
   ADVENT_FINALE,
-  GOLEM_SMASH_BASE_DAMAGE,
+  recordWinterRoll,
   GOLEM_SMASH_COST,
   RNGMAS_WEEKS,
   adventDoorAt,
@@ -67,14 +68,10 @@ test("the Christmas star is only claimable on December 25", () => {
   expect(adventFinaleAt(AFTER).openNow).toBe(false);
 });
 
-test("golem strikes are deterministic and stay inside the multiplier table", () => {
-  const multipliers = [1, 2, 3, 5, 10, 25, 50, 100];
-  for (let index = 0; index < 40; index += 1) {
-    const strike = golemStrikeFor("test-profile:ember", index);
-    expect(strike).toEqual(golemStrikeFor("test-profile:ember", index));
-    expect(strike.damage).toBe(GOLEM_SMASH_BASE_DAMAGE * strike.multiplier);
-    expect(multipliers).toContain(strike.multiplier);
-  }
+test("golem damage is the actual rolled number with no multiplier", () => {
+  for (const n of [0, 1, 500000, 1000000])
+    expect(golemStrikeFor(n).damage).toBe(n);
+  expect(() => golemStrikeFor(-1)).toThrow();
 });
 
 test("an open advent door pays its EP exactly once", () => {
@@ -84,13 +81,13 @@ test("an open advent door pays its EP exactly once", () => {
     day: 8,
     at: Date.UTC(2026, 11, 8, 12),
   });
-  expect(claimed.balance).toBe(300000);
-  expect(claimed.totalEarned).toBe(300000);
+  expect(claimed.balance).toBe(30000);
+  expect(claimed.totalEarned).toBe(30000);
   expect(claimed.rngmas.claimed).toEqual([8]);
   expect(claimed.history.at(-1)).toMatchObject({
     type: "advent-claim",
     day: 8,
-    ep: 300000,
+    ep: 30000,
   });
   expect(() =>
     applyProgress(claimed, {
@@ -139,46 +136,109 @@ test("the last advent door pays the Gingerbread aura", () => {
   expect(claimed.owned).toContain("rngmas-gingerbread");
 });
 
-test("golem smash spends EP, carries damage and pays the weekly aura", () => {
-  let state = {
-    ...emptyProgress(),
-    profile: testProfile,
-    balance: 5_000_000,
-  };
-  const week = rngmasWeekAt(SEASON);
-  expect(week.id).toBe("ember");
-  let strikes = 0;
-  while (!state.rngmas.golems.ember.defeated && strikes < 100) {
-    const before = state.balance;
-    state = applyProgress(state, { type: "golem-smash", at: SEASON });
-    expect(state.balance).toBe(before - GOLEM_SMASH_COST);
-    strikes += 1;
-  }
-  expect(state.rngmas.golems.ember.defeated).toBe(true);
-  expect(state.rngmas.golems.ember.strikes).toBe(strikes);
-  expect(state.rngmas.golems.ember.damage).toBe(week.hp);
-  expect(state.owned).toContain("rngmas-ember");
-  expect(
-    state.history.filter((entry) => entry.type === "golem-reward"),
-  ).toEqual([
-    expect.objectContaining({
-      golemId: "ember",
-      productId: "rngmas-ember",
-    }),
-  ]);
+const GOLEM_AT = Date.UTC(2026, 11, 17, 12);
+const completeNumber = (state, number, id, source) =>
+  applyProgress(state, {
+    type: "complete",
+    id,
+    at: GOLEM_AT,
+    cooldownUntil: GOLEM_AT + 1000,
+    result: evaluate(number),
+    ...(source ? { source } : {}),
+  });
+
+test("a paid strike uses one real online result and survives save/reload", () => {
+  let state = { ...emptyProgress(), profile: testProfile, balance: 6000000 };
+  state = applyProgress(state, { type: "golem-smash", at: GOLEM_AT });
+  expect(state.balance).toBe(5900000);
+  expect(state.rngmas.golems.hollow.armed).toBe(true);
   expect(() =>
-    applyProgress(state, { type: "golem-smash", at: SEASON }),
-  ).toThrow(/already defeated/);
+    applyProgress(state, { type: "golem-smash", at: GOLEM_AT }),
+  ).toThrow(/prepared/);
+  state = parseProgress(JSON.stringify(state));
+  state = completeNumber(state, 604827, "winter-one");
+  expect(state.rngmas.golems.hollow.damage).toBe(604827);
+  expect(state.rngmas.golems.hollow.armed).toBe(false);
+  expect(completeNumber(state, 604827, "winter-one")).toEqual(state);
+  expect(
+    completeNumber(state, 900000, "winter-two").rngmas.golems.hollow.damage,
+  ).toBe(604827);
 });
 
-test("golem smash refuses outside the season and without EP", () => {
-  const guest = { ...emptyProgress(), profile: testProfile };
+test("zero damage still consumes the prepared strike and offline rolls do not", () => {
+  let state = { ...emptyProgress(), profile: testProfile, balance: 1000000 };
+  state = applyProgress(state, { type: "golem-smash", at: GOLEM_AT });
+  const offline = completeNumber(state, 1000000, "offline-one", "offline");
+  expect(offline.rngmas.golems.hollow.armed).toBe(true);
+  const zero = completeNumber(offline, 0, "zero");
+  expect(zero.rngmas.golems.hollow).toMatchObject({
+    damage: 0,
+    armed: false,
+    strikes: 1,
+    lastNumber: 0,
+  });
+});
+
+test("weekly activities differ, require completion and pay rewards once", () => {
+  expect(new Set(RNGMAS_WEEKS.map((w) => w.metric)).size).toBe(5);
+  for (const week of RNGMAS_WEEKS) {
+    let state = { ...emptyProgress(), profile: testProfile };
+    expect(() =>
+      applyProgress(state, { type: "claim-winter-week", at: week.start }),
+    ).toThrow(/Complete/);
+    state.rngmas.golems[week.id] = {
+      ...state.rngmas.golems[week.id],
+      count: week.goal,
+      damage: week.hp,
+    };
+    const claimed = applyProgress(state, {
+      type: "claim-winter-week",
+      at: week.start,
+    });
+    expect(claimed.owned).toContain(week.reward);
+    expect(claimed.balance).toBe(week.ep);
+    expect(claimed.battlePass.boosts.charges["boost-surge"]).toBe(1);
+    expect(() =>
+      applyProgress(claimed, { type: "claim-winter-week", at: week.start }),
+    ).toThrow(/already/);
+  }
+});
+
+test("weekly tally rules count only the intended numbers", () => {
+  const record = emptyProgress().rngmas;
+  expect(
+    recordWinterRoll(record, { number: 1234 }, Date.UTC(2026, 11, 2)).golems
+      .frost.count,
+  ).toBe(1);
+  expect(
+    recordWinterRoll(record, { number: 1234 }, SEASON).golems.ember.count,
+  ).toBe(0);
+  expect(
+    recordWinterRoll(record, { number: 1235 }, SEASON).golems.ember.count,
+  ).toBe(1);
+  expect(
+    recordWinterRoll(record, { number: 1204 }, Date.UTC(2026, 11, 24)).golems
+      .golem.count,
+  ).toBe(1);
+});
+
+test("golem preparations refuse wrong weeks, insufficient EP and a pending roll", () => {
+  const state = { ...emptyProgress(), profile: testProfile };
   expect(() =>
-    applyProgress(guest, { type: "golem-smash", at: BEFORE }),
-  ).toThrow(/No golem/);
+    applyProgress(state, { type: "golem-smash", at: BEFORE }),
+  ).toThrow(/No winter/);
   expect(() =>
-    applyProgress(guest, { type: "golem-smash", at: SEASON }),
-  ).toThrow(/Not enough EP/);
+    applyProgress(state, { type: "golem-smash", at: SEASON }),
+  ).toThrow(/not open/);
+  expect(() =>
+    applyProgress(state, { type: "golem-smash", at: GOLEM_AT }),
+  ).toThrow(/Not enough/);
+  expect(() =>
+    applyProgress(
+      { ...state, balance: 200000, pendingRoll: { id: "x" } },
+      { type: "golem-smash", at: GOLEM_AT },
+    ),
+  ).toThrow(/current roll/);
 });
 
 test("the RNGmas record repairs junk", () => {
@@ -194,6 +254,9 @@ test("the RNGmas record repairs junk", () => {
   expect(junk.golems.ember).toEqual({
     damage: 0,
     strikes: 0,
+    count: 0,
+    armed: false,
+    lastNumber: null,
     defeated: false,
   });
 });
@@ -242,7 +305,7 @@ test("the shop grows an RNGmas door during the season", async ({ page }) => {
     page.getByRole("heading", { name: /Advent calendar/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /Ember Golem/ }),
+    page.getByRole("heading", { name: /Winter lights/ }),
   ).toBeVisible();
 });
 
@@ -261,28 +324,31 @@ test("an open advent door pays EP from the calendar", async ({ page }) => {
   await door.click();
   await expect
     .poll(async () => (await readSavedProgress(page)).balance)
-    .toBe(300000);
+    .toBe(30000);
   await expect(door).toBeDisabled();
 });
 
-test("golem smash spends EP and moves the golem health bar", async ({
+test("the golem preparation is saved without inventing damage", async ({
   page,
 }) => {
   await seedProgress(page, {
     ...emptyProgress(),
     profile: testProfile,
-    balance: 1_000_000,
-    totalEarned: 1_000_000,
+    balance: 1000000,
+    totalEarned: 1000000,
   });
-  await pauseClockAt(page, SEASON);
+  await pauseClockAt(page, GOLEM_AT);
   await page.goto("/shop/rngmas");
   await waitForApp(page);
-  await page.getByRole("button", { name: /Smash for 25,000 EP/ }).click();
-  await expect(page.locator(".golem-strike")).toBeVisible();
+  await page.getByRole("button", { name: /Prepare strike/ }).click();
+  await expect(page.getByText(/Strike prepared\./).first()).toBeVisible();
   const saved = await readSavedProgress(page);
-  expect(saved.balance).toBe(1_000_000 - GOLEM_SMASH_COST);
-  expect(saved.rngmas.golems.ember.strikes).toBe(1);
-  expect(saved.rngmas.golems.ember.damage).toBeGreaterThan(0);
+  expect(saved.balance).toBe(900000);
+  expect(saved.rngmas.golems.hollow).toMatchObject({
+    armed: true,
+    damage: 0,
+    strikes: 0,
+  });
 });
 
 test("before the season the shop only teases RNGmas", async ({ page }) => {
@@ -404,7 +470,7 @@ test("a winter aura draws the shared ornament layer", async ({ page }) => {
   await expect(aura.locator(".aura-motes i")).toHaveCount(8);
 });
 
-test("every week has a golem and a distinct permanent aura", () => {
+test("every chapter has a distinct activity and permanent aura", () => {
   const rewards = new Set();
   for (const week of RNGMAS_WEEKS) {
     expect(week.hp).toBeGreaterThan(0);
@@ -436,11 +502,6 @@ test("Frostfall starts at the First Light handover and expires with RNGmas", asy
   expect(battlePassSeason(RNGMAS_END).active).toBe(false);
 });
 
-test("every tenth golem strike guarantees at least tenfold damage", () => {
-  for (let i = 9; i < 100; i += 10)
-    expect(golemStrikeFor("p:frost", i).multiplier).toBeGreaterThanOrEqual(10);
-});
-
 test("Christmas mode can be toggled from Themes and survives reload", async ({
   page,
 }) => {
@@ -457,4 +518,81 @@ test("Christmas mode can be toggled from Themes and survives reload", async ({
   await waitForApp(page);
   await page.getByRole("button", { name: "Appearance" }).click();
   await expect(toggle).toHaveAttribute("aria-checked", "false");
+});
+
+test("new activity save fields repair malformed input without losing receipts", () => {
+  const parsed = parseRngmas({
+    claimed: [1],
+    golems: {
+      hollow: { count: -1, armed: "yes", lastNumber: 1000001 },
+      ember: { count: Infinity, armed: true },
+    },
+  });
+  expect(parsed.claimed).toEqual([1]);
+  expect(parsed.golems.hollow).toMatchObject({
+    count: 0,
+    armed: false,
+    lastNumber: null,
+  });
+  expect(parsed.golems.ember).toMatchObject({ count: 0, armed: false });
+});
+
+test("weekly progress settles once per online roll and excludes skill extras", () => {
+  const at = Date.UTC(2026, 11, 2, 12);
+  let state = { ...emptyProgress(), profile: testProfile };
+  const action = {
+    type: "complete",
+    id: "even-roll",
+    at,
+    cooldownUntil: at + 1000,
+    result: evaluate(1234),
+    extras: [{ result: evaluate(2468) }],
+  };
+  state = applyProgress(state, action);
+  expect(state.rngmas.golems.frost.count).toBe(1);
+  expect(applyProgress(state, action).rngmas.golems.frost.count).toBe(1);
+  expect(
+    applyProgress(state, { ...action, id: "offline", source: "offline" }).rngmas
+      .golems.frost.count,
+  ).toBe(1);
+});
+
+test("weekly rewards expire at the UTC boundary and do not fund cycle gates", () => {
+  let state = { ...emptyProgress(), profile: testProfile };
+  state.rngmas.golems.frost.count = 30;
+  const claimed = applyProgress(state, {
+    type: "claim-winter-week",
+    at: Date.UTC(2026, 11, 7, 23, 59, 59),
+  });
+  expect(claimed.cycleEarnedEP).toBe(state.cycleEarnedEP);
+  expect(() =>
+    applyProgress(state, {
+      type: "claim-winter-week",
+      at: Date.UTC(2026, 11, 8),
+    }),
+  ).toThrow(/Complete/);
+});
+
+test("finishing the golem remains claimable after reload and delivers the boost", () => {
+  let state = {
+    ...emptyProgress(),
+    profile: testProfile,
+    balance: 1000000,
+    totalEarned: 1000000,
+  };
+  state.rngmas.golems.hollow.damage = 24999999;
+  state = applyProgress(state, { type: "golem-smash", at: GOLEM_AT });
+  state = completeNumber(state, 999999, "finishing-strike");
+  state = parseProgress(JSON.stringify(state));
+  expect(state.rngmas.golems.hollow.damage).toBe(25000000);
+  expect(state.rngmas.golems.hollow.defeated).toBe(false);
+  const claimed = applyProgress(state, {
+    type: "claim-winter-week",
+    at: GOLEM_AT,
+  });
+  expect(claimed.owned).toContain("rngmas-hollow");
+  expect(claimed.battlePass.boosts.charges["boost-surge"]).toBe(1);
+  expect(
+    parseProgress(JSON.stringify(claimed)).rngmas.golems.hollow.defeated,
+  ).toBe(true);
 });

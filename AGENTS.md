@@ -36,11 +36,8 @@ left. `sale-reward` history rows stay parseable and visible.
 RNGmas 2026 and the Battle Pass are the live event exceptions. RNGmas runs from
 1 December 2026 to 2 January 2027 (UTC) in `src/rngmas.js`: the temporary
 Frostfall theme in the Appearance menu (December 16–January 2, after First Light), a 24-door advent calendar on
-`/shop/rngmas`, and five weekly golems. A door is claimable only on its December UTC day; door 24 pays the Gingerbread aura and the
-Christmas Day-only star pays the RNGmas Star aura. Golem Smash spends
-`GOLEM_SMASH_COST` EP on a strike whose damage is `GOLEM_SMASH_BASE_DAMAGE`
-times a deterministic random multiplier (`golemStrikeFor`), carries between
-strikes, and pays a permanent aura when the week's golem is defeated.
+`/shop/rngmas`, and five weekly activities. A door is claimable only on its December UTC day; door 24 pays the Gingerbread aura and the
+Christmas Day-only star pays the RNGmas Star aura. Golem Smash uses the next normal online roll as damage after preparing a paid strike.
 `progress.rngmas` (`{ id, claimed, finale, golems }`) is part of the save
 contract and survives every reset, like permanent cosmetics.
 
@@ -503,6 +500,11 @@ rather than guessing.
 - **Bug fixes never rewrite release notes.** Preserve all existing `src/changelog.js` entries verbatim during a bug fix. Record implementation/QA notes separately. Presentation-only capitalization is fine; add release notes only for an explicitly requested new release.
 
 Christmas decorations respect the persisted `christmasMode` setting in Themes.
-Every tenth golem strike guarantees at least ×10 damage; four visual armor phases
-are derived from saved damage and never reset progression. RNGmas 2026 is pass
-season 2, December 16–January 2 UTC.
+Weekly activities use the retired RNGween main-roll tally rules and mission card
+layout recovered from commit `d131975`. Legacy `golems` IDs remain save receipts;
+new `count`, `armed`, and `lastNumber` fields are parsed defensively. Only the
+December 15–22 chapter is Golem Smash. Prepare a strike for 100,000 EP; the next
+online committed result deals its numeric value as damage, once. Offline and
+extra skill rolls do not add progress. Weekly claims grant their permanent aura,
+modest EP (except the golem) and one Surge Capacitor charge. RNGmas 2026 is pass
+season 2, December 16–January 2 UTC. The local dev preview is December 17 UTC.

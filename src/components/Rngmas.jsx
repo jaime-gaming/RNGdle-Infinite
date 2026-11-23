@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -17,7 +17,6 @@ import {
   ADVENT_DOORS,
   ADVENT_FINALE,
   GOLEM_SMASH_COST,
-  GOLEM_SMASH_BASE_DAMAGE,
   RNGMAS_COSMETICS_BY_ID,
   RNGMAS_TEMPORARY_THEMES,
   RNGMAS_WEEKS,
@@ -35,6 +34,7 @@ import { useModalDialog } from "../use-modal-dialog.js";
 import { useRngmasStatus } from "../use-rngmas.js";
 import NumberBox from "./NumberBox";
 import "../rngmas.css";
+import "../winter-missions.css";
 
 function whenLine(status) {
   if (status.active)
@@ -76,8 +76,8 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
           <strong>RNGmas 2026</strong>
           <small>
             {status.active
-              ? `${opened} / ${ADVENT_DAYS} doors · ${defeated} / ${RNGMAS_WEEKS.length} golems`
-              : `Advent calendar, five golems and a winter theme · ${whenLine(status)}`}
+              ? `${opened} / ${ADVENT_DAYS} doors · ${defeated} / ${RNGMAS_WEEKS.length} chapters`
+              : `Advent calendar, weekly activities and a winter theme · ${whenLine(status)}`}
           </small>
         </span>
         <span className="rngmas-flag-when" aria-hidden="true">
@@ -115,7 +115,7 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
               RNGmas <span>2026</span>
             </h2>
             <p className="rngmas-hero-subtitle">
-              Five weeks of doors, golems and winter light.
+              Daily doors and a different activity each week.
             </p>
           </div>
           <div className="rngmas-hero-art" aria-hidden="true">
@@ -138,7 +138,7 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
             <small>one each day</small>
           </span>
           <span>
-            <strong>{RNGMAS_WEEKS.length} golems</strong>
+            <strong>{RNGMAS_WEEKS.length} chapters</strong>
             <small>one each week</small>
           </span>
           <span>
@@ -164,16 +164,16 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
             <Hammer size={14} aria-hidden="true" /> Golem Smash
           </h3>
           <p>
-            Each week a golem wakes with a pool of EP for a health bar. Spend{" "}
-            {formatEP(GOLEM_SMASH_COST)} EP on a strike: the strike rolls a
-            random multiplier, from a ×1 chip to a ×100 RNGmas miracle. Defeat
-            the golem and its permanent aura is yours. The damage carries
-            between strikes, and the golem keeps its progress until its week
-            ends.
+            Each chapter has a different activity: even numbers, winter lights,
+            Golem Smash, the gift workshop and a New Year countdown. Complete
+            and claim each activity during its week for a permanent aura and one
+            Surge Capacitor charge.
           </p>
           <p className="rngmas-note">
-            A strike deals {formatEP(GOLEM_SMASH_BASE_DAMAGE)} damage before its
-            multiplier. Nothing here changes roll odds, scoring or badge values.
+            During Golem Smash, prepare a strike for{" "}
+            {formatEP(GOLEM_SMASH_COST)} EP, then roll normally. The number you
+            roll is the damage. No critical multipliers. Prepared strikes
+            survive reloads.
           </p>
         </section>
 
@@ -191,7 +191,7 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
 
         <section className="rngmas-block">
           <h3>
-            <Star size={14} aria-hidden="true" /> The weekly golems
+            <Star size={14} aria-hidden="true" /> Weekly activities
           </h3>
           <ul className="rngmas-week-list">
             {RNGMAS_WEEKS.map((week) => {
@@ -350,7 +350,9 @@ export function AdventCalendar({ record, status, onClaim, pending }) {
             ? ", claimed"
             : finale.openNow
               ? ", open now"
-              : ", opens December 25"
+              : finale.missed
+                ? ", missed"
+                : ", opens December 25"
         }`}
         data-testid="advent-star"
       >
@@ -364,9 +366,11 @@ export function AdventCalendar({ record, status, onClaim, pending }) {
               ? "The star is yours. Kept forever."
               : finale.openNow
                 ? "Open the star and claim the limited aura."
-                : `Opens December 25 · ${waitText(
-                    Math.max(0, finale.open - now),
-                  )}`}
+                : finale.missed
+                  ? "Missed · this door closed at midnight UTC."
+                  : `Opens December 25 · ${waitText(
+                      Math.max(0, finale.open - now),
+                    )}`}
           </small>
         </span>
         <span className="advent-star-aura" aria-hidden="true">
@@ -383,192 +387,127 @@ export function AdventCalendar({ record, status, onClaim, pending }) {
   );
 }
 
-function lastStrikeOf(progress, golemId) {
-  const history = progress?.history ?? [];
-  for (let index = history.length - 1; index >= 0; index -= 1) {
-    const entry = history[index];
-    if (entry.type === "golem-smash" && entry.golemId === golemId) return entry;
-  }
-  return null;
-}
-
-export function GolemSmash({ progress, status, onSmash, pending }) {
-  const [hit, setHit] = useState(false);
-  const hitTimer = useRef(0);
-  useEffect(
-    () => () => {
-      clearTimeout(hitTimer.current);
-    },
-    [],
-  );
+export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
   const week = status.week;
-  if (!week) {
-    return (
-      <section className="golem-card is-empty">
-        <div className="rngmas-section-heading">
-          <div>
-            <h3>
-              <Hammer size={16} /> Golem Smash
-            </h3>
-            <p>
-              No golem is awake this week. The next one arrives with its week.
-            </p>
-          </div>
-        </div>
-      </section>
-    );
-  }
-  const record = golemProgress(progress?.rngmas, week);
+  if (!week) return null;
+  const record = progress.rngmas.golems[week.id];
+  const isGolem = week.metric === "damage";
+  const count = isGolem ? record.damage : (record.count ?? 0);
+  const ready = count >= week.goal;
   const aura = RNGMAS_COSMETICS_BY_ID.get(week.reward);
-  const lastStrike = lastStrikeOf(progress, week.id);
-  const affordable = progress.balance >= GOLEM_SMASH_COST;
-  const ended = status.now >= week.end;
-  const phase = record.defeated
-    ? 4
-    : Math.min(3, Math.floor(record.fraction * 4));
-  const phases = [
-    "Armored",
-    "Fractured",
-    "Core exposed",
-    "Last stand",
-    "Vanquished",
-  ];
-  const untilBreakthrough = 10 - (record.strikes % 10);
   return (
-    <section
-      className={`golem-card ${record.defeated ? "is-defeated" : ""} ${
-        hit ? "is-hit" : ""
-      }`}
-      style={{ "--golem-accent": week.accent }}
-      data-phase={phase}
-      aria-labelledby="golem-title"
-    >
-      <div className="rngmas-section-heading">
-        <div>
-          <span className="golem-kicker">
-            Golem Smash · Week {week.index} of {RNGMAS_WEEKS.length}
-          </span>
-          <h3 id="golem-title">{week.name}</h3>
-          <p>{week.blurb}</p>
-        </div>
-        <span className="rngmas-section-stat">
-          {rngmasDateLabel(week.start)} – {rngmasDateLabel(week.end)}
-        </span>
-      </div>
-
-      <div className="golem-stage">
-        <div className="golem-figure" aria-hidden="true">
-          <span className="golem-eye" />
-          <span className="golem-eye" />
-          <span className="golem-mouth" />
-          <span className="golem-core" />
-          <span className="golem-crown">✦</span>
-          {Array.from({ length: 8 }, (_, i) => (
-            <i key={i} className="golem-shard" style={{ "--shard": i }} />
-          ))}
-        </div>
-        <div className="golem-body">
-          <strong className="golem-phase">
-            Phase {Math.min(4, phase + 1)} / 4 · {phases[phase]}
-          </strong>
-          <div className="golem-phase-track" aria-hidden="true">
-            {[0, 1, 2, 3].map((i) => (
-              <span
-                key={i}
-                className={
-                  phase > i ? "is-cleared" : phase === i ? "is-current" : ""
-                }
-              >
-                {i + 1}
-              </span>
-            ))}
-          </div>
-          <div
-            className="golem-hp"
-            role="img"
-            aria-label={`${Math.round(record.fraction * 100)}% of ${week.name} damaged`}
-          >
-            <i style={{ width: `${record.fraction * 100}%` }} />
-          </div>
-          <div className="golem-hp-label">
+    <section aria-label="Weekly winter activity">
+      <ul className="winter-missions">
+        <li
+          className="winter-mission"
+          data-state={
+            record.defeated ? "collected" : ready ? "claimable" : "open"
+          }
+          style={{ "--treat-a": aura.swatch[0], "--treat-b": aura.swatch[1] }}
+        >
+          <div className="winter-mission-top">
+            <span>
+              Chapter {week.index} · {rngmasDateLabel(week.start)} –{" "}
+              {rngmasDateLabel(week.end)} UTC
+            </span>
             <span>
               {record.defeated
-                ? "Defeated"
-                : `${formatEP(record.remaining)} EP left`}
-            </span>
-            <span>
-              {formatEP(record.damage)} / {formatEP(week.hp)}
+                ? "Collected"
+                : ready
+                  ? "Ready to collect"
+                  : "In progress"}
             </span>
           </div>
-          {lastStrike && !record.defeated && (
-            <p className="golem-strike" role="status">
-              <strong>{lastStrike.label}</strong> · ×{lastStrike.multiplier} ·{" "}
-              {formatEP(lastStrike.damage)} damage
-            </p>
-          )}
-          {record.defeated ? (
-            <p className="golem-defeated">
-              <Check size={15} /> {week.name} defeated.{" "}
-              <strong>{aura.name}</strong> is yours forever.
-            </p>
-          ) : (
+          <div className="winter-mission-preview" aria-hidden="true">
+            <NumberBox
+              value={record.lastNumber ?? "2026"}
+              tier="rare"
+              aura={aura.id}
+              compact
+            />
+          </div>
+          <h3>{week.name}</h3>
+          <p>{week.blurb}</p>
+          <div className="winter-mission-meter">
+            <span>
+              {formatEP(count)} / {formatEP(week.goal)}{" "}
+              {isGolem ? "damage" : "rolls"}
+            </span>
+            <progress
+              max={week.goal}
+              value={count}
+              aria-label={`${week.name} progress`}
+            />
+          </div>
+          {isGolem && !ready && !record.defeated && (
             <>
-              <button
-                type="button"
-                className="primary-button golem-smash-button"
-                disabled={pending || hit || !affordable || ended}
-                onClick={() => {
-                  setHit(true);
-                  clearTimeout(hitTimer.current);
-                  hitTimer.current = setTimeout(() => setHit(false), 460);
-                  onSmash?.();
-                }}
-              >
-                <Hammer size={16} />
-                {affordable
-                  ? `Smash for ${formatEP(GOLEM_SMASH_COST)} EP`
-                  : `${formatEP(GOLEM_SMASH_COST - progress.balance)} EP to go`}
-              </button>
-              <p className="golem-breakthrough">
-                {untilBreakthrough === 1
-                  ? "Next hit: guaranteed ×10 or better!"
-                  : `${untilBreakthrough} strikes to a guaranteed ×10+ breakthrough`}{" "}
-                · {record.strikes} strikes landed
-              </p>
-              <details className="golem-odds">
-                <summary>Damage odds & strategy</summary>
-                <p>
-                  ×1 50% · ×2 25% · ×3 12% · ×5 7% · ×10 3.5% · ×25 1.5% · ×50
-                  0.8% · ×100 0.2%. Every tenth hit upgrades results below ×10.
-                  Four armor phases mark your progress; the final blow awards
-                  the permanent aura. Finish before the weekly deadline.
-                </p>
-              </details>
               <p className="rngmas-note">
-                Roll → earn EP → smash. Random damage from ×1 to ×100. Every
-                tenth strike guarantees at least ×10. Damage is saved
-                {ended ? ", but this week is over." : "."}
+                One prepared strike uses your next normal roll: 0–1,000,000
+                damage, averaging 500,000. No multipliers or critical hits.
+                About 50 strikes (5,000,000 EP) on average. Skills and offline
+                rolls do not add damage.
               </p>
+              {record.lastNumber != null && (
+                <p role="status">
+                  Last strike: <strong>{formatEP(record.lastNumber)}</strong>{" "}
+                  damage · {record.strikes} strikes
+                </p>
+              )}
+              {record.armed ? (
+                <p role="status">
+                  Strike prepared.{" "}
+                  <a href={import.meta.env.BASE_URL}>Go to Roll</a> to land it.
+                  Saved across reloads; land it before this chapter ends.
+                </p>
+              ) : (
+                <button
+                  className="secondary-button"
+                  disabled={
+                    pending ||
+                    progress.balance < GOLEM_SMASH_COST ||
+                    !!progress.pendingRoll
+                  }
+                  onClick={onSmash}
+                >
+                  Prepare strike · {formatEP(GOLEM_SMASH_COST)} EP
+                </button>
+              )}
             </>
           )}
-        </div>
-      </div>
-
-      <div className="golem-reward">
-        <span className="golem-reward-art" aria-hidden="true">
-          <NumberBox
-            value={record.defeated ? "GG" : "??"}
-            tier="rare"
-            aura={aura.id}
-            compact
-          />
-        </span>
-        <span>
-          <small>Weekly reward</small>
-          <strong>{aura.name}</strong>
-          <em>{record.defeated ? "Unlocked" : "Locked until defeated"}</em>
-        </span>
-      </div>
+          <p className="winter-mission-reward">
+            <Gift size={14} aria-hidden="true" />{" "}
+            <strong>
+              {aura.name}
+              {week.ep ? ` + ${formatEP(week.ep)} EP` : ""}
+            </strong>{" "}
+            · permanent aura + 1 Surge Capacitor charge
+          </p>
+          <button
+            className={ready ? "primary-button" : "secondary-button"}
+            disabled={pending || !ready || record.defeated}
+            onClick={onClaim}
+          >
+            {record.defeated
+              ? "In your collection"
+              : ready
+                ? `Collect ${aura.name}`
+                : "Complete activity to collect"}
+          </button>
+        </li>
+        <li className="winter-mission">
+          <h3>This week's rules</h3>
+          <p>
+            Progress comes from your main online roll only. Extra skill results
+            and offline rolls do not count. You can play normally, including
+            Auto-Roll. Claim before this chapter ends; there is no catch-up.
+            Collected auras survive resets.
+          </p>
+          <p>
+            The calendar is separate: each door must be claimed on its own UTC
+            day.
+          </p>
+        </li>
+      </ul>
     </section>
   );
 }
@@ -583,7 +522,7 @@ export function RngmasWeeks({ progress }) {
           <h3 id="rngmas-weeks-title">
             <Sparkles size={16} /> The season
           </h3>
-          <p>Five weeks, five golems, five permanent auras.</p>
+          <p>Different weekly activities. Five permanent auras.</p>
         </div>
       </div>
       <ol className="rngmas-week-timeline">
@@ -621,7 +560,7 @@ export function RngmasWeeks({ progress }) {
                     "--swatch-b": aura.swatch[1],
                   }}
                 />
-                {state.defeated ? aura.name : "??? "}
+                {aura.name}
               </span>
             </li>
           );
@@ -661,7 +600,7 @@ export default function RngmasShelf({ progress, onAction, notify }) {
   const smash = () =>
     run(
       { type: "golem-smash", golemId: status.week?.id },
-      status.week ? `You struck the ${status.week.name}.` : "Strike landed.",
+      "Strike prepared. Your next normal roll will deal damage.",
     );
 
   return (
@@ -679,7 +618,7 @@ export default function RngmasShelf({ progress, onAction, notify }) {
             RNGmas <span>2026</span>
           </h2>
           <p>
-            Doors, golems and winter light. {rngmasRangeLabel()} · all times
+            Daily doors and weekly activities. {rngmasRangeLabel()} · all times
             UTC.
           </p>
         </div>
@@ -700,6 +639,9 @@ export default function RngmasShelf({ progress, onAction, notify }) {
         pending={pending}
       />
       <GolemSmash
+        onClaim={() =>
+          run({ type: "claim-winter-week" }, "Weekly reward collected.")
+        }
         progress={progress}
         status={status}
         onSmash={smash}
@@ -708,8 +650,8 @@ export default function RngmasShelf({ progress, onAction, notify }) {
       <RngmasWeeks progress={progress} />
 
       <p className="rngmas-shelf-fine">
-        The calendar and the golems pay EP and permanent auras. Nothing here
-        changes roll odds, scoring tables, badge values or cooldowns.
+        The calendar and weekly activities award EP and permanent auras. Nothing
+        here changes roll odds, scoring tables, badge values or cooldowns.
       </p>
     </section>
   );

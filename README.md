@@ -51,14 +51,14 @@ you claim are yours forever.
 
 ## RNGmas 2026
 
-From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly golems. Frostfall and the RNGmas pass run from December 16, after First Light, until January 2. Toggle decorations with **christmas mode** in Themes.
+From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass run from December 16, after First Light, until January 2. Toggle decorations with **christmas mode** in Themes.
 
 **Advent calendar.** A new door opens every day from December 1. Claim it on that UTC day or lose it; there is no catch-up. The last door holds the Gingerbread aura,
 and the RNGmas Star is claimable only on Christmas Day.
 
-**Golem Smash.** Each week a golem wakes with an EP health bar. Spend EP on a
-strike, roll a random multiplier from ×1 to ×100, and defeat the golem to keep
-its permanent aura. Four armor phases track damage; every tenth hit guarantees at least ×10. The golems: Frost, Ember, Hollow, RNGmas and New Year.
+**Weekly activities.** First snow (even numbers), Winter lights (numbers ending in 5), Golem Smash, Gift workshop (numbers containing 0) and Midnight countdown (online rolls). Claim during the chapter for a permanent aura, one Surge Capacitor charge and modest EP.
+
+**Golem Smash, December 15–22.** Prepare a strike for 100,000 EP. Your next normal online number deals that much damage to the 25,000,000-HP golem: 0–1,000,000 per strike, averaging 500,000. No multipliers, no extra skill hits and no offline damage. A prepared strike survives reloads. Expect about 50 strikes (5,000,000 EP); no fixed maximum is promised.
 
 Nothing here changes roll odds, scoring tables, badge values or cooldowns; earned auras stay in your collection forever.
 

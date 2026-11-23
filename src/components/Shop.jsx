@@ -1457,8 +1457,8 @@ export default function Shop({
                     <strong>RNGmas 2026</strong>
                     <small>
                       {rngmas.active
-                        ? "Doors, golems and winter light."
-                        : "Advent calendar, five golems and a winter theme."}
+                        ? "Daily doors and weekly activities."
+                        : "Advent calendar, weekly activities and a winter theme."}
                     </small>
                   </span>
                   <span className="shop-tile-stat">

@@ -374,7 +374,13 @@ export function saveHasProgress(progress) {
   if (uniqueIds(progress.rngmas?.claimed).size > 0) return true;
   if (progress.rngmas?.finale) return true;
   for (const record of Object.values(progress.rngmas?.golems ?? {}))
-    if (record?.defeated || safeAmount(record?.damage) > 0) return true;
+    if (
+      record?.defeated ||
+      safeAmount(record?.damage) > 0 ||
+      safeAmount(record?.count) > 0 ||
+      record?.armed === true
+    )
+      return true;
   if (passLifetimeXp(progress) > 0) return true;
   if (passLifetimeClaims(progress) > 0) return true;
   if (passLifetimePremium(progress) > 0) return true;
@@ -463,6 +469,7 @@ export function saveProgressScore(progress) {
   if (progress.rngmas?.finale) score += 100;
   for (const record of Object.values(progress.rngmas?.golems ?? {})) {
     if (record?.defeated) score += 200;
+    score += safeAmount(record?.count);
     score += Math.min(200, Math.round(safeAmount(record?.damage) / 10000));
   }
   score += Math.round(
@@ -579,6 +586,7 @@ export function compareSaveRichness(local, cloud) {
     ...Object.keys(cloudGolems),
   ])) {
     compareNumber(localGolems[id]?.damage, cloudGolems[id]?.damage);
+    compareNumber(localGolems[id]?.count, cloudGolems[id]?.count);
     compareFlag(localGolems[id]?.defeated, cloudGolems[id]?.defeated);
   }
   compareNumber(passLifetimeXp(local), passLifetimeXp(cloud));

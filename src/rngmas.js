@@ -19,13 +19,12 @@ export function rngmasThemeActive(at = gameNow()) {
   return at >= RNGMAS_THEME_START && at < RNGMAS_END;
 }
 
-export const GOLEM_SMASH_COST = 25000;
-export const GOLEM_SMASH_BASE_DAMAGE = 20000;
+export const GOLEM_SMASH_COST = 100000;
 
 export const RNGMAS_FAMILY = {
   id: "rngmas",
   label: "RNGmas 2026",
-  blurb: "Winter lights, advent doors and the golems of the season.",
+  blurb: "Winter lights, advent doors and weekly activities.",
   font: '"Space Mono", monospace',
   tracking: "0.12em",
   casing: "uppercase",
@@ -45,7 +44,7 @@ export const RNGMAS_COSMETICS = [
     swatch: ["#082f49", "#a5f3fc"],
     icon: "frost",
     description:
-      "The Frost Golem's reward: deep ice with a bright frost rim. Kept forever, never sold.",
+      "First snow's reward: deep ice with a bright frost rim. Kept forever, never sold.",
   },
   {
     id: "rngmas-ember",
@@ -58,7 +57,7 @@ export const RNGMAS_COSMETICS = [
     swatch: ["#431407", "#fdba74"],
     icon: "ember",
     description:
-      "The Ember Golem's reward: coal black with a warm ember glow. Kept forever, never sold.",
+      "Winter lights' reward: coal black with a warm ember glow. Kept forever, never sold.",
   },
   {
     id: "rngmas-hollow",
@@ -71,7 +70,7 @@ export const RNGMAS_COSMETICS = [
     swatch: ["#042f2e", "#5eead4"],
     icon: "hollow",
     description:
-      "The Hollow Golem's reward: a cold teal shell around an empty centre. Kept forever, never sold.",
+      "Golem Smash's reward: a cold teal shell around an empty centre. Kept forever, never sold.",
   },
   {
     id: "rngmas-golem",
@@ -84,7 +83,7 @@ export const RNGMAS_COSMETICS = [
     swatch: ["#1c1410", "#fbbf24"],
     icon: "golem",
     description:
-      "The RNGmas Golem's reward: dark stone with a golden core. Kept forever, never sold.",
+      "The Gift workshop's reward: dark stone with a golden core. Kept forever, never sold.",
   },
   {
     id: "rngmas-newyear",
@@ -97,7 +96,7 @@ export const RNGMAS_COSMETICS = [
     swatch: ["#1e1b4b", "#f0abfc"],
     icon: "spark",
     description:
-      "The New Year Golem's reward: midnight blue with a violet spark. Kept forever, never sold.",
+      "Midnight countdown's reward: midnight blue with a violet spark. Kept forever, never sold.",
   },
   {
     id: "rngmas-gingerbread",
@@ -133,29 +132,29 @@ export const RNGMAS_COSMETICS_BY_ID = new Map(
 );
 
 export const ADVENT_DOORS = [
-  { day: 1, ep: 25000 },
-  { day: 2, ep: 50000 },
-  { day: 3, ep: 75000 },
-  { day: 4, ep: 100000 },
-  { day: 5, ep: 150000 },
-  { day: 6, ep: 200000 },
-  { day: 7, ep: 250000 },
-  { day: 8, ep: 300000 },
-  { day: 9, ep: 350000 },
-  { day: 10, ep: 400000 },
-  { day: 11, ep: 450000 },
-  { day: 12, ep: 500000 },
-  { day: 13, ep: 600000 },
-  { day: 14, ep: 700000 },
-  { day: 15, ep: 800000 },
-  { day: 16, ep: 900000 },
-  { day: 17, ep: 1000000 },
-  { day: 18, ep: 1100000 },
-  { day: 19, ep: 1200000 },
-  { day: 20, ep: 1300000 },
-  { day: 21, ep: 1400000 },
-  { day: 22, ep: 1500000 },
-  { day: 23, ep: 1750000 },
+  { day: 1, ep: 2500 },
+  { day: 2, ep: 5000 },
+  { day: 3, ep: 7500 },
+  { day: 4, ep: 10000 },
+  { day: 5, ep: 15000 },
+  { day: 6, ep: 20000 },
+  { day: 7, ep: 25000 },
+  { day: 8, ep: 30000 },
+  { day: 9, ep: 35000 },
+  { day: 10, ep: 40000 },
+  { day: 11, ep: 45000 },
+  { day: 12, ep: 50000 },
+  { day: 13, ep: 60000 },
+  { day: 14, ep: 70000 },
+  { day: 15, ep: 80000 },
+  { day: 16, ep: 90000 },
+  { day: 17, ep: 100000 },
+  { day: 18, ep: 110000 },
+  { day: 19, ep: 120000 },
+  { day: 20, ep: 130000 },
+  { day: 21, ep: 140000 },
+  { day: 22, ep: 150000 },
+  { day: 23, ep: 175000 },
   { day: 24, aura: "rngmas-gingerbread" },
 ];
 
@@ -167,9 +166,12 @@ export const RNGMAS_WEEKS = [
     id: "frost",
     start: Date.UTC(2026, 11, 1),
     end: Date.UTC(2026, 11, 8),
-    name: "Frost Golem",
-    blurb: "A frozen giant wakes with the first door.",
-    hp: 750000,
+    name: "First snow",
+    blurb: "Finish 30 even-numbered online rolls.",
+    metric: "even",
+    goal: 30,
+    ep: 75000,
+    hp: 1000000,
     reward: "rngmas-frost",
     accent: "#7dd3fc",
   },
@@ -178,9 +180,12 @@ export const RNGMAS_WEEKS = [
     id: "ember",
     start: Date.UTC(2026, 11, 8),
     end: Date.UTC(2026, 11, 15),
-    name: "Ember Golem",
-    blurb: "A coal-black giant carries the second week.",
-    hp: 1500000,
+    name: "Winter lights",
+    blurb: "Roll 12 numbers ending in 5 online.",
+    metric: "ends5",
+    goal: 12,
+    ep: 100000,
+    hp: 1000000,
     reward: "rngmas-ember",
     accent: "#fb923c",
   },
@@ -189,9 +194,12 @@ export const RNGMAS_WEEKS = [
     id: "hollow",
     start: Date.UTC(2026, 11, 15),
     end: Date.UTC(2026, 11, 22),
-    name: "Hollow Golem",
-    blurb: "An empty shell of ice guards the third week.",
-    hp: 3000000,
+    name: "Golem Smash",
+    blurb: "Prepare a strike, then roll normally. Your number is the damage.",
+    metric: "damage",
+    goal: 25000000,
+    ep: 0,
+    hp: 25000000,
     reward: "rngmas-hollow",
     accent: "#5eead4",
   },
@@ -200,9 +208,12 @@ export const RNGMAS_WEEKS = [
     id: "golem",
     start: Date.UTC(2026, 11, 22),
     end: Date.UTC(2026, 11, 29),
-    name: "RNGmas Golem",
-    blurb: "The golden giant of Christmas week.",
-    hp: 6000000,
+    name: "Gift workshop",
+    blurb: "Finish 80 online rolls containing a 0.",
+    metric: "contains0",
+    goal: 80,
+    ep: 150000,
+    hp: 1000000,
     reward: "rngmas-golem",
     accent: "#fbbf24",
   },
@@ -211,9 +222,12 @@ export const RNGMAS_WEEKS = [
     id: "newyear",
     start: Date.UTC(2026, 11, 29),
     end: Date.UTC(2027, 0, 2),
-    name: "New Year Golem",
-    blurb: "A midnight giant closes the season.",
-    hp: 10000000,
+    name: "Midnight countdown",
+    blurb: "Finish 100 online rolls before the year-end event closes.",
+    metric: "rolls",
+    goal: 100,
+    ep: 200000,
+    hp: 1000000,
     reward: "rngmas-newyear",
     accent: "#f0abfc",
   },
@@ -225,17 +239,6 @@ export const RNGMAS_TEMPORARY_THEMES = [
     label: "Frostfall",
     blurb: "Blue ice, white snow and winter light.",
   },
-];
-
-const STRIKE_TABLE = [
-  { chance: 0.5, multiplier: 1, tier: "common", label: "Chip" },
-  { chance: 0.25, multiplier: 2, tier: "uncommon", label: "Crack" },
-  { chance: 0.12, multiplier: 3, tier: "rare", label: "Break" },
-  { chance: 0.07, multiplier: 5, tier: "epic", label: "Shatter" },
-  { chance: 0.035, multiplier: 10, tier: "anomaly", label: "Smash" },
-  { chance: 0.015, multiplier: 25, tier: "mythic", label: "Crushing blow" },
-  { chance: 0.008, multiplier: 50, tier: "godly", label: "Golem breaker" },
-  { chance: 0.002, multiplier: 100, tier: "godly", label: "RNGmas miracle" },
 ];
 
 function rngmasNow(at) {
@@ -318,33 +321,60 @@ export function rngmasRangeLabel() {
   })}`;
 }
 
-function hashString(value) {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i++)
-    hash = Math.imul(hash ^ value.charCodeAt(i), 16777619) >>> 0;
-  return hash;
+export function golemStrikeFor(number) {
+  if (!Number.isInteger(number) || number < 0 || number > 1000000)
+    throw new Error("Invalid strike number");
+  return {
+    number,
+    damage: number,
+    multiplier: 1,
+    tier: "common",
+    label: "Number strike",
+  };
 }
 
-export function golemStrikeFor(seedKey, strikeIndex) {
-  const seed = hashString(`${seedKey}:${strikeIndex}`);
-  const roll = (seed % 1000000) / 1000000;
-  let cursor = 0;
-  let chosen = STRIKE_TABLE.at(-1);
-  for (const entry of STRIKE_TABLE) {
-    cursor += entry.chance;
-    if (roll < cursor) {
-      chosen = entry;
-      break;
-    }
-  }
-  if ((strikeIndex + 1) % 10 === 0 && chosen.multiplier < 10)
-    chosen = STRIKE_TABLE.find((entry) => entry.multiplier === 10);
+export function winterRollTally(result) {
+  const number = result.number;
+  const digits = String(number);
   return {
-    multiplier: chosen.multiplier,
-    tier: chosen.tier,
-    label: chosen.label,
-    damage: GOLEM_SMASH_BASE_DAMAGE * chosen.multiplier,
-    roll,
+    rolls: 1,
+    even: number % 2 === 0 ? 1 : 0,
+    ends5: number % 10 === 5 ? 1 : 0,
+    contains0: digits.includes("0") ? 1 : 0,
+  };
+}
+
+export function recordWinterRoll(record, result, at) {
+  const week = rngmasWeekAt(at);
+  if (!week) return record;
+  const previous = record.golems[week.id];
+  if (previous.defeated) return record;
+  if (week.metric === "damage") {
+    if (!previous.armed) return record;
+    return {
+      ...record,
+      golems: {
+        ...record.golems,
+        [week.id]: {
+          ...previous,
+          armed: false,
+          damage: Math.min(
+            week.hp,
+            previous.damage + golemStrikeFor(result.number).damage,
+          ),
+          strikes: previous.strikes + 1,
+          lastNumber: result.number,
+        },
+      },
+    };
+  }
+  const count = Math.min(
+    week.goal,
+    (previous.count ?? 0) + winterRollTally(result)[week.metric],
+  );
+  return {
+    ...record,
+    golems: { ...record.golems, [week.id]: { ...previous, count } },
   };
 }
 
@@ -360,7 +390,14 @@ export function emptyRngmas() {
     golems: Object.fromEntries(
       RNGMAS_WEEKS.map((week) => [
         week.id,
-        { damage: 0, defeated: false, strikes: 0 },
+        {
+          damage: 0,
+          defeated: false,
+          strikes: 0,
+          count: 0,
+          armed: false,
+          lastNumber: null,
+        },
       ]),
     ),
   };
@@ -400,9 +437,18 @@ export function parseRngmas(value, receipts = {}) {
     golems[week.id] = {
       damage,
       strikes,
+      count: validCount(record.count) ? Math.min(record.count, week.goal) : 0,
+      armed:
+        week.metric === "damage" &&
+        record.armed === true &&
+        record.defeated !== true,
+      lastNumber:
+        validCount(record.lastNumber) && record.lastNumber <= 1000000
+          ? record.lastNumber
+          : null,
       defeated:
         record.defeated === true ||
-        damage >= week.hp ||
+        (!("count" in record) && !("armed" in record) && damage >= week.hp) ||
         owned.includes(week.reward),
     };
   }

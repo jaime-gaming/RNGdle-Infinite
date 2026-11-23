@@ -153,7 +153,7 @@ import {
   adventFinaleAt,
   adventRewardFor,
   emptyRngmas,
-  golemStrikeFor,
+  recordWinterRoll,
   parseRngmas,
   rngmasRewardIds,
   rngmasWeekAt,
@@ -1411,70 +1411,73 @@ function applyEvent(state, action) {
       history: appendHistory(state.history, [row]),
     };
   }
-  if (action.type === "golem-smash") {
+  if (action.type === "golem-smash" || action.type === "claim-winter-week") {
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
-      throw new Error("Invalid golem smash time");
+      throw new Error("Invalid activity time");
     const week = rngmasWeekAt(at);
-    if (!week) throw new Error("No golem is awake this week.");
+    if (!week) throw new Error("No winter activity is open.");
     const rngmas = state.rngmas ?? emptyRngmas();
-    const record = rngmas.golems?.[week.id] ?? {
-      damage: 0,
-      defeated: false,
-      strikes: 0,
-    };
-    if (record.defeated) throw new Error(`${week.name} is already defeated.`);
-    if (state.balance < GOLEM_SMASH_COST)
-      throw new Error(`Not enough EP to smash ${week.name}.`);
-    const strike = golemStrikeFor(
-      `${state.profile?.id ?? "guest"}:${week.id}`,
-      record.strikes,
-    );
-    const damage = Math.min(strike.damage, week.hp - record.damage);
-    const defeated = record.damage + damage >= week.hp;
+    const record = rngmas.golems[week.id];
+    if (record.defeated) throw new Error("Reward already collected.");
+    if (action.type === "golem-smash") {
+      if (week.metric !== "damage")
+        throw new Error("Golem Smash is not open this week.");
+      if (record.armed)
+        throw new Error("Roll to land your prepared strike first.");
+      if (record.damage >= week.hp)
+        throw new Error("The golem is defeated. Collect your reward.");
+      if (state.pendingRoll) throw new Error("Finish your current roll first.");
+      if (state.balance < GOLEM_SMASH_COST)
+        throw new Error("Not enough EP to prepare a strike.");
+      return {
+        ...state,
+        balance: state.balance - GOLEM_SMASH_COST,
+        rngmas: {
+          ...rngmas,
+          golems: { ...rngmas.golems, [week.id]: { ...record, armed: true } },
+        },
+      };
+    }
+    const count =
+      week.metric === "damage" ? record.damage : (record.count ?? 0);
+    if (count < week.goal)
+      throw new Error("Complete this week's activity first.");
+    if (
+      !validAmount(state.balance + week.ep) ||
+      !validAmount(state.totalEarned + week.ep)
+    )
+      throw new Error("EP balance limit reached.");
     const aura = RNGMAS_COSMETICS_BY_ID.get(week.reward);
-    const next = {
-      damage: record.damage + damage,
-      defeated,
-      strikes: record.strikes + 1,
-    };
     return {
       ...state,
-      balance: state.balance - GOLEM_SMASH_COST,
+      balance: state.balance + week.ep,
+      totalEarned: state.totalEarned + week.ep,
+      battlePass: {
+        ...state.battlePass,
+        boosts: grantBoost(state.battlePass?.boosts, "boost-surge", 1, at),
+      },
+      owned: [...new Set([...state.owned, week.reward])],
       rngmas: {
         ...rngmas,
-        golems: { ...rngmas.golems, [week.id]: next },
+        golems: {
+          ...rngmas.golems,
+          [week.id]: { ...record, defeated: true, armed: false },
+        },
       },
-      owned:
-        defeated && !state.owned.includes(aura.id)
-          ? [...state.owned, aura.id]
-          : state.owned,
       history: appendHistory(state.history, [
         {
-          id: action.eventId ?? `golem:${week.id}:${next.strikes}`,
-          type: "golem-smash",
+          id: `golem-reward:${week.id}`,
+          type: "golem-reward",
           at,
           golemId: week.id,
-          damage,
-          tier: strike.tier,
-          multiplier: strike.multiplier,
-          ep: GOLEM_SMASH_COST,
+          productId: aura.id,
+          name: aura.name,
         },
-        ...(defeated
-          ? [
-              {
-                id: `golem-reward:${week.id}`,
-                type: "golem-reward",
-                at,
-                golemId: week.id,
-                productId: aura.id,
-                name: aura.name,
-              },
-            ]
-          : []),
       ]),
     };
   }
+
   if (action.type === "bookmark") {
     const id = typeof action.id === "string" ? action.id : "";
     if (
@@ -2051,6 +2054,14 @@ function applyEvent(state, action) {
     return {
       ...state,
       history: appendHistory(state.history, events),
+      rngmas:
+        action.source === "offline"
+          ? state.rngmas
+          : recordWinterRoll(
+              state.rngmas ?? emptyRngmas(),
+              committed.scored,
+              at,
+            ),
       tasks,
       battlePass,
       pendingRoll: null,
