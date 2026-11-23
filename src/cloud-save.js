@@ -413,6 +413,20 @@ function passLifetimePremium(progress) {
   );
 }
 
+function resourceTotal(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return 0;
+  return Object.values(value).reduce((total, amount) => {
+    const next = total + safeAmount(amount);
+    return Math.min(Number.MAX_SAFE_INTEGER, next);
+  }, 0);
+}
+
+function offlineRollsWaiting(progress) {
+  const batch = progress?.offline?.batch;
+  if (!Array.isArray(batch?.numbers)) return 0;
+  return Math.max(0, batch.numbers.length - safeAmount(batch.index));
+}
+
 export function saveProgressScore(progress) {
   if (!progress?.profile) return 0;
   const tally = allTimeTally(progress);
@@ -432,15 +446,26 @@ export function saveProgressScore(progress) {
   score += safeAmount(progress.rollbacks) * 9000;
   score += safeAmount(progress.freshStarts) * 25000;
   score += safeAmount(tally.best?.ep);
-  score += Math.round(
-    Math.log10(
-      safeAmount(progress.totalEarned) + safeAmount(progress.balance) + 10,
-    ) * 600,
+  const wealth = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    safeAmount(progress.totalEarned) + investedWealth(progress),
   );
+  score += Math.round(Math.log10(wealth + 10) * 600);
+  score += Math.round(Math.log10(safeAmount(progress.cycleEarnedEP) + 1) * 200);
+  score += safeAmount(progress.surplusBanked) * 40;
+  score += Math.round(Math.log10(safeAmount(tally.spent) + 1) * 80);
   score += safeAmount(progress.blackFriday?.stamps) * 40;
+  score += Math.round(
+    Math.log10(safeAmount(progress.blackFriday?.spent) + 1) * 60,
+  );
   score += uniqueIds(progress.rngweenLimited?.auras).size * 120;
   score += passLifetimeClaims(progress) * 30;
   score += Math.round(passLifetimeXp(progress) / 10);
+  score += safeAmount(progress.flywheelCharge) * 40;
+  score += resourceTotal(progress.skillCharge) * 30;
+  score += resourceTotal(progress.battlePass?.boosts?.charges) * 50;
+  score += safeAmount(progress.tasks?.skip?.tokens) * 180;
+  score += offlineRollsWaiting(progress) * 120;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.round(score));
 }
 
@@ -471,6 +496,7 @@ export function compareSaveRichness(local, cloud) {
     else if (!Boolean(left) && Boolean(right)) cloudAhead = true;
   };
 
+  compareNumber(local.balance, cloud.balance);
   compareNumber(investedWealth(local), investedWealth(cloud));
   for (const key of [
     "totalEarned",
@@ -485,6 +511,9 @@ export function compareSaveRichness(local, cloud) {
   for (const key of ["rolls", "spent"])
     compareNumber(localTally[key], cloudTally[key]);
   compareNumber(localTally.best?.ep, cloudTally.best?.ep);
+  compareNumber(local.flywheelCharge, cloud.flywheelCharge);
+  compareNumber(local.tasks?.skip?.tokens, cloud.tasks?.skip?.tokens);
+  compareNumber(offlineRollsWaiting(local), offlineRollsWaiting(cloud));
 
   for (const key of ["discovered", "owned", "pets", "skills"])
     compareSet(local[key], cloud[key]);
@@ -492,6 +521,30 @@ export function compareSaveRichness(local, cloud) {
   compareSet(localTally.discovered, cloudTally.discovered);
   compareSet(localTally.pets, cloudTally.pets);
   compareSet(local.rngweenLimited?.auras, cloud.rngweenLimited?.auras);
+  compareSet(
+    Object.keys(local.skillCharge ?? {}).filter(
+      (id) => safeAmount(local.skillCharge?.[id]) > 0,
+    ),
+    Object.keys(cloud.skillCharge ?? {}).filter(
+      (id) => safeAmount(cloud.skillCharge?.[id]) > 0,
+    ),
+  );
+  compareSet(
+    Object.keys(local.battlePass?.boosts?.charges ?? {}).filter(
+      (id) => safeAmount(local.battlePass?.boosts?.charges?.[id]) > 0,
+    ),
+    Object.keys(cloud.battlePass?.boosts?.charges ?? {}).filter(
+      (id) => safeAmount(cloud.battlePass?.boosts?.charges?.[id]) > 0,
+    ),
+  );
+  compareNumber(
+    resourceTotal(local.skillCharge),
+    resourceTotal(cloud.skillCharge),
+  );
+  compareNumber(
+    resourceTotal(local.battlePass?.boosts?.charges),
+    resourceTotal(cloud.battlePass?.boosts?.charges),
+  );
   compareFlag(
     local.rngweenLimited?.skinEarned,
     cloud.rngweenLimited?.skinEarned,
@@ -502,6 +555,7 @@ export function compareSaveRichness(local, cloud) {
   );
 
   compareNumber(local.blackFriday?.stamps, cloud.blackFriday?.stamps);
+  compareNumber(local.blackFriday?.spent, cloud.blackFriday?.spent);
   compareFlag(local.blackFriday?.skinEarned, cloud.blackFriday?.skinEarned);
   compareNumber(passLifetimeXp(local), passLifetimeXp(cloud));
   compareNumber(passLifetimeClaims(local), passLifetimeClaims(cloud));
@@ -547,6 +601,10 @@ export function summarizeSaveProgress(progress) {
       ...uniqueIds(tally.discovered),
     ]).size,
     upgrades: uniqueIds(progress?.owned).size,
+    cosmetics: [...uniqueIds(progress?.owned)].filter((id) => {
+      const item = productById.get(id);
+      return item?.kind === "aura" || item?.passReward;
+    }).length,
     skills: uniqueIds(progress?.skills).size,
     companions: uniqueIds(progress?.pets).size,
     pendingRoll: Boolean(progress?.pendingRoll),
@@ -555,7 +613,7 @@ export function summarizeSaveProgress(progress) {
       xp: safeAmount(progress?.battlePass?.xp),
       level: passLevelForXp(safeAmount(progress?.battlePass?.xp)),
       premium: Boolean(progress?.battlePass?.premium),
-      claimed: uniqueIds(progress?.battlePass?.claimed).size,
+      claimed: passLifetimeClaims(progress),
       archivedSeasons: Array.isArray(progress?.battlePass?.archive)
         ? progress.battlePass.archive.length
         : 0,
@@ -565,7 +623,9 @@ export function summarizeSaveProgress(progress) {
 
 function choiceMessage(reason) {
   if (reason === "generation")
-    return "These copies are from different stages of your game. Choose one; the other stays saved in Settings.";
+    return "These copies are from different reset generations but tie on durable progress. Choose one; the other stays saved in Settings.";
+  if (reason === "mixed")
+    return "Both copies have the same durable-progress score, but different parts of your progress. Choose one; the other stays saved in Settings.";
   if (reason === "profile")
     return "These are different profiles and cannot be combined. Choose one; the other stays saved in Settings.";
   if (reason === "tie")
@@ -642,31 +702,14 @@ export function chooseSaveWinner(
     };
 
   const sameLineage = local.profile.id === cloud.profile.id;
-  if (!sameLineage) {
-    const localHoldsProgress = saveHasProgress(local);
-    const cloudHoldsProgress = saveHasProgress(cloud);
-    if (localHoldsProgress !== cloudHoldsProgress)
-      return localHoldsProgress
-        ? {
-            progress: local,
-            winner: "local",
-            comparison: "local-only-progress",
-          }
-        : {
-            progress: cloud,
-            winner: "cloud",
-            comparison: "cloud-only-progress",
-          };
-
+  if (!sameLineage)
     return {
       progress: null,
       winner: "choice",
       comparison: "incomparable",
       choiceReason: "profile",
     };
-  }
 
-  const epoch = compareSaveEpoch(local, cloud);
   if (localAuthoritative)
     return {
       progress: local,
@@ -674,61 +717,56 @@ export function chooseSaveWinner(
       comparison,
       authoritativeRestore: true,
     };
-  if (trusted) {
-    if (epoch === "cloud")
-      return {
-        progress: cloud,
-        winner: "cloud",
-        comparison,
-        trusted: true,
-      };
-    if (epoch === "local")
-      return { progress: local, winner: "local", comparison, trusted: true };
-    if (comparison === "cloud")
-      return {
-        progress: cloud,
-        winner: "cloud",
-        comparison,
-        trusted: true,
-      };
-    return { progress: local, winner: "local", comparison, trusted: true };
-  }
-  if (epoch !== "same")
+
+  const epoch = compareSaveEpoch(local, cloud);
+  if (epoch === "local" || epoch === "cloud")
     return {
-      progress: null,
-      winner: "choice",
-      comparison: "generation-conflict",
-      choiceReason: "generation",
-      epoch,
+      progress: epoch === "local" ? local : cloud,
+      winner: epoch,
+      comparison: "reset-progress",
+      resetProgress: true,
+      ...(trusted ? { trusted: true } : {}),
     };
+
+  const richer = richerSaveCopy(local, cloud);
+  if (richer) return trusted ? { ...richer, trusted: true } : richer;
+
   if (comparison === "local" || comparison === "cloud")
     return {
       progress: comparison === "local" ? local : cloud,
       winner: comparison,
       comparison,
+      ...(trusted ? { trusted: true } : {}),
     };
-  const richer = richerSaveCopy(local, cloud);
-  if (richer) return richer;
-  if (comparison === "equal" && sameSave(local, cloud))
-    return { progress: cloud, winner: "cloud", comparison };
+
+  if (comparison === "equal") {
+    if (sameSave(local, cloud))
+      return { progress: cloud, winner: "cloud", comparison };
+    return {
+      progress: local,
+      winner: "local",
+      comparison,
+      preferencesOnly: true,
+      ...(trusted ? { trusted: true } : {}),
+    };
+  }
 
   return {
-    progress: local,
-    winner: "local",
-    comparison,
-    preferencesOnly: true,
+    progress: cloud,
+    winner: "cloud",
+    comparison: "progress-score-tie",
+    progressScoreTie: true,
+    ...(trusted ? { trusted: true } : {}),
   };
 }
-
-export const RICHER_COPY_SHARE = 1.25;
 
 export function compareSaveScore(local, cloud) {
   const localScore = saveProgressScore(local);
   const cloudScore = saveProgressScore(cloud);
   const richer =
-    localScore >= cloudScore * RICHER_COPY_SHARE
+    localScore > cloudScore
       ? "local"
-      : cloudScore >= localScore * RICHER_COPY_SHARE
+      : cloudScore > localScore
         ? "cloud"
         : "even";
   return { localScore, cloudScore, richer };
@@ -2391,11 +2429,7 @@ export async function reconcileCloudSave(
         "This copy does not include a game profile. Choose another copy.",
       );
 
-    if (
-      choice.winner === "local" &&
-      remoteRaw &&
-      !(choice.trusted && choice.comparison !== "incomparable")
-    ) {
+    if (choice.winner === "local" && remoteRaw) {
       writeRecoveryCopy(
         remoteRaw,
         storage,
@@ -2533,6 +2567,19 @@ export async function reconcileCloudSave(
         choice.winner === "local"
           ? "You chose progress from this device. The online copy is saved in Settings."
           : "You chose the online progress. The device copy is saved in Settings.";
+    } else if (choice.progressScoreTie) {
+      notice =
+        "The copies had equal progress scores, so the online copy was kept. The device copy is saved in Settings.";
+    } else if (choice.resetProgress) {
+      notice =
+        choice.winner === "local"
+          ? "This device's later reset progress was kept. The previous online copy is saved in Settings."
+          : "The online copy's later reset progress was kept. The previous device copy is saved in Settings.";
+    } else if (choice.richerCopy) {
+      notice =
+        choice.winner === "local"
+          ? "This device holds more progress, so it was backed up online. The other copy is saved in Settings."
+          : "The online copy holds more progress, so it was loaded. The other copy is saved in Settings.";
     } else if (choice.trusted || choice.preferencesOnly) {
       notice =
         choice.trusted &&
@@ -2541,11 +2588,6 @@ export async function reconcileCloudSave(
         !sameSave(localProgress, remoteProgress)
           ? "The online copy had newer progress, so it was loaded. This device's previous copy is saved in Settings."
           : "";
-    } else if (choice.richerCopy) {
-      notice =
-        choice.winner === "local"
-          ? "This device holds more progress, so it was backed up online. The other copy is saved in Settings."
-          : "The online copy holds more progress, so it was loaded. The other copy is saved in Settings.";
     } else if (choice.winner === "local" && remoteProgress) {
       notice =
         "This device had more progress, so it was backed up online. The previous online copy is saved in Settings.";

@@ -5,7 +5,7 @@ import "../legal.css";
 
 const CONTACT_EMAIL = "jaimegamingpro@gmail.com";
 const REPOSITORY_URL = "https://github.com/jaime-gaming/RNGdle-Infinite";
-const UPDATED = "Last updated 11 November 2026.";
+const UPDATED = "Last updated 23 November 2026.";
 
 function ContactLink() {
   return <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
@@ -56,9 +56,19 @@ export default function LegalPage({ page, navigate }) {
               Account, Firebase handles sign-in and stores your game save and
               account settings so you can continue on another device. Account
               details protect save ownership; your email is not shown on a
-              public profile. Google provides sign-in when you choose it and may
-              process security signals for additional request checks when that
-              feature is configured.
+              public profile. When server-checked Cloud rolls are enabled, the
+              Worker verifies Firebase sign-in, reads the Cloud save to derive
+              roll timing and skills, issues random roll numbers, and keeps a
+              server cooldown plus warning or restriction state. A random
+              browser-local identifier helps distinguish that browser's requests
+              from another device; the game does not use IP addresses or device
+              fingerprinting to classify roll attempts. A first early request
+              from a different device is not treated as suspicious. If repeated
+              early requests meet the server's verification threshold, Cloud
+              rolls and Cloud save writes may be paused. The save remains
+              readable and no progress is deleted; you can continue locally.
+              Security status is stored separately and is not included in a
+              public profile.
             </p>
             <p>
               Google and Firebase provide authentication and database
