@@ -20,6 +20,7 @@ import {
   BATTLE_PASS_PREMIUM_PRICE,
   BATTLE_PASS_REWARDS,
   BATTLE_PASS_VARIANT,
+  BATTLE_PASS_OVERFLOW_EP_PER_BPEP,
   BPEP_PER_LEVEL,
   BPEP_PER_ROLL,
   PASS_BOOSTS,
@@ -413,6 +414,26 @@ export default function BattlePass({
             })}
           </ol>
         </div>
+        <aside
+          className={`pass-overflow-reward ${currentSeason && level >= BATTLE_PASS_LEVELS ? "is-active" : ""}`}
+          data-testid="pass-overflow-reward"
+          aria-label="Post-track bonus"
+        >
+          <span className="pass-overflow-icon" aria-hidden="true">
+            <Coins size={18} />
+          </span>
+          <div className="pass-overflow-copy">
+            <span>After level {BATTLE_PASS_LEVELS}</span>
+            <strong>
+              +{formatEP(BATTLE_PASS_OVERFLOW_EP_PER_BPEP)} EP per BPEP
+            </strong>
+            <p>
+              Once level 30 is full, each extra BPEP from online rolls or pass
+              missions automatically adds{" "}
+              {formatEP(BATTLE_PASS_OVERFLOW_EP_PER_BPEP)} EP to your wallet.
+            </p>
+          </div>
+        </aside>
         {inspectedLevel && inspectedDefinition && (
           <dialog
             ref={inspectionDialog}

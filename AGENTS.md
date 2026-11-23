@@ -65,8 +65,11 @@ advance. First Light
 starts on 2026-11-18. Its accent is shared by `/pass`, the temporary theme and
 the active Pass navigation animation. Every pass mission — daily, weekly and
 season milestones — is listed on the Tasks page in its own section; `/pass`
-keeps the reward track. Missions pay BPEP only; BPEP is not a shop wallet.
-The optional premium track is bought with EP, never real money. Levels 5, 15 and
+keeps the reward track. BPEP advances the pass but is not a shop wallet. Once
+the 15,000-BPEP track is complete, every additional BPEP earned from an online
+roll or mission automatically converts to 100 EP; BPEP left over from the
+reward that completes the track converts too. The optional premium track is
+bought with EP, never real money. Levels 5, 15 and
 25 add a consumable boost charge (the premium track pays two) without touching
 their EP, the season milestone `pass-season-boost` pays one more, and one charge
 a day can be bought for `PASS_BOOST_PRICE` EP; one boost runs at a time and
@@ -450,7 +453,7 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.6fix1`; do not change it
+  flow. The current label is exactly `v0.6fix3`; do not change it
   until the next session or an explicit user request. Public release notes
   live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
