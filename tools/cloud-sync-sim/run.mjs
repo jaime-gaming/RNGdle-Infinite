@@ -12,6 +12,7 @@ const projectRoot = new URL("../../", import.meta.url).pathname;
 
 const plan = [
   ["A", "first-sync"],
+  ["A", "trusted-richer-device"],
   ["B", "adopt"],
   ["B", "play-more"],
   ["A", "resync"],
@@ -117,7 +118,36 @@ if (problems.length) {
   process.exit(1);
 }
 
+store[`cloud_security_status/${UID}`] = {
+  cloud_access: false,
+  status: "restricted",
+};
+writeFileSync(storeFile, JSON.stringify(store));
+const restrictionCheck = spawnSync(
+  process.execPath,
+  [
+    "--import",
+    registerPath,
+    path.resolve("tools/cloud-sync-sim/restriction-check.mjs"),
+  ],
+  {
+    cwd: projectRoot,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      SIM_UID: UID,
+      SIM_STATE_DIR: stateDir,
+      FAKE_FIRESTORE: storeFile,
+      FAKE_UID: UID,
+    },
+  },
+);
+if (restrictionCheck.status !== 0) {
+  console.error("\nCloud restriction simulation FAILED.");
+  process.exit(1);
+}
+
 rmSync(stateDir, { recursive: true, force: true });
 console.log(
-  "\nCloud sync simulation passed: upload, second device, both-way sync, publish, unpublish, conflict.",
+  "\nCloud sync simulation passed: upload, cross-device reconciliation, recovery, publish, unpublish, and restriction.",
 );

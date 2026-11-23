@@ -118,6 +118,7 @@ import {
   BPEP_PER_ROLL,
   BATTLE_PASS_REWARDS,
   battlePassSeason,
+  passOverflowEP,
   claimPassMission,
   emptyBattlePass,
   activateBoost,
@@ -529,7 +530,29 @@ export function parseAndRepairProgress(raw) {
   const passRead = parseBattlePass(p.battlePass);
   if (p.battlePass != null && passRead.repaired)
     note("battle pass progress was unreadable, so it was reset.");
-  const battlePass = passRead.pass;
+  let battlePass = passRead.pass;
+  const recordedSeasonClaims = history
+    .filter(
+      (event) =>
+        event.type === "pass-mission" &&
+        event.seasonId === battlePass.seasonId &&
+        passMissionById(event.missionId)?.cadence === "season",
+    )
+    .map((event) => event.missionId);
+  const seasonSlot = battlePass.missions.season;
+  const claimedSeasonMissions = [
+    ...new Set([...seasonSlot.claimed, ...recordedSeasonClaims]),
+  ];
+  if (claimedSeasonMissions.length > seasonSlot.claimed.length) {
+    battlePass = {
+      ...battlePass,
+      missions: {
+        ...battlePass.missions,
+        season: { ...seasonSlot, claimed: claimedSeasonMissions },
+      },
+    };
+    note("a claimed pass milestone was restored from your activity history.");
+  }
   for (const reward of BATTLE_PASS_REWARDS) {
     for (const track of ["free", "premium"]) {
       const definition = reward[track];
@@ -1387,8 +1410,23 @@ function applyEvent(state, action) {
       throw new Error("Invalid pass mission time");
     const ready = ensurePassSeason(state, at);
     const mission = passMissionById(action.id);
+    const receiptId = `pass-mission:${ready.battlePass.seasonId}:${action.id}`;
+    if (
+      mission?.cadence === "season" &&
+      ready.history?.some(
+        (event) =>
+          event.type === "pass-mission" &&
+          event.seasonId === ready.battlePass.seasonId &&
+          event.missionId === action.id,
+      )
+    )
+      throw new Error("This pass mission is already claimed.");
+    const overflowEP = passOverflowEP(ready.battlePass.xp, mission?.reward);
+    const balance = ready.balance + overflowEP;
+    const totalEarned = ready.totalEarned + overflowEP;
+    if (!validAmount(balance) || !validAmount(totalEarned))
+      throw new Error("EP balance limit reached.");
     const claimed = claimPassMission(ready.battlePass, action.id, at);
-    // A milestone can pay a boost charge as well as BPEP.
     const battlePass = mission.boost
       ? {
           ...claimed,
@@ -1402,18 +1440,19 @@ function applyEvent(state, action) {
       : claimed;
     return {
       ...ready,
+      balance,
+      totalEarned,
       battlePass,
       history: appendHistory(ready.history, [
         {
-          id:
-            action.eventId ??
-            `pass-mission:${battlePass.seasonId}:${action.id}`,
+          id: action.eventId ?? receiptId,
           type: "pass-mission",
           at,
           seasonId: battlePass.seasonId,
           missionId: action.id,
           name: mission.title,
           bpep: mission.reward,
+          ...(overflowEP ? { ep: overflowEP } : {}),
         },
       ]),
     };
@@ -1755,8 +1794,18 @@ function applyEvent(state, action) {
         multiplier,
       };
     });
-    const balance = state.balance + credited,
-      totalEarned = state.totalEarned + credited;
+    const at = action.at ?? Math.ceil(Date.now());
+    const season = battlePassSeason(at);
+    const pass = state.battlePass ?? emptyBattlePass();
+    const rollBpep =
+      action.source !== "offline" &&
+      season.active &&
+      pass.seasonId === season.id
+        ? BPEP_PER_ROLL
+        : 0;
+    const passEP = passOverflowEP(pass.xp, rollBpep);
+    const balance = state.balance + credited + passEP,
+      totalEarned = state.totalEarned + credited + passEP;
     if (
       !validAmount(balance) ||
       !validAmount(totalEarned) ||
@@ -1773,16 +1822,6 @@ function applyEvent(state, action) {
             state.pendingRoll.drawLimit === undefined ? 9 : SKILL_MAX_DRAWS,
           )
         : 0;
-    const at = action.at ?? Math.ceil(Date.now());
-    const season = battlePassSeason(at);
-    const pass = state.battlePass ?? emptyBattlePass();
-    const rollBpep =
-      action.source !== "offline" &&
-      season.active &&
-      pass.seasonId === season.id
-        ? Math.min(BPEP_PER_ROLL, Math.max(0, BATTLE_PASS_MAX_XP - pass.xp))
-        : 0;
-
     const events = paidEvents.flatMap(
       ({
         scored,
@@ -1809,6 +1848,7 @@ function applyEvent(state, action) {
             tier: scored.tier,
             ep: scored.totalEP,
             ...(first && rollBpep ? { bpep: rollBpep } : {}),
+            ...(first && passEP ? { passEP } : {}),
             ...(ownPetBonus
               ? { petBonus: ownPetBonus, pet: state.activePet }
               : {}),
@@ -2303,6 +2343,9 @@ function parseHistory(value) {
           ...next,
           ep: e.ep,
           ...(validAmount(e.bpep) && e.bpep > 0 ? { bpep: e.bpep } : {}),
+          ...(validAmount(e.passEP) && e.passEP > 0
+            ? { passEP: e.passEP }
+            : {}),
           tier:
             manifest.tiers.findLast((tier) => e.ep >= tier.minEP)?.id ?? e.tier,
           ...(e.source === "offline" ? { source: "offline" } : {}),
@@ -2572,7 +2615,8 @@ function parseHistory(value) {
         !e.name ||
         e.name.length > 100 ||
         !validAmount(e.bpep) ||
-        e.bpep < 1
+        e.bpep < 1 ||
+        (e.ep !== undefined && !validAmount(e.ep))
       )
         return [];
       next = {
@@ -2581,6 +2625,7 @@ function parseHistory(value) {
         missionId: e.missionId,
         name: e.name,
         bpep: e.bpep,
+        ...(validAmount(e.ep) && e.ep > 0 ? { ep: e.ep } : {}),
       };
     } else if (e.type === "boost") {
       if (

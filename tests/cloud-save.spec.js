@@ -164,18 +164,18 @@ const progress = (overrides = {}) => ({
   ...overrides,
 });
 
-test("same-profile local progress wins only by strict dominance", () => {
+test("same-profile progress that wins by durable dimensions is automatic", () => {
   const cloud = progress({ balance: 100, totalEarned: 100 });
   const richerLocal = progress({ balance: 150, totalEarned: 150 });
 
   expect(compareSaveRichness(richerLocal, cloud)).toBe("local");
   expect(chooseSaveWinner(richerLocal, cloud)).toMatchObject({
     winner: "local",
-    comparison: "local",
+    richerCopy: true,
   });
 });
 
-test("a tie keeps this device's copy while the copy with more progress wins", () => {
+test("equal progress keeps local preferences and mixed progress is scored", () => {
   const cloud = progress({ balance: 100, totalEarned: 200 });
   const tie = progress({
     profile: { id: "profile-a", username: "another-name", createdAt: 1 },
@@ -196,8 +196,9 @@ test("a tie keeps this device's copy while the copy with more progress wins", ()
   expect(compareSaveRichness(incomparable, cloud)).toBe("incomparable");
   expect(saveProgressScore(incomparable)).toBe(saveProgressScore(cloud));
   expect(chooseSaveWinner(incomparable, cloud)).toMatchObject({
-    winner: "local",
-    preferencesOnly: true,
+    winner: "cloud",
+    progressScoreTie: true,
+    comparison: "progress-score-tie",
   });
   expect(compareSaveRichness(anotherProfile, cloud)).toBe("incomparable");
   expect(chooseSaveWinner(anotherProfile, cloud)).toMatchObject({
@@ -243,7 +244,7 @@ test("mixed progress across devices keeps the copy that holds more things", () =
   expect(saveProgressScore({ profile: null })).toBe(0);
 });
 
-test("a player can explicitly keep either save in a same-generation conflict", () => {
+test("an explicit save choice still takes priority over automatic arbitration", () => {
   const cloud = progress({ balance: 100, totalEarned: 200 });
   const incomparable = progress({ balance: 150, totalEarned: 150 });
 
@@ -358,7 +359,31 @@ test("the comparison summary reports durable progress rather than save size", ()
   });
 });
 
-test("a later reset generation requires a choice instead of winning by itself", () => {
+test("Cloud conflict summaries show cosmetics and lifetime Pass progress", () => {
+  const saved = progress({
+    owned: ["quickwind-1", "pass-signal", "pass-firstlight"],
+    battlePass: {
+      ...emptyProgress().battlePass,
+      seasonId: "first-light-1",
+      xp: 18_000,
+      premium: true,
+      claimed: ["free-1"],
+      archive: [{ seasonId: "first-light-0", xp: 8_000, claimed: 2 }],
+    },
+  });
+
+  expect(summarizeSaveProgress(saved)).toMatchObject({
+    cosmetics: 2,
+    battlePass: {
+      xp: 18_000,
+      premium: true,
+      claimed: 3,
+      archivedSeasons: 1,
+    },
+  });
+});
+
+test("same-profile copies automatically keep the later reset generation", () => {
   const olderCloud = progress({
     balance: 9_000_000,
     totalEarned: 9_000_000,
@@ -376,8 +401,9 @@ test("a later reset generation requires a choice instead of winning by itself", 
 
   expect(compareSaveEpoch(newerLocal, olderCloud)).toBe("local");
   expect(chooseSaveWinner(newerLocal, olderCloud)).toMatchObject({
-    winner: "choice",
-    choiceReason: "generation",
+    winner: "local",
+    resetProgress: true,
+    comparison: "reset-progress",
   });
   expect(
     chooseSaveWinner(newerLocal, olderCloud, { decision: "local" }),
@@ -393,12 +419,13 @@ test("rebirth progress is compared inside a later prestige generation", () => {
 
   expect(compareSaveEpoch(rebirthAndPrestige, prestigeOnly)).toBe("local");
   expect(chooseSaveWinner(rebirthAndPrestige, prestigeOnly)).toMatchObject({
-    winner: "choice",
-    choiceReason: "generation",
+    winner: "local",
+    resetProgress: true,
+    comparison: "reset-progress",
   });
 });
 
-test("a rollback generation also requires an explicit choice", () => {
+test("a later rollback generation wins automatically", () => {
   const earlier = progress({ rollbacks: 0, ultraRebirths: 3, rebirths: 6 });
   const laterRollback = progress({
     rollbacks: 1,
@@ -407,12 +434,13 @@ test("a rollback generation also requires an explicit choice", () => {
   });
   expect(compareSaveEpoch(laterRollback, earlier)).toBe("local");
   expect(chooseSaveWinner(laterRollback, earlier)).toMatchObject({
-    winner: "choice",
-    choiceReason: "generation",
+    winner: "local",
+    resetProgress: true,
+    comparison: "reset-progress",
   });
 });
 
-test("an actual fresh-start result triggers a choice against its older cloud era", () => {
+test("an actual fresh-start result wins against its older cloud era", () => {
   const oldEra = progress({
     ultraRebirths: 3,
     rebirths: 6,
@@ -431,12 +459,13 @@ test("an actual fresh-start result triggers a choice against its older cloud era
   expect(compareSaveEpoch(freshStart, oldEra)).toBe("local");
   expect(compareSaveRichness(freshStart, oldEra)).toBe("incomparable");
   expect(chooseSaveWinner(freshStart, oldEra)).toMatchObject({
-    winner: "choice",
-    choiceReason: "generation",
+    winner: "local",
+    resetProgress: true,
+    comparison: "reset-progress",
   });
 });
 
-test("a named but never played profile never blocks the copy that has progress", () => {
+test("different profile IDs always require confirmation", () => {
   const shell = progress({ balance: 0, totalEarned: 0 });
   const playedHere = {
     ...progress({
@@ -452,12 +481,21 @@ test("a named but never played profile never blocks the copy that has progress",
   expect(saveHasProgress(empty)).toBe(false);
 
   expect(chooseSaveWinner(playedHere, shell)).toMatchObject({
-    winner: "local",
-    comparison: "local-only-progress",
+    winner: "choice",
+    choiceReason: "profile",
   });
   expect(chooseSaveWinner(shell, playedHere)).toMatchObject({
-    winner: "cloud",
-    comparison: "cloud-only-progress",
+    winner: "choice",
+    choiceReason: "profile",
+  });
+
+  const sameProfileShell = {
+    ...shell,
+    profile: { ...playedHere.profile },
+  };
+  expect(chooseSaveWinner(playedHere, sameProfileShell)).toMatchObject({
+    winner: "local",
+    richerCopy: true,
   });
 });
 
@@ -503,15 +541,15 @@ test("this device's own synced lineage continues without asking", () => {
   const behind = progress({ balance: 100, totalEarned: 1_000, rebirths: 1 });
 
   expect(chooseSaveWinner(afterRebirth, cloud)).toMatchObject({
-    winner: "choice",
-    choiceReason: "generation",
+    winner: "local",
+    resetProgress: true,
   });
-
   expect(
     chooseSaveWinner(afterRebirth, cloud, { trusted: true }),
-  ).toMatchObject({ winner: "local", trusted: true });
+  ).toMatchObject({ winner: "local", resetProgress: true, trusted: true });
   expect(chooseSaveWinner(behind, cloud, { trusted: true })).toMatchObject({
     winner: "cloud",
+    resetProgress: true,
     trusted: true,
   });
 });
