@@ -176,16 +176,49 @@ const GAME_AUTHORITY_REFERENCES = Object.freeze({
   "invalid-game-response": "NT604",
 });
 
-export function errorReference(message = "", fallback = "GM503") {
-  for (const [pattern, id] of classifiers)
-    if (pattern.test(String(message))) return id;
+function classify(message, fallback) {
+  for (const [pattern, id] of classifiers) if (pattern.test(message)) return id;
   return byId.has(fallback) ? fallback : "GM503";
+}
+
+export function errorReference(message = "", fallback = "GM503") {
+  return classify(String(message ?? ""), fallback);
 }
 
 export function gameAuthorityErrorReference(code, message = "") {
   if (Object.hasOwn(GAME_AUTHORITY_REFERENCES, code))
     return GAME_AUTHORITY_REFERENCES[code];
   return errorReference(message, "GM516");
+}
+
+const GAME_UNAVAILABLE_REASONS = Object.freeze({
+  offline: "offline",
+  signIn: "sign-in",
+  provider: "provider",
+  browserSettings: "browser-settings",
+  server: "server",
+});
+
+// The support reference already says that Cloud verification is unavailable.
+// These reasons say what the player can actually do about it.
+export function cloudUnavailableReason({
+  online = true,
+  status = 0,
+  code = "",
+  message = "",
+} = {}) {
+  if (online === false) return GAME_UNAVAILABLE_REASONS.offline;
+  if (status === 401 || code === "sign-in-required")
+    return GAME_UNAVAILABLE_REASONS.signIn;
+  if (status === 403 || status === 429)
+    return GAME_UNAVAILABLE_REASONS.provider;
+  if (status === 0)
+    return /failed to fetch|networkerror|load failed|blocked/i.test(
+      String(message),
+    )
+      ? GAME_UNAVAILABLE_REASONS.browserSettings
+      : GAME_UNAVAILABLE_REASONS.server;
+  return GAME_UNAVAILABLE_REASONS.server;
 }
 
 export function isErrorReference(value) {

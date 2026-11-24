@@ -1,4 +1,4 @@
-import { copyFile, writeFile } from "node:fs/promises";
+import { copyFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { build } from "vite";
 
@@ -13,6 +13,16 @@ await build({
     emptyOutDir: true,
   },
 });
+
+// `emptyOutDir` clears docs/, which also holds the published Cloud security
+// notes. They are not part of the Vite output, so they are carried over.
+const sourceDocumentation = path.resolve("docs-source");
+for (const name of await readdir(sourceDocumentation).catch(() => []))
+  if (name.endsWith(".md"))
+    await copyFile(
+      path.join(sourceDocumentation, name),
+      path.join(outputDirectory, name),
+    );
 
 await copyFile(
   path.join(outputDirectory, "index.html"),

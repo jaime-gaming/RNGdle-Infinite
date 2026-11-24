@@ -1,5 +1,8 @@
 import { firebaseAuth } from "./firebase.js";
-import { gameAuthorityErrorReference } from "./error-codes.js";
+import {
+  cloudUnavailableReason,
+  gameAuthorityErrorReference,
+} from "./error-codes.js";
 
 export const GAME_DEVICE_KEY = "rng-infinite-game-device-v1";
 export const GAME_REQUEST_KEY = "rng-infinite-pending-game-roll-v1";
@@ -97,11 +100,16 @@ async function readJsonResponse(response) {
   }
 }
 
-function authorityError(code, message) {
+function authorityError(code, message, reason = "") {
   const error = new Error(message);
   error.code = code;
   error.reference = gameAuthorityErrorReference(code, message);
+  if (reason) error.reason = reason;
   return error;
+}
+
+function offline() {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
 export async function requestGameStatus(userId, onSecurity) {
@@ -160,6 +168,13 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
       accountChanged
         ? cause.message
         : "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later or continue locally.",
+      accountChanged
+        ? ""
+        : cloudUnavailableReason({
+            online: !offline(),
+            status: 0,
+            message: String(cause?.message ?? ""),
+          }),
     );
   }
 
@@ -175,7 +190,16 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
         : "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later or continue locally.");
     const code =
       typeof body?.code === "string" ? body.code : "game-security-unavailable";
-    const error = authorityError(code, message);
+    const error = authorityError(
+      code,
+      message,
+      cloudUnavailableReason({
+        online: !offline(),
+        status: response.status,
+        code,
+        message,
+      }),
+    );
     if (Number.isSafeInteger(body?.retryAfterMs) && body.retryAfterMs >= 0)
       error.retryAfterMs = body.retryAfterMs;
     throw error;

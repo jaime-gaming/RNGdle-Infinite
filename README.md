@@ -85,7 +85,7 @@ Your progress is saved in this browser. Keep the site data on this device; if sa
 
 ## Privacy & contact
 
-Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and the [Terms of Service](https://rngdle-infinite.jaime-gaming.com/tos). Implementation notes on Cloud roll verification, its current limits, reference codes, and deployment are in [Cloud game security](docs/cloud-game-security.md). Questions? Email [jaimegamingpro@gmail.com](mailto:jaimegamingpro@gmail.com).
+Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and the [Terms of Service](https://rngdle-infinite.jaime-gaming.com/tos). Implementation notes on Cloud roll verification, its current limits, reference codes, and deployment are in [Cloud game security](docs-source/cloud-game-security.md). Questions? Email [jaimegamingpro@gmail.com](mailto:jaimegamingpro@gmail.com).
 
 ## Credits
 
