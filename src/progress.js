@@ -114,7 +114,7 @@ import {
   BATTLE_PASS_MAX_XP,
   BATTLE_PASS_PREMIUM_PRICE,
   BPEP_PER_ROLL,
-  BATTLE_PASS_REWARDS,
+  passRewardsFor,
   battlePassSeason,
   passOverflowEP,
   claimPassMission,
@@ -569,7 +569,7 @@ export function parseAndRepairProgress(raw) {
     };
     note("a claimed pass milestone was restored from your activity history.");
   }
-  for (const reward of BATTLE_PASS_REWARDS) {
+  for (const reward of passRewardsFor(battlePass.seasonId)) {
     for (const track of ["free", "premium"]) {
       const definition = reward[track];
       if (
@@ -583,6 +583,7 @@ export function parseAndRepairProgress(raw) {
     }
   }
   if (
+    battlePass.seasonId !== "season-2" &&
     battlePass.claimed.includes(rewardKey("premium", 30)) &&
     !owned.includes("pass-firstlight") &&
     !owned.includes("pass-prism")
@@ -1028,9 +1029,9 @@ function collectBonus(state, cadence, at, eventId = null) {
 
 function grantPassReward(state, level, track, at, eventId = null) {
   const pass = state.battlePass ?? emptyBattlePass();
-  const reward = BATTLE_PASS_REWARDS.find((entry) => entry.level === level)?.[
-    track
-  ];
+  const reward = passRewardsFor(pass.seasonId).find(
+    (entry) => entry.level === level,
+  )?.[track];
   if (!reward) throw new Error("That pass reward does not exist.");
   if (passRewardState(pass, level, track) !== "claimable")
     throw new Error("This pass reward is not ready to claim.");
@@ -1084,7 +1085,7 @@ function ensurePassSeason(state, at) {
   let next = { ...state, battlePass: pass };
   if (pass.seasonId) {
     const level = passLevelForXp(pass.xp);
-    for (const reward of BATTLE_PASS_REWARDS) {
+    for (const reward of passRewardsFor(pass.seasonId)) {
       if (reward.level > level) continue;
       for (const track of ["free", "premium"]) {
         if (

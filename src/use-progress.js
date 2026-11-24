@@ -308,6 +308,7 @@ export function useProgress({
     localProfileRequired,
     deleteAuthUser,
   };
+  const [gameSecurityAttempt, setGameSecurityAttempt] = useState(0);
   useEffect(() => {
     let active = true;
     setGameSecurity(null);
@@ -321,7 +322,16 @@ export function useProgress({
     return () => {
       active = false;
     };
-  }, [authReady, cloudEnabled, localPlay, online, userId]);
+  }, [authReady, cloudEnabled, gameSecurityAttempt, localPlay, online, userId]);
+  // The first status check is not retried on its own. This asks again on
+  // demand, for example after the player presses Try again.
+  const refreshGameSecurity = useCallback(async () => {
+    const current = authRef.current;
+    if (!(current.cloudEnabled && current.authReady && current.userId))
+      return null;
+    if (current.localPlay) return null;
+    return requestGameStatus(current.userId, setGameSecurity);
+  }, []);
   const cloudGate = useRef({
     userId: null,
     ready: !cloudEnabled || (authReady && !userId),
@@ -2531,6 +2541,8 @@ export function useProgress({
     progress,
     warning,
     gameSecurity,
+    refreshGameSecurity,
+    retryGameSecurity: () => setGameSecurityAttempt((attempt) => attempt + 1),
     dispatch,
     epoch,
     cloud,

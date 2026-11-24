@@ -1126,6 +1126,36 @@ nav button.active {
   font-weight: 600;
 }
 
+.roll-cloud-unavailable {
+  max-width: 420px;
+  margin: 0 auto 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: 10px;
+  background: var(--surface, #f7f7f8);
+  text-align: center;
+  font-size: 12px;
+  line-height: 20px;
+}
+.roll-cloud-unavailable strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.roll-cloud-unavailable p {
+  margin: 0 0 8px;
+  opacity: 0.85;
+}
+.roll-cloud-unavailable button {
+  margin: 0 auto;
+}
+.roll-cloud-unavailable-detail {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 18px;
+  opacity: 0.75;
+}
+
 .roll-experience .godly {
   --rarity: #b45309;
   --rarity-bg: #fef3c7;

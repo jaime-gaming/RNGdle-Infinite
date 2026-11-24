@@ -10,6 +10,13 @@ import {
 // Winter art for the seven permanent RNGmas auras, in the RNGween style: a
 // turning seal, corner filigree, a crest, two guardians and rising motes.
 const ART = {
+  "pass-snowglobe": { Mark: SnowflakeMark, side: PineMark, label: "snowglobe" },
+  "pass-carillon": { Mark: BellMark, side: SnowflakeMark, label: "carillon" },
+  "pass-polar-crown": {
+    Mark: WinterStarMark,
+    side: PineMark,
+    label: "polar-crown",
+  },
   "rngmas-frost": {
     Mark: SnowflakeMark,
     side: PineMark,

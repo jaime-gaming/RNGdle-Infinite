@@ -142,6 +142,42 @@ export const BATTLE_PASS_VARIANT = {
 
 export const BATTLE_PASS_COSMETICS = [
   {
+    id: "pass-snowglobe",
+    kind: "aura",
+    name: "Snowglobe",
+    family: "battle-pass",
+    eventOnly: true,
+    passReward: true,
+    swatch: ["#164e63", "#cffafe"],
+    icon: "frost",
+    description:
+      "RNGmas 2026 free track: an icy seal and drifting snow. Permanent and cosmetic only.",
+  },
+  {
+    id: "pass-carillon",
+    kind: "aura",
+    name: "Midnight Carillon",
+    family: "battle-pass",
+    eventOnly: true,
+    passReward: true,
+    swatch: ["#312e81", "#c4b5fd"],
+    icon: "bell",
+    description:
+      "RNGmas 2026 premium track: silver bells in a violet winter sky. Permanent and cosmetic only.",
+  },
+  {
+    id: "pass-polar-crown",
+    kind: "aura",
+    name: "Polar Crown",
+    family: "battle-pass",
+    eventOnly: true,
+    passReward: true,
+    swatch: ["#064e3b", "#a7f3d0"],
+    icon: "spark",
+    description:
+      "RNGmas 2026 premium finale: a winter star above an emerald frost crown. Permanent and cosmetic only.",
+  },
+  {
     id: "pass-signal",
     kind: "aura",
     name: "Signal Flare",
@@ -317,6 +353,46 @@ export const BATTLE_PASS_REWARDS = Array.from(
     return { level, free, premium };
   },
 );
+
+export const RNGMAS_PASS_REWARDS = BATTLE_PASS_REWARDS.map(
+  ({ level, free, premium }) => {
+    const winter = (reward, track) => {
+      const special =
+        track === "free" && level === 10
+          ? "pass-snowglobe"
+          : track === "premium" && level === 20
+            ? "pass-carillon"
+            : track === "premium" && level === 30
+              ? "pass-polar-crown"
+              : null;
+      if (special) {
+        const cosmetic = BATTLE_PASS_COSMETICS.find(
+          (item) => item.id === special,
+        );
+        return {
+          kind: "aura",
+          id: special,
+          name: cosmetic.name,
+          repeatEP: track === "free" ? 80000 : 200000,
+        };
+      }
+      return {
+        ...reward,
+        ep: Math.round((reward.ep * 0.85) / 1000) * 1000,
+        ...(reward.boost ? { boost: { ...reward.boost } } : {}),
+      };
+    };
+    return {
+      level,
+      free: winter(free, "free"),
+      premium: winter(premium, "premium"),
+    };
+  },
+);
+
+export function passRewardsFor(seasonId) {
+  return seasonId === "season-2" ? RNGMAS_PASS_REWARDS : BATTLE_PASS_REWARDS;
+}
 
 export const PASS_METRICS = [
   "rolls",
@@ -920,7 +996,7 @@ export function passReadyCount(pass, at) {
   if (!pass?.seasonId) return 0;
   let ready = 0;
   const level = passLevelForXp(pass.xp);
-  for (const reward of BATTLE_PASS_REWARDS) {
+  for (const reward of passRewardsFor(pass.seasonId)) {
     if (reward.level > level) continue;
     if (!pass.claimed.includes(rewardKey("free", reward.level))) ready++;
     if (
@@ -1031,9 +1107,9 @@ export function rerollPassDaily(pass, id, at) {
 }
 
 export function passRewardState(pass, level, track) {
-  const reward = BATTLE_PASS_REWARDS.find((entry) => entry.level === level)?.[
-    track
-  ];
+  const reward = passRewardsFor(pass.seasonId).find(
+    (entry) => entry.level === level,
+  )?.[track];
   if (!reward) return "locked";
   const key = rewardKey(track, level);
   if (pass.claimed.includes(key)) return "claimed";

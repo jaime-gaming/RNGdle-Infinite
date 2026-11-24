@@ -404,3 +404,30 @@
   );
   filter: drop-shadow(0 0 4px #fbbf24);
 }
+.rngmas-aura.aura-snowglobe {
+  --aura-primary: #cffafe;
+  --aura-secondary: #164e63;
+}
+.rngmas-aura.aura-carillon {
+  --aura-primary: #c4b5fd;
+  --aura-secondary: #312e81;
+}
+.rngmas-aura.aura-polar-crown {
+  --aura-primary: #a7f3d0;
+  --aura-secondary: #064e3b;
+}
+.number-box[data-cosmetic="pass-snowglobe"] {
+  background: #083344;
+  color: #ecfeff;
+  border-color: #67e8f9;
+}
+.number-box[data-cosmetic="pass-carillon"] {
+  background: #1e1b4b;
+  color: #ede9fe;
+  border-color: #a78bfa;
+}
+.number-box[data-cosmetic="pass-polar-crown"] {
+  background: #022c22;
+  color: #ecfdf5;
+  border-color: #6ee7b7;
+}

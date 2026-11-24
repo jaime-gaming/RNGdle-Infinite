@@ -46,6 +46,7 @@ import { walletMultiplier } from "../progress.js";
 import { walletParts } from "../rack.js";
 import { priorRollsOf } from "../deja-vu.js";
 import { CreatureIcon } from "./game-icons.jsx";
+import CloudUnavailableNotice from "./CloudUnavailableNotice.jsx";
 import "../roll.css";
 
 const AnimatedCount = memo(function AnimatedCount({
@@ -192,6 +193,7 @@ export default function RollExperience({
   openSignup,
   navigate,
   arrivalPet = null,
+  onRefreshAccess = null,
 }) {
   const settings = rollSettings(session.owned);
   const { settings: preferences } = useSettings();
@@ -230,6 +232,7 @@ export default function RollExperience({
   const mounted = useRef(false);
   const [error, setError] = useState("");
   const [errorReferenceCode, setErrorReferenceCode] = useState("");
+  const [errorReason, setErrorReason] = useState("");
   const [settleError, setSettleError] = useState("");
   const [settleErrorReferenceCode, setSettleErrorReferenceCode] = useState("");
   function recordRollError(value) {
@@ -243,11 +246,18 @@ export default function RollExperience({
           : errorReference(message)
         : "",
     );
+    setErrorReason(message ? (value?.reason ?? "") : "");
   }
   function clearRollError() {
     setError("");
     setErrorReferenceCode("");
+    setErrorReason("");
   }
+  // The Cloud notice replaces the plain sentence it used to add: it carries the
+  // same reassurance plus the action that helps with this specific failure.
+  const cloudUnavailable =
+    !session.pendingRoll &&
+    ["NT605", "CL304", "AC402"].includes(errorReferenceCode);
   function recordSettlementError(outcome) {
     const message = outcome.ok ? "" : (outcome.message ?? "");
     setSettleError(message);
@@ -1023,13 +1033,26 @@ export default function RollExperience({
               {error}{" "}
               {session.pendingRoll
                 ? "Your committed roll is retained; resume it below."
-                : "No roll or EP was awarded. Use Retry & Roll to try again."}
+                : cloudUnavailable
+                  ? "No roll or EP was awarded."
+                  : "No roll or EP was awarded. Use Retry & Roll to try again."}
               {errorReferenceCode && (
                 <small className="roll-error-reference">
                   Reference {errorReferenceCode}
                 </small>
               )}
             </p>
+          )}
+          {error && cloudUnavailable && (
+            <CloudUnavailableNotice
+              reason={errorReason}
+              onRetry={() => {
+                clearRollError();
+                if (onRefreshAccess) onRefreshAccess();
+                generate();
+              }}
+              onSignInAgain={openSignup}
+            />
           )}
           <p className="roll-hint">
             <InfinityIcon size={14} /> {settings.rollMS / 1000}s reveal{" "}
@@ -1199,8 +1222,8 @@ export default function RollExperience({
             {!splitDetail && !splitOpen && rollAgainControl}
             {error && (
               <p className="roll-load-error" role="alert">
-                {error} No roll or EP was awarded. Use Retry &amp; Roll to try
-                again.
+                {error} No roll or EP was awarded.{" "}
+                {cloudUnavailable ? "" : "Use Retry & Roll to try again."}
                 {errorReferenceCode && (
                   <small className="roll-error-reference">
                     Reference {errorReferenceCode}

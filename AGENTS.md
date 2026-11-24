@@ -508,3 +508,11 @@ online committed result deals its numeric value as damage, once. Offline and
 extra skill rolls do not add progress. Weekly claims grant their permanent aura,
 modest EP (except the golem) and one Surge Capacitor charge. RNGmas 2026 is pass
 season 2, December 16–January 2 UTC. The local dev preview is December 17 UTC.
+
+Pass reward definitions are resolved by saved `seasonId` through `passRewardsFor`.
+Never use the First Light `BATTLE_PASS_REWARDS` constant directly for live claims,
+receipt repair, rollover delivery or the Pass page. RNGmas uses Snowglobe (free
+10), Midnight Carillon (premium 20) and Polar Crown (premium 30), with a smaller
+EP budget for its shorter season. Existing First Light ownership stays intact.
+The Cloud verification outage fixes from upstream `d513747` are integrated;
+the event branch retains version `v0.6.1` rather than the main patch label.

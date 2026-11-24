@@ -59,3 +59,21 @@ are preserved; publishing client assets does not deploy those rules.
 
 The dev preview clock starts December 17, 2026 at 00:00 UTC. Production ignores
 that override, and automated browser fixtures override it independently.
+
+## Season-specific pass rewards and patch 4
+
+RNGmas rewards resolve through `passRewardsFor("season-2")`, not the First Light
+track: Snowglobe at free level 10, Midnight Carillon at premium level 20, and
+Polar Crown at premium level 30. These are permanent cosmetic auras, separate
+from both First Light and weekly event rewards. EP payouts are approximately
+85% of First Light's values (rounded to 1,000 EP) for the shorter season. Existing
+boost types and charge counts stay unchanged. No new save fields are needed.
+Claims, receipt repair, readiness, automatic previous-season delivery and UI use
+the saved season identity. Previously owned cosmetics are never removed.
+
+Upstream patch `d513747` is applied on top of the prior bug-fix-3 integration:
+Cloud verification failures now offer recovery actions, retry the status check,
+and distinguish offline, expired sign-in, provider and server failures. The
+client, Worker, API handling, render checks and outage tests are carried over.
+The event keeps its `v0.6.1` version label. Main's history was rewritten upstream;
+only the new patch delta was applied to avoid replaying old releases.
