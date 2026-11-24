@@ -13,7 +13,25 @@ import { authoritativeGamePlan } from "./game-session.js";
 
 const STATUS_PATH = "/api/game/status";
 const ROLL_PATH = "/api/game/roll";
+const GAME_PREFIX = "/api/game/";
 const MAX_BODY_BYTES = 512;
+
+// Server-side diagnosis tags. They are logged by the Worker and never returned
+// to the browser: the client only receives its support reference.
+export const GAME_FAULTS = Object.freeze({
+  config: "cloud-game-config-missing",
+  token: "cloud-game-token-unavailable",
+  session: "cloud-game-session-unavailable",
+  restriction: "cloud-game-restriction-unavailable",
+  save: "cloud-game-save-unavailable",
+  plan: "cloud-game-plan-unavailable",
+  roll: "cloud-game-roll-unavailable",
+  route: "unknown-api-route",
+});
+
+export function isGamePath(pathname) {
+  return typeof pathname === "string" && pathname.startsWith(GAME_PREFIX);
+}
 
 function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), {
@@ -26,7 +44,18 @@ function jsonResponse(status, body) {
   });
 }
 
-function serviceUnavailable() {
+// The browser keeps its single support reference; the fault tag only reaches
+// the Worker log, where it names which dependency actually failed.
+export function logCloudFault(fault, detail = "") {
+  try {
+    console.error(
+      `[RNGdle Worker] Cloud roll verification unavailable: ${fault}${detail ? ` (${detail})` : ""}.`,
+    );
+  } catch {}
+}
+
+function serviceUnavailable(fault, detail = "") {
+  logCloudFault(fault, detail);
   return jsonResponse(503, {
     ok: false,
     code: "game-security-unavailable",
@@ -196,15 +225,15 @@ export function createGameEndpoint({
     const projectId = String(env.FIREBASE_PROJECT_ID ?? "").trim();
     const token = bearerToken(request);
     if (!projectId || !env.FIREBASE_SERVICE_ACCOUNT_JSON || !token)
-      return serviceUnavailable();
+      return serviceUnavailable(GAME_FAULTS.config);
 
     let claims;
     try {
       claims = await verifyToken(token, projectId);
     } catch (error) {
       if (error instanceof TokenVerificationUnavailable)
-        return serviceUnavailable();
-      return serviceUnavailable();
+        return serviceUnavailable(GAME_FAULTS.token);
+      return serviceUnavailable(GAME_FAULTS.token);
     }
     if (!claims?.sub)
       return jsonResponse(401, {
@@ -227,7 +256,7 @@ export function createGameEndpoint({
         }),
       ]);
     } catch {
-      return serviceUnavailable();
+      return serviceUnavailable(GAME_FAULTS.session);
     }
 
     if (
@@ -243,7 +272,7 @@ export function createGameEndpoint({
           verifiedAttempts: 0,
         };
       } catch {
-        return serviceUnavailable();
+        return serviceUnavailable(GAME_FAULTS.restriction);
       }
     }
 
@@ -253,7 +282,7 @@ export function createGameEndpoint({
         try {
           confirmed = await confirmDurableRestriction(session.stub);
         } catch {
-          return serviceUnavailable();
+          return serviceUnavailable(GAME_FAULTS.restriction);
         }
       return jsonResponse(403, {
         ok: false,
@@ -273,7 +302,7 @@ export function createGameEndpoint({
           getAdminAccessToken,
         });
       } catch {
-        return serviceUnavailable();
+        return serviceUnavailable(GAME_FAULTS.restriction);
       }
       return jsonResponse(403, {
         ok: false,
@@ -297,6 +326,7 @@ export function createGameEndpoint({
         fetcher,
       });
     } catch {
+      logCloudFault(GAME_FAULTS.save, "the Player save could not be read");
       return jsonResponse(503, {
         ok: false,
         code: "cloud-save-unavailable",
@@ -323,6 +353,10 @@ export function createGameEndpoint({
     try {
       plan = authoritativeGamePlan(savedProgress);
     } catch {
+      logCloudFault(
+        GAME_FAULTS.plan,
+        "the Cloud save could not form a roll plan",
+      );
       return jsonResponse(409, {
         ok: false,
         code: "cloud-save-not-ready",
@@ -345,13 +379,13 @@ export function createGameEndpoint({
         }),
       );
     } catch {
-      return serviceUnavailable();
+      return serviceUnavailable(GAME_FAULTS.session);
     }
     let result;
     try {
       result = await rollResponse.json();
     } catch {
-      return serviceUnavailable();
+      return serviceUnavailable(GAME_FAULTS.session);
     }
 
     if (result.restrictionRequired) {
@@ -372,7 +406,7 @@ export function createGameEndpoint({
           security: confirmed.security,
         });
       } catch {
-        return serviceUnavailable();
+        return serviceUnavailable(GAME_FAULTS.roll);
       }
     }
 

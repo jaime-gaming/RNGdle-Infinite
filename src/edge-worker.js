@@ -228,7 +228,12 @@ export function createIncidentEndpoint({
   };
 }
 
-import { createGameEndpoint } from "./game-api.js";
+import {
+  createGameEndpoint,
+  isGamePath,
+  logCloudFault,
+  GAME_FAULTS,
+} from "./game-api.js";
 import { GameSessionDurableObject } from "./game-session.js";
 
 export { GameSessionDurableObject };
@@ -236,12 +241,22 @@ export { GameSessionDurableObject };
 const handleIncidentReport = createIncidentEndpoint();
 const handleGameRequest = createGameEndpoint();
 
+// Routes starting with the API prefix never fall through to the static assets:
+// a single-page-app fallback would answer them with index.html, which leaves the
+// browser with a page-load error instead of a reference it can report.
+function apiNotFound() {
+  return jsonResponse(404, { ok: false, code: "not-found" });
+}
+
 export default {
   async fetch(request, env) {
     const pathname = new URL(request.url).pathname;
     if (pathname === REPORT_PATH) return handleIncidentReport(request, env);
-    if (pathname.startsWith("/api/game"))
-      return handleGameRequest(request, env);
+    if (isGamePath(pathname)) return handleGameRequest(request, env);
+    if (pathname.startsWith("/api/")) {
+      logCloudFault(GAME_FAULTS.route, `unknown API route ${pathname}`);
+      return apiNotFound();
+    }
     return env.ASSETS.fetch(request);
   },
 };

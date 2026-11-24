@@ -331,6 +331,7 @@ function App() {
     progress: session,
     warning: progressWarning,
     gameSecurity,
+    refreshGameSecurity,
     dispatch,
     epoch,
     cloud,
@@ -1165,6 +1166,18 @@ function App() {
                     )}
                   </small>
                 )}
+                {gameSecurity.status === "pending" &&
+                  auth.user &&
+                  !localPlay && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      data-testid="game-security-recheck"
+                      onClick={() => void refreshGameSecurity()}
+                    >
+                      Check Cloud access again
+                    </button>
+                  )}
                 {gameSecurity.status === "restricted" &&
                   auth.user &&
                   !localPlay && (
@@ -1219,6 +1232,7 @@ function App() {
                 navigate={navigate}
                 onComplete={completeRoll}
                 onDraw={() => dispatch({ type: "draw" })}
+                onRefreshAccess={refreshGameSecurity}
                 openSignup={openAuth}
                 aura={session.equipped}
                 arrivalPet={arrivalPet}
