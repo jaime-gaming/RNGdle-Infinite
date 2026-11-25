@@ -133,6 +133,40 @@ try {
     "same-origin-allow-popups",
   );
 
+  // The Cloud-roll endpoints are answered by the Worker, not by the SPA
+  // fallback. This build runs without its secret, so the Worker must fail
+  // closed and its log must name the binding that is missing.
+  const gameStatus = await fetch(`${origin}/api/game/status`);
+  const gameStatusBody = await gameStatus.json();
+  assert.equal(
+    gameStatus.status,
+    503,
+    "a Worker without its secret fails closed",
+  );
+  assert.equal(gameStatusBody.code, "game-security-unavailable");
+  assert.equal(gameStatusBody.hint, "deployment");
+  assert.equal(gameStatus.headers.get("cache-control"), "no-store");
+  assert.doesNotMatch(JSON.stringify(gameStatusBody), /cloud-game-/);
+  assert.doesNotMatch(JSON.stringify(gameStatusBody), /rngdle-build-id/);
+  const gameRoll = await fetch(`${origin}/api/game/roll`, {
+    method: "POST",
+    headers: {
+      Origin: origin,
+      "Content-Type": "application/json",
+      Authorization: "Bearer test-id-token",
+    },
+    body: JSON.stringify({
+      requestId: "smoke-request-0001",
+      deviceId: "smoke-device-0001",
+      profileId: "smoke-profile",
+    }),
+  });
+  assert.equal(gameRoll.status, 503);
+  assert.equal((await gameRoll.json()).code, "game-security-unavailable");
+  const unknownApi = await fetch(`${origin}/api/game/nope`);
+  assert.equal(unknownApi.status, 404);
+  assert.doesNotMatch(await unknownApi.text(), /rngdle-build-id/);
+
   for (const route of [
     "/shop/auras",
     "/settings/save-recovery",

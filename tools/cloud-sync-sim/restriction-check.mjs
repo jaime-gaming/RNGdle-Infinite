@@ -12,7 +12,10 @@ assert.ok(uid, "FAKE_UID is required");
 const database = { __fake: true };
 const saveRef = doc(database, "player_saves", uid);
 const beforeSnapshot = await getDoc(saveRef);
-assert.ok(beforeSnapshot.exists(), "restricted Cloud saves must remain readable");
+assert.ok(
+  beforeSnapshot.exists(),
+  "restricted Cloud saves must remain readable",
+);
 const before = beforeSnapshot.data();
 
 await assert.rejects(

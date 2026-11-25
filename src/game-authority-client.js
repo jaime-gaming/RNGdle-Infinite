@@ -100,11 +100,20 @@ async function readJsonResponse(response) {
   }
 }
 
-function authorityError(code, message, reason = "") {
+function authorityError(
+  code,
+  message,
+  { reason = "", status = 0, hint = "" } = {},
+) {
   const error = new Error(message);
   error.code = code;
   error.reference = gameAuthorityErrorReference(code, message);
+  // A support reference alone cannot tell a provider outage from a blocked
+  // request. The HTTP status travels with the error so the notice and the
+  // console warning say which one happened.
+  error.status = Number.isSafeInteger(status) ? status : 0;
   if (reason) error.reason = reason;
+  if (hint) error.hint = hint;
   return error;
 }
 
@@ -168,13 +177,16 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
       accountChanged
         ? cause.message
         : "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later or continue locally.",
-      accountChanged
-        ? ""
-        : cloudUnavailableReason({
-            online: !offline(),
-            status: 0,
-            message: String(cause?.message ?? ""),
-          }),
+      {
+        reason: accountChanged
+          ? ""
+          : cloudUnavailableReason({
+              online: !offline(),
+              status: 0,
+              message: String(cause?.message ?? ""),
+            }),
+        status: 0,
+      },
     );
   }
 
@@ -190,16 +202,16 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
         : "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later or continue locally.");
     const code =
       typeof body?.code === "string" ? body.code : "game-security-unavailable";
-    const error = authorityError(
-      code,
-      message,
-      cloudUnavailableReason({
+    const error = authorityError(code, message, {
+      status: response.status,
+      hint: typeof body?.hint === "string" ? body.hint : "",
+      reason: cloudUnavailableReason({
         online: !offline(),
         status: response.status,
         code,
         message,
       }),
-    );
+    });
     if (Number.isSafeInteger(body?.retryAfterMs) && body.retryAfterMs >= 0)
       error.retryAfterMs = body.retryAfterMs;
     throw error;
@@ -225,12 +237,37 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
     throw authorityError(
       "invalid-game-response",
       "The Cloud roll response could not be checked. No progress was changed; retry safely.",
+      { status: response.status },
     );
   }
 
   return {
     ...body,
     requestKey: pending.requestId,
+  };
+}
+
+// One console line per failed Cloud verification, so a report can say whether
+// the request never left the browser or the Worker answered and why. It never
+// carries the token, the save, the profile or the roll.
+export function describeCloudVerificationFailure(error) {
+  if (!error || typeof error !== "object") return null;
+  const status = Number.isSafeInteger(error.status) ? error.status : 0;
+  const where =
+    status === 0
+      ? "the request never reached the Worker"
+      : status === 401
+        ? "the Worker rejected the sign-in"
+        : status === 503
+          ? "the Worker could not verify the roll"
+          : `the Worker answered ${status}`;
+  return {
+    reference: error.reference ?? "",
+    code: typeof error.code === "string" ? error.code : "",
+    status,
+    reason: error.reason ?? "",
+    hint: error.hint ?? "",
+    where,
   };
 }
 

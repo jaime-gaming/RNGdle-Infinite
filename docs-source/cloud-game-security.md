@@ -66,6 +66,30 @@ Durable Object, or the service-account secret is unavailable. Local play and
 existing saves remain available. A Cloudflare secret is not read by Vite and is
 never included in `dist/`.
 
+## Diagnosing a 503
+
+A `503` from `/api/game/status` or `/api/game/roll` means the Worker could not
+verify the request. It is a deployment fault, not a player fault, and the
+browser cannot repair it. The Worker writes one line to its log before the
+browser receives `NT605`. Read that line in the Cloudflare dashboard
+(**Workers → rngdle-infinite → Logs**) or with `npx wrangler tail`:
+
+| Worker log tag                       | What is missing                                     | Setup step                                              |
+| ------------------------------------ | --------------------------------------------------- | ------------------------------------------------------- |
+| `cloud-game-project-missing`         | `FIREBASE_PROJECT_ID` var                           | Add it to `vars` in `wrangler.jsonc` and redeploy.      |
+| `cloud-game-service-account-missing` | `FIREBASE_SERVICE_ACCOUNT_JSON` secret              | `npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON` |
+| `cloud-game-session-binding-missing` | The `GAME_SESSIONS` Durable Object binding          | Deploy the binding and the `v1` SQLite migration.       |
+| `cloud-game-token-unavailable`       | The Firebase signing keys or the ID token           | Retry, then check `securetoken` reachability.           |
+| `cloud-game-session-unavailable`     | The Durable Object did not answer                   | Check the binding name against `wrangler.jsonc`.        |
+| `cloud-game-save-unavailable`        | The player save could not be read from Firestore    | Check the service account's Firestore access.           |
+| `cloud-game-restriction-unavailable` | The enforcement record could not be read or written | Check Firestore access for the service account.         |
+
+Each line also carries the failing detail (for example
+`reading the Cloud save answered 403` or `FIREBASE_SERVICE_ACCOUNT_JSON is not
+valid JSON`) so the cause is visible without a second deploy. A missing token
+now answers `401 sign-in-required`, not `503`, because that one is repaired by
+signing in again.
+
 ## Error references
 
 If a roll error shows a `Reference` code, include that code when asking for help.

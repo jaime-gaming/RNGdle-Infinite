@@ -194,6 +194,7 @@ export default function RollExperience({
   navigate,
   arrivalPet = null,
   onRefreshAccess = null,
+  onPlayLocally = null,
 }) {
   const settings = rollSettings(session.owned);
   const { settings: preferences } = useSettings();
@@ -230,6 +231,7 @@ export default function RollExperience({
   const localCooldown = useRef(0);
   const [localCooldownUntil, setLocalCooldownUntil] = useState(0);
   const mounted = useRef(false);
+  const [switchingToLocal, setSwitchingToLocal] = useState(false);
   const [error, setError] = useState("");
   const [errorReferenceCode, setErrorReferenceCode] = useState("");
   const [errorReason, setErrorReason] = useState("");
@@ -239,29 +241,13 @@ export default function RollExperience({
     const message =
       value instanceof Error ? value.message : String(value ?? "");
     setError(message);
-    const refCode =
-      message
-        ? isErrorReference(value?.reference)
-          ? value.reference
-          : errorReference(message)
-        : "";
+    const refCode = message
+      ? isErrorReference(value?.reference)
+        ? value.reference
+        : errorReference(message)
+      : "";
     setErrorReferenceCode(refCode);
     setErrorReason(message ? (value?.reason ?? "") : "");
-
-    // Add detailed console error for F12
-    if (refCode === "NT605") {
-      console.error(
-        "[RNGdle] Detailed NT605 Error:",
-        {
-          message,
-          reference: refCode,
-          reason: errorReason,
-          status: value?.status ?? (value instanceof Error ? undefined : value?.code),
-          timestamp: new Date().toISOString(),
-          stack: value instanceof Error ? value.stack : undefined,
-        }
-      );
-    }
   }
   function clearRollError() {
     setError("");
@@ -276,26 +262,12 @@ export default function RollExperience({
   function recordSettlementError(outcome) {
     const message = outcome.ok ? "" : (outcome.message ?? "");
     setSettleError(message);
-    const refCode =
-      message
-        ? isErrorReference(outcome.reference)
-          ? outcome.reference
-          : errorReference(message)
-        : "";
+    const refCode = message
+      ? isErrorReference(outcome.reference)
+        ? outcome.reference
+        : errorReference(message)
+      : "";
     setSettleErrorReferenceCode(refCode);
-
-    // Add detailed console error for F12
-    if (refCode === "NT605") {
-      console.error(
-        "[RNGdle] Detailed NT605 Settlement Error:",
-        {
-          message,
-          reference: refCode,
-          status: outcome?.status ?? outcome?.code,
-          timestamp: new Date().toISOString(),
-        }
-      );
-    }
   }
   const [copied, setCopied] = useState(false);
   const [cooldown, setCooldown] = useState(() =>
@@ -716,6 +688,17 @@ export default function RollExperience({
     };
   }, []);
 
+  function playLocally() {
+    if (!onPlayLocally || switchingToLocal) return;
+    setSwitchingToLocal(true);
+    clearRollError();
+    Promise.resolve(onPlayLocally())
+      .catch(() => {})
+      .finally(() => {
+        if (mounted.current) setSwitchingToLocal(false);
+      });
+  }
+
   async function generate() {
     if (
       drawPending.current ||
@@ -1074,12 +1057,14 @@ export default function RollExperience({
           {error && cloudUnavailable && (
             <CloudUnavailableNotice
               reason={errorReason}
+              busy={switchingToLocal}
               onRetry={() => {
                 clearRollError();
                 if (onRefreshAccess) onRefreshAccess();
                 generate();
               }}
               onSignInAgain={openSignup}
+              onPlayLocally={playLocally}
             />
           )}
           <p className="roll-hint">

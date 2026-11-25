@@ -28,6 +28,7 @@ import {
 import { firebaseConfigured } from "./firebase.js";
 import {
   acknowledgeServerRoll,
+  describeCloudVerificationFailure,
   requestGameStatus,
   requestServerRoll,
 } from "./game-authority-client.js";
@@ -1866,11 +1867,20 @@ export function useProgress({
             !auth.localPlay,
           );
           if (serverAuthoritative) {
-            serverRoll = await requestServerRoll(
-              auth.userId,
-              previous.profile.id,
-              setGameSecurity,
-            );
+            try {
+              serverRoll = await requestServerRoll(
+                auth.userId,
+                previous.profile.id,
+                setGameSecurity,
+              );
+            } catch (error) {
+              const details = describeCloudVerificationFailure(error);
+              if (details)
+                console.warn(
+                  `[RNGdle] Cloud roll verification unavailable: ${details.reference || details.code || "no reference"}; ${details.where}; reason ${details.reason || "unknown"}${details.hint ? `; ${details.hint}` : ""}.`,
+                );
+              throw error;
+            }
             serverRollRequestKey = serverRoll.requestKey;
             timing = { ...serverRoll.timing };
             flywheel = serverRoll.flywheel;

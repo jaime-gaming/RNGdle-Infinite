@@ -332,8 +332,11 @@ npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
 npm run verify:cloud     # Cloud Accounts simulation against firestore.rules
 npm run test:render      # mount the app shell plus offline overlay and profile privacy in Node
 npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
-npm run deploy:worker    # build and deploy the Worker (production is guarded)
+npm run deploy:worker    # build, deploy the Worker, then check /api/game/status
 npm run audit:economy    # price ladder and roll-distribution audit
+npm run release:bump     # move the internal fixN label in every place it lives
+npm run release:check    # fail if those labels disagree
+npm run verify:release   # Prettier check plus the label check, before a merge
 npm run format           # Prettier over src, tests, root configs and README
 ```
 
@@ -456,17 +459,36 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.6fix4`; do not change it
-  until the next session or an explicit user request. Public release notes
-  live in `src/changelog.js` and keep historical entries.
+  flow. The current label is exactly `v0.6fix5`, and every fix patch runs
+  `npm run release:bump` so this patch's label is one `fixN` above the label it
+  replaces. `tools/release-version.mjs` writes `src/app-update.js`, the line
+  below and `tests/app-update.spec.js` together from `package.json`;
+  `npm run release:check` fails if they disagree, and `vite.config.js` derives
+  the build metadata from the same file. Never hand-write a label. Public
+  release notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
 - **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
   name the squashed commit after the release it publishes: `v0.5.2 bug fix 2`
-  when the merge carries bug fixes (the number matches the internal `fixN`
-  label), otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
+  when the merge carries fixes (the number matches the internal `fixN` label),
+  otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
   when the branch is verified: `npm run build`, `npm run test:worker`,
-  `npm run verify:cloud`, the Playwright suite and `prettier --check`.
+  `npm run verify:cloud`, the Playwright suite and `npm run verify:release`
+  (Prettier over source, tests and tools plus the label check).
+- **A fix patch is finished only when it is deployed.** Editing files, merging
+  and updating `docs/` all leave the live custom domain on the previous build,
+  because that domain is served by the Worker from `dist/`. After the merge,
+  run `CF_ALLOW_PRODUCTION=true npm run deploy:worker` when the user asked for
+  the fix to reach players, and say plainly which steps ran. Never report a
+  console error as fixed while the build that carries the change is not live.
+- **Fix the cause the logs name, not the sentence the player saw.** A 503 on
+  `/api/game/status` or `/api/game/roll` is a Worker deployment fault: the
+  Worker logs one line naming the missing binding (`FIREBASE_PROJECT_ID`,
+  `FIREBASE_SERVICE_ACCOUNT_JSON`, `GAME_SESSIONS`) or the failing dependency
+  before the browser sees `game-security-unavailable`. Read that line first;
+  `docs-source/cloud-game-security.md` lists the setup step for each tag.
+  Browser-side changes cannot repair it, so do not merge a client-only fix for
+  a 503 until the Worker log or a live check shows the deployment is healthy.
 - A change to `firestore.rules` only takes effect after
   `npm run deploy:rules`. Say so explicitly in the merge summary; the app cannot
   deploy rules for the user, and the client must stay compatible with the rules

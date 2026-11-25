@@ -94,6 +94,51 @@ export async function run() {
   }
 
   {
+    let localSwitches = 0;
+    const outage = mount(
+      <CloudUnavailableNotice
+        reason="server"
+        onPlayLocally={() => {
+          localSwitches++;
+          return Promise.resolve();
+        }}
+      />,
+    );
+    const button = outage.host.querySelector(
+      '[data-testid="cloud-unavailable-local-play"]',
+    );
+    check(Boolean(button), "server: offers the local switch, not just a retry");
+    act(() => {
+      button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    check(localSwitches === 1, "server: the local switch asks for local play");
+    act(() => outage.root.unmount());
+    outage.host.remove();
+
+    const expiring = mount(
+      <CloudUnavailableNotice reason="signIn" onPlayLocally={() => {}} />,
+    );
+    check(
+      !expiring.host.querySelector(
+        '[data-testid="cloud-unavailable-local-play"]',
+      ),
+      "sign-in: a session problem is repaired by signing in, not by leaving",
+    );
+    act(() => expiring.root.unmount());
+    expiring.host.remove();
+
+    const withoutHandler = mount(<CloudUnavailableNotice reason="server" />);
+    check(
+      !withoutHandler.host.querySelector(
+        '[data-testid="cloud-unavailable-local-play"]',
+      ),
+      "server: no local switch is shown when the page offers no local play",
+    );
+    act(() => withoutHandler.root.unmount());
+    withoutHandler.host.remove();
+  }
+
+  {
     const fallback = mount(<CloudUnavailableNotice reason="unexpected" />);
     check(
       fallback.host.textContent.includes(CLOUD_UNAVAILABLE_COPY.server.lead),
