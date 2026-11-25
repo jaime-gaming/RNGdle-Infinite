@@ -516,3 +516,30 @@ receipt repair, rollover delivery or the Pass page. RNGmas uses Snowglobe (free
 EP budget for its shorter season. Existing First Light ownership stays intact.
 The Cloud verification outage fixes from upstream `d513747` are integrated;
 the event branch retains version `v0.6.1` rather than the main patch label.
+
+## Integrated Cloud fallback patch
+
+Upstream `3b8d4fa` (bug fix 5) is integrated without changing the event's
+`v0.6.1` label. Vite reads `currentInternalVersion()` rather than a separate
+hard-coded label. `release:check` supports both the release label and fixN labels.
+No deployment is implied by a successful local build or a pushed branch.
+
+Transient Cloud outages may use normal local rolls automatically. The allowlist
+in `allowsLocalFallback` accepts actual numeric HTTP 0 or 500–599 only. Server
+restrictions, account changes, insecure requests and cooldown decisions must not
+activate the fallback. Outage marks are account/profile scoped, defensively
+parsed, and written only after the replacement roll is saved. Retire the old
+Cloud request ID only after that local commit; failed saves retain their retry ID.
+
+Recovery probes stop at 40 attempts. A fresh validated status check (including
+on reload or explicit retry) can heal an exhausted session. Failed HTTP responses
+and unknown security states cannot mark Cloud recovered. Requests have 15-second
+fetch timeouts. Late responses from an old account cannot update the active
+account's security or commit a draw. Keep the ordinary Cloud-save reconciliation;
+never merge two different profiles to hide a conflict.
+
+`tools/render-sim/cloud-fallback-integrity.mjs` covers quota failure, restrictions,
+exhausted-budget recovery and the actual hook timer boundary. Client tests reject
+invalid timing, skills and error-envelope security changes while preserving the
+request ID. Live binding/secret availability still needs a production check;
+local tests cannot certify it.

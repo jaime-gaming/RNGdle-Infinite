@@ -569,7 +569,7 @@ export default function CloudAccount({
               type="button"
               className="secondary-button"
               data-testid="continue-locally"
-              onClick={onContinueLocal}
+              onClick={() => void onContinueLocal?.()}
             >
               Continue locally
             </button>
@@ -583,7 +583,7 @@ export default function CloudAccount({
               type="button"
               className="secondary-button"
               data-testid="continue-locally"
-              onClick={onContinueLocal}
+              onClick={() => void onContinueLocal?.()}
             >
               Continue locally
             </button>
@@ -1336,7 +1336,7 @@ export default function CloudAccount({
                   type="button"
                   className="secondary-button"
                   data-testid="continue-locally"
-                  onClick={onContinueLocal}
+                  onClick={() => void onContinueLocal?.()}
                   disabled={pending}
                 >
                   Continue locally

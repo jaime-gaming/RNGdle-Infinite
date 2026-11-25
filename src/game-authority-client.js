@@ -1,3 +1,5 @@
+import { ROLL_DURATIONS, COOLDOWN_DURATIONS } from "./shop-data.js";
+import { skillById } from "./skills.js";
 import { firebaseAuth } from "./firebase.js";
 import {
   cloudUnavailableReason,
@@ -6,6 +8,7 @@ import {
 
 export const GAME_DEVICE_KEY = "rng-infinite-game-device-v1";
 export const GAME_REQUEST_KEY = "rng-infinite-pending-game-roll-v1";
+export const GAME_TOKEN_SOURCE_KEY = "rng-infinite-game-token-source-v1";
 
 function newId() {
   if (typeof globalThis.crypto?.randomUUID === "function")
@@ -77,19 +80,35 @@ function clearRequest(requestId) {
   } catch {}
 }
 
+// Firebase Auth owns the browser session. This is the only place the game
+// borrows it, so a build without Firebase (or a test) can supply the signed-in
+// user instead of reaching into the Firebase module.
+let tokenSource = null;
+
+export function setGameTokenSource(source) {
+  tokenSource = typeof source === "function" ? source : null;
+}
+
 async function idTokenFor(userId) {
-  const user = firebaseAuth?.currentUser;
+  const user = tokenSource
+    ? await tokenSource(userId)
+    : firebaseAuth?.currentUser;
   if (!user || user.uid !== userId)
     throw new Error("The Cloud sign-in changed. Reload and try again.");
   return user.getIdToken();
 }
 
-function updateSecurity(onSecurity, security) {
-  if (
+function validSecurity(security) {
+  return (
     security &&
-    ["clear", "warning", "restricted", "pending"].includes(security.status)
-  )
-    onSecurity?.(security);
+    ["clear", "warning", "restricted", "pending"].includes(security.status) &&
+    (security.message == null ||
+      (typeof security.message === "string" && security.message.length <= 2000))
+  );
+}
+
+function updateSecurity(onSecurity, security) {
+  if (validSecurity(security)) onSecurity?.(security);
 }
 
 async function readJsonResponse(response) {
@@ -100,11 +119,20 @@ async function readJsonResponse(response) {
   }
 }
 
-function authorityError(code, message, reason = "") {
+function authorityError(
+  code,
+  message,
+  { reason = "", status = 0, hint = "" } = {},
+) {
   const error = new Error(message);
   error.code = code;
   error.reference = gameAuthorityErrorReference(code, message);
+  // A support reference alone cannot tell a provider outage from a blocked
+  // request. The HTTP status travels with the error so the notice and the
+  // console warning say which one happened.
+  error.status = Number.isSafeInteger(status) ? status : 0;
   if (reason) error.reason = reason;
+  if (hint) error.hint = hint;
   return error;
 }
 
@@ -121,10 +149,17 @@ export async function requestGameStatus(userId, onSecurity) {
       credentials: "same-origin",
       headers: { Authorization: `Bearer ${token}` },
       referrerPolicy: "same-origin",
+      signal: AbortSignal.timeout(15_000),
     });
     const body = await readJsonResponse(response);
-    updateSecurity(onSecurity, body?.security);
-    return body?.security ?? null;
+    if (!validSecurity(body?.security)) return null;
+    const decision =
+      response.status === 403 &&
+      ["cloud-restricted", "restriction-pending"].includes(body?.code) &&
+      ["restricted", "pending"].includes(body.security.status);
+    if (!(response.ok && body?.ok === true) && !decision) return null;
+    updateSecurity(onSecurity, body.security);
+    return body.security;
   } catch {
     return null;
   }
@@ -158,6 +193,7 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
         profileId,
       }),
       referrerPolicy: "same-origin",
+      signal: AbortSignal.timeout(15_000),
     });
   } catch (cause) {
     const accountChanged =
@@ -168,19 +204,30 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
       accountChanged
         ? cause.message
         : "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later or continue locally.",
-      accountChanged
-        ? ""
-        : cloudUnavailableReason({
-            online: !offline(),
-            status: 0,
-            message: String(cause?.message ?? ""),
-          }),
+      {
+        reason: accountChanged
+          ? ""
+          : cloudUnavailableReason({
+              online: !offline(),
+              status: 0,
+              message: String(cause?.message ?? ""),
+            }),
+        status: 0,
+      },
     );
   }
 
   const body = await readJsonResponse(response);
-  updateSecurity(onSecurity, body?.security);
   if (!response.ok || body?.ok !== true) {
+    if (
+      (response.status === 403 &&
+        ["cloud-restricted", "restriction-pending"].includes(body?.code) &&
+        ["restricted", "pending"].includes(body?.security?.status)) ||
+      (response.status === 429 &&
+        body?.code === "roll-not-ready" &&
+        body?.security?.status === "warning")
+    )
+      updateSecurity(onSecurity, body.security);
     if ([400, 401, 403, 409, 413, 415, 429].includes(response.status))
       clearRequest(pending.requestId);
     const message =
@@ -190,16 +237,16 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
         : "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later or continue locally.");
     const code =
       typeof body?.code === "string" ? body.code : "game-security-unavailable";
-    const error = authorityError(
-      code,
-      message,
-      cloudUnavailableReason({
+    const error = authorityError(code, message, {
+      status: response.status,
+      hint: typeof body?.hint === "string" ? body.hint : "",
+      reason: cloudUnavailableReason({
         online: !offline(),
         status: response.status,
         code,
         message,
       }),
-    );
+    });
     if (Number.isSafeInteger(body?.retryAfterMs) && body.retryAfterMs >= 0)
       error.retryAfterMs = body.retryAfterMs;
     throw error;
@@ -207,6 +254,8 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
 
   if (
     typeof body.rollId !== "string" ||
+    !body.rollId ||
+    body.rollId.length > 128 ||
     body.profileId !== profileId ||
     !Array.isArray(body.numbers) ||
     body.numbers.length < 1 ||
@@ -216,21 +265,51 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
       (number) =>
         !Number.isSafeInteger(number) || number < 0 || number > 1_000_000,
     ) ||
-    !Number.isSafeInteger(body.timing?.rollMS) ||
-    !Number.isSafeInteger(body.timing?.cooldownMS) ||
+    !ROLL_DURATIONS.includes(body.timing?.rollMS) ||
+    ![0, ...COOLDOWN_DURATIONS].includes(body.timing?.cooldownMS) ||
     !Array.isArray(body.armedSkills) ||
     !Array.isArray(body.firedSkills) ||
+    body.armedSkills.some((id) => !skillById.has(id)) ||
+    new Set(body.armedSkills).size !== body.armedSkills.length ||
+    body.firedSkills.some((id) => !body.armedSkills.includes(id)) ||
+    new Set(body.firedSkills).size !== body.firedSkills.length ||
     ![null, "boost", "charge"].includes(body.flywheel)
   ) {
     throw authorityError(
       "invalid-game-response",
       "The Cloud roll response could not be checked. No progress was changed; retry safely.",
+      { status: response.status },
     );
   }
 
+  updateSecurity(onSecurity, body.security);
   return {
     ...body,
     requestKey: pending.requestId,
+  };
+}
+
+// One console line per failed Cloud verification, so a report can say whether
+// the request never left the browser or the Worker answered and why. It never
+// carries the token, the save, the profile or the roll.
+export function describeCloudVerificationFailure(error) {
+  if (!error || typeof error !== "object") return null;
+  const status = Number.isSafeInteger(error.status) ? error.status : 0;
+  const where =
+    status === 0
+      ? "the request never reached the Worker"
+      : status === 401
+        ? "the Worker rejected the sign-in"
+        : status === 503
+          ? "the Worker could not verify the roll"
+          : `the Worker answered ${status}`;
+  return {
+    reference: error.reference ?? "",
+    code: typeof error.code === "string" ? error.code : "",
+    status,
+    reason: error.reason ?? "",
+    hint: error.hint ?? "",
+    where,
   };
 }
 

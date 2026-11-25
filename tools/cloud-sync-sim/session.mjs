@@ -181,7 +181,10 @@ const steps = {
       fail("the stale device did not pick up the newer progress");
     const displaced = readCloudRecovery(storage);
     const archived = displaced ? JSON.parse(displaced.raw) : null;
-    if (result.winner === "cloud" && archived?.totalEarned !== local.totalEarned)
+    if (
+      result.winner === "cloud" &&
+      archived?.totalEarned !== local.totalEarned
+    )
       fail("the automatically displaced device copy was not recoverable");
   },
 

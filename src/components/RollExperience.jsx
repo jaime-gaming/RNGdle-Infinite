@@ -194,6 +194,7 @@ export default function RollExperience({
   navigate,
   arrivalPet = null,
   onRefreshAccess = null,
+  onPlayLocally = null,
 }) {
   const settings = rollSettings(session.owned);
   const { settings: preferences } = useSettings();
@@ -230,6 +231,7 @@ export default function RollExperience({
   const localCooldown = useRef(0);
   const [localCooldownUntil, setLocalCooldownUntil] = useState(0);
   const mounted = useRef(false);
+  const [switchingToLocal, setSwitchingToLocal] = useState(false);
   const [error, setError] = useState("");
   const [errorReferenceCode, setErrorReferenceCode] = useState("");
   const [errorReason, setErrorReason] = useState("");
@@ -239,13 +241,12 @@ export default function RollExperience({
     const message =
       value instanceof Error ? value.message : String(value ?? "");
     setError(message);
-    setErrorReferenceCode(
-      message
-        ? isErrorReference(value?.reference)
-          ? value.reference
-          : errorReference(message)
-        : "",
-    );
+    const refCode = message
+      ? isErrorReference(value?.reference)
+        ? value.reference
+        : errorReference(message)
+      : "";
+    setErrorReferenceCode(refCode);
     setErrorReason(message ? (value?.reason ?? "") : "");
   }
   function clearRollError() {
@@ -261,13 +262,12 @@ export default function RollExperience({
   function recordSettlementError(outcome) {
     const message = outcome.ok ? "" : (outcome.message ?? "");
     setSettleError(message);
-    setSettleErrorReferenceCode(
-      message
-        ? isErrorReference(outcome.reference)
-          ? outcome.reference
-          : errorReference(message)
-        : "",
-    );
+    const refCode = message
+      ? isErrorReference(outcome.reference)
+        ? outcome.reference
+        : errorReference(message)
+      : "";
+    setSettleErrorReferenceCode(refCode);
   }
   const [copied, setCopied] = useState(false);
   const [cooldown, setCooldown] = useState(() =>
@@ -688,6 +688,17 @@ export default function RollExperience({
     };
   }, []);
 
+  function playLocally() {
+    if (!onPlayLocally || switchingToLocal) return;
+    setSwitchingToLocal(true);
+    clearRollError();
+    Promise.resolve(onPlayLocally())
+      .catch(() => {})
+      .finally(() => {
+        if (mounted.current) setSwitchingToLocal(false);
+      });
+  }
+
   async function generate() {
     if (
       drawPending.current ||
@@ -1046,12 +1057,14 @@ export default function RollExperience({
           {error && cloudUnavailable && (
             <CloudUnavailableNotice
               reason={errorReason}
+              busy={switchingToLocal}
               onRetry={() => {
                 clearRollError();
                 if (onRefreshAccess) onRefreshAccess();
                 generate();
               }}
               onSignInAgain={openSignup}
+              onPlayLocally={playLocally}
             />
           )}
           <p className="roll-hint">

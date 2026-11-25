@@ -22,6 +22,16 @@ import { PROGRESS_KEY } from "../src/progress.js";
 import { readSavedProgress } from "./helpers/save.js";
 import { unpackVaultSave } from "../src/save-codec.js";
 
+test("the internal version and build metadata share the event release identity", async () => {
+  const { verifyLabels, releaseLine } =
+    await import("../tools/release-version.mjs");
+  const { expected, problems } = verifyLabels();
+  expect(problems).toEqual([]);
+  expect(expected).toBe(APP_INTERNAL_VERSION);
+  expect(expected.startsWith(releaseLine())).toBe(true);
+  expect(verifyLabels("9.9.9").problems.length).toBeGreaterThan(0);
+});
+
 test("only the legacy GitHub Pages build shows the mirror notice", () => {
   expect(isLegacyMirrorBuild("/RNGdle-Infinite/")).toBe(true);
   expect(isLegacyMirrorBuild("/")).toBe(false);

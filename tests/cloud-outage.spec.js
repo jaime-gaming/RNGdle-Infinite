@@ -2,7 +2,13 @@ import { expect, test } from "@playwright/test";
 import { webcrypto } from "node:crypto";
 import { emptyProgress } from "../src/progress.js";
 import { cloudUnavailableReason } from "../src/error-codes.js";
-import { createGameEndpoint, GAME_FAULTS } from "../src/game-api.js";
+import {
+  createGameEndpoint,
+  describeFailure,
+  GAME_FAULTS,
+} from "../src/game-api.js";
+import { FirestoreServiceUnavailable } from "../src/firestore-admin.js";
+import { describeCloudVerificationFailure } from "../src/game-authority-client.js";
 import { GameSessionDurableObject } from "../src/game-session.js";
 
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
@@ -53,6 +59,17 @@ function statusRequest() {
   });
 }
 
+// The authority client keeps its error factory private; this mirrors the object
+// it builds so the console line can be checked without a browser fetch.
+function authorityErrorForTest(status, reason) {
+  return {
+    code: status === 503 ? "game-security-unavailable" : "sign-in-required",
+    reference: status === 503 ? "NT605" : "AC402",
+    status,
+    reason,
+  };
+}
+
 async function captureWorkerLog(run) {
   const lines = [];
   const original = console.error;
@@ -87,10 +104,16 @@ test("a Worker deployed without its service-account secret names the missing bin
   });
 
   expect(response.status).toBe(503);
-  expect(await response.json()).toMatchObject({
+  const body = await response.json();
+  expect(body).toMatchObject({
     code: "game-security-unavailable",
+    hint: "deployment",
   });
-  expect(log).toContain(GAME_FAULTS.config);
+  // The browser never receives the internal tag or the secret name.
+  expect(JSON.stringify(body)).not.toContain("FIREBASE_SERVICE_ACCOUNT_JSON");
+  expect(JSON.stringify(body)).not.toContain("cloud-game-");
+  expect(log).toContain(GAME_FAULTS.secret);
+  expect(log).toContain("FIREBASE_SERVICE_ACCOUNT_JSON");
 });
 
 test("each unavailable dependency logs its own fault while the browser keeps one reference", async () => {
@@ -215,4 +238,105 @@ test("the player's roll notice names the action that helps with this outage", ()
   ).toBe("browser-settings");
   expect(cloudUnavailableReason({ status: 0 })).toBe("server");
   expect(cloudUnavailableReason({ status: 503 })).toBe("server");
+});
+
+test("a Worker missing one binding names that binding instead of a generic config fault", async () => {
+  const { gameConfigProblem, GAME_BINDINGS, GAME_FAULTS } =
+    await import("../src/game-api.js");
+  const full = {
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    FIREBASE_SERVICE_ACCOUNT_JSON: SERVICE_ACCOUNT,
+    GAME_SESSIONS: namespaceFor(
+      new GameSessionDurableObject({ storage: makeDurableStorage() }),
+    ),
+  };
+  expect(gameConfigProblem(full)).toBeNull();
+  expect(
+    gameConfigProblem({ ...full, FIREBASE_PROJECT_ID: "  " }),
+  ).toMatchObject({
+    fault: GAME_FAULTS.project,
+    setup: expect.stringContaining("wrangler.jsonc"),
+  });
+  expect(
+    gameConfigProblem({ ...full, FIREBASE_SERVICE_ACCOUNT_JSON: undefined }),
+  ).toMatchObject({
+    fault: GAME_FAULTS.secret,
+    setup: expect.stringContaining(GAME_BINDINGS.serviceAccount),
+  });
+  expect(
+    gameConfigProblem({ ...full, GAME_SESSIONS: undefined }),
+  ).toMatchObject({ fault: GAME_FAULTS.sessionBinding });
+
+  const endpoint = createGameEndpoint({
+    verifyToken: async () => ({ sub: UID }),
+    getAdminAccessToken: async () => "admin-access-token",
+    fetcher: async () => {
+      throw new Error("Firestore is never reached without its secret.");
+    },
+  });
+  let response;
+  const log = await captureWorkerLog(async () => {
+    response = await endpoint(statusRequest(), {
+      FIREBASE_PROJECT_ID: PROJECT_ID,
+      GAME_SESSIONS: full.GAME_SESSIONS,
+    });
+  });
+  expect(response.status).toBe(503);
+  expect(log).toContain(GAME_FAULTS.secret);
+  expect(log).toContain("wrangler secret put");
+});
+
+test("a missing sign-in token is a sign-in answer, not a service outage", async () => {
+  const endpoint = createGameEndpoint({
+    verifyToken: async () => ({ sub: UID }),
+    getAdminAccessToken: async () => "admin-access-token",
+    fetcher: async () => new Response("", { status: 404 }),
+  });
+  const session = new GameSessionDurableObject({
+    storage: makeDurableStorage(),
+  });
+  const log = await captureWorkerLog(async () => {
+    const response = await endpoint(
+      new Request("https://game.example/api/game/status"),
+      {
+        FIREBASE_PROJECT_ID: PROJECT_ID,
+        FIREBASE_SERVICE_ACCOUNT_JSON: SERVICE_ACCOUNT,
+        GAME_SESSIONS: namespaceFor(session),
+      },
+    );
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ code: "sign-in-required" });
+  });
+  expect(log).toBe("");
+});
+
+test("the Worker log carries the failing detail so a report can tell the causes apart", async () => {
+  const unavailable = new FirestoreServiceUnavailable(
+    "reading the Cloud save answered 403",
+  );
+  expect(describeFailure(unavailable)).toBe(
+    "FirestoreServiceUnavailable: reading the Cloud save answered 403",
+  );
+  expect(describeFailure(undefined)).toBe("no error was reported");
+  expect(describeFailure(new Error("x".repeat(400)))).toHaveLength(300);
+});
+
+test("a failure that never reached the Worker is reported apart from a Worker answer", async () => {
+  const blocked = authorityErrorForTest(0, "browser-settings");
+  expect(describeCloudVerificationFailure(blocked)).toMatchObject({
+    status: 0,
+    where: "the request never reached the Worker",
+    reason: "browser-settings",
+  });
+  const outage = authorityErrorForTest(503, "server");
+  outage.hint = "deployment";
+  expect(describeCloudVerificationFailure(outage)).toMatchObject({
+    status: 503,
+    hint: "deployment",
+    where: "the Worker could not verify the roll",
+  });
+  expect(
+    describeCloudVerificationFailure(authorityErrorForTest(401, "sign-in")),
+  ).toMatchObject({ where: "the Worker rejected the sign-in" });
+  expect(describeCloudVerificationFailure(null)).toBeNull();
 });
