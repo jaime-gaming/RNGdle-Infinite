@@ -17,8 +17,14 @@ const GAME_PREFIX = "/api/game/";
 const MAX_BODY_BYTES = 512;
 
 // Server-side diagnosis tags. They are logged by the Worker and never returned
-// to the browser: the client only receives its support reference.
+// to the browser: the client only receives its support reference. Every tag
+// names one binding or dependency, so a 503 in the logs always says what the
+// deployment is actually missing instead of a generic configuration fault.
 export const GAME_FAULTS = Object.freeze({
+  project: "cloud-game-project-missing",
+  secret: "cloud-game-service-account-missing",
+  sessionBinding: "cloud-game-session-binding-missing",
+  unauthenticated: "cloud-game-token-missing",
   config: "cloud-game-config-missing",
   token: "cloud-game-token-unavailable",
   session: "cloud-game-session-unavailable",
@@ -28,6 +34,68 @@ export const GAME_FAULTS = Object.freeze({
   roll: "cloud-game-roll-unavailable",
   route: "unknown-api-route",
 });
+
+// A coarse, non-sensitive class for the browser. It names the kind of failure
+// (a deployment setting, the sign-in, a dependency) without the internal tag or
+// any account detail, so a player can report something more useful than "it
+// says 503" even when the Worker log is not open.
+export const FAULT_HINTS = Object.freeze({
+  deployment: "deployment",
+  signIn: "sign-in",
+  dependency: "dependency",
+  save: "save",
+});
+
+const HINT_BY_FAULT = Object.freeze({
+  [GAME_FAULTS.project]: FAULT_HINTS.deployment,
+  [GAME_FAULTS.secret]: FAULT_HINTS.deployment,
+  [GAME_FAULTS.sessionBinding]: FAULT_HINTS.deployment,
+  [GAME_FAULTS.config]: FAULT_HINTS.deployment,
+  [GAME_FAULTS.token]: FAULT_HINTS.dependency,
+  [GAME_FAULTS.session]: FAULT_HINTS.dependency,
+  [GAME_FAULTS.restriction]: FAULT_HINTS.dependency,
+  [GAME_FAULTS.roll]: FAULT_HINTS.dependency,
+  [GAME_FAULTS.save]: FAULT_HINTS.save,
+});
+
+// Every binding the Cloud-roll path needs, in one place, so the deployment
+// checklist and the Worker cannot drift apart.
+export const GAME_BINDINGS = Object.freeze({
+  projectId: "FIREBASE_PROJECT_ID",
+  serviceAccount: "FIREBASE_SERVICE_ACCOUNT_JSON",
+  sessions: "GAME_SESSIONS",
+});
+
+// A missing binding is a deployment fault, not a player fault. It is reported
+// with the binding name and its own setup step so the cause is visible before
+// anyone looks at a save or a cooldown.
+export function gameConfigProblem(env = {}) {
+  if (!String(env[GAME_BINDINGS.projectId] ?? "").trim())
+    return {
+      fault: GAME_FAULTS.project,
+      detail: `${GAME_BINDINGS.projectId} is not set for this Worker`,
+      setup: "Add FIREBASE_PROJECT_ID to the vars in wrangler.jsonc.",
+    };
+  if (!env[GAME_BINDINGS.serviceAccount])
+    return {
+      fault: GAME_FAULTS.secret,
+      detail: `${GAME_BINDINGS.serviceAccount} is not set for this Worker`,
+      setup: "npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON",
+    };
+  const sessions = env[GAME_BINDINGS.sessions];
+  if (
+    !sessions ||
+    typeof sessions.idFromName !== "function" ||
+    typeof sessions.get !== "function"
+  )
+    return {
+      fault: GAME_FAULTS.sessionBinding,
+      detail: `${GAME_BINDINGS.sessions} is not bound to this Worker`,
+      setup:
+        "Deploy with the Durable Object binding and the v1 migration in wrangler.jsonc.",
+    };
+  return null;
+}
 
 export function isGamePath(pathname) {
   return typeof pathname === "string" && pathname.startsWith(GAME_PREFIX);
@@ -46,19 +114,36 @@ function jsonResponse(status, body) {
 
 // The browser keeps its single support reference; the fault tag only reaches
 // the Worker log, where it names which dependency actually failed.
-export function logCloudFault(fault, detail = "") {
+export function logCloudFault(fault, detail = "", setup = "") {
   try {
     console.error(
       `[RNGdle Worker] Cloud roll verification unavailable: ${fault}${detail ? ` (${detail})` : ""}.`,
     );
+    if (setup) console.error(`[RNGdle Worker] Fix this deployment: ${setup}`);
   } catch {}
 }
 
-function serviceUnavailable(fault, detail = "") {
-  logCloudFault(fault, detail);
+// Server logs keep one readable line per known dependency instead of a bare
+// "something failed", which is what made earlier 503 reports unusable.
+export function describeFailure(error) {
+  if (!error) return "no error was reported";
+  const name =
+    typeof error.name === "string" && error.name !== "Error"
+      ? `${error.name}: `
+      : "";
+  const message =
+    typeof error.message === "string" && error.message
+      ? error.message
+      : String(error);
+  return `${name}${message}`.slice(0, 300);
+}
+
+export function serviceUnavailable(fault, detail = "", setup = "") {
+  logCloudFault(fault, detail, setup);
   return jsonResponse(503, {
     ok: false,
     code: "game-security-unavailable",
+    hint: HINT_BY_FAULT[fault] ?? FAULT_HINTS.dependency,
     message:
       "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later or continue locally.",
   });
@@ -122,18 +207,25 @@ async function sessionFor(namespace, userId) {
     typeof namespace.idFromName !== "function" ||
     typeof namespace.get !== "function"
   )
-    throw new FirestoreServiceUnavailable();
+    throw new FirestoreServiceUnavailable(
+      "the GAME_SESSIONS Durable Object binding is missing",
+    );
   const id = namespace.idFromName(userId);
   const stub = namespace.get(id);
   const response = await stub.fetch(
     new Request("https://game-session.internal/status", { method: "GET" }),
   );
-  if (!response.ok) throw new FirestoreServiceUnavailable();
+  if (!response.ok)
+    throw new FirestoreServiceUnavailable(
+      `the Durable Object answered ${response.status} to its status request`,
+    );
   let status;
   try {
     status = await response.json();
   } catch {
-    throw new FirestoreServiceUnavailable();
+    throw new FirestoreServiceUnavailable(
+      "the Durable Object status was not JSON",
+    );
   }
   if (!status?.security || typeof status.security.status !== "string")
     throw new FirestoreServiceUnavailable();
@@ -224,16 +316,29 @@ export function createGameEndpoint({
 
     const projectId = String(env.FIREBASE_PROJECT_ID ?? "").trim();
     const token = bearerToken(request);
-    if (!projectId || !env.FIREBASE_SERVICE_ACCOUNT_JSON || !token)
-      return serviceUnavailable(GAME_FAULTS.config);
+    // The deployment check runs before the token check: a Worker that was never
+    // given its secret cannot verify anything, and reporting "sign in again"
+    // for it would send the player after a cause that is not theirs.
+    const problem = gameConfigProblem(env);
+    if (problem)
+      return serviceUnavailable(problem.fault, problem.detail, problem.setup);
+    if (!token)
+      return jsonResponse(401, {
+        ok: false,
+        code: "sign-in-required",
+        message: "Sign in again before rolling with a Cloud profile.",
+      });
 
     let claims;
     try {
       claims = await verifyToken(token, projectId);
     } catch (error) {
-      if (error instanceof TokenVerificationUnavailable)
-        return serviceUnavailable(GAME_FAULTS.token);
-      return serviceUnavailable(GAME_FAULTS.token);
+      return serviceUnavailable(
+        GAME_FAULTS.token,
+        error instanceof TokenVerificationUnavailable
+          ? "the Firebase signing keys could not be loaded"
+          : "verifying the Firebase sign-in failed unexpectedly",
+      );
     }
     if (!claims?.sub)
       return jsonResponse(401, {
@@ -255,8 +360,8 @@ export function createGameEndpoint({
           getAdminAccessToken,
         }),
       ]);
-    } catch {
-      return serviceUnavailable(GAME_FAULTS.session);
+    } catch (error) {
+      return serviceUnavailable(GAME_FAULTS.session, describeFailure(error));
     }
 
     if (
@@ -271,8 +376,11 @@ export function createGameEndpoint({
           verifiedEvents: 0,
           verifiedAttempts: 0,
         };
-      } catch {
-        return serviceUnavailable(GAME_FAULTS.restriction);
+      } catch (error) {
+        return serviceUnavailable(
+          GAME_FAULTS.restriction,
+          describeFailure(error),
+        );
       }
     }
 
@@ -281,8 +389,11 @@ export function createGameEndpoint({
       if (session.status.security.status !== "restricted")
         try {
           confirmed = await confirmDurableRestriction(session.stub);
-        } catch {
-          return serviceUnavailable(GAME_FAULTS.restriction);
+        } catch (error) {
+          return serviceUnavailable(
+            GAME_FAULTS.restriction,
+            describeFailure(error),
+          );
         }
       return jsonResponse(403, {
         ok: false,
@@ -301,8 +412,11 @@ export function createGameEndpoint({
           fetcher,
           getAdminAccessToken,
         });
-      } catch {
-        return serviceUnavailable(GAME_FAULTS.restriction);
+      } catch (error) {
+        return serviceUnavailable(
+          GAME_FAULTS.restriction,
+          describeFailure(error),
+        );
       }
       return jsonResponse(403, {
         ok: false,
@@ -325,11 +439,15 @@ export function createGameEndpoint({
         idToken: token,
         fetcher,
       });
-    } catch {
-      logCloudFault(GAME_FAULTS.save, "the Player save could not be read");
+    } catch (error) {
+      logCloudFault(
+        GAME_FAULTS.save,
+        `the Player save could not be read: ${describeFailure(error)}`,
+      );
       return jsonResponse(503, {
         ok: false,
         code: "cloud-save-unavailable",
+        hint: FAULT_HINTS.save,
         message:
           "Your Cloud save could not be checked, so no roll was issued. Your saved progress is safe; try again later.",
       });
@@ -352,10 +470,10 @@ export function createGameEndpoint({
     let plan;
     try {
       plan = authoritativeGamePlan(savedProgress);
-    } catch {
+    } catch (error) {
       logCloudFault(
         GAME_FAULTS.plan,
-        "the Cloud save could not form a roll plan",
+        `the Cloud save could not form a roll plan: ${describeFailure(error)}`,
       );
       return jsonResponse(409, {
         ok: false,
@@ -378,14 +496,20 @@ export function createGameEndpoint({
           }),
         }),
       );
-    } catch {
-      return serviceUnavailable(GAME_FAULTS.session);
+    } catch (error) {
+      return serviceUnavailable(
+        GAME_FAULTS.session,
+        `the Durable Object did not answer: ${describeFailure(error)}`,
+      );
     }
     let result;
     try {
       result = await rollResponse.json();
-    } catch {
-      return serviceUnavailable(GAME_FAULTS.session);
+    } catch (error) {
+      return serviceUnavailable(
+        GAME_FAULTS.session,
+        `the Durable Object answered ${rollResponse.status} without JSON: ${describeFailure(error)}`,
+      );
     }
 
     if (result.restrictionRequired) {
@@ -405,8 +529,8 @@ export function createGameEndpoint({
           code: "cloud-restricted",
           security: confirmed.security,
         });
-      } catch {
-        return serviceUnavailable(GAME_FAULTS.roll);
+      } catch (error) {
+        return serviceUnavailable(GAME_FAULTS.roll, describeFailure(error));
       }
     }
 

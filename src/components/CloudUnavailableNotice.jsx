@@ -33,10 +33,17 @@ const ACTION_LABELS = Object.freeze({
   retry: "Try again",
 });
 
+// Only the reasons this device can actually fix get the local switch. A
+// signed-out session or a refused sign-in is repaired in the Cloud Account
+// page, not by leaving the account.
+const LOCAL_PLAY_REASONS = new Set(["server", "browser-settings", "offline"]);
+
 export default function CloudUnavailableNotice({
   reason = "server",
   onRetry,
   onSignInAgain,
+  onPlayLocally,
+  busy = false,
 }) {
   const [explained, setExplained] = useState(false);
   const copy = CLOUD_UNAVAILABLE_COPY[reason] ?? CLOUD_UNAVAILABLE_COPY.server;
@@ -46,6 +53,8 @@ export default function CloudUnavailableNotice({
       : reason === "signIn" || reason === "provider"
         ? "Sign in again"
         : "Cloud rolls are unavailable";
+  const canPlayLocally =
+    typeof onPlayLocally === "function" && LOCAL_PLAY_REASONS.has(reason);
 
   function act() {
     if (copy.action === "retry") return onRetry?.();
@@ -65,9 +74,27 @@ export default function CloudUnavailableNotice({
     >
       <strong>{title}</strong>
       <p>{copy.lead} You can keep playing locally in the meantime.</p>
-      <button type="button" className="secondary-button" onClick={act}>
-        {ACTION_LABELS[copy.action]}
-      </button>
+      <div className="roll-cloud-unavailable-actions">
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={busy}
+          onClick={act}
+        >
+          {ACTION_LABELS[copy.action]}
+        </button>
+        {canPlayLocally && (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy}
+            data-testid="cloud-unavailable-local-play"
+            onClick={() => onPlayLocally?.()}
+          >
+            {busy ? "Switching…" : "Keep playing locally"}
+          </button>
+        )}
+      </div>
       {explained && (
         <p className="roll-cloud-unavailable-detail">
           A privacy extension, a proxy or strict browser settings can block the

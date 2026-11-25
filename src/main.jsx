@@ -767,15 +767,16 @@ function App() {
       "cloud-account",
     );
   }
-  function continueLocally() {
+  // Returns a promise so a caller that shows progress (the Cloud outage
+  // notice) can tell when the switch to local play has finished.
+  async function continueLocally() {
     if (auth.user || !auth.ready) {
-      void auth.signOut().then((result) => {
-        if (!result.ok)
-          notify({
-            kind: "error",
-            text: result.message || "Could not finish switching to local play.",
-          });
-      });
+      const result = await auth.signOut();
+      if (!result.ok)
+        notify({
+          kind: "error",
+          text: result.message || "Could not finish switching to local play.",
+        });
     }
     chooseLocalPlay(true);
     setLocalPlay(true);
@@ -1048,7 +1049,7 @@ function App() {
                 <button
                   type="button"
                   className="secondary-button cloud-quota-retry"
-                  onClick={continueLocally}
+                  onClick={() => void continueLocally()}
                 >
                   Continue locally
                 </button>
@@ -1090,7 +1091,7 @@ function App() {
                   <button
                     type="button"
                     className="secondary-button cloud-quota-retry"
-                    onClick={continueLocally}
+                    onClick={() => void continueLocally()}
                   >
                     Sign out &amp; play locally
                   </button>
@@ -1184,7 +1185,7 @@ function App() {
                     <button
                       type="button"
                       className="secondary-button"
-                      onClick={continueLocally}
+                      onClick={() => void continueLocally()}
                     >
                       Continue locally
                     </button>
@@ -1233,6 +1234,7 @@ function App() {
                 onComplete={completeRoll}
                 onDraw={() => dispatch({ type: "draw" })}
                 onRefreshAccess={refreshGameSecurity}
+                onPlayLocally={continueLocally}
                 openSignup={openAuth}
                 aura={session.equipped}
                 arrivalPet={arrivalPet}
@@ -1446,7 +1448,7 @@ function App() {
                             </p>
                             <button
                               className="secondary-button"
-                              onClick={continueLocally}
+                              onClick={() => void continueLocally()}
                             >
                               Continue locally
                             </button>

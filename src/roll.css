@@ -1146,6 +1146,12 @@ nav button.active {
   margin: 0 0 8px;
   opacity: 0.85;
 }
+.roll-cloud-unavailable-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
 .roll-cloud-unavailable button {
   margin: 0 auto;
 }

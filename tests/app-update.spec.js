@@ -22,6 +22,18 @@ import { PROGRESS_KEY } from "../src/progress.js";
 import { readSavedProgress } from "./helpers/save.js";
 import { unpackVaultSave } from "../src/save-codec.js";
 
+test("the internal label has one source and every stated label agrees", async () => {
+  const { internalVersionLabel, releaseLine, verifyLabels } =
+    await import("../tools/release-version.mjs");
+  expect(releaseLine("0.6.0")).toBe("v0.6");
+  expect(releaseLine("0.5.2")).toBe("v0.5.2");
+  expect(internalVersionLabel("0.6.0")).toBe("v0.6fix0");
+  const { expected, problems } = verifyLabels();
+  expect(problems).toEqual([]);
+  expect(expected).toBe(APP_INTERNAL_VERSION);
+  expect(expected.startsWith(releaseLine())).toBe(true);
+});
+
 test("only the legacy GitHub Pages build shows the mirror notice", () => {
   expect(isLegacyMirrorBuild("/RNGdle-Infinite/")).toBe(true);
   expect(isLegacyMirrorBuild("/")).toBe(false);
@@ -49,7 +61,8 @@ test("build identity is read from the page and version checks use the app base p
     getAppInternalVersion({
       querySelector: () => ({ content: APP_INTERNAL_VERSION }),
     }),
-  ).toBe("v0.6fix4");
+  ).toBe(APP_INTERNAL_VERSION);
+  expect(APP_INTERNAL_VERSION).toMatch(/^v\d+\.\d+(?:\.\d+)?fix\d+$/);
   expect(
     makeVersionUrl({
       base: "/preview/",
@@ -103,7 +116,7 @@ test("Settings refreshes once when current and keeps the saved game intact", asy
     new URL("/version.json", page.url()).toString(),
   );
   expect(liveVersion.ok()).toBeTruthy();
-  expect(APP_INTERNAL_VERSION).toBe("v0.6fix4");
+  expect(APP_INTERNAL_VERSION).toBe("v0.6fix5");
   expect(await liveVersion.json()).toMatchObject({
     buildId,
     internalVersion: APP_INTERNAL_VERSION,

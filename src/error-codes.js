@@ -191,6 +191,26 @@ export function gameAuthorityErrorReference(code, message = "") {
   return errorReference(message, "GM516");
 }
 
+// Codes where the Cloud roll path is transiently unable to verify, so the same
+// roll can be issued locally and settled again once Cloud answers. Everything
+// else (paused access, a moved profile, a far-future cooldown, an insecure
+// request) is a decision the server already made and must not be bypassed.
+export const LOCAL_FALLBACK_CODES = Object.freeze([
+  "game-security-unavailable",
+  "cloud-save-unavailable",
+  "cloud-save-not-ready",
+  "cloud-profile-changed",
+]);
+
+export function allowsLocalFallback(error) {
+  const code = typeof error?.code === "string" ? error.code : "";
+  if (!LOCAL_FALLBACK_CODES.includes(code)) return false;
+  const status = Number(error?.status ?? 0);
+  // 0 means the request never left the browser: that is the same kind of
+  // outage as a 5xx, not a server decision.
+  return status === 0 || status >= 500;
+}
+
 const GAME_UNAVAILABLE_REASONS = Object.freeze({
   offline: "offline",
   signIn: "sign-in",

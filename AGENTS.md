@@ -281,6 +281,36 @@ Only rolls fund a cycle gate.
 - Black Friday side posters are ordered by the current page, never by a timer
   or a random pick.
 
+## Cloud availability and fallback
+
+- **An outage never asks the player anything.** When the Worker cannot verify a
+  roll because a dependency or binding is unavailable, the game keeps playing on
+  this device with the ordinary local roll (same draws, odds, skills and
+  timing). There is no sign-out, no lost progress and no "Keep playing locally"
+  click. `src/error-codes.js` holds the only allowlist: `allowsLocalFallback`
+  accepts `game-security-unavailable`, `cloud-save-unavailable`,
+  `cloud-save-not-ready` and `cloud-profile-changed`, and only with HTTP status
+  `0` or `>= 500`.
+- **Server decisions stay decisions.** `cloud-restricted`, `restriction-pending`,
+  `roll-not-ready`, `sign-in-required` and `request-not-secure` are answers from
+  Cloud, not outages. Never route them through the fallback: the notice,
+  reference and manual choice stay exactly as they are.
+- **The fallback is remembered, and it heals itself.** `src/cloud-fallback.js`
+  keeps one mark (`rng-infinite-cloud-recovery-v1`) per account in
+  `localStorage`. The mark is written only after the fallback roll is committed,
+  so a cancelled draw leaves nothing behind. While it exists, the game plays
+  locally, a probe asks `GET /api/game/status` at 3 s doubling to 60 s (skipped
+  while the tab is hidden, stopped for the session after 40 attempts), and the
+  first answer that carries a security status clears the mark, tells the player
+  Cloud is syncing and re-triggers the normal Cloud write. Do not add an ad-hoc
+  merge step: the Cloud-save precedence in this file is the only reconciliation.
+- **The mark belongs to one account.** Signing out or switching accounts clears
+  it; a reload resumes the same session so local play continues without a click.
+  Guest play never writes it.
+- **Both directions must stay visible in text.** Starting the fallback and
+  returning to Cloud each set a `warning` notice; neither may be silent, because
+  a player who cannot tell which save is live will stop trusting either.
+
 ## Tool-call budget
 
 - Tool calls are a limited per-turn resource. Arena.ai does not publish an
@@ -302,6 +332,7 @@ Only rolls fund a cycle gate.
 | `src/use-progress.js`                            | Local persistence and transactional cloud reconciliation.                   |
 | `src/firebase.js`, `src/use-firebase-auth.js`    | Firebase clients, email/Google auth and provider linking.                   |
 | `src/cloud-save.js`                              | Firestore CRUD, save comparison and browser ownership/cache/recovery.       |
+| `src/cloud-fallback.js`                          | Cloud-outage mark and probe backoff behind the automatic local fallback.    |
 | `firestore.rules`                                | Per-UID Firestore access policy.                                            |
 | `src/roll.worker.js`, `src/random.js`            | Worker-based roll scoring and random source.                                |
 | `src/badges.js`, `src/infinite-badges.js`        | Badge definitions, families and metadata.                                   |
@@ -332,8 +363,11 @@ npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
 npm run verify:cloud     # Cloud Accounts simulation against firestore.rules
 npm run test:render      # mount the app shell plus offline overlay and profile privacy in Node
 npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
-npm run deploy:worker    # build and deploy the Worker (production is guarded)
+npm run deploy:worker    # build, deploy the Worker, then check /api/game/status
 npm run audit:economy    # price ladder and roll-distribution audit
+npm run release:bump     # move the internal fixN label in every place it lives
+npm run release:check    # fail if those labels disagree
+npm run verify:release   # Prettier check plus the label check, before a merge
 npm run format           # Prettier over src, tests, root configs and README
 ```
 
@@ -456,17 +490,42 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.6fix4`; do not change it
-  until the next session or an explicit user request. Public release notes
-  live in `src/changelog.js` and keep historical entries.
+  flow. The current label is exactly `v0.6fix5`, and every fix patch runs
+  `npm run release:bump` so this patch's label is one `fixN` above the label it
+  replaces. `tools/release-version.mjs` writes `src/app-update.js`, the line
+  below and `tests/app-update.spec.js` together from `package.json`;
+  `npm run release:check` fails if they disagree, and `vite.config.js` derives
+  the build metadata from the same file. Never hand-write a label. Public
+  release notes live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
 - **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
   name the squashed commit after the release it publishes: `v0.5.2 bug fix 2`
-  when the merge carries bug fixes (the number matches the internal `fixN`
-  label), otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
+  when the merge carries fixes (the number matches the internal `fixN` label),
+  otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
   when the branch is verified: `npm run build`, `npm run test:worker`,
-  `npm run verify:cloud`, the Playwright suite and `prettier --check`.
+  `npm run verify:cloud`, the Playwright suite and `npm run verify:release`
+  (Prettier over source, tests and tools plus the label check).
+- **One patch is one commit.** `v0.6 bug fix 5` may name exactly one commit on
+  `main`; a follow-up correction of the same patch belongs in that commit, not
+  in a second one. Before merging, check `git log --oneline` and confirm the
+  message is the release label alone, with nothing appended. A patch that has
+  already landed as two commits is corrected by the user's explicit instruction
+  only, because collapsing it needs a force-push to `main`.
+- **A fix patch is finished only when it is deployed.** Editing files, merging
+  and updating `docs/` all leave the live custom domain on the previous build,
+  because that domain is served by the Worker from `dist/`. After the merge,
+  run `CF_ALLOW_PRODUCTION=true npm run deploy:worker` when the user asked for
+  the fix to reach players, and say plainly which steps ran. Never report a
+  console error as fixed while the build that carries the change is not live.
+- **Fix the cause the logs name, not the sentence the player saw.** A 503 on
+  `/api/game/status` or `/api/game/roll` is a Worker deployment fault: the
+  Worker logs one line naming the missing binding (`FIREBASE_PROJECT_ID`,
+  `FIREBASE_SERVICE_ACCOUNT_JSON`, `GAME_SESSIONS`) or the failing dependency
+  before the browser sees `game-security-unavailable`. Read that line first;
+  `docs-source/cloud-game-security.md` lists the setup step for each tag.
+  Browser-side changes cannot repair it, so do not merge a client-only fix for
+  a 503 until the Worker log or a live check shows the deployment is healthy.
 - A change to `firestore.rules` only takes effect after
   `npm run deploy:rules`. Say so explicitly in the merge summary; the app cannot
   deploy rules for the user, and the client must stay compatible with the rules

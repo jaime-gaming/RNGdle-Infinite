@@ -8,6 +8,7 @@ const suites = [
   new URL("./offline-overlay.mjs", import.meta.url).pathname,
   new URL("./profile-privacy.mjs", import.meta.url).pathname,
   new URL("./cloud-unavailable.mjs", import.meta.url).pathname,
+  new URL("./cloud-fallback.mjs", import.meta.url).pathname,
 ];
 
 let failed = false;

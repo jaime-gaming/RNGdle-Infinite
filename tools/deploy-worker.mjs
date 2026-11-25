@@ -9,6 +9,8 @@ function run(executable, args) {
   return result.status ?? 1;
 }
 
+import { checkDeploymentHealth, workerDomain } from "./worker-health.mjs";
+
 const branchResult = spawnSync("git", ["branch", "--show-current"], {
   encoding: "utf8",
 });
@@ -45,7 +47,18 @@ const args = ["wrangler", "deploy"];
 if (dryRun) args.push("--dry-run", "--outdir", ".cache/worker-deploy");
 if (run(executable, args) !== 0) process.exit(1);
 
-if (!dryRun)
+if (!dryRun) {
+  const origin = workerDomain();
+  if (origin) {
+    const health = await checkDeploymentHealth(origin);
+    if (health.healthy)
+      console.log(`\nDeployment check passed. ${health.message}`);
+    else {
+      console.error(`\nDeployment check FAILED. ${health.message}`);
+      console.error(health.setup);
+      process.exitCode = 1;
+    }
+  }
   console.log(
     [
       "",
@@ -55,3 +68,4 @@ if (!dryRun)
       "Cloudflare Pages project. See archive/DEPLOYMENT.md.",
     ].join("\n"),
   );
+}
