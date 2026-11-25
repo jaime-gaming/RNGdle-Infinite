@@ -60,7 +60,7 @@ function serviceUnavailable(fault, detail = "") {
     ok: false,
     code: "game-security-unavailable",
     message:
-      "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later or continue locally.",
+      "Cloud rolls cannot be verified right now. Your saved progress is safe; try again later.",
   });
 }
 
@@ -327,12 +327,12 @@ export function createGameEndpoint({
       });
     } catch {
       logCloudFault(GAME_FAULTS.save, "the Player save could not be read");
-      return jsonResponse(503, {
-        ok: false,
-        code: "cloud-save-unavailable",
-        message:
-          "Your Cloud save could not be checked, so no roll was issued. Your saved progress is safe; try again later.",
-      });
+  return jsonResponse(503, {
+    ok: false,
+    code: "cloud-save-unavailable",
+    message:
+      "Your Cloud save could not be checked, so no roll was issued. Your saved progress is safe; try again later.",
+  });
     }
     if (!savedProgress)
       return jsonResponse(409, {

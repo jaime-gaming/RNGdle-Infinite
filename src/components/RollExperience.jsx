@@ -239,14 +239,29 @@ export default function RollExperience({
     const message =
       value instanceof Error ? value.message : String(value ?? "");
     setError(message);
-    setErrorReferenceCode(
+    const refCode =
       message
         ? isErrorReference(value?.reference)
           ? value.reference
           : errorReference(message)
-        : "",
-    );
+        : "";
+    setErrorReferenceCode(refCode);
     setErrorReason(message ? (value?.reason ?? "") : "");
+
+    // Add detailed console error for F12
+    if (refCode === "NT605") {
+      console.error(
+        "[RNGdle] Detailed NT605 Error:",
+        {
+          message,
+          reference: refCode,
+          reason: errorReason,
+          status: value?.status ?? (value instanceof Error ? undefined : value?.code),
+          timestamp: new Date().toISOString(),
+          stack: value instanceof Error ? value.stack : undefined,
+        }
+      );
+    }
   }
   function clearRollError() {
     setError("");
@@ -261,13 +276,26 @@ export default function RollExperience({
   function recordSettlementError(outcome) {
     const message = outcome.ok ? "" : (outcome.message ?? "");
     setSettleError(message);
-    setSettleErrorReferenceCode(
+    const refCode =
       message
         ? isErrorReference(outcome.reference)
           ? outcome.reference
           : errorReference(message)
-        : "",
-    );
+        : "";
+    setSettleErrorReferenceCode(refCode);
+
+    // Add detailed console error for F12
+    if (refCode === "NT605") {
+      console.error(
+        "[RNGdle] Detailed NT605 Settlement Error:",
+        {
+          message,
+          reference: refCode,
+          status: outcome?.status ?? outcome?.code,
+          timestamp: new Date().toISOString(),
+        }
+      );
+    }
   }
   const [copied, setCopied] = useState(false);
   const [cooldown, setCooldown] = useState(() =>
