@@ -18,3 +18,5 @@ media/*.png
 !media/rebirth.png
 !media/save-recovery.png
 .dev.vars*
+
+!media/rngmas.png

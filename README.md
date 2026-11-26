@@ -8,7 +8,7 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
   <a href="https://rngdle-infinite.jaime-gaming.com/"><strong>▶ Play now</strong></a>
 </p>
 
-[How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Battle Pass](#battle-pass) · [RNGmas 2026](#rngmas-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Credits](#credits)
+[How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Battle Pass](#battle-pass) · [RNGmas 2026](#rngmas-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Run locally](#run-locally) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Credits](#credits)
 
 ![The game, ready for a roll](media/roll.png)
 
@@ -74,11 +74,15 @@ The winter trail combines RNGween-style missions and aura previews with Black Fr
 
 Nothing here changes roll odds, scoring tables, badge values or cooldowns; earned auras stay in your collection forever.
 
+![The expandable RNGmas chapter trail on a desktop screen](media/rngmas.png)
+
+_Seasonal preview with a synthetic local profile, December 17 UTC. Captures illustrate this development branch, not proof of a live deployment._
+
 ## Keep your progress
 
 Open **Profile → Continue locally**, then give your local profile a name to keep your progress on this device. A Cloud Account is optional if you want to continue on another device. If you play offline, progress is saved locally and a Cloud Account syncs again when you reconnect.
 
-When two devices hold different progress for the same profile, the copy with more progress is kept automatically and the other copy stays safe here; you are asked only when both copies are equally far along. You choose whether to share a public profile: **Make profile public** either publishes the summary or explains what stopped it, and a name that belongs to another Cloud account is reported instead of failing quietly. A profile logo appears only when that profile is shared. To go back to an earlier saved copy, open **Settings → Restore save**; you can check the copy's progress before choosing it.
+When two devices hold different progress for the same profile, the copy with more progress is kept automatically and the other copy stays safe here; you are asked when the copies belong to different game profiles. You choose whether to share a public profile: **Make profile public** either publishes the summary or explains what stopped it, and a name that belongs to another Cloud account is reported instead of failing quietly. A profile logo appears only when that profile is shared. To go back to an earlier saved copy, open **Settings → Restore save**; you can check the copy's progress before choosing it.
 
 ![Choose a saved copy to restore](media/save-recovery.png)
 
@@ -100,6 +104,93 @@ Your progress is saved in this browser. Keep the site data on this device; if sa
 
 Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and the [Terms of Service](https://rngdle-infinite.jaime-gaming.com/tos). Implementation notes on Cloud roll verification, its current limits, reference codes, and deployment are in [Cloud game security](docs/cloud-game-security.md). Questions? Email [jaimegamingpro@gmail.com](mailto:jaimegamingpro@gmail.com).
 
+## Run locally
+
+### Requirements and installation
+
+Use **Node.js 22 or newer**, npm and a modern browser. The development server
+binds to `0.0.0.0`, so avoid exposing it on an untrusted network.
+
+```sh
+git clone https://github.com/jaime-gaming/RNGdle-Infinite.git
+cd RNGdle-Infinite
+npm ci
+npm run dev:test
+```
+
+Open the URL Vite prints (normally `http://localhost:5173`), select **Continue
+locally** in Profile and create a local profile. No Firebase credentials are
+needed in this mode. The checked-in test environment pins the preview clock to
+November 18, 2026; Playwright overrides it for deterministic fixtures. In a POSIX
+shell, use the real clock with `VITE_GAME_PREVIEW_AT=0 npm run dev:test`, or
+preview RNGmas with
+`VITE_GAME_PREVIEW_AT=1797465600000 npm run dev:test` (December 17 UTC).
+In PowerShell, set `$env:VITE_GAME_PREVIEW_AT="0"` before `npm run dev:test`
+instead. Production builds ignore this preview override.
+
+### Build and preview
+
+```sh
+npm run build
+npm run preview
+```
+
+The production build is written to `dist/`; Vite prints the preview URL, normally
+`http://localhost:4173`. This previews static assets, **not** a fully configured
+Cloudflare backend. `npm run test:worker` exercises the Worker artifact locally.
+Do not interpret a static preview as verification of Firebase or production
+secrets. The legacy mirror uses `npm run build:github-pages` to generate `docs/`
+with the `/RNGdle-Infinite/` base path; do not edit generated bundles by hand.
+
+### Optional Cloud development
+
+`npm run dev` loads the checked-in development Firebase Web configuration and
+can contact the real project. For experiments, use a separate test Firebase
+project and an ignored `.env.local`, using `.env.example` as the variable list.
+Configure Authentication providers/authorized domains and Firestore rules for
+that **test** project first. Never copy service-account JSON into `.env.local`
+or any `VITE_` variable. Firebase Web configuration is public client data, not a
+server credential. `.env.local` also affects other Vite modes, so keep it out of
+local-only tests if it supplies Firebase settings.
+
+Authenticated roll endpoints additionally require the Worker, Durable Object
+binding and server-only secrets described in
+[Cloud game security](docs-source/cloud-game-security.md). Publishing Firestore
+rules or deploying a Worker is a separate, explicitly authorized operation.
+
+### Checks and screenshots
+
+```sh
+npx playwright install chromium
+npm run test:render
+npm run verify:cloud
+npm run verify:release
+npm test
+```
+
+Tests start a local-only server on port 5174. On Linux, Playwright may need system
+dependencies (`npx playwright install --with-deps chromium`); an existing browser
+can be selected through `CHROMIUM_PATH`. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for change-specific checks. With a local-only dev server running, regenerate the
+base README captures using `npm run screenshots`; set `SCREENSHOT_BASE` to its
+URL if it is not `http://127.0.0.1:5174`. The seasonal capture is generated by
+`node tools/screenshot-rngmas.mjs` against the same server, using synthetic data
+and a fixed December 17 UTC clock. Use `VITE_GAME_PREVIEW_AT=0` on that server
+when reproducing the seasonal capture.
+
+## License and project policies
+
+No project-wide source-code license is currently declared. Contact the
+maintainer before assuming reuse or redistribution rights. A license must be
+chosen explicitly; this documentation does not add one. Third-party artwork,
+fonts and packages retain their own terms, documented in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+- [Contribution guide](CONTRIBUTING.md)
+- [Private security reporting](SECURITY.md)
+- [Release history and development notes](CHANGELOG.md)
+- [Repository checklist and metadata proposals](docs-source/repository-checklist.md)
+
 ## Credits
 
 - The original [RNGdle](https://www.rngdle.com/) by Cam / sparrowpatch.
@@ -107,4 +198,4 @@ Read [Privacy & Rights](https://rngdle-infinite.jaime-gaming.com/privacy) and th
 - Badge artwork by [Twemoji](https://github.com/jdecked/twemoji), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Fonts: Inter and Space Mono. Icons: [Lucide](https://lucide.dev/).
 
-_Documentation updated November 23, 2026._
+_Documentation reviewed November 22, 2026._
