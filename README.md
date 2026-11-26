@@ -51,14 +51,16 @@ you claim are yours forever.
 
 ## RNGmas 2026
 
-From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass run from December 16, after First Light, until January 2. Toggle decorations with **christmas mode** in Themes.
+From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass also open on December 1, when First Light closes, and last until January 2. Toggle decorations with **christmas mode** in Themes.
 
 **Advent calendar.** A new door opens every day from December 1. Claim it on that UTC day or lose it; there is no catch-up. The last door holds the Gingerbread aura,
 and the RNGmas Star is claimable only on Christmas Day.
 
-**Weekly activities.** First snow (even numbers), Winter lights (numbers ending in 5), Golem Smash, Gift workshop (numbers containing 0) and Midnight countdown (online rolls). Claim during the chapter for a permanent aura, one Surge Capacitor charge and modest EP.
+**Weekly activities.** Golem Smash (December 1–8), Christmas market (December 8–15), Snowcoin exchange (December 15–22), Gift workshop (December 22–29, 80 online numbers containing 0) and Midnight countdown (December 29–January 2, 100 online rolls). Claim during each chapter for a permanent aura and one Surge Capacitor charge. The last two chapters also pay modest EP.
 
-**Golem Smash, December 15–22.** Prepare a strike for 100,000 EP. Your next normal online number deals that much damage to the 25,000,000-HP golem: 0–1,000,000 per strike, averaging 500,000. No multipliers, no extra skill hits and no offline damage. A prepared strike survives reloads. Expect about 50 strikes (5,000,000 EP); no fixed maximum is promised.
+**Snowcoins.** Earn one per primary online roll, including Auto-Roll; offline and extra skill results do not count. From December 8 the market sells five one-time boost offers (10–90 Snowcoins); buy from any three stalls during that week for Emberlight. From December 15, exchange 10,000 EP per Snowcoin, up to 200 coins across the event; exchange 100 during that week for Frostbound. Both services stay open until January 2, but weekly aura claims expire with their chapter. There is no EP cash-out. Wallets and purchase receipts survive resets; unspent coins stop being usable after the event.
+
+**Golem Smash, December 1–8.** Prepare a strike for 100,000 EP. Your next normal online number deals that much damage to the 25,000,000-HP golem: 0–1,000,000 per strike, averaging 500,000. No multipliers, no extra skill hits and no offline damage. A prepared strike survives reloads. Expect about 50 strikes (5,000,000 EP); no fixed maximum is promised.
 
 Nothing here changes roll odds, scoring tables, badge values or cooldowns; earned auras stay in your collection forever.
 

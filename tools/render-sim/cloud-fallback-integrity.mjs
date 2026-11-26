@@ -10,6 +10,12 @@ import {
   rememberCloudOutage,
 } from "../../src/cloud-fallback.js";
 import { setGameTokenSource } from "../../src/game-authority-client.js";
+import {
+  useStatusIssue,
+  getStatusIssue,
+  maintenanceActiveFor,
+} from "../../src/use-status-issue.js";
+import { STATUS_SUMMARY_URL } from "../../src/status-page.js";
 import { useProgress } from "../../src/use-progress.js";
 
 const UID = "uid-integrity";
@@ -19,7 +25,12 @@ const settle = () =>
     await new Promise((resolve) => setTimeout(resolve, 150));
   });
 
-async function mount() {
+function StatusMonitor() {
+  useStatusIssue();
+  return null;
+}
+
+async function mount({ status = false } = {}) {
   const progress = {
     ...emptyProgress(),
     profile: { id: PROFILE, username: "IntegrityPlayer", createdAt: 1 },
@@ -42,7 +53,14 @@ async function mount() {
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
-  await act(async () => root.render(<Probe />));
+  await act(async () =>
+    root.render(
+      <>
+        {status && <StatusMonitor />}
+        <Probe />
+      </>,
+    ),
+  );
   await settle();
   return {
     get session() {
@@ -68,6 +86,48 @@ export async function run() {
     if (!/not wrapped in act/.test(String(args[0]))) originalError(...args);
   };
   try {
+    localStorage.clear();
+    sessionStorage.clear();
+    const maintenanceCalls = installFetch({ fail: { roll: true } });
+    const normalFetch = globalThis.fetch;
+    globalThis.fetch = async (input, options) =>
+      String(input) === STATUS_SUMMARY_URL
+        ? Response.json({
+            components: [],
+            incidents: [],
+            scheduled_maintenances: [
+              {
+                id: "maintenance-regression",
+                name: "RNGdle Infinite maintenance",
+                status: "in_progress",
+              },
+            ],
+          })
+        : normalFetch(input, options);
+    const maintenanceFixture = await mount({ status: true });
+    try {
+      assert.equal(maintenanceActiveFor(getStatusIssue()), true);
+      const response = await act(async () =>
+        maintenanceFixture.session.dispatch({ type: "draw" }),
+      );
+      assert.equal(response.ok, true);
+      assert.ok(maintenanceFixture.session.progress.pendingRoll);
+      assert.equal(
+        maintenanceCalls.some((call) => call.includes("/api/game/roll")),
+        false,
+      );
+      assert.equal(readCloudOutage(), null);
+      console.log(
+        "   PASS scheduled maintenance commits local rolls without waiting for Cloud or creating an outage mark",
+      );
+    } finally {
+      await maintenanceFixture.unmount();
+    }
+    installFetch({ fail: {} });
+    const clearStatus = await mount({ status: true });
+    await clearStatus.unmount();
+    assert.equal(maintenanceActiveFor(getStatusIssue()), false);
+
     localStorage.clear();
     sessionStorage.clear();
     installFetch({ fail: { roll: true } });

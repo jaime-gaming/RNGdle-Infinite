@@ -373,6 +373,11 @@ export function saveHasProgress(progress) {
   if (progress.blackFriday?.skinEarned) return true;
   if (uniqueIds(progress.rngmas?.claimed).size > 0) return true;
   if (progress.rngmas?.finale) return true;
+  if (
+    safeAmount(progress.rngmas?.snowcoinsEarned) > 0 ||
+    uniqueIds(progress.rngmas?.marketPurchases).size > 0
+  )
+    return true;
   for (const record of Object.values(progress.rngmas?.golems ?? {}))
     if (
       record?.defeated ||
@@ -467,6 +472,8 @@ export function saveProgressScore(progress) {
   score += safeAmount(progress.blackFriday?.stamps) * 40;
   score += uniqueIds(progress.rngmas?.claimed).size * 25;
   if (progress.rngmas?.finale) score += 100;
+  score += Math.min(1000, safeAmount(progress.rngmas?.snowcoinsEarned));
+  score += uniqueIds(progress.rngmas?.marketPurchases).size * 25;
   for (const record of Object.values(progress.rngmas?.golems ?? {})) {
     if (record?.defeated) score += 200;
     score += safeAmount(record?.count);
@@ -579,6 +586,12 @@ export function compareSaveRichness(local, cloud) {
     uniqueIds(cloud.rngmas?.claimed).size,
   );
   compareFlag(local.rngmas?.finale, cloud.rngmas?.finale);
+  compareNumber(local.rngmas?.snowcoinsEarned, cloud.rngmas?.snowcoinsEarned);
+  compareNumber(
+    local.rngmas?.snowcoinsExchanged,
+    cloud.rngmas?.snowcoinsExchanged,
+  );
+  compareSet(local.rngmas?.marketPurchases, cloud.rngmas?.marketPurchases);
   const localGolems = local.rngmas?.golems ?? {};
   const cloudGolems = cloud.rngmas?.golems ?? {};
   for (const id of new Set([

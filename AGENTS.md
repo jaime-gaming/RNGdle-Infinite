@@ -35,10 +35,10 @@ left. `sale-reward` history rows stay parseable and visible.
 
 RNGmas 2026 and the Battle Pass are the live event exceptions. RNGmas runs from
 1 December 2026 to 2 January 2027 (UTC) in `src/rngmas.js`: the temporary
-Frostfall theme in the Appearance menu (December 16–January 2, after First Light), a 24-door advent calendar on
+Frostfall theme in the Appearance menu (December 1–January 2, after First Light), a 24-door advent calendar on
 `/shop/rngmas`, and five weekly activities. A door is claimable only on its December UTC day; door 24 pays the Gingerbread aura and the
 Christmas Day-only star pays the RNGmas Star aura. Golem Smash uses the next normal online roll as damage after preparing a paid strike.
-`progress.rngmas` (`{ id, claimed, finale, golems }`) is part of the save
+`progress.rngmas` (`{ id, claimed, finale, golems, snowcoins, snowcoinsEarned, snowcoinsExchanged, marketPurchases }`) is part of the save
 contract and survives every reset, like permanent cosmetics.
 
 RNGmas follows the RNGween pattern, not the retired Black Friday one. The page
@@ -213,7 +213,7 @@ Only rolls fund a cycle gate.
   empty one.
 - `sale-reward` activity rows stay parseable and visible in history; they carry
   no EP and never count as spending.
-- `rngmas` records (`{ id, claimed, finale, golems }`) keep the advent doors
+- `rngmas` records (`{ id, claimed, finale, golems, snowcoins, snowcoinsEarned, snowcoinsExchanged, marketPurchases }`) keep the advent doors
   opened, the Christmas Day star and each golem's damage, strikes and defeat.
   Rewards are always re-derived from the record (`rngmasRewardIds`), so a
   hand-edited save cannot invent a calendar aura. Junk or foreign records are
@@ -503,17 +503,17 @@ Christmas decorations respect the persisted `christmasMode` setting in Themes.
 Weekly activities use the retired RNGween main-roll tally rules and mission card
 layout recovered from commit `d131975`. Legacy `golems` IDs remain save receipts;
 new `count`, `armed`, and `lastNumber` fields are parsed defensively. Only the
-December 15–22 chapter is Golem Smash. Prepare a strike for 100,000 EP; the next
+December 1–8 chapter is Golem Smash. Prepare a strike for 100,000 EP; the next
 online committed result deals its numeric value as damage, once. Offline and
 extra skill rolls do not add progress. Weekly claims grant their permanent aura,
 modest EP (except the golem) and one Surge Capacitor charge. RNGmas 2026 is pass
-season 2, December 16–January 2 UTC. The local dev preview is December 17 UTC.
+season 2, December 1–January 2 UTC. The local dev preview is December 17 UTC.
 
 Pass reward definitions are resolved by saved `seasonId` through `passRewardsFor`.
 Never use the First Light `BATTLE_PASS_REWARDS` constant directly for live claims,
 receipt repair, rollover delivery or the Pass page. RNGmas uses Snowglobe (free
 10), Midnight Carillon (premium 20) and Polar Crown (premium 30), with a smaller
-EP budget for its shorter season. Existing First Light ownership stays intact.
+EP budget retained from its original schedule. Existing First Light ownership stays intact.
 The Cloud verification outage fixes from upstream `d513747` are integrated;
 the event branch retains version `v0.6.1` rather than the main patch label.
 
@@ -543,3 +543,28 @@ exhausted-budget recovery and the actual hook timer boundary. Client tests rejec
 invalid timing, skills and error-envelope security changes while preserving the
 request ID. Live binding/secret availability still needs a production check;
 local tests cannot certify it.
+
+## December 1 launch and weekly economy
+
+First Light ends and the RNGmas pass/Frostfall begin on December 1 UTC. RNGmas
+ends January 2 UTC; the dev preview stays December 17. Weeks: Golem Smash,
+Christmas market, Snowcoin exchange, Gift workshop and Midnight countdown.
+The market opens December 8 and the exchange December 15; both stay available
+until the event ends, independently of their chapter's expiring aura claim.
+
+One primary settled online roll earns one Snowcoin; Auto-Roll counts, offline
+and extra skill results do not. The wallet caps at 1,000,000. Exchange is one-way,
+10,000 EP per coin, maximum 200 converted per event. Each market offer grants
+boost charges once; three distinct purchases complete the market chapter and
+100 converted coins complete the exchange chapter. These two chapters grant
+no EP. `snowcoinsEarned`, `snowcoinsExchanged` and distinct `marketPurchases`
+are durable reconciliation dimensions; the decreasing wallet is not. Never
+merge currencies from different profiles. Retain legacy chapter IDs, counts,
+auras and historical rows. Currency and receipts survive resets and reloads.
+New `winter-exchange` and `winter-market` history rows are parsed defensively.
+
+An ended maintenance window overrides stale provider flags. While maintenance
+is active, the normal draw path commits locally without first requesting a Cloud
+roll or activating an outage marker; backup/publishing/deletion remain paused.
+Keep account ownership and known server restrictions intact. The render integrity
+suite exercises the real status store and progress hook for this path.

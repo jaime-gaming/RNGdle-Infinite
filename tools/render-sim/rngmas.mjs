@@ -110,8 +110,8 @@ export async function run() {
         progress={progress()}
         status={{
           ...status,
-          now: Date.UTC(2026, 11, 17),
-          week: RNGMAS_WEEKS[2],
+          now: Date.UTC(2026, 11, 2),
+          week: RNGMAS_WEEKS[0],
         }}
         onSmash={() => prepared++}
         pending={false}

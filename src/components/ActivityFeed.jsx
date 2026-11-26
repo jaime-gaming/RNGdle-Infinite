@@ -552,6 +552,10 @@ export default function ActivityFeed({
                     <ShoppingBag size={19} />
                   ) : event.type === "advent-claim" ? (
                     <Gift size={19} />
+                  ) : event.type === "winter-exchange" ? (
+                    <Coins size={19} />
+                  ) : event.type === "winter-market" ? (
+                    <ShoppingBag size={19} />
                   ) : event.type === "golem-smash" ? (
                     <Hammer size={19} />
                   ) : event.type === "golem-reward" ? (
@@ -645,7 +649,13 @@ export default function ActivityFeed({
                                                               : event.type ===
                                                                   "golem-reward"
                                                                 ? `Golem reward · ${event.name}`
-                                                                : `Equipped ${event.name}`}
+                                                                : event.type ===
+                                                                    "winter-exchange"
+                                                                  ? "Snowcoin exchange"
+                                                                  : event.type ===
+                                                                      "winter-market"
+                                                                    ? "Christmas market purchase"
+                                                                    : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString("en-US", {
@@ -868,6 +878,14 @@ export default function ActivityFeed({
                           {event.day} · kept forever
                         </>
                       )}
+                    </p>
+                  ) : event.type === "winter-exchange" ? (
+                    <p className="activity-transaction">
+                      −{formatEP(event.ep)} EP · +{event.coins} Snowcoins
+                    </p>
+                  ) : event.type === "winter-market" ? (
+                    <p className="activity-transaction">
+                      −{event.coins} Snowcoins · Winter stall reward
                     </p>
                   ) : event.type === "golem-smash" ? (
                     <p className="activity-transaction">

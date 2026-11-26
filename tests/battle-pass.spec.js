@@ -115,9 +115,7 @@ test("pass progression targets a season-long pace and avoids extreme mission goa
 
 test("the current season is manually scheduled and never advertises a successor", () => {
   expect(battlePassSeason(BATTLE_PASS_FIRST_START).id).toBe("season-1");
-  expect(
-    battlePassSeason(BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS - 1).id,
-  ).toBe("season-1");
+  expect(battlePassSeason(Date.UTC(2026, 11, 1) - 1).id).toBe("season-1");
   const closed = battlePassSeason(
     BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS,
   );

@@ -13,7 +13,7 @@ export const RNGMAS_ANNOUNCE_DAYS = 14;
 export const RNGMAS_ANNOUNCE_AT = RNGMAS_START - RNGMAS_ANNOUNCE_DAYS * DAY_MS;
 
 export const ADVENT_DAYS = 24;
-export const RNGMAS_THEME_START = Date.UTC(2026, 11, 16, 0, 0, 0);
+export const RNGMAS_THEME_START = RNGMAS_START;
 
 export function rngmasThemeActive(at = gameNow()) {
   return at >= RNGMAS_THEME_START && at < RNGMAS_END;
@@ -44,7 +44,7 @@ export const RNGMAS_COSMETICS = [
     swatch: ["#082f49", "#a5f3fc"],
     icon: "frost",
     description:
-      "First snow's reward: deep ice with a bright frost rim. Kept forever, never sold.",
+      "The Snowcoin exchange's reward: deep ice with a bright frost rim. Kept forever, never sold.",
   },
   {
     id: "rngmas-ember",
@@ -57,7 +57,7 @@ export const RNGMAS_COSMETICS = [
     swatch: ["#431407", "#fdba74"],
     icon: "ember",
     description:
-      "Winter lights' reward: coal black with a warm ember glow. Kept forever, never sold.",
+      "The Christmas market's reward: coal black with a warm ember glow. Kept forever, never sold.",
   },
   {
     id: "rngmas-hollow",
@@ -160,48 +160,88 @@ export const ADVENT_DOORS = [
 
 export const ADVENT_FINALE = { day: 25, aura: "rngmas-star" };
 
+export const SNOWCOIN_CAP = 1000000;
+export const SNOWCOIN_EXCHANGE_EP = 10000;
+export const SNOWCOIN_EXCHANGE_CAP = 200;
+export const WINTER_MARKET = [
+  {
+    id: "snow-spark",
+    name: "Spark Injector",
+    price: 10,
+    boost: "boost-spark",
+  },
+  {
+    id: "snow-surge",
+    name: "Surge Capacitor",
+    price: 15,
+    boost: "boost-surge",
+  },
+  {
+    id: "snow-overdrive",
+    name: "Overdrive Cell",
+    price: 20,
+    boost: "boost-overdrive",
+  },
+  {
+    id: "snow-surge-bundle",
+    name: "Surge bundle",
+    price: 60,
+    boost: "boost-surge",
+    charges: 3,
+  },
+  {
+    id: "snow-overdrive-bundle",
+    name: "Overdrive bundle",
+    price: 90,
+    boost: "boost-overdrive",
+    charges: 3,
+  },
+];
+
 export const RNGMAS_WEEKS = [
   {
     index: 1,
-    id: "frost",
-    start: Date.UTC(2026, 11, 1),
+    id: "hollow",
+    start: RNGMAS_START,
     end: Date.UTC(2026, 11, 8),
-    name: "First snow",
-    blurb: "Finish 30 even-numbered online rolls.",
-    metric: "even",
-    goal: 30,
-    ep: 75000,
-    hp: 1000000,
-    reward: "rngmas-frost",
-    accent: "#7dd3fc",
+    name: "Golem Smash",
+    blurb: "Prepare a strike, then roll normally. Your number is the damage.",
+    metric: "damage",
+    goal: 25000000,
+    hp: 25000000,
+    ep: 0,
+    reward: "rngmas-hollow",
+    accent: "#5eead4",
   },
   {
     index: 2,
     id: "ember",
     start: Date.UTC(2026, 11, 8),
     end: Date.UTC(2026, 11, 15),
-    name: "Winter lights",
-    blurb: "Roll 12 numbers ending in 5 online.",
-    metric: "ends5",
-    goal: 12,
-    ep: 100000,
+    name: "Christmas market",
+    blurb:
+      "Buy from any three winter stalls this week to earn Emberlight. The market stays open until January 2.",
+    metric: "purchases",
+    goal: 3,
     hp: 1000000,
+    ep: 0,
     reward: "rngmas-ember",
     accent: "#fb923c",
   },
   {
     index: 3,
-    id: "hollow",
+    id: "frost",
     start: Date.UTC(2026, 11, 15),
     end: Date.UTC(2026, 11, 22),
-    name: "Golem Smash",
-    blurb: "Prepare a strike, then roll normally. Your number is the damage.",
-    metric: "damage",
-    goal: 25000000,
+    name: "Snowcoin exchange",
+    blurb:
+      "Exchange EP for 100 Snowcoins to earn Frostbound. Conversion is one-way and capped at 200 coins.",
+    metric: "exchanged",
+    goal: 100,
+    hp: 1000000,
     ep: 0,
-    hp: 25000000,
-    reward: "rngmas-hollow",
-    accent: "#5eead4",
+    reward: "rngmas-frost",
+    accent: "#7dd3fc",
   },
   {
     index: 4,
@@ -212,8 +252,8 @@ export const RNGMAS_WEEKS = [
     blurb: "Finish 80 online rolls containing a 0.",
     metric: "contains0",
     goal: 80,
-    ep: 150000,
     hp: 1000000,
+    ep: 150000,
     reward: "rngmas-golem",
     accent: "#fbbf24",
   },
@@ -221,13 +261,13 @@ export const RNGMAS_WEEKS = [
     index: 5,
     id: "newyear",
     start: Date.UTC(2026, 11, 29),
-    end: Date.UTC(2027, 0, 2),
+    end: RNGMAS_END,
     name: "Midnight countdown",
     blurb: "Finish 100 online rolls before the year-end event closes.",
     metric: "rolls",
     goal: 100,
-    ep: 200000,
     hp: 1000000,
+    ep: 200000,
     reward: "rngmas-newyear",
     accent: "#f0abfc",
   },
@@ -347,6 +387,14 @@ export function winterRollTally(result) {
 export function recordWinterRoll(record, result, at) {
   const week = rngmasWeekAt(at);
   if (!week) return record;
+  record = {
+    ...record,
+    snowcoins: Math.min(SNOWCOIN_CAP, (record.snowcoins ?? 0) + 1),
+    snowcoinsEarned: Math.min(
+      Number.MAX_SAFE_INTEGER,
+      (record.snowcoinsEarned ?? 0) + 1,
+    ),
+  };
   const previous = record.golems[week.id];
   if (previous.defeated) return record;
   if (week.metric === "damage") {
@@ -370,7 +418,7 @@ export function recordWinterRoll(record, result, at) {
   }
   const count = Math.min(
     week.goal,
-    (previous.count ?? 0) + winterRollTally(result)[week.metric],
+    (previous.count ?? 0) + (winterRollTally(result)[week.metric] ?? 0),
   );
   return {
     ...record,
@@ -387,6 +435,10 @@ export function emptyRngmas() {
     id: RNGMAS_ID,
     claimed: [],
     finale: false,
+    snowcoins: 0,
+    snowcoinsEarned: 0,
+    snowcoinsExchanged: 0,
+    marketPurchases: [],
     golems: Object.fromEntries(
       RNGMAS_WEEKS.map((week) => [
         week.id,
@@ -437,7 +489,12 @@ export function parseRngmas(value, receipts = {}) {
     golems[week.id] = {
       damage,
       strikes,
-      count: validCount(record.count) ? Math.min(record.count, week.goal) : 0,
+      count: validCount(record.count)
+        ? Math.min(
+            record.count,
+            week.id === "ember" ? Math.max(12, week.goal) : week.goal,
+          )
+        : 0,
       armed:
         week.metric === "damage" &&
         record.armed === true &&
@@ -452,7 +509,34 @@ export function parseRngmas(value, receipts = {}) {
         owned.includes(week.reward),
     };
   }
-  return { id: RNGMAS_ID, claimed, finale, golems };
+  const snowcoinsEarned = validCount(value?.snowcoinsEarned)
+    ? value.snowcoinsEarned
+    : 0;
+  const snowcoins = validCount(value?.snowcoins)
+    ? Math.min(value.snowcoins, snowcoinsEarned, SNOWCOIN_CAP)
+    : 0;
+  const snowcoinsExchanged = validCount(value?.snowcoinsExchanged)
+    ? Math.min(value.snowcoinsExchanged, SNOWCOIN_EXCHANGE_CAP)
+    : 0;
+  const marketPurchases = Array.isArray(value?.marketPurchases)
+    ? [
+        ...new Set(
+          value.marketPurchases.filter((id) =>
+            WINTER_MARKET.some((item) => item.id === id),
+          ),
+        ),
+      ]
+    : [];
+  return {
+    id: RNGMAS_ID,
+    claimed,
+    finale,
+    golems,
+    snowcoins,
+    snowcoinsEarned,
+    snowcoinsExchanged,
+    marketPurchases,
+  };
 }
 
 export function rngmasRewardIds(record) {

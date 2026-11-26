@@ -1,3 +1,4 @@
+import { gameNow } from "./game-clock.js";
 import { unpackVaultSave } from "./save-codec.js";
 
 import { reaperAct } from "./rngween-legacy.js";
@@ -145,6 +146,10 @@ import {
   parseBlackFriday,
 } from "./black-friday.js";
 import {
+  SNOWCOIN_CAP,
+  SNOWCOIN_EXCHANGE_CAP,
+  SNOWCOIN_EXCHANGE_EP,
+  WINTER_MARKET,
   ADVENT_FINALE,
   GOLEM_SMASH_COST,
   RNGMAS_COSMETICS_BY_ID,
@@ -1412,6 +1417,91 @@ function applyEvent(state, action) {
       history: appendHistory(state.history, [row]),
     };
   }
+  if (
+    action.type === "winter-exchange" ||
+    action.type === "winter-market-buy"
+  ) {
+    const at = action.at ?? Math.ceil(gameNow());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid winter transaction time.");
+    const week = rngmasWeekAt(at);
+    const record = state.rngmas ?? emptyRngmas();
+    if (action.type === "winter-exchange") {
+      if (!week || week.index < 3)
+        throw new Error("The Snowcoin exchange is closed.");
+      const amount = action.amount;
+      if (
+        !Number.isSafeInteger(amount) ||
+        amount < 1 ||
+        amount > SNOWCOIN_EXCHANGE_CAP
+      )
+        throw new Error("Choose a whole number from 1 to 200.");
+      const exchanged = record.snowcoinsExchanged ?? 0;
+      if (exchanged + amount > SNOWCOIN_EXCHANGE_CAP)
+        throw new Error("The seasonal exchange limit is 200 Snowcoins.");
+      const cost = amount * SNOWCOIN_EXCHANGE_EP;
+      if (state.balance < cost)
+        throw new Error("Not enough EP for this exchange.");
+      if (
+        (record.snowcoins ?? 0) + amount > SNOWCOIN_CAP ||
+        (record.snowcoinsEarned ?? 0) > Number.MAX_SAFE_INTEGER - amount
+      )
+        throw new Error("Snowcoin limit reached.");
+      return {
+        ...state,
+        balance: state.balance - cost,
+        rngmas: {
+          ...record,
+          snowcoins: (record.snowcoins ?? 0) + amount,
+          snowcoinsEarned: (record.snowcoinsEarned ?? 0) + amount,
+          snowcoinsExchanged: exchanged + amount,
+        },
+        history: appendHistory(state.history, [
+          {
+            id: action.eventId ?? `winter-exchange:${at}:${exchanged}`,
+            type: "winter-exchange",
+            at,
+            ep: cost,
+            coins: amount,
+          },
+        ]),
+      };
+    }
+    if (!week || week.index < 2)
+      throw new Error("The Christmas market is closed.");
+    const item = WINTER_MARKET.find((item) => item.id === action.id);
+    if (!item) throw new Error("Unknown winter stall.");
+    if ((record.marketPurchases ?? []).includes(item.id))
+      throw new Error("This stall reward was already bought.");
+    if ((record.snowcoins ?? 0) < item.price)
+      throw new Error("Not enough Snowcoins.");
+    return {
+      ...state,
+      rngmas: {
+        ...record,
+        snowcoins: record.snowcoins - item.price,
+        marketPurchases: [...(record.marketPurchases ?? []), item.id],
+      },
+      battlePass: {
+        ...state.battlePass,
+        boosts: grantBoost(
+          state.battlePass?.boosts,
+          item.boost,
+          item.charges ?? 1,
+          at,
+        ),
+      },
+      history: appendHistory(state.history, [
+        {
+          id: `winter-market:${item.id}`,
+          type: "winter-market",
+          at,
+          itemId: item.id,
+          coins: item.price,
+        },
+      ]),
+    };
+  }
   if (action.type === "golem-smash" || action.type === "claim-winter-week") {
     const at = action.at ?? Math.ceil(Date.now());
     if (!validAmount(at) || at > 8640000000000000)
@@ -1441,7 +1531,13 @@ function applyEvent(state, action) {
       };
     }
     const count =
-      week.metric === "damage" ? record.damage : (record.count ?? 0);
+      week.metric === "damage"
+        ? record.damage
+        : week.metric === "purchases"
+          ? (rngmas.marketPurchases ?? []).length
+          : week.metric === "exchanged"
+            ? (rngmas.snowcoinsExchanged ?? 0)
+            : (record.count ?? 0);
     if (count < week.goal)
       throw new Error("Complete this week's activity first.");
     if (
@@ -2753,6 +2849,19 @@ function parseHistory(value) {
       )
         return [];
       next = { ...base, seasonId: e.seasonId, name: e.name, ep: e.ep };
+    } else if (e.type === "winter-exchange") {
+      if (
+        !Number.isSafeInteger(e.coins) ||
+        e.coins < 1 ||
+        e.coins > SNOWCOIN_EXCHANGE_CAP ||
+        e.ep !== e.coins * SNOWCOIN_EXCHANGE_EP
+      )
+        return [];
+      next = { ...base, coins: e.coins, ep: e.ep };
+    } else if (e.type === "winter-market") {
+      const item = WINTER_MARKET.find((item) => item.id === e.itemId);
+      if (!item || e.coins !== item.price) return [];
+      next = { ...base, itemId: item.id, coins: item.price };
     } else if (e.type === "advent-claim") {
       if (!Number.isInteger(e.day) || e.day < 1 || e.day > ADVENT_FINALE.day)
         return [];

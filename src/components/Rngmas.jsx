@@ -13,6 +13,9 @@ import {
   X,
 } from "lucide-react";
 import {
+  WINTER_MARKET,
+  SNOWCOIN_EXCHANGE_EP,
+  SNOWCOIN_EXCHANGE_CAP,
   ADVENT_DAYS,
   ADVENT_DOORS,
   ADVENT_FINALE,
@@ -164,13 +167,13 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
             <Hammer size={14} aria-hidden="true" /> Golem Smash
           </h3>
           <p>
-            Each chapter has a different activity: even numbers, winter lights,
-            Golem Smash, the gift workshop and a New Year countdown. Complete
-            and claim each activity during its week for a permanent aura and one
-            Surge Capacitor charge.
+            Each chapter has a different activity: the Christmas market, the
+            Snowcoin exchange, Golem Smash, the gift workshop and a New Year
+            countdown. Complete and claim each activity during its week for a
+            permanent aura and one Surge Capacitor charge.
           </p>
           <p className="rngmas-note">
-            During Golem Smash, prepare a strike for{" "}
+            From December 1 to 8, prepare a strike for{" "}
             {formatEP(GOLEM_SMASH_COST)} EP, then roll normally. The number you
             roll is the damage. No critical multipliers. Prepared strikes
             survive reloads.
@@ -182,7 +185,7 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
             <Sparkles size={14} aria-hidden="true" /> The winter look
           </h3>
           <p>
-            While RNGmas is on, the Appearance menu offers{" "}
+            From December 1 until January 2 UTC, the Appearance menu offers{" "}
             {RNGMAS_TEMPORARY_THEMES.map((entry) => entry.label).join(" and ")},
             with snow drifting past the page edges. It leaves the menu when the
             season ends and falls back to the regular dark theme.
@@ -392,7 +395,13 @@ export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
   if (!week) return null;
   const record = progress.rngmas.golems[week.id];
   const isGolem = week.metric === "damage";
-  const count = isGolem ? record.damage : (record.count ?? 0);
+  const count = isGolem
+    ? record.damage
+    : week.metric === "purchases"
+      ? (progress.rngmas.marketPurchases ?? []).length
+      : week.metric === "exchanged"
+        ? (progress.rngmas.snowcoinsExchanged ?? 0)
+        : (record.count ?? 0);
   const ready = count >= week.goal;
   const aura = RNGMAS_COSMETICS_BY_ID.get(week.reward);
   return (
@@ -431,7 +440,13 @@ export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
           <div className="winter-mission-meter">
             <span>
               {formatEP(count)} / {formatEP(week.goal)}{" "}
-              {isGolem ? "damage" : "rolls"}
+              {isGolem
+                ? "damage"
+                : week.metric === "purchases"
+                  ? "stalls"
+                  : week.metric === "exchanged"
+                    ? "Snowcoins exchanged"
+                    : "rolls"}
             </span>
             <progress
               max={week.goal}
@@ -497,9 +512,11 @@ export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
         <li className="winter-mission">
           <h3>This week's rules</h3>
           <p>
-            Progress comes from your main online roll only. Extra skill results
-            and offline rolls do not count. You can play normally, including
-            Auto-Roll. Claim before this chapter ends; there is no catch-up.
+            {week.metric === "purchases"
+              ? "Buy from three different stalls below, then collect this chapter's aura before December 15 UTC. Each stall can be bought once."
+              : week.metric === "exchanged"
+                ? "Exchange 100 Snowcoins below, then claim this chapter's aura before December 22 UTC. Earned coins from rolls do not count toward the exchange goal."
+                : "Progress comes from your main online roll only. Extra skill results and offline rolls do not count. Auto-Roll counts. Claim before this chapter ends; there is no catch-up."}{" "}
             Collected auras survive resets.
           </p>
           <p>
@@ -566,6 +583,119 @@ export function RngmasWeeks({ progress }) {
           );
         })}
       </ol>
+    </section>
+  );
+}
+
+export function WinterEconomy({ progress, status, onAction, pending }) {
+  const [amount, setAmount] = useState("10");
+  if (!status.active) return null;
+  const record = progress.rngmas;
+  const index = status.week?.index ?? 0;
+  const exchanged = record.snowcoinsExchanged ?? 0;
+  const count = Number(amount);
+  return (
+    <section
+      className="advent-calendar"
+      aria-label="Snowcoins and winter stalls"
+    >
+      <div className="rngmas-section-heading">
+        <div>
+          <h3>Snowcoins · {(record.snowcoins ?? 0).toLocaleString("en-US")}</h3>
+          <p>
+            One Snowcoin per main online roll, including Auto-Roll. No coins
+            from extra skill results or offline rolls. Spend before January 2
+            UTC; coins have no EP cash-out.
+          </p>
+        </div>
+      </div>
+      <div className="winter-missions">
+        <div className="winter-mission">
+          <h3>Christmas market</h3>
+          <p>
+            {index < 2
+              ? "Opens December 8 UTC."
+              : "Open until January 2 UTC. Each offer can be bought once. Charges stay in your inventory after the event."}
+          </p>
+          {WINTER_MARKET.map((item) => {
+            const bought = (record.marketPurchases ?? []).includes(item.id);
+            return (
+              <button
+                key={item.id}
+                className="secondary-button"
+                disabled={
+                  pending ||
+                  index < 2 ||
+                  bought ||
+                  (record.snowcoins ?? 0) < item.price
+                }
+                onClick={() =>
+                  onAction(
+                    { type: "winter-market-buy", id: item.id },
+                    `${item.name} collected.`,
+                  )
+                }
+              >
+                {item.name} ×{item.charges ?? 1} · {item.price} Snowcoins
+                {bought ? " · Bought" : ""}
+              </button>
+            );
+          })}
+        </div>
+        <div className="winter-mission">
+          <h3>EP → Snowcoins</h3>
+          <p>
+            {index < 3 ? "Opens December 15 UTC." : "Open until January 2 UTC."}{" "}
+            1 Snowcoin costs {formatEP(SNOWCOIN_EXCHANGE_EP)} EP. One-way
+            conversion, no refunds. Maximum {SNOWCOIN_EXCHANGE_CAP} exchanged
+            across the event.
+          </p>
+          <label>
+            Snowcoins to exchange
+            <input
+              type="number"
+              min="1"
+              max={SNOWCOIN_EXCHANGE_CAP - exchanged}
+              step="1"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              disabled={
+                pending || index < 3 || exchanged >= SNOWCOIN_EXCHANGE_CAP
+              }
+            />
+          </label>
+          <p>
+            {exchanged} / {SNOWCOIN_EXCHANGE_CAP} exchanged · cost{" "}
+            {formatEP(
+              Number.isSafeInteger(count) &&
+                count > 0 &&
+                count <= SNOWCOIN_EXCHANGE_CAP
+                ? count * SNOWCOIN_EXCHANGE_EP
+                : 0,
+            )}{" "}
+            EP
+          </p>
+          <button
+            className="secondary-button"
+            disabled={
+              pending ||
+              index < 3 ||
+              !Number.isSafeInteger(count) ||
+              count < 1 ||
+              count + exchanged > SNOWCOIN_EXCHANGE_CAP ||
+              progress.balance < count * SNOWCOIN_EXCHANGE_EP
+            }
+            onClick={() =>
+              onAction(
+                { type: "winter-exchange", amount: count },
+                "EP exchanged for Snowcoins.",
+              )
+            }
+          >
+            Exchange EP for Snowcoins
+          </button>
+        </div>
+      </div>
     </section>
   );
 }
@@ -645,6 +775,12 @@ export default function RngmasShelf({ progress, onAction, notify }) {
         progress={progress}
         status={status}
         onSmash={smash}
+        pending={pending}
+      />
+      <WinterEconomy
+        progress={progress}
+        status={status}
+        onAction={run}
         pending={pending}
       />
       <RngmasWeeks progress={progress} />

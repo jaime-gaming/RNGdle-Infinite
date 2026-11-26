@@ -2066,6 +2066,7 @@ export function useProgress({
             })(),
           );
           const serverAuthoritative = Boolean(
+            !maintenance &&
             previous.profile &&
             auth.cloudEnabled &&
             auth.userId &&

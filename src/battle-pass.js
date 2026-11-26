@@ -7,7 +7,7 @@ export const BATTLE_PASS_SEASONS = [
     index: 1,
     id: "season-1",
     start: Date.UTC(2026, 10, 18, 0, 0, 0),
-    end: Date.UTC(2026, 11, 16, 0, 0, 0),
+    end: Date.UTC(2026, 11, 1, 0, 0, 0),
     name: "First Light",
     theme:
       "Gold at the horizon, warm light on a quiet field. Begin where the day breaks.",
@@ -16,7 +16,7 @@ export const BATTLE_PASS_SEASONS = [
   {
     index: 2,
     id: "season-2",
-    start: Date.UTC(2026, 11, 16),
+    start: Date.UTC(2026, 11, 1),
     end: Date.UTC(2027, 0, 2),
     name: "RNGmas 2026",
     theme: "Frostfall settles over the winter reward track.",

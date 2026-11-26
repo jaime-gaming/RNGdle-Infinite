@@ -136,7 +136,7 @@ test("the last advent door pays the Gingerbread aura", () => {
   expect(claimed.owned).toContain("rngmas-gingerbread");
 });
 
-const GOLEM_AT = Date.UTC(2026, 11, 17, 12);
+const GOLEM_AT = Date.UTC(2026, 11, 2, 12);
 const completeNumber = (state, number, id, source) =>
   applyProgress(state, {
     type: "complete",
@@ -191,6 +191,13 @@ test("weekly activities differ, require completion and pay rewards once", () => 
       count: week.goal,
       damage: week.hp,
     };
+    if (week.metric === "purchases")
+      state.rngmas.marketPurchases = [
+        "snow-spark",
+        "snow-surge",
+        "snow-overdrive",
+      ];
+    if (week.metric === "exchanged") state.rngmas.snowcoinsExchanged = 100;
     const claimed = applyProgress(state, {
       type: "claim-winter-week",
       at: week.start,
@@ -204,21 +211,22 @@ test("weekly activities differ, require completion and pay rewards once", () => 
   }
 });
 
-test("weekly tally rules count only the intended numbers", () => {
+test("weekly tally rules keep transaction progress separate from normal rolls", () => {
   const record = emptyProgress().rngmas;
-  expect(
-    recordWinterRoll(record, { number: 1234 }, Date.UTC(2026, 11, 2)).golems
-      .frost.count,
-  ).toBe(1);
   expect(
     recordWinterRoll(record, { number: 1234 }, SEASON).golems.ember.count,
   ).toBe(0);
   expect(
-    recordWinterRoll(record, { number: 1235 }, SEASON).golems.ember.count,
-  ).toBe(1);
+    recordWinterRoll(record, { number: 1235 }, Date.UTC(2026, 11, 17)).golems
+      .frost.count,
+  ).toBe(0);
   expect(
     recordWinterRoll(record, { number: 1204 }, Date.UTC(2026, 11, 24)).golems
       .golem.count,
+  ).toBe(1);
+  expect(
+    recordWinterRoll(record, { number: 1204 }, Date.UTC(2026, 11, 24))
+      .snowcoins,
   ).toBe(1);
 });
 
@@ -305,7 +313,9 @@ test("the shop grows an RNGmas door during the season", async ({ page }) => {
     page.getByRole("heading", { name: /Advent calendar/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /Winter lights/ }),
+    page
+      .getByRole("region", { name: "Weekly winter activity" })
+      .getByRole("heading", { name: "Christmas market", exact: true }),
   ).toBeVisible();
 });
 
@@ -537,29 +547,29 @@ test("new activity save fields repair malformed input without losing receipts", 
   expect(parsed.golems.ember).toMatchObject({ count: 0, armed: false });
 });
 
-test("weekly progress settles once per online roll and excludes skill extras", () => {
+test("Snowcoins settle once per online roll and exclude skill extras and offline", () => {
   const at = Date.UTC(2026, 11, 2, 12);
   let state = { ...emptyProgress(), profile: testProfile };
   const action = {
     type: "complete",
-    id: "even-roll",
+    id: "snow-roll",
     at,
     cooldownUntil: at + 1000,
     result: evaluate(1234),
     extras: [{ result: evaluate(2468) }],
   };
   state = applyProgress(state, action);
-  expect(state.rngmas.golems.frost.count).toBe(1);
-  expect(applyProgress(state, action).rngmas.golems.frost.count).toBe(1);
+  expect(state.rngmas.snowcoins).toBe(1);
+  expect(applyProgress(state, action).rngmas.snowcoins).toBe(1);
   expect(
     applyProgress(state, { ...action, id: "offline", source: "offline" }).rngmas
-      .golems.frost.count,
+      .snowcoins,
   ).toBe(1);
 });
 
 test("weekly rewards expire at the UTC boundary and do not fund cycle gates", () => {
-  let state = { ...emptyProgress(), profile: testProfile };
-  state.rngmas.golems.frost.count = 30;
+  const state = { ...emptyProgress(), profile: testProfile };
+  state.rngmas.golems.hollow.damage = 25000000;
   const claimed = applyProgress(state, {
     type: "claim-winter-week",
     at: Date.UTC(2026, 11, 7, 23, 59, 59),

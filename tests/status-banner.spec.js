@@ -236,3 +236,22 @@ test("scheduled maintenance never gates gameplay before its start time", () => {
     maintenanceActiveFor({ ...scheduled, scheduledFor: "invalid" }, startsAt),
   ).toBe(true);
 });
+
+test("ended or completed maintenance cannot keep online features paused", () => {
+  const start = Date.UTC(2026, 11, 1);
+  const issue = {
+    kind: "maintenance",
+    status: "in_progress",
+    componentStatus: "under_maintenance",
+    scheduledFor: new Date(start).toISOString(),
+    scheduledUntil: new Date(start + 3600000).toISOString(),
+  };
+  expect(maintenanceActiveFor(issue, start + 1)).toBe(true);
+  expect(maintenanceActiveFor(issue, start + 3600000)).toBe(false);
+  expect(
+    maintenanceActiveFor({ ...issue, status: "completed" }, start + 1),
+  ).toBe(false);
+  expect(
+    maintenanceActiveFor({ ...issue, status: "cancelled" }, start + 1),
+  ).toBe(false);
+});
