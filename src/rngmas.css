@@ -1324,16 +1324,48 @@
 }
 
 @media (max-width: 900px) {
-  .rngmas-pine,
-  .rngmas-gift,
-  .rngmas-bell,
-  .rngmas-flake-mark,
-  .rngmas-star-mark,
+  .rngmas-pine {
+    width: 38px;
+    height: 48px;
+    opacity: 0.25;
+  }
+  .rngmas-gift {
+    width: 23px;
+    height: 23px;
+    opacity: 0.28;
+  }
+  .rngmas-bell {
+    width: 24px;
+    height: 24px;
+    opacity: 0.25;
+  }
+  .rngmas-flake-mark {
+    width: 26px;
+    height: 26px;
+    opacity: 0.3;
+  }
+  .rngmas-star-mark {
+    width: 17px;
+    height: 17px;
+    opacity: 0.3;
+  }
   .rngmas-garland {
-    display: none;
+    opacity: 0.25;
   }
   .rngmas-snowbank {
-    opacity: 0.7;
+    width: 130px;
+    height: 65px;
+    opacity: 0.65;
+  }
+  .rngmas-pine-left,
+  .rngmas-gift-left,
+  .rngmas-flake-mark-left {
+    left: -8px;
+  }
+  .rngmas-pine-right,
+  .rngmas-gift-right,
+  .rngmas-bell-right {
+    right: -6px;
   }
 }
 
@@ -1485,4 +1517,414 @@
     animation: none;
     display: none;
   }
+}
+
+.winter-wayfinding {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 28px;
+  padding: 14px 16px;
+  border-block: 1px solid var(--border);
+  font: 500 11px/1.5 var(--font-mono);
+}
+.winter-wayfinding a,
+.winter-wayfinding > span {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+}
+.winter-wayfinding > span {
+  margin-left: auto;
+  color: var(--text);
+}
+.winter-calendar-zone,
+.winter-trail {
+  scroll-margin-top: 90px;
+}
+.winter-trail {
+  margin-top: 32px;
+}
+.winter-passport {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.winter-passport > svg {
+  flex-shrink: 0;
+  color: var(--green);
+}
+.winter-passport strong {
+  font-size: 13px;
+}
+.winter-passport p {
+  margin: 5px 0 0;
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.winter-chapter {
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: clip;
+  background: var(--surface);
+}
+.winter-chapter[data-current="true"] {
+  border-color: color-mix(in srgb, var(--chapter-accent) 50%, var(--border));
+}
+.winter-chapter > summary {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 22px;
+  cursor: pointer;
+  list-style: none;
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--chapter-accent) 7%, transparent),
+    transparent 75%
+  );
+}
+.winter-chapter > summary::-webkit-details-marker {
+  display: none;
+}
+.winter-chapter > summary:hover {
+  background-color: var(--hover);
+}
+.winter-chapter > summary:focus-visible {
+  outline: 2px solid var(--chapter-accent);
+  outline-offset: -4px;
+}
+.winter-chapter-number {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  height: 48px;
+  border: 1px dashed
+    color-mix(in srgb, var(--chapter-accent) 50%, var(--border));
+  border-radius: 8px;
+  color: var(--chapter-accent);
+  font: 700 18px/1 var(--font-mono);
+}
+.winter-chapter-heading {
+  display: grid;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+.winter-chapter-heading > small {
+  font: 500 9px/1.7 var(--font-mono);
+  color: var(--secondary);
+  letter-spacing: 0.04em;
+}
+.winter-chapter-heading > strong {
+  font-size: clamp(16px, 2vw, 21px);
+  color: var(--text);
+}
+.winter-chapter-heading > span {
+  font: 500 10px/1.5 var(--font-mono);
+  color: var(--secondary);
+}
+.winter-chapter[data-current="true"] .winter-chapter-heading > span {
+  color: var(--chapter-accent);
+}
+.winter-chapter[data-current="true"] .winter-chapter-heading > span::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: winter-live 3s ease-in-out infinite;
+}
+.winter-chapter-prize {
+  display: grid;
+  gap: 6px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text);
+}
+.winter-chapter-prize small {
+  color: var(--secondary);
+  font: 500 10px/1.5 var(--font-mono);
+}
+.winter-chapter-chevron {
+  flex-shrink: 0;
+  transition: transform 200ms ease;
+}
+.winter-chapter[open] > summary .winter-chapter-chevron {
+  transform: rotate(180deg);
+}
+.winter-chapter-content {
+  padding: 0 22px 22px;
+  border-top: 1px solid var(--border);
+}
+.winter-chapter[open] .winter-chapter-content {
+  animation: winter-zone-enter 220ms ease-out;
+}
+.winter-chapter-content .winter-missions {
+  margin-top: 20px;
+}
+.winter-chapter-preview {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 0 0;
+}
+.winter-chapter-preview > .number-box {
+  flex-shrink: 0;
+}
+.winter-chapter-preview h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.winter-chapter-preview p,
+.winter-market > p,
+.winter-exchange-desk > p {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.winter-chapter-content .advent-calendar {
+  padding: 20px 0 0;
+  margin-top: 20px;
+  border: 0;
+  border-top: 1px dashed var(--border);
+  border-radius: 0;
+  background: none;
+}
+.winter-market-layout {
+  min-width: 0;
+}
+.winter-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0;
+  align-items: center;
+}
+.winter-stamps > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 34px;
+  border: 1px dashed var(--border);
+  border-radius: 5px;
+  font: 500 11px/1 var(--font-mono);
+  color: var(--muted);
+}
+.winter-stamps > span svg {
+  display: none;
+}
+.winter-stamps > span[data-earned="true"] {
+  color: var(--green);
+  background: var(--green-bg);
+  font-size: 0;
+  border-style: solid;
+}
+.winter-stamps > span[data-earned="true"] svg {
+  display: block;
+}
+.winter-stamps p {
+  flex-basis: 100%;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+.winter-stalls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 12px;
+}
+.winter-stall {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.winter-stall > svg {
+  margin: 20px 0 10px;
+  color: #d4a85c;
+}
+.winter-stall h4 {
+  margin: 6px 0;
+  font-size: 14px;
+}
+.winter-stall p {
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.winter-stall button {
+  margin-top: auto;
+  padding: 12px;
+  width: 100%;
+  font-size: 11px;
+  white-space: normal;
+}
+.winter-stall-tag {
+  font: 500 9px/1.5 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px dashed var(--border);
+  width: 100%;
+  padding-bottom: 10px;
+  color: var(--secondary);
+}
+.winter-stall[data-bought="true"] .winter-stall-tag {
+  color: var(--green);
+}
+.winter-exchange-desk {
+  max-width: 560px;
+}
+.winter-exchange-desk label {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+  font-size: 12px;
+}
+.winter-exchange-desk input {
+  width: 100%;
+  max-width: 220px;
+  min-height: 44px;
+}
+.winter-exchange-desk button {
+  min-height: 44px;
+  padding: 12px 18px;
+}
+@keyframes winter-zone-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes winter-live {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (max-width: 600px) {
+  .winter-wayfinding {
+    gap: 14px;
+    padding: 10px 0;
+  }
+  .winter-wayfinding > span {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+  .winter-chapter > summary {
+    gap: 10px;
+    padding: 16px 12px;
+    flex-wrap: wrap;
+  }
+  .winter-chapter-number {
+    flex-basis: 32px;
+    height: 42px;
+    font-size: 14px;
+  }
+  .winter-chapter-heading {
+    flex-basis: calc(100% - 85px);
+  }
+  .winter-chapter-prize {
+    flex-basis: 100%;
+    text-align: left;
+    margin-left: 42px;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+  .winter-chapter-chevron {
+    position: absolute;
+    right: 14px;
+    top: 30px;
+  }
+  .winter-chapter > summary {
+    position: relative;
+  }
+  .winter-chapter-content {
+    padding: 0 12px 16px;
+  }
+  .winter-chapter-preview {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .winter-passport {
+    padding: 14px;
+    align-items: flex-start;
+  }
+  .winter-chapter-heading > small {
+    font-size: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .winter-chapter[open] .winter-chapter-content,
+  .winter-chapter[data-current="true"] .winter-chapter-heading > span::before {
+    animation: none;
+  }
+  .winter-chapter-chevron {
+    transition: none;
+  }
+}
+
+.winter-golem-scene {
+  display: grid;
+  place-items: center;
+  margin: 18px 0;
+  padding: 14px;
+  border-radius: 10px;
+  color: var(--treat-b, #5eead4);
+  background: radial-gradient(ellipse at 50% 70%, #5eead414, transparent 70%);
+}
+.winter-golem-scene svg {
+  width: min(100%, 240px);
+  height: 180px;
+}
+.winter-golem-scene > span {
+  text-align: center;
+  color: var(--secondary);
+  font: 500 10px/1.7 var(--font-mono);
+}
+.winter-golem-scene[data-armed="true"] .winter-golem-heart {
+  animation: winter-live 2s ease-in-out infinite;
+}
+.winter-golem-scene svg[data-hit="true"] {
+  animation: winter-golem-hit 350ms ease-out;
+}
+.winter-golem-scene[data-finished="true"] {
+  color: #fbbf24;
+}
+@keyframes winter-golem-hit {
+  25% {
+    transform: translateX(-3px) rotate(-1deg);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .winter-golem-scene[data-armed="true"] .winter-golem-heart,
+  .winter-golem-scene svg[data-hit="true"] {
+    animation: none;
+  }
+}
+
+.winter-chapter-number,
+.winter-chapter[data-current="true"] .winter-chapter-heading > span {
+  color: color-mix(in srgb, var(--chapter-accent) 55%, var(--text));
 }

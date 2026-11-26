@@ -51,12 +51,22 @@ you claim are yours forever.
 
 ## RNGmas 2026
 
-From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass also open on December 1, when First Light closes, and last until January 2. Toggle decorations with **christmas mode** in Themes.
+From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass also open on December 1, when First Light closes, and last until January 2. Toggle decorations independently of your color theme with **Christmas mode**, under **TEMPORAL** in Appearance. Snow, lights and scenery adapt to phones, tablets and desktops; reduced-motion preferences are respected.
 
 **Advent calendar.** A new door opens every day from December 1. Claim it on that UTC day or lose it; there is no catch-up. The last door holds the Gingerbread aura,
 and the RNGmas Star is claimable only on Christmas Day.
 
-**Weekly activities.** Golem Smash (December 1–8), Christmas market (December 8–15), Snowcoin exchange (December 15–22), Gift workshop (December 22–29, 80 online numbers containing 0) and Midnight countdown (December 29–January 2, 100 online rolls). Claim during each chapter for a permanent aura and one Surge Capacitor charge. The last two chapters also pay modest EP.
+**Weekly activities.** Golem Smash (December 1–8), Christmas market (December 8–15), Snowcoin exchange (December 15–22), Gift workshop (December 22–29, 80 online numbers containing 0) and Midnight countdown (December 29–January 2, 100 online rolls). Each chapter is an expandable zone; the live one opens by default. Claim during its week for a permanent aura, Snowcoins and a themed boost bundle:
+
+| Chapter            | Extra rewards alongside the permanent aura            |
+| ------------------ | ----------------------------------------------------- |
+| Golem Smash        | 50 Snowcoins + 2 Overdrive Cell charges               |
+| Christmas market   | 15 Snowcoins + 2 Spark Injector charges               |
+| Snowcoin exchange  | 25 Snowcoins + 2 Surge Capacitor charges              |
+| Gift workshop      | 35 Snowcoins + 2 Surge Capacitor charges + 150,000 EP |
+| Midnight countdown | 50 Snowcoins + 3 Overdrive Cell charges + 200,000 EP  |
+
+The winter trail combines RNGween-style missions and aura previews with Black Friday-style offer cards and a stall-visit passport. Previously claimed rewards remain yours; the redesigned bundles cannot be claimed again on old completion receipts.
 
 **Snowcoins.** Earn one per primary online roll, including Auto-Roll; offline and extra skill results do not count. From December 8 the market sells five one-time boost offers (10–90 Snowcoins); buy from any three stalls during that week for Emberlight. From December 15, exchange 10,000 EP per Snowcoin, up to 200 coins across the event; exchange 100 during that week for Frostbound. Both services stay open until January 2, but weekly aura claims expire with their chapter. There is no EP cash-out. Wallets and purchase receipts survive resets; unspent coins stop being usable after the event.
 

@@ -41,7 +41,7 @@ Christmas Day-only star pays the RNGmas Star aura. Golem Smash uses the next nor
 `progress.rngmas` (`{ id, claimed, finale, golems, snowcoins, snowcoinsEarned, snowcoinsExchanged, marketPurchases }`) is part of the save
 contract and survives every reset, like permanent cosmetics.
 
-RNGmas follows the RNGween pattern, not the retired Black Friday one. The page
+RNGmas combines RNGween mission/aura art with Black Friday-style offer cards and a stall-visit passport; neither retired event is reactivated. The page
 decoration is `src/components/RngmasDecor.jsx`: a fixed, `aria-hidden`,
 `pointer-events: none` layer behind `#root` (which gets `isolation: isolate`),
 aligned under the header, that sets `data-season="rngmas"` while the season is
@@ -506,7 +506,7 @@ new `count`, `armed`, and `lastNumber` fields are parsed defensively. Only the
 December 1–8 chapter is Golem Smash. Prepare a strike for 100,000 EP; the next
 online committed result deals its numeric value as damage, once. Offline and
 extra skill rolls do not add progress. Weekly claims grant their permanent aura,
-modest EP (except the golem) and one Surge Capacitor charge. RNGmas 2026 is pass
+modest EP (the last two weeks), Snowcoins and chapter-specific boost bundles. RNGmas 2026 is pass
 season 2, December 1–January 2 UTC. The local dev preview is December 17 UTC.
 
 Pass reward definitions are resolved by saved `seasonId` through `passRewardsFor`.
@@ -568,3 +568,29 @@ is active, the normal draw path commits locally without first requesting a Cloud
 roll or activating an outage marker; backup/publishing/deletion remain paused.
 Keep account ownership and known server restrictions intact. The render integrity
 suite exercises the real status store and progress hook for this path.
+
+## Winter zones and universal Christmas mode
+
+Appearance always exposes Christmas mode under its TEMPORAL group, alongside
+available temporary themes. It is a `menuitemcheckbox` with an independent visual
+switch, persistent device setting, accessible description and existing menu
+keyboard support. It does not change the selected color theme. Decoration is
+still event-gated; the preference is configurable outside the event. Never hide
+all seasonal scenery at the phone/tablet breakpoint: scale ornaments and keep
+snow banks and lights behind the content without intercepting input.
+
+`WinterChapters` renders five native details/summary zones. The current chapter
+opens automatically; other chapters can be explored, but only the live chapter
+can award its aura. The market and exchange live inside their zones and remain
+usable after their chapter ends until January 2. Summaries distinguish collected,
+ready, live, upcoming and closed states. The stall passport derives its marks
+from existing purchase receipts, not a new stamp currency.
+
+Chapter rewards now use `week.coins`, `week.boost` and `week.charges`: Golem
+50 coins + 2 Overdrive; market 15 + 2 Spark; exchange 25 + 2 Surge; workshop
+35 + 2 Surge; countdown 50 + 3 Overdrive. Existing auras and EP amounts remain.
+Currency/boosts are granted atomically with the completion receipt. Legacy claims
+are never replayed for extra bonuses, and parser repairs never mint those bonuses.
+No new save fields, odds changes, price discounts on base products or cooldown
+changes were introduced. All new scene, expansion and switch motion has a
+reduced-motion path. Keep source/release changelog history untouched.

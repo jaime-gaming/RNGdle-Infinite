@@ -1,8 +1,12 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   Check,
   ChevronRight,
+  ChevronDown,
+  Coins,
+  ShoppingBag,
+  Zap,
   Clock3,
   Gift,
   Hammer,
@@ -14,6 +18,7 @@ import {
 } from "lucide-react";
 import {
   WINTER_MARKET,
+  winterChapterCount,
   SNOWCOIN_EXCHANGE_EP,
   SNOWCOIN_EXCHANGE_CAP,
   ADVENT_DAYS,
@@ -27,10 +32,10 @@ import {
   adventDoorAt,
   adventFinaleAt,
   adventRewardFor,
-  golemProgress,
   rngmasDateLabel,
   rngmasRangeLabel,
 } from "../rngmas.js";
+import { passBoostById } from "../battle-pass.js";
 import { formatEP } from "../roll-data.js";
 import { waitText } from "../tasks.js";
 import { useModalDialog } from "../use-modal-dialog.js";
@@ -164,13 +169,13 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
 
         <section className="rngmas-block">
           <h3>
-            <Hammer size={14} aria-hidden="true" /> Golem Smash
+            <ShoppingBag size={14} aria-hidden="true" /> The winter trail
           </h3>
           <p>
             Each chapter has a different activity: the Christmas market, the
             Snowcoin exchange, Golem Smash, the gift workshop and a New Year
             countdown. Complete and claim each activity during its week for a
-            permanent aura and one Surge Capacitor charge.
+            permanent aura, Snowcoins and a different boost bundle.
           </p>
           <p className="rngmas-note">
             From December 1 to 8, prepare a strike for{" "}
@@ -390,18 +395,72 @@ export function AdventCalendar({ record, status, onClaim, pending }) {
   );
 }
 
+function WinterGolem({ record, goal }) {
+  return (
+    <div
+      className="winter-golem-scene"
+      data-armed={record.armed}
+      data-finished={record.damage >= goal}
+      aria-hidden="true"
+    >
+      <svg
+        key={`${record.strikes}:${record.lastNumber}`}
+        data-hit={record.lastNumber != null}
+        viewBox="0 0 240 180"
+        fill="none"
+      >
+        <ellipse
+          cx="120"
+          cy="166"
+          rx="74"
+          ry="7"
+          fill="currentColor"
+          opacity=".12"
+        />
+        <g stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+          <path
+            d="m80 65-22 9-12 50 22 6 18-33m74-32 22 9 12 50-22 6-18-33"
+            fill="var(--surface)"
+          />
+          <path
+            d="m84 58 14-22h44l14 22 7 70-22 16H99l-22-16Z"
+            fill="var(--surface)"
+          />
+          <path
+            d="m89 138-5 24h28l4-18m35-6 5 24h-28l-4-18"
+            fill="var(--surface)"
+          />
+          <path d="m98 36-8-11 19 4 11-15 11 15 19-4-8 11M94 65h17m18 0h17" />
+          <path
+            d="m120 83 15 18-15 23-15-23Z"
+            className="winter-golem-heart"
+            fill="currentColor"
+          />
+          <path d="m90 83 9 12-8 16m59-28-9 12 8 16m-47-60h36" opacity=".5" />
+        </g>
+        <path
+          d="m54 48 3-7 3 7 7 3-7 3-3 7-3-7-7-3Zm130-23 2-5 2 5 5 2-5 2-2 5-2-5-5-2Z"
+          fill="currentColor"
+          opacity=".6"
+        />
+      </svg>
+      <span>
+        {record.damage >= goal
+          ? "Golem defeated · collect your reward"
+          : record.armed
+            ? "Strike prepared · your next number lands here"
+            : `${formatEP(Math.max(0, goal - record.damage))} damage remaining`}
+      </span>
+    </div>
+  );
+}
+
 export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
   const week = status.week;
   if (!week) return null;
   const record = progress.rngmas.golems[week.id];
   const isGolem = week.metric === "damage";
-  const count = isGolem
-    ? record.damage
-    : week.metric === "purchases"
-      ? (progress.rngmas.marketPurchases ?? []).length
-      : week.metric === "exchanged"
-        ? (progress.rngmas.snowcoinsExchanged ?? 0)
-        : (record.count ?? 0);
+  const count = winterChapterCount(progress.rngmas, week);
   const ready = count >= week.goal;
   const aura = RNGMAS_COSMETICS_BY_ID.get(week.reward);
   return (
@@ -427,6 +486,7 @@ export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
                   : "In progress"}
             </span>
           </div>
+          {isGolem && <WinterGolem record={record} goal={week.goal} />}
           <div className="winter-mission-preview" aria-hidden="true">
             <NumberBox
               value={record.lastNumber ?? "2026"}
@@ -495,7 +555,8 @@ export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
               {aura.name}
               {week.ep ? ` + ${formatEP(week.ep)} EP` : ""}
             </strong>{" "}
-            · permanent aura + 1 Surge Capacitor charge
+            · {week.coins} Snowcoins + {week.charges}{" "}
+            {passBoostById(week.boost).name} charges
           </p>
           <button
             className={ready ? "primary-button" : "secondary-button"}
@@ -529,65 +590,13 @@ export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
   );
 }
 
-export function RngmasWeeks({ progress }) {
-  const now = useRngmasStatus().now;
-  const record = progress?.rngmas;
-  return (
-    <section className="rngmas-weeks" aria-labelledby="rngmas-weeks-title">
-      <div className="rngmas-section-heading">
-        <div>
-          <h3 id="rngmas-weeks-title">
-            <Sparkles size={16} /> The season
-          </h3>
-          <p>Different weekly activities. Five permanent auras.</p>
-        </div>
-      </div>
-      <ol className="rngmas-week-timeline">
-        {RNGMAS_WEEKS.map((week) => {
-          const state = golemProgress(record, week);
-          const aura = RNGMAS_COSMETICS_BY_ID.get(week.reward);
-          const current = now >= week.start && now < week.end;
-          const past = now >= week.end;
-          return (
-            <li
-              key={week.id}
-              className={`${current ? "is-current" : ""} ${
-                past ? "is-past" : ""
-              } ${state.defeated ? "is-defeated" : ""}`}
-              style={{ "--week-accent": week.accent }}
-            >
-              <span className="rngmas-week-dot" aria-hidden="true" />
-              <span className="rngmas-week-copy">
-                <strong>
-                  {week.name}
-                  {current && (
-                    <span className="rngmas-week-live">This week</span>
-                  )}
-                </strong>
-                <small>
-                  {rngmasDateLabel(week.start)} – {rngmasDateLabel(week.end)}
-                </small>
-              </span>
-              <span className="rngmas-week-reward">
-                <span
-                  className="aura-swatch"
-                  aria-hidden="true"
-                  style={{
-                    "--swatch-a": aura.swatch[0],
-                    "--swatch-b": aura.swatch[1],
-                  }}
-                />
-                {aura.name}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
-  );
-}
-
-export function WinterEconomy({ progress, status, onAction, pending }) {
+export function WinterEconomy({
+  progress,
+  status,
+  onAction,
+  pending,
+  zone = "all",
+}) {
   const [amount, setAmount] = useState("10");
   if (!status.active) return null;
   const record = progress.rngmas;
@@ -599,103 +608,314 @@ export function WinterEconomy({ progress, status, onAction, pending }) {
       className="advent-calendar"
       aria-label="Snowcoins and winter stalls"
     >
-      <div className="rngmas-section-heading">
-        <div>
-          <h3>Snowcoins · {(record.snowcoins ?? 0).toLocaleString("en-US")}</h3>
-          <p>
-            One Snowcoin per main online roll, including Auto-Roll. No coins
-            from extra skill results or offline rolls. Spend before January 2
-            UTC; coins have no EP cash-out.
-          </p>
+      {zone === "all" && (
+        <div className="rngmas-section-heading">
+          <div>
+            <h3>
+              Snowcoins · {(record.snowcoins ?? 0).toLocaleString("en-US")}
+            </h3>
+            <p>
+              One Snowcoin per main online roll, including Auto-Roll. No coins
+              from extra skill results or offline rolls. Spend before January 2
+              UTC; coins have no EP cash-out.
+            </p>
+          </div>
         </div>
-      </div>
-      <div className="winter-missions">
-        <div className="winter-mission">
-          <h3>Christmas market</h3>
-          <p>
-            {index < 2
-              ? "Opens December 8 UTC."
-              : "Open until January 2 UTC. Each offer can be bought once. Charges stay in your inventory after the event."}
-          </p>
-          {WINTER_MARKET.map((item) => {
-            const bought = (record.marketPurchases ?? []).includes(item.id);
-            return (
-              <button
-                key={item.id}
-                className="secondary-button"
+      )}
+      <div className="winter-market-layout">
+        {zone !== "exchange" && (
+          <div className="winter-market">
+            <h3>Christmas market</h3>
+            <p>
+              {index < 2
+                ? "Opens December 8 UTC."
+                : "Open until January 2 UTC. Each offer can be bought once. Charges stay in your inventory after the event."}
+            </p>
+            <div
+              className="winter-stamps"
+              aria-label={`${record.marketPurchases?.length ?? 0} of 5 stalls visited`}
+            >
+              {WINTER_MARKET.map((item, index) => (
+                <span
+                  key={item.id}
+                  data-earned={(record.marketPurchases ?? []).includes(item.id)}
+                >
+                  <Check size={15} aria-hidden="true" />
+                  {index + 1}
+                </span>
+              ))}
+              <p>
+                Visit three stalls during Chapter 2 to collect Emberlight. Each
+                offer is yours once.
+              </p>
+            </div>
+            <div className="winter-stalls">
+              {WINTER_MARKET.map((item) => {
+                const bought = (record.marketPurchases ?? []).includes(item.id);
+                const boost = passBoostById(item.boost);
+                return (
+                  <article
+                    className="winter-stall"
+                    key={item.id}
+                    data-bought={bought}
+                  >
+                    <span className="winter-stall-tag">
+                      {bought
+                        ? "Collected"
+                        : item.charges
+                          ? "Winter bundle"
+                          : "Single charge"}
+                    </span>
+                    <Zap size={24} aria-hidden="true" />
+                    <h4>{item.name}</h4>
+                    <p>{boost.blurb}</p>
+                    <p>
+                      {item.charges ?? 1} charge{item.charges ? "s" : ""} · kept
+                      after the event
+                    </p>
+                    <button
+                      className="secondary-button"
+                      disabled={
+                        pending ||
+                        index < 2 ||
+                        bought ||
+                        (record.snowcoins ?? 0) < item.price
+                      }
+                      onClick={() =>
+                        onAction(
+                          { type: "winter-market-buy", id: item.id },
+                          `${item.name} collected.`,
+                        )
+                      }
+                    >
+                      {item.name} ×{item.charges ?? 1} · {item.price} Snowcoins
+                      {bought ? " · Bought" : ""}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {zone !== "market" && (
+          <div className="winter-exchange-desk">
+            <h3>EP → Snowcoins</h3>
+            <p>
+              {index < 3
+                ? "Opens December 15 UTC."
+                : "Open until January 2 UTC."}{" "}
+              1 Snowcoin costs {formatEP(SNOWCOIN_EXCHANGE_EP)} EP. One-way
+              conversion, no refunds. Maximum {SNOWCOIN_EXCHANGE_CAP} exchanged
+              across the event.
+            </p>
+            <label>
+              Snowcoins to exchange
+              <input
+                type="number"
+                min="1"
+                max={SNOWCOIN_EXCHANGE_CAP - exchanged}
+                step="1"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
                 disabled={
-                  pending ||
-                  index < 2 ||
-                  bought ||
-                  (record.snowcoins ?? 0) < item.price
+                  pending || index < 3 || exchanged >= SNOWCOIN_EXCHANGE_CAP
                 }
-                onClick={() =>
-                  onAction(
-                    { type: "winter-market-buy", id: item.id },
-                    `${item.name} collected.`,
-                  )
-                }
-              >
-                {item.name} ×{item.charges ?? 1} · {item.price} Snowcoins
-                {bought ? " · Bought" : ""}
-              </button>
-            );
-          })}
-        </div>
-        <div className="winter-mission">
-          <h3>EP → Snowcoins</h3>
-          <p>
-            {index < 3 ? "Opens December 15 UTC." : "Open until January 2 UTC."}{" "}
-            1 Snowcoin costs {formatEP(SNOWCOIN_EXCHANGE_EP)} EP. One-way
-            conversion, no refunds. Maximum {SNOWCOIN_EXCHANGE_CAP} exchanged
-            across the event.
-          </p>
-          <label>
-            Snowcoins to exchange
-            <input
-              type="number"
-              min="1"
-              max={SNOWCOIN_EXCHANGE_CAP - exchanged}
-              step="1"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              />
+            </label>
+            <p>
+              {exchanged} / {SNOWCOIN_EXCHANGE_CAP} exchanged · cost{" "}
+              {formatEP(
+                Number.isSafeInteger(count) &&
+                  count > 0 &&
+                  count <= SNOWCOIN_EXCHANGE_CAP
+                  ? count * SNOWCOIN_EXCHANGE_EP
+                  : 0,
+              )}{" "}
+              EP
+            </p>
+            <button
+              className="secondary-button"
               disabled={
-                pending || index < 3 || exchanged >= SNOWCOIN_EXCHANGE_CAP
+                pending ||
+                index < 3 ||
+                !Number.isSafeInteger(count) ||
+                count < 1 ||
+                count + exchanged > SNOWCOIN_EXCHANGE_CAP ||
+                progress.balance < count * SNOWCOIN_EXCHANGE_EP
               }
-            />
-          </label>
-          <p>
-            {exchanged} / {SNOWCOIN_EXCHANGE_CAP} exchanged · cost{" "}
-            {formatEP(
-              Number.isSafeInteger(count) &&
-                count > 0 &&
-                count <= SNOWCOIN_EXCHANGE_CAP
-                ? count * SNOWCOIN_EXCHANGE_EP
-                : 0,
-            )}{" "}
-            EP
-          </p>
-          <button
-            className="secondary-button"
-            disabled={
-              pending ||
-              index < 3 ||
-              !Number.isSafeInteger(count) ||
-              count < 1 ||
-              count + exchanged > SNOWCOIN_EXCHANGE_CAP ||
-              progress.balance < count * SNOWCOIN_EXCHANGE_EP
-            }
-            onClick={() =>
+              onClick={() =>
+                onAction(
+                  { type: "winter-exchange", amount: count },
+                  "EP exchanged for Snowcoins.",
+                )
+              }
+            >
+              Exchange EP for Snowcoins
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function WinterChapter({ week, progress, status, onAction, onSmash, pending }) {
+  const current = status.week?.id === week.id;
+  const past = status.now >= week.end;
+  const unlocked = status.now >= week.start && status.active;
+  const collected = progress.rngmas.golems[week.id].defeated;
+  const count = winterChapterCount(progress.rngmas, week);
+  const aura = RNGMAS_COSMETICS_BY_ID.get(week.reward);
+  const [open, setOpen] = useState(current);
+  useEffect(() => setOpen(current), [current]);
+  const availableService =
+    unlocked && (week.metric === "purchases" || week.metric === "exchanged");
+  const label = collected
+    ? "Collected"
+    : current
+      ? count >= week.goal
+        ? "Reward ready"
+        : "Live now"
+      : past
+        ? availableService
+          ? "Stalls still open"
+          : "Chapter ended"
+        : "Coming next";
+  return (
+    <details
+      className="winter-chapter"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      data-current={current}
+      data-collected={collected}
+      style={{ "--chapter-accent": week.accent }}
+    >
+      <summary>
+        <span className="winter-chapter-number" aria-hidden="true">
+          {collected ? (
+            <Check size={20} />
+          ) : (
+            String(week.index).padStart(2, "0")
+          )}
+        </span>
+        <span className="winter-chapter-heading">
+          <small>
+            CHAPTER {week.index} · {rngmasDateLabel(week.start)} –{" "}
+            {rngmasDateLabel(week.end)} UTC
+          </small>
+          <strong>{week.name}</strong>
+          <span>{label}</span>
+        </span>
+        <span className="winter-chapter-prize">
+          {aura.name}
+          <small>+ {week.coins} Snowcoins</small>
+        </span>
+        <ChevronDown
+          className="winter-chapter-chevron"
+          size={20}
+          aria-hidden="true"
+        />
+      </summary>
+      <div className="winter-chapter-content">
+        {current ? (
+          <GolemSmash
+            progress={progress}
+            status={status}
+            onSmash={onSmash}
+            pending={pending}
+            onClaim={() =>
               onAction(
-                { type: "winter-exchange", amount: count },
-                "EP exchanged for Snowcoins.",
+                { type: "claim-winter-week" },
+                `${aura.name}, ${week.coins} Snowcoins and boost charges collected.`,
               )
             }
-          >
-            Exchange EP for Snowcoins
-          </button>
+          />
+        ) : (
+          <div className="winter-chapter-preview">
+            <NumberBox value="2026" tier="rare" aura={aura.id} compact />
+            <div>
+              <h3>{week.name}</h3>
+              <p>{week.blurb}</p>
+              <p>
+                <strong>{aura.name}</strong> · {week.coins} Snowcoins ·{" "}
+                {week.charges} {passBoostById(week.boost).name} charges
+                {week.ep ? ` · ${formatEP(week.ep)} EP` : ""}
+              </p>
+              <p>
+                {collected
+                  ? "Your aura is kept forever. This chapter cannot be claimed twice."
+                  : past
+                    ? "This chapter's aura claim has ended. Existing rewards and progress are kept."
+                    : `Opens ${rngmasDateLabel(week.start)} UTC. Explore the rewards now; play when the chapter opens.`}
+              </p>
+            </div>
+          </div>
+        )}
+        {availableService && (
+          <WinterEconomy
+            zone={week.metric === "purchases" ? "market" : "exchange"}
+            progress={progress}
+            status={status}
+            onAction={onAction}
+            pending={pending}
+          />
+        )}
+      </div>
+    </details>
+  );
+}
+
+export function WinterChapters({
+  progress,
+  status,
+  onAction,
+  onSmash,
+  pending,
+}) {
+  return (
+    <section
+      id="winter-chapters"
+      className="winter-trail"
+      aria-labelledby="winter-trail-title"
+    >
+      <div className="rngmas-section-heading">
+        <div>
+          <p className="eyebrow">THE WINTER TRAIL</p>
+          <h3 id="winter-trail-title">A new stop each week.</h3>
+          <p>
+            Open a zone to see its activity and rewards. Weekly aura claims
+            expire; unlocked stalls stay open until January 2 UTC.
+          </p>
         </div>
       </div>
+      <div className="winter-passport" aria-label="Chapter collection">
+        <Gift size={20} aria-hidden="true" />
+        <div>
+          <strong>
+            {
+              RNGMAS_WEEKS.filter(
+                (week) => progress.rngmas.golems[week.id].defeated,
+              ).length
+            }{" "}
+            / 5 chapter auras collected
+          </strong>
+          <p>
+            Earn Snowcoins from main online rolls and chapter rewards. Spend
+            them at the market; no real money.
+          </p>
+        </div>
+      </div>
+      {RNGMAS_WEEKS.map((week) => (
+        <WinterChapter
+          key={week.id}
+          week={week}
+          progress={progress}
+          status={status}
+          onAction={onAction}
+          onSmash={onSmash}
+          pending={pending}
+        />
+      ))}
     </section>
   );
 }
@@ -762,28 +982,33 @@ export default function RngmasShelf({ progress, onAction, notify }) {
         </div>
       </div>
 
-      <AdventCalendar
-        record={progress.rngmas}
-        status={status}
-        onClaim={claim}
-        pending={pending}
-      />
-      <GolemSmash
-        onClaim={() =>
-          run({ type: "claim-winter-week" }, "Weekly reward collected.")
-        }
-        progress={progress}
-        status={status}
-        onSmash={smash}
-        pending={pending}
-      />
-      <WinterEconomy
+      <nav className="winter-wayfinding" aria-label="RNGmas zones">
+        <a href="#winter-calendar">
+          <CalendarDays size={16} /> Advent square
+        </a>
+        <a href="#winter-chapters">
+          <ShoppingBag size={16} /> Winter trail
+        </a>
+        <span>
+          <Coins size={16} /> {formatEP(progress.rngmas.snowcoins ?? 0)}{" "}
+          Snowcoins
+        </span>
+      </nav>
+      <div id="winter-calendar" className="winter-calendar-zone">
+        <AdventCalendar
+          record={progress.rngmas}
+          status={status}
+          onClaim={claim}
+          pending={pending}
+        />
+      </div>
+      <WinterChapters
         progress={progress}
         status={status}
         onAction={run}
+        onSmash={smash}
         pending={pending}
       />
-      <RngmasWeeks progress={progress} />
 
       <p className="rngmas-shelf-fine">
         The calendar and weekly activities award EP and permanent auras. Nothing

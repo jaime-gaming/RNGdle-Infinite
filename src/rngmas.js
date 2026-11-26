@@ -211,6 +211,9 @@ export const RNGMAS_WEEKS = [
     hp: 25000000,
     ep: 0,
     reward: "rngmas-hollow",
+    boost: "boost-overdrive",
+    charges: 2,
+    coins: 50,
     accent: "#5eead4",
   },
   {
@@ -226,6 +229,9 @@ export const RNGMAS_WEEKS = [
     hp: 1000000,
     ep: 0,
     reward: "rngmas-ember",
+    boost: "boost-spark",
+    charges: 2,
+    coins: 15,
     accent: "#fb923c",
   },
   {
@@ -241,6 +247,9 @@ export const RNGMAS_WEEKS = [
     hp: 1000000,
     ep: 0,
     reward: "rngmas-frost",
+    boost: "boost-surge",
+    charges: 2,
+    coins: 25,
     accent: "#7dd3fc",
   },
   {
@@ -255,6 +264,9 @@ export const RNGMAS_WEEKS = [
     hp: 1000000,
     ep: 150000,
     reward: "rngmas-golem",
+    boost: "boost-surge",
+    charges: 2,
+    coins: 35,
     accent: "#fbbf24",
   },
   {
@@ -269,6 +281,9 @@ export const RNGMAS_WEEKS = [
     hp: 1000000,
     ep: 200000,
     reward: "rngmas-newyear",
+    boost: "boost-overdrive",
+    charges: 3,
+    coins: 50,
     accent: "#f0abfc",
   },
 ];
@@ -590,4 +605,11 @@ export function golemProgress(record, week) {
     remaining: Math.max(0, week.hp - entry.damage),
     fraction: Math.min(1, entry.damage / week.hp),
   };
+}
+
+export function winterChapterCount(record, week) {
+  if (week.metric === "purchases") return record?.marketPurchases?.length ?? 0;
+  if (week.metric === "exchanged") return record?.snowcoinsExchanged ?? 0;
+  const entry = record?.golems?.[week.id];
+  return week.metric === "damage" ? (entry?.damage ?? 0) : (entry?.count ?? 0);
 }

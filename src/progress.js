@@ -150,6 +150,7 @@ import {
   SNOWCOIN_EXCHANGE_CAP,
   SNOWCOIN_EXCHANGE_EP,
   WINTER_MARKET,
+  winterChapterCount,
   ADVENT_FINALE,
   GOLEM_SMASH_COST,
   RNGMAS_COSMETICS_BY_ID,
@@ -1530,14 +1531,7 @@ function applyEvent(state, action) {
         },
       };
     }
-    const count =
-      week.metric === "damage"
-        ? record.damage
-        : week.metric === "purchases"
-          ? (rngmas.marketPurchases ?? []).length
-          : week.metric === "exchanged"
-            ? (rngmas.snowcoinsExchanged ?? 0)
-            : (record.count ?? 0);
+    const count = winterChapterCount(rngmas, week);
     if (count < week.goal)
       throw new Error("Complete this week's activity first.");
     if (
@@ -1545,6 +1539,8 @@ function applyEvent(state, action) {
       !validAmount(state.totalEarned + week.ep)
     )
       throw new Error("EP balance limit reached.");
+    if ((rngmas.snowcoinsEarned ?? 0) > Number.MAX_SAFE_INTEGER - week.coins)
+      throw new Error("Snowcoin limit reached.");
     const aura = RNGMAS_COSMETICS_BY_ID.get(week.reward);
     return {
       ...state,
@@ -1552,11 +1548,18 @@ function applyEvent(state, action) {
       totalEarned: state.totalEarned + week.ep,
       battlePass: {
         ...state.battlePass,
-        boosts: grantBoost(state.battlePass?.boosts, "boost-surge", 1, at),
+        boosts: grantBoost(
+          state.battlePass?.boosts,
+          week.boost,
+          week.charges,
+          at,
+        ),
       },
       owned: [...new Set([...state.owned, week.reward])],
       rngmas: {
         ...rngmas,
+        snowcoins: Math.min(SNOWCOIN_CAP, (rngmas.snowcoins ?? 0) + week.coins),
+        snowcoinsEarned: (rngmas.snowcoinsEarned ?? 0) + week.coins,
         golems: {
           ...rngmas.golems,
           [week.id]: { ...record, defeated: true, armed: false },

@@ -142,17 +142,6 @@ export default function AppearanceMenu({
             if (!host.current?.contains(event.relatedTarget)) close();
           }}
         >
-          <button
-            type="button"
-            role="menuitemcheckbox"
-            aria-checked={settings.christmasMode}
-            className="appearance-option"
-            onClick={() => update({ christmasMode: !settings.christmasMode })}
-          >
-            <Snowflake size={16} aria-hidden="true" />
-            <span>christmas mode</span>
-            {settings.christmasMode && <Check size={14} aria-hidden="true" />}
-          </button>
           <p className="appearance-heading">Color theme</p>
           {THEMES.map(([value, name, ThemeIcon]) => (
             <button
@@ -171,30 +160,53 @@ export default function AppearanceMenu({
               {effective === value && <Check size={14} aria-hidden="true" />}
             </button>
           ))}
-          {temporaryOptions.length > 0 && (
-            <>
-              <p className="appearance-temporary">TEMPORAL</p>
-              {temporaryOptions.map(([value, name, ThemeIcon]) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={effective === value}
-                  className="appearance-option"
-                  onClick={() => {
-                    onTheme(value);
-                    close(true);
-                  }}
-                >
-                  <ThemeIcon size={16} aria-hidden="true" />
-                  <span>{name} theme</span>
-                  {effective === value && (
-                    <Check size={14} aria-hidden="true" />
-                  )}
-                </button>
-              ))}
-            </>
-          )}
+          <div role="group" aria-label="TEMPORAL">
+            <p className="appearance-temporary">TEMPORAL</p>
+            {temporaryOptions.map(([value, name, ThemeIcon]) => (
+              <button
+                key={value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={effective === value}
+                className="appearance-option"
+                onClick={() => {
+                  onTheme(value);
+                  close(true);
+                }}
+              >
+                <ThemeIcon size={16} aria-hidden="true" />
+                <span>{name} theme</span>
+                {effective === value && <Check size={14} aria-hidden="true" />}
+              </button>
+            ))}
+            <button
+              type="button"
+              role="menuitemcheckbox"
+              aria-label="Christmas mode"
+              aria-describedby={`${id}-christmas-description`}
+              aria-checked={settings.christmasMode}
+              className="appearance-option appearance-christmas"
+              onClick={() => update({ christmasMode: !settings.christmasMode })}
+            >
+              <Snowflake size={18} aria-hidden="true" />
+              <span className="appearance-christmas-copy">
+                <strong>Christmas mode</strong>
+                <small>
+                  {settings.christmasMode ? "On" : "Off"} · Seasonal decorations
+                </small>
+              </span>
+              <span className="appearance-switch" aria-hidden="true">
+                <i />
+              </span>
+            </button>
+            <p
+              id={`${id}-christmas-description`}
+              className="appearance-season-note"
+            >
+              Snow, lights and winter scenery on any screen. Keeps your color
+              theme. Visible December 1–January 2; follows reduced motion.
+            </p>
+          </div>
         </div>
       )}
     </div>

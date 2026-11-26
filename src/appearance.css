@@ -44,7 +44,7 @@
   align-items: center;
   gap: 11px;
   width: 100%;
-  min-height: 39px;
+  min-height: 44px;
   padding: 9px;
   border-radius: 7px;
   color: var(--secondary);
@@ -88,4 +88,63 @@
   content: "";
   flex: 1;
   border-top: 1px dashed currentColor;
+}
+
+.appearance-menu {
+  width: 292px;
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
+}
+.appearance-christmas {
+  min-height: 64px;
+  margin-top: 6px;
+  border: 1px solid var(--border);
+}
+.appearance-christmas-copy {
+  display: grid;
+  gap: 5px;
+}
+.appearance-christmas-copy strong {
+  font-size: 12px;
+}
+.appearance-christmas-copy small {
+  color: var(--secondary);
+  font-size: 10px;
+}
+.appearance-switch {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 20px;
+  padding: 3px;
+  border: 1px solid var(--muted);
+  border-radius: 20px;
+  background: var(--surface);
+}
+.appearance-switch i {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition:
+    transform 180ms ease,
+    background 180ms ease;
+}
+.appearance-christmas[aria-checked="true"] .appearance-switch {
+  border-color: var(--green);
+}
+.appearance-christmas[aria-checked="true"] .appearance-switch i {
+  transform: translateX(14px);
+  background: var(--green);
+}
+.appearance-season-note {
+  margin: 8px 9px 5px;
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .appearance-switch i {
+    transition: none;
+  }
 }

@@ -7,7 +7,7 @@ import {
   AdventCalendar,
   GolemSmash,
   RngmasEventNotice,
-  RngmasWeeks,
+  WinterChapters,
 } from "../../src/components/Rngmas.jsx";
 import RngmasAura from "../../src/components/RngmasAura.jsx";
 import RngmasDecor from "../../src/components/RngmasDecor.jsx";
@@ -149,11 +149,17 @@ export async function run() {
   }
 
   {
-    const { root, host } = mount(<RngmasWeeks progress={progress()} />);
+    const { root, host } = mount(
+      <WinterChapters
+        progress={progress()}
+        status={status}
+        onAction={() => {}}
+      />,
+    );
     await settle();
     check(
-      host.querySelectorAll(".rngmas-week-timeline li").length === 5,
-      "the season lists five weeks",
+      host.querySelectorAll(".winter-chapter").length === 5,
+      "the season lists five expandable chapter zones",
     );
     act(() => root.unmount());
   }

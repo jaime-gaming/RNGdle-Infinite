@@ -204,7 +204,8 @@ test("weekly activities differ, require completion and pay rewards once", () => 
     });
     expect(claimed.owned).toContain(week.reward);
     expect(claimed.balance).toBe(week.ep);
-    expect(claimed.battlePass.boosts.charges["boost-surge"]).toBe(1);
+    expect(claimed.battlePass.boosts.charges[week.boost]).toBe(week.charges);
+    expect(claimed.rngmas.snowcoins).toBe(week.coins);
     expect(() =>
       applyProgress(claimed, { type: "claim-winter-week", at: week.start }),
     ).toThrow(/already/);
@@ -601,7 +602,8 @@ test("finishing the golem remains claimable after reload and delivers the boost"
     at: GOLEM_AT,
   });
   expect(claimed.owned).toContain("rngmas-hollow");
-  expect(claimed.battlePass.boosts.charges["boost-surge"]).toBe(1);
+  expect(claimed.battlePass.boosts.charges["boost-overdrive"]).toBe(2);
+  expect(claimed.rngmas.snowcoins).toBe(state.rngmas.snowcoins + 50);
   expect(
     parseProgress(JSON.stringify(claimed)).rngmas.golems.hollow.defeated,
   ).toBe(true);

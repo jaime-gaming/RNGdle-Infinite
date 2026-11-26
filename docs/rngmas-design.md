@@ -16,13 +16,13 @@ preview system. The Snowcoin wallet uses the same reducer and saved-roll settlem
 
 ## Weekly activities (UTC; end exclusive)
 
-| Dates        | Activity           | Goal                                    | Rewards                                      |
-| ------------ | ------------------ | --------------------------------------- | -------------------------------------------- |
-| Dec 1–8      | Golem Smash        | 25,000,000 damage                       | Hollow Frost, one Surge charge               |
-| Dec 8–15     | Christmas market   | Buy from three distinct stalls          | Emberlight, one Surge charge                 |
-| Dec 15–22    | Snowcoin exchange  | Convert 1,000,000 EP into 100 Snowcoins | Frostbound, one Surge charge                 |
-| Dec 22–29    | Gift workshop      | 80 online numbers containing 0          | Golem Core, 150,000 EP, one Surge charge     |
-| Dec 29–Jan 2 | Midnight countdown | 100 online rolls                        | New Year Spark, 200,000 EP, one Surge charge |
+| Dates        | Activity           | Goal                                    | Rewards                                                   |
+| ------------ | ------------------ | --------------------------------------- | --------------------------------------------------------- |
+| Dec 1–8      | Golem Smash        | 25,000,000 damage                       | Hollow Frost, 50 coins, 2 Overdrive charges               |
+| Dec 8–15     | Christmas market   | Buy from three distinct stalls          | Emberlight, 15 coins, 2 Spark charges                     |
+| Dec 15–22    | Snowcoin exchange  | Convert 1,000,000 EP into 100 Snowcoins | Frostbound, 25 coins, 2 Surge charges                     |
+| Dec 22–29    | Gift workshop      | 80 online numbers containing 0          | Golem Core, 35 coins, 150,000 EP, 2 Surge charges         |
+| Dec 29–Jan 2 | Midnight countdown | 100 online rolls                        | New Year Spark, 50 coins, 200,000 EP, 3 Overdrive charges |
 
 First Light now ends December 1, when Frostfall and the RNGmas pass open.
 All end times are exclusive. The event ends January 2 UTC. Advent doors and
@@ -138,3 +138,53 @@ now commits locally. An expired scheduled window also overrides stale
 `in_progress`/`under_maintenance` flags, while backups, publishing and deletion
 remain paused during active maintenance. No account security policy, Firestore
 rule, live deployment or release label was changed.
+
+## Expandable zones and seasonal appearance
+
+The event now has an Advent square and a winter trail with five expandable
+chapter zones. Native details/summary controls provide keyboard and touch access.
+The live chapter opens by default, while other zones show their schedule, aura
+preview and full reward bundle. Claim buttons appear only in the active chapter.
+An unlocked market/exchange remains usable inside its older zone until closing.
+A collection passport shows already collected chapter auras; the market's five
+stamp slots derive directly from one-time purchase receipts.
+
+The visual direction combines RNGween's mission cards, aura scenes and explicit
+collection with Black Friday's offer-card and stamp-passport structure, inspected
+from `d131975` and `eac2300`. It does not restore either retired event's gameplay,
+branding, temporary inventory or pricing. Market cards show genuine charge
+counts, effect duration and Snowcoin price, without invented before-prices.
+
+Christmas mode is always in Appearance → TEMPORAL. Its switch and description
+explain the seasonal decoration independently of the color theme. Settings stay
+on this device, rather than falsely promising cross-device setting sync. All
+screen sizes retain ornaments; phone/tablet variants reduce sizes and opacity
+instead of removing the winter scene. The preferences remain usable outside the
+event, but decoration still appears only within the UTC event window.
+
+Chapter rewards now add 175 Snowcoins in total and use three different boost
+types, rather than five identical Surge charges. Coins are earned directly into
+the existing wallet with the completion receipt, capped at the wallet limit;
+lifetime earnings remain monotonic. No EP-to-Snowcoin rate, base price or roll
+odds were changed. Old claims do not receive a second payout and old cosmetics
+remain owned. Existing event EP does not fund cycle gates. No save fields were
+added for this redesign.
+
+### Zone redesign verification
+
+- 140 focused Playwright tests passed across `winter-zones`, `winter-economy`,
+  `rngmas`, `battle-pass`, `pass-season-rewards`, `routing-theme`,
+  `settings-notifications`, `mobile-bar` and `cloud-save`.
+- New coverage checks 360px phones, 768px tablets and 1440px desktops; visible
+  scenery, the TEMPORAL switch, persistence, Space/Escape keyboard operation,
+  keyboard chapter expansion, expired claims versus still-open stalls,
+  reduced-motion styles, live reward collection, legacy receipts and atomic
+  safe-integer/wallet-cap handling.
+- `test:render` now mounts the actual five-zone `WinterChapters` component in
+  place of the former static roadmap. It passed, together with `verify:cloud`,
+  `verify:release` and the base `audit:economy` check.
+- Production build, Worker browser smoke, GitHub Pages build and Pages smoke
+  passed. The existing non-fatal large-chunk advisory remains.
+- Manual browser screenshots were reviewed for the desktop trail, mobile
+  market and mobile Appearance menu. The sandbox preview remains December 17
+  UTC. No production deployment or release-label change was performed.
