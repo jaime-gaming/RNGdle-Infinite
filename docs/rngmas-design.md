@@ -198,7 +198,7 @@ separate final digits, four paid virtual parcels, and ten numbers at least
 500,000. Their exact windows and reward IDs are in `src/winter-festival.js` and
 the README. These are personal timed objectives, never fake global statistics.
 
-Ten additional aura identities bring the event collection to 17, separate from
+Historical implementation (superseded by the reward revision below): ten additional aura identities brought the event collection to 17, separate from
 the three pass auras. Three of them are market exclusives at 60/100/140 Snowcoins;
 the other seven come from tasks and live activities. Distinct palettes and winter
 crest/guardian art reuse the existing RNGween-derived ornament system. All
@@ -229,3 +229,30 @@ rendered aura layers and ten distinct new palettes, so a cosmetic cannot silentl
 fall back to a plain number box. Render/Cloud checks and both hosting smoke tests
 passed; screenshots and documentation were refreshed. This is branch validation,
 not a production deployment or new release tag.
+
+## Reward and navigation revision
+
+The event now uses mutually exclusive Advent / Festival / Trail views, following
+RNGween World's section navigation rather than one long stack of expanded boards.
+The Festival has mission, live-schedule and reward views. Eight auras remain offered
+(five chapters, two calendar keepsakes, midnight); the winter pass is separate.
+Lantern Moth is the season-long roll mission reward, Parcel Kit comes from the
+live gift drive, and Polar Axolotl costs 100 Snowcoins at the market. Base companions
+are still required; skins change artwork, not stats. Other missions give existing
+boost charges and Snowcoins. Three old market aura offers are retired.
+
+All historical aura metadata, ownership, purchase and mission receipts remain.
+`festival.rewardClaims` distinguishes revised reward receipts from old claims;
+old receipts restore the old aura, never silently replace it with a skin. Skin
+ownership is permanent through resets, with defensive equipment parsing and Cloud
+comparison. Bookmarks now retain 25 rolls; profile cards initially show ten and
+provide show-all/show-fewer controls. Firestore profile validation accepts 25 pins;
+rules still require a separate operator deployment.
+
+Revision verification: 44 bookmark/RNGmas/festival/companion tests passed;
+profile-share/public-profile tests passed (13), Legacy tests passed (2), and
+updated documentation asset tests passed (5). Render and Cloud simulations,
+economy audit, production/Pages builds, release checks, and Worker/Pages browser
+smokes passed. An attempted whole-repository Playwright run exceeded the execution
+budget and was stopped; it is not reported as a full-suite pass. Its outdated
+README contract was updated for the already-requested setup/policy sections.

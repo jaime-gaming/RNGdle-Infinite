@@ -132,9 +132,13 @@ export function LegacyNotice() {
             {clock.closed
               ? "Legacy has closed"
               : `${clock.days} ${clock.days === 1 ? "day" : "days"} · ${clock.hours}h ${clock.minutes}m ${clock.seconds}s left`}{" "}
-            · Status, support and updates end.
+            · Gameplay, status, support and updates end.
           </span>
         </div>
+        <p className="legacy-move-reminder">
+          Your save will not move automatically. Sync your account and verify it
+          on the current site before clearing Legacy.
+        </p>
         <a href={`${GAME_URL}/`}>
           Current game <ArrowUpRight size={14} />
         </a>

@@ -632,6 +632,7 @@ export function compareSaveRichness(local, cloud) {
     Array.isArray(cf?.digits) ? cf.digits.map(String) : [],
   );
   compareSet(lf?.claimed, cf?.claimed);
+  compareSet(lf?.rewardClaims, cf?.rewardClaims);
   for (const id of new Set([
     ...Object.keys(lf?.live ?? {}),
     ...Object.keys(cf?.live ?? {}),

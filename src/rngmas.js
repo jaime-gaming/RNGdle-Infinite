@@ -1,3 +1,4 @@
+import { WINTER_COMPANION_SKINS } from "./winter-companions.js";
 import {
   WINTER_EXCLUSIVES,
   emptyWinterFestival,
@@ -136,8 +137,20 @@ export const RNGMAS_COSMETICS = [
   },
 ];
 
+export const ACTIVE_RNGMAS_AURAS = RNGMAS_COSMETICS.filter(
+  (item) =>
+    !WINTER_EXCLUSIVES.some((extra) => extra.id === item.id) ||
+    item.id === "rngmas-midnight",
+);
+export const RNGMAS_REWARDS = [
+  ...ACTIVE_RNGMAS_AURAS,
+  ...WINTER_COMPANION_SKINS,
+];
 export const RNGMAS_COSMETICS_BY_ID = new Map(
-  RNGMAS_COSMETICS.map((item) => [item.id, item]),
+  [...RNGMAS_COSMETICS, ...WINTER_COMPANION_SKINS].map((item) => [
+    item.id,
+    item,
+  ]),
 );
 
 export const ADVENT_DOORS = [
@@ -205,20 +218,38 @@ export const WINTER_MARKET = [
     boost: "boost-overdrive",
     charges: 3,
   },
-  { id: "snow-velvet", name: "Velvet Noel", price: 60, aura: "rngmas-velvet" },
+  {
+    id: "snow-velvet",
+    retired: true,
+    name: "Velvet Noel",
+    price: 60,
+    aura: "rngmas-velvet",
+  },
   {
     id: "snow-aurora",
+    retired: true,
     name: "Aurora Postcard",
     price: 100,
     aura: "rngmas-aurora",
   },
   {
     id: "snow-crown",
+    retired: true,
     name: "Solstice Crown",
     price: 140,
     aura: "rngmas-crown",
   },
+  {
+    id: "snow-polar-axolotl",
+    name: "Polar Axolotl",
+    price: 100,
+    cosmetic: "winter-polar-axolotl",
+  },
 ];
+
+export const ACTIVE_WINTER_MARKET = WINTER_MARKET.filter(
+  (item) => !item.retired,
+);
 
 export const RNGMAS_WEEKS = [
   {
@@ -588,13 +619,21 @@ export function parseRngmas(value, receipts = {}) {
 
 export function rngmasRewardIds(record) {
   const ids = [];
-  for (const task of WINTER_SPECIAL_TASKS)
-    if (record?.festival?.claimed?.includes(task.id)) ids.push(task.reward);
-  for (const event of WINTER_LIVE_EVENTS)
-    if (record?.festival?.live?.[event.id]?.claimed) ids.push(event.reward);
+  for (const mission of [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS]) {
+    const claimed = mission.start
+      ? record?.festival?.live?.[mission.id]?.claimed
+      : record?.festival?.claimed?.includes(mission.id);
+    const reward = record?.festival?.rewardClaims?.includes(mission.id)
+      ? mission.reward
+      : mission.legacyReward;
+    if (claimed && reward) ids.push(reward);
+  }
   for (const item of WINTER_MARKET)
-    if (item.aura && record?.marketPurchases?.includes(item.id))
-      ids.push(item.aura);
+    if (
+      (item.aura || item.cosmetic) &&
+      record?.marketPurchases?.includes(item.id)
+    )
+      ids.push(item.aura || item.cosmetic);
   for (const day of record?.claimed ?? []) {
     const door = ADVENT_DOORS.find((entry) => entry.day === day);
     if (door?.aura) ids.push(door.aura);

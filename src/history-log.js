@@ -1,6 +1,7 @@
 export const HISTORY_LIMIT = 10_000;
 
-export const BOOKMARK_LIMIT = 10;
+export const BOOKMARK_LIMIT = 25;
+export const PROFILE_PIN_PREVIEW_LIMIT = 10;
 
 export const HISTORY_WARNING = 7_500;
 

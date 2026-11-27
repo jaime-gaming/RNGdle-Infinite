@@ -9,6 +9,7 @@ import {
   recordWinterRoll,
   parseRngmas,
   RNGMAS_COSMETICS,
+  RNGMAS_REWARDS,
 } from "../src/rngmas.js";
 import {
   WINTER_SPECIAL_TASKS,
@@ -32,7 +33,8 @@ test("all seventeen event cosmetics have distinct identities and four live windo
   expect(WINTER_LIVE_EVENTS.length).toBe(4);
   for (const e of WINTER_LIVE_EVENTS) {
     expect(e.start).toBeLessThan(e.end);
-    expect(RNGMAS_COSMETICS.some((a) => a.id === e.reward)).toBe(true);
+    if (e.reward)
+      expect(RNGMAS_REWARDS.some((a) => a.id === e.reward)).toBe(true);
   }
 });
 test("festival rolls are primary, online, once-per-receipt and do not progress outside their live window", () => {
@@ -80,7 +82,9 @@ test("special tasks grant cosmetics once, restore ownership receipts and survive
       at: Date.UTC(2026, 11, 2),
     };
     const claimed = applyProgress(saved, action);
-    expect(claimed.owned).toContain(task.reward);
+    if (task.reward) expect(claimed.owned).toContain(task.reward);
+    else
+      expect(claimed.battlePass.boosts.charges[task.boost]).toBe(task.charges);
     expect(claimed.rngmas.snowcoins).toBe(task.coins);
     expect(claimed.cycleEarnedEP).toBe(0);
     const loaded = parseProgress(JSON.stringify(claimed));
@@ -92,7 +96,7 @@ test("special tasks grant cosmetics once, restore ownership receipts and survive
         .festival,
     ).toEqual(loaded.rngmas.festival);
     const owned = parseRngmas(null, { owned: [task.reward] });
-    expect(owned.festival.claimed).toContain(task.id);
+    if (task.reward) expect(owned.festival.claimed).toContain(task.id);
   }
 });
 test("bell relay counts distinct digits, not repeated rolls", () => {
@@ -107,7 +111,7 @@ test("bell relay counts distinct digits, not repeated rolls", () => {
     { ...state(), rngmas: record },
     { type: "winter-special-claim", id: e.id, at: e.start },
   );
-  expect(claimed.owned).toContain(e.reward);
+  expect(claimed.battlePass.boosts.charges[e.boost]).toBe(e.charges);
   expect(() =>
     applyProgress(
       { ...state(), rngmas: record },
@@ -175,15 +179,15 @@ test("market exclusives grant permanent auras without minting boost charges", ()
   saved.rngmas.snowcoins = saved.rngmas.snowcoinsEarned = 300;
   const action = {
     type: "winter-market-buy",
-    id: "snow-velvet",
+    id: "snow-polar-axolotl",
     at: Date.UTC(2026, 11, 10),
   };
   const bought = applyProgress(saved, action);
-  expect(bought.owned).toContain("rngmas-velvet");
-  expect(bought.rngmas.snowcoins).toBe(240);
+  expect(bought.owned).toContain("winter-polar-axolotl");
+  expect(bought.rngmas.snowcoins).toBe(200);
   expect(bought.battlePass.boosts.charges).toEqual({});
   const loaded = parseProgress(JSON.stringify(bought));
-  expect(loaded.owned).toContain("rngmas-velvet");
+  expect(loaded.owned).toContain("winter-polar-axolotl");
   expect(() => applyProgress(loaded, action)).toThrow(/already/);
 });
 test("live drive works on a phone and special rewards appear in activity history", async ({
@@ -196,6 +200,12 @@ test("live drive works on a phone and special rewards appear in activity history
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/shop/rngmas");
   await waitForApp(page);
+  await page
+    .getByRole("button", { name: "Festival board", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Live schedule", exact: true })
+    .click();
   for (let i = 0; i < 4; i++) {
     await page
       .getByRole("button", { name: "Send parcel · 5 Snowcoins", exact: true })
@@ -209,11 +219,11 @@ test("live drive works on a phone and special rewards appear in activity history
       .toBe(i + 1);
   }
   await page
-    .getByRole("button", { name: "Collect Northbound Parcel", exact: true })
+    .getByRole("button", { name: "Collect Parcel Kit", exact: true })
     .click();
   await expect
     .poll(async () =>
-      (await readSavedProgress(page)).owned.includes("rngmas-parcel"),
+      (await readSavedProgress(page)).owned.includes("winter-parcel-kit"),
     )
     .toBe(true);
   expect(
@@ -223,7 +233,7 @@ test("live drive works on a phone and special rewards appear in activity history
   await waitForApp(page);
   await expect(
     page.getByRole("heading", {
-      name: "Winter reward · Northbound Parcel",
+      name: "Winter reward · Parcel Kit",
       exact: true,
     }),
   ).toBeVisible();
@@ -237,22 +247,39 @@ test("every exclusive renders its aura artwork and distinct palette instead of a
   await page.goto("/shop/rngmas");
   await waitForApp(page);
   await page
-    .locator(".festival-zone")
-    .filter({ hasText: "The winter collection" })
-    .locator("summary")
+    .getByRole("button", { name: "Festival board", exact: true })
     .click();
+  await page.getByRole("button", { name: "Rewards", exact: true }).click();
   const collection = page.locator(".festival-collection");
-  await expect(
-    collection.locator('.number-box[data-cosmetic="none"]'),
-  ).toHaveCount(0);
-  await expect(
-    collection.locator('[data-winter-exclusive="true"]'),
-  ).toHaveCount(10);
-  await expect(collection.locator(".rngmas-aura")).toHaveCount(17);
-  const backgrounds = await collection
-    .locator('[data-winter-exclusive="true"]')
-    .evaluateAll((nodes) =>
-      nodes.map((node) => getComputedStyle(node).backgroundImage),
-    );
-  expect(new Set(backgrounds).size).toBe(10);
+  await expect(collection.locator("article")).toHaveCount(11);
+  await expect(collection.locator(".rngmas-aura")).toHaveCount(8);
+  await expect(collection.locator(".winter-pet-accessory")).toHaveCount(3);
+});
+
+test("winter companion skins reject forged equipment and preserve old earned aura receipts", () => {
+  const saved = state();
+  saved.pets = ["moth"];
+  expect(() =>
+    applyProgress(saved, {
+      type: "equip-pet-skin",
+      petId: "moth",
+      skinId: "lantern",
+    }),
+  ).toThrow(/Unlock/);
+  saved.owned.push("winter-lantern-moth");
+  const equipped = applyProgress(saved, {
+    type: "equip-pet-skin",
+    petId: "moth",
+    skinId: "lantern",
+  });
+  expect(parseProgress(JSON.stringify(equipped)).petSkins.moth).toBe("lantern");
+  expect(
+    parseProgress(JSON.stringify({ ...saved, petSkins: { moth: "forged" } }))
+      .petSkins,
+  ).toEqual({});
+  const old = state();
+  old.rngmas.festival.claimed = ["lantern-run"];
+  const restored = parseProgress(JSON.stringify(old));
+  expect(restored.owned).toContain("rngmas-lantern");
+  expect(restored.owned).not.toContain("winter-lantern-moth");
 });

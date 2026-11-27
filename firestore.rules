@@ -253,7 +253,7 @@ service cloud.firestore {
 
     function validPins(pins) {
       return pins is list
-        && pins.size() <= 10
+        && pins.size() <= 25
         && (pins.size() < 1 || validPinnedRoll(pins[0]))
         && (pins.size() < 2 || validPinnedRoll(pins[1]))
         && (pins.size() < 3 || validPinnedRoll(pins[2]))
@@ -263,7 +263,22 @@ service cloud.firestore {
         && (pins.size() < 7 || validPinnedRoll(pins[6]))
         && (pins.size() < 8 || validPinnedRoll(pins[7]))
         && (pins.size() < 9 || validPinnedRoll(pins[8]))
-        && (pins.size() < 10 || validPinnedRoll(pins[9]));
+        && (pins.size() < 10 || validPinnedRoll(pins[9]))
+        && (pins.size() < 11 || validPinnedRoll(pins[10]))
+        && (pins.size() < 12 || validPinnedRoll(pins[11]))
+        && (pins.size() < 13 || validPinnedRoll(pins[12]))
+        && (pins.size() < 14 || validPinnedRoll(pins[13]))
+        && (pins.size() < 15 || validPinnedRoll(pins[14]))
+        && (pins.size() < 16 || validPinnedRoll(pins[15]))
+        && (pins.size() < 17 || validPinnedRoll(pins[16]))
+        && (pins.size() < 18 || validPinnedRoll(pins[17]))
+        && (pins.size() < 19 || validPinnedRoll(pins[18]))
+        && (pins.size() < 20 || validPinnedRoll(pins[19]))
+        && (pins.size() < 21 || validPinnedRoll(pins[20]))
+        && (pins.size() < 22 || validPinnedRoll(pins[21]))
+        && (pins.size() < 23 || validPinnedRoll(pins[22]))
+        && (pins.size() < 24 || validPinnedRoll(pins[23]))
+        && (pins.size() < 25 || validPinnedRoll(pins[24]));
     }
 
     function validOptionalText(value) {

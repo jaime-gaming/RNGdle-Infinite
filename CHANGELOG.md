@@ -1,3 +1,11 @@
+## Winter layout and reward correction
+
+- Raise bookmarks to 25, with ten initially visible on profiles and expandable pins.
+- Replace the long event stack with section navigation and focused mission/schedule/reward views, based on historical RNGween organization.
+- Offer eight event auras and three illustrated companion skins; use boosts instead of surplus mission auras. Preserve previously earned rewards.
+- Restore the Christmas switch icon and make the Legacy notice explain gameplay closure and the save-transfer check directly.
+- Extend profile Firestore rules to validate up to 25 pins (not deployed here).
+
 # Changelog
 
 The complete player-facing release history is maintained in

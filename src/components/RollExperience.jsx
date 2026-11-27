@@ -1006,6 +1006,7 @@ export default function RollExperience({
         arrival={arrivalPet}
         docked={companionSkillFiring}
         prism={session.petSkins?.axolotl === "prism"}
+        skins={session.petSkins ?? {}}
         phase={!run ? "idle" : busy ? "reveal" : "cooldown"}
       />
       {!run ? (

@@ -20,7 +20,9 @@ try {
   await mockOperationalStatus(page);
   await seedProgress(page, { balance: 3000000, totalEarned: 3000000 });
   await page.goto(`${base}/shop/rngmas`);
-  await page.locator(".winter-chapter[data-current='true']").waitFor();
+  await page
+    .getByRole("button", { name: "Festival board", exact: true })
+    .click();
   await page.locator("#winter-festival-board").evaluate((node) => {
     node.scrollIntoView({ block: "start" });
   });
@@ -29,15 +31,8 @@ try {
     path: new URL("../media/rngmas.png", import.meta.url).pathname,
     animations: "disabled",
   });
-  await page
-    .locator(".festival-zone")
-    .filter({ hasText: "The winter collection" })
-    .locator("summary")
-    .click();
-  await page
-    .locator(".festival-zone")
-    .filter({ hasText: "The winter collection" })
-    .evaluate((node) => node.scrollIntoView({ block: "start" }));
+  await page.getByRole("button", { name: "Rewards", exact: true }).click();
+  await page.locator(".festival-collection").scrollIntoViewIfNeeded();
   await page.screenshot({
     path: new URL("../media/rngmas-collection.png", import.meta.url).pathname,
     animations: "disabled",

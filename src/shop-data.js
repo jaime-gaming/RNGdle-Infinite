@@ -1,3 +1,4 @@
+import { WINTER_COMPANION_SKINS } from "./winter-companions.js";
 import { SKILLS, SKILL_SLOTS } from "./skills.js";
 import {
   BATTLE_PASS_COSMETICS,
@@ -805,6 +806,7 @@ export const productById = new Map(
     ...RNGMAS_COSMETICS,
     ...BATTLE_PASS_COSMETICS,
     BATTLE_PASS_VARIANT,
+    ...WINTER_COMPANION_SKINS,
   ].map((item) => [item.id, item]),
 );
 

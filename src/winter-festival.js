@@ -100,6 +100,20 @@ export const WINTER_LIVE_EVENTS = [
     coins: 35,
   },
 ];
+const CURRENT_REWARDS = {
+  "lantern-run": { reward: "winter-lantern-moth" },
+  "ribbon-hunt": { reward: null, boost: "boost-spark", charges: 2 },
+  "prism-set": { reward: null, boost: "boost-surge", charges: 1 },
+  "meteor-watch": { reward: null, boost: "boost-overdrive", charges: 1 },
+  "bell-relay": { reward: null, boost: "boost-surge", charges: 1 },
+  "gift-drive": { reward: "winter-parcel-kit" },
+  "midnight-wishes": { reward: "rngmas-midnight" },
+};
+for (const mission of [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS]) {
+  mission.legacyReward = mission.reward;
+  Object.assign(mission, CURRENT_REWARDS[mission.id]);
+}
+
 const count = (value) =>
   Number.isSafeInteger(value) && value >= 0 ? value : 0;
 const digits = (value) =>
@@ -116,6 +130,7 @@ export function emptyWinterFestival() {
     seven: 0,
     digits: [],
     claimed: [],
+    rewardClaims: [],
     live: Object.fromEntries(
       WINTER_LIVE_EVENTS.map((event) => [
         event.id,
@@ -126,20 +141,33 @@ export function emptyWinterFestival() {
 }
 export function parseWinterFestival(value, owned = []) {
   const base = emptyWinterFestival();
+  const all = [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS];
+  base.rewardClaims = all
+    .filter(
+      (mission) =>
+        (Array.isArray(value?.rewardClaims) &&
+          value.rewardClaims.includes(mission.id)) ||
+        (mission.reward && owned.includes(mission.reward)),
+    )
+    .map((mission) => mission.id);
   base.rolls = Math.min(150, count(value?.rolls));
   base.seven = Math.min(25, count(value?.seven));
   base.digits = digits(value?.digits);
   base.claimed = WINTER_SPECIAL_TASKS.filter(
     (task) =>
       (Array.isArray(value?.claimed) && value.claimed.includes(task.id)) ||
-      owned.includes(task.reward),
+      (task.reward && owned.includes(task.reward)) ||
+      owned.includes(task.legacyReward),
   ).map((task) => task.id);
   for (const event of WINTER_LIVE_EVENTS) {
     const stored = value?.live?.[event.id];
     base.live[event.id] = {
       count: Math.min(event.goal, count(stored?.count)),
       digits: digits(stored?.digits),
-      claimed: stored?.claimed === true || owned.includes(event.reward),
+      claimed:
+        stored?.claimed === true ||
+        (event.reward && owned.includes(event.reward)) ||
+        owned.includes(event.legacyReward),
     };
   }
   return base;

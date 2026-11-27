@@ -1,4 +1,8 @@
 import {
+  winterCompanionSkin,
+  WINTER_COMPANION_SKINS,
+} from "./winter-companions.js";
+import {
   WINTER_SPECIAL_TASKS,
   WINTER_LIVE_EVENTS,
   emptyWinterFestival,
@@ -618,10 +622,12 @@ export function parseAndRepairProgress(raw) {
   ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
 
   const activePet = pets.includes(p.activePet) ? p.activePet : "none";
-  const petSkins =
-    owned.includes("pass-axolotl") && p.petSkins?.axolotl === "prism"
-      ? { axolotl: "prism" }
-      : {};
+  const petSkins = {};
+  if (owned.includes("pass-axolotl") && p.petSkins?.axolotl === "prism")
+    petSkins.axolotl = "prism";
+  for (const skin of WINTER_COMPANION_SKINS)
+    if (owned.includes(skin.id) && p.petSkins?.[skin.petId] === skin.skinId)
+      petSkins[skin.petId] = skin.skinId;
   let skillsInput = p.skills;
   if (p.skills != null && !Array.isArray(p.skills)) {
     note(
@@ -799,7 +805,7 @@ export function preservePermanentCosmetics(previous, next) {
     ]),
   ].filter((id) => {
     const item = productById.get(id);
-    return item?.kind === "aura" || item?.passReward;
+    return item?.kind === "aura" || item?.passReward || item?.winterReward;
   });
   const missing = known.filter(
     (id) =>
@@ -904,7 +910,7 @@ function startNewCycle(
 ) {
   const owned = [...new Set(state.owned ?? [])].filter((id) => {
     const item = productById.get(id);
-    return item?.kind === "aura" || item?.passReward;
+    return item?.kind === "aura" || item?.passReward || item?.winterReward;
   });
 
   const kept = (state.skills ?? []).filter(
@@ -1326,7 +1332,7 @@ function applyEvent(state, action) {
 
     const cosmetics = [...new Set(state.owned ?? [])].filter((id) => {
       const item = productById.get(id);
-      return item?.kind === "aura" || item?.passReward;
+      return item?.kind === "aura" || item?.passReward || item?.winterReward;
     });
     const next = {
       ...emptyProgress(),
@@ -1471,7 +1477,20 @@ function applyEvent(state, action) {
       throw new Error("Snowcoin limit reached.");
     return {
       ...state,
-      owned: [...new Set([...state.owned, mission.reward])],
+      owned: mission.reward
+        ? [...new Set([...state.owned, mission.reward])]
+        : state.owned,
+      battlePass: mission.boost
+        ? {
+            ...state.battlePass,
+            boosts: grantBoost(
+              state.battlePass?.boosts,
+              mission.boost,
+              mission.charges,
+              at,
+            ),
+          }
+        : state.battlePass,
       rngmas: {
         ...record,
         snowcoins: Math.min(
@@ -1482,12 +1501,17 @@ function applyEvent(state, action) {
         festival: mission.start
           ? {
               ...festival,
+              rewardClaims: [...(festival.rewardClaims ?? []), mission.id],
               live: {
                 ...festival.live,
                 [mission.id]: { ...festival.live[mission.id], claimed: true },
               },
             }
-          : { ...festival, claimed: [...festival.claimed, mission.id] },
+          : {
+              ...festival,
+              rewardClaims: [...(festival.rewardClaims ?? []), mission.id],
+              claimed: [...festival.claimed, mission.id],
+            },
       },
       history: appendHistory(state.history, [
         {
@@ -1496,7 +1520,9 @@ function applyEvent(state, action) {
           at,
           missionId: mission.id,
           productId: mission.reward,
-          name: RNGMAS_COSMETICS_BY_ID.get(mission.reward).name,
+          name: mission.reward
+            ? RNGMAS_COSMETICS_BY_ID.get(mission.reward).name
+            : mission.name,
         },
       ]),
     };
@@ -1554,7 +1580,7 @@ function applyEvent(state, action) {
     if (!week || week.index < 2)
       throw new Error("The Christmas market is closed.");
     const item = WINTER_MARKET.find((item) => item.id === action.id);
-    if (!item) throw new Error("Unknown winter stall.");
+    if (!item || item.retired) throw new Error("Unknown winter stall.");
     if ((record.marketPurchases ?? []).includes(item.id))
       throw new Error("This stall reward was already bought.");
     if ((record.snowcoins ?? 0) < item.price)
@@ -1566,20 +1592,22 @@ function applyEvent(state, action) {
         snowcoins: record.snowcoins - item.price,
         marketPurchases: [...(record.marketPurchases ?? []), item.id],
       },
-      owned: item.aura
-        ? [...new Set([...state.owned, item.aura])]
-        : state.owned,
-      battlePass: item.aura
-        ? state.battlePass
-        : {
-            ...state.battlePass,
-            boosts: grantBoost(
-              state.battlePass?.boosts,
-              item.boost,
-              item.charges ?? 1,
-              at,
-            ),
-          },
+      owned:
+        item.aura || item.cosmetic
+          ? [...new Set([...state.owned, item.aura || item.cosmetic])]
+          : state.owned,
+      battlePass:
+        item.aura || item.cosmetic
+          ? state.battlePass
+          : {
+              ...state.battlePass,
+              boosts: grantBoost(
+                state.battlePass?.boosts,
+                item.boost,
+                item.charges ?? 1,
+                at,
+              ),
+            },
       history: appendHistory(state.history, [
         {
           id: `winter-market:${item.id}`,
@@ -2421,21 +2449,19 @@ function applyEvent(state, action) {
     };
   }
   if (action.type === "equip-pet-skin") {
-    if (
-      action.petId !== "axolotl" ||
-      !(state.pets ?? []).includes(action.petId)
-    )
+    if (!(state.pets ?? []).includes(action.petId))
       throw new Error("Find this companion before changing its appearance.");
-    if (
-      action.skinId === "prism" &&
-      !(state.owned ?? []).includes("pass-axolotl")
-    )
-      throw new Error("Unlock the Prism Axolotl skin before equipping it.");
-    if (action.skinId !== "original" && action.skinId !== "prism")
+    const skin = winterCompanionSkin(action.petId, action.skinId);
+    const prism = action.petId === "axolotl" && action.skinId === "prism";
+    if (action.skinId !== "original" && !skin && !prism)
       throw new Error("That companion skin is not available.");
+    if (prism && !state.owned.includes("pass-axolotl"))
+      throw new Error("Unlock the Prism Axolotl skin before equipping it.");
+    if (skin && !state.owned.includes(skin.id))
+      throw new Error("Unlock this winter skin before equipping it.");
     const petSkins = { ...(state.petSkins ?? {}) };
-    if (action.skinId === "original") delete petSkins.axolotl;
-    else petSkins.axolotl = "prism";
+    if (action.skinId === "original") delete petSkins[action.petId];
+    else petSkins[action.petId] = action.skinId;
     return { ...state, petSkins };
   }
   if (action.type === "equip-pet") {
@@ -2955,7 +2981,7 @@ function parseHistory(value) {
       );
       if (
         !mission ||
-        e.productId !== mission.reward ||
+        ![mission.reward, mission.legacyReward].includes(e.productId) ||
         typeof e.name !== "string" ||
         e.name.length > 100
       )

@@ -1,3 +1,4 @@
+import { WINTER_COMPANION_SKINS } from "../winter-companions.js";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -27,6 +28,7 @@ function PetSkinPicker({
   pet,
   isOwned,
   unlocked,
+  winterOwned = [],
   selectedSkin,
   pending,
   onSelect,
@@ -52,6 +54,16 @@ function PetSkinPicker({
           },
         ]
       : []),
+    ...WINTER_COMPANION_SKINS.filter((skin) => skin.petId === pet.id).map(
+      (skin) => ({
+        id: skin.skinId,
+        label: skin.name,
+        owned: isOwned && winterOwned.includes(skin.id),
+        description:
+          skin.description +
+          " Cosmetic only; your companion's EP bonus is unchanged.",
+      }),
+    ),
     {
       id: "mystery",
       label: "???",
@@ -78,6 +90,7 @@ function PetSkinPicker({
           multiplier={pet.multiplier}
           size={96}
           prism={preview === "prism"}
+          skin={preview}
           className={preview === "mystery" ? "is-mystery-silhouette" : ""}
         />
       </div>
@@ -120,6 +133,7 @@ function PetSkinPicker({
                 multiplier={pet.multiplier}
                 size={48}
                 prism={option.id === "prism"}
+                skin={option.id}
                 className={
                   option.id === "mystery" ? "is-mystery-silhouette" : ""
                 }
@@ -163,7 +177,6 @@ export default function PetShelf({
   );
   const active = progress.activePet ?? "none";
   const prismAxolotl = (progress.owned ?? []).includes("pass-axolotl");
-  const activeAxolotlSkin = progress.petSkins?.axolotl ?? "original";
 
   const tracked = validGoal(progress.goalId, progress.owned, owned)
     ? progress.goalId
@@ -320,10 +333,7 @@ export default function PetShelf({
                 const signature = skillForPet(pet.id);
                 const current = i === at;
                 const hasPrismSkin = pet.id === "axolotl";
-                const selectedSkin =
-                  hasPrismSkin && activeAxolotlSkin === "prism"
-                    ? "prism"
-                    : "original";
+                const selectedSkin = progress.petSkins?.[pet.id] ?? "original";
 
                 const pickable = pickingGoal && !isOwned;
                 return (
@@ -357,13 +367,14 @@ export default function PetShelf({
                             pet={pet}
                             isOwned={isOwned}
                             unlocked={prismAxolotl}
+                            winterOwned={progress.owned ?? []}
                             selectedSkin={selectedSkin}
                             pending={pending}
                             onSelect={(skinId) =>
                               run(
                                 "equip-pet-skin",
                                 pet.id,
-                                `${skinId === "prism" ? "Prism" : "Original"} ${pet.name} skin equipped.`,
+                                `${pet.name} skin equipped.`,
                                 { petId: pet.id, skinId },
                               )
                             }
@@ -380,6 +391,7 @@ export default function PetShelf({
                             name={pet.name}
                             multiplier={pet.multiplier}
                             size={124}
+                            skin={selectedSkin}
                             active={isActive}
                             prism={
                               hasPrismSkin &&
@@ -551,6 +563,7 @@ export default function PetShelf({
                     name={pet.name}
                     multiplier={pet.multiplier}
                     size={34}
+                    skin={progress.petSkins?.[pet.id] ?? "original"}
                     active={active === pet.id}
                     prism={prismAxolotl}
                   />

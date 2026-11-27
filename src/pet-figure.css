@@ -237,3 +237,23 @@
     }
   }
 }
+
+.pet-figure[data-winter-skin] {
+  position: relative;
+}
+.pet-figure .winter-pet-accessory {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--pet-accent);
+  filter: drop-shadow(0 0 3px var(--pet-accent));
+  pointer-events: none;
+}
+.pet-figure[data-winter-skin="polar"] > svg:not(.winter-pet-accessory) {
+  filter: hue-rotate(145deg) saturate(0.7) brightness(1.2);
+}
+.pet-figure[data-winter-skin="lantern"] .pet-figure-halo {
+  background: radial-gradient(circle, #fbbf2440, transparent 70%);
+}

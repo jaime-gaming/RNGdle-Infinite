@@ -1,3 +1,4 @@
+import PetIcon from "./PetIcon.jsx";
 import WinterFestival from "./WinterFestival.jsx";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -19,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import {
-  WINTER_MARKET,
+  ACTIVE_WINTER_MARKET,
   winterChapterCount,
   SNOWCOIN_EXCHANGE_EP,
   SNOWCOIN_EXCHANGE_CAP,
@@ -635,9 +636,9 @@ export function WinterEconomy({
             </p>
             <div
               className="winter-stamps"
-              aria-label={`${record.marketPurchases?.length ?? 0} of ${WINTER_MARKET.length} stalls visited`}
+              aria-label={`${record.marketPurchases?.length ?? 0} of ${ACTIVE_WINTER_MARKET.length} stalls visited`}
             >
-              {WINTER_MARKET.map((item, index) => (
+              {ACTIVE_WINTER_MARKET.map((item, index) => (
                 <span
                   key={item.id}
                   data-earned={(record.marketPurchases ?? []).includes(item.id)}
@@ -652,9 +653,10 @@ export function WinterEconomy({
               </p>
             </div>
             <div className="winter-stalls">
-              {WINTER_MARKET.map((item) => {
+              {ACTIVE_WINTER_MARKET.map((item) => {
                 const bought = (record.marketPurchases ?? []).includes(item.id);
-                const boost = item.aura ? null : passBoostById(item.boost);
+                const boost =
+                  item.aura || item.cosmetic ? null : passBoostById(item.boost);
                 return (
                   <article
                     className="winter-stall"
@@ -664,13 +666,17 @@ export function WinterEconomy({
                     <span className="winter-stall-tag">
                       {bought
                         ? "Collected"
-                        : item.aura
-                          ? "Exclusive aura"
-                          : item.charges
-                            ? "Winter bundle"
-                            : "Single charge"}
+                        : item.cosmetic
+                          ? "Companion skin"
+                          : item.aura
+                            ? "Exclusive aura"
+                            : item.charges
+                              ? "Winter bundle"
+                              : "Single charge"}
                     </span>
-                    {item.aura ? (
+                    {item.cosmetic ? (
+                      <PetIcon pet="axolotl" skin="polar" size={72} />
+                    ) : item.aura ? (
                       <NumberBox
                         value="2026"
                         tier="rare"
@@ -682,12 +688,12 @@ export function WinterEconomy({
                     )}
                     <h4>{item.name}</h4>
                     <p>
-                      {item.aura
+                      {item.aura || item.cosmetic
                         ? "Exclusive to this winter market. Kept forever, including after resets."
                         : boost.blurb}
                     </p>
                     <p>
-                      {item.aura
+                      {item.aura || item.cosmetic
                         ? "Permanent cosmetic · no effect on odds"
                         : `${item.charges ?? 1} charges · kept after the event`}
                     </p>
@@ -707,8 +713,10 @@ export function WinterEconomy({
                       }
                     >
                       {item.name}
-                      {item.aura ? "" : ` ×${item.charges ?? 1}`} · {item.price}{" "}
-                      Snowcoins
+                      {item.aura || item.cosmetic
+                        ? ""
+                        : ` ×${item.charges ?? 1}`}{" "}
+                      · {item.price} Snowcoins
                       {bought ? " · Bought" : ""}
                     </button>
                   </article>
@@ -943,6 +951,7 @@ export function WinterChapters({
 export default function RngmasShelf({ progress, onAction, notify }) {
   const status = useRngmasStatus();
   const [pending, setPending] = useState(false);
+  const [zone, setZone] = useState("calendar");
   const busy = useRef(false);
 
   async function run(action, message) {
@@ -1003,42 +1012,54 @@ export default function RngmasShelf({ progress, onAction, notify }) {
       </div>
 
       <nav className="winter-wayfinding" aria-label="RNGmas zones">
-        <a href="#winter-calendar">
-          <CalendarDays size={16} /> Advent square
-        </a>
-        <a href="#winter-festival-board">
-          <Radio size={16} /> Festival board
-        </a>
-        <a href="#winter-chapters">
-          <ShoppingBag size={16} /> Winter trail
-        </a>
+        {[
+          ["calendar", "Advent square", CalendarDays],
+          ["festival", "Festival board", Radio],
+          ["chapters", "Winter trail", ShoppingBag],
+        ].map(([id, label, Icon]) => (
+          <button
+            key={id}
+            className="secondary-button"
+            aria-pressed={zone === id}
+            aria-controls={`rngmas-zone-${id}`}
+            onClick={() => setZone(id)}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
         <span>
           <Coins size={16} /> {formatEP(progress.rngmas.snowcoins ?? 0)}{" "}
           Snowcoins
         </span>
       </nav>
-      <div id="winter-calendar" className="winter-calendar-zone">
-        <AdventCalendar
-          record={progress.rngmas}
+      <div id="rngmas-zone-calendar" hidden={zone !== "calendar"}>
+        <div id="winter-calendar" className="winter-calendar-zone">
+          <AdventCalendar
+            record={progress.rngmas}
+            status={status}
+            onClaim={claim}
+            pending={pending}
+          />
+        </div>
+      </div>
+      <div id="rngmas-zone-festival" hidden={zone !== "festival"}>
+        <WinterFestival
+          progress={progress}
           status={status}
-          onClaim={claim}
+          onAction={run}
           pending={pending}
         />
       </div>
-      <WinterFestival
-        progress={progress}
-        status={status}
-        onAction={run}
-        pending={pending}
-      />
-      <WinterChapters
-        progress={progress}
-        status={status}
-        onAction={run}
-        onSmash={smash}
-        pending={pending}
-      />
-
+      <div id="rngmas-zone-chapters" hidden={zone !== "chapters"}>
+        <WinterChapters
+          progress={progress}
+          status={status}
+          onAction={run}
+          onSmash={smash}
+          pending={pending}
+        />
+      </div>
       <p className="rngmas-shelf-fine">
         The calendar and weekly activities award EP and permanent auras. Nothing
         here changes roll odds, scoring tables, badge values or cooldowns.

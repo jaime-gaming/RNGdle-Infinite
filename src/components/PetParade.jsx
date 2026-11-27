@@ -13,6 +13,7 @@ function Walker({
   phase,
   docked = false,
   prism = false,
+  skin = "original",
 }) {
   const definition = petById.get(pet);
   if (!definition) return null;
@@ -38,6 +39,7 @@ function Walker({
           size={active ? 52 : 40}
           active={active}
           prism={prism}
+          skin={skin}
         />
         <span className="pet-walker-trail" aria-hidden="true">
           <i />
@@ -56,7 +58,7 @@ function Walker({
   );
 }
 
-function Arrival({ pet, prism = false }) {
+function Arrival({ pet, prism = false, skin = "original" }) {
   const definition = petById.get(pet);
   if (!definition) return null;
   return (
@@ -74,6 +76,7 @@ function Arrival({ pet, prism = false }) {
         size={74}
         className="pet-arrival-figure"
         prism={prism}
+        skin={skin}
       />
       <span className="pet-arrival-copy">
         <span className="pet-arrival-eyebrow">
@@ -97,6 +100,7 @@ export default function PetParade({
 
   docked = false,
   prism = false,
+  skins = {},
 }) {
   if (!pets.length && !arrival) return null;
   const ordered = [...pets].sort((a, b) =>
@@ -117,9 +121,10 @@ export default function PetParade({
           phase={phase}
           docked={docked && id === active}
           prism={prism}
+          skin={skins[id]}
         />
       ))}
-      {arrival && <Arrival pet={arrival} prism={prism} />}
+      {arrival && <Arrival pet={arrival} prism={prism} skin={skins[arrival]} />}
     </div>
   );
 }

@@ -29,7 +29,7 @@ export function rebirthRelevantPurchases(owned = []) {
 // This is the same rule, so the page can never promise a different outcome.
 export function rebirthKeepsPurchase(id) {
   const item = productById.get(id);
-  return item?.kind === "aura" || !!item?.passReward;
+  return item?.kind === "aura" || !!item?.passReward || !!item?.winterReward;
 }
 
 export function rebirthKeptPurchases(owned = []) {

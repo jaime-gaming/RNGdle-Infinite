@@ -313,6 +313,7 @@ test("the shop grows an RNGmas door during the season", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: /Advent calendar/ }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Winter trail", exact: true }).click();
   await expect(
     page
       .getByRole("region", { name: "Weekly winter activity" })
@@ -351,6 +352,7 @@ test("the golem preparation is saved without inventing damage", async ({
   await pauseClockAt(page, GOLEM_AT);
   await page.goto("/shop/rngmas");
   await waitForApp(page);
+  await page.getByRole("button", { name: "Winter trail", exact: true }).click();
   await page.getByRole("button", { name: /Prepare strike/ }).click();
   await expect(page.getByText(/Strike prepared\./).first()).toBeVisible();
   const saved = await readSavedProgress(page);

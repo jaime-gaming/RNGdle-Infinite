@@ -187,6 +187,7 @@ export default function AppearanceMenu({
               className="appearance-option appearance-christmas"
               onClick={() => update({ christmasMode: !settings.christmasMode })}
             >
+              <Snowflake size={16} aria-hidden="true" />
               <span>Christmas mode</span>
               <span className="appearance-switch" aria-hidden="true">
                 <i />

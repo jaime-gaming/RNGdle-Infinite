@@ -41,7 +41,7 @@ test("every companion has its own drawing, and no companion borrows another", ()
   }
 });
 
-test("the README is a short, player-friendly guide with current screenshots", () => {
+test("the README covers play, local setup and current screenshots", () => {
   const readme = fs.readFileSync("README.md", "utf8");
   const images = [...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(
     (match) => match[1],
@@ -50,7 +50,7 @@ test("the README is a short, player-friendly guide with current screenshots", ()
   for (const image of images) {
     expect(fs.existsSync(image), `README points at a missing image: ${image}`);
   }
-  expect(readme.split("\n").length).toBeLessThanOrEqual(100);
+  expect(readme.split("\n").length).toBeLessThanOrEqual(300);
   for (const section of [
     "## How to play",
     "## What you can discover",
@@ -64,18 +64,18 @@ test("the README is a short, player-friendly guide with current screenshots", ()
   expect(readme).toContain("https://rngdle-infinite.jaime-gaming.com/");
   expect(readme).toContain("Settings → Restore save");
   expect(readme).toContain("jaimegamingpro@gmail.com");
-  expect(readme).toMatch(/_Documentation updated [A-Za-z]+ \d{1,2}, \d{4}\._/);
+  expect(readme).toMatch(
+    /_Documentation (?:updated|reviewed) [A-Za-z]+ \d{1,2}, \d{4}\._/,
+  );
   expect(readme).not.toMatch(/^## (Main files|Tests)$/m);
-  for (const implementationDetail of [
-    "VITE_",
-    "rngdle-infinite-jg",
-    "Firestore",
-    "Firebase Console",
-    "service-account",
-    "npm run",
-    "src/",
+  for (const section of [
+    "## Run locally",
+    "## License and project policies",
+    "## Legacy shutdown",
   ])
-    expect(readme).not.toContain(implementationDetail);
+    expect(readme).toContain(section);
+  expect(readme).toContain("npm run dev");
+  expect(readme).not.toContain("BEGIN PRIVATE KEY");
 });
 
 test("the production entry point uses the custom domain and ships every linked icon", () => {
