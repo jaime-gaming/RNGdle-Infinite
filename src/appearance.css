@@ -96,20 +96,9 @@
   overflow-y: auto;
 }
 .appearance-christmas {
-  min-height: 64px;
+  min-height: 44px;
   margin-top: 6px;
   border: 1px solid var(--border);
-}
-.appearance-christmas-copy {
-  display: grid;
-  gap: 5px;
-}
-.appearance-christmas-copy strong {
-  font-size: 12px;
-}
-.appearance-christmas-copy small {
-  color: var(--secondary);
-  font-size: 10px;
 }
 .appearance-switch {
   flex: 0 0 34px;
@@ -136,12 +125,6 @@
 .appearance-christmas[aria-checked="true"] .appearance-switch i {
   transform: translateX(14px);
   background: var(--green);
-}
-.appearance-season-note {
-  margin: 8px 9px 5px;
-  color: var(--secondary);
-  font-size: 11px;
-  line-height: 1.6;
 }
 @media (prefers-reduced-motion: reduce) {
   .appearance-switch i {

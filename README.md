@@ -8,9 +8,11 @@ RNGdle Infinite is a free browser game about surprising numbers, collectible bad
   <a href="https://rngdle-infinite.jaime-gaming.com/"><strong>▶ Play now</strong></a>
 </p>
 
-[How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Battle Pass](#battle-pass) · [RNGmas 2026](#rngmas-2026) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Run locally](#run-locally) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Credits](#credits)
+[How to play](#how-to-play) · [What you can discover](#what-you-can-discover) · [Battle Pass](#battle-pass) · [RNGmas 2026](#rngmas-2026) · [Legacy shutdown](#legacy-shutdown) · [Keep your progress](#keep-your-progress) · [FAQ](#faq) · [Privacy & contact](#privacy--contact) · [Run locally](#run-locally) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Credits](#credits)
 
 ![The game, ready for a roll](media/roll.png)
+
+> **GitHub Pages Legacy closes December 1, 2026 at 00:00 Madrid (CET).** The current domain stays online. [Shutdown details and moving your save](#legacy-shutdown).
 
 ## How to play
 
@@ -53,6 +55,21 @@ you claim are yours forever.
 
 From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass also open on December 1, when First Light closes, and last until January 2. Toggle decorations independently of your color theme with **Christmas mode**, under **TEMPORAL** in Appearance. Snow, lights and scenery adapt to phones, tablets and desktops; reduced-motion preferences are respected.
 
+The festival now includes **17 exclusive event auras**, plus the **3 winter-pass cosmetics**. Alongside the five weekly zones, a festival board gives you season-long tasks and four scheduled live activities with personal progress—not invented global player counts.
+
+**Special tasks.** Settle 150 primary online rolls for Lantern Keeper; find 25 numbers containing a 7 for Ribbon Runner; collect all ten final digits for Ice Prism. Claim during RNGmas for the aura and 15/20/25 Snowcoins respectively. Auto-Roll counts; offline and extra skill results do not.
+
+**Live gatherings (UTC, end exclusive).** These activities must be completed and claimed within their window:
+
+| Activity              | Window                        | Goal                                          | Exclusive aura    |
+| --------------------- | ----------------------------- | --------------------------------------------- | ----------------- |
+| Meteor watch          | Dec 4, 18:00 – Dec 7, 00:00   | 30 even primary online rolls                  | Starfall Snow     |
+| Bell relay            | Dec 11, 18:00 – Dec 14, 00:00 | Eight distinct final digits                   | Carol Circuit     |
+| Northbound gift drive | Dec 18, 18:00 – Dec 21, 00:00 | Four in-game parcels costing 5 Snowcoins each | Northbound Parcel |
+| Midnight wishes       | Dec 31, 18:00 – Jan 1, 02:00  | Ten primary online rolls of at least 500,000  | Midnight Wish     |
+
+The market also offers **Velvet Noel (60 Snowcoins), Aurora Postcard (100) and Solstice Crown (140)**, once each. The collection gallery previews all event auras and shows which you own. These cosmetics do not change odds or scoring.
+
 **Advent calendar.** A new door opens every day from December 1. Claim it on that UTC day or lose it; there is no catch-up. The last door holds the Gingerbread aura,
 and the RNGmas Star is claimable only on Christmas Day.
 
@@ -68,15 +85,33 @@ and the RNGmas Star is claimable only on Christmas Day.
 
 The winter trail combines RNGween-style missions and aura previews with Black Friday-style offer cards and a stall-visit passport. Previously claimed rewards remain yours; the redesigned bundles cannot be claimed again on old completion receipts.
 
-**Snowcoins.** Earn one per primary online roll, including Auto-Roll; offline and extra skill results do not count. From December 8 the market sells five one-time boost offers (10–90 Snowcoins); buy from any three stalls during that week for Emberlight. From December 15, exchange 10,000 EP per Snowcoin, up to 200 coins across the event; exchange 100 during that week for Frostbound. Both services stay open until January 2, but weekly aura claims expire with their chapter. There is no EP cash-out. Wallets and purchase receipts survive resets; unspent coins stop being usable after the event.
+**Snowcoins.** Earn one per primary online roll, including Auto-Roll; offline and extra skill results do not count. From December 8 the market sells five one-time boost offers (10–90 Snowcoins) and three permanent exclusive auras (60–140 Snowcoins); buy from any three stalls during that week for Emberlight. From December 15, exchange 10,000 EP per Snowcoin, up to 200 coins across the event; exchange 100 during that week for Frostbound. Both services stay open until January 2, but weekly aura claims expire with their chapter. There is no EP cash-out. Wallets and purchase receipts survive resets; unspent coins stop being usable after the event.
 
 **Golem Smash, December 1–8.** Prepare a strike for 100,000 EP. Your next normal online number deals that much damage to the 25,000,000-HP golem: 0–1,000,000 per strike, averaging 500,000. No multipliers, no extra skill hits and no offline damage. A prepared strike survives reloads. Expect about 50 strikes (5,000,000 EP); no fixed maximum is promised.
 
 Nothing here changes roll odds, scoring tables, badge values or cooldowns; earned auras stay in your collection forever.
 
-![The expandable RNGmas chapter trail on a desktop screen](media/rngmas.png)
+![The RNGmas festival board with special tasks and timed activities](media/rngmas.png)
+
+![Seventeen exclusive event auras in the winter collection](media/rngmas-collection.png)
 
 _Seasonal preview with a synthetic local profile, December 17 UTC. Captures illustrate this development branch, not proof of a live deployment._
+
+## Legacy shutdown
+
+The GitHub Pages Legacy Version at `jaime-gaming.github.io/RNGdle-Infinite/` closes **December 1, 2026 at 00:00 Europe/Madrid**, which is **November 30 at 23:00 UTC** (23:00 in the Canary Islands). Legacy gameplay, status reporting, support and updates end. The current game at [rngdle-infinite.jaime-gaming.com](https://rngdle-infinite.jaime-gaming.com/) continues.
+
+A permanent countdown banner links to **Shutdown & moving your save**. At the deadline this build switches to a closure page instead of mounting the game. A private local-backup download remains available without erasing site data.
+
+**Move before closing:** wait for a successful Cloud sync on Legacy, open the current site with the same account and verify your profile/progress before clearing anything. Local-only browser saves do not transfer automatically between domains. The backup is an archival copy, not an automatic import. Full instructions, preview commands and deployment caveats are in [the shutdown plan](docs-source/legacy-shutdown.md).
+
+![Legacy countdown and easy access to shutdown information](media/legacy-countdown.png)
+
+![The shutdown information and save-migration checklist](media/legacy-shutdown.png)
+
+![The Legacy closure screen, with current-site access and local backup](media/legacy-closed.png)
+
+_These are development previews with synthetic local data, not evidence of a production deployment. Old cached offline builds cannot be remotely erased by a new client build._
 
 ## Keep your progress
 

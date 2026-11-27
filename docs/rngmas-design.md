@@ -188,3 +188,44 @@ added for this redesign.
 - Manual browser screenshots were reviewed for the desktop trail, mobile
   market and mobile Appearance menu. The sandbox preview remains December 17
   UTC. No production deployment or release-label change was performed.
+
+## Launch festival expansion
+
+The live board adds three season-long tasks (150 main rolls, 25 containing a 7,
+and all ten final digits), each with its own permanent aura and a bounded coin
+reward. Four live windows add different mechanics: 30 even numbers, eight
+separate final digits, four paid virtual parcels, and ten numbers at least
+500,000. Their exact windows and reward IDs are in `src/winter-festival.js` and
+the README. These are personal timed objectives, never fake global statistics.
+
+Ten additional aura identities bring the event collection to 17, separate from
+the three pass auras. Three of them are market exclusives at 60/100/140 Snowcoins;
+the other seven come from tasks and live activities. Distinct palettes and winter
+crest/guardian art reuse the existing RNGween-derived ornament system. All
+cosmetics are permanent once collected; no odds or scoring values change.
+
+`rngmas.festival` is a new persisted record with bounded task counters, distinct
+digits, claim IDs and per-window live records. Its parser repairs malformed data,
+recovers ownership receipts and never replays coin rewards. Roll settlement owns
+updates, so duplicate receipts, extras and offline rolls cannot progress it.
+Fresh Start keeps it. Cloud comparison covers counts, sets and claims without
+merging profiles. The gift drive spends 20 coins total with no refund or coin
+reward; its completion grants only its exclusive aura. The other live rewards
+pay 20/25/35 coins. Seasonal tasks pay 15/20/25. Claims use gameNow/UTC, reject
+closed windows, and are atomic with the existing history and owned collections.
+
+Christmas mode is intentionally minimal: just its label and switch in TEMPORAL.
+The Legacy closure uses a separate Spanish-midnight wall-clock deadline documented
+in `legacy-shutdown.md`; it does not change the December 1 UTC festival launch.
+
+### Launch expansion verification
+
+153 focused Playwright checks passed, including primary-only and duplicate roll
+settlement, live-window boundaries, distinct-digit goals, paid parcel limits,
+once-only claims, malformed festival data, Fresh Start preservation, Cloud
+comparison and non-transfer across profiles. The phone test completes the gift
+drive and verifies its activity entry. A browser-art regression checks all 17
+rendered aura layers and ten distinct new palettes, so a cosmetic cannot silently
+fall back to a plain number box. Render/Cloud checks and both hosting smoke tests
+passed; screenshots and documentation were refreshed. This is branch validation,
+not a production deployment or new release tag.

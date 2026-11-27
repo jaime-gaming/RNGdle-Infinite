@@ -1,3 +1,11 @@
+import {
+  WINTER_EXCLUSIVES,
+  emptyWinterFestival,
+  parseWinterFestival,
+  recordWinterFestival,
+  WINTER_SPECIAL_TASKS,
+  WINTER_LIVE_EVENTS,
+} from "./winter-festival.js";
 import { gameNow } from "./game-clock.js";
 
 export const RNGMAS_ID = "rngmas-2026";
@@ -33,6 +41,7 @@ export const RNGMAS_FAMILY = {
 };
 
 export const RNGMAS_COSMETICS = [
+  ...WINTER_EXCLUSIVES,
   {
     id: "rngmas-frost",
     kind: "aura",
@@ -195,6 +204,19 @@ export const WINTER_MARKET = [
     price: 90,
     boost: "boost-overdrive",
     charges: 3,
+  },
+  { id: "snow-velvet", name: "Velvet Noel", price: 60, aura: "rngmas-velvet" },
+  {
+    id: "snow-aurora",
+    name: "Aurora Postcard",
+    price: 100,
+    aura: "rngmas-aurora",
+  },
+  {
+    id: "snow-crown",
+    name: "Solstice Crown",
+    price: 140,
+    aura: "rngmas-crown",
   },
 ];
 
@@ -402,6 +424,7 @@ export function winterRollTally(result) {
 export function recordWinterRoll(record, result, at) {
   const week = rngmasWeekAt(at);
   if (!week) return record;
+  record = recordWinterFestival(record, result, at);
   record = {
     ...record,
     snowcoins: Math.min(SNOWCOIN_CAP, (record.snowcoins ?? 0) + 1),
@@ -451,6 +474,7 @@ export function emptyRngmas() {
     claimed: [],
     finale: false,
     snowcoins: 0,
+    festival: emptyWinterFestival(),
     snowcoinsEarned: 0,
     snowcoinsExchanged: 0,
     marketPurchases: [],
@@ -542,8 +566,16 @@ export function parseRngmas(value, receipts = {}) {
         ),
       ]
     : [];
+  for (const item of WINTER_MARKET)
+    if (
+      item.aura &&
+      owned.includes(item.aura) &&
+      !marketPurchases.includes(item.id)
+    )
+      marketPurchases.push(item.id);
   return {
     id: RNGMAS_ID,
+    festival: parseWinterFestival(value?.festival, owned),
     claimed,
     finale,
     golems,
@@ -556,6 +588,13 @@ export function parseRngmas(value, receipts = {}) {
 
 export function rngmasRewardIds(record) {
   const ids = [];
+  for (const task of WINTER_SPECIAL_TASKS)
+    if (record?.festival?.claimed?.includes(task.id)) ids.push(task.reward);
+  for (const event of WINTER_LIVE_EVENTS)
+    if (record?.festival?.live?.[event.id]?.claimed) ids.push(event.reward);
+  for (const item of WINTER_MARKET)
+    if (item.aura && record?.marketPurchases?.includes(item.id))
+      ids.push(item.aura);
   for (const day of record?.claimed ?? []) {
     const door = ADVENT_DOORS.find((entry) => entry.day === day);
     if (door?.aura) ids.push(door.aura);

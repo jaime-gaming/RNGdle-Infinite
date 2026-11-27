@@ -1,0 +1,143 @@
+.legacy-notice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px max(20px, calc((100vw - 1120px) / 2));
+  border-bottom: 1px solid #d4a85b66;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+.legacy-notice > svg {
+  flex-shrink: 0;
+  color: #b47e2c;
+}
+.legacy-notice > div {
+  flex: 1;
+  min-width: 200px;
+  display: grid;
+  gap: 6px;
+}
+.legacy-notice strong {
+  font-size: 12px;
+}
+.legacy-notice span {
+  font: 500 10px/1.7 var(--font-mono);
+  color: var(--secondary);
+}
+.legacy-notice a,
+.legacy-notice button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  font-size: 11px;
+  padding: 10px;
+}
+.legacy-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(720px, calc(100vw - 24px));
+  max-height: 88dvh;
+  margin: auto;
+  padding: clamp(24px, 4vw, 40px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  background: var(--surface);
+}
+.legacy-dialog::backdrop {
+  background: #050a17bb;
+}
+.legacy-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.legacy-information h2 {
+  font-size: clamp(26px, 4vw, 40px);
+  line-height: 1.15;
+  margin: 16px 0 24px;
+  letter-spacing: -0.035em;
+}
+.legacy-information h3 {
+  font-size: 17px;
+  margin-top: 28px;
+}
+.legacy-information p,
+.legacy-information li {
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--secondary);
+}
+.legacy-information strong,
+.legacy-information a {
+  color: var(--text);
+}
+.legacy-information li {
+  margin: 10px 0;
+}
+.legacy-information ol,
+.legacy-information ul {
+  padding-left: 20px;
+}
+.legacy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 26px 0;
+}
+.legacy-actions > * {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 18px;
+  font-size: 12px;
+  min-height: 44px;
+}
+.legacy-information .legacy-fine {
+  font-size: 11px;
+}
+.legacy-closed {
+  max-width: 780px;
+  margin: 60px auto;
+  padding: 24px;
+}
+.legacy-closed-mark {
+  font-size: 24px;
+  font-weight: 700;
+}
+.legacy-closed-mark span {
+  font: 500 10px var(--font-mono);
+  margin-left: 12px;
+}
+.legacy-closed-status {
+  display: inline-block;
+  margin: 24px 0;
+  padding: 8px 12px;
+  border: 1px solid #b47e2c88;
+  border-radius: 6px;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .legacy-notice {
+    gap: 8px;
+    padding: 12px;
+  }
+  .legacy-notice > svg {
+    display: none;
+  }
+  .legacy-closed {
+    margin: 16px auto;
+  }
+  .legacy-actions > * {
+    width: 100%;
+  }
+}
+
+.legacy-actions a.primary-button {
+  color: var(--bg);
+  text-decoration: none;
+}

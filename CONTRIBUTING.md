@@ -48,6 +48,11 @@ changes. Hosting changes also need `npm run test:worker`; prepare the legacy
 mirror with `npm run build:github-pages` and `npm run test:github-pages`.
 Generated tables and bundles should come from their tools, not hand edits.
 
+The event capture tool is `node tools/screenshot-rngmas.mjs`; it also captures
+the collection gallery. `node tools/screenshot-legacy.mjs` captures the two
+Legacy preview servers documented in `docs-source/legacy-shutdown.md`. Use only
+synthetic local profiles. Production ignores both preview-clock variables.
+
 ## Pull requests and releases
 
 Describe the problem, intended behavior, compatibility implications and exact

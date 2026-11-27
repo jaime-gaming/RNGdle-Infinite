@@ -1,6 +1,8 @@
+import WinterFestival from "./WinterFestival.jsx";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
+  Radio,
   Check,
   ChevronRight,
   ChevronDown,
@@ -633,7 +635,7 @@ export function WinterEconomy({
             </p>
             <div
               className="winter-stamps"
-              aria-label={`${record.marketPurchases?.length ?? 0} of 5 stalls visited`}
+              aria-label={`${record.marketPurchases?.length ?? 0} of ${WINTER_MARKET.length} stalls visited`}
             >
               {WINTER_MARKET.map((item, index) => (
                 <span
@@ -652,7 +654,7 @@ export function WinterEconomy({
             <div className="winter-stalls">
               {WINTER_MARKET.map((item) => {
                 const bought = (record.marketPurchases ?? []).includes(item.id);
-                const boost = passBoostById(item.boost);
+                const boost = item.aura ? null : passBoostById(item.boost);
                 return (
                   <article
                     className="winter-stall"
@@ -662,16 +664,32 @@ export function WinterEconomy({
                     <span className="winter-stall-tag">
                       {bought
                         ? "Collected"
-                        : item.charges
-                          ? "Winter bundle"
-                          : "Single charge"}
+                        : item.aura
+                          ? "Exclusive aura"
+                          : item.charges
+                            ? "Winter bundle"
+                            : "Single charge"}
                     </span>
-                    <Zap size={24} aria-hidden="true" />
+                    {item.aura ? (
+                      <NumberBox
+                        value="2026"
+                        tier="rare"
+                        aura={item.aura}
+                        compact
+                      />
+                    ) : (
+                      <Zap size={24} aria-hidden="true" />
+                    )}
                     <h4>{item.name}</h4>
-                    <p>{boost.blurb}</p>
                     <p>
-                      {item.charges ?? 1} charge{item.charges ? "s" : ""} · kept
-                      after the event
+                      {item.aura
+                        ? "Exclusive to this winter market. Kept forever, including after resets."
+                        : boost.blurb}
+                    </p>
+                    <p>
+                      {item.aura
+                        ? "Permanent cosmetic · no effect on odds"
+                        : `${item.charges ?? 1} charges · kept after the event`}
                     </p>
                     <button
                       className="secondary-button"
@@ -688,7 +706,9 @@ export function WinterEconomy({
                         )
                       }
                     >
-                      {item.name} ×{item.charges ?? 1} · {item.price} Snowcoins
+                      {item.name}
+                      {item.aura ? "" : ` ×${item.charges ?? 1}`} · {item.price}{" "}
+                      Snowcoins
                       {bought ? " · Bought" : ""}
                     </button>
                   </article>
@@ -986,6 +1006,9 @@ export default function RngmasShelf({ progress, onAction, notify }) {
         <a href="#winter-calendar">
           <CalendarDays size={16} /> Advent square
         </a>
+        <a href="#winter-festival-board">
+          <Radio size={16} /> Festival board
+        </a>
         <a href="#winter-chapters">
           <ShoppingBag size={16} /> Winter trail
         </a>
@@ -1002,6 +1025,12 @@ export default function RngmasShelf({ progress, onAction, notify }) {
           pending={pending}
         />
       </div>
+      <WinterFestival
+        progress={progress}
+        status={status}
+        onAction={run}
+        pending={pending}
+      />
       <WinterChapters
         progress={progress}
         status={status}

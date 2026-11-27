@@ -1,3 +1,4 @@
+import { WINTER_EXCLUSIVES } from "../winter-festival.js";
 import React from "react";
 import "../number-box.css";
 import "../number-box-palettes.css";
@@ -18,7 +19,9 @@ const tiers = new Set([
   "mythic",
   "godly",
 ]);
+const winterExclusiveIds = new Set(WINTER_EXCLUSIVES.map((item) => item.id));
 const cosmetics = new Set([
+  ...winterExclusiveIds,
   "starfall",
   "aurora",
   "orbit",
@@ -120,6 +123,7 @@ export default function NumberBox({
       className={`number-box ${rarity === "godly" ? "tier-godly" : ""} ${compact ? "number-box-compact" : ""} ${className}`}
       data-tier={rarity}
       data-cosmetic={cosmetic}
+      data-winter-exclusive={winterExclusiveIds.has(cosmetic) || undefined}
       data-deja-vu={dejaVu || undefined}
       data-aura-layout={auraLayout === "contained" ? "contained" : undefined}
       style={{

@@ -35,6 +35,8 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import { prepareRolls } from "./roll-client.js";
 import LoadingScreen from "./components/LoadingScreen.jsx";
+import { LegacyGate } from "./components/LegacyShutdown.jsx";
+import { legacyNow, legacyShutdownState } from "./legacy-shutdown.js";
 import MirrorNotice from "./components/MirrorNotice.jsx";
 import { shouldShowLoadingScreen } from "./loading-gate.js";
 import "./shop.css";
@@ -2018,11 +2020,14 @@ function App() {
   );
 }
 
-const updateSaveRecovery = recoverSaveAfterUpdate();
+const legacyClosed =
+  isLegacyMirrorBuild() && legacyShutdownState(legacyNow()).closed;
+const updateSaveRecovery = legacyClosed ? null : recoverSaveAfterUpdate();
 
-const vaultRecovery = updateSaveRecovery?.recovered
-  ? { restored: false }
-  : restoreVaultIfNeeded();
+const vaultRecovery =
+  legacyClosed || updateSaveRecovery?.recovered
+    ? { restored: false }
+    : restoreVaultIfNeeded();
 
 try {
   window.addEventListener("error", (e) => {
@@ -2040,7 +2045,9 @@ if (!rootEl) {
   createRoot(rootEl).render(
     <ErrorBoundary>
       <SettingsProvider>
-        <App />
+        <LegacyGate>
+          <App />
+        </LegacyGate>
       </SettingsProvider>
     </ErrorBoundary>,
   );

@@ -47,7 +47,7 @@ decoration is `src/components/RngmasDecor.jsx`: a fixed, `aria-hidden`,
 aligned under the header, that sets `data-season="rngmas"` while the season is
 live and takes it away afterwards. It draws snow banks, pines, gifts, bells,
 garlands and a 22-flake snowfall; `is-reduced-motion` keeps the picture and
-drops every animation. The seven winter auras use
+drops every animation. The seventeen event auras and three winter pass auras use
 `src/components/RngmasAura.jsx` plus `src/rngmas-auras.css`, which reuse the
 shared `.aura-*` ornament rules from `rngween-auras.css` (seal, filigree,
 crest, guardians, motes) instead of Black Friday's flat box paint. Keep new
@@ -594,3 +594,28 @@ are never replayed for extra bonuses, and parser repairs never mint those bonuse
 No new save fields, odds changes, price discounts on base products or cooldown
 changes were introduced. All new scene, expansion and switch motion has a
 reduced-motion path. Keep source/release changelog history untouched.
+
+## Launch preparation: festival and Legacy deadline
+
+Christmas mode now shows only its name and the activation switch under TEMPORAL:
+no decorative icon, status subtitle or explanatory paragraph. Keep its existing
+accessible checkbox state, persistence and responsive decoration behavior.
+
+`src/winter-festival.js` defines three season-long tasks, four explicitly timed
+live activities and ten additional cosmetic identities. RNGmas now has 17 event
+auras plus three pass auras. The saved `rngmas.festival` record has bounded roll/
+7-containing counters, distinct final digits, task claims and per-live-window
+count/digit/claim receipts. Default, parse and compare all dimensions. Main online
+settlement updates it once; extra skill/offline rolls never count. The gift drive
+is four paid 5-Snowcoin in-game parcels, not a real-world donation. All tasks and
+live claims validate their UTC window in the reducer. Market aura offers grant
+permanent ownership without boost charges. Preserve all old receipts and resets.
+
+The Legacy shutdown is December 1, 2026 at 00:00 Europe/Madrid, November 30 at
+23:00 UTC. `LegacyGate` wraps App only on repository-base builds. At the deadline
+it unmounts the game and its status/sync effects; the information/archival backup
+utility stays available. Never apply this gate to the root-domain current game.
+The countdown uses wall time, not seasonal `gameNow()`. Dev-only
+`VITE_LEGACY_PREVIEW_AT` previews before/after; production ignores it. Do not erase
+local saves, silently migrate profiles or claim automatic cross-origin import.
+See `docs-source/legacy-shutdown.md` for cached-client and deployment limitations.

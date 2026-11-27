@@ -1,3 +1,9 @@
+import {
+  WINTER_SPECIAL_TASKS,
+  WINTER_LIVE_EVENTS,
+  emptyWinterFestival,
+  winterFestivalCount,
+} from "./winter-festival.js";
 import { gameNow } from "./game-clock.js";
 import { unpackVaultSave } from "./save-codec.js";
 
@@ -1419,6 +1425,83 @@ function applyEvent(state, action) {
     };
   }
   if (
+    action.type === "winter-special-claim" ||
+    action.type === "winter-parcel"
+  ) {
+    const at = action.at ?? Math.ceil(gameNow());
+    if (!validAmount(at) || !rngmasWeekAt(at))
+      throw new Error("The winter festival is closed.");
+    const record = state.rngmas ?? emptyRngmas();
+    const festival = record.festival ?? emptyWinterFestival();
+    const mission = [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS].find(
+      (item) => item.id === action.id,
+    );
+    if (!mission) throw new Error("Unknown winter activity.");
+    if (mission.start && (at < mission.start || at >= mission.end))
+      throw new Error("This live window is closed.");
+    const claimed = mission.start
+      ? festival.live[mission.id].claimed
+      : festival.claimed.includes(mission.id);
+    if (claimed) throw new Error("Reward already collected.");
+    if (action.type === "winter-parcel") {
+      if (mission.metric !== "donations")
+        throw new Error("This activity does not take parcels.");
+      const entry = festival.live[mission.id];
+      if (entry.count >= mission.goal)
+        throw new Error("All parcels are already sent.");
+      if ((record.snowcoins ?? 0) < 5) throw new Error("Not enough Snowcoins.");
+      return {
+        ...state,
+        rngmas: {
+          ...record,
+          snowcoins: record.snowcoins - 5,
+          festival: {
+            ...festival,
+            live: {
+              ...festival.live,
+              [mission.id]: { ...entry, count: entry.count + 1 },
+            },
+          },
+        },
+      };
+    }
+    if (winterFestivalCount(record, mission) < mission.goal)
+      throw new Error("Complete this activity first.");
+    if ((record.snowcoinsEarned ?? 0) > Number.MAX_SAFE_INTEGER - mission.coins)
+      throw new Error("Snowcoin limit reached.");
+    return {
+      ...state,
+      owned: [...new Set([...state.owned, mission.reward])],
+      rngmas: {
+        ...record,
+        snowcoins: Math.min(
+          SNOWCOIN_CAP,
+          (record.snowcoins ?? 0) + mission.coins,
+        ),
+        snowcoinsEarned: (record.snowcoinsEarned ?? 0) + mission.coins,
+        festival: mission.start
+          ? {
+              ...festival,
+              live: {
+                ...festival.live,
+                [mission.id]: { ...festival.live[mission.id], claimed: true },
+              },
+            }
+          : { ...festival, claimed: [...festival.claimed, mission.id] },
+      },
+      history: appendHistory(state.history, [
+        {
+          id: `winter-special:${mission.id}`,
+          type: "winter-reward",
+          at,
+          missionId: mission.id,
+          productId: mission.reward,
+          name: RNGMAS_COSMETICS_BY_ID.get(mission.reward).name,
+        },
+      ]),
+    };
+  }
+  if (
     action.type === "winter-exchange" ||
     action.type === "winter-market-buy"
   ) {
@@ -1483,15 +1566,20 @@ function applyEvent(state, action) {
         snowcoins: record.snowcoins - item.price,
         marketPurchases: [...(record.marketPurchases ?? []), item.id],
       },
-      battlePass: {
-        ...state.battlePass,
-        boosts: grantBoost(
-          state.battlePass?.boosts,
-          item.boost,
-          item.charges ?? 1,
-          at,
-        ),
-      },
+      owned: item.aura
+        ? [...new Set([...state.owned, item.aura])]
+        : state.owned,
+      battlePass: item.aura
+        ? state.battlePass
+        : {
+            ...state.battlePass,
+            boosts: grantBoost(
+              state.battlePass?.boosts,
+              item.boost,
+              item.charges ?? 1,
+              at,
+            ),
+          },
       history: appendHistory(state.history, [
         {
           id: `winter-market:${item.id}`,
@@ -2861,6 +2949,23 @@ function parseHistory(value) {
       )
         return [];
       next = { ...base, coins: e.coins, ep: e.ep };
+    } else if (e.type === "winter-reward") {
+      const mission = [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS].find(
+        (item) => item.id === e.missionId,
+      );
+      if (
+        !mission ||
+        e.productId !== mission.reward ||
+        typeof e.name !== "string" ||
+        e.name.length > 100
+      )
+        return [];
+      next = {
+        ...base,
+        missionId: mission.id,
+        productId: mission.reward,
+        name: e.name,
+      };
     } else if (e.type === "winter-market") {
       const item = WINTER_MARKET.find((item) => item.id === e.itemId);
       if (!item || e.coins !== item.price) return [];

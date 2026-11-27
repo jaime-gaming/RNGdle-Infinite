@@ -49,7 +49,8 @@ for (const [width, height] of [
     });
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute("aria-checked", "true");
-    await expect(group).toContainText("Keeps your color theme");
+    await expect(toggle).toHaveText("Christmas mode");
+    await expect(group.locator(".appearance-season-note")).toHaveCount(0);
     await toggle.focus();
     await page.keyboard.press("Space");
     await expect(toggle).toHaveAttribute("aria-checked", "false");
@@ -96,7 +97,7 @@ test("chapters expand with keyboard, keep the active zone open and retain access
     .toBe(50);
   await expect(market.locator(".winter-stamps")).toHaveAttribute(
     "aria-label",
-    "1 of 5 stalls visited",
+    "1 of 8 stalls visited",
   );
   await expect(market).toHaveAttribute("open", "");
   await market.locator("summary").click();

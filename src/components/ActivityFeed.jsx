@@ -558,7 +558,7 @@ export default function ActivityFeed({
                     <ShoppingBag size={19} />
                   ) : event.type === "golem-smash" ? (
                     <Hammer size={19} />
-                  ) : event.type === "golem-reward" ? (
+                  ) : ["golem-reward", "winter-reward"].includes(event.type) ? (
                     <Star size={19} />
                   ) : event.type === "sale-reward" ||
                     event.type === "pass-reward" ||
@@ -650,12 +650,15 @@ export default function ActivityFeed({
                                                                   "golem-reward"
                                                                 ? `Golem reward · ${event.name}`
                                                                 : event.type ===
-                                                                    "winter-exchange"
-                                                                  ? "Snowcoin exchange"
+                                                                    "winter-reward"
+                                                                  ? `Winter reward · ${event.name}`
                                                                   : event.type ===
-                                                                      "winter-market"
-                                                                    ? "Christmas market purchase"
-                                                                    : `Equipped ${event.name}`}
+                                                                      "winter-exchange"
+                                                                    ? "Snowcoin exchange"
+                                                                    : event.type ===
+                                                                        "winter-market"
+                                                                      ? "Christmas market purchase"
+                                                                      : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString("en-US", {
@@ -892,7 +895,7 @@ export default function ActivityFeed({
                       <strong>−{formatEP(event.ep)} EP</strong> · ×
                       {event.multiplier} · {formatEP(event.damage)} damage
                     </p>
-                  ) : event.type === "golem-reward" ? (
+                  ) : ["golem-reward", "winter-reward"].includes(event.type) ? (
                     <p className="activity-transaction">
                       <strong>Permanent aura</strong> · {event.name} · kept
                       forever

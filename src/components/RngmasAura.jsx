@@ -1,3 +1,4 @@
+import { WINTER_EXCLUSIVES } from "../winter-festival.js";
 import React from "react";
 import {
   BellMark,
@@ -10,6 +11,23 @@ import {
 // Winter art for the seven permanent RNGmas auras, in the RNGween style: a
 // turning seal, corner filigree, a crest, two guardians and rising motes.
 const ART = {
+  ...Object.fromEntries(
+    WINTER_EXCLUSIVES.map((aura) => [
+      aura.id,
+      {
+        Mark:
+          aura.winterArt === "bell"
+            ? BellMark
+            : aura.winterArt === "gift"
+              ? GiftMark
+              : aura.winterArt === "snow"
+                ? SnowflakeMark
+                : WinterStarMark,
+        side: PineMark,
+        label: aura.winterArt,
+      },
+    ]),
+  ),
   "pass-snowglobe": { Mark: SnowflakeMark, side: PineMark, label: "snowglobe" },
   "pass-carillon": { Mark: BellMark, side: SnowflakeMark, label: "carillon" },
   "pass-polar-crown": {
@@ -82,7 +100,17 @@ export default function RngmasAura({ aura }) {
   if (!art) return null;
   const { Mark, side: SideMark, label } = art;
   return (
-    <span className={`rngmas-aura aura-winter aura-${label}`}>
+    <span
+      className={`rngmas-aura aura-winter aura-${label}`}
+      style={
+        WINTER_EXCLUSIVES.some((item) => item.id === aura)
+          ? {
+              "--aura-primary": "var(--aura-b)",
+              "--aura-secondary": "var(--aura-a)",
+            }
+          : undefined
+      }
+    >
       <span className="aura-atmosphere" />
       <SnowSeal />
       <svg

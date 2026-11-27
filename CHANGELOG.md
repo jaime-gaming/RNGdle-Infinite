@@ -22,6 +22,11 @@ deployment, new tag or new published release.
   independent of color theme, with responsive scenery and reduced-motion support.
 - Cloud fallback/recovery and maintenance draw paths are hardened. An expired
   maintenance window no longer remains active solely because of stale flags.
+- Launch preparation adds three special tasks, four scheduled live activities and
+  ten more event cosmetics. Christmas mode is reduced to its name and switch.
+- The GitHub Pages Legacy build shows a countdown to December 1 at 00:00 Madrid,
+  then replaces gameplay with closure/migration information and a private backup
+  utility. The current root-domain game continues.
 - Repository onboarding, contribution guidance, security reporting and
   third-party license notices are documented without changing the code license.
 

@@ -431,3 +431,16 @@
   color: #ecfdf5;
   border-color: #6ee7b7;
 }
+
+.number-box[data-cosmetic][data-winter-exclusive="true"] {
+  --box-background: linear-gradient(
+    135deg,
+    var(--aura-a),
+    color-mix(in srgb, var(--aura-a) 70%, var(--aura-b))
+  );
+  --box-border: var(--aura-b);
+  --box-ink: #f0fdff;
+  --box-shadow:
+    0 0 18px color-mix(in srgb, var(--aura-b) 30%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--aura-b) 20%, transparent);
+}

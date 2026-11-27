@@ -21,12 +21,25 @@ try {
   await seedProgress(page, { balance: 3000000, totalEarned: 3000000 });
   await page.goto(`${base}/shop/rngmas`);
   await page.locator(".winter-chapter[data-current='true']").waitFor();
-  await page.locator("#winter-chapters").evaluate((node) => {
+  await page.locator("#winter-festival-board").evaluate((node) => {
     node.scrollIntoView({ block: "start" });
   });
   await mkdir(new URL("../media/", import.meta.url), { recursive: true });
   await page.screenshot({
     path: new URL("../media/rngmas.png", import.meta.url).pathname,
+    animations: "disabled",
+  });
+  await page
+    .locator(".festival-zone")
+    .filter({ hasText: "The winter collection" })
+    .locator("summary")
+    .click();
+  await page
+    .locator(".festival-zone")
+    .filter({ hasText: "The winter collection" })
+    .evaluate((node) => node.scrollIntoView({ block: "start" }));
+  await page.screenshot({
+    path: new URL("../media/rngmas-collection.png", import.meta.url).pathname,
     animations: "disabled",
   });
   console.log("media/rngmas.png (synthetic local profile, December 17 UTC)");

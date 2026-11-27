@@ -183,29 +183,15 @@ export default function AppearanceMenu({
               type="button"
               role="menuitemcheckbox"
               aria-label="Christmas mode"
-              aria-describedby={`${id}-christmas-description`}
               aria-checked={settings.christmasMode}
               className="appearance-option appearance-christmas"
               onClick={() => update({ christmasMode: !settings.christmasMode })}
             >
-              <Snowflake size={18} aria-hidden="true" />
-              <span className="appearance-christmas-copy">
-                <strong>Christmas mode</strong>
-                <small>
-                  {settings.christmasMode ? "On" : "Off"} · Seasonal decorations
-                </small>
-              </span>
+              <span>Christmas mode</span>
               <span className="appearance-switch" aria-hidden="true">
                 <i />
               </span>
             </button>
-            <p
-              id={`${id}-christmas-description`}
-              className="appearance-season-note"
-            >
-              Snow, lights and winter scenery on any screen. Keeps your color
-              theme. Visible December 1–January 2; follows reduced motion.
-            </p>
           </div>
         </div>
       )}
