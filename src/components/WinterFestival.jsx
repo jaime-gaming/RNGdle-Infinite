@@ -1,3 +1,10 @@
+import WinterMotif from "./WinterMotif.jsx";
+import {
+  WINTER_ROTATIONS,
+  WINTER_INGREDIENTS,
+  winterSchedule,
+} from "../winter-rotation.js";
+import { passBoostById } from "../battle-pass.js";
 import PetIcon from "./PetIcon.jsx";
 import React, { useEffect, useState } from "react";
 import { CalendarDays, Radio, Gift, Snowflake } from "lucide-react";
@@ -5,6 +12,7 @@ import { gameNow } from "../game-clock.js";
 import {
   WINTER_SPECIAL_TASKS,
   WINTER_LIVE_EVENTS,
+  WINTER_GATHERINGS,
   winterFestivalCount,
 } from "../winter-festival.js";
 import { RNGMAS_REWARDS, RNGMAS_COSMETICS_BY_ID } from "../rngmas.js";
@@ -31,6 +39,7 @@ export default function WinterFestival({
   collectionOnly = false,
 }) {
   const [view, setView] = useState("tasks");
+  const [fullCalendar, setFullCalendar] = useState(false);
   const [now, setNow] = useState(gameNow);
   useEffect(() => {
     const nextBoundary = Math.min(
@@ -50,7 +59,7 @@ export default function WinterFestival({
     const aura = RNGMAS_COSMETICS_BY_ID.get(mission.reward);
     const rewardName =
       aura?.name ??
-      `${mission.charges} ${mission.boost?.replace("boost-", "")} boost${mission.charges > 1 ? "s" : ""}`;
+      `${mission.charges} ${passBoostById(mission.boost)?.name ?? "boost"} charge${mission.charges > 1 ? "s" : ""}`;
     const open = !live || (now >= mission.start && now < mission.end);
     const claimed = live
       ? festival?.live?.[mission.id]?.claimed
@@ -62,10 +71,14 @@ export default function WinterFestival({
         key={mission.id}
         data-live={live && open}
         data-collected={claimed}
+        data-ready={open && count >= mission.goal && !claimed}
+        data-motif={mission.motif ?? "parcel"}
       >
         <p className="eyebrow">
           {claimed
-            ? "IN YOUR COLLECTION"
+            ? aura
+              ? "IN YOUR COLLECTION"
+              : "COLLECTED"
             : live
               ? open
                 ? "LIVE NOW"
@@ -79,14 +92,21 @@ export default function WinterFestival({
         ) : aura ? (
           <NumberBox value="2026" tier="rare" aura={aura.id} compact />
         ) : (
-          <Gift size={36} aria-hidden="true" />
+          <WinterMotif
+            motif={mission.motif ?? "parcel"}
+            size={46}
+            aria-hidden="true"
+          />
         )}
         <h4>
           <span className="festival-mission-number">
             {String(
-              (live ? WINTER_LIVE_EVENTS : WINTER_SPECIAL_TASKS).indexOf(
-                mission,
-              ) + 1,
+              (live
+                ? mission.group === "rotation"
+                  ? WINTER_ROTATIONS
+                  : [...WINTER_GATHERINGS].sort((a, b) => a.start - b.start)
+                : WINTER_SPECIAL_TASKS
+              ).indexOf(mission) + 1,
             ).padStart(2, "0")}
           </span>{" "}
           {mission.name}
@@ -115,6 +135,35 @@ export default function WinterFestival({
             aria-label={`${mission.name} progress`}
           />
         </label>
+        {["digits", "ingredients"].includes(mission.metric) && (
+          <div
+            className="winter-ingredient-board"
+            aria-label={
+              mission.metric === "ingredients"
+                ? "Kitchen ingredients"
+                : "Final digits"
+            }
+          >
+            {(mission.metric === "ingredients"
+              ? WINTER_INGREDIENTS
+              : Array.from({ length: 10 }, (_, i) => String(i))
+            ).map((name, i) => {
+              const found = (
+                live ? festival?.live?.[mission.id]?.digits : festival?.digits
+              )?.includes(i);
+              return (
+                <span
+                  key={name}
+                  data-found={!!found}
+                  aria-label={`${name}: ${found ? "found" : "missing"}`}
+                >
+                  {found ? "✓ " : ""}
+                  {name}
+                </span>
+              );
+            })}
+          </div>
+        )}
         {mission.metric === "donations" &&
           open &&
           !claimed &&
@@ -147,12 +196,51 @@ export default function WinterFestival({
           }
         >
           {claimed
-            ? "In your collection"
+            ? aura
+              ? "In your collection"
+              : "Collected"
             : !open
-              ? "Window closed"
+              ? now < mission.start
+                ? "Not open yet"
+                : "Window closed"
               : `Collect ${rewardName}`}
         </button>
       </article>
+    );
+  };
+  const scheduleCards = (events) => {
+    const schedule = winterSchedule(events, now);
+    const shown = fullCalendar
+      ? [...events].sort((a, b) => a.start - b.start)
+      : [...schedule.active, ...schedule.upcoming.slice(0, 1)];
+    return (
+      <>
+        <div className="winter-schedule-controls">
+          <button
+            className="secondary-button"
+            aria-pressed={!fullCalendar}
+            onClick={() => setFullCalendar(false)}
+          >
+            Now & next
+          </button>
+          <button
+            className="secondary-button"
+            aria-pressed={fullCalendar}
+            onClick={() => setFullCalendar(true)}
+          >
+            Full calendar
+          </button>
+          <span>
+            {schedule.active.length} open · {schedule.upcoming.length} upcoming
+          </span>
+        </div>
+        <div className="festival-grid">{shown.map((m) => card(m, true))}</div>
+        {!shown.length && (
+          <p className="festival-explainer">
+            All windows have ended. Your earned rewards stay in your collection.
+          </p>
+        )}
+      </>
     );
   };
   return (
@@ -177,7 +265,7 @@ export default function WinterFestival({
               </p>
             </div>
           </div>
-          <div className="festival-summary">
+          <div className="festival-summary" hidden={view !== "tasks"}>
             <strong>
               {festival?.claimed?.length ?? 0} / {WINTER_SPECIAL_TASKS.length}{" "}
               missions collected
@@ -196,6 +284,7 @@ export default function WinterFestival({
             {[
               ["tasks", "Missions"],
               ["live", "Live schedule"],
+              ["commissions", "Rotating commissions"],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -221,16 +310,28 @@ export default function WinterFestival({
             <header className="festival-zone-heading">
               <Radio size={18} />
               <strong>Live gatherings</strong>
-              <span>Four scheduled windows · UTC</span>
+              <span>{WINTER_GATHERINGS.length} different gatherings · UTC</span>
             </header>
             <p className="festival-explainer">
               These are timed activities with your own progress, not a shared
               global counter. Start, finish and claim inside the window; there
               is no catch-up. The gift drive uses Snowcoins instead of rolls.
             </p>
-            <div className="festival-grid">
-              {WINTER_LIVE_EVENTS.map((m) => card(m, true))}
-            </div>
+            {scheduleCards(WINTER_GATHERINGS)}
+          </div>
+          <div className="festival-zone" hidden={view !== "commissions"}>
+            <header className="festival-zone-heading">
+              <CalendarDays size={18} />
+              <strong>The village noticeboard</strong>
+              <span>One commission every four days</span>
+            </header>
+            <p className="festival-explainer">
+              Eight different routes, one reward each. Complete and collect
+              during its four-day window for 6 Snowcoins and one Spark Injector
+              charge. No streaks, no escalating daily grind. These use the same
+              main online rolls as other missions.
+            </p>
+            {scheduleCards(WINTER_ROTATIONS)}
           </div>
         </>
       )}

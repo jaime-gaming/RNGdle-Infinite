@@ -1,5 +1,5 @@
 import WinterTasks from "./WinterTasks.jsx";
-import { rngmasStatus } from "../rngmas.js";
+import { rngmasStatus, winterReadyCount } from "../rngmas.js";
 import React, { useState } from "react";
 import {
   ArrowDownToLine,
@@ -343,6 +343,14 @@ export default function Tasks({
               <strong>RNGmas</strong>
               <small>Missions · Live · Weekly</small>
             </span>
+            {winterReadyCount(progress.rngmas, now) > 0 && (
+              <span
+                className="tasks-view-ready"
+                aria-label={`${winterReadyCount(progress.rngmas, now)} ready`}
+              >
+                {winterReadyCount(progress.rngmas, now)}
+              </span>
+            )}
           </button>
         )}
       </div>

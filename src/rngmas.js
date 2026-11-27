@@ -4,6 +4,7 @@ import {
   emptyWinterFestival,
   parseWinterFestival,
   recordWinterFestival,
+  winterFestivalCount,
   WINTER_SPECIAL_TASKS,
   WINTER_LIVE_EVENTS,
 } from "./winter-festival.js";
@@ -207,14 +208,16 @@ export const WINTER_MARKET = [
   {
     id: "snow-surge-bundle",
     name: "Surge bundle",
-    price: 60,
+    price: 40,
+    legacyPrice: 60,
     boost: "boost-surge",
     charges: 3,
   },
   {
     id: "snow-overdrive-bundle",
     name: "Overdrive bundle",
-    price: 90,
+    price: 55,
+    legacyPrice: 90,
     boost: "boost-overdrive",
     charges: 3,
   },
@@ -690,4 +693,31 @@ export function winterChapterCount(record, week) {
   if (week.metric === "exchanged") return record?.snowcoinsExchanged ?? 0;
   const entry = record?.golems?.[week.id];
   return week.metric === "damage" ? (entry?.damage ?? 0) : (entry?.count ?? 0);
+}
+
+// Keep Tasks and the global ready indicator in sync with expiring event claims.
+export function winterReadyCount(record, at = gameNow()) {
+  const status = rngmasStatus(at);
+  if (!status.active) return 0;
+  const festival = record?.festival;
+  let ready = [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS].filter(
+    (mission) => {
+      const claimed = mission.start
+        ? festival?.live?.[mission.id]?.claimed
+        : festival?.claimed?.includes(mission.id);
+      return (
+        !claimed &&
+        (!mission.start || (at >= mission.start && at < mission.end)) &&
+        winterFestivalCount(record, mission) >= mission.goal
+      );
+    },
+  ).length;
+  const week = status.week;
+  if (
+    week &&
+    !record?.golems?.[week.id]?.defeated &&
+    winterChapterCount(record, week) >= week.goal
+  )
+    ready++;
+  return ready;
 }

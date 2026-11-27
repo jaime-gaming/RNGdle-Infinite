@@ -640,3 +640,30 @@ SettingsProvider masks the saved preference outside this window and rejects
 out-of-season toggle updates; Appearance disables the switch and shows it off.
 The shared seasonal hook schedules the exact boundary and refreshes on focus,
 so decoration disappears without a reload. Keep stored opt-outs intact.
+
+### Expanded winter village rotation
+
+`winter-rotation.js` defines seven additional gatherings and eight contiguous
+four-day commissions. They append to WINTER_LIVE_EVENTS after the original four;
+never reorder/reuse those receipt IDs. There are now 11 gatherings and eight
+commissions, each calendar covering Dec 1–Jan 2 without gaps or overlap.
+`festival.live` stores all bounded counts/ingredient or digit sets/claim receipts;
+no daily reset deletes progress. The kitchen maps final digit modulo four to
+Sugar/Spice/Cocoa/Ginger. Adjacent pairs use unpadded decimal strings; zero is
+not a repeated pair. Only primary settled online rolls progress these rules.
+All new windows award banked boosts and Snowcoins once, no automatic activation.
+The gift drive now refunds 10 of the 20 donated Snowcoins when claimed.
+
+`winter-village.css` adds opaque evergreen/cranberry/brass surfaces, warm string
+lights, swaying reward ornaments, stamped ingredient slots and ready-state trim.
+All new motion has a reduced-motion override. `winterReadyCount` drives Tasks
+and its global ready indicator and excludes expired claims. Full calendars are
+opt-in; Now & next shows current plus the next window. Keep missions in Tasks.
+
+Market Surge/Overdrive triples now cost 40/55; `legacyPrice` preserves old 60/90
+history receipts without refunding or enabling another purchase. Historical
+receipt coin amounts and cosmetic IDs must not be silently rewritten.
+Run `npm run audit:winter` for deterministic 2,000-player-per-activity demand
+samples, calendar coverage and hard bonus-budget assertions. Added windows cap
+at 128 Snowcoins, 13 Spark charges and 2 Surge charges over the entire season.
+No new cosmetic IDs, scoring/odds/cooldown changes or unlimited farms.

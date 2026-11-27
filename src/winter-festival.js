@@ -1,3 +1,8 @@
+import {
+  WINTER_EXTRA_GATHERINGS,
+  WINTER_ROTATIONS,
+  winterRollMatches,
+} from "./winter-rotation.js";
 export const WINTER_EXCLUSIVES = [
   ["lantern", "Lantern Keeper", "#451a03", "#fbbf24", "bell"],
   ["ribbon", "Ribbon Runner", "#4c0519", "#fda4af", "gift"],
@@ -106,13 +111,19 @@ const CURRENT_REWARDS = {
   "prism-set": { reward: null, boost: "boost-surge", charges: 1 },
   "meteor-watch": { reward: "winter-holly-corvid" },
   "bell-relay": { reward: "winter-snow-owl" },
-  "gift-drive": { reward: "winter-parcel-kit" },
+  "gift-drive": { reward: "winter-parcel-kit", coins: 10 },
   "midnight-wishes": { reward: "rngmas-midnight" },
 };
 for (const mission of [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS]) {
   mission.legacyReward = mission.reward;
   Object.assign(mission, CURRENT_REWARDS[mission.id]);
 }
+
+// Preserve the first four legacy entries and their IDs for existing receipts.
+WINTER_LIVE_EVENTS.push(...WINTER_EXTRA_GATHERINGS, ...WINTER_ROTATIONS);
+export const WINTER_GATHERINGS = WINTER_LIVE_EVENTS.filter(
+  (event) => event.group !== "rotation",
+);
 
 const count = (value) =>
   Number.isSafeInteger(value) && value >= 0 ? value : 0;
@@ -163,7 +174,9 @@ export function parseWinterFestival(value, owned = []) {
     const stored = value?.live?.[event.id];
     base.live[event.id] = {
       count: Math.min(event.goal, count(stored?.count)),
-      digits: digits(stored?.digits),
+      digits: digits(stored?.digits).filter(
+        (n) => event.metric !== "ingredients" || n < 4,
+      ),
       claimed:
         stored?.claimed === true ||
         (event.reward && owned.includes(event.reward)) ||
@@ -174,8 +187,8 @@ export function parseWinterFestival(value, owned = []) {
 }
 export function winterFestivalCount(record, mission) {
   const stats = record?.festival ?? emptyWinterFestival();
-  const entry = mission.start ? stats.live[mission.id] : stats;
-  return mission.metric === "digits"
+  const entry = mission.start ? stats.live?.[mission.id] : stats;
+  return ["digits", "ingredients"].includes(mission.metric)
     ? (entry?.digits?.length ?? 0)
     : mission.start
       ? (entry?.count ?? 0)
@@ -197,22 +210,25 @@ export function recordWinterFestival(record, result, at) {
   for (const event of WINTER_LIVE_EVENTS) {
     if (at < event.start || at >= event.end || event.metric === "donations")
       continue;
-    const entry = stats.live[event.id];
+    const entry = stats.live?.[event.id] ?? {
+      count: 0,
+      digits: [],
+      claimed: false,
+    };
     next.live[event.id] = {
       ...entry,
       count: Math.min(
         event.goal,
-        entry.count +
-          (event.metric === "even"
-            ? Number(result.number % 2 === 0)
-            : event.metric === "high"
-              ? Number(result.number >= 500000)
-              : 0),
+        entry.count + Number(winterRollMatches(event.metric, result.number)),
       ),
-      digits:
-        event.metric === "digits"
-          ? [...new Set([...entry.digits, last])]
-          : entry.digits,
+      digits: ["digits", "ingredients"].includes(event.metric)
+        ? [
+            ...new Set([
+              ...entry.digits,
+              event.metric === "ingredients" ? last % 4 : last,
+            ]),
+          ]
+        : entry.digits,
     };
   }
   return { ...record, festival: next };

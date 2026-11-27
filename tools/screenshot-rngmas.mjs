@@ -20,12 +20,29 @@ try {
   await mockOperationalStatus(page);
   await seedProgress(page, { balance: 3000000, totalEarned: 3000000 });
   await page.goto(`${base}/tasks?event=rngmas`);
-  await page.locator("#winter-festival-board").evaluate((node) => {
+  await page.locator(".winter-tasks").evaluate((node) => {
     node.scrollIntoView({ block: "start" });
   });
   await mkdir(new URL("../media/", import.meta.url), { recursive: true });
   await page.screenshot({
     path: new URL("../media/rngmas.png", import.meta.url).pathname,
+    animations: "disabled",
+  });
+  await page
+    .getByRole("button", { name: "Live schedule", exact: true })
+    .click();
+  await page
+    .locator(".winter-tasks")
+    .evaluate((node) => node.scrollIntoView({ block: "start" }));
+  await page.screenshot({
+    path: new URL("../media/rngmas-live.png", import.meta.url).pathname,
+    animations: "disabled",
+  });
+  await page
+    .getByRole("button", { name: "Rotating commissions", exact: true })
+    .click();
+  await page.screenshot({
+    path: new URL("../media/rngmas-commissions.png", import.meta.url).pathname,
     animations: "disabled",
   });
   await page.goto(`${base}/shop/rngmas`);

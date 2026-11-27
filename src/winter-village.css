@@ -1,0 +1,351 @@
+/* Solid evergreen, cranberry ribbon, brass trim and snow-white paper. */
+.winter-tasks {
+  --winter-gold: #d5a94f;
+  --winter-pine: #174b3d;
+  --winter-berry: #952e3e;
+  border: 1px solid var(--border);
+  padding: 0 0 18px;
+  overflow: clip;
+}
+.winter-village-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 40px 26px 30px;
+  color: #fff5d7;
+  background: linear-gradient(120deg, #153d32, #205647 65%, #143d34);
+  border-bottom: 4px solid #d5a94f;
+  overflow: hidden;
+}
+.winter-village-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: repeating-linear-gradient(
+    130deg,
+    #fff2cf 0 12px,
+    #952e3e 12px 24px
+  );
+}
+.winter-village-header h2 {
+  font-size: clamp(23px, 3vw, 32px);
+  letter-spacing: -0.04em;
+  margin: 5px 0 10px;
+  line-height: 1.15;
+}
+.winter-village-header p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.winter-village-header .eyebrow {
+  color: #f5d58e;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+.winter-village-header .winter-motif {
+  color: #e7c773;
+  flex-shrink: 0;
+}
+.winter-village-status {
+  margin-left: auto;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #65856c;
+  border-radius: 8px;
+  background: #13382e;
+  min-width: 150px;
+}
+.winter-village-status strong {
+  color: #ffe4a1;
+  font-size: 13px;
+}
+.winter-village-status span {
+  font-size: 10px;
+  line-height: 1.6;
+}
+.winter-village-lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+  border-top: 2px solid #c9ad68;
+  display: flex;
+  justify-content: space-around;
+  pointer-events: none;
+}
+.winter-village-lights i {
+  position: relative;
+  height: 10px;
+  width: 7px;
+  margin-top: 7px;
+  border-radius: 3px 3px 50% 50%;
+  background: #f4ce73;
+  box-shadow: 0 0 8px #f4ce73;
+  animation: winter-bulb-warmth 4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--bulb) * -0.4s);
+}
+.winter-village-lights i::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 3px;
+  height: 7px;
+  width: 1px;
+  background: #c9ad68;
+}
+.winter-village-lights i:nth-child(3n) {
+  background: #fb8187;
+  box-shadow: 0 0 8px #fb8187;
+}
+.winter-village-lights i:nth-child(3n + 1) {
+  background: #a4e3c2;
+  box-shadow: 0 0 8px #a4e3c2;
+}
+.winter-village-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.winter-village-stats span {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+  padding: 15px 8px;
+  font-size: 11px;
+  color: var(--secondary);
+}
+.winter-village-stats span + span {
+  border-left: 1px solid var(--border);
+}
+.winter-village-stats strong {
+  font: 600 20px var(--font-mono);
+  color: var(--text);
+}
+.winter-tasks > .festival-tabs {
+  padding: 0 18px;
+}
+.winter-tasks .festival-board,
+.winter-tasks .winter-trail {
+  padding: 0 18px;
+}
+.winter-tasks .winter-trail {
+  margin-top: 20px;
+}
+.winter-tasks .festival-zone {
+  border-top: 3px solid var(--winter-gold);
+}
+.winter-tasks .festival-zone-heading {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.winter-tasks .festival-zone-heading > svg {
+  color: var(--winter-berry);
+}
+.winter-tasks .festival-grid {
+  padding-top: 16px;
+}
+.winter-tasks .festival-card {
+  position: relative;
+  border-radius: 9px;
+  border-left: 3px solid var(--winter-gold);
+  background: var(--bg);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+.winter-tasks .festival-card:hover {
+  transform: translateY(-2px);
+  border-left-color: var(--green);
+}
+.winter-tasks .festival-card[data-live="true"] {
+  border-color: var(--green);
+}
+.winter-tasks .festival-card[data-ready="true"] {
+  border-color: var(--winter-gold);
+  animation: winter-ready-trim 3s ease-in-out infinite alternate;
+}
+.winter-tasks .festival-card[data-collected="true"] {
+  border-left-color: var(--green);
+}
+.winter-tasks .festival-card[data-collected="true"] .eyebrow::before {
+  content: "✓ ";
+  color: var(--green);
+}
+.winter-tasks .festival-card progress {
+  height: 8px;
+  border-radius: 8px;
+  accent-color: var(--winter-pine);
+}
+.winter-tasks .festival-card progress::-webkit-progress-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.winter-tasks .festival-card progress::-webkit-progress-value {
+  background: repeating-linear-gradient(
+    125deg,
+    #236448 0 12px,
+    #39785b 12px 24px
+  );
+  border-radius: 8px;
+  transition: width 0.35s ease;
+}
+.winter-motif {
+  display: inline-grid;
+  place-items: center;
+  color: var(--green);
+}
+.festival-card > .winter-motif {
+  width: 72px;
+  height: 76px;
+  border: 1px solid var(--border);
+  border-radius: 40% 40% 44% 44%;
+  background: var(--surface);
+  color: var(--green);
+}
+.festival-card > .winter-motif > svg {
+  animation: winter-ornament-sway 6s ease-in-out infinite alternate;
+  transform-origin: 50% 15%;
+}
+.winter-motif-cookie {
+  color: #bb8146;
+}
+.winter-schedule-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 0 18px 14px;
+}
+.winter-schedule-controls span {
+  margin-left: auto;
+  font: 10px var(--font-mono);
+  color: var(--secondary);
+}
+.winter-schedule-controls button[aria-pressed="true"] {
+  border-color: var(--green);
+  background: var(--surface);
+}
+.winter-ingredient-board {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.winter-ingredient-board span {
+  min-width: 26px;
+  padding: 5px 7px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: 10px var(--font-mono);
+}
+.winter-ingredient-board span[data-found="true"] {
+  border-style: solid;
+  border-color: var(--green);
+  color: var(--green);
+  animation: winter-stamp-in 0.25s ease-out both;
+}
+.winter-tasks .winter-chapter > summary {
+  background: var(--surface);
+  border-left: 3px solid var(--chapter-accent);
+}
+.winter-tasks .winter-chapter-number {
+  border-style: solid;
+  border-radius: 50%;
+  color: var(--text);
+}
+.winter-tasks .winter-passport {
+  border-style: solid;
+  border-left: 4px solid var(--winter-gold);
+}
+@keyframes winter-bulb-warmth {
+  from {
+    filter: brightness(0.85);
+  }
+  to {
+    filter: brightness(1.2);
+  }
+}
+@keyframes winter-ornament-sway {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+@keyframes winter-ready-trim {
+  from {
+    box-shadow: inset 0 0 0 1px #d5a94f;
+  }
+  to {
+    box-shadow: inset 0 0 0 2px #d5a94f;
+  }
+}
+@keyframes winter-stamp-in {
+  from {
+    transform: scale(0.92);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@media (min-width: 700px) {
+  .festival-card > .winter-motif {
+    grid-column: 1;
+    grid-row: 1 / 6;
+    align-self: center;
+    justify-self: center;
+  }
+  .festival-card > .winter-ingredient-board {
+    grid-column: 2;
+  }
+}
+@media (max-width: 700px) {
+  .winter-village-header {
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 34px 18px 24px;
+  }
+  .winter-village-header > .winter-motif {
+    display: none;
+  }
+  .winter-village-status {
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+  .winter-village-stats span {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    font-size: 10px;
+  }
+  .winter-tasks .festival-board,
+  .winter-tasks .winter-trail {
+    padding: 0 10px;
+  }
+  .winter-schedule-controls span {
+    width: 100%;
+    margin-top: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .winter-tasks *,
+  .winter-tasks *::before,
+  .winter-tasks *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

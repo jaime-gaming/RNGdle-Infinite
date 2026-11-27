@@ -1,3 +1,12 @@
+## Christmas village expansion
+
+- Add eleven contiguous mini-event gatherings and eight four-day rotating commissions alongside the five weekly chapters and Advent calendar.
+- Add ingredient collections, adjacent-digit ribbon work, odd delivery routes, divisible-by-three bell routes, zero hunts, a Christmas feast and New Year farewell.
+- Add Now & next / Full calendar views, ingredient stamps and expiring event claims to the Tasks ready counter.
+- Rework event presentation around evergreen, cranberry ribbon, brass trim, warm lights and animated ornaments, with opaque panels and reduced-motion support.
+- Award bounded Snowcoins and banked boosts; refund 10 Snowcoins on the four-parcel gift-drive claim. Reduce triple Surge/Overdrive bundle prices to 40/55, retaining historical 60/90 receipts.
+- Add a reproducible seasonal balance audit and regression tests for every new activity, rotation boundaries, claim persistence, mobile and reduced motion.
+
 ## Event Tasks, solid surfaces and seasonal companions
 
 - Move all RNGmas missions, live activities and weekly claims to Tasks → RNGmas; keep calendar, rewards, market and exchange in Shop.

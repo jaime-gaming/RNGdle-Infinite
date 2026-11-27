@@ -286,3 +286,108 @@ passed. Captures now show Tasks missions and the five-skin reward collection.
 
 Final combined run: 140 tests passed across RNGmas, winter economy/festival/zones,
 regular Tasks/task lists, Battle Pass/rewards, season identity and documentation.
+
+## Christmas village expansion (current revision)
+
+The event now has five weekly chapters, three season-long tasks, eleven
+mini-event gatherings and eight four-day commissions, plus the unchanged
+24-door calendar and Christmas star. All mission claims remain in Tasks.
+No new exclusive cosmetics are added: the active collection stays at eight
+auras and five companion skins, separate from the pass. All old reward and
+purchase receipts remain meaningful.
+
+### Calendar and mini-games
+
+Gatherings cover the season continuously, end-exclusive UTC:
+
+| Gathering | Opens | Ends | Mechanic | Reward |
+| --- | --- | --- | --- | --- |
+| Tree lighting | Dec 1 00:00 | Dec 4 18:00 | Six distinct final digits | 10 coins + Spark |
+| Meteor watch | Dec 4 18:00 | Dec 7 00:00 | 30 even rolls | Holly Corvid + 20 coins |
+| Sleigh post | Dec 7 00:00 | Dec 11 18:00 | 24 odd rolls | 12 coins + Spark |
+| Bell relay | Dec 11 18:00 | Dec 14 00:00 | Eight distinct final digits | Snow Owl + 25 coins |
+| Gingerbread kitchen | Dec 14 00:00 | Dec 18 18:00 | Four ingredients | 10 coins + Surge |
+| Northbound drive | Dec 18 18:00 | Dec 21 00:00 | Four parcels, 5 coins each | Parcel Kit + 10 coins |
+| Ribbon workshop | Dec 21 00:00 | Dec 24 00:00 | 16 numbers with adjacent identical digits | 12 coins + Spark |
+| Christmas feast | Dec 24 00:00 | Dec 27 00:00 | 30 main rolls | 16 coins + Surge |
+| Lantern walk | Dec 27 00:00 | Dec 31 18:00 | 18 numbers containing zero | 12 coins + Spark |
+| Midnight wishes | Dec 31 18:00 | Jan 1 02:00 | Ten numbers >= 500,000 | Midnight Wish + 35 coins |
+| First sunrise | Jan 1 02:00 | Jan 2 00:00 | 20 main rolls | 8 coins + Spark |
+
+Commissions start Dec 1/5/9/13/17/21/25/29, each lasting four days. Their
+mechanics are rolls, even deliveries, multiples of three, ingredients, odd
+deliveries, adjacent pairs, zeroes and seven distinct final digits. Each awards
+six coins and one banked Spark charge once; no daily attendance streak. Gathering
+and commission progress can share the same normal roll; no extra paid RNG layer.
+
+Ingredients are Sugar, Spice, Cocoa and Ginger, selected by final digit modulo
+four (therefore not equally likely: 30/30/20/20%). Both ingredient missions show
+found/missing stamps. Adjacent pairs and zero checks never pad leading zeroes.
+All new progress lives in existing bounded `festival.live` entries; old saves
+receive defaults, unknown IDs are dropped, and malformed ingredient sets repair
+to distinct integers 0–3. Claims must occur within the window and remain once-only
+after reload, Cloud reconciliation and resets.
+
+### Bounded rewards and market value
+
+Added windows award at most **128 Snowcoins, 13 Spark charges and 2 Surge
+charges across 32 days**. No added Overdrive charges, free EP, permanent stat
+boosts, scoring changes, cooldown changes or repeatable farming. Existing
+chapter rewards remain unchanged. The drive costs 20 coins and refunds 10 on
+claim, so it remains a net 10-coin sink, not an arbitrage loop. Boosts only enter
+the inventory: the player decides when to activate them, using existing
+non-stacking duration rules.
+
+Three Surge charges now cost 40 (versus 45 for three single-charge prices);
+three Overdrive charges cost 55 (versus 60). Each stall remains once-only.
+`legacyPrice` accepts old 60/90 purchase history without repricing, refunding or
+clearing an owned receipt. The exchange remains one-way, 10,000 EP per coin,
+maximum 200 across the event. No real money, cash-out or purchased event rolls.
+
+### Reproducible demand sample
+
+`npm run audit:winter` checks calendar continuity, unique IDs and bonus budgets,
+then samples 2,000 simulated players per activity using seeded uniform normal
+rolls. These are demand estimates, not guarantees or a time requirement;
+activities overlap rather than adding all roll counts together.
+
+| Activity | Goal | Median main rolls | 90th percentile |
+| --- | ---: | ---: | ---: |
+| `meteor-watch` | 30 | 59 | 70 |
+| `bell-relay` | 8 | 13 | 20 |
+| `midnight-wishes` | 10 | 19 | 26 |
+| `tree-lighting` | 6 | 8 | 11 |
+| `sleigh-post` | 24 | 48 | 58 |
+| `winter-bakery` | 4 | 8 | 14 |
+| `ribbon-workshop` | 16 | 39 | 50 |
+| `christmas-feast` | 30 | 30 | 30 |
+| `snow-lanterns` | 18 | 44 | 56 |
+| `first-sunrise` | 20 | 20 | 20 |
+| `commission-pine-route` | 24 | 24 | 24 |
+| `commission-even-parcels` | 16 | 31 | 39 |
+| `commission-bell-trios` | 12 | 35 | 48 |
+| `commission-pantry-list` | 4 | 8 | 14 |
+| `commission-odd-postcodes` | 16 | 32 | 39 |
+| `commission-matching-ribbons` | 12 | 29 | 38 |
+| `commission-snowy-route` | 12 | 29 | 39 |
+| `commission-last-lights` | 7 | 10 | 15 |
+
+### Presentation and accessibility
+
+Opaque paper panels sit below a solid evergreen village header, cranberry ribbon
+and brass trim. Warm bulbs breathe gently, reward ornaments sway, ingredient
+stamps settle into place and claimable cards show a restrained inset trim.
+Reduced motion removes every new animation/transition. Now & next shows only the
+current and next gathering or commission; the entire chronological calendar is
+available on demand. Upcoming buttons identify their state, and the Tasks ready
+counter excludes expired claims. Decorations and Christmas mode retain the exact
+seasonal gate and the December 17 development preview.
+
+Captures: `media/rngmas.png`, `media/rngmas-live.png`,
+`media/rngmas-commissions.png`, and `media/rngmas-collection.png`.
+
+Expansion verification: 148 targeted tests passed across RNGmas, the new rotation,
+winter festival/economy/zones, Tasks/task lists, pass rewards and season identity,
+and documentation. `audit:winter`, `audit:economy`, Cloud simulations, render
+simulations, release checks and production/Pages builds passed. Worker and Pages
+browser smokes passed. No deployment, main-branch update or rules change was made.

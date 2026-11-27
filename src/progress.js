@@ -2989,13 +2989,19 @@ function parseHistory(value) {
       next = {
         ...base,
         missionId: mission.id,
-        productId: mission.reward,
+        productId: e.productId,
         name: e.name,
       };
     } else if (e.type === "winter-market") {
       const item = WINTER_MARKET.find((item) => item.id === e.itemId);
-      if (!item || e.coins !== item.price) return [];
-      next = { ...base, itemId: item.id, coins: item.price };
+      if (
+        !item ||
+        !Number.isSafeInteger(e.coins) ||
+        e.coins < 1 ||
+        ![item.price, item.legacyPrice].includes(e.coins)
+      )
+        return [];
+      next = { ...base, itemId: item.id, coins: e.coins };
     } else if (e.type === "advent-claim") {
       if (!Number.isInteger(e.day) || e.day < 1 || e.day > ADVENT_FINALE.day)
         return [];

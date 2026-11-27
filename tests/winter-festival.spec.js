@@ -28,10 +28,10 @@ const state = () => ({
   totalEarned: 3000000,
 });
 
-test("all seventeen event cosmetics have distinct identities and four live windows are bounded", () => {
+test("all seventeen event cosmetics have distinct identities and all live windows are bounded", () => {
   expect(RNGMAS_COSMETICS.length).toBe(17);
   expect(new Set(RNGMAS_COSMETICS.map((a) => a.id)).size).toBe(17);
-  expect(WINTER_LIVE_EVENTS.length).toBe(4);
+  expect(WINTER_LIVE_EVENTS.length).toBe(19);
   for (const e of WINTER_LIVE_EVENTS) {
     expect(e.start).toBeLessThan(e.end);
     if (e.reward)
@@ -145,7 +145,7 @@ test("gift drive requires four paid parcels during the window and never refunds 
     at: e.start,
   });
   expect(saved.owned).toContain(e.reward);
-  expect(saved.rngmas.snowcoins).toBe(0);
+  expect(saved.rngmas.snowcoins).toBe(10);
 });
 test("malformed festival fields repair defensively and retained progress participates in Cloud comparison", () => {
   const repaired = parseWinterFestival({

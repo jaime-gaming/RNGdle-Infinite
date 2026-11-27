@@ -55,18 +55,28 @@ you claim are yours forever.
 
 From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass also open on December 1, when First Light closes, and last until January 2. During December 1–January 2 UTC only, toggle decorations independently of your color theme with **Christmas mode**, under **TEMPORAL** in Appearance. Outside that season the switch is disabled and decorations cannot activate. Snow, lights and scenery adapt to phones, tablets and desktops; reduced-motion preferences are respected.
 
-Find all event missions, live gatherings and weekly chapters in **Tasks → RNGmas**. The shop contains the Advent calendar, reward gallery, market and exchange. The festival now includes **8 event auras and 5 companion skins**, plus the **3 winter-pass cosmetics**. Alongside the five weekly zones, a festival board gives you season-long tasks and four scheduled live activities with personal progress—not invented global player counts.
+Find all event missions, live gatherings and weekly chapters in **Tasks → RNGmas**. The shop contains the Advent calendar, reward gallery, market and exchange. The festival now includes **8 event auras and 5 companion skins**, plus the **3 winter-pass cosmetics**. Alongside the five weekly zones, a festival board gives you three season-long tasks, eleven scheduled gatherings and eight rotating commissions with personal progress—not invented global player counts.
 
 **Special tasks.** Settle 150 primary online rolls for Lantern Moth; find 25 numbers containing a 7 for two Spark charges; collect all ten final digits for one Surge charge. Claim during RNGmas for the reward and 15/20/25 Snowcoins respectively. Auto-Roll counts; offline and extra skill results do not.
 
 **Live gatherings (UTC, end exclusive).** These activities must be completed and claimed within their window:
 
-| Activity              | Window                        | Goal                                          | Exclusive aura |
-| --------------------- | ----------------------------- | --------------------------------------------- | -------------- |
-| Meteor watch          | Dec 4, 18:00 – Dec 7, 00:00   | 30 even primary online rolls                  | Starfall Snow  |
-| Bell relay            | Dec 11, 18:00 – Dec 14, 00:00 | Eight distinct final digits                   | Carol Circuit  |
-| Northbound gift drive | Dec 18, 18:00 – Dec 21, 00:00 | Four in-game parcels costing 5 Snowcoins each | Parcel Kit     |
-| Midnight wishes       | Dec 31, 18:00 – Jan 1, 02:00  | Ten primary online rolls of at least 500,000  | Midnight Wish  |
+| Activity              | Window                        | Goal                                          | Exclusive aura            |
+| --------------------- | ----------------------------- | --------------------------------------------- | ------------------------- |
+| Meteor watch          | Dec 4, 18:00 – Dec 7, 00:00   | 30 even primary online rolls                  | Starfall Snow             |
+| Bell relay            | Dec 11, 18:00 – Dec 14, 00:00 | Eight distinct final digits                   | Carol Circuit             |
+| Northbound gift drive | Dec 18, 18:00 – Dec 21, 00:00 | Four in-game parcels costing 5 Snowcoins each | Parcel Kit + 10 Snowcoins |
+| Midnight wishes       | Dec 31, 18:00 – Jan 1, 02:00  | Ten primary online rolls of at least 500,000  | Midnight Wish             |
+
+**More gatherings.** Light the village tree (Dec 1–4), deliver odd-numbered sleigh post (Dec 7–11), collect four ingredients in the Gingerbread kitchen (Dec 14–18), match adjacent digits in the Ribbon workshop (Dec 21–24), roll for the Christmas feast (Dec 24–27), find zeroes on the Lantern walk (Dec 27–31), and welcome the First sunrise (Jan 1–2). Exact UTC windows and rewards are shown in Tasks. The kitchen uses the final digit modulo four, not a new paid draw.
+
+**Rotating commissions.** A new four-day commission opens on Dec 1, 5, 9, 13, 17, 21, 25 and 29. Goals rotate between rolls, even/odd deliveries, multiples of three, ingredients, matching digits, zeroes and distinct final digits. Each pays 6 Snowcoins and one Spark Injector charge once. No daily streaks or escalating attendance bonus. Use **Now & next** for a short list or **Full calendar** to plan ahead; complete and claim inside the stated window.
+
+**Better-value bundles.** Three Surge charges now cost 40 Snowcoins; three Overdrive charges cost 55. Older purchase receipts remain intact. Boosts are banked for later activation; no event reward changes roll odds or cooldowns.
+
+![Timed gatherings and the village kitchen](media/rngmas-live.png)
+
+![Four-day village commissions](media/rngmas-commissions.png)
 
 The market offers **Polar Axolotl (100 Snowcoins)** once. The reward gallery previews eight auras and five companion skins. Previously earned auras stay yours. Skins need their base companion and do not change stats or odds.
 
@@ -85,7 +95,7 @@ and the RNGmas Star is claimable only on Christmas Day.
 
 The winter trail combines RNGween-style missions and aura previews with Black Friday-style offer cards and a stall-visit passport. Previously claimed rewards remain yours; the redesigned bundles cannot be claimed again on old completion receipts.
 
-**Snowcoins.** Earn one per primary online roll, including Auto-Roll; offline and extra skill results do not count. From December 8 the market sells five one-time boost offers (10–90 Snowcoins) and a permanent Polar Axolotl skin (100 Snowcoins); buy from any three stalls during that week for Emberlight. From December 15, exchange 10,000 EP per Snowcoin, up to 200 coins across the event; exchange 100 during that week for Frostbound. Both services stay open until January 2, but weekly aura claims expire with their chapter. There is no EP cash-out. Wallets and purchase receipts survive resets; unspent coins stop being usable after the event.
+**Snowcoins.** Earn one per primary online roll, including Auto-Roll; offline and extra skill results do not count. From December 8 the market sells five one-time boost offers (10–55 Snowcoins) and a permanent Polar Axolotl skin (100 Snowcoins); buy from any three stalls during that week for Emberlight. From December 15, exchange 10,000 EP per Snowcoin, up to 200 coins across the event; exchange 100 during that week for Frostbound. Both services stay open until January 2, but weekly aura claims expire with their chapter. There is no EP cash-out. Wallets and purchase receipts survive resets; unspent coins stop being usable after the event.
 
 **Golem Smash, December 1–8.** Prepare a strike for 100,000 EP. Your next normal online number deals that much damage to the 25,000,000-HP golem: 0–1,000,000 per strike, averaging 500,000. No multipliers, no extra skill hits and no offline damage. A prepared strike survives reloads. Expect about 50 strikes (5,000,000 EP); no fixed maximum is promised.
 

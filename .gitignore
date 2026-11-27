@@ -24,3 +24,6 @@ media/*.png
 !media/legacy-countdown.png
 !media/legacy-shutdown.png
 !media/legacy-closed.png
+
+!media/rngmas-live.png
+!media/rngmas-commissions.png

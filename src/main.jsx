@@ -1,4 +1,4 @@
-import { rngmasThemeActive } from "./rngmas.js";
+import { rngmasThemeActive, winterReadyCount } from "./rngmas.js";
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -485,7 +485,8 @@ function App() {
 
   const readyTasks =
     taskSummary(session.tasks, taskNow).ready +
-    passMissionReadyCount(session.battlePass, taskNow);
+    passMissionReadyCount(session.battlePass, taskNow) +
+    winterReadyCount(session.rngmas, taskNow);
   const readyPass = passReadyCount(session.battlePass, taskNow);
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
