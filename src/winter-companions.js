@@ -6,7 +6,7 @@ export const WINTER_COMPANION_SKINS = [
     skinId: "lantern",
     accent: "#fbbf24",
     description:
-      "Warm lantern wings and a hanging winter light. Earned from Keep the lanterns lit.",
+      "Golden wing markings, a wool collar and a hanging winter lantern. Earned from Keep the lanterns lit.",
   },
   {
     id: "winter-parcel-kit",
@@ -15,7 +15,7 @@ export const WINTER_COMPANION_SKINS = [
     skinId: "parcel",
     accent: "#fb7185",
     description:
-      "A red delivery scarf and a tiny parcel. Earned from the Northbound gift drive.",
+      "A crimson cape, delivery satchel and a ribbon-wrapped parcel. Earned from the Northbound gift drive.",
   },
   {
     id: "winter-polar-axolotl",
@@ -25,6 +25,24 @@ export const WINTER_COMPANION_SKINS = [
     accent: "#67e8f9",
     description:
       "An ice crown and snow-bright gills. Available at the winter market.",
+  },
+  {
+    id: "winter-holly-corvid",
+    name: "Holly Corvid",
+    petId: "corvid",
+    skinId: "holly",
+    accent: "#4ade80",
+    description:
+      "A holly wreath and berry-red winter scarf. Earned from Meteor watch.",
+  },
+  {
+    id: "winter-snow-owl",
+    name: "Snow Owl",
+    petId: "owl",
+    skinId: "snow",
+    accent: "#93c5fd",
+    description:
+      "A blue knitted cap, pale plumage and a snowflake brooch. Earned from Bell relay.",
   },
 ].map((item) => ({
   ...item,

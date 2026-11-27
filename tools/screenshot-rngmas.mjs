@@ -19,10 +19,7 @@ try {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockOperationalStatus(page);
   await seedProgress(page, { balance: 3000000, totalEarned: 3000000 });
-  await page.goto(`${base}/shop/rngmas`);
-  await page
-    .getByRole("button", { name: "Festival board", exact: true })
-    .click();
+  await page.goto(`${base}/tasks?event=rngmas`);
   await page.locator("#winter-festival-board").evaluate((node) => {
     node.scrollIntoView({ block: "start" });
   });
@@ -31,6 +28,7 @@ try {
     path: new URL("../media/rngmas.png", import.meta.url).pathname,
     animations: "disabled",
   });
+  await page.goto(`${base}/shop/rngmas`);
   await page.getByRole("button", { name: "Rewards", exact: true }).click();
   await page.locator(".festival-collection").scrollIntoViewIfNeeded();
   await page.screenshot({

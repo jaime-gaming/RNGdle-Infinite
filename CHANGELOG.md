@@ -1,3 +1,10 @@
+## Event Tasks, solid surfaces and seasonal companions
+
+- Move all RNGmas missions, live activities and weekly claims to Tasks → RNGmas; keep calendar, rewards, market and exchange in Shop.
+- Make seasonal content surfaces opaque and keep disabled controls readable.
+- Redraw Lantern Moth and Parcel Kit; add Holly Corvid and Snow Owl skins to timed gatherings, for five winter companion skins total.
+- Disable Christmas mode outside December 1–January 2 UTC, guard settings changes, and remove seasonal effects at the exact boundary without reloading.
+
 ## Winter layout and reward correction
 
 - Raise bookmarks to 25, with ten initially visible on profiles and expandable pins.

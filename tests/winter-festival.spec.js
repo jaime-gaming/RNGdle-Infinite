@@ -1,3 +1,4 @@
+import { WINTER_COMPANION_SKINS } from "../src/winter-companions.js";
 import { test, expect, pauseClockAt } from "./helpers/clock.js";
 import {
   emptyProgress,
@@ -111,7 +112,7 @@ test("bell relay counts distinct digits, not repeated rolls", () => {
     { ...state(), rngmas: record },
     { type: "winter-special-claim", id: e.id, at: e.start },
   );
-  expect(claimed.battlePass.boosts.charges[e.boost]).toBe(e.charges);
+  expect(claimed.owned).toContain(e.reward);
   expect(() =>
     applyProgress(
       { ...state(), rngmas: record },
@@ -198,11 +199,8 @@ test("live drive works on a phone and special rewards appear in activity history
   await seedProgress(page, saved);
   await pauseClockAt(page, WINTER_LIVE_EVENTS[2].start + 1000);
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto("/shop/rngmas");
+  await page.goto("/tasks?event=rngmas");
   await waitForApp(page);
-  await page
-    .getByRole("button", { name: "Festival board", exact: true })
-    .click();
   await page
     .getByRole("button", { name: "Live schedule", exact: true })
     .click();
@@ -246,14 +244,11 @@ test("every exclusive renders its aura artwork and distinct palette instead of a
   await pauseClockAt(page, Date.UTC(2026, 11, 17));
   await page.goto("/shop/rngmas");
   await waitForApp(page);
-  await page
-    .getByRole("button", { name: "Festival board", exact: true })
-    .click();
   await page.getByRole("button", { name: "Rewards", exact: true }).click();
   const collection = page.locator(".festival-collection");
-  await expect(collection.locator("article")).toHaveCount(11);
+  await expect(collection.locator("article")).toHaveCount(13);
   await expect(collection.locator(".rngmas-aura")).toHaveCount(8);
-  await expect(collection.locator(".winter-pet-accessory")).toHaveCount(3);
+  await expect(collection.locator(".winter-pet-accessory")).toHaveCount(5);
 });
 
 test("winter companion skins reject forged equipment and preserve old earned aura receipts", () => {
@@ -282,4 +277,28 @@ test("winter companion skins reject forged equipment and preserve old earned aur
   const restored = parseProgress(JSON.stringify(old));
   expect(restored.owned).toContain("rngmas-lantern");
   expect(restored.owned).not.toContain("winter-lantern-moth");
+});
+
+test("all five winter skins equip only for their owner and survive resets", () => {
+  expect(WINTER_COMPANION_SKINS).toHaveLength(5);
+  for (const skin of WINTER_COMPANION_SKINS) {
+    const saved = state();
+    saved.pets = [skin.petId];
+    saved.owned.push(skin.id);
+    const equipped = applyProgress(saved, {
+      type: "equip-pet-skin",
+      petId: skin.petId,
+      skinId: skin.skinId,
+    });
+    expect(parseProgress(JSON.stringify(equipped)).petSkins[skin.petId]).toBe(
+      skin.skinId,
+    );
+    equipped.ultraRebirths = 3;
+    expect(
+      applyProgress(equipped, {
+        type: "fresh-start",
+        at: Date.UTC(2026, 11, 17),
+      }).owned,
+    ).toContain(skin.id);
+  }
 });

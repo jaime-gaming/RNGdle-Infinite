@@ -176,6 +176,9 @@ test("market and exchange work through the saved wallet on a phone", async ({
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/shop/rngmas");
   await waitForApp(page);
+  await page
+    .getByRole("button", { name: "Market & exchange", exact: true })
+    .click();
   await page.getByLabel("Snowcoins to exchange").fill("10");
   await page
     .getByRole("button", { name: "Exchange EP for Snowcoins", exact: true })
@@ -183,11 +186,6 @@ test("market and exchange work through the saved wallet on a phone", async ({
   await expect
     .poll(async () => (await readSavedProgress(page)).rngmas.snowcoins)
     .toBe(60);
-  await page
-    .locator(".winter-chapter")
-    .filter({ has: page.locator("summary", { hasText: "Christmas market" }) })
-    .locator("summary")
-    .click();
   await page.getByRole("button", { name: /Spark Injector ×1/ }).click();
   await expect
     .poll(async () => (await readSavedProgress(page)).rngmas.snowcoins)

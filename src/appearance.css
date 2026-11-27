@@ -131,3 +131,9 @@
     transition: none;
   }
 }
+.appearance-christmas:disabled {
+  opacity: 1;
+  color: var(--muted);
+  cursor: not-allowed;
+  background: var(--surface);
+}

@@ -602,7 +602,7 @@ a snowflake icon, with no status subtitle or explanatory paragraph. Keep its exi
 accessible checkbox state, persistence and responsive decoration behavior.
 
 `src/winter-festival.js` defines three season-long tasks, four explicitly timed
-live activities. RNGmas offers eight event auras and three companion skins,
+live activities. RNGmas offers eight event auras and five companion skins,
 plus three separate pass auras. Historical aura identities stay parseable but
 are not offered by new missions or the market. The saved `rngmas.festival` record has bounded roll/
 7-containing counters, distinct final digits, task claims and per-live-window
@@ -620,3 +620,23 @@ The countdown uses wall time, not seasonal `gameNow()`. Dev-only
 `VITE_LEGACY_PREVIEW_AT` previews before/after; production ignores it. Do not erase
 local saves, silently migrate profiles or claim automatic cross-origin import.
 See `docs-source/legacy-shutdown.md` for cached-client and deployment limitations.
+
+### Event Tasks and seasonal settings
+
+All season missions, live activities and weekly chapter claims live in
+`Tasks → RNGmas`, implemented by `WinterTasks`. The shop only renders calendar,
+collection and Snowcoin services; do not duplicate mission claims there.
+`?event=rngmas` opens the event tab (hash fragments are canonicalized away).
+WinterChapters accepts `showServices={false}` in Tasks; market and exchange stay
+in Shop. Content surfaces and disabled event controls are opaque in every theme.
+
+Five permanent winter companion skins share the secure registry in
+`winter-companions.js`. Lantern Moth and Parcel Kit have revised artwork; Holly
+Corvid and Snow Owl come from Meteor watch and Bell relay. Base companions remain
+required to equip, with no stat changes. Existing ownership/receipts stay intact.
+
+Christmas mode is effective only in [December 1, 2026, January 2, 2027) UTC.
+SettingsProvider masks the saved preference outside this window and rejects
+out-of-season toggle updates; Appearance disables the switch and shows it off.
+The shared seasonal hook schedules the exact boundary and refreshes on focus,
+so decoration disappears without a reload. Keep stored opt-outs intact.

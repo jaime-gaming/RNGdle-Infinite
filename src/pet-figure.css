@@ -257,3 +257,12 @@
 .pet-figure[data-winter-skin="lantern"] .pet-figure-halo {
   background: radial-gradient(circle, #fbbf2440, transparent 70%);
 }
+.pet-figure[data-winter-skin="snow"] > svg:not(.winter-pet-accessory) {
+  filter: saturate(0.2) brightness(1.7);
+}
+.pet-figure[data-winter-skin="holly"] {
+  background: #102c20;
+}
+.pet-figure[data-winter-skin="snow"] {
+  background: #172f50;
+}

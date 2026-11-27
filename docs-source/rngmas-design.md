@@ -256,3 +256,33 @@ economy audit, production/Pages builds, release checks, and Worker/Pages browser
 smokes passed. An attempted whole-repository Playwright run exceeded the execution
 budget and was stopped; it is not reported as a full-suite pass. Its outdated
 README contract was updated for the already-requested setup/policy sections.
+
+## Tasks placement and Christmas-only settings
+
+All RNGmas mission claims (special, live and weekly) now live on Tasks, in the
+RNGmas tab. `tasks?event=rngmas` deep-links to it. The shop retains the Advent
+calendar, collection, market and exchange; it contains no mission claim controls.
+Weekly services are separated from weekly mission rendering. Event content panels
+use solid theme surfaces, including selected tabs and disabled controls.
+
+Lantern Moth and Parcel Kit have revised artwork. Two additional permanent skins,
+Holly Corvid (Meteor watch) and Snow Owl (Bell relay), bring the registry to five.
+They are cosmetic variants, not new stat-bearing companions. Existing secure
+ownership, equipment parsing, resets and main-stage rendering apply to all five.
+
+Christmas mode is effective only December 1, 2026 through January 2, 2027 UTC
+(end exclusive). The switch remains visible but disabled and unchecked outside
+this range. Settings updates cannot activate it outside the season, even if an
+old preference is true. Saved opt-outs remain intact. The shared seasonal clock
+schedules the start/end boundary and refreshes on focus; decorations disappear
+without reloading at midnight UTC.
+
+Tasks/season revision checks: 63 event/economy/navigation tests passed, followed
+by 58 Tasks/pass/reward/documentation checks. Battle Pass, task-list and season
+identity regressions passed. Light/dark solid-surface assertions and the exact
+UTC shutdown-without-reload regression passed. Render/Cloud simulations,
+release formatting/version checks and Worker/Pages builds and browser smokes
+passed. Captures now show Tasks missions and the five-skin reward collection.
+
+Final combined run: 140 tests passed across RNGmas, winter economy/festival/zones,
+regular Tasks/task lists, Battle Pass/rewards, season identity and documentation.

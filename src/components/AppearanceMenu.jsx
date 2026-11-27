@@ -183,9 +183,13 @@ export default function AppearanceMenu({
               type="button"
               role="menuitemcheckbox"
               aria-label="Christmas mode"
-              aria-checked={settings.christmasMode}
+              aria-checked={rngmasActive && settings.christmasMode}
+              disabled={!rngmasActive}
               className="appearance-option appearance-christmas"
-              onClick={() => update({ christmasMode: !settings.christmasMode })}
+              onClick={() => {
+                if (rngmasActive)
+                  update({ christmasMode: !settings.christmasMode });
+              }}
             >
               <Snowflake size={16} aria-hidden="true" />
               <span>Christmas mode</span>

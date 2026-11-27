@@ -72,41 +72,45 @@ for (const [width, height] of [
   });
 }
 
-test("chapters expand with keyboard, keep the active zone open and retain access to older stalls", async ({
+test("weekly missions are in Tasks while old market services stay in Shop", async ({
   page,
 }) => {
   const saved = state();
   saved.rngmas.snowcoins = saved.rngmas.snowcoinsEarned = 60;
   await seedProgress(page, saved);
   await pauseClockAt(page, AT);
-  await page.goto("/shop/rngmas");
+  await page.goto("/tasks?event=rngmas");
   await waitForApp(page);
+  await page
+    .getByRole("button", { name: "Weekly chapters", exact: true })
+    .click();
   await expect(page.locator(".winter-chapter")).toHaveCount(5);
   const exchange = chapter(page, "Snowcoin exchange");
   await expect(exchange).toHaveAttribute("open", "");
   const market = chapter(page, "Christmas market");
-  await expect(market).not.toHaveAttribute("open", "");
   await market.locator("summary").focus();
   await page.keyboard.press("Enter");
+  await expect(market).toHaveAttribute("open", "");
   await expect(
-    market.getByRole("button", { name: /Spark Injector ×1/ }),
-  ).toBeVisible();
-  await market.getByRole("button", { name: /Spark Injector ×1/ }).click();
+    market.getByRole("button", { name: /Spark Injector/ }),
+  ).toHaveCount(0);
+  await page.goto("/shop/rngmas");
+  await waitForApp(page);
+  await expect(page.locator(".winter-chapter")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Collect Lantern/ }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Market & exchange", exact: true })
+    .click();
+  await page.getByRole("button", { name: /Spark Injector ×1/ }).click();
   await expect
     .poll(async () => (await readSavedProgress(page)).rngmas.snowcoins)
     .toBe(50);
-  await expect(market.locator(".winter-stamps")).toHaveAttribute(
+  await expect(page.locator(".winter-stamps")).toHaveAttribute(
     "aria-label",
-    "1 of 8 stalls visited",
+    "1 of 6 stalls visited",
   );
-  await expect(market).toHaveAttribute("open", "");
-  await market.locator("summary").click();
-  await expect(market).not.toHaveAttribute("open", "");
-  const future = chapter(page, "Gift workshop");
-  await future.locator("summary").click();
-  await expect(future).toContainText("Opens Dec 22 UTC");
-  await expect(future.getByRole("button")).toHaveCount(0);
-  await expect(exchange).toHaveAttribute("open", "");
 });
 
 test("reduced motion disables new zone and toggle animations without removing scenery", async ({
@@ -115,9 +119,12 @@ test("reduced motion disables new zone and toggle animations without removing sc
   await page.emulateMedia({ reducedMotion: "reduce" });
   await seedProgress(page, state());
   await pauseClockAt(page, AT);
-  await page.goto("/shop/rngmas");
+  await page.goto("/tasks?event=rngmas");
   await waitForApp(page);
   await expect(page.locator(".rngmas-decor")).toHaveClass(/is-reduced-motion/);
+  await page
+    .getByRole("button", { name: "Weekly chapters", exact: true })
+    .click();
   const content = chapter(page, "Snowcoin exchange").locator(
     ".winter-chapter-content",
   );
@@ -168,7 +175,7 @@ test("chapter rewards vary, persist once and legacy claims never generate extra 
   }
 });
 
-test("Christmas mode remains configurable outside the event without leaking seasonal effects", async ({
+test("Christmas mode is visible but disabled after the event", async ({
   page,
 }) => {
   await seedProgress(page, state());
@@ -191,8 +198,11 @@ test("collecting a live chapter updates its passport and cannot pay again after 
   saved.rngmas.marketPurchases = ["snow-spark", "snow-surge", "snow-overdrive"];
   await seedProgress(page, saved);
   await pauseClockAt(page, Date.UTC(2026, 11, 10, 12));
-  await page.goto("/shop/rngmas");
+  await page.goto("/tasks?event=rngmas");
   await waitForApp(page);
+  await page
+    .getByRole("button", { name: "Weekly chapters", exact: true })
+    .click();
   const market = chapter(page, "Christmas market");
   await expect(market.locator("summary")).toContainText("Reward ready");
   await market
@@ -205,6 +215,9 @@ test("collecting a live chapter updates its passport and cannot pay again after 
   await expect(page.getByLabel("Chapter collection")).toContainText("1 / 5");
   await page.reload();
   await waitForApp(page);
+  await page
+    .getByRole("button", { name: "Weekly chapters", exact: true })
+    .click();
   await expect(
     market.getByRole("button", { name: "In your collection", exact: true }),
   ).toBeDisabled();
@@ -234,3 +247,71 @@ test("chapter bonuses respect the wallet cap and reject lifetime integer overflo
   expect(saved.rngmas.golems.hollow.defeated).toBe(false);
   expect(saved.battlePass.boosts.charges).toEqual({});
 });
+
+for (const [label, at, active] of [
+  ["before", Date.UTC(2026, 10, 30, 23, 59, 59), false],
+  ["opening", Date.UTC(2026, 11, 1), true],
+  ["closing", Date.UTC(2027, 0, 2), false],
+])
+  test(`Christmas switch is season-gated at ${label}`, async ({ page }) => {
+    await seedProgress(page, state());
+    await pauseClockAt(page, at);
+    await page.goto("/");
+    await waitForApp(page);
+    await page.getByRole("button", { name: "Appearance", exact: true }).click();
+    const toggle = page.getByRole("menuitemcheckbox", {
+      name: "Christmas mode",
+      exact: true,
+    });
+    await expect(toggle).toHaveAttribute("aria-checked", String(active));
+    if (active) await expect(toggle).toBeEnabled();
+    else await expect(toggle).toBeDisabled();
+    await expect(page.locator(".rngmas-decor")).toHaveCount(active ? 1 : 0);
+  });
+
+test("Christmas decorations expire without reloading at the exact UTC boundary", async ({
+  page,
+}) => {
+  await seedProgress(page, state());
+  await pauseClockAt(page, Date.UTC(2027, 0, 1, 23, 59, 59));
+  await page.goto("/");
+  await waitForApp(page);
+  await expect(page.locator(".rngmas-decor")).toHaveCount(1);
+  await page.clock.runFor(1001);
+  await expect(page.locator(".rngmas-decor")).toHaveCount(0);
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  const toggle = page.getByRole("menuitemcheckbox", {
+    name: "Christmas mode",
+    exact: true,
+  });
+  await expect(toggle).toBeDisabled();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
+});
+
+for (const theme of ["Light", "Dark"])
+  test(`event surfaces are opaque in ${theme} theme`, async ({ page }) => {
+    await seedProgress(page, state());
+    await pauseClockAt(page, AT);
+    await page.goto("/tasks?event=rngmas");
+    await waitForApp(page);
+    await page.getByRole("button", { name: "Appearance", exact: true }).click();
+    await page
+      .getByRole("menuitemradio", { name: `${theme} theme`, exact: true })
+      .click();
+    const surfaces = await page
+      .locator(
+        '.winter-tasks,.festival-board,.festival-summary,.festival-card,.festival-tabs button[aria-pressed="true"]',
+      )
+      .evaluateAll((nodes) =>
+        nodes.map((node) => ({
+          color: getComputedStyle(node).backgroundColor,
+          opacity: getComputedStyle(node).opacity,
+        })),
+      );
+    expect(surfaces.length).toBeGreaterThan(4);
+    for (const surface of surfaces) {
+      expect(surface.opacity).toBe("1");
+      expect(surface.color).toMatch(/^(rgb|oklch|oklab)\(/);
+      expect(surface.color).not.toContain("/");
+    }
+  });

@@ -787,7 +787,15 @@ export function WinterEconomy({
   );
 }
 
-function WinterChapter({ week, progress, status, onAction, onSmash, pending }) {
+function WinterChapter({
+  week,
+  progress,
+  status,
+  onAction,
+  onSmash,
+  pending,
+  showServices = true,
+}) {
   const current = status.week?.id === week.id;
   const past = status.now >= week.end;
   const unlocked = status.now >= week.start && status.active;
@@ -879,7 +887,7 @@ function WinterChapter({ week, progress, status, onAction, onSmash, pending }) {
             </div>
           </div>
         )}
-        {availableService && (
+        {showServices && availableService && (
           <WinterEconomy
             zone={week.metric === "purchases" ? "market" : "exchange"}
             progress={progress}
@@ -894,6 +902,7 @@ function WinterChapter({ week, progress, status, onAction, onSmash, pending }) {
 }
 
 export function WinterChapters({
+  showServices = true,
   progress,
   status,
   onAction,
@@ -936,6 +945,7 @@ export function WinterChapters({
       {RNGMAS_WEEKS.map((week) => (
         <WinterChapter
           key={week.id}
+          showServices={showServices}
           week={week}
           progress={progress}
           status={status}
@@ -976,11 +986,6 @@ export default function RngmasShelf({ progress, onAction, notify }) {
         ? "The RNGmas Star is yours."
         : `Advent door ${day} opened.`,
     );
-  const smash = () =>
-    run(
-      { type: "golem-smash", golemId: status.week?.id },
-      "Strike prepared. Your next normal roll will deal damage.",
-    );
 
   return (
     <section
@@ -1014,8 +1019,8 @@ export default function RngmasShelf({ progress, onAction, notify }) {
       <nav className="winter-wayfinding" aria-label="RNGmas zones">
         {[
           ["calendar", "Advent square", CalendarDays],
-          ["festival", "Festival board", Radio],
-          ["chapters", "Winter trail", ShoppingBag],
+          ["festival", "Rewards", Gift],
+          ["chapters", "Market & exchange", ShoppingBag],
         ].map(([id, label, Icon]) => (
           <button
             key={id}
@@ -1045,6 +1050,7 @@ export default function RngmasShelf({ progress, onAction, notify }) {
       </div>
       <div id="rngmas-zone-festival" hidden={zone !== "festival"}>
         <WinterFestival
+          collectionOnly
           progress={progress}
           status={status}
           onAction={run}
@@ -1052,14 +1058,26 @@ export default function RngmasShelf({ progress, onAction, notify }) {
         />
       </div>
       <div id="rngmas-zone-chapters" hidden={zone !== "chapters"}>
-        <WinterChapters
+        <WinterEconomy
+          zone="market"
           progress={progress}
           status={status}
           onAction={run}
-          onSmash={smash}
+          pending={pending}
+        />
+        <WinterEconomy
+          zone="exchange"
+          progress={progress}
+          status={status}
+          onAction={run}
           pending={pending}
         />
       </div>
+      <p className="rngmas-shelf-fine">
+        <a href={`${import.meta.env.BASE_URL}tasks?event=rngmas`}>
+          Open RNGmas missions in Tasks →
+        </a>
+      </p>
       <p className="rngmas-shelf-fine">
         The calendar and weekly activities award EP and permanent auras. Nothing
         here changes roll odds, scoring tables, badge values or cooldowns.

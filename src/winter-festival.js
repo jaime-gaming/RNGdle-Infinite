@@ -104,8 +104,8 @@ const CURRENT_REWARDS = {
   "lantern-run": { reward: "winter-lantern-moth" },
   "ribbon-hunt": { reward: null, boost: "boost-spark", charges: 2 },
   "prism-set": { reward: null, boost: "boost-surge", charges: 1 },
-  "meteor-watch": { reward: null, boost: "boost-overdrive", charges: 1 },
-  "bell-relay": { reward: null, boost: "boost-surge", charges: 1 },
+  "meteor-watch": { reward: "winter-holly-corvid" },
+  "bell-relay": { reward: "winter-snow-owl" },
   "gift-drive": { reward: "winter-parcel-kit" },
   "midnight-wishes": { reward: "rngmas-midnight" },
 };

@@ -28,6 +28,7 @@ export default function WinterFestival({
   status,
   onAction,
   pending,
+  collectionOnly = false,
 }) {
   const [view, setView] = useState("tasks");
   const [now, setNow] = useState(gameNow);
@@ -158,78 +159,82 @@ export default function WinterFestival({
     <section
       id="winter-festival-board"
       className="festival-board"
-      aria-labelledby="festival-board-title"
+      aria-labelledby={collectionOnly ? undefined : "festival-board-title"}
+      aria-label={collectionOnly ? "Winter rewards" : undefined}
     >
-      <div className="rngmas-section-heading">
-        <div>
-          <p className="eyebrow">
-            <Radio size={13} /> THE FESTIVAL IS OPEN
-          </p>
-          <h3 id="festival-board-title">The festival board</h3>
-          <p>
-            Complete three season-long missions or join a timed gathering. Main
-            online rolls count; extra skill results and offline rolls do not.
-            Companion skins require their base companion to equip.
-          </p>
-        </div>
-      </div>
-      <div className="festival-summary">
-        <strong>
-          {festival?.claimed?.length ?? 0} / {WINTER_SPECIAL_TASKS.length}{" "}
-          missions collected
-        </strong>
-        <progress
-          value={festival?.claimed?.length ?? 0}
-          max={WINTER_SPECIAL_TASKS.length}
-          aria-label="Season missions collected"
-        />
-        <span>
-          {remaining(status.endsInMs ? now + status.endsInMs : now, now)} left
-          this season · Claim before the window closes.
-        </span>
-      </div>
-      <nav className="festival-tabs" aria-label="Festival sections">
-        {[
-          ["tasks", "Missions"],
-          ["live", "Live schedule"],
-          ["collection", "Rewards"],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            className="secondary-button"
-            aria-pressed={view === id}
-            onClick={() => setView(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-      <div className="festival-zone" hidden={view !== "tasks"}>
-        <header className="festival-zone-heading">
-          <Snowflake size={18} />
-          <strong>Special winter tasks</strong>
-          <span>Available throughout RNGmas</span>
-        </header>
-        <div className="festival-grid">
-          {WINTER_SPECIAL_TASKS.map((m) => card(m, false))}
-        </div>
-      </div>
-      <div className="festival-zone" hidden={view !== "live"}>
-        <header className="festival-zone-heading">
-          <Radio size={18} />
-          <strong>Live gatherings</strong>
-          <span>Four scheduled windows · UTC</span>
-        </header>
-        <p className="festival-explainer">
-          These are timed activities with your own progress, not a shared global
-          counter. Start, finish and claim inside the window; there is no
-          catch-up. The gift drive uses Snowcoins instead of rolls.
-        </p>
-        <div className="festival-grid">
-          {WINTER_LIVE_EVENTS.map((m) => card(m, true))}
-        </div>
-      </div>
-      <div className="festival-zone" hidden={view !== "collection"}>
+      {!collectionOnly && (
+        <>
+          <div className="rngmas-section-heading">
+            <div>
+              <p className="eyebrow">
+                <Radio size={13} /> THE FESTIVAL IS OPEN
+              </p>
+              <h3 id="festival-board-title">The festival board</h3>
+              <p>
+                Complete three season-long missions or join a timed gathering.
+                Main online rolls count; extra skill results and offline rolls
+                do not. Companion skins require their base companion to equip.
+              </p>
+            </div>
+          </div>
+          <div className="festival-summary">
+            <strong>
+              {festival?.claimed?.length ?? 0} / {WINTER_SPECIAL_TASKS.length}{" "}
+              missions collected
+            </strong>
+            <progress
+              value={festival?.claimed?.length ?? 0}
+              max={WINTER_SPECIAL_TASKS.length}
+              aria-label="Season missions collected"
+            />
+            <span>
+              {remaining(status.endsInMs ? now + status.endsInMs : now, now)}{" "}
+              left this season · Claim before the window closes.
+            </span>
+          </div>
+          <nav className="festival-tabs" aria-label="Festival sections">
+            {[
+              ["tasks", "Missions"],
+              ["live", "Live schedule"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                className="secondary-button"
+                aria-pressed={view === id}
+                onClick={() => setView(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="festival-zone" hidden={view !== "tasks"}>
+            <header className="festival-zone-heading">
+              <Snowflake size={18} />
+              <strong>Special winter tasks</strong>
+              <span>Available throughout RNGmas</span>
+            </header>
+            <div className="festival-grid">
+              {WINTER_SPECIAL_TASKS.map((m) => card(m, false))}
+            </div>
+          </div>
+          <div className="festival-zone" hidden={view !== "live"}>
+            <header className="festival-zone-heading">
+              <Radio size={18} />
+              <strong>Live gatherings</strong>
+              <span>Four scheduled windows · UTC</span>
+            </header>
+            <p className="festival-explainer">
+              These are timed activities with your own progress, not a shared
+              global counter. Start, finish and claim inside the window; there
+              is no catch-up. The gift drive uses Snowcoins instead of rolls.
+            </p>
+            <div className="festival-grid">
+              {WINTER_LIVE_EVENTS.map((m) => card(m, true))}
+            </div>
+          </div>
+        </>
+      )}
+      <div className="festival-zone" hidden={!collectionOnly}>
         <header className="festival-zone-heading">
           <Gift size={18} />
           <strong>The winter collection</strong>
@@ -239,11 +244,11 @@ export default function WinterFestival({
           </span>
         </header>
         <p className="festival-explainer">
-          Eight auras and three companion skins: five chapter rewards, two
+          Eight auras and five companion skins: five chapter rewards, two
           calendar keepsakes, one midnight aura and skins from a mission, the
-          gift drive and the market. Other missions award boosts and Snowcoins
-          instead. Previously earned rewards stay yours; winter pass rewards are
-          separate.
+          gift drive, live gatherings and the market. Other missions award
+          boosts and Snowcoins instead. Previously earned rewards stay yours;
+          winter pass rewards are separate.
         </p>
         <div className="festival-collection">
           {RNGMAS_REWARDS.map((aura) => (

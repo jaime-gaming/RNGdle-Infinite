@@ -2124,3 +2124,34 @@
     max-width: 210px;
   }
 }
+
+/* Event content is solid: scenery never shows through readable surfaces. */
+.rngmas-shelf,
+.winter-tasks,
+.festival-board,
+.winter-trail,
+.festival-summary,
+.festival-collection article,
+.winter-wayfinding {
+  background-color: var(--surface);
+  opacity: 1;
+  backdrop-filter: none;
+}
+.festival-summary,
+.winter-tasks {
+  padding: 18px;
+  border-radius: 12px;
+}
+.winter-wayfinding button[aria-pressed="true"],
+.festival-tabs button[aria-pressed="true"] {
+  background: var(--surface);
+  border-color: var(--green);
+}
+.festival-card:has(button:disabled),
+.winter-chapter[data-collected="true"] {
+  opacity: 1;
+}
+.rngmas-shelf button:disabled,
+.winter-tasks button:disabled {
+  opacity: 1;
+}

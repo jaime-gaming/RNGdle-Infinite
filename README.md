@@ -53,9 +53,9 @@ you claim are yours forever.
 
 ## RNGmas 2026
 
-From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass also open on December 1, when First Light closes, and last until January 2. Toggle decorations independently of your color theme with **Christmas mode**, under **TEMPORAL** in Appearance. Snow, lights and scenery adapt to phones, tablets and desktops; reduced-motion preferences are respected.
+From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass also open on December 1, when First Light closes, and last until January 2. During December 1–January 2 UTC only, toggle decorations independently of your color theme with **Christmas mode**, under **TEMPORAL** in Appearance. Outside that season the switch is disabled and decorations cannot activate. Snow, lights and scenery adapt to phones, tablets and desktops; reduced-motion preferences are respected.
 
-Use the Advent square, Festival board and Winter trail controls to switch between focused sections. The festival now includes **8 event auras and 3 companion skins**, plus the **3 winter-pass cosmetics**. Alongside the five weekly zones, a festival board gives you season-long tasks and four scheduled live activities with personal progress—not invented global player counts.
+Find all event missions, live gatherings and weekly chapters in **Tasks → RNGmas**. The shop contains the Advent calendar, reward gallery, market and exchange. The festival now includes **8 event auras and 5 companion skins**, plus the **3 winter-pass cosmetics**. Alongside the five weekly zones, a festival board gives you season-long tasks and four scheduled live activities with personal progress—not invented global player counts.
 
 **Special tasks.** Settle 150 primary online rolls for Lantern Moth; find 25 numbers containing a 7 for two Spark charges; collect all ten final digits for one Surge charge. Claim during RNGmas for the reward and 15/20/25 Snowcoins respectively. Auto-Roll counts; offline and extra skill results do not.
 
@@ -68,12 +68,12 @@ Use the Advent square, Festival board and Winter trail controls to switch betwee
 | Northbound gift drive | Dec 18, 18:00 – Dec 21, 00:00 | Four in-game parcels costing 5 Snowcoins each | Parcel Kit     |
 | Midnight wishes       | Dec 31, 18:00 – Jan 1, 02:00  | Ten primary online rolls of at least 500,000  | Midnight Wish  |
 
-The market offers **Polar Axolotl (100 Snowcoins)** once. The reward gallery previews eight auras and three companion skins. Previously earned auras stay yours. Skins need their base companion and do not change stats or odds.
+The market offers **Polar Axolotl (100 Snowcoins)** once. The reward gallery previews eight auras and five companion skins. Previously earned auras stay yours. Skins need their base companion and do not change stats or odds.
 
 **Advent calendar.** A new door opens every day from December 1. Claim it on that UTC day or lose it; there is no catch-up. The last door holds the Gingerbread aura,
 and the RNGmas Star is claimable only on Christmas Day.
 
-**Weekly activities.** Golem Smash (December 1–8), Christmas market (December 8–15), Snowcoin exchange (December 15–22), Gift workshop (December 22–29, 80 online numbers containing 0) and Midnight countdown (December 29–January 2, 100 online rolls). Each chapter is an expandable zone; the live one opens by default. Claim during its week for a permanent aura, Snowcoins and a themed boost bundle:
+**Weekly activities.** Golem Smash (December 1–8), Christmas market (December 8–15), Snowcoin exchange (December 15–22), Gift workshop (December 22–29, 80 online numbers containing 0) and Midnight countdown (December 29–January 2, 100 online rolls). Each chapter is an expandable zone in Tasks → RNGmas → Weekly chapters; the live one opens by default. Claim during its week for a permanent aura, Snowcoins and a themed boost bundle:
 
 | Chapter            | Extra rewards alongside the permanent aura            |
 | ------------------ | ----------------------------------------------------- |
