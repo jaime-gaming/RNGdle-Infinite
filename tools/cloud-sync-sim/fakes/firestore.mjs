@@ -390,7 +390,7 @@ function makeCommit(staged) {
         record.prestiges,
       ].every(validCount) &&
       Array.isArray(record.pins) &&
-      record.pins.length <= 10 &&
+      record.pins.length <= 25 &&
       record.pins.every(validPin) &&
       (record.favoriteTier === null || validTier(record.favoriteTier)) &&
       [record.aura, record.companion].every(

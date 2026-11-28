@@ -1,14 +1,16 @@
 export const CHANGELOG = [
   {
     version: "v0.6.1",
-    date: "2026-11-22",
-    title: "rngmas, the advent calendar and golem smash",
+    date: "2026-11-28",
+    title: "rngmas: the winter village",
     body: [
-      "rngmas runs from december 1 to january 2: a temporary winter theme, an advent calendar and five weekly golems.",
-      "the advent calendar opens one door a day; missed doors stay claimable for three days, and christmas day holds the rngmas star.",
-      "golem smash: spend ep on strikes, each strike rolls a random multiplier, and every defeated golem pays a permanent aura.",
-      "snow drifts past the page edges while the season is on, and the seven winter auras wear their own animated art.",
-      "black friday 2026 is retired: prices return to normal, and the blackouts and stamps you already earned stay yours.",
+      "the update arrives november 28; RNGmas and Christmas mode open december 1 at 00:00 UTC and close january 2 at 00:00 UTC.",
+      "tasks → RNGmas holds season missions, eleven gatherings, eight rotating commissions and five different weekly chapters.",
+      "shop → RNGmas: advent doors december 1–24, the christmas day star, collection and market. Missed doors cannot be recovered.",
+      "eight permanent auras and five companion skins; skins need their base companion. Earned boosts wait for manual activation.",
+      "shared winter decoration, reward sources and countdowns. Christmas mode is optional in Appearance → TEMPORAL, only in season.",
+      "bookmark up to 25 rolls; profiles show ten at first with show-more. Old event rewards and save receipts stay intact.",
+      "black friday is retired. Legacy Pages retires december 1 at midnight Madrid time; the main site stays open.",
     ],
   },
   {

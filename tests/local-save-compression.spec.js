@@ -299,11 +299,11 @@ test("help links use themed buttons and changelog copy stays lowercase", async (
     page.getByRole("heading", { name: "Changelog", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".changelog-title").first()).toHaveText(
-    "rngmas, the advent calendar and golem smash",
+    "rngmas: the winter village",
   );
   await expect(
     page.locator(".changelog-entry").first().locator("p").first(),
   ).toHaveText(
-    "rngmas runs from december 1 to january 2: a temporary winter theme, an advent calendar and five weekly golems.",
+    "the update arrives november 28; RNGmas and Christmas mode open december 1 at 00:00 UTC and close january 2 at 00:00 UTC.",
   );
 });

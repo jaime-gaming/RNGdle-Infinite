@@ -63,6 +63,18 @@ const profile = {
   balance: 500,
   totalEarned: 500,
 };
+if (scenario === "full-bookmarks") {
+  profile.history = Array.from({ length: 25 }, (_, i) => ({
+    id: `pin-${i}`,
+    type: "roll",
+    at: 1_700_000_100_000 + i,
+    number: 100 + i,
+    tier: "trash",
+    ep: 1,
+    badges: [],
+  }));
+  profile.bookmarks = profile.history.map((entry) => entry.id);
+}
 const enable = () => setCloudProfileVisibility(UID, true);
 
 if (phase === "setup") {
@@ -73,7 +85,7 @@ if (phase === "setup") {
   process.exit(0);
 }
 
-if (scenario === "healthy") {
+if (scenario === "healthy" || scenario === "full-bookmarks") {
   const result = await enable();
   report("published", result.published);
   check(result.published, "the public profile was not published");
@@ -88,6 +100,16 @@ if (scenario === "healthy") {
     saved(settingsPath).username_key === "luckyotter41",
     "the settings document does not hold the reserved name",
   );
+
+  if (scenario === "full-bookmarks") {
+    const pins = saved(publicPath)?.record?.pins;
+    check(pins?.length === 25, "publishing truncated or rejected 25 bookmarks");
+    check(
+      new Set(pins.map((pin) => pin.number)).size === 25,
+      "bookmarks were duplicated",
+    );
+    report("published bookmarks", pins.length);
+  }
 
   const off = await setCloudProfileVisibility(UID, false);
   report("unpublished", off.enabled);

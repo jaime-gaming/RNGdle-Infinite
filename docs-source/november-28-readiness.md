@@ -96,3 +96,30 @@ hosting availability. Those require the operator checks above.
 
 No production deploy, main-branch change, Firebase rule publish or live Cloud
 account operation was performed. The evidence above describes local verification.
+
+## Follow-up: release notes and Cloud bookmark verification
+
+The in-game v0.6.1 changelog now carries **November 28**, not November 22, and
+no longer advertises five golems, seven auras or a three-day Advent grace period.
+Only the publication date changed; event opening, theme activation, doors and
+all activity windows remain in December as requested.
+
+A missed test-model mismatch was found: the fake Firestore validator still
+accepted at most ten pins. It now models the checked-in 25-pin rules. A separate
+Cloud session creates a full 25-bookmark private save, enables sharing, checks
+that all 25 distinct pins reach the public summary, and disables sharing again.
+A regression test ties the client limit, rules indices and simulation limit
+together. These checks do not contact Firebase or imply rules were deployed.
+
+For the production operator, in an authenticated environment with Firebase API
+access, inspect the project selection (`.firebaserc`: `rngdle-infinite-jg`), then
+run `npm run deploy:rules -- --project rngdle-infinite-jg`. The script publishes
+only Firestore rules, not a site build. Confirm successful CLI output and test
+publishing/reading all 25 bookmarks with an owned test account on the real domain.
+Disable public sharing afterward and verify the private save remains. Do not
+truncate a user's bookmarks to ten as a workaround for stale rules.
+
+This Arena environment cannot reach Firebase's APIs. No service account, token,
+password or private player save is needed in chat. A production permission error
+still requires that operator publish and live verification; code-only tests
+cannot remove a stale deployed-rule restriction.

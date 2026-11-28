@@ -2,8 +2,8 @@
  * Focused harness for the public-profile enable path.
  *
  * The fake Firestore (tools/cloud-sync-sim/fakes/firestore.mjs) re-checks every
- * staged write against the real firestore.rules logic, so a passing run here
- * means the production transaction + rules combination really publishes.
+ * staged write against a JavaScript model of firestore.rules. This is not the
+ * Firebase emulator or a production permission check; keep the model in sync.
  *
  * Scenarios (each runs a "setup" process, a store mutation, then a "check"
  * process, because the fake Firestore keeps the store in memory):
@@ -30,7 +30,7 @@ const claimPath = "cloud_profile_names/luckyotter41";
 
 const scenarios = process.argv.slice(2).length
   ? process.argv.slice(2)
-  : ["healthy", "unreserved", "conflict"];
+  : ["healthy", "full-bookmarks", "unreserved", "conflict"];
 
 function run(scenario, phase) {
   return spawnSync(

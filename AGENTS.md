@@ -355,12 +355,13 @@ the checked-in `.env.production` is used only for production builds.
 
 `npm run verify:cloud` needs no Firebase: it runs real app sessions on simulated
 devices that share a fake Firestore which evaluates every commit against a model
-of `firestore.rules`, so a client write the real rules would reject fails there.
+of `firestore.rules`. The model must be kept in sync; it is not an emulator or
+proof that a deployed Firebase project accepts a write.
 It covers the first upload, a second device adopting the online save, both-way
 sync, a stale device never overwriting newer progress, publishing, unpublishing
 and the two-profile conflict. `tools/cloud-sync-sim/public-profile.mjs` then
-checks the enable path alone: a healthy account, an account whose name was
-never reserved (it must be claimed before publishing) and a name another account
+checks the enable path alone: a healthy account, a full 25-bookmark profile
+(without truncation), an account whose name was never reserved (it must be claimed before publishing) and a name another account
 owns (it must stay private and report a conflict).
 
 `npm run test:render` bundles the app shell, the offline overlay and the profile
