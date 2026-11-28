@@ -1086,6 +1086,16 @@ export function cloudSaveWriteWaitMs(limitData, now = Date.now()) {
     : Math.max(0, lastWrite + CLOUD_SAVE_WRITE_INTERVAL_MS - now);
 }
 
+// Lee el documento de límite de escritura sin iniciar transacción y devuelve
+// los milisegundos restantes de espera (0 si se puede escribir ahora).
+export async function cloudSaveWriteCooldownMs(userId, now = Date.now()) {
+  if (!userId) return 0;
+  const database = requireFirestore();
+  const writeLimitReference = saveWriteLimitRef(database, userId);
+  const snapshot = await getDoc(writeLimitReference);
+  return cloudSaveWriteWaitMs(snapshot.exists() ? snapshot.data() : null, now);
+}
+
 function isCloudWriteCooldownError(error) {
   return /wait a couple of seconds before (saving Cloud progress|updating the public profile|restoring Cloud progress)(?: again)?/i.test(
     String(error?.message ?? ""),

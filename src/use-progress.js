@@ -14,6 +14,7 @@ import {
   readCachedSaveForUser,
   readCloudOwner,
   reconcileCloudSave,
+  cloudSaveWriteCooldownMs,
   writeCloudSyncMark,
   renameCloudProfile,
   removeCachedSaveForUser,
@@ -257,6 +258,8 @@ export function useProgress({
     cloudQueue = useRef(Promise.resolve()),
     cloudWriteVersion = useRef(0),
     cloudWriteFailure = useRef({ snapshot: null, userId: null, attempts: 0 }),
+    cloudWriteDebounceTimer = useRef(null),
+    lastCloudWriteTime = useRef(0),
     outageSession = useRef(null),
     outageBlocked = useRef(false),
     cloudBlocked = useRef(false),
@@ -1052,7 +1055,7 @@ export function useProgress({
 
     let active = true;
     let retryTimer = null;
-    const flush = () => {
+    const flush = async () => {
       globalThis.removeEventListener?.("focus", flush);
       document.removeEventListener?.("visibilitychange", onFlushVisibility);
       if (
@@ -1062,6 +1065,17 @@ export function useProgress({
         !cloudGate.current.ready
       )
         return;
+      // Evitar rate-limits: si el cooldown de escritura de Cloud no ha
+      // pasado, reprogramar el flush para después del cooldown en lugar de
+      // dejar que el servidor rechace la escritura.
+      const cooldownMs = await cloudSaveWriteCooldownMs(userId);
+      if (cooldownMs > 0) {
+        const debounceTimer = setTimeout(() => {
+          void flush();
+        }, cooldownMs + 150);
+        cloudWriteDebounceTimer.current = debounceTimer;
+        return;
+      }
       const task = enqueueSerial(cloudQueue, () => {
         if (
           !active ||
@@ -1224,14 +1238,28 @@ export function useProgress({
         });
     };
     const onFlushVisibility = () => {
-      if (document.visibilityState === "visible") flush();
+      if (document.visibilityState === "visible") {
+        if (cloudWriteDebounceTimer.current) {
+          clearTimeout(cloudWriteDebounceTimer.current);
+          cloudWriteDebounceTimer.current = null;
+        }
+        void flush();
+      }
     };
-    const timer = tabActive ? setTimeout(flush, 10_000) : undefined;
+    if (cloudWriteDebounceTimer.current) {
+      clearTimeout(cloudWriteDebounceTimer.current);
+      cloudWriteDebounceTimer.current = null;
+    }
+    const timer = tabActive ? setTimeout(flush, 2_500) : undefined;
     globalThis.addEventListener?.("focus", flush);
     document.addEventListener?.("visibilitychange", onFlushVisibility);
     return () => {
       active = false;
       clearTimeout(timer);
+      if (cloudWriteDebounceTimer.current) {
+        clearTimeout(cloudWriteDebounceTimer.current);
+        cloudWriteDebounceTimer.current = null;
+      }
       if (retryTimer) clearTimeout(retryTimer);
       globalThis.removeEventListener?.("focus", flush);
       document.removeEventListener?.("visibilitychange", onFlushVisibility);

@@ -46,7 +46,10 @@ import { formatEP } from "../roll-data.js";
 import { waitText } from "../tasks.js";
 import { useModalDialog } from "../use-modal-dialog.js";
 import { useRngmasStatus } from "../use-rngmas.js";
+import { WINTER_GATHERINGS, winterFestivalCount } from "../winter-festival.js";
+import { WINTER_ROTATIONS, winterSchedule } from "../winter-rotation.js";
 import NumberBox from "./NumberBox";
+import WinterMotif from "./WinterMotif.jsx";
 import "../rngmas.css";
 import "../winter-missions.css";
 
@@ -243,6 +246,189 @@ function doorRewardLabel(door) {
   if (!reward) return "??";
   if (reward.ep) return formatEP(reward.ep);
   return reward.item?.name ?? "Aura";
+}
+
+const CONFETTI_COLORS = [
+  "#15803d",
+  "#991b1b",
+  "#d97706",
+  "#fbbf24",
+  "#7dd3fc",
+  "#c084fc",
+];
+
+function villageEventState(festival, event, now) {
+  const count = winterFestivalCount(festival, event);
+  const claimed = event.start
+    ? Boolean(festival.live?.[event.id]?.claimed)
+    : Boolean(festival.claimed?.includes(event.id));
+  const open = now >= event.start && now < event.end;
+  return { count, claimed, open };
+}
+
+function ClaimConfetti({ active, onEnd }) {
+  if (!active) return null;
+  const [pieces, setPieces] = useState(
+    Array.from({ length: 44 }, (_, index) => index),
+  );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPieces([]);
+      onEnd?.();
+    }, 1700);
+    return () => clearTimeout(timer);
+  }, [onEnd]);
+  const prefersReduced =
+    typeof matchMedia === "function" &&
+    matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (prefersReduced || pieces.length === 0) return null;
+  return (
+    <div className="rngmas-confetti" aria-hidden="true">
+      {pieces.map((index) => {
+        const side = index % 2 === 0 ? -1 : 1;
+        return (
+          <span
+            key={index}
+            className="rngmas-confetti-piece"
+            style={{
+              left: `${50 + side * (14 + (index % 6) * 10)}vw`,
+              background: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
+              "--dx": `${side * (22 + (index % 9) * 14)}vw`,
+              "--dy": `${-30 - (index % 11) * 18}vh`,
+              "--r": `${((index % 13) - 6) * 60}deg`,
+              "--s": `${0.6 + (index % 5) * 0.15}`,
+              delay: `${index * 10}ms`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+export function VillageNow({
+  progress,
+  status,
+  onAction,
+  pending,
+  onCelebrate,
+}) {
+  const festival = progress.rngmas.festival;
+  const now = status.now;
+  const events = [...WINTER_GATHERINGS, ...WINTER_ROTATIONS];
+  const schedule = winterSchedule(events, now);
+  const current = schedule.active[0];
+  const upcoming = schedule.upcoming[0];
+  if (!current && !upcoming) return null;
+
+  const currentState = current
+    ? villageEventState(festival, current, now)
+    : null;
+  const ready = Boolean(
+    currentState &&
+    currentState.open &&
+    currentState.count >= current.goal &&
+    !currentState.claimed,
+  );
+  const claimableNow = ready && !pending;
+
+  const upcomingLabel = upcoming
+    ? `Próxima: ${upcoming.name} · ${rngmasDateLabel(upcoming.start)} UTC`
+    : "";
+
+  return (
+    <section className="village-now winter-event" aria-label="Village now">
+      <div className="rngmas-section-heading">
+        <div>
+          <Snowflake size={15} aria-hidden="true" />
+          <h3>El pueblo ahora</h3>
+          <p>
+            Una actividad del pueblo está abierta cada día. La actividad actual
+            cuenta con tu próxima tirada online principal; las tiradas de
+            habilidades extra y las tiradas fuera de línea no cuentan.
+          </p>
+        </div>
+        <span className="rngmas-section-stat" aria-hidden="true">
+          {current
+            ? `Hasta ${rngmasDateLabel(current.end)} UTC`
+            : "Sin actividad abierta"}
+        </span>
+      </div>
+
+      {current && (
+        <article className="village-card">
+          <div className="village-motif">
+            <WinterMotif
+              motif={current.motif ?? "parcel"}
+              size={48}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="village-body">
+            <div className="village-top">
+              <strong>{current.name}</strong>
+              <span className="village-state">
+                {currentState.claimed
+                  ? "Recogido"
+                  : ready
+                    ? "Listo para recoger"
+                    : currentState.open
+                      ? "Abierto"
+                      : "Cerrado"}
+              </span>
+            </div>
+            <p className="village-blurb">{current.description}</p>
+            <label className="village-progress-label">
+              {currentState.count} / {current.goal}
+            </label>
+            <progress
+              className="village-progress"
+              max={current.goal}
+              value={currentState.count}
+              aria-label={`${current.name} progreso`}
+            />
+            <div className="village-actions">
+              <WinterCountdown
+                until={current.end}
+                label="Cierra en"
+                className="village-countdown"
+              />
+              {claimableNow && (
+                <button
+                  type="button"
+                  className="primary-button village-claim"
+                  onClick={() => {
+                    onAction(
+                      {
+                        type: "winter-special-claim",
+                        id: current.id,
+                      },
+                      `${current.name} recogido.`,
+                    );
+                    onCelebrate?.();
+                  }}
+                >
+                  Recoger {current.name.split(" ")[0]}
+                </button>
+              )}
+              {!claimableNow && currentState.open && (
+                <button className="secondary-button" disabled>
+                  Completa la actividad para recoger
+                </button>
+              )}
+            </div>
+          </div>
+        </article>
+      )}
+
+      {upcoming && upcomingLabel && (
+        <p className="village-upcoming">
+          <Clock3 size={13} aria-hidden="true" />
+          <span>{upcomingLabel}</span>
+        </p>
+      )}
+    </section>
+  );
 }
 
 export function AdventCalendar({ record, status, onClaim, pending }) {
@@ -953,6 +1139,7 @@ export default function RngmasShelf({ progress, onAction, notify }) {
   const status = useRngmasStatus();
   const [pending, setPending] = useState(false);
   const [zone, setZone] = useState("calendar");
+  const [celebrate, setCelebrate] = useState(false);
   const busy = useRef(false);
 
   async function run(action, message) {
@@ -1017,6 +1204,17 @@ export default function RngmasShelf({ progress, onAction, notify }) {
           Snowcoins
         </span>
       </nav>
+
+      <VillageNow
+        progress={progress}
+        status={status}
+        onAction={run}
+        pending={pending}
+        onCelebrate={() => setCelebrate(true)}
+      />
+
+      <ClaimConfetti active={celebrate} onEnd={() => setCelebrate(false)} />
+
       <div id="rngmas-zone-calendar" hidden={zone !== "calendar"}>
         <div id="winter-calendar" className="winter-calendar-zone">
           <AdventCalendar
