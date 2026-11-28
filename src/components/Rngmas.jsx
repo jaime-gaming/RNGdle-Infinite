@@ -1,3 +1,8 @@
+// REMOVE-RNGMAS: delete this entire file (and src/rngmas.js, src/rngmas.css,
+// src/rngmas-auras.css, src/components/RngmasDecor.jsx, src/components/WinterMotif.jsx,
+// src/components/WinterCountdown.jsx, src/components/WinterFestival.jsx,
+// src/components/WinterTasks.jsx, src/winter-festival.js, src/winter-rotation.js,
+// src/use-rngmas.js) when the RNGmas/Christmas event ends.
 import WinterEventHeader from "./WinterEventHeader.jsx";
 import WinterEventGuide from "./WinterEventGuide.jsx";
 import WinterCountdown from "./WinterCountdown.jsx";
