@@ -45,6 +45,7 @@ test("the v0.2 Flywheel-meter preference migrates to the skill bar", () => {
 test("settings default to a quiet, unchanged game and are keyed separately from progress", () => {
   expect(SETTINGS_KEY).not.toBe("rng-infinite-progress-v1");
   expect(defaultSettings).toEqual({
+    christmasMode: true,
     notifyReady: false,
     notifySound: false,
     notifyRankEnabled: false,

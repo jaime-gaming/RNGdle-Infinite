@@ -12,6 +12,7 @@ import {
   AURA_FAMILIES,
 } from "../src/shop-data.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
+import { pauseClockAt } from "./helpers/clock.js";
 
 const funded = {
   ...emptyProgress(),
@@ -37,6 +38,9 @@ async function openShelf(page, id, label) {
 test("the hub is an index of shelf buttons, and each one is its own page", async ({
   page,
 }) => {
+  // Away from RNGmas, so the seasonal tile does not join the permanent shelves.
+  await page.clock.install();
+  await pauseClockAt(page, Date.UTC(2026, 1, 15, 12));
   await seedProgress(page, funded);
   await page.goto("/shop");
   await waitForApp(page);

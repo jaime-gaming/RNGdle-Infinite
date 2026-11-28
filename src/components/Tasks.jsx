@@ -1,3 +1,5 @@
+import WinterTasks from "./WinterTasks.jsx";
+import { rngmasStatus, winterReadyCount } from "../rngmas.js";
 import React, { useState } from "react";
 import {
   ArrowDownToLine,
@@ -92,7 +94,16 @@ export default function Tasks({
 }) {
   const [pending, setPending] = useState("");
   const [confirming, setConfirming] = useState("");
-  const [activeView, setActiveView] = useState("regular");
+  const [requestedView, setActiveView] = useState(() =>
+    new URLSearchParams(globalThis.location?.search).get("event") === "rngmas"
+      ? "winter"
+      : "regular",
+  );
+  const winterStatus = rngmasStatus(now);
+  const activeView =
+    requestedView === "winter" && !winterStatus.shown
+      ? "regular"
+      : requestedView;
   const summary = taskSummary(progress.tasks, now);
   const pass = progress.battlePass ?? null;
   const passSeason = battlePassSeason(now);
@@ -320,75 +331,106 @@ export default function Tasks({
             </span>
           )}
         </button>
+        {winterStatus.shown && (
+          <button
+            type="button"
+            className={activeView === "winter" ? "is-active" : ""}
+            aria-pressed={activeView === "winter"}
+            onClick={() => setActiveView("winter")}
+          >
+            <Gift size={18} />
+            <span className="tasks-view-copy">
+              <strong>RNGmas</strong>
+              <small>Missions · Live · Weekly</small>
+            </span>
+            {winterReadyCount(progress.rngmas, now) > 0 && (
+              <span
+                className="tasks-view-ready"
+                aria-label={`${winterReadyCount(progress.rngmas, now)} ready`}
+              >
+                {winterReadyCount(progress.rngmas, now)}
+              </span>
+            )}
+          </button>
+        )}
       </div>
-      {activeView === "regular" ? (
-        <section className="tasks-summary" aria-label="Task summary">
-          <div className="tasks-stat">
-            <span className="tasks-stat-label">Available</span>
-            <strong>
-              <Coins size={15} aria-hidden="true" />
-              {formatEP(progress.balance)} EP
-            </strong>
-          </div>
-          <div className="tasks-stat">
-            <span className="tasks-stat-label">Ready</span>
-            <strong>
-              {summary.ready} <small>to claim</small>
-            </strong>
-            <small className="tasks-stat-note">
-              {readyEP > 0
-                ? `Worth +${formatEP(readyEP)} EP together`
-                : "Nothing waiting for you"}
-            </small>
-          </div>
-          <div className="tasks-stat">
-            <span className="tasks-stat-label">Claimed</span>
-            <strong>
-              {summary.claimed} <small>of {summary.total} this reset</small>
-            </strong>
-          </div>
-          <div className="tasks-stat">
-            <span className="tasks-stat-label">Task Skips</span>
-            <strong>
-              {skips.tokens} <small>of {skips.limit} held</small>
-            </strong>
-            <small className="tasks-stat-note">{skipNote}</small>
-          </div>
-        </section>
-      ) : (
-        <section
-          className="tasks-summary tasks-summary-pass"
-          aria-label="Battle Pass summary"
-        >
-          <div className="tasks-stat">
-            <span className="tasks-stat-label">Season</span>
-            <strong>{passSeason.name}</strong>
-            <small className="tasks-stat-note">
-              {passLive
-                ? `Season ${passSeason.index}`
-                : passSeason.upcoming
-                  ? `Opens ${passDateLabel(passSeason.start)}`
-                  : "No active season"}
-            </small>
-          </div>
-          <div className="tasks-stat">
-            <span className="tasks-stat-label">Progress</span>
-            <strong>
-              {passLevel} <small>of {BATTLE_PASS_LEVELS}</small>
-            </strong>
-            <small className="tasks-stat-note">
-              {count(pass?.xp ?? 0)} BPEP
-            </small>
-          </div>
-          <div className="tasks-stat">
-            <span className="tasks-stat-label">Ready</span>
-            <strong>
-              {passReady} <small>missions</small>
-            </strong>
-            <small className="tasks-stat-note">Claim for BPEP</small>
-          </div>
-        </section>
+      {activeView === "winter" && winterStatus.shown && (
+        <WinterTasks
+          progress={progress}
+          status={winterStatus}
+          onAction={onAction}
+          notify={notify}
+        />
       )}
+      {activeView !== "winter" &&
+        (activeView === "regular" ? (
+          <section className="tasks-summary" aria-label="Task summary">
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Available</span>
+              <strong>
+                <Coins size={15} aria-hidden="true" />
+                {formatEP(progress.balance)} EP
+              </strong>
+            </div>
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Ready</span>
+              <strong>
+                {summary.ready} <small>to claim</small>
+              </strong>
+              <small className="tasks-stat-note">
+                {readyEP > 0
+                  ? `Worth +${formatEP(readyEP)} EP together`
+                  : "Nothing waiting for you"}
+              </small>
+            </div>
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Claimed</span>
+              <strong>
+                {summary.claimed} <small>of {summary.total} this reset</small>
+              </strong>
+            </div>
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Task Skips</span>
+              <strong>
+                {skips.tokens} <small>of {skips.limit} held</small>
+              </strong>
+              <small className="tasks-stat-note">{skipNote}</small>
+            </div>
+          </section>
+        ) : (
+          <section
+            className="tasks-summary tasks-summary-pass"
+            aria-label="Battle Pass summary"
+          >
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Season</span>
+              <strong>{passSeason.name}</strong>
+              <small className="tasks-stat-note">
+                {passLive
+                  ? `Season ${passSeason.index}`
+                  : passSeason.upcoming
+                    ? `Opens ${passDateLabel(passSeason.start)}`
+                    : "No active season"}
+              </small>
+            </div>
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Progress</span>
+              <strong>
+                {passLevel} <small>of {BATTLE_PASS_LEVELS}</small>
+              </strong>
+              <small className="tasks-stat-note">
+                {count(pass?.xp ?? 0)} BPEP
+              </small>
+            </div>
+            <div className="tasks-stat">
+              <span className="tasks-stat-label">Ready</span>
+              <strong>
+                {passReady} <small>missions</small>
+              </strong>
+              <small className="tasks-stat-note">Claim for BPEP</small>
+            </div>
+          </section>
+        ))}
       {activeView === "regular" &&
         lists.map((list) => {
           const { cadence, views, bonus } = list;

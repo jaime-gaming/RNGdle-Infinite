@@ -1,3 +1,4 @@
+import { rngmasThemeActive, winterReadyCount } from "./rngmas.js";
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -34,6 +35,8 @@ import Shop from "./components/Shop";
 import { useProgress } from "./use-progress";
 import { prepareRolls } from "./roll-client.js";
 import LoadingScreen from "./components/LoadingScreen.jsx";
+import { LegacyGate } from "./components/LegacyShutdown.jsx";
+import { legacyNow, legacyShutdownState } from "./legacy-shutdown.js";
 import MirrorNotice from "./components/MirrorNotice.jsx";
 import { shouldShowLoadingScreen } from "./loading-gate.js";
 import "./shop.css";
@@ -67,16 +70,14 @@ import {
   passMissionReadyCount,
   passReadyCount,
 } from "./battle-pass.js";
+import { RNGMAS_TEMPORARY_THEMES } from "./rngmas.js";
+import { useRngmasStatus } from "./use-rngmas.js";
 import { infiniteBadges } from "./infinite-badges.js";
 import { taskSummary } from "./tasks.js";
 import { useGameClock } from "./use-game-clock.js";
 import FreshStartDialog, { FreshStartFlag } from "./components/FreshStart.jsx";
 import AppearanceMenu from "./components/AppearanceMenu.jsx";
-import SaleTicker from "./components/SaleTicker.jsx";
-import { SaleSideAds } from "./components/BlackFriday.jsx";
-import { useSaleStatus } from "./use-black-friday.js";
-import { applySaleBranding } from "./sale-branding.js";
-import { SALE_THEMES } from "./black-friday.js";
+import RngmasDecor from "./components/RngmasDecor.jsx";
 import { freshRareBadges, newlyReady } from "./notice-rules.js";
 import { badgeMetadata } from "./roll-data.js";
 import { HISTORY_LIMIT, HISTORY_WARNING } from "./history-log.js";
@@ -162,8 +163,7 @@ function shopSectionFromLocation(target) {
   if (pageFromLocation(target) !== "shop") return "";
 
   const named = (name) =>
-    SHOP_SECTIONS.some((section) => section.id === name) ||
-    name === "black-friday"
+    SHOP_SECTIONS.some((section) => section.id === name) || name === "rngmas"
       ? name
       : "";
   const hash = String(target.hash || "").replace(/^#/, "");
@@ -197,7 +197,6 @@ function App() {
     settingsSubpageFromLocation(location),
   );
 
-  const sale = useSaleStatus();
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem("rng-theme");
@@ -205,8 +204,8 @@ function App() {
         "light",
         "dark",
         "system",
-        ...SALE_THEMES.map((entry) => entry.id),
         ...BATTLE_PASS_TEMPORARY_THEMES.map((entry) => entry.id),
+        ...RNGMAS_TEMPORARY_THEMES.map((entry) => entry.id),
       ].includes(saved)
         ? saved
         : "light";
@@ -236,6 +235,7 @@ function App() {
   const [pickingGoal, setPickingGoal] = useState(false);
   const taskNow = useGameClock();
   const passSeason = battlePassSeason(taskNow);
+  const rngmas = useRngmasStatus();
   const [modal, setModal] = useState(null);
   const [freshStartOpen, setFreshStartOpen] = useState(false);
   const openFreshStart = useCallback(() => setFreshStartOpen(true), []);
@@ -485,7 +485,8 @@ function App() {
 
   const readyTasks =
     taskSummary(session.tasks, taskNow).ready +
-    passMissionReadyCount(session.battlePass, taskNow);
+    passMissionReadyCount(session.battlePass, taskNow) +
+    winterReadyCount(session.rngmas, taskNow);
   const readyPass = passReadyCount(session.battlePass, taskNow);
   const lastReadyTasks = useRef(readyTasks);
   useEffect(() => {
@@ -576,7 +577,7 @@ function App() {
   };
   const openShelf = (id, focus = null) => {
     const section =
-      id === "black-friday" || SHOP_SECTIONS.some((entry) => entry.id === id)
+      id === "rngmas" || SHOP_SECTIONS.some((entry) => entry.id === id)
         ? id
         : "";
     setShopFocus(focus);
@@ -663,14 +664,18 @@ function App() {
   }, [page, sharedCard, profileName, session.profile?.username]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
-    const saleTheme = SALE_THEMES.find((entry) => entry.id === theme) ?? null;
     const passTheme = BATTLE_PASS_TEMPORARY_THEMES.find(
       (entry) => entry.id === theme,
     );
-    const isPassTheme = passSeason.active && Boolean(passTheme);
+    const rngmasTheme = RNGMAS_TEMPORARY_THEMES.find(
+      (entry) => entry.id === theme,
+    );
+    const isPassTheme =
+      passSeason.active && passSeason.index === 1 && Boolean(passTheme);
+    const isRngmasTheme = rngmasThemeActive(rngmas.now) && Boolean(rngmasTheme);
     const update = () => {
       const resolved =
-        saleTheme || passTheme
+        passTheme || rngmasTheme
           ? "dark"
           : theme === "system"
             ? media.matches
@@ -678,9 +683,8 @@ function App() {
               : "light"
             : theme;
       document.documentElement.dataset.theme = resolved;
-      if (saleTheme && sale.active)
-        document.documentElement.dataset.saleTheme = theme;
-      else delete document.documentElement.dataset.saleTheme;
+      if (isRngmasTheme) document.documentElement.dataset.rngmasTheme = theme;
+      else delete document.documentElement.dataset.rngmasTheme;
       if (isPassTheme) {
         document.documentElement.dataset.passTheme = theme;
         document.documentElement.style.setProperty(
@@ -699,11 +703,14 @@ function App() {
     } catch {}
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
-  }, [theme, sale.active, passSeason.active, passSeason.accent]);
-
-  useEffect(() => {
-    applySaleBranding(sale.active);
-  }, [sale.active]);
+  }, [
+    theme,
+    passSeason.index,
+    passSeason.active,
+    passSeason.accent,
+    rngmas.active,
+    rngmas.now,
+  ]);
   useEffect(
     () => () => {
       clearTimeout(arrivalTimer.current);
@@ -843,8 +850,8 @@ function App() {
 
   return (
     <>
+      <RngmasDecor />
       {isLegacyMirrorBuild() && <MirrorNotice />}
-      {!loading && <SaleTicker status={sale} />}
       <header className="header">
         <div className="header-left">
           <button
@@ -933,7 +940,8 @@ function App() {
           <AppearanceMenu
             theme={theme}
             onTheme={setTheme}
-            passActive={passSeason.active}
+            passActive={passSeason.active && passSeason.index === 1}
+            rngmasActive={rngmasThemeActive(rngmas.now)}
           />
           <button
             className="sign-in"
@@ -1201,14 +1209,12 @@ function App() {
       )}
       <main
         aria-busy={loading}
-        className={`${page === "roll" ? "home-main" : "content-main"} ${sale.active ? "sale-ad-layout" : ""}`}
+        className={page === "roll" ? "home-main" : "content-main"}
       >
         {loading ? (
           <LoadingScreen />
         ) : (
           <>
-            {/* RETIREMENT: event-only chrome. */}
-            <SaleSideAds status={sale} page={page} onOpenShelf={openShelf} />
             <div
               className="roll-view"
               hidden={page !== "roll"}
@@ -2015,11 +2021,14 @@ function App() {
   );
 }
 
-const updateSaveRecovery = recoverSaveAfterUpdate();
+const legacyClosed =
+  isLegacyMirrorBuild() && legacyShutdownState(legacyNow()).closed;
+const updateSaveRecovery = legacyClosed ? null : recoverSaveAfterUpdate();
 
-const vaultRecovery = updateSaveRecovery?.recovered
-  ? { restored: false }
-  : restoreVaultIfNeeded();
+const vaultRecovery =
+  legacyClosed || updateSaveRecovery?.recovered
+    ? { restored: false }
+    : restoreVaultIfNeeded();
 
 try {
   window.addEventListener("error", (e) => {
@@ -2037,7 +2046,9 @@ if (!rootEl) {
   createRoot(rootEl).render(
     <ErrorBoundary>
       <SettingsProvider>
-        <App />
+        <LegacyGate>
+          <App />
+        </LegacyGate>
       </SettingsProvider>
     </ErrorBoundary>,
   );

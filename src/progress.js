@@ -1,5 +1,15 @@
+import {
+  winterCompanionSkin,
+  WINTER_COMPANION_SKINS,
+} from "./winter-companions.js";
+import {
+  WINTER_SPECIAL_TASKS,
+  WINTER_LIVE_EVENTS,
+  emptyWinterFestival,
+  winterFestivalCount,
+} from "./winter-festival.js";
+import { gameNow } from "./game-clock.js";
 import { unpackVaultSave } from "./save-codec.js";
-import { salePriceOf } from "./black-friday.js";
 
 import { reaperAct } from "./rngween-legacy.js";
 import { allTimeTally } from "./profile-stats.js";
@@ -107,7 +117,6 @@ import {
 } from "./rngween.js";
 import {
   emptyRngweenLimited,
-  grantRngweenCosmetic,
   limitedRewardIds,
   parseRngweenLimited,
 } from "./rngween-limited.js";
@@ -116,7 +125,7 @@ import {
   BATTLE_PASS_MAX_XP,
   BATTLE_PASS_PREMIUM_PRICE,
   BPEP_PER_ROLL,
-  BATTLE_PASS_REWARDS,
+  passRewardsFor,
   battlePassSeason,
   passOverflowEP,
   claimPassMission,
@@ -143,14 +152,28 @@ import {
 } from "./battle-pass.js";
 import {
   BLACK_FRIDAY_SKIN,
-  blackFridayActive,
   emptyBlackFriday,
-  isResaleCosmetic,
   parseBlackFriday,
-  resalePrice,
-  saleCompanionPrice,
-  stampForPurchase,
 } from "./black-friday.js";
+import {
+  SNOWCOIN_CAP,
+  SNOWCOIN_EXCHANGE_CAP,
+  SNOWCOIN_EXCHANGE_EP,
+  WINTER_MARKET,
+  winterChapterCount,
+  ADVENT_FINALE,
+  GOLEM_SMASH_COST,
+  RNGMAS_COSMETICS_BY_ID,
+  RNGMAS_WEEKS,
+  adventDoorAt,
+  adventFinaleAt,
+  adventRewardFor,
+  emptyRngmas,
+  recordWinterRoll,
+  parseRngmas,
+  rngmasRewardIds,
+  rngmasWeekAt,
+} from "./rngmas.js";
 export { HISTORY_LIMIT, HISTORY_WARNING };
 export const PROGRESS_KEY = "rng-infinite-progress-v1";
 export const PROFILE_DESCRIPTION_LIMIT = 200;
@@ -267,6 +290,7 @@ export function emptyProgress() {
     rngweenLimited: emptyRngweenLimited(),
     // RETIREMENT: keep parsing the Black Friday save record.
     blackFriday: emptyBlackFriday(),
+    rngmas: emptyRngmas(),
     battlePass: emptyBattlePass(),
 
     events: {},
@@ -527,6 +551,14 @@ export function parseAndRepairProgress(raw) {
     owned.push(BLACK_FRIDAY_SKIN.id);
     note("your limited Black Friday 2026 skin was restored from its stamps.");
   }
+  const rngmas = parseRngmas(p.rngmas, { owned });
+  if (
+    p.rngmas != null &&
+    (typeof p.rngmas !== "object" || Array.isArray(p.rngmas))
+  )
+    note("the RNGmas record was unreadable, so it was reset.");
+  for (const id of rngmasRewardIds(rngmas))
+    if (!owned.includes(id)) owned.push(id);
   const passRead = parseBattlePass(p.battlePass);
   if (p.battlePass != null && passRead.repaired)
     note("battle pass progress was unreadable, so it was reset.");
@@ -553,7 +585,7 @@ export function parseAndRepairProgress(raw) {
     };
     note("a claimed pass milestone was restored from your activity history.");
   }
-  for (const reward of BATTLE_PASS_REWARDS) {
+  for (const reward of passRewardsFor(battlePass.seasonId)) {
     for (const track of ["free", "premium"]) {
       const definition = reward[track];
       if (
@@ -567,6 +599,7 @@ export function parseAndRepairProgress(raw) {
     }
   }
   if (
+    battlePass.seasonId !== "season-2" &&
     battlePass.claimed.includes(rewardKey("premium", 30)) &&
     !owned.includes("pass-firstlight") &&
     !owned.includes("pass-prism")
@@ -589,10 +622,12 @@ export function parseAndRepairProgress(raw) {
   ].sort((a, b) => PET_IDS.indexOf(a) - PET_IDS.indexOf(b));
 
   const activePet = pets.includes(p.activePet) ? p.activePet : "none";
-  const petSkins =
-    owned.includes("pass-axolotl") && p.petSkins?.axolotl === "prism"
-      ? { axolotl: "prism" }
-      : {};
+  const petSkins = {};
+  if (owned.includes("pass-axolotl") && p.petSkins?.axolotl === "prism")
+    petSkins.axolotl = "prism";
+  for (const skin of WINTER_COMPANION_SKINS)
+    if (owned.includes(skin.id) && p.petSkins?.[skin.petId] === skin.skinId)
+      petSkins[skin.petId] = skin.skinId;
   let skillsInput = p.skills;
   if (p.skills != null && !Array.isArray(p.skills)) {
     note(
@@ -737,6 +772,7 @@ export function parseAndRepairProgress(raw) {
     tasks: tasksRead.tasks,
     rngweenLimited,
     blackFriday,
+    rngmas,
     battlePass,
     skillCharge,
     cooldownUntil,
@@ -769,7 +805,7 @@ export function preservePermanentCosmetics(previous, next) {
     ]),
   ].filter((id) => {
     const item = productById.get(id);
-    return item?.kind === "aura" || item?.passReward;
+    return item?.kind === "aura" || item?.passReward || item?.winterReward;
   });
   const missing = known.filter(
     (id) =>
@@ -874,7 +910,7 @@ function startNewCycle(
 ) {
   const owned = [...new Set(state.owned ?? [])].filter((id) => {
     const item = productById.get(id);
-    return item?.kind === "aura" || item?.passReward;
+    return item?.kind === "aura" || item?.passReward || item?.winterReward;
   });
 
   const kept = (state.skills ?? []).filter(
@@ -922,39 +958,6 @@ function startNewCycle(
   };
 }
 
-function withSaleStamp(state, at, ep = null) {
-  if (!blackFridayActive(at)) return state;
-  const last = state.history?.[state.history.length - 1];
-  const spent =
-    ep ??
-    (last && last.type === "purchase" && validAmount(last.ep) ? last.ep : 0);
-  const { record, newStamps, skinUnlocked } = stampForPurchase(
-    state.blackFriday,
-    spent,
-    at,
-  );
-  if (!newStamps && !skinUnlocked) return { ...state, blackFriday: record };
-  const skin = BLACK_FRIDAY_SKIN;
-  return {
-    ...state,
-    blackFriday: record,
-    owned:
-      skinUnlocked && !state.owned.includes(skin.id)
-        ? [...state.owned, skin.id]
-        : state.owned,
-    history: appendHistory(state.history, [
-      {
-        id: `sale-reward:${skin.id}:${record.stamps}`,
-        type: "sale-reward",
-        at,
-        productId: skin.id,
-        name: skin.name,
-        stamps: record.stamps,
-      },
-    ]),
-  };
-}
-
 function buyTaskSkip(state, item, action) {
   const at = action.at ?? Math.ceil(Date.now());
   if (!validAmount(at) || at > 8640000000000000)
@@ -971,27 +974,24 @@ function buyTaskSkip(state, item, action) {
     );
   if (state.balance < price) throw new Error("Not enough EP for this item.");
   const tasks = state.tasks ?? emptyTasks();
-  return withSaleStamp(
-    {
-      ...state,
-      history: appendHistory(state.history, [
-        {
-          id: action.eventId ?? `buy:${item.id}:${at}`,
-          type: "purchase",
-          at,
-          productId: item.id,
-          name: item.name,
-          ep: price,
-        },
-      ]),
-      balance: state.balance - price,
-      tasks: {
-        ...tasks,
-        skip: boughtSkip(state.tasks, at),
+  return {
+    ...state,
+    history: appendHistory(state.history, [
+      {
+        id: action.eventId ?? `buy:${item.id}:${at}`,
+        type: "purchase",
+        at,
+        productId: item.id,
+        name: item.name,
+        ep: price,
       },
+    ]),
+    balance: state.balance - price,
+    tasks: {
+      ...tasks,
+      skip: boughtSkip(state.tasks, at),
     },
-    at,
-  );
+  };
 }
 
 function payTask(state, task, at, eventId = null) {
@@ -1047,9 +1047,9 @@ function collectBonus(state, cadence, at, eventId = null) {
 
 function grantPassReward(state, level, track, at, eventId = null) {
   const pass = state.battlePass ?? emptyBattlePass();
-  const reward = BATTLE_PASS_REWARDS.find((entry) => entry.level === level)?.[
-    track
-  ];
+  const reward = passRewardsFor(pass.seasonId).find(
+    (entry) => entry.level === level,
+  )?.[track];
   if (!reward) throw new Error("That pass reward does not exist.");
   if (passRewardState(pass, level, track) !== "claimable")
     throw new Error("This pass reward is not ready to claim.");
@@ -1103,7 +1103,7 @@ function ensurePassSeason(state, at) {
   let next = { ...state, battlePass: pass };
   if (pass.seasonId) {
     const level = passLevelForXp(pass.xp);
-    for (const reward of BATTLE_PASS_REWARDS) {
+    for (const reward of passRewardsFor(pass.seasonId)) {
       if (reward.level > level) continue;
       for (const track of ["free", "premium"]) {
         if (
@@ -1332,7 +1332,7 @@ function applyEvent(state, action) {
 
     const cosmetics = [...new Set(state.owned ?? [])].filter((id) => {
       const item = productById.get(id);
-      return item?.kind === "aura" || item?.passReward;
+      return item?.kind === "aura" || item?.passReward || item?.winterReward;
     });
     const next = {
       ...emptyProgress(),
@@ -1344,6 +1344,7 @@ function applyEvent(state, action) {
       rngweenLimited: state.rngweenLimited,
 
       blackFriday: state.blackFriday ?? emptyBlackFriday(),
+      rngmas: state.rngmas ?? emptyRngmas(),
       battlePass: state.battlePass ?? emptyBattlePass(),
       loadouts: state.loadouts ?? [],
       goalId: state.goalId ?? null,
@@ -1360,6 +1361,339 @@ function applyEvent(state, action) {
       );
     return state.goalId === action.id ? state : { ...state, goalId: action.id };
   }
+  if (action.type === "claim-advent") {
+    const at = action.at ?? Math.ceil(gameNow());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid advent claim time");
+    const rngmas = state.rngmas ?? emptyRngmas();
+    const day = action.day;
+    if (day === ADVENT_FINALE.day) {
+      if (!adventFinaleAt(at).openNow)
+        throw new Error("The RNGmas star is not open yet.");
+      if (rngmas.finale)
+        throw new Error("You already claimed the RNGmas star.");
+      const aura = RNGMAS_COSMETICS_BY_ID.get(ADVENT_FINALE.aura);
+      return {
+        ...state,
+        rngmas: { ...rngmas, finale: true },
+        owned: state.owned.includes(aura.id)
+          ? state.owned
+          : [...state.owned, aura.id],
+        history: appendHistory(state.history, [
+          {
+            id: action.eventId ?? `advent:${ADVENT_FINALE.day}:${at}`,
+            type: "advent-claim",
+            at,
+            day: ADVENT_FINALE.day,
+            productId: aura.id,
+            name: aura.name,
+          },
+        ]),
+      };
+    }
+    const reward = adventRewardFor(day);
+    if (!reward) throw new Error("That advent door does not exist.");
+    if (!adventDoorAt(day, at).openNow)
+      throw new Error("That advent door is not open.");
+    if (rngmas.claimed.includes(day))
+      throw new Error("You already opened that advent door.");
+    const claimed = [...rngmas.claimed, day].sort((a, b) => a - b);
+    const row = {
+      id: action.eventId ?? `advent:${day}:${at}`,
+      type: "advent-claim",
+      at,
+      day,
+      ...(reward.ep ? { ep: reward.ep } : {}),
+      ...(reward.aura
+        ? { productId: reward.aura, name: reward.item.name }
+        : {}),
+    };
+    if (reward.ep) {
+      const balance = state.balance + reward.ep;
+      const totalEarned = state.totalEarned + reward.ep;
+      if (!validAmount(balance) || !validAmount(totalEarned))
+        throw new Error("EP balance limit reached.");
+      return {
+        ...state,
+        balance,
+        totalEarned,
+        rngmas: { ...rngmas, claimed },
+        history: appendHistory(state.history, [row]),
+      };
+    }
+    return {
+      ...state,
+      rngmas: { ...rngmas, claimed },
+      owned: state.owned.includes(reward.aura)
+        ? state.owned
+        : [...state.owned, reward.aura],
+      history: appendHistory(state.history, [row]),
+    };
+  }
+  if (
+    action.type === "winter-special-claim" ||
+    action.type === "winter-parcel"
+  ) {
+    const at = action.at ?? Math.ceil(gameNow());
+    if (!validAmount(at) || !rngmasWeekAt(at))
+      throw new Error("The winter festival is closed.");
+    const record = state.rngmas ?? emptyRngmas();
+    const festival = record.festival ?? emptyWinterFestival();
+    const mission = [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS].find(
+      (item) => item.id === action.id,
+    );
+    if (!mission) throw new Error("Unknown winter activity.");
+    if (mission.start && (at < mission.start || at >= mission.end))
+      throw new Error("This live window is closed.");
+    const claimed = mission.start
+      ? festival.live[mission.id].claimed
+      : festival.claimed.includes(mission.id);
+    if (claimed) throw new Error("Reward already collected.");
+    if (action.type === "winter-parcel") {
+      if (mission.metric !== "donations")
+        throw new Error("This activity does not take parcels.");
+      const entry = festival.live[mission.id];
+      if (entry.count >= mission.goal)
+        throw new Error("All parcels are already sent.");
+      if ((record.snowcoins ?? 0) < 5) throw new Error("Not enough Snowcoins.");
+      return {
+        ...state,
+        rngmas: {
+          ...record,
+          snowcoins: record.snowcoins - 5,
+          festival: {
+            ...festival,
+            live: {
+              ...festival.live,
+              [mission.id]: { ...entry, count: entry.count + 1 },
+            },
+          },
+        },
+      };
+    }
+    if (winterFestivalCount(record, mission) < mission.goal)
+      throw new Error("Complete this activity first.");
+    if ((record.snowcoinsEarned ?? 0) > Number.MAX_SAFE_INTEGER - mission.coins)
+      throw new Error("Snowcoin limit reached.");
+    return {
+      ...state,
+      owned: mission.reward
+        ? [...new Set([...state.owned, mission.reward])]
+        : state.owned,
+      battlePass: mission.boost
+        ? {
+            ...state.battlePass,
+            boosts: grantBoost(
+              state.battlePass?.boosts,
+              mission.boost,
+              mission.charges,
+              at,
+            ),
+          }
+        : state.battlePass,
+      rngmas: {
+        ...record,
+        snowcoins: Math.min(
+          SNOWCOIN_CAP,
+          (record.snowcoins ?? 0) + mission.coins,
+        ),
+        snowcoinsEarned: (record.snowcoinsEarned ?? 0) + mission.coins,
+        festival: mission.start
+          ? {
+              ...festival,
+              rewardClaims: [...(festival.rewardClaims ?? []), mission.id],
+              live: {
+                ...festival.live,
+                [mission.id]: { ...festival.live[mission.id], claimed: true },
+              },
+            }
+          : {
+              ...festival,
+              rewardClaims: [...(festival.rewardClaims ?? []), mission.id],
+              claimed: [...festival.claimed, mission.id],
+            },
+      },
+      history: appendHistory(state.history, [
+        {
+          id: `winter-special:${mission.id}`,
+          type: "winter-reward",
+          at,
+          missionId: mission.id,
+          productId: mission.reward,
+          name: mission.reward
+            ? RNGMAS_COSMETICS_BY_ID.get(mission.reward).name
+            : mission.name,
+        },
+      ]),
+    };
+  }
+  if (
+    action.type === "winter-exchange" ||
+    action.type === "winter-market-buy"
+  ) {
+    const at = action.at ?? Math.ceil(gameNow());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid winter transaction time.");
+    const week = rngmasWeekAt(at);
+    const record = state.rngmas ?? emptyRngmas();
+    if (action.type === "winter-exchange") {
+      if (!week || week.index < 3)
+        throw new Error("The Snowcoin exchange is closed.");
+      const amount = action.amount;
+      if (
+        !Number.isSafeInteger(amount) ||
+        amount < 1 ||
+        amount > SNOWCOIN_EXCHANGE_CAP
+      )
+        throw new Error("Choose a whole number from 1 to 200.");
+      const exchanged = record.snowcoinsExchanged ?? 0;
+      if (exchanged + amount > SNOWCOIN_EXCHANGE_CAP)
+        throw new Error("The seasonal exchange limit is 200 Snowcoins.");
+      const cost = amount * SNOWCOIN_EXCHANGE_EP;
+      if (state.balance < cost)
+        throw new Error("Not enough EP for this exchange.");
+      if (
+        (record.snowcoins ?? 0) + amount > SNOWCOIN_CAP ||
+        (record.snowcoinsEarned ?? 0) > Number.MAX_SAFE_INTEGER - amount
+      )
+        throw new Error("Snowcoin limit reached.");
+      return {
+        ...state,
+        balance: state.balance - cost,
+        rngmas: {
+          ...record,
+          snowcoins: (record.snowcoins ?? 0) + amount,
+          snowcoinsEarned: (record.snowcoinsEarned ?? 0) + amount,
+          snowcoinsExchanged: exchanged + amount,
+        },
+        history: appendHistory(state.history, [
+          {
+            id: action.eventId ?? `winter-exchange:${at}:${exchanged}`,
+            type: "winter-exchange",
+            at,
+            ep: cost,
+            coins: amount,
+          },
+        ]),
+      };
+    }
+    if (!week || week.index < 2)
+      throw new Error("The Christmas market is closed.");
+    const item = WINTER_MARKET.find((item) => item.id === action.id);
+    if (!item || item.retired) throw new Error("Unknown winter stall.");
+    if ((record.marketPurchases ?? []).includes(item.id))
+      throw new Error("This stall reward was already bought.");
+    if ((record.snowcoins ?? 0) < item.price)
+      throw new Error("Not enough Snowcoins.");
+    return {
+      ...state,
+      rngmas: {
+        ...record,
+        snowcoins: record.snowcoins - item.price,
+        marketPurchases: [...(record.marketPurchases ?? []), item.id],
+      },
+      owned:
+        item.aura || item.cosmetic
+          ? [...new Set([...state.owned, item.aura || item.cosmetic])]
+          : state.owned,
+      battlePass:
+        item.aura || item.cosmetic
+          ? state.battlePass
+          : {
+              ...state.battlePass,
+              boosts: grantBoost(
+                state.battlePass?.boosts,
+                item.boost,
+                item.charges ?? 1,
+                at,
+              ),
+            },
+      history: appendHistory(state.history, [
+        {
+          id: `winter-market:${item.id}`,
+          type: "winter-market",
+          at,
+          itemId: item.id,
+          coins: item.price,
+        },
+      ]),
+    };
+  }
+  if (action.type === "golem-smash" || action.type === "claim-winter-week") {
+    const at = action.at ?? Math.ceil(gameNow());
+    if (!validAmount(at) || at > 8640000000000000)
+      throw new Error("Invalid activity time");
+    const week = rngmasWeekAt(at);
+    if (!week) throw new Error("No winter activity is open.");
+    const rngmas = state.rngmas ?? emptyRngmas();
+    const record = rngmas.golems[week.id];
+    if (record.defeated) throw new Error("Reward already collected.");
+    if (action.type === "golem-smash") {
+      if (week.metric !== "damage")
+        throw new Error("Golem Smash is not open this week.");
+      if (record.armed)
+        throw new Error("Roll to land your prepared strike first.");
+      if (record.damage >= week.hp)
+        throw new Error("The golem is defeated. Collect your reward.");
+      if (state.pendingRoll) throw new Error("Finish your current roll first.");
+      if (state.balance < GOLEM_SMASH_COST)
+        throw new Error("Not enough EP to prepare a strike.");
+      return {
+        ...state,
+        balance: state.balance - GOLEM_SMASH_COST,
+        rngmas: {
+          ...rngmas,
+          golems: { ...rngmas.golems, [week.id]: { ...record, armed: true } },
+        },
+      };
+    }
+    const count = winterChapterCount(rngmas, week);
+    if (count < week.goal)
+      throw new Error("Complete this week's activity first.");
+    if (
+      !validAmount(state.balance + week.ep) ||
+      !validAmount(state.totalEarned + week.ep)
+    )
+      throw new Error("EP balance limit reached.");
+    if ((rngmas.snowcoinsEarned ?? 0) > Number.MAX_SAFE_INTEGER - week.coins)
+      throw new Error("Snowcoin limit reached.");
+    const aura = RNGMAS_COSMETICS_BY_ID.get(week.reward);
+    return {
+      ...state,
+      balance: state.balance + week.ep,
+      totalEarned: state.totalEarned + week.ep,
+      battlePass: {
+        ...state.battlePass,
+        boosts: grantBoost(
+          state.battlePass?.boosts,
+          week.boost,
+          week.charges,
+          at,
+        ),
+      },
+      owned: [...new Set([...state.owned, week.reward])],
+      rngmas: {
+        ...rngmas,
+        snowcoins: Math.min(SNOWCOIN_CAP, (rngmas.snowcoins ?? 0) + week.coins),
+        snowcoinsEarned: (rngmas.snowcoinsEarned ?? 0) + week.coins,
+        golems: {
+          ...rngmas.golems,
+          [week.id]: { ...record, defeated: true, armed: false },
+        },
+      },
+      history: appendHistory(state.history, [
+        {
+          id: `golem-reward:${week.id}`,
+          type: "golem-reward",
+          at,
+          golemId: week.id,
+          productId: aura.id,
+          name: aura.name,
+        },
+      ]),
+    };
+  }
+
   if (action.type === "bookmark") {
     const id = typeof action.id === "string" ? action.id : "";
     if (
@@ -1520,28 +1854,24 @@ function applyEvent(state, action) {
       throw new Error("That boost is already on the counter today.");
     if (state.balance < PASS_BOOST_PRICE)
       throw new Error("Not enough EP for that boost charge.");
-    return withSaleStamp(
-      {
-        ...state,
-        balance: state.balance - PASS_BOOST_PRICE,
-        battlePass: {
-          ...pass,
-          boosts: boughtBoost(pass.boosts, boost.id, at),
-        },
-        history: appendHistory(state.history, [
-          {
-            id: action.eventId ?? `boost-buy:${boost.id}:${at}`,
-            type: "purchase",
-            at,
-            productId: boost.id,
-            name: `${boost.name} charge`,
-            ep: PASS_BOOST_PRICE,
-          },
-        ]),
+    return {
+      ...state,
+      balance: state.balance - PASS_BOOST_PRICE,
+      battlePass: {
+        ...pass,
+        boosts: boughtBoost(pass.boosts, boost.id, at),
       },
-      at,
-      PASS_BOOST_PRICE,
-    );
+      history: appendHistory(state.history, [
+        {
+          id: action.eventId ?? `boost-buy:${boost.id}:${at}`,
+          type: "purchase",
+          at,
+          productId: boost.id,
+          name: `${boost.name} charge`,
+          ep: PASS_BOOST_PRICE,
+        },
+      ]),
+    };
   }
   if (action.type === "buy-pass-premium") {
     const at = action.at ?? Math.ceil(Date.now());
@@ -1553,33 +1883,25 @@ function applyEvent(state, action) {
       throw new Error("The pass season is not open for upgrades.");
     if (ready.battlePass.premium)
       throw new Error("This season's premium track is already unlocked.");
-    const premiumPrice = salePriceOf(
-      BATTLE_PASS_PREMIUM_PRICE,
-      "battle-pass-premium",
-      at,
-    );
+    const premiumPrice = BATTLE_PASS_PREMIUM_PRICE;
     if (ready.balance < premiumPrice)
       throw new Error("Not enough EP for the premium track.");
-    return withSaleStamp(
-      {
-        ...ready,
-        balance: ready.balance - premiumPrice,
-        battlePass: { ...ready.battlePass, premium: true },
-        history: appendHistory(ready.history, [
-          {
-            id: action.eventId ?? `pass-upgrade:${ready.battlePass.seasonId}`,
-            type: "pass-upgrade",
-            at,
-            seasonId: ready.battlePass.seasonId,
-            productId: "battle-pass-premium",
-            name: "Premium Pass Track",
-            ep: premiumPrice,
-          },
-        ]),
-      },
-      at,
-      premiumPrice,
-    );
+    return {
+      ...ready,
+      balance: ready.balance - premiumPrice,
+      battlePass: { ...ready.battlePass, premium: true },
+      history: appendHistory(ready.history, [
+        {
+          id: action.eventId ?? `pass-upgrade:${ready.battlePass.seasonId}`,
+          type: "pass-upgrade",
+          at,
+          seasonId: ready.battlePass.seasonId,
+          productId: "battle-pass-premium",
+          name: "Premium Pass Track",
+          ep: premiumPrice,
+        },
+      ]),
+    };
   }
 
   if (action.type === "history-prune") {
@@ -1948,6 +2270,14 @@ function applyEvent(state, action) {
     return {
       ...state,
       history: appendHistory(state.history, events),
+      rngmas:
+        action.source === "offline"
+          ? state.rngmas
+          : recordWinterRoll(
+              state.rngmas ?? emptyRngmas(),
+              committed.scored,
+              at,
+            ),
       tasks,
       battlePass,
       pendingRoll: null,
@@ -1999,12 +2329,8 @@ function applyEvent(state, action) {
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid purchase time");
 
-    if (item.eventOnly && resalePrice(item, at) === null)
-      throw new Error(
-        item.limited
-          ? "This limited skin is paid by sale stamps, not by EP."
-          : "This permanent aura is not available for purchase.",
-      );
+    if (item.eventOnly)
+      throw new Error("This permanent aura is not available for purchase.");
     if (item.repeatable) return buyTaskSkip(state, item, action);
     const price = productPrice(item, at);
     if (state.owned.includes(item.id))
@@ -2032,69 +2358,57 @@ function applyEvent(state, action) {
         `${item.name} is out of stock. The skill shelf restocks every five minutes; no EP was spent.`,
       );
     if (state.balance < price) throw new Error("Not enough EP for this item.");
-    return withSaleStamp(
-      {
-        ...state,
-        history: appendHistory(state.history, [
-          {
-            id:
-              action.eventId ??
-              `buy:${item.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
-            type: "purchase",
-            at,
-            productId: item.id,
-            name: item.name,
-            ep: price,
-          },
-        ]),
-        balance: state.balance - price,
-        goalId: state.goalId === item.id ? null : (state.goalId ?? null),
-        ...(item.kind === "pace"
-          ? {
-              flywheelCharge:
-                item.id === "flywheel"
-                  ? 0
-                  : Math.min(state.flywheelCharge ?? 0, item.charges),
-            }
-          : {}),
-        ...(item.id === "offline-roller" ||
-        ["offline", "offline-cap"].includes(item.kind)
-          ? {
-              offline: {
-                lastSeenAt: at,
-                batch: null,
-                report:
-                  item.id === "offline-roller"
-                    ? null
-                    : (state.offline?.report ?? null),
-              },
-            }
-          : {}),
-        owned: [...state.owned, item.id],
-        equipped: item.kind === "aura" ? item.id : state.equipped,
+    return {
+      ...state,
+      history: appendHistory(state.history, [
+        {
+          id:
+            action.eventId ??
+            `buy:${item.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
+          type: "purchase",
+          at,
+          productId: item.id,
+          name: item.name,
+          ep: price,
+        },
+      ]),
+      balance: state.balance - price,
+      goalId: state.goalId === item.id ? null : (state.goalId ?? null),
+      ...(item.kind === "pace"
+        ? {
+            flywheelCharge:
+              item.id === "flywheel"
+                ? 0
+                : Math.min(state.flywheelCharge ?? 0, item.charges),
+          }
+        : {}),
+      ...(item.id === "offline-roller" ||
+      ["offline", "offline-cap"].includes(item.kind)
+        ? {
+            offline: {
+              lastSeenAt: at,
+              batch: null,
+              report:
+                item.id === "offline-roller"
+                  ? null
+                  : (state.offline?.report ?? null),
+            },
+          }
+        : {}),
+      owned: [...state.owned, item.id],
+      equipped: item.kind === "aura" ? item.id : state.equipped,
 
-        ...(isResaleCosmetic(item)
-          ? {
-              rngweenLimited: grantRngweenCosmetic(
-                state.rngweenLimited,
-                item.id,
-              ),
-            }
-          : {}),
-
-        ...(item.kind === "skill"
-          ? {
-              skills: [...new Set([...(state.skills ?? []), item.id])],
-              equippedSkills: autoEquip(
-                state.equippedSkills ?? [],
-                { ...state, owned: [...state.owned, item.id] },
-                item.id,
-              ),
-            }
-          : {}),
-      },
-      at,
-    );
+      ...(item.kind === "skill"
+        ? {
+            skills: [...new Set([...(state.skills ?? []), item.id])],
+            equippedSkills: autoEquip(
+              state.equippedSkills ?? [],
+              { ...state, owned: [...state.owned, item.id] },
+              item.id,
+            ),
+          }
+        : {}),
+    };
   }
   if (action.type === "buy-pet") {
     const pet = petById.get(action.id);
@@ -2105,7 +2419,7 @@ function applyEvent(state, action) {
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid purchase time");
 
-    const price = saleCompanionPrice(pet, at);
+    const price = pet.price;
     if (state.balance < price)
       throw new Error("Not enough EP for this companion.");
     const pets = [...new Set([...(state.pets ?? []), pet.id])].sort(
@@ -2116,43 +2430,38 @@ function applyEvent(state, action) {
       { ...state, pets },
       { type: "equip-pet", id: pet.id, at },
     );
-    return withSaleStamp(
-      {
-        ...worn,
-        balance: state.balance - price,
-        goalId: state.goalId === pet.id ? null : (state.goalId ?? null),
-        history: appendHistory(state.history, [
-          {
-            id:
-              action.eventId ??
-              `pet:${pet.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
-            type: "purchase",
-            at,
-            productId: pet.id,
-            name: pet.name,
-            ep: price,
-          },
-        ]),
-      },
-      at,
-    );
+    return {
+      ...worn,
+      balance: state.balance - price,
+      goalId: state.goalId === pet.id ? null : (state.goalId ?? null),
+      history: appendHistory(state.history, [
+        {
+          id:
+            action.eventId ??
+            `pet:${pet.id}${state.rebirths ? `:${state.rebirths}` : ""}`,
+          type: "purchase",
+          at,
+          productId: pet.id,
+          name: pet.name,
+          ep: price,
+        },
+      ]),
+    };
   }
   if (action.type === "equip-pet-skin") {
-    if (
-      action.petId !== "axolotl" ||
-      !(state.pets ?? []).includes(action.petId)
-    )
+    if (!(state.pets ?? []).includes(action.petId))
       throw new Error("Find this companion before changing its appearance.");
-    if (
-      action.skinId === "prism" &&
-      !(state.owned ?? []).includes("pass-axolotl")
-    )
-      throw new Error("Unlock the Prism Axolotl skin before equipping it.");
-    if (action.skinId !== "original" && action.skinId !== "prism")
+    const skin = winterCompanionSkin(action.petId, action.skinId);
+    const prism = action.petId === "axolotl" && action.skinId === "prism";
+    if (action.skinId !== "original" && !skin && !prism)
       throw new Error("That companion skin is not available.");
+    if (prism && !state.owned.includes("pass-axolotl"))
+      throw new Error("Unlock the Prism Axolotl skin before equipping it.");
+    if (skin && !state.owned.includes(skin.id))
+      throw new Error("Unlock this winter skin before equipping it.");
     const petSkins = { ...(state.petSkins ?? {}) };
-    if (action.skinId === "original") delete petSkins.axolotl;
-    else petSkins.axolotl = "prism";
+    if (action.skinId === "original") delete petSkins[action.petId];
+    else petSkins[action.petId] = action.skinId;
     return { ...state, petSkins };
   }
   if (action.type === "equip-pet") {
@@ -2657,6 +2966,107 @@ function parseHistory(value) {
       )
         return [];
       next = { ...base, seasonId: e.seasonId, name: e.name, ep: e.ep };
+    } else if (e.type === "winter-exchange") {
+      if (
+        !Number.isSafeInteger(e.coins) ||
+        e.coins < 1 ||
+        e.coins > SNOWCOIN_EXCHANGE_CAP ||
+        e.ep !== e.coins * SNOWCOIN_EXCHANGE_EP
+      )
+        return [];
+      next = { ...base, coins: e.coins, ep: e.ep };
+    } else if (e.type === "winter-reward") {
+      const mission = [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS].find(
+        (item) => item.id === e.missionId,
+      );
+      if (
+        !mission ||
+        ![mission.reward, mission.legacyReward].includes(e.productId) ||
+        typeof e.name !== "string" ||
+        e.name.length > 100
+      )
+        return [];
+      next = {
+        ...base,
+        missionId: mission.id,
+        productId: e.productId,
+        name: e.name,
+      };
+    } else if (e.type === "winter-market") {
+      const item = WINTER_MARKET.find((item) => item.id === e.itemId);
+      if (
+        !item ||
+        !Number.isSafeInteger(e.coins) ||
+        e.coins < 1 ||
+        ![item.price, item.legacyPrice].includes(e.coins)
+      )
+        return [];
+      next = { ...base, itemId: item.id, coins: e.coins };
+    } else if (e.type === "advent-claim") {
+      if (!Number.isInteger(e.day) || e.day < 1 || e.day > ADVENT_FINALE.day)
+        return [];
+      const reward = adventRewardFor(e.day);
+      if (!reward) return [];
+      if (e.day === ADVENT_FINALE.day) {
+        if (typeof e.name !== "string" || !e.name || e.name.length > 100)
+          return [];
+        next = {
+          ...base,
+          day: e.day,
+          productId: ADVENT_FINALE.aura,
+          name: e.name,
+        };
+      } else if (reward.ep) {
+        if (!validAmount(e.ep) || e.ep < 1) return [];
+        next = { ...base, day: e.day, ep: e.ep };
+      } else {
+        if (typeof e.name !== "string" || !e.name || e.name.length > 100)
+          return [];
+        next = {
+          ...base,
+          day: e.day,
+          productId: reward.aura,
+          name: e.name,
+        };
+      }
+    } else if (e.type === "golem-smash") {
+      const week = RNGMAS_WEEKS.find((entry) => entry.id === e.golemId);
+      if (
+        !week ||
+        !validAmount(e.damage) ||
+        e.damage < 1 ||
+        !validAmount(e.ep) ||
+        e.ep < 1 ||
+        typeof e.tier !== "string" ||
+        e.tier.length > 20 ||
+        !validAmount(e.multiplier) ||
+        e.multiplier < 1
+      )
+        return [];
+      next = {
+        ...base,
+        golemId: e.golemId,
+        damage: e.damage,
+        tier: e.tier,
+        multiplier: e.multiplier,
+        ep: e.ep,
+      };
+    } else if (e.type === "golem-reward") {
+      const week = RNGMAS_WEEKS.find((entry) => entry.id === e.golemId);
+      if (
+        !week ||
+        e.productId !== week.reward ||
+        typeof e.name !== "string" ||
+        !e.name ||
+        e.name.length > 100
+      )
+        return [];
+      next = {
+        ...base,
+        golemId: e.golemId,
+        productId: e.productId,
+        name: e.name,
+      };
     } else if (e.type === "task") {
       if (
         !TASK_CADENCES.includes(e.cadence) ||

@@ -1,3 +1,5 @@
+import { useRngmasStatus } from "./use-rngmas.js";
+import { rngmasThemeActive } from "./rngmas.js";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { defaultSettings, loadSettings, saveSettings } from "./settings.js";
 import { formatEP, formatEPCompact } from "./roll-data.js";
@@ -10,6 +12,7 @@ const SettingsContext = createContext({
 });
 
 export function SettingsProvider({ children }) {
+  const season = useRngmasStatus();
   const [settings, setSettings] = useState(loadSettings);
   const [saveError, setSaveError] = useState("");
 
@@ -33,8 +36,15 @@ export function SettingsProvider({ children }) {
   return (
     <SettingsContext.Provider
       value={{
-        settings,
-        update: (patch) => commit({ ...settings, ...patch }),
+        settings: {
+          ...settings,
+          christmasMode: season.active && settings.christmasMode,
+        },
+        update: (patch) => {
+          const safe = { ...patch };
+          if (!rngmasThemeActive()) delete safe.christmasMode;
+          commit({ ...settings, ...safe });
+        },
         reset: () => commit({ ...defaultSettings }),
         saveError,
       }}

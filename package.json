@@ -1,6 +1,6 @@
 {
   "name": "rngdle-infinite",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,6 +20,7 @@
     "prepare:data": "node tools/prepare-game-data.mjs",
     "vendor:emoji": "node tools/vendor-emoji.mjs",
     "audit:economy": "node tools/audit-economy.mjs",
+    "audit:winter": "node tools/audit-winter.mjs",
     "verify:cloud": "node tools/cloud-sync-sim/run.mjs && node tools/cloud-sync-sim/public-profile.mjs",
     "test:render": "node tools/render-sim/run.mjs",
     "release:check": "node tools/release-version.mjs --check",

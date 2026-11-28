@@ -42,12 +42,12 @@ export function currentInternalVersion() {
 }
 
 function nextFixLabel(internal) {
-  const match = /^(v\d+\.\d+(?:\.\d+)?)fix(\d+)$/.exec(internal);
+  const match = /^(v\d+\.\d+(?:\.\d+)?)(?:fix(\d+))?$/.exec(internal);
   if (!match)
     throw new Error(
       `The internal version "${internal}" has no fixN suffix to increment.`,
     );
-  return `${match[1]}fix${Number(match[2]) + 1}`;
+  return `${match[1]}fix${Number(match[2] ?? 0) + 1}`;
 }
 
 // Every place that states the current label, with the exact text it holds.
@@ -88,6 +88,14 @@ export function currentLabels() {
 export function verifyLabels(version = releaseVersion()) {
   const expected = currentInternalVersion();
   const problems = [];
+  const line = releaseLine(version);
+  if (
+    expected !== line &&
+    !new RegExp(`^${line.replace(/\./g, "\\.")}fix[0-9]+$`).test(expected)
+  )
+    problems.push(
+      `The label "${expected}" does not belong to the ${line} release line.`,
+    );
   for (const { file, value, found } of currentLabels()) {
     if (!found) problems.push(`${file} states no internal version`);
     else if (value !== expected)

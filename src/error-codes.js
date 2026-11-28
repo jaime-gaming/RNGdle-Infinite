@@ -205,10 +205,13 @@ export const LOCAL_FALLBACK_CODES = Object.freeze([
 export function allowsLocalFallback(error) {
   const code = typeof error?.code === "string" ? error.code : "";
   if (!LOCAL_FALLBACK_CODES.includes(code)) return false;
-  const status = Number(error?.status ?? 0);
+  const status = error?.status ?? 0;
   // 0 means the request never left the browser: that is the same kind of
   // outage as a 5xx, not a server decision.
-  return status === 0 || status >= 500;
+  return (
+    Number.isInteger(status) &&
+    (status === 0 || (status >= 500 && status <= 599))
+  );
 }
 
 const GAME_UNAVAILABLE_REASONS = Object.freeze({

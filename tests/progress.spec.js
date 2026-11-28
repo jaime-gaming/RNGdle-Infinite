@@ -18,7 +18,6 @@ import {
   BPEP_PER_ROLL,
   BATTLE_PASS_PREMIUM_PRICE,
 } from "../src/battle-pass.js";
-import { salePriceOf } from "../src/black-friday.js";
 import { evaluate } from "./helpers/index.js";
 import { mockRandom, showRoll, startRoll } from "./helpers/random-roll.js";
 import { seedProgress, testProfile } from "./helpers/progress.js";
@@ -26,13 +25,9 @@ import { readSavedProgress } from "./helpers/save.js";
 
 const saved = (page) => readSavedProgress(page);
 
-test("premium pass purchases use the live Black Friday price in the wallet and receipt", () => {
+test("premium pass purchases use the listed price in the wallet and receipt", () => {
   const at = Date.UTC(2026, 10, 27, 12);
-  const price = salePriceOf(
-    BATTLE_PASS_PREMIUM_PRICE,
-    "battle-pass-premium",
-    at,
-  );
+  const price = BATTLE_PASS_PREMIUM_PRICE;
   const initial = { ...emptyProgress(), balance: BATTLE_PASS_PREMIUM_PRICE };
   expect(() =>
     applyProgress(initial, { type: "buy", id: "battle-pass-premium", at }),

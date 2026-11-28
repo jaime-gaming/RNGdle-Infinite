@@ -1,4 +1,5 @@
-import React from "react";
+import { PROFILE_PIN_PREVIEW_LIMIT } from "../history-log.js";
+import React, { useEffect, useState } from "react";
 import { Bookmark, History, Sparkles } from "lucide-react";
 import { BOOKMARK_LIMIT } from "../progress.js";
 import { prestigeShown } from "../rebirth.js";
@@ -19,6 +20,8 @@ export function when(at) {
 }
 
 export default function ProfileRecord({ record, shared = false }) {
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => setExpanded(false), [record.name]);
   const best = record.best;
   const items = [
     ["Rolls completed", record.rolls.toLocaleString("en-US")],
@@ -83,18 +86,20 @@ export default function ProfileRecord({ record, shared = false }) {
         </span>
         {record.pins.length ? (
           <ul aria-label="Pinned rolls">
-            {record.pins.map((roll, index) => (
-              <li key={`${roll.number}-${index}`}>
-                <NumberBox
-                  compact
-                  value={roll.number}
-                  tier={roll.tier}
-                  dejaVu={roll.dejaVu === true}
-                  aria-label={`Pinned roll ${roll.number}`}
-                />
-                <small>+{formatStatEP(roll.ep)}</small>
-              </li>
-            ))}
+            {record.pins
+              .slice(0, expanded ? BOOKMARK_LIMIT : PROFILE_PIN_PREVIEW_LIMIT)
+              .map((roll, index) => (
+                <li key={`${roll.number}-${index}`}>
+                  <NumberBox
+                    compact
+                    value={roll.number}
+                    tier={roll.tier}
+                    dejaVu={roll.dejaVu === true}
+                    aria-label={`Pinned roll ${roll.number}`}
+                  />
+                  <small>+{formatStatEP(roll.ep)}</small>
+                </li>
+              ))}
           </ul>
         ) : (
           <small className="profile-pins-empty">
@@ -102,6 +107,17 @@ export default function ProfileRecord({ record, shared = false }) {
               ? "No pinned rolls on this card."
               : `Bookmark up to ${BOOKMARK_LIMIT} rolls in History and they show here.`}
           </small>
+        )}
+        {record.pins.length > PROFILE_PIN_PREVIEW_LIMIT && (
+          <button
+            className="secondary-button profile-pins-more"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded
+              ? "Show fewer pinned rolls"
+              : `Show all ${Math.min(record.pins.length, BOOKMARK_LIMIT)} pinned rolls`}
+          </button>
         )}
       </div>
       <p className="profile-wearing">

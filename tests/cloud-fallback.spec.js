@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   CLOUD_RECOVERY_MAX_ATTEMPTS,
+  canProbeCloudOutage,
   CLOUD_RECOVERY_MAX_PROBE_MS,
   beginCloudOutage,
   clearCloudOutage,
@@ -173,4 +174,60 @@ test("a broken storage refuses the mark instead of throwing", () => {
   );
   expect(readCloudOutage(broken)).toBeNull();
   expect(() => clearCloudOutage(broken)).not.toThrow();
+});
+
+test("the retry budget has an exact stopping boundary, including after reload", () => {
+  const storage = memoryStorage();
+  for (const attempts of [0, 39, 40, 41]) {
+    rememberCloudOutage(
+      { userId: "user", sessionId: "session", attempts },
+      storage,
+    );
+    expect(canProbeCloudOutage(readCloudOutage(storage))).toBe(attempts < 40);
+  }
+  expect(canProbeCloudOutage(null)).toBe(false);
+});
+
+test("malformed outage counters and timestamps cannot activate local fallback", () => {
+  const storage = memoryStorage();
+  const key = "rng-infinite-cloud-recovery-v1";
+  const valid = {
+    active: true,
+    userId: "user",
+    sessionId: "session",
+    attempts: 0,
+    at: Date.now(),
+    profileId: "profile",
+  };
+  for (const change of [
+    { attempts: "1" },
+    { attempts: -1 },
+    { attempts: 1.5 },
+    { at: null },
+    { at: -1 },
+    { at: 8640000000000001 },
+    { profileId: {} },
+  ]) {
+    storage.setItem(key, JSON.stringify({ ...valid, ...change }));
+    expect(readCloudOutage(storage)).toBeNull();
+  }
+});
+
+test("only actual HTTP outages qualify, not coerced or invalid status values", () => {
+  for (const status of [
+    null,
+    "503",
+    "",
+    true,
+    499,
+    600,
+    999,
+    Infinity,
+    503.1,
+  ]) {
+    if (status === null) continue;
+    expect(
+      allowsLocalFallback({ code: "game-security-unavailable", status }),
+    ).toBe(false);
+  }
 });

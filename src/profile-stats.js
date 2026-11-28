@@ -8,7 +8,11 @@ import {
 import { PETS } from "./pets.js";
 import { SKILLS, skillSlots } from "./skills.js";
 import { LATEST_VERSION } from "./changelog.js";
-import { BOOKMARK_LIMIT, isCycleMarker } from "./history-log.js";
+import {
+  BOOKMARK_LIMIT,
+  PROFILE_PIN_PREVIEW_LIMIT,
+  isCycleMarker,
+} from "./history-log.js";
 import { favoriteTier, mergeTallies, tallyEntries } from "./history-tally.js";
 import { productById } from "./shop-data.js";
 import { gameUrlForLocation } from "./site-links.js";
@@ -532,13 +536,15 @@ export function drawExportCardToCanvas(canvas, progress = {}, logo = null) {
     const gap = 12;
     const boxW = (2 * tileW + tileGap - gap * (perRow - 1)) / perRow;
     const boxH = 74;
-    highlights.pinned.slice(0, BOOKMARK_LIMIT).forEach((roll, index) => {
-      const px = left + (index % perRow) * (boxW + gap);
-      const py = pinY + 14 + Math.floor(index / perRow) * (boxH + gap);
-      drawNumberBox(ctx, roll, px, py, boxW, boxH, {
-        label: `+${formatCardEP(roll.ep)} EP`,
+    highlights.pinned
+      .slice(0, PROFILE_PIN_PREVIEW_LIMIT)
+      .forEach((roll, index) => {
+        const px = left + (index % perRow) * (boxW + gap);
+        const py = pinY + 14 + Math.floor(index / perRow) * (boxH + gap);
+        drawNumberBox(ctx, roll, px, py, boxW, boxH, {
+          label: `+${formatCardEP(roll.ep)} EP`,
+        });
       });
-    });
   } else {
     ctx.fillStyle = "#6e6b65";
     ctx.font = `500 13px ${SANS}`;

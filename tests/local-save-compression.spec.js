@@ -299,11 +299,11 @@ test("help links use themed buttons and changelog copy stays lowercase", async (
     page.getByRole("heading", { name: "Changelog", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".changelog-title").first()).toHaveText(
-    "battle pass, new discoveries and a clearer shop",
+    "rngmas: the winter village",
   );
   await expect(
     page.locator(".changelog-entry").first().locator("p").first(),
   ).toHaveText(
-    "the Battle Pass has a schedule for each season, 30 levels, optional EP premium and boosts at levels 5, 8, 15, 18, 25 and 28.",
+    "the update arrives november 28; RNGmas and Christmas mode open december 1 at 00:00 UTC and close january 2 at 00:00 UTC.",
   );
 });

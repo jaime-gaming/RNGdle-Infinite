@@ -111,6 +111,7 @@ try {
   );
   const context = await browser.newContext();
   const page = await context.newPage();
+  await page.clock.install({ time: new Date("2026-11-22T12:00:00Z") });
   await mockOperationalStatus(page);
   const pageErrors = [];
   const failedRequests = [];
@@ -158,7 +159,7 @@ try {
   await expect(page.locator(".header")).toBeVisible();
 
   await expect(page.locator(".mirror-notice")).toBeVisible();
-  await expect(page.locator(".mirror-notice a")).toHaveAttribute(
+  await expect(page.locator(".mirror-notice a").first()).toHaveAttribute(
     "href",
     "https://rngdle-infinite.jaime-gaming.com/",
   );
@@ -177,6 +178,42 @@ try {
   );
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(failedRequests, []);
+  await page
+    .getByRole("button", { name: "Shutdown & moving your save" })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("dialog")).toContainText("00:00 Madrid");
+  await page
+    .getByRole("button", { name: "Close shutdown information" })
+    .click();
+  await page.clock.setSystemTime(new Date("2026-11-30T23:00:00Z"));
+  await expect(
+    page.getByText("This version is now closed", { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByText("This version is now closed", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".header")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "GENERATE", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Download local backup", exact: true }),
+  ).toBeVisible();
+  const storedBackup = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    PROGRESS_KEY,
+  );
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download local backup", exact: true })
+    .click();
+  const backupDownload = await downloadPromise;
+  assert.equal(
+    await readFile(await backupDownload.path(), "utf8"),
+    storedBackup,
+  );
   await context.close();
 } finally {
   await browser?.close();

@@ -67,8 +67,11 @@ export function maintenanceActiveFor(issueOrIssues, at = gameNow()) {
   const issues = Array.isArray(issueOrIssues) ? issueOrIssues : [issueOrIssues];
   return issues.some((issue) => {
     if (!issue || issue.kind !== "maintenance") return false;
+    if (RESOLVED_MAINTENANCE_STATUSES.has(normalize(issue.status)))
+      return false;
     const start = Date.parse(issue.scheduledFor ?? "");
     const end = Date.parse(issue.scheduledUntil ?? "");
+    if (Number.isFinite(end) && Number.isFinite(at) && at >= end) return false;
     // Status providers can publish an in-progress flag ahead of the window;
     // never gate gameplay before its explicitly scheduled start.
     if (Number.isFinite(start) && Number.isFinite(at) && at < start)

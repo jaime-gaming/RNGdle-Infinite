@@ -1,9 +1,17 @@
-import { copyFile, readdir, writeFile } from "node:fs/promises";
+import { copyFile, writeFile, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { build } from "vite";
 
 const githubPagesBase = "/RNGdle-Infinite/";
 const outputDirectory = path.resolve("docs");
+const notes = await Promise.all(
+  (await readdir(outputDirectory).catch(() => []))
+    .filter((name) => name.endsWith(".md"))
+    .map(async (name) => [
+      name,
+      await readFile(path.join(outputDirectory, name)),
+    ]),
+);
 
 await build({
   mode: "production",
@@ -14,6 +22,8 @@ await build({
   },
 });
 
+for (const [name, content] of notes)
+  await writeFile(path.join(outputDirectory, name), content);
 // `emptyOutDir` clears docs/, which also holds the published Cloud security
 // notes. They are not part of the Vite output, so they are carried over.
 const sourceDocumentation = path.resolve("docs-source");

@@ -37,7 +37,24 @@ export function readCloudOutage(storage) {
     if (stored?.active !== true) return null;
     if (typeof stored.userId !== "string" || !stored.userId) return null;
     if (typeof stored.sessionId !== "string" || !stored.sessionId) return null;
-    return stored;
+    if (
+      !Number.isSafeInteger(stored.at) ||
+      stored.at < 0 ||
+      stored.at > 8640000000000000
+    )
+      return null;
+    if (
+      stored.attempts != null &&
+      (!Number.isSafeInteger(stored.attempts) || stored.attempts < 0)
+    )
+      return null;
+    if (stored.profileId != null && typeof stored.profileId !== "string")
+      return null;
+    return {
+      ...stored,
+      attempts: Math.min(stored.attempts ?? 0, CLOUD_RECOVERY_MAX_ATTEMPTS),
+      profileId: stored.profileId ?? "",
+    };
   } catch {
     return null;
   }
@@ -56,12 +73,15 @@ export function rememberCloudOutage(
         active: true,
         userId,
         sessionId,
-        attempts: Math.max(0, Math.trunc(Number(attempts) || 0)),
+        attempts: Math.min(
+          CLOUD_RECOVERY_MAX_ATTEMPTS,
+          Math.max(0, Math.trunc(Number(attempts) || 0)),
+        ),
         profileId: typeof profileId === "string" ? profileId : "",
         at,
       }),
     );
-    return true;
+    return readCloudOutage(target) !== null;
   } catch {
     return false;
   }
@@ -110,4 +130,13 @@ export function endCloudOutage(userId, storage) {
   if (stored && userId && stored.userId !== userId) return false;
   clearCloudOutage(storage);
   return true;
+}
+
+export function canProbeCloudOutage(mark) {
+  return Boolean(
+    mark &&
+    Number.isSafeInteger(mark.attempts) &&
+    mark.attempts >= 0 &&
+    mark.attempts < CLOUD_RECOVERY_MAX_ATTEMPTS,
+  );
 }

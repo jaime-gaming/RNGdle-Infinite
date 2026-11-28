@@ -133,7 +133,9 @@ test("returning credits six real scores, discoveries and an automatic summary wi
   await expect(page.locator('[data-event-type="roll"]').first()).toContainText(
     "Offline roll completed",
   );
-  await page.getByRole("button", { name: "Dismiss offline summary" }).click();
+  await expect(
+    page.getByRole("button", { name: "Dismiss offline summary" }),
+  ).toHaveCount(0);
   await expect.poll(async () => (await saved(page)).offline.report).toBeNull();
   await expect(page.locator("dialog.offline-overlay")).toHaveCount(0);
   await page.reload();
@@ -431,4 +433,29 @@ test("deletion removes offline earnings, commitments and presence without later 
   ).toEqual([]);
   await page.clock.fastForward(1800000);
   expect(await saved(page)).toBeNull();
+});
+
+test("a returning tab never counts its own heartbeat as online income", () => {
+  const now = 100000000;
+  expect(
+    offlinePlan(
+      { lastSeenAt: now - 3600000 },
+      now,
+      [{ id: "mine", at: now, visible: true }],
+      "mine",
+      true,
+    ).count,
+  ).toBe(6);
+  expect(
+    offlinePlan(
+      { lastSeenAt: now - 3600000 },
+      now,
+      [
+        { id: "mine", at: now, visible: true },
+        { id: "other", at: now - 100, visible: true },
+      ],
+      "mine",
+      true,
+    ).count,
+  ).toBe(0);
 });

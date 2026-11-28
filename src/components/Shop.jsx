@@ -1,3 +1,4 @@
+import WinterCountdown from "./WinterCountdown.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -6,9 +7,9 @@ import {
   ChevronRight,
   Coins,
   Eye,
+  Gift,
   LayoutGrid,
   MoreHorizontal,
-  Percent,
   Repeat,
   Search,
   ShoppingBag,
@@ -52,20 +53,8 @@ import { rackReport } from "../rack.js";
 import "../progress-links.css";
 import PetShelf from "./PetShelf";
 import { TIERS } from "../history-tally.js";
-import SaleEventNotice, {
-  SaleStampBook,
-  SaleStampCard,
-} from "./BlackFriday.jsx";
-import { useSaleStatus } from "../use-black-friday.js";
-import {
-  BLACK_FRIDAY_SKIN,
-  BLACK_FRIDAY_STAMPS,
-  blackFridayDayLabel,
-  resaleMissing,
-  resalePrice,
-  saleDiscountFor,
-  stampsLeft,
-} from "../black-friday.js";
+import RngmasShelf, { RngmasEventNotice } from "./Rngmas.jsx";
+import { useRngmasStatus } from "../use-rngmas.js";
 import { PETS } from "../pets.js";
 import { flywheelRequired } from "../flywheel.js";
 import {
@@ -309,12 +298,8 @@ export default function Shop({
 }) {
   const formatEP = useFormatEP();
 
-  const sale = useSaleStatus();
-  const saleRecord = progress.blackFriday ?? null;
-  const saleShelf = section === "black-friday";
-  const saleItems = sale.active
-    ? [BLACK_FRIDAY_SKIN, ...resaleMissing(progress.owned)]
-    : [];
+  const rngmas = useRngmasStatus();
+  const rngmasShelf = section === "rngmas";
   const hasGuestProgress =
     (progress.history?.length ?? 0) > 0 ||
     progress.balance > 0 ||
@@ -485,7 +470,6 @@ export default function Shop({
         : progress.owned.includes(item.id);
     const price = currentPrice(item);
 
-    const onCounter = resalePrice(item, clock) !== null;
     const requires = !!(
       item.requires && !progress.owned.includes(item.requires)
     );
@@ -507,7 +491,7 @@ export default function Shop({
       price,
       affordable: progress.balance >= price,
       available:
-        (!item.eventOnly || onCounter) &&
+        !item.eventOnly &&
         !owned &&
         !requires &&
         !profileGated &&
@@ -515,7 +499,7 @@ export default function Shop({
         !blocked &&
         seasonOpen,
       affordableNow:
-        (!item.eventOnly || onCounter) &&
+        !item.eventOnly &&
         !owned &&
         !requires &&
         stocked &&
@@ -652,10 +636,6 @@ export default function Shop({
     const definition = skill ? skillById.get(item.skillId ?? item.id) : null;
     const Icon = icons[item.icon] ?? ShoppingBag;
 
-    const discount = sale.active ? saleDiscountFor(item) : 0;
-    const onCounter = resalePrice(item, clock) !== null;
-    const limited = item.id === BLACK_FRIDAY_SKIN.id;
-
     const stateLabel = equipped
       ? "Equipped"
       : state.owned
@@ -686,14 +666,6 @@ export default function Shop({
         {pickable && (
           <span className="shop-card-pick" aria-hidden="true">
             <Target size={15} />
-          </span>
-        )}
-        {(discount > 0 || onCounter) && (
-          <span
-            className={`sale-tag ${onCounter ? "is-resale" : ""}`}
-            aria-hidden="true"
-          >
-            {onCounter ? "COUNTER" : `−${Math.round(discount * 100)}%`}
           </span>
         )}
         {aura && (
@@ -794,26 +766,11 @@ export default function Shop({
             </div>
           )}
           {item.eventOnly ? (
-            limited ? (
-              <div className="shop-source">
-                Limited skin · Paid by {BLACK_FRIDAY_STAMPS} sale stamps · Kept
-                forever
-              </div>
-            ) : onCounter ? (
-              <div className="shop-price is-sale">
-                <Coins size={15} />
-                {formatEP(state.price)} EP
-              </div>
-            ) : (
-              <div className="shop-source">
-                Special &amp; Limited · Permanently owned · Not for sale
-              </div>
-            )
+            <div className="shop-source">
+              Special &amp; Limited · Permanently owned · Not for sale
+            </div>
           ) : (
-            <div className={`shop-price ${discount ? "is-sale" : ""}`}>
-              {discount > 0 && (
-                <span className="shop-price-was">{formatEP(item.price)}</span>
-              )}
+            <div className="shop-price">
               <Coins size={15} />
               {formatEP(state.price)} EP
             </div>
@@ -824,7 +781,7 @@ export default function Shop({
             }
             disabled={
               pending ||
-              (item.eventOnly && !state.owned && !onCounter) ||
+              (item.eventOnly && !state.owned) ||
               (premiumPass && !shopPassSeason.active && !state.owned) ||
               restocking ||
               (equipped && aura) ||
@@ -834,7 +791,7 @@ export default function Shop({
                 (!state.affordable || state.requires || state.blocked))
             }
             onClick={() => {
-              if (item.eventOnly && !state.owned && !onCounter) return;
+              if (item.eventOnly && !state.owned) return;
               if (state.profileGated) return openSignup();
               if (!state.owned)
                 return preferences.confirmPurchases
@@ -870,13 +827,7 @@ export default function Shop({
               ) : (
                 "Season closed"
               )
-            ) : limited && !state.owned ? (
-              saleRecord?.skinEarned ? (
-                "Unlocked · equip it"
-              ) : (
-                `${stampsLeft(saleRecord)} sale stamps to go`
-              )
-            ) : item.eventOnly && !state.owned && !onCounter ? (
+            ) : item.eventOnly && !state.owned ? (
               "Not for sale"
             ) : item.repeatable && state.blocked ? (
               state.repeat.waitMs > 0 ? (
@@ -1293,11 +1244,9 @@ export default function Shop({
         </div>
       </div>
 
-      <SaleEventNotice
+      <RngmasEventNotice
         progress={progress}
-        previewTier={previewTier}
-        onOpenSpecial={() => onOpenFamily("special")}
-        onOpenSaleShelf={() => onOpenShelf("black-friday")}
+        onOpenShelf={() => onOpenShelf("rngmas")}
       />
 
       {shelf && (
@@ -1467,11 +1416,7 @@ export default function Shop({
           </small>
         )}
       </section>
-      {sale.active && (
-        <SaleStampCard record={saleRecord} previewTier={previewTier} />
-      )}
-
-      {!shelf && !saleShelf && (
+      {!shelf && !rngmasShelf && (
         <>
           <section className="shop-hub" id="shop-hub" aria-label="Shop shelves">
             <div className="shop-section-heading">
@@ -1493,34 +1438,36 @@ export default function Shop({
             </div>
             <nav className="shop-jump" aria-label="Shop sections">
               {visibleShelves.map(shelfTile)}
-              {sale.active && (
+              {rngmas.shown && (
                 <a
-                  href={pathForSubpage("shop", "black-friday")}
-                  aria-label="Black Friday 2026"
-                  className="shop-tile is-sale"
-                  data-shelf="black-friday"
+                  href={pathForSubpage("shop", "rngmas")}
+                  aria-label="RNGmas 2026"
+                  className="shop-tile is-rngmas winter-event"
+                  data-shelf="rngmas"
                   onClick={(event) => {
                     if (event.metaKey || event.ctrlKey || event.shiftKey)
                       return;
                     event.preventDefault();
-                    onOpenShelf("black-friday");
+                    onOpenShelf("rngmas");
                   }}
                 >
                   <span className="shop-tile-icon" aria-hidden="true">
-                    <Percent size={20} />
+                    <Gift size={20} />
                   </span>
                   <span className="shop-tile-body">
-                    <strong>Black Friday 2026</strong>
+                    <strong>RNGmas 2026</strong>
                     <small>
-                      {sale.active
-                        ? "The whole shop, down for the day."
-                        : "One day of discounts and a limited skin."}
+                      {rngmas.active
+                        ? "Calendar in Shop · missions and mini-events in Tasks."
+                        : "Preview now · play December 1–January 2 UTC."}
                     </small>
                   </span>
                   <span className="shop-tile-stat">
-                    {sale.active
-                      ? `${saleRecord?.stamps ?? 0} / ${BLACK_FRIDAY_STAMPS} stamps`
-                      : blackFridayDayLabel()}
+                    <span>Dec 1 – Jan 2 UTC</span>
+                    <WinterCountdown
+                      until={rngmas.active ? rngmas.end : rngmas.start}
+                      label={rngmas.active ? "Season ends in" : "Opens in"}
+                    />
                   </span>
                 </a>
               )}
@@ -1609,7 +1556,7 @@ export default function Shop({
         </>
       )}
 
-      {(shelf || saleShelf) && (
+      {(shelf || rngmasShelf) && (
         <div className="shop-controls">
           <div className="shop-bar">
             <button
@@ -1620,10 +1567,10 @@ export default function Shop({
               <LayoutGrid size={14} /> All shelves
             </button>
             <span className="shop-count" role="status">
-              {saleShelf
-                ? sale.active
-                  ? `${saleRecord?.stamps ?? 0} of ${BLACK_FRIDAY_STAMPS} stamps · ${waitText(sale.endsInMs)} left`
-                  : `Opens ${blackFridayDayLabel()}`
+              {rngmasShelf
+                ? rngmas.active
+                  ? `${progress.rngmas?.claimed?.length ?? 0} / 24 doors · ${waitText(rngmas.endsInMs)} left`
+                  : "Opens December 1"
                 : shelf.id === "companions"
                   ? `${PETS.filter((pet) => progress.pets?.includes(pet.id)).length} / ${PETS.length} found`
                   : shelf.id === "auras" && auraFamily?.legacyHub
@@ -1637,48 +1584,8 @@ export default function Shop({
           </div>
         </div>
       )}
-      {saleShelf && (
-        <section
-          className="shop-category sale-shelf"
-          id="shop-black-friday"
-          tabIndex={-1}
-        >
-          <div className="shop-section-heading">
-            <div>
-              <h2>
-                <Percent size={16} /> Black Friday 2026
-              </h2>
-              <p>
-                {sale.active
-                  ? "The whole shop is down for the day, and every stamp below is EP you actually spent."
-                  : `One day only — ${blackFridayDayLabel()}. This is everything the day puts on the counter.`}
-              </p>
-            </div>
-            <span className="shop-section-stat">
-              {sale.active
-                ? `ends in ${waitText(sale.endsInMs)}`
-                : `starts in ${waitText(sale.startsInMs)}`}
-            </span>
-          </div>
-          {sale.active ? (
-            <>
-              <SaleStampBook record={saleRecord} profile={progress.profile} />
-              <div className="shop-grid shop-grid-rows">
-                {saleItems.map((item, index) => card(item, index))}
-              </div>
-              <p className="sale-shelf-fine">
-                Stamps, counter prices and the limited skin exist only while the
-                day is on. Whatever you keep, you keep forever.
-              </p>
-            </>
-          ) : (
-            <p className="sale-shelf-fine">
-              {sale.upcoming
-                ? "The counter is closed until Black Friday begins."
-                : "The counter is closed. Black Friday 2026 has ended."}
-            </p>
-          )}
-        </section>
+      {rngmasShelf && (
+        <RngmasShelf progress={progress} onAction={onAction} notify={notify} />
       )}
       {shelf && !["auras", "companions"].includes(shelf.id) && (
         <div className="shop-filters" aria-label="Shelf filters">
@@ -1879,7 +1786,11 @@ export default function Shop({
         </section>
       )}
       {shelf?.id === "auras" && (
-        <section className="shop-category" id="shop-auras" tabIndex={-1}>
+        <section
+          className={`shop-category${auraFamily?.id === "rngmas" ? " winter-event winter-aura-shelf" : ""}`}
+          id="shop-auras"
+          tabIndex={-1}
+        >
           <div className="shop-section-heading">
             <div>
               <h2>
@@ -2248,7 +2159,7 @@ export default function Shop({
       </dialog>
 
       <dialog
-        className="shop-preview-dialog"
+        className={`shop-preview-dialog${lookPreview?.family === "rngmas" ? " winter-event" : ""}`}
         ref={lookDialog}
         aria-labelledby="shop-look-title"
         onCancel={(event) => {

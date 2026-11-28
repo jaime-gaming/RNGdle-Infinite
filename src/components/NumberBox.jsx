@@ -1,8 +1,11 @@
+import { WINTER_EXCLUSIVES } from "../winter-festival.js";
 import React from "react";
 import "../number-box.css";
 import "../number-box-palettes.css";
 import "../rngween-auras.css";
+import "../rngmas-auras.css";
 import RngweenAura from "./RngweenAura.jsx";
+import RngmasAura from "./RngmasAura.jsx";
 import { productById } from "../shop-data.js";
 
 const tiers = new Set([
@@ -16,7 +19,9 @@ const tiers = new Set([
   "mythic",
   "godly",
 ]);
+const winterExclusiveIds = new Set(WINTER_EXCLUSIVES.map((item) => item.id));
 const cosmetics = new Set([
+  ...winterExclusiveIds,
   "starfall",
   "aurora",
   "orbit",
@@ -50,6 +55,16 @@ const cosmetics = new Set([
   "hexbound",
   "hollow-lantern",
   "blackout-2026",
+  "rngmas-frost",
+  "rngmas-ember",
+  "rngmas-hollow",
+  "rngmas-golem",
+  "rngmas-newyear",
+  "rngmas-gingerbread",
+  "rngmas-star",
+  "pass-snowglobe",
+  "pass-carillon",
+  "pass-polar-crown",
   "pass-signal",
   "pass-prism",
   "pass-firstlight",
@@ -108,6 +123,7 @@ export default function NumberBox({
       className={`number-box ${rarity === "godly" ? "tier-godly" : ""} ${compact ? "number-box-compact" : ""} ${className}`}
       data-tier={rarity}
       data-cosmetic={cosmetic}
+      data-winter-exclusive={winterExclusiveIds.has(cosmetic) || undefined}
       data-deja-vu={dejaVu || undefined}
       data-aura-layout={auraLayout === "contained" ? "contained" : undefined}
       style={{
@@ -123,6 +139,7 @@ export default function NumberBox({
         <span className="box-cosmetic" aria-hidden="true">
           <span className="box-finish" />
           <RngweenAura aura={cosmetic} />
+          <RngmasAura aura={cosmetic} />
           <span className="box-halo" />
           <span className="box-ornament">
             <span className="aura-trace" />

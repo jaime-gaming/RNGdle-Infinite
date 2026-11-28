@@ -232,6 +232,7 @@ test("share text ends with the public game link", () => {
 
 test("the changelog lists every release and flags an unseen version", () => {
   expect(CHANGELOG.map((e) => e.version)).toEqual([
+    "v0.6.1",
     "v0.6",
     "v0.5.2",
     "v0.5.1",
@@ -242,7 +243,7 @@ test("the changelog lists every release and flags an unseen version", () => {
     "v0.2",
     "v0.1",
   ]);
-  expect(LATEST_VERSION).toBe("v0.6");
+  expect(LATEST_VERSION).toBe("v0.6.1");
   expect(hasUnseenVersion("v0.2")).toBe(true);
   const launch = CHANGELOG.at(-1);
   expect(launch.title).toBe("launch");

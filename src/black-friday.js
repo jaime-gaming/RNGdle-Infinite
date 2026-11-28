@@ -1,21 +1,14 @@
-// RETIREMENT: see archive/qa/black-friday-retirement.md before removing event UI.
-import { gameNow } from "./game-clock.js";
-import { RNGWEEN_COSMETICS, RNGWEEN_WORLD_SKIN } from "./rngween.js";
+// RETIREMENT: Black Friday 2026 is over. This module keeps only what players
+// already earned: the limited skin, its aura family and the save record.
+import { RNGWEEN_COSMETICS } from "./rngween.js";
 
 export const BLACK_FRIDAY_ID = "black-friday-2026";
-
-export const BLACK_FRIDAY_START = Date.UTC(2026, 10, 27, 0, 0, 0);
-export const BLACK_FRIDAY_END = Date.UTC(2026, 10, 28, 0, 0, 0);
 
 export const BLACK_FRIDAY_STAMPS = 25;
 
 export const SALE_STAMP_EVERY = 100000;
 
 export const SALE_STAMP_CAP = 99;
-
-export const RNGWEEN_RESALE_PRICE = 10_000_000;
-
-export const SALE_DISCOUNTS = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5];
 
 // RETIREMENT: keep the Blackout renderer and save record.
 export const BLACK_FRIDAY_SKIN = {
@@ -43,118 +36,9 @@ export const BLACK_FRIDAY_FAMILY = {
   eventOnly: true,
 };
 
-export const SALE_THEMES = [
-  {
-    id: "ultra-black",
-    label: "Ultra-Black",
-    blurb: "Pure black, white ink, no colour at all.",
-  },
-  {
-    id: "red-sale",
-    label: "Red Sale",
-    blurb: "Black shelves under a red sale sign.",
-  },
-];
-
-export function saleNow(at = gameNow()) {
-  return Number.isFinite(at) ? at : gameNow();
-}
-
-export function blackFridayActive(at = gameNow()) {
-  const now = saleNow(at);
-  return now >= BLACK_FRIDAY_START && now < BLACK_FRIDAY_END;
-}
-
-export function blackFridayStatus(at = gameNow()) {
-  const now = saleNow(at);
-  const active = now >= BLACK_FRIDAY_START && now < BLACK_FRIDAY_END;
-  return {
-    id: BLACK_FRIDAY_ID,
-    active,
-    upcoming: now < BLACK_FRIDAY_START,
-    over: now >= BLACK_FRIDAY_END,
-
-    shown: now < BLACK_FRIDAY_END,
-    startsInMs: Math.max(0, BLACK_FRIDAY_START - now),
-    endsInMs: active ? Math.max(0, BLACK_FRIDAY_END - now) : 0,
-    start: BLACK_FRIDAY_START,
-    end: BLACK_FRIDAY_END,
-    now,
-  };
-}
-
-export function blackFridayDayLabel() {
-  return new Date(BLACK_FRIDAY_START).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-export function saleDiscountForId(id) {
-  const key = String(id ?? "");
-  if (!key) return 0;
-  let hash = 2166136261;
-  for (let i = 0; i < key.length; i++)
-    hash = Math.imul(hash ^ key.charCodeAt(i), 16777619) >>> 0;
-  return SALE_DISCOUNTS[hash % SALE_DISCOUNTS.length];
-}
-
-export function saleDiscountFor(item) {
-  if (!item?.id) return 0;
-  // Legacy one-off counter cosmetics retain their special fixed resale price;
-  // other newly added event products participate in the current sale.
-  if (
-    item.eventOnly &&
-    (isResaleCosmetic(item) || item.id === BLACK_FRIDAY_SKIN.id)
-  )
-    return 0;
-  return saleDiscountForId(item.id);
-}
-
-export function salePriceOf(price, id, at = gameNow()) {
-  const base = Number.isFinite(price) ? Math.max(0, Math.trunc(price)) : 0;
-  if (!base || !blackFridayActive(at)) return base;
-  const discount = saleDiscountForId(id);
-  if (!discount) return base;
-  return Math.max(1, Math.floor((base * (1 - discount)) / 100) * 100);
-}
-
-export function salePrice(item, at = gameNow()) {
-  return salePriceOf(item?.price ?? 0, item?.id, at);
-}
-
-export function saleCompanionPrice(pet, at = gameNow()) {
-  return salePriceOf(pet?.price ?? 0, pet?.id, at);
-}
-
-const RESALE_IDS = new Set(RNGWEEN_COSMETICS.map((item) => item.id));
-
-export function isResaleCosmetic(item) {
-  return !!item?.eventOnly && RESALE_IDS.has(item.id);
-}
-
-export function resalePrice(item, at = gameNow()) {
-  return isResaleCosmetic(item) && blackFridayActive(at)
-    ? RNGWEEN_RESALE_PRICE
-    : null;
-}
-
-export function resaleOpen(at = gameNow()) {
-  return blackFridayActive(at);
-}
-
 export function stampsForSpend(spent) {
   const value = Number.isFinite(spent) && spent > 0 ? spent : 0;
   return Math.min(SALE_STAMP_CAP, Math.floor(value / SALE_STAMP_EVERY));
-}
-
-export function epToNextStamp(record) {
-  const spent = record?.spent ?? 0;
-  if (stampsForSpend(spent) >= SALE_STAMP_CAP) return 0;
-  return SALE_STAMP_EVERY - (spent % SALE_STAMP_EVERY);
 }
 
 export function emptyBlackFriday() {
@@ -180,34 +64,12 @@ export function parseBlackFriday(value, receipts = {}) {
   };
 }
 
-export function stampForPurchase(record, ep, at = gameNow()) {
-  const base = record ?? emptyBlackFriday();
-  const price = Number.isFinite(ep) && ep > 0 ? Math.floor(ep) : 0;
-  if (!blackFridayActive(at) || price <= 0)
-    return { record: base, newStamps: 0, skinUnlocked: false };
-  const spent = base.spent + price;
-  const stamps = stampsForSpend(spent);
-  const skinEarned = base.skinEarned || stamps >= BLACK_FRIDAY_STAMPS;
-  return {
-    record: { id: BLACK_FRIDAY_ID, spent, stamps, skinEarned },
-    newStamps: Math.max(0, stamps - base.stamps),
-    skinUnlocked: skinEarned && !base.skinEarned,
-  };
-}
+// RETIREMENT: cosmetics bought at the retired counter keep their value so two
+// copies of the same save still compare the way they did on the sale day.
+export const RNGWEEN_RESALE_PRICE = 10_000_000;
 
-export function stampsLeft(record) {
-  return Math.max(0, BLACK_FRIDAY_STAMPS - (record?.stamps ?? 0));
-}
+const RESALE_IDS = new Set(RNGWEEN_COSMETICS.map((item) => item.id));
 
-export function stampFraction(record) {
-  const spent = record?.spent ?? 0;
-  return Math.min(1, spent / (BLACK_FRIDAY_STAMPS * SALE_STAMP_EVERY));
-}
-
-export function resaleMissing(owned = []) {
-  return RNGWEEN_COSMETICS.filter((item) => !owned.includes(item.id));
-}
-
-export function rngweenReceiptFor(id) {
-  return id === RNGWEEN_WORLD_SKIN.id ? "skinEarned" : "auras";
+export function isResaleCosmetic(item) {
+  return !!item?.eventOnly && RESALE_IDS.has(item.id);
 }

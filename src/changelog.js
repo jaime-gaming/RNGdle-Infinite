@@ -1,5 +1,19 @@
 export const CHANGELOG = [
   {
+    version: "v0.6.1",
+    date: "2026-11-28",
+    title: "rngmas: the winter village",
+    body: [
+      "the update arrives november 28; RNGmas and Christmas mode open december 1 at 00:00 UTC and close january 2 at 00:00 UTC.",
+      "tasks → RNGmas holds season missions, eleven gatherings, eight rotating commissions and five different weekly chapters.",
+      "shop → RNGmas: advent doors december 1–24, the christmas day star, collection and market. Missed doors cannot be recovered.",
+      "eight permanent auras and five companion skins; skins need their base companion. Earned boosts wait for manual activation.",
+      "shared winter decoration, reward sources and countdowns. Christmas mode is optional in Appearance → TEMPORAL, only in season.",
+      "bookmark up to 25 rolls; profiles show ten at first with show-more. Old event rewards and save receipts stay intact.",
+      "black friday is retired. Legacy Pages retires december 1 at midnight Madrid time; the main site stays open.",
+    ],
+  },
+  {
     version: "v0.6",
     date: "2026-11-18",
     title: "battle pass, new discoveries and a clearer shop",

@@ -559,6 +559,45 @@ export const BatMark = (props) => (
   </Mark>
 );
 
+export const SnowflakeMark = (props) => (
+  <Mark {...props}>
+    <path d="M12 2.6v18.8M3.9 7.3l16.2 9.4M3.9 16.7l16.2-9.4" />
+    <path d="M12 6.2 9.4 3.8M12 6.2l2.6-2.4M12 17.8l-2.6 2.4M12 17.8l2.6 2.4" />
+    <path d="m6.2 9.9-3.4.5M6.2 14.1l-3.4-.5M17.8 9.9l3.4.5M17.8 14.1l3.4-.5" />
+    <circle className="tone" cx="12" cy="12" r="1.9" />
+  </Mark>
+);
+export const PineMark = (props) => (
+  <Mark {...props}>
+    <path d="M12 2.8 6.6 10h2.9L5 16.2h5.2L7.4 20.6h9.2L13.8 16.2H19L14.5 10h2.9Z" />
+    <path className="tone" d="M10.6 20.6h2.8V22h-2.8Z" />
+    <path d="M9.4 12.6h1.6M13 15h1.8" />
+  </Mark>
+);
+export const GiftMark = (props) => (
+  <Mark {...props}>
+    <rect x="3.6" y="9.4" width="16.8" height="11.4" rx="2.2" />
+    <path d="M3.6 13.4h16.8M12 9.4v11.4" />
+    <path
+      className="tone"
+      d="M12 9.4C9 9.4 7 7.6 7 5.8 7 4.4 8 3.6 9.2 3.6c1.6 0 2.4 1.8 2.8 5.8Zm0 0c3 0 5-1.8 5-3.6 0-1.4-1-2.2-2.2-2.2-1.6 0-2.4 1.8-2.8 5.8Z"
+    />
+  </Mark>
+);
+export const BellMark = (props) => (
+  <Mark {...props}>
+    <path d="M12 3.4c-3.4 0-5.4 2.4-5.4 6v3.2L4.6 17h14.8l-2-4.4V9.4c0-3.6-2-6-5.4-6Z" />
+    <path className="tone" d="M9.8 19.4a2.2 2.2 0 0 0 4.4 0Z" />
+    <path d="M12 3.4V2.2" />
+  </Mark>
+);
+export const WinterStarMark = (props) => (
+  <Mark {...props}>
+    <path d="m12 2.6 2.2 6.6 6.8 2.2-6.8 2.2L12 20.2 9.8 13.6 3 11.4l6.8-2.2Z" />
+    <path className="tone" d="m18.6 16.4.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8Z" />
+  </Mark>
+);
+
 export const BlackoutMark = (props) => (
   <Mark {...props}>
     <rect x="3.4" y="3.4" width="17.2" height="17.2" rx="4.4" />

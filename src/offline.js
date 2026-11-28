@@ -105,12 +105,14 @@ export function offlinePlan(
   if (!OFFLINE_INTERVALS.includes(intervalMS))
     throw new Error("Invalid offline interval");
   if (!OFFLINE_CAPS.includes(cap)) throw new Error("Invalid offline cap");
+  const arrivedAt = presences.find((p) => p.id === tabId)?.at ?? now;
+  const others = presences.filter((p) => p.id !== tabId && p.at <= arrivedAt);
   const since = Math.max(
     offline?.lastSeenAt ?? now,
-    ...presences.map((p) => p.at),
+    ...others.map((p) => p.at),
   );
-  const online = presences.some(
-    (p) => p.id !== tabId && p.visible && now - p.at < PRESENCE_STALE_MS,
+  const online = others.some(
+    (p) => p.visible && now - p.at < PRESENCE_STALE_MS,
   );
   return {
     since,
@@ -149,6 +151,12 @@ export function markPresenceHidden(profileId, tabId, at = Date.now()) {
   if (!profileId || !tabId) return;
   try {
     writePresence(profileId, tabId, at, false);
+  } catch {}
+}
+export function removePresence(profileId, tabId) {
+  if (!profileId || !tabId) return;
+  try {
+    localStorage.removeItem(PRESENCE_PREFIX + profileId + ":" + tabId);
   } catch {}
 }
 export function clearPresence(profileId) {

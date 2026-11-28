@@ -35,6 +35,7 @@ import {
 import {
   CLOUD_RECOVERY_MAX_ATTEMPTS,
   beginCloudOutage,
+  canProbeCloudOutage,
   endCloudOutage,
   nextProbeDelay,
   outageForAccount,
@@ -232,7 +233,12 @@ export function useProgress({
     [epoch, setEpoch] = useState(0),
     [cloudRetry, setCloudRetry] = useState(0),
     [cloudWriteRetry, setCloudWriteRetry] = useState(0),
-    [gameSecurity, setGameSecurity] = useState(null);
+    [gameSecurity, setGameSecurityState] = useState(null);
+  const gameSecurityRef = useRef(null);
+  const setGameSecurity = useCallback((security) => {
+    gameSecurityRef.current = security;
+    setGameSecurityState(security);
+  }, []);
   const [cloud, setCloudState] = useState(() =>
     !cloudEnabled
       ? { status: "unconfigured", ready: true, userId: null, error: "" }
@@ -337,7 +343,8 @@ export function useProgress({
         active = false;
       };
     void requestGameStatus(userId, (security) => {
-      if (active) setGameSecurity(security);
+      if (active && !recoverCloudStatus(userId, security))
+        setGameSecurity(security);
     });
     return () => {
       active = false;
@@ -350,6 +357,10 @@ export function useProgress({
     if (!userId || localPlay) return;
     const mark = outageForAccount(userId, localStorage);
     if (!mark) return;
+    if (mark.profileId && mark.profileId !== current.current.profile?.id) {
+      endCloudOutage(userId, localStorage);
+      return;
+    }
     outageSession.current = mark.sessionId;
     cloudBlocked.current = false;
     setOutageEpoch((epoch) => epoch + 1);
@@ -371,7 +382,12 @@ export function useProgress({
     let timer = null;
     const schedule = () => {
       const current = outageForAccount(userId, localStorage);
-      if (cancelled || !current) return;
+      if (
+        cancelled ||
+        !canProbeCloudOutage(current) ||
+        current.sessionId !== sessionId
+      )
+        return;
       timer = setTimeout(
         () => void probe(),
         nextProbeDelay(current.attempts ?? 0),
@@ -385,36 +401,34 @@ export function useProgress({
         profileId: mark.profileId,
       });
     async function probe() {
-      if (cancelled || document.visibilityState === "hidden") {
+      const mark = outageForAccount(userId, localStorage);
+      if (
+        cancelled ||
+        !canProbeCloudOutage(mark) ||
+        mark.sessionId !== sessionId
+      )
+        return;
+      if (document.visibilityState === "hidden") {
         schedule();
         return;
       }
       const security = await requestGameStatus(userId, () => {});
-      if (cancelled) return;
+      if (
+        cancelled ||
+        authRef.current.userId !== userId ||
+        outageForAccount(userId, localStorage)?.sessionId !== sessionId
+      )
+        return;
       // A security answer only exists after every binding was checked, so it is
       // the signal that Cloud can verify rolls again. A paused account is
       // Cloud's decision, not an outage: stop probing and show the notice.
-      if (security && typeof security.status === "string") {
-        endOutage(userId);
-        cloudBlocked.current =
-          security.status === "restricted" || security.status === "pending";
-        if (cloudBlocked.current) {
-          setGameSecurity(security);
-          return;
-        }
-        setGameSecurity({
-          status: "warning",
-          warningStage: 1,
-          message:
-            "Cloud is answering again. This device’s progress is syncing with your online save; nothing was lost while Cloud was unavailable.",
-        });
-        setCloudWriteRetry((retry) => retry + 1);
-        setCloudRetry((retry) => retry + 1);
+      if (security) {
+        recoverCloudStatus(userId, security);
         return;
       }
       const attempts =
         (outageForAccount(userId, localStorage)?.attempts ?? 0) + 1;
-      if (attempts > CLOUD_RECOVERY_MAX_ATTEMPTS) outageBlocked.current = true;
+      if (attempts >= CLOUD_RECOVERY_MAX_ATTEMPTS) outageBlocked.current = true;
       record(attempts);
       schedule();
     }
@@ -432,7 +446,13 @@ export function useProgress({
     if (!(current.cloudEnabled && current.authReady && current.userId))
       return null;
     if (current.localPlay) return null;
-    return requestGameStatus(current.userId, setGameSecurity);
+    return requestGameStatus(current.userId, (security) => {
+      if (
+        authRef.current.userId === current.userId &&
+        !recoverCloudStatus(current.userId, security)
+      )
+        setGameSecurity(security);
+    });
   }, []);
   const cloudGate = useRef({
     userId: null,
@@ -474,6 +494,29 @@ export function useProgress({
     endCloudOutage(activeUserId, localStorage);
     outageSession.current = null;
     outageBlocked.current = false;
+  }
+  function recoverCloudStatus(activeUserId, security) {
+    if (authRef.current.userId !== activeUserId) return false;
+    const mark = outageForAccount(activeUserId, localStorage);
+    if (
+      !mark ||
+      (mark.profileId && mark.profileId !== current.current.profile?.id)
+    )
+      return false;
+    endOutage(activeUserId);
+    cloudBlocked.current = ["restricted", "pending"].includes(security.status);
+    if (cloudBlocked.current) setGameSecurity(security);
+    else {
+      setGameSecurity({
+        status: "warning",
+        warningStage: 1,
+        message:
+          "Cloud is answering again. This device’s progress is syncing with your online save; nothing was lost while Cloud was unavailable.",
+      });
+      setCloudWriteRetry((retry) => retry + 1);
+      setCloudRetry((retry) => retry + 1);
+    }
+    return true;
   }
   function markLocalCloudDirty() {
     const activeUser = authRef.current.userId;
@@ -1870,7 +1913,8 @@ export function useProgress({
         let next,
           committed,
           presence,
-          serverRollRequestKey = null;
+          serverRollRequestKey = null,
+          fallbackAccount = null;
         if (action.type.startsWith("offline-")) {
           if (!previous.profile || !previous.owned.includes("offline-roller"))
             throw new Error(
@@ -1956,6 +2000,17 @@ export function useProgress({
               "Your game was restarted. This action was cancelled.",
             );
         } else if (action.type === "draw") {
+          const security = gameSecurityRef.current;
+          if (
+            auth.cloudEnabled &&
+            auth.userId &&
+            !auth.localPlay &&
+            ["pending", "restricted"].includes(security?.status)
+          )
+            throw new Error(
+              security.message ||
+                "Cloud rolls are paused for this account. Choose local play explicitly to continue.",
+            );
           if (previous.offline?.batch)
             throw new Error(
               "Finish restoring offline rewards before starting another roll.",
@@ -2001,22 +2056,32 @@ export function useProgress({
           // A device that already fell back to local play keeps playing locally
           // until the probe confirms Cloud can verify rolls again.
           const outageActive = Boolean(
-            auth.userId && outageForAccount(auth.userId, localStorage),
+            auth.userId &&
+            (() => {
+              const mark = outageForAccount(auth.userId, localStorage);
+              return (
+                mark &&
+                (!mark.profileId || mark.profileId === previous.profile?.id)
+              );
+            })(),
           );
           const serverAuthoritative = Boolean(
+            !maintenance &&
             previous.profile &&
             auth.cloudEnabled &&
             auth.userId &&
             !auth.localPlay &&
-            !outageActive &&
-            !cloudBlocked.current,
+            !outageActive,
           );
           if (serverAuthoritative) {
             try {
               serverRoll = await requestServerRoll(
                 auth.userId,
                 previous.profile.id,
-                setGameSecurity,
+                (security) => {
+                  if (authRef.current.userId === auth.userId)
+                    setGameSecurity(security);
+                },
               );
             } catch (error) {
               const details = describeCloudVerificationFailure(error);
@@ -2084,10 +2149,18 @@ export function useProgress({
               "Your profile changed in another tab. The draw was cancelled.",
             );
           }
-          // The outage is only recorded once the roll it was issued for is
-          // committed, so a cancelled draw leaves no mark behind.
+          if (
+            authRef.current.userId !== auth.userId ||
+            authRef.current.localPlay !== auth.localPlay
+          )
+            throw new Error(
+              "The signed-in account changed. The draw was cancelled.",
+            );
           if (serverAuthoritative && !serverRoll)
-            beginOutage(auth.userId, previous.profile?.id);
+            fallbackAccount = {
+              userId: auth.userId,
+              profileId: previous.profile?.id,
+            };
           const firedPicks = new Set((picks ?? []).map((pick) => pick.skill));
           const fired = serverRoll
             ? serverRoll.firedSkills
@@ -2417,6 +2490,10 @@ export function useProgress({
               if (typeof previousCloudOwner === "string" && previousCloudOwner)
                 clearCloudDirty(previousCloudOwner);
             } else markLocalCloudDirty();
+            if (fallbackAccount) {
+              acknowledgeServerRoll();
+              beginOutage(fallbackAccount.userId, fallbackAccount.profileId);
+            }
             healthy.current = true;
             unsaved.current = new Set();
             setWarning("");

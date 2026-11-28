@@ -1,3 +1,4 @@
+import WinterCountdown from "./WinterCountdown.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -18,7 +19,7 @@ import {
   BATTLE_PASS_COSMETICS,
   BATTLE_PASS_LEVELS,
   BATTLE_PASS_PREMIUM_PRICE,
-  BATTLE_PASS_REWARDS,
+  passRewardsFor,
   BATTLE_PASS_VARIANT,
   BATTLE_PASS_OVERFLOW_EP_PER_BPEP,
   BPEP_PER_LEVEL,
@@ -101,6 +102,7 @@ export default function BattlePass({
     archive: [],
   };
   const season = battlePassSeason(now);
+  const rewards = passRewardsFor(pass.seasonId || season.id);
   const level = passLevelForXp(pass.xp);
   const intoLevel = passXpIntoLevel(pass.xp);
   const [pending, setPending] = useState("");
@@ -130,7 +132,7 @@ export default function BattlePass({
   const buyStatus = boostBuyStatus(pass.boosts, boostClock);
   const canBuy = buyStatus.waitMs === 0 && progress.balance >= PASS_BOOST_PRICE;
   const inspectedLevel = inspectedReward
-    ? BATTLE_PASS_REWARDS.find((item) => item.level === inspectedReward.level)
+    ? rewards.find((item) => item.level === inspectedReward.level)
     : null;
   const inspectedDefinition = inspectedLevel?.[inspectedReward?.track];
   const inspectedCosmetic =
@@ -248,7 +250,10 @@ export default function BattlePass({
   }
 
   return (
-    <div className="battle-pass" style={{ "--pass-accent": season.accent }}>
+    <div
+      className={`battle-pass${season.index === 2 ? " winter-event winter-pass" : ""}`}
+      style={{ "--pass-accent": season.accent }}
+    >
       {!cloudUser && !progress.profile && (
         <div className="guest-save-notice">
           <p>Guest pass progress is temporary. Name a profile to keep it.</p>
@@ -327,6 +332,14 @@ export default function BattlePass({
             )}
           </div>
         </div>
+        {season.index === 2 && !ended && (
+          <WinterCountdown
+            until={season.upcoming ? season.start : season.end}
+            label={
+              season.upcoming ? "Winter pass opens in" : "Winter pass closes in"
+            }
+          />
+        )}
         <div className="pass-level-progress">
           <progress
             max={BPEP_PER_LEVEL}
@@ -352,8 +365,9 @@ export default function BattlePass({
           </h3>
           <p>
             Optional, purchased in Shop with EP. Earn extra EP, double boost
-            charges at levels 5, 8, 15, 18, 25 and 28, the Prism Axolotl at
-            level 20 and First Light Crown at level 30. Claimed cosmetics stay
+            charges at levels 5, 8, 15, 18, 25 and 28,{" "}
+            {rewards[19].premium.name} at level 20 and{" "}
+            {rewards[29].premium.name} at level 30. Claimed cosmetics stay
             yours.
           </p>
         </div>
@@ -390,7 +404,7 @@ export default function BattlePass({
         </div>
         <div className="pass-track-scroll">
           <ol className="pass-track-grid">
-            {BATTLE_PASS_REWARDS.map((reward) => {
+            {rewards.map((reward) => {
               const milestone =
                 reward.free.kind !== "ep" || reward.premium.kind !== "ep";
               const isNext = reward.level === level + 1;

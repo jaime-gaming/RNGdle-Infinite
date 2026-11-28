@@ -16,7 +16,7 @@ function check(ok, label) {
 
 const UID = "uid-fallback";
 
-function installFetch({ fail }) {
+export function installFetch({ fail }) {
   const calls = [];
   globalThis.fetch = async (input, options = {}) => {
     const url = new URL(String(input), "https://game.example/");
@@ -61,7 +61,7 @@ function installFetch({ fail }) {
 // A draw resolves the roll worker through import.meta.url, which this bundle
 // format does not carry, and scores it in a worker. Both are replaced with the
 // page origin and an immediate answer so the test stays about the fallback.
-function installBrowserShims() {
+export function installBrowserShims() {
   const RealURL = globalThis.URL;
   globalThis.URL = class extends RealURL {
     constructor(input, base) {
@@ -185,6 +185,10 @@ export async function run() {
     const mark = readCloudOutage();
     check(Boolean(mark), "the outage leaves a mark for this account");
     check(mark?.userId === UID, "the mark records which account hit it");
+    check(
+      sessionStorage.getItem("rng-infinite-pending-game-roll-v1") === null,
+      "a committed local replacement cannot later replay the abandoned Cloud request",
+    );
     check(
       allowsLocalFallback({ code: "game-security-unavailable", status: 503 }) &&
         !allowsLocalFallback({ code: "cloud-restricted", status: 403 }),

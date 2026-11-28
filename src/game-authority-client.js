@@ -1,3 +1,5 @@
+import { ROLL_DURATIONS, COOLDOWN_DURATIONS } from "./shop-data.js";
+import { skillById } from "./skills.js";
 import { firebaseAuth } from "./firebase.js";
 import {
   cloudUnavailableReason,
@@ -96,12 +98,17 @@ async function idTokenFor(userId) {
   return user.getIdToken();
 }
 
-function updateSecurity(onSecurity, security) {
-  if (
+function validSecurity(security) {
+  return (
     security &&
-    ["clear", "warning", "restricted", "pending"].includes(security.status)
-  )
-    onSecurity?.(security);
+    ["clear", "warning", "restricted", "pending"].includes(security.status) &&
+    (security.message == null ||
+      (typeof security.message === "string" && security.message.length <= 2000))
+  );
+}
+
+function updateSecurity(onSecurity, security) {
+  if (validSecurity(security)) onSecurity?.(security);
 }
 
 async function readJsonResponse(response) {
@@ -142,10 +149,17 @@ export async function requestGameStatus(userId, onSecurity) {
       credentials: "same-origin",
       headers: { Authorization: `Bearer ${token}` },
       referrerPolicy: "same-origin",
+      signal: AbortSignal.timeout(15_000),
     });
     const body = await readJsonResponse(response);
-    updateSecurity(onSecurity, body?.security);
-    return body?.security ?? null;
+    if (!validSecurity(body?.security)) return null;
+    const decision =
+      response.status === 403 &&
+      ["cloud-restricted", "restriction-pending"].includes(body?.code) &&
+      ["restricted", "pending"].includes(body.security.status);
+    if (!(response.ok && body?.ok === true) && !decision) return null;
+    updateSecurity(onSecurity, body.security);
+    return body.security;
   } catch {
     return null;
   }
@@ -179,6 +193,7 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
         profileId,
       }),
       referrerPolicy: "same-origin",
+      signal: AbortSignal.timeout(15_000),
     });
   } catch (cause) {
     const accountChanged =
@@ -203,8 +218,16 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
   }
 
   const body = await readJsonResponse(response);
-  updateSecurity(onSecurity, body?.security);
   if (!response.ok || body?.ok !== true) {
+    if (
+      (response.status === 403 &&
+        ["cloud-restricted", "restriction-pending"].includes(body?.code) &&
+        ["restricted", "pending"].includes(body?.security?.status)) ||
+      (response.status === 429 &&
+        body?.code === "roll-not-ready" &&
+        body?.security?.status === "warning")
+    )
+      updateSecurity(onSecurity, body.security);
     if ([400, 401, 403, 409, 413, 415, 429].includes(response.status))
       clearRequest(pending.requestId);
     const message =
@@ -231,6 +254,8 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
 
   if (
     typeof body.rollId !== "string" ||
+    !body.rollId ||
+    body.rollId.length > 128 ||
     body.profileId !== profileId ||
     !Array.isArray(body.numbers) ||
     body.numbers.length < 1 ||
@@ -240,10 +265,14 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
       (number) =>
         !Number.isSafeInteger(number) || number < 0 || number > 1_000_000,
     ) ||
-    !Number.isSafeInteger(body.timing?.rollMS) ||
-    !Number.isSafeInteger(body.timing?.cooldownMS) ||
+    !ROLL_DURATIONS.includes(body.timing?.rollMS) ||
+    ![0, ...COOLDOWN_DURATIONS].includes(body.timing?.cooldownMS) ||
     !Array.isArray(body.armedSkills) ||
     !Array.isArray(body.firedSkills) ||
+    body.armedSkills.some((id) => !skillById.has(id)) ||
+    new Set(body.armedSkills).size !== body.armedSkills.length ||
+    body.firedSkills.some((id) => !body.armedSkills.includes(id)) ||
+    new Set(body.firedSkills).size !== body.firedSkills.length ||
     ![null, "boost", "charge"].includes(body.flywheel)
   ) {
     throw authorityError(
@@ -253,6 +282,7 @@ export async function requestServerRoll(userId, profileId, onSecurity) {
     );
   }
 
+  updateSecurity(onSecurity, body.security);
   return {
     ...body,
     requestKey: pending.requestId,

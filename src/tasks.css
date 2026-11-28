@@ -589,3 +589,16 @@
   font-size: 10px;
   color: var(--muted);
 }
+
+.tasks-view-switch:has(> button:nth-child(3)) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 860px);
+}
+.tasks-view-switch button.is-active {
+  background: var(--surface);
+}
+@media (max-width: 600px) {
+  .tasks-view-switch:has(> button:nth-child(3)) {
+    grid-template-columns: 1fr;
+  }
+}

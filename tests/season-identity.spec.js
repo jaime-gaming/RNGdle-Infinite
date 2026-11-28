@@ -182,9 +182,9 @@ test("the month palette stays valid while only configured seasons are exposed", 
   const closed = battlePassSeason(
     BATTLE_PASS_FIRST_START + BATTLE_PASS_SEASON_MS,
   );
-  expect(closed.id).toBe("season-1");
-  expect(closed.active).toBe(false);
-  expect(closed.ended).toBe(true);
+  expect(closed.id).toBe("season-2");
+  expect(closed.active).toBe(true);
+  expect(closed.name).toBe("RNGmas 2026");
 
   expect(passSeasonIdentity(1).lap).toBe(1);
   expect(passSeasonIdentity(13).lap).toBe(2);

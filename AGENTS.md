@@ -28,35 +28,40 @@ aura ownership, Hexbound, attendance timestamps and `rngween-*` history are
 still part of the save contract. Do not remove those records or reintroduce
 event progression/UI. The old RNGween changelog entry is historical and stays.
 
-Black Friday 2026 and the Battle Pass are the event exceptions. Black Friday is
-one UTC day — Friday 27 November 2026, `src/black-friday.js` — during which the whole shop is
-discounted 20–50% per product, every 100,000 EP spent awards one sale stamp
-(`SALE_STAMP_EVERY`), 25 stamps unlock the limited `blackout-2026` skin, and
-the RNGween looks a save missed return to the counter at 10,000,000 EP each.
-While the day is on the calendar the hub grows a `black-friday` shelf
-(`/shop/black-friday`) with the stamp card, the skin and the counter. Its
-interface (sale ticker, event notice, stamp card, the Ultra-Black and Red Sale
-themes, the sale favicon and manifest) exists only while
-`blackFridayStatus(at).active`; the event notice is also shown before the day
-and disappears afterward. `progress.blackFriday` is part of the save contract
-and survives every reset, like permanent cosmetics. Dev builds honour
+Black Friday 2026 is retired. `src/black-friday.js` keeps only the limited
+`blackout-2026` aura, its family and the `progress.blackFriday` save record
+(`{ id, spent, stamps, skinEarned }`); there is no sale UI, pricing or branding
+left. `sale-reward` history rows stay parseable and visible.
+
+RNGmas 2026 and the Battle Pass are the live event exceptions. RNGmas runs from
+1 December 2026 to 2 January 2027 (UTC) in `src/rngmas.js`: the temporary
+Frostfall theme in the Appearance menu (December 1–January 2, after First Light), a 24-door advent calendar on
+`/shop/rngmas`, and five weekly activities. A door is claimable only on its December UTC day; door 24 pays the Gingerbread aura and the
+Christmas Day-only star pays the RNGmas Star aura. Golem Smash uses the next normal online roll as damage after preparing a paid strike.
+`progress.rngmas` (`{ id, claimed, finale, golems, snowcoins, snowcoinsEarned, snowcoinsExchanged, marketPurchases }`) is part of the save
+contract and survives every reset, like permanent cosmetics.
+
+RNGmas combines RNGween mission/aura art with Black Friday-style offer cards and a stall-visit passport; neither retired event is reactivated. The page
+decoration is `src/components/RngmasDecor.jsx`: a fixed, `aria-hidden`,
+`pointer-events: none` layer behind `#root` (which gets `isolation: isolate`),
+aligned under the header, that sets `data-season="rngmas"` while the season is
+live and takes it away afterwards. It draws snow banks, pines, gifts, bells,
+garlands and a 22-flake snowfall; `is-reduced-motion` keeps the picture and
+drops every animation. The eight actively offered event auras and three winter pass auras use
+`src/components/RngmasAura.jsx` plus `src/rngmas-auras.css`, which reuse the
+shared `.aura-*` ornament rules from `rngween-auras.css` (seal, filigree,
+crest, guardians, motes) instead of Black Friday's flat box paint. Keep new
+event art in that shape: hand-drawn marks in `game-icons.jsx`, SVG ornaments,
+CSS keyframes, and a reduced-motion path for each.
+
+Dev builds honour
 `VITE_GAME_PREVIEW_AT` (a UTC epoch in milliseconds) to shift the shared game
 clock for previews; production ignores that variable, and Playwright forces it
-off so date-sensitive tests remain deterministic. Spending accumulates across purchases, rather
-than requiring a single purchase of 100,000 EP. The sale shelf contains a
-25-slot graphical stamp book; sale themes are marked TEMPORAL in the selector
-and linked posters occupy the page margins, including on small screens. Posters
-stay in the document as it scrolls; offers rotate every 15 seconds, pausing on
-hover, focus, hidden tabs and reduced motion. Whole posters fit within the main
-area and are hidden rather than cut off at the footer. See
-`archive/qa/black-friday-retirement.md` before retiring event code. The stamp
-book remembers which stamps were seen per local profile and animates only newly
-seen stamps when the book enters view; this presentation marker never affects
-progress or rewards. Special & Limiteds banners and wardrobe filters appear
-only when the save owns an event aura, even during the sale;
-missed looks can be bought from the sale shelf. Aura cards have a rarity preview.
-Moving reveal digits are lighter than landed digits using opacity only, without
-adding backgrounds, borders, underlines or other decorations.
+off so date-sensitive tests remain deterministic. Special & Limiteds banners
+and wardrobe filters appear only when the save owns an event aura. Aura cards
+have a rarity preview. Moving reveal digits are lighter than landed digits
+using opacity only, without adding backgrounds, borders, underlines or other
+decorations.
 
 The Battle Pass (`src/battle-pass.js`) uses individually configured season
 end dates or durations. Only launched seasons are listed; a successor requires
@@ -180,9 +185,9 @@ Only rolls fund a cycle gate.
 - **UTC for calendar labels.** Daily/weekly task periods use UTC (`Date.UTC`,
   `getUTC*`, `timeZone: "UTC"`). Gameplay timers use `gameNow()` in
   `src/game-clock.js`; `Date.now()` is for non-gating timestamps. The event-gated
-  systems are the one-day Black Friday sale (`src/black-friday.js`) and the
-  individually scheduled Battle Pass seasons (`src/battle-pass.js`). Nothing
-  else gates gameplay by calendar date.
+  systems are RNGmas (`src/rngmas.js`) and the individually scheduled Battle
+  Pass seasons (`src/battle-pass.js`). Nothing else gates gameplay by calendar
+  date.
 - **Routes are client paths.** `src/router.js` owns paths such as `/shop/auras`
   and `/profile/<username>`. The Worker serves the app at the domain root; its `assets.not_found_handling: single-page-application` serves
   `index.html` for direct route loads, and `public/_headers` keeps HTML and the
@@ -208,6 +213,13 @@ Only rolls fund a cycle gate.
   empty one.
 - `sale-reward` activity rows stay parseable and visible in history; they carry
   no EP and never count as spending.
+- `rngmas` records (`{ id, claimed, finale, golems, snowcoins, snowcoinsEarned, snowcoinsExchanged, marketPurchases }`) keep the advent doors
+  opened, the Christmas Day star and each golem's damage, strikes and defeat.
+  Rewards are always re-derived from the record (`rngmasRewardIds`), so a
+  hand-edited save cannot invent a calendar aura. Junk or foreign records are
+  repaired to an empty one.
+- `advent-claim`, `golem-smash` and `golem-reward` activity rows stay parseable
+  and visible in history.
 - `battlePass` keeps the current season, BPEP, premium flag, claimed rewards,
   mission tallies and a bounded archive. `pass-reward`, `pass-mission` and
   `pass-upgrade` activity rows stay parseable and visible in history.
@@ -278,38 +290,6 @@ Only rolls fund a cycle gate.
 - Status notices poll every 60 seconds and also on focus, visibility and
   reconnection. The banner is a normal-flow sibling between the header and
   `main`, so the interface shifts down instead of being covered.
-- Black Friday side posters are ordered by the current page, never by a timer
-  or a random pick.
-
-## Cloud availability and fallback
-
-- **An outage never asks the player anything.** When the Worker cannot verify a
-  roll because a dependency or binding is unavailable, the game keeps playing on
-  this device with the ordinary local roll (same draws, odds, skills and
-  timing). There is no sign-out, no lost progress and no "Keep playing locally"
-  click. `src/error-codes.js` holds the only allowlist: `allowsLocalFallback`
-  accepts `game-security-unavailable`, `cloud-save-unavailable`,
-  `cloud-save-not-ready` and `cloud-profile-changed`, and only with HTTP status
-  `0` or `>= 500`.
-- **Server decisions stay decisions.** `cloud-restricted`, `restriction-pending`,
-  `roll-not-ready`, `sign-in-required` and `request-not-secure` are answers from
-  Cloud, not outages. Never route them through the fallback: the notice,
-  reference and manual choice stay exactly as they are.
-- **The fallback is remembered, and it heals itself.** `src/cloud-fallback.js`
-  keeps one mark (`rng-infinite-cloud-recovery-v1`) per account in
-  `localStorage`. The mark is written only after the fallback roll is committed,
-  so a cancelled draw leaves nothing behind. While it exists, the game plays
-  locally, a probe asks `GET /api/game/status` at 3 s doubling to 60 s (skipped
-  while the tab is hidden, stopped for the session after 40 attempts), and the
-  first answer that carries a security status clears the mark, tells the player
-  Cloud is syncing and re-triggers the normal Cloud write. Do not add an ad-hoc
-  merge step: the Cloud-save precedence in this file is the only reconciliation.
-- **The mark belongs to one account.** Signing out or switching accounts clears
-  it; a reload resumes the same session so local play continues without a click.
-  Guest play never writes it.
-- **Both directions must stay visible in text.** Starting the fallback and
-  returning to Cloud each set a `warning` notice; neither may be silent, because
-  a player who cannot tell which save is live will stop trusting either.
 
 ## Tool-call budget
 
@@ -332,13 +312,14 @@ Only rolls fund a cycle gate.
 | `src/use-progress.js`                            | Local persistence and transactional cloud reconciliation.                   |
 | `src/firebase.js`, `src/use-firebase-auth.js`    | Firebase clients, email/Google auth and provider linking.                   |
 | `src/cloud-save.js`                              | Firestore CRUD, save comparison and browser ownership/cache/recovery.       |
-| `src/cloud-fallback.js`                          | Cloud-outage mark and probe backoff behind the automatic local fallback.    |
 | `firestore.rules`                                | Per-UID Firestore access policy.                                            |
 | `src/roll.worker.js`, `src/random.js`            | Worker-based roll scoring and random source.                                |
 | `src/badges.js`, `src/infinite-badges.js`        | Badge definitions, families and metadata.                                   |
 | `src/pets.js`, `src/skills.js`, `src/rebirth.js` | Companions, skills, rebirth, prestige and rollback rules.                   |
 | `src/tasks.js`, `src/history-tally.js`           | Daily/weekly tasks and historical profile totals.                           |
 | `src/shop-data.js`                               | Products, shelves, aura families and timing upgrades.                       |
+| `src/rngmas.js`, `src/use-rngmas.js`             | RNGmas schedule, advent calendar, golems and rewards.                       |
+| `src/rngmas.css`, `src/rngmas-auras.css`         | RNGmas shelf, snow decoration and winter aura art.                          |
 | `src/changelog.js`, `src/app-update.js`          | Release notes, unseen-version marker and update identity.                   |
 | `src/components/`                                | Game, account and profile UI.                                               |
 | `src/*.css`                                      | Feature styles; `src/mobile.css` is loaded last.                            |
@@ -363,11 +344,8 @@ npm run test:worker      # smoke-test the Worker artifact and SPA routes locally
 npm run verify:cloud     # Cloud Accounts simulation against firestore.rules
 npm run test:render      # mount the app shell plus offline overlay and profile privacy in Node
 npm run test:github-pages # smoke-test the GitHub Pages base path and SPA fallback
-npm run deploy:worker    # build, deploy the Worker, then check /api/game/status
+npm run deploy:worker    # build and deploy the Worker (production is guarded)
 npm run audit:economy    # price ladder and roll-distribution audit
-npm run release:bump     # move the internal fixN label in every place it lives
-npm run release:check    # fail if those labels disagree
-npm run verify:release   # Prettier check plus the label check, before a merge
 npm run format           # Prettier over src, tests, root configs and README
 ```
 
@@ -377,12 +355,13 @@ the checked-in `.env.production` is used only for production builds.
 
 `npm run verify:cloud` needs no Firebase: it runs real app sessions on simulated
 devices that share a fake Firestore which evaluates every commit against a model
-of `firestore.rules`, so a client write the real rules would reject fails there.
+of `firestore.rules`. The model must be kept in sync; it is not an emulator or
+proof that a deployed Firebase project accepts a write.
 It covers the first upload, a second device adopting the online save, both-way
 sync, a stale device never overwriting newer progress, publishing, unpublishing
 and the two-profile conflict. `tools/cloud-sync-sim/public-profile.mjs` then
-checks the enable path alone: a healthy account, an account whose name was
-never reserved (it must be claimed before publishing) and a name another account
+checks the enable path alone: a healthy account, a full 25-bookmark profile
+(without truncation), an account whose name was never reserved (it must be claimed before publishing) and a name another account
 owns (it must stay private and report a conflict).
 
 `npm run test:render` bundles the app shell, the offline overlay and the profile
@@ -401,12 +380,10 @@ Playwright uses `CHROMIUM_PATH` when provided. Some environments need
 Chromium binary. Keep realistic reveal/cooldown timing in tests; set a longer
 test timeout rather than changing game timers.
 
-Shop prices are date-gated by the Black Friday sale, so on 27 November (UTC)
-the shelves show discounted prices, the counter and the stamp card. Specs that
-assert exact prices or stock pin the virtual clock — `page.clock.install()`
-with a fixed time away from the sale day, or `pauseClockAt` inside
-`tests/black-friday.spec.js` for the sale day itself — and must never depend on
-the real calendar date.
+RNGmas gates calendar doors and golem weeks by date. Specs that assert exact
+advent windows, golem HP or rewards pin the virtual clock — `page.clock.install()`
+with a fixed time, or `pauseClockAt` inside `tests/rngmas.spec.js` — and must
+never depend on the real calendar date.
 
 ## Product rules
 
@@ -490,42 +467,17 @@ rather than guessing.
   verify Cloudflare settings, DNS, Firebase authorized domains, or a production
   deployment.
 - `src/app-update.js` tracks the internal label for the reload-until-updated
-  flow. The current label is exactly `v0.6fix5`, and every fix patch runs
-  `npm run release:bump` so this patch's label is one `fixN` above the label it
-  replaces. `tools/release-version.mjs` writes `src/app-update.js`, the line
-  below and `tests/app-update.spec.js` together from `package.json`;
-  `npm run release:check` fails if they disagree, and `vite.config.js` derives
-  the build metadata from the same file. Never hand-write a label. Public
-  release notes live in `src/changelog.js` and keep historical entries.
+  flow. The current label is exactly `v0.6.1`; do not change it
+  until the next session or an explicit user request. Public release notes
+  live in `src/changelog.js` and keep historical entries.
 - Work on the session branch; do not push to `main` directly. Do not open a PR
   until the user asks. Use `gh` for PRs and checks.
 - **Merge with GitHub's squash merge, never a merge commit or a rebase**, and
   name the squashed commit after the release it publishes: `v0.5.2 bug fix 2`
-  when the merge carries fixes (the number matches the internal `fixN` label),
-  otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
+  when the merge carries bug fixes (the number matches the internal `fixN`
+  label), otherwise just `v0.5.2` or, for a new minor line, `v0.6`. Merge only
   when the branch is verified: `npm run build`, `npm run test:worker`,
-  `npm run verify:cloud`, the Playwright suite and `npm run verify:release`
-  (Prettier over source, tests and tools plus the label check).
-- **One patch is one commit.** `v0.6 bug fix 5` may name exactly one commit on
-  `main`; a follow-up correction of the same patch belongs in that commit, not
-  in a second one. Before merging, check `git log --oneline` and confirm the
-  message is the release label alone, with nothing appended. A patch that has
-  already landed as two commits is corrected by the user's explicit instruction
-  only, because collapsing it needs a force-push to `main`.
-- **A fix patch is finished only when it is deployed.** Editing files, merging
-  and updating `docs/` all leave the live custom domain on the previous build,
-  because that domain is served by the Worker from `dist/`. After the merge,
-  run `CF_ALLOW_PRODUCTION=true npm run deploy:worker` when the user asked for
-  the fix to reach players, and say plainly which steps ran. Never report a
-  console error as fixed while the build that carries the change is not live.
-- **Fix the cause the logs name, not the sentence the player saw.** A 503 on
-  `/api/game/status` or `/api/game/roll` is a Worker deployment fault: the
-  Worker logs one line naming the missing binding (`FIREBASE_PROJECT_ID`,
-  `FIREBASE_SERVICE_ACCOUNT_JSON`, `GAME_SESSIONS`) or the failing dependency
-  before the browser sees `game-security-unavailable`. Read that line first;
-  `docs-source/cloud-game-security.md` lists the setup step for each tag.
-  Browser-side changes cannot repair it, so do not merge a client-only fix for
-  a 503 until the Worker log or a live check shows the deployment is healthy.
+  `npm run verify:cloud`, the Playwright suite and `prettier --check`.
 - A change to `firestore.rules` only takes effect after
   `npm run deploy:rules`. Say so explicitly in the merge summary; the app cannot
   deploy rules for the user, and the client must stay compatible with the rules
@@ -547,3 +499,192 @@ rather than guessing.
 - After a requested merge succeeds, delete the merged remote branch (use `gh pr merge <number> --squash --delete-branch`). Never switch branches or delete the active checkout; respect session branch restrictions.
 
 - **Bug fixes never rewrite release notes.** Preserve all existing `src/changelog.js` entries verbatim during a bug fix. Record implementation/QA notes separately. Presentation-only capitalization is fine; add release notes only for an explicitly requested new release.
+
+Christmas decorations respect the persisted `christmasMode` setting in Themes.
+Weekly activities use the retired RNGween main-roll tally rules and mission card
+layout recovered from commit `d131975`. Legacy `golems` IDs remain save receipts;
+new `count`, `armed`, and `lastNumber` fields are parsed defensively. Only the
+December 1–8 chapter is Golem Smash. Prepare a strike for 100,000 EP; the next
+online committed result deals its numeric value as damage, once. Offline and
+extra skill rolls do not add progress. Weekly claims grant their permanent aura,
+modest EP (the last two weeks), Snowcoins and chapter-specific boost bundles. RNGmas 2026 is pass
+season 2, December 1–January 2 UTC. The local dev preview is December 17 UTC.
+
+Pass reward definitions are resolved by saved `seasonId` through `passRewardsFor`.
+Never use the First Light `BATTLE_PASS_REWARDS` constant directly for live claims,
+receipt repair, rollover delivery or the Pass page. RNGmas uses Snowglobe (free
+10), Midnight Carillon (premium 20) and Polar Crown (premium 30), with a smaller
+EP budget retained from its original schedule. Existing First Light ownership stays intact.
+The Cloud verification outage fixes from upstream `d513747` are integrated;
+the event branch retains version `v0.6.1` rather than the main patch label.
+
+## Integrated Cloud fallback patch
+
+Upstream `3b8d4fa` (bug fix 5) is integrated without changing the event's
+`v0.6.1` label. Vite reads `currentInternalVersion()` rather than a separate
+hard-coded label. `release:check` supports both the release label and fixN labels.
+No deployment is implied by a successful local build or a pushed branch.
+
+Transient Cloud outages may use normal local rolls automatically. The allowlist
+in `allowsLocalFallback` accepts actual numeric HTTP 0 or 500–599 only. Server
+restrictions, account changes, insecure requests and cooldown decisions must not
+activate the fallback. Outage marks are account/profile scoped, defensively
+parsed, and written only after the replacement roll is saved. Retire the old
+Cloud request ID only after that local commit; failed saves retain their retry ID.
+
+Recovery probes stop at 40 attempts. A fresh validated status check (including
+on reload or explicit retry) can heal an exhausted session. Failed HTTP responses
+and unknown security states cannot mark Cloud recovered. Requests have 15-second
+fetch timeouts. Late responses from an old account cannot update the active
+account's security or commit a draw. Keep the ordinary Cloud-save reconciliation;
+never merge two different profiles to hide a conflict.
+
+`tools/render-sim/cloud-fallback-integrity.mjs` covers quota failure, restrictions,
+exhausted-budget recovery and the actual hook timer boundary. Client tests reject
+invalid timing, skills and error-envelope security changes while preserving the
+request ID. Live binding/secret availability still needs a production check;
+local tests cannot certify it.
+
+## December 1 launch and weekly economy
+
+First Light ends and the RNGmas pass/Frostfall begin on December 1 UTC. RNGmas
+ends January 2 UTC; the dev preview stays December 17. Weeks: Golem Smash,
+Christmas market, Snowcoin exchange, Gift workshop and Midnight countdown.
+The market opens December 8 and the exchange December 15; both stay available
+until the event ends, independently of their chapter's expiring aura claim.
+
+One primary settled online roll earns one Snowcoin; Auto-Roll counts, offline
+and extra skill results do not. The wallet caps at 1,000,000. Exchange is one-way,
+10,000 EP per coin, maximum 200 converted per event. Each market offer grants
+boost charges once; three distinct purchases complete the market chapter and
+100 converted coins complete the exchange chapter. These two chapters grant
+no EP. `snowcoinsEarned`, `snowcoinsExchanged` and distinct `marketPurchases`
+are durable reconciliation dimensions; the decreasing wallet is not. Never
+merge currencies from different profiles. Retain legacy chapter IDs, counts,
+auras and historical rows. Currency and receipts survive resets and reloads.
+New `winter-exchange` and `winter-market` history rows are parsed defensively.
+
+An ended maintenance window overrides stale provider flags. While maintenance
+is active, the normal draw path commits locally without first requesting a Cloud
+roll or activating an outage marker; backup/publishing/deletion remain paused.
+Keep account ownership and known server restrictions intact. The render integrity
+suite exercises the real status store and progress hook for this path.
+
+## Winter zones and universal Christmas mode
+
+Appearance always exposes Christmas mode under its TEMPORAL group, alongside
+available temporary themes. It is a `menuitemcheckbox` with an independent visual
+switch, persistent device setting, accessible description and existing menu
+keyboard support. It does not change the selected color theme. Decoration is
+still event-gated; the preference is configurable outside the event. Never hide
+all seasonal scenery at the phone/tablet breakpoint: scale ornaments and keep
+snow banks and lights behind the content without intercepting input.
+
+`WinterChapters` renders five native details/summary zones. The current chapter
+opens automatically; other chapters can be explored, but only the live chapter
+can award its aura. The market and exchange live inside their zones and remain
+usable after their chapter ends until January 2. Summaries distinguish collected,
+ready, live, upcoming and closed states. The stall passport derives its marks
+from existing purchase receipts, not a new stamp currency.
+
+Chapter rewards now use `week.coins`, `week.boost` and `week.charges`: Golem
+50 coins + 2 Overdrive; market 15 + 2 Spark; exchange 25 + 2 Surge; workshop
+35 + 2 Surge; countdown 50 + 3 Overdrive. Existing auras and EP amounts remain.
+Currency/boosts are granted atomically with the completion receipt. Legacy claims
+are never replayed for extra bonuses, and parser repairs never mint those bonuses.
+No new save fields, odds changes, price discounts on base products or cooldown
+changes were introduced. All new scene, expansion and switch motion has a
+reduced-motion path. Keep source/release changelog history untouched.
+
+## Launch preparation: festival and Legacy deadline
+
+Christmas mode now shows only its name and the activation switch under TEMPORAL:
+a snowflake icon, with no status subtitle or explanatory paragraph. Keep its existing
+accessible checkbox state, persistence and responsive decoration behavior.
+
+`src/winter-festival.js` defines three season-long tasks, four explicitly timed
+live activities. RNGmas offers eight event auras and five companion skins,
+plus three separate pass auras. Historical aura identities stay parseable but
+are not offered by new missions or the market. The saved `rngmas.festival` record has bounded roll/
+7-containing counters, distinct final digits, task claims and per-live-window
+count/digit/claim receipts. Default, parse and compare all dimensions. Main online
+settlement updates it once; extra skill/offline rolls never count. The gift drive
+is four paid 5-Snowcoin in-game parcels, not a real-world donation. All tasks and
+live claims validate their UTC window in the reducer. Market companion-skin offers grant
+permanent ownership without boost charges. Preserve all old receipts and resets.
+
+The Legacy shutdown is December 1, 2026 at 00:00 Europe/Madrid, November 30 at
+23:00 UTC. `LegacyGate` wraps App only on repository-base builds. At the deadline
+it unmounts the game and its status/sync effects; the information/archival backup
+utility stays available. Never apply this gate to the root-domain current game.
+The countdown uses wall time, not seasonal `gameNow()`. Dev-only
+`VITE_LEGACY_PREVIEW_AT` previews before/after; production ignores it. Do not erase
+local saves, silently migrate profiles or claim automatic cross-origin import.
+See `docs-source/legacy-shutdown.md` for cached-client and deployment limitations.
+
+### Event Tasks and seasonal settings
+
+All season missions, live activities and weekly chapter claims live in
+`Tasks → RNGmas`, implemented by `WinterTasks`. The shop only renders calendar,
+collection and Snowcoin services; do not duplicate mission claims there.
+`?event=rngmas` opens the event tab (hash fragments are canonicalized away).
+WinterChapters accepts `showServices={false}` in Tasks; market and exchange stay
+in Shop. Content surfaces and disabled event controls are opaque in every theme.
+
+Five permanent winter companion skins share the secure registry in
+`winter-companions.js`. Lantern Moth and Parcel Kit have revised artwork; Holly
+Corvid and Snow Owl come from Meteor watch and Bell relay. Base companions remain
+required to equip, with no stat changes. Existing ownership/receipts stay intact.
+
+Christmas mode is effective only in [December 1, 2026, January 2, 2027) UTC.
+SettingsProvider masks the saved preference outside this window and rejects
+out-of-season toggle updates; Appearance disables the switch and shows it off.
+The shared seasonal hook schedules the exact boundary and refreshes on focus,
+so decoration disappears without a reload. Keep stored opt-outs intact.
+
+### Expanded winter village rotation
+
+`winter-rotation.js` defines seven additional gatherings and eight contiguous
+four-day commissions. They append to WINTER_LIVE_EVENTS after the original four;
+never reorder/reuse those receipt IDs. There are now 11 gatherings and eight
+commissions, each calendar covering Dec 1–Jan 2 without gaps or overlap.
+`festival.live` stores all bounded counts/ingredient or digit sets/claim receipts;
+no daily reset deletes progress. The kitchen maps final digit modulo four to
+Sugar/Spice/Cocoa/Ginger. Adjacent pairs use unpadded decimal strings; zero is
+not a repeated pair. Only primary settled online rolls progress these rules.
+All new windows award banked boosts and Snowcoins once, no automatic activation.
+The gift drive now refunds 10 of the 20 donated Snowcoins when claimed.
+
+`winter-village.css` adds opaque evergreen/cranberry/brass surfaces, warm string
+lights, swaying reward ornaments, stamped ingredient slots and ready-state trim.
+All new motion has a reduced-motion override. `winterReadyCount` drives Tasks
+and its global ready indicator and excludes expired claims. Full calendars are
+opt-in; Now & next shows current plus the next window. Keep missions in Tasks.
+
+Market Surge/Overdrive triples now cost 40/55; `legacyPrice` preserves old 60/90
+history receipts without refunding or enabling another purchase. Historical
+receipt coin amounts and cosmetic IDs must not be silently rewritten.
+Run `npm run audit:winter` for deterministic 2,000-player-per-activity demand
+samples, calendar coverage and hard bonus-budget assertions. Added windows cap
+at 128 Snowcoins, 13 Spark charges and 2 Surge charges over the entire season.
+No new cosmetic IDs, scoring/odds/cooldown changes or unlimited farms.
+
+### November 28 release preparation
+
+Read `docs-source/november-28-readiness.md`. Release day is Nov 28; the event still
+opens Dec 1 00:00 UTC, an hour after the Legacy mirror's Madrid-midnight closure.
+Tasks and Shop expose read-only previews in the announcement period; claims and
+Christmas mode remain season-gated. `WinterEventHeader`, `WinterEventGuide` and
+`WinterCountdown` unify the announcement/modal/Tasks/Shop presentation; winter
+pass and RNGmas aura previews use the same `.winter-event` visual contract.
+Countdowns tick in leaves only, have no per-second aria-live announcements and
+reject invalid target times without crashing the page. `nextRngmasBoundary`
+wakes both seasonal status and the global game clock at daily and 18:00 handovers.
+Default Advent/chapter action timestamps use `gameNow`, like other event actions.
+
+Starter calendar EP is now 10k/12.5k/15k/17.5k/20k/22.5k for doors 1–6; total
+calendar EP is 1,547,500. The 37,500 increase cannot be claimed again from an old
+receipt and does not pay into cycle-earned EP. Source-labelled collection cards
+clarify exact acquisition windows and base-companion requirements. Preserve all
+old earned amounts, cosmetic IDs, receipts and opt-outs. Firestore's 25-pin rules
+still need an explicit operator deployment; tests do not imply it happened.

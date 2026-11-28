@@ -196,3 +196,36 @@ test("retired events remain parseable but cannot create fresh attendance", () =>
     }),
   ).toThrow(/Unknown progress action/);
 });
+
+test("the retired Black Friday record keeps its stamps and the Blackout aura", () => {
+  const raw = {
+    ...emptyProgress(),
+    profile,
+    owned: [],
+    blackFriday: {
+      id: "black-friday-2026",
+      spent: 2_500_000,
+      stamps: 25,
+      skinEarned: true,
+    },
+    history: [
+      {
+        id: "sale-reward:blackout-2026:25",
+        type: "sale-reward",
+        at,
+        productId: "blackout-2026",
+        name: "Blackout 2026",
+        stamps: 25,
+      },
+    ],
+  };
+  const progress = parseProgress(JSON.stringify(raw));
+  expect(progress.blackFriday).toEqual({
+    id: "black-friday-2026",
+    spent: 2_500_000,
+    stamps: 25,
+    skinEarned: true,
+  });
+  expect(progress.owned).toContain("blackout-2026");
+  expect(progress.history.map(({ type }) => type)).toEqual(["sale-reward"]);
+});

@@ -10,7 +10,10 @@ import {
   RotateCcw,
   Share2,
   Bookmark,
+  Gift,
+  Hammer,
   ListChecks,
+  Star,
   Tag,
   TriangleAlert,
   Infinity as InfinityIcon,
@@ -547,6 +550,16 @@ export default function ActivityFeed({
                       "pass-upgrade",
                     ].includes(event.type) ? (
                     <ShoppingBag size={19} />
+                  ) : event.type === "advent-claim" ? (
+                    <Gift size={19} />
+                  ) : event.type === "winter-exchange" ? (
+                    <Coins size={19} />
+                  ) : event.type === "winter-market" ? (
+                    <ShoppingBag size={19} />
+                  ) : event.type === "golem-smash" ? (
+                    <Hammer size={19} />
+                  ) : ["golem-reward", "winter-reward"].includes(event.type) ? (
+                    <Star size={19} />
                   ) : event.type === "sale-reward" ||
                     event.type === "pass-reward" ||
                     event.type === "boost" ? (
@@ -627,7 +640,25 @@ export default function ActivityFeed({
                                                           ? event.stamps >= 25
                                                             ? "Sale reward · Blackout 2026 unlocked"
                                                             : `Sale stamp ${event.stamps} of 25`
-                                                          : `Equipped ${event.name}`}
+                                                          : event.type ===
+                                                              "advent-claim"
+                                                            ? `Advent door ${event.day}`
+                                                            : event.type ===
+                                                                "golem-smash"
+                                                              ? `Golem Smash · ${event.tier}`
+                                                              : event.type ===
+                                                                  "golem-reward"
+                                                                ? `Golem reward · ${event.name}`
+                                                                : event.type ===
+                                                                    "winter-reward"
+                                                                  ? `Winter reward · ${event.name}`
+                                                                  : event.type ===
+                                                                      "winter-exchange"
+                                                                    ? "Snowcoin exchange"
+                                                                    : event.type ===
+                                                                        "winter-market"
+                                                                      ? "Christmas market purchase"
+                                                                      : `Equipped ${event.name}`}
                     </h2>
                     <time dateTime={new Date(event.at).toISOString()}>
                       {new Date(event.at).toLocaleString("en-US", {
@@ -836,6 +867,38 @@ export default function ActivityFeed({
                     <p className="activity-transaction">
                       <strong>-{formatEP(event.ep)} EP</strong> · optional
                       premium track, no real money
+                    </p>
+                  ) : event.type === "advent-claim" ? (
+                    <p className="activity-transaction">
+                      {event.ep ? (
+                        <>
+                          <strong>+{formatEP(event.ep)} EP</strong> · advent
+                          door {event.day}
+                        </>
+                      ) : (
+                        <>
+                          <strong>Permanent aura</strong> · advent door{" "}
+                          {event.day} · kept forever
+                        </>
+                      )}
+                    </p>
+                  ) : event.type === "winter-exchange" ? (
+                    <p className="activity-transaction">
+                      −{formatEP(event.ep)} EP · +{event.coins} Snowcoins
+                    </p>
+                  ) : event.type === "winter-market" ? (
+                    <p className="activity-transaction">
+                      −{event.coins} Snowcoins · Winter stall reward
+                    </p>
+                  ) : event.type === "golem-smash" ? (
+                    <p className="activity-transaction">
+                      <strong>−{formatEP(event.ep)} EP</strong> · ×
+                      {event.multiplier} · {formatEP(event.damage)} damage
+                    </p>
+                  ) : ["golem-reward", "winter-reward"].includes(event.type) ? (
+                    <p className="activity-transaction">
+                      <strong>Permanent aura</strong> · {event.name} · kept
+                      forever
                     </p>
                   ) : event.type === "sale-reward" ? (
                     <p className="activity-transaction">

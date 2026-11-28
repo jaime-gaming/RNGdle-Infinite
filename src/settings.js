@@ -17,6 +17,7 @@ export const defaultSettings = {
   notifyRankEnabled: false,
   notifyRank: null,
 
+  christmasMode: true,
   compactNumbers: false,
   showSkillBar: true,
   skillBarCollapsed: false,
@@ -27,6 +28,7 @@ export const defaultSettings = {
 };
 
 const booleans = [
+  "christmasMode",
   "notifyReady",
   "notifySound",
   "notifyRankEnabled",

@@ -15,9 +15,7 @@ const APP_UPDATE_CACHE_TIMEOUT_MS = 1500;
 
 const APP_UPDATE_SAVE_TTL_MS = 60 * 60 * 1000;
 
-// Bumped with `npm run release:bump` (see tools/release-version.mjs), which
-// keeps this label, the build metadata, AGENTS.md and the release test in step.
-export const APP_INTERNAL_VERSION = "v0.6fix5";
+export const APP_INTERNAL_VERSION = "v0.6.1";
 
 export function isNewerVersion(candidate, baseline) {
   const parse = (label) => {

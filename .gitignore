@@ -18,3 +18,12 @@ media/*.png
 !media/rebirth.png
 !media/save-recovery.png
 .dev.vars*
+
+!media/rngmas.png
+!media/rngmas-collection.png
+!media/legacy-countdown.png
+!media/legacy-shutdown.png
+!media/legacy-closed.png
+
+!media/rngmas-live.png
+!media/rngmas-commissions.png

@@ -4,15 +4,14 @@ import {
   ChevronDown,
   Monitor,
   Moon,
-  Square,
+  Snowflake,
   Sun,
   Sunrise,
-  Tag,
 } from "lucide-react";
-import { SALE_THEMES } from "../black-friday.js";
 import { BATTLE_PASS_TEMPORARY_THEMES } from "../battle-pass.js";
-import { useSaleStatus } from "../use-black-friday.js";
+import { RNGMAS_TEMPORARY_THEMES } from "../rngmas.js";
 import "../appearance.css";
+import { useSettings } from "../use-settings.jsx";
 
 const THEMES = [
   ["light", "Light", Sun],
@@ -20,19 +19,23 @@ const THEMES = [
   ["dark", "Dark", Moon],
 ];
 
-const SALE_THEME_ICONS = { "ultra-black": Square, "red-sale": Tag };
 const ALL_TEMPORARY_THEME_IDS = new Set([
-  ...SALE_THEMES.map((entry) => entry.id),
   ...BATTLE_PASS_TEMPORARY_THEMES.map((entry) => entry.id),
+  ...RNGMAS_TEMPORARY_THEMES.map((entry) => entry.id),
 ]);
 
-export default function AppearanceMenu({ theme, onTheme, passActive = false }) {
+export default function AppearanceMenu({
+  theme,
+  onTheme,
+  passActive = false,
+  rngmasActive = false,
+}) {
+  const { settings, update } = useSettings();
   const [open, setOpen] = useState(false);
   const host = useRef(null);
   const trigger = useRef(null);
   const menu = useRef(null);
   const id = useId();
-  const sale = useSaleStatus();
   const temporaryOptions = [
     ...(passActive
       ? BATTLE_PASS_TEMPORARY_THEMES.map((entry) => [
@@ -41,11 +44,11 @@ export default function AppearanceMenu({ theme, onTheme, passActive = false }) {
           Sunrise,
         ])
       : []),
-    ...(sale.active
-      ? SALE_THEMES.map((entry) => [
+    ...(rngmasActive
+      ? RNGMAS_TEMPORARY_THEMES.map((entry) => [
           entry.id,
           entry.label,
-          SALE_THEME_ICONS[entry.id] ?? Moon,
+          Snowflake,
         ])
       : []),
   ];
@@ -113,9 +116,6 @@ export default function AppearanceMenu({ theme, onTheme, passActive = false }) {
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         title={`${label} theme`}
-        data-sale-theme-option={
-          SALE_THEMES.some((entry) => entry.id === theme) || undefined
-        }
         data-temporary-theme-option={
           ALL_TEMPORARY_THEME_IDS.has(theme) || undefined
         }
@@ -160,30 +160,44 @@ export default function AppearanceMenu({ theme, onTheme, passActive = false }) {
               {effective === value && <Check size={14} aria-hidden="true" />}
             </button>
           ))}
-          {temporaryOptions.length > 0 && (
-            <>
-              <p className="appearance-temporary">TEMPORAL</p>
-              {temporaryOptions.map(([value, name, ThemeIcon]) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={effective === value}
-                  className="appearance-option"
-                  onClick={() => {
-                    onTheme(value);
-                    close(true);
-                  }}
-                >
-                  <ThemeIcon size={16} aria-hidden="true" />
-                  <span>{name} theme</span>
-                  {effective === value && (
-                    <Check size={14} aria-hidden="true" />
-                  )}
-                </button>
-              ))}
-            </>
-          )}
+          <div role="group" aria-label="TEMPORAL">
+            <p className="appearance-temporary">TEMPORAL</p>
+            {temporaryOptions.map(([value, name, ThemeIcon]) => (
+              <button
+                key={value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={effective === value}
+                className="appearance-option"
+                onClick={() => {
+                  onTheme(value);
+                  close(true);
+                }}
+              >
+                <ThemeIcon size={16} aria-hidden="true" />
+                <span>{name} theme</span>
+                {effective === value && <Check size={14} aria-hidden="true" />}
+              </button>
+            ))}
+            <button
+              type="button"
+              role="menuitemcheckbox"
+              aria-label="Christmas mode"
+              aria-checked={rngmasActive && settings.christmasMode}
+              disabled={!rngmasActive}
+              className="appearance-option appearance-christmas"
+              onClick={() => {
+                if (rngmasActive)
+                  update({ christmasMode: !settings.christmasMode });
+              }}
+            >
+              <Snowflake size={16} aria-hidden="true" />
+              <span>Christmas mode</span>
+              <span className="appearance-switch" aria-hidden="true">
+                <i />
+              </span>
+            </button>
+          </div>
         </div>
       )}
     </div>

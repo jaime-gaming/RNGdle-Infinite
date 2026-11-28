@@ -371,6 +371,38 @@ export function saveHasProgress(progress) {
   if (progress.rngweenLimited?.finaleEarned) return true;
   if (safeAmount(progress.blackFriday?.stamps) > 0) return true;
   if (progress.blackFriday?.skinEarned) return true;
+  if (uniqueIds(progress.rngmas?.claimed).size > 0) return true;
+  if (progress.rngmas?.finale) return true;
+  if (
+    safeAmount(progress.rngmas?.snowcoinsEarned) > 0 ||
+    uniqueIds(progress.rngmas?.marketPurchases).size > 0
+  )
+    return true;
+  if (
+    safeAmount(progress.rngmas?.festival?.rolls) > 0 ||
+    safeAmount(progress.rngmas?.festival?.seven) > 0 ||
+    (Array.isArray(progress.rngmas?.festival?.digits) &&
+      progress.rngmas.festival.digits.length > 0) ||
+    uniqueIds(progress.rngmas?.festival?.claimed).size > 0
+  )
+    return true;
+  if (
+    Object.values(progress.rngmas?.festival?.live ?? {}).some(
+      (entry) =>
+        safeAmount(entry?.count) > 0 ||
+        (Array.isArray(entry?.digits) && entry.digits.length > 0) ||
+        entry?.claimed,
+    )
+  )
+    return true;
+  for (const record of Object.values(progress.rngmas?.golems ?? {}))
+    if (
+      record?.defeated ||
+      safeAmount(record?.damage) > 0 ||
+      safeAmount(record?.count) > 0 ||
+      record?.armed === true
+    )
+      return true;
   if (passLifetimeXp(progress) > 0) return true;
   if (passLifetimeClaims(progress) > 0) return true;
   if (passLifetimePremium(progress) > 0) return true;
@@ -455,6 +487,29 @@ export function saveProgressScore(progress) {
   score += safeAmount(progress.surplusBanked) * 40;
   score += Math.round(Math.log10(safeAmount(tally.spent) + 1) * 80);
   score += safeAmount(progress.blackFriday?.stamps) * 40;
+  score += uniqueIds(progress.rngmas?.claimed).size * 25;
+  if (progress.rngmas?.finale) score += 100;
+  score += Math.min(1000, safeAmount(progress.rngmas?.snowcoinsEarned));
+  score +=
+    safeAmount(progress.rngmas?.festival?.rolls) +
+    safeAmount(progress.rngmas?.festival?.seven);
+  score += uniqueIds(progress.rngmas?.festival?.claimed).size * 50;
+  score +=
+    (Array.isArray(progress.rngmas?.festival?.digits)
+      ? progress.rngmas.festival.digits.length
+      : 0) * 3;
+  for (const entry of Object.values(progress.rngmas?.festival?.live ?? {}))
+    score +=
+      safeAmount(entry?.count) +
+      (entry?.claimed ? 50 : 0) +
+      (Array.isArray(entry?.digits) ? entry.digits.length : 0);
+
+  score += uniqueIds(progress.rngmas?.marketPurchases).size * 25;
+  for (const record of Object.values(progress.rngmas?.golems ?? {})) {
+    if (record?.defeated) score += 200;
+    score += safeAmount(record?.count);
+    score += Math.min(200, Math.round(safeAmount(record?.damage) / 10000));
+  }
   score += Math.round(
     Math.log10(safeAmount(progress.blackFriday?.spent) + 1) * 60,
   );
@@ -557,6 +612,52 @@ export function compareSaveRichness(local, cloud) {
   compareNumber(local.blackFriday?.stamps, cloud.blackFriday?.stamps);
   compareNumber(local.blackFriday?.spent, cloud.blackFriday?.spent);
   compareFlag(local.blackFriday?.skinEarned, cloud.blackFriday?.skinEarned);
+  compareNumber(
+    uniqueIds(local.rngmas?.claimed).size,
+    uniqueIds(cloud.rngmas?.claimed).size,
+  );
+  compareFlag(local.rngmas?.finale, cloud.rngmas?.finale);
+  compareNumber(local.rngmas?.snowcoinsEarned, cloud.rngmas?.snowcoinsEarned);
+  compareNumber(
+    local.rngmas?.snowcoinsExchanged,
+    cloud.rngmas?.snowcoinsExchanged,
+  );
+  compareSet(local.rngmas?.marketPurchases, cloud.rngmas?.marketPurchases);
+  const lf = local.rngmas?.festival,
+    cf = cloud.rngmas?.festival;
+  compareNumber(lf?.rolls, cf?.rolls);
+  compareNumber(lf?.seven, cf?.seven);
+  compareSet(
+    Array.isArray(lf?.digits) ? lf.digits.map(String) : [],
+    Array.isArray(cf?.digits) ? cf.digits.map(String) : [],
+  );
+  compareSet(lf?.claimed, cf?.claimed);
+  compareSet(lf?.rewardClaims, cf?.rewardClaims);
+  for (const id of new Set([
+    ...Object.keys(lf?.live ?? {}),
+    ...Object.keys(cf?.live ?? {}),
+  ])) {
+    compareNumber(lf?.live?.[id]?.count, cf?.live?.[id]?.count);
+    compareFlag(lf?.live?.[id]?.claimed, cf?.live?.[id]?.claimed);
+    compareSet(
+      Array.isArray(lf?.live?.[id]?.digits)
+        ? lf.live[id].digits.map(String)
+        : [],
+      Array.isArray(cf?.live?.[id]?.digits)
+        ? cf.live[id].digits.map(String)
+        : [],
+    );
+  }
+  const localGolems = local.rngmas?.golems ?? {};
+  const cloudGolems = cloud.rngmas?.golems ?? {};
+  for (const id of new Set([
+    ...Object.keys(localGolems),
+    ...Object.keys(cloudGolems),
+  ])) {
+    compareNumber(localGolems[id]?.damage, cloudGolems[id]?.damage);
+    compareNumber(localGolems[id]?.count, cloudGolems[id]?.count);
+    compareFlag(localGolems[id]?.defeated, cloudGolems[id]?.defeated);
+  }
   compareNumber(passLifetimeXp(local), passLifetimeXp(cloud));
   compareNumber(passLifetimeClaims(local), passLifetimeClaims(cloud));
   compareNumber(passLifetimePremium(local), passLifetimePremium(cloud));
