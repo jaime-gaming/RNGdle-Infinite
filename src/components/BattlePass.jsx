@@ -1,3 +1,4 @@
+import WinterCountdown from "./WinterCountdown.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -249,7 +250,10 @@ export default function BattlePass({
   }
 
   return (
-    <div className="battle-pass" style={{ "--pass-accent": season.accent }}>
+    <div
+      className={`battle-pass${season.index === 2 ? " winter-event winter-pass" : ""}`}
+      style={{ "--pass-accent": season.accent }}
+    >
       {!cloudUser && !progress.profile && (
         <div className="guest-save-notice">
           <p>Guest pass progress is temporary. Name a profile to keep it.</p>
@@ -328,6 +332,14 @@ export default function BattlePass({
             )}
           </div>
         </div>
+        {season.index === 2 && !ended && (
+          <WinterCountdown
+            until={season.upcoming ? season.start : season.end}
+            label={
+              season.upcoming ? "Winter pass opens in" : "Winter pass closes in"
+            }
+          />
+        )}
         <div className="pass-level-progress">
           <progress
             max={BPEP_PER_LEVEL}

@@ -1,3 +1,6 @@
+import WinterEventHeader from "./WinterEventHeader.jsx";
+import WinterEventGuide from "./WinterEventGuide.jsx";
+import WinterCountdown from "./WinterCountdown.jsx";
 import PetIcon from "./PetIcon.jsx";
 import WinterFestival from "./WinterFestival.jsx";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -70,7 +73,7 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
     <>
       <button
         type="button"
-        className={`rngmas-flag ${status.active ? "is-live" : "is-soon"}`}
+        className={`rngmas-flag winter-event ${status.active ? "is-live" : "is-soon"}`}
         data-testid="rngmas-event-button"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
@@ -93,13 +96,14 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
         </span>
         <span className="rngmas-flag-when" aria-hidden="true">
           <Clock3 size={13} />
-          {status.active
-            ? waitText(status.endsInMs)
-            : waitText(status.startsInMs)}
+          <WinterCountdown
+            until={status.active ? status.end : status.start}
+            label={status.active ? "Ends in" : "Opens in"}
+          />
         </span>
       </button>
       <dialog
-        className="rngmas-dialog"
+        className="rngmas-dialog winter-event"
         ref={dialog}
         aria-labelledby="rngmas-dialog-title"
         aria-describedby="rngmas-dialog-when"
@@ -117,47 +121,13 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
         >
           <X size={18} />
         </button>
-        <div className="rngmas-dialog-hero">
-          <div>
-            <p className="eyebrow rngmas-eyebrow">
-              <Snowflake size={13} aria-hidden="true" /> RNGMAS 2026
-            </p>
-            <h2 id="rngmas-dialog-title">
-              RNGmas <span>2026</span>
-            </h2>
-            <p className="rngmas-hero-subtitle">
-              Daily doors and a different activity each week.
-            </p>
-          </div>
-          <div className="rngmas-hero-art" aria-hidden="true">
-            <Gift size={34} />
-            <small>
-              DEC 1
-              <br />
-              JAN 2
-            </small>
-          </div>
-        </div>
+        <WinterEventHeader status={status} titleId="rngmas-dialog-title" />
         <p className="rngmas-when" id="rngmas-dialog-when">
           {rngmasRangeLabel()} · {status.active ? "live now" : "starts soon"} ·
           all times UTC
         </p>
 
-        <div className="rngmas-dialog-highlights" aria-label="Event highlights">
-          <span>
-            <strong>{ADVENT_DAYS} doors</strong>
-            <small>one each day</small>
-          </span>
-          <span>
-            <strong>{RNGMAS_WEEKS.length} chapters</strong>
-            <small>one each week</small>
-          </span>
-          <span>
-            <strong>{RNGMAS_TEMPORARY_THEMES.length} theme</strong>
-            <small>winter look</small>
-          </span>
-        </div>
-
+        <WinterEventGuide status={status} />
         <section className="rngmas-block">
           <h3>
             <CalendarDays size={14} aria-hidden="true" /> The advent calendar
@@ -232,10 +202,10 @@ export function RngmasEventNotice({ progress, onOpenShelf, navigate }) {
         </section>
 
         <p className="rngmas-fine">
-          The event is a calendar and cosmetics event. It never touches the
-          draw, the scoring tables, badge values or cooldowns. Every aura you
-          earn is permanent, so a rebirth, a prestige, a Rollback or a fresh
-          start can never take it away.
+          The event combines missions, mini-events, a calendar and cosmetics. It
+          never touches the draw, the scoring tables, badge values or cooldowns.
+          Every aura you earn is permanent, so a rebirth, a prestige, a Rollback
+          or a fresh start can never take it away.
         </p>
         <div className="rngmas-dialog-actions">
           {onOpenShelf && (
@@ -303,6 +273,19 @@ export function AdventCalendar({ record, status, onClaim, pending }) {
         </span>
       </div>
 
+      {!status.over && (
+        <WinterCountdown
+          until={
+            status.upcoming
+              ? status.start
+              : Math.min(
+                  status.end,
+                  Math.floor(now / 86400000) * 86400000 + 86400000,
+                )
+          }
+          label={status.upcoming ? "First door opens in" : "UTC daily reset in"}
+        />
+      )}
       <div className="advent-grid">
         {ADVENT_DOORS.map((door) => {
           const state = adventDoorAt(door.day, now);
@@ -476,6 +459,7 @@ export function GolemSmash({ progress, status, onSmash, onClaim, pending }) {
           }
           style={{ "--treat-a": aura.swatch[0], "--treat-b": aura.swatch[1] }}
         >
+          <WinterCountdown until={week.end} label="Chapter closes in" />
           <div className="winter-mission-top">
             <span>
               Chapter {week.index} · {rngmasDateLabel(week.start)} –{" "}
@@ -601,7 +585,7 @@ export function WinterEconomy({
   zone = "all",
 }) {
   const [amount, setAmount] = useState("10");
-  if (!status.active) return null;
+  if (status.over) return null;
   const record = progress.rngmas;
   const index = status.week?.index ?? 0;
   const exchanged = record.snowcoinsExchanged ?? 0;
@@ -629,6 +613,10 @@ export function WinterEconomy({
         {zone !== "exchange" && (
           <div className="winter-market">
             <h3>Christmas market</h3>
+            <WinterCountdown
+              until={index < 2 ? RNGMAS_WEEKS[1].start : status.end}
+              label={index < 2 ? "Market opens in" : "Market closes in"}
+            />
             <p>
               {index < 2
                 ? "Opens December 8 UTC."
@@ -871,6 +859,9 @@ function WinterChapter({
             <NumberBox value="2026" tier="rare" aura={aura.id} compact />
             <div>
               <h3>{week.name}</h3>
+              {!past && (
+                <WinterCountdown until={week.start} label="Chapter opens in" />
+              )}
               <p>{week.blurb}</p>
               <p>
                 <strong>{aura.name}</strong> · {week.coins} Snowcoins ·{" "}
@@ -973,6 +964,14 @@ export default function RngmasShelf({ progress, onAction, notify }) {
       if (result.ok) notify?.({ kind: "done", text: message });
       else notify?.({ kind: "error", text: result.message });
       return result.ok;
+    } catch (error) {
+      notify?.({
+        kind: "error",
+        text:
+          error?.message ||
+          "The action could not be completed. Your saved progress is unchanged.",
+      });
+      return false;
     } finally {
       busy.current = false;
       setPending(false);
@@ -989,32 +988,12 @@ export default function RngmasShelf({ progress, onAction, notify }) {
 
   return (
     <section
-      className="shop-category rngmas-shelf"
+      className="shop-category rngmas-shelf winter-event"
       id="shop-rngmas"
       tabIndex={-1}
     >
-      <div className="rngmas-hero">
-        <div className="rngmas-hero-copy">
-          <p className="eyebrow rngmas-eyebrow">
-            <Snowflake size={13} aria-hidden="true" /> WINTER EVENT
-          </p>
-          <h2>
-            RNGmas <span>2026</span>
-          </h2>
-          <p>
-            Daily doors and weekly activities. {rngmasRangeLabel()} · all times
-            UTC.
-          </p>
-        </div>
-        <div className="rngmas-hero-badge" aria-hidden="true">
-          <Gift size={30} />
-          <small>
-            {status.active
-              ? `${waitText(status.endsInMs)} left`
-              : "Coming soon"}
-          </small>
-        </div>
-      </div>
+      <WinterEventHeader status={status} />
+      <WinterEventGuide status={status} />
 
       <nav className="winter-wayfinding" aria-label="RNGmas zones">
         {[

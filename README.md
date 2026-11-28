@@ -53,6 +53,8 @@ you claim are yours forever.
 
 ## RNGmas 2026
 
+**The November 28 update is a preview; play starts December 1 at 00:00 UTC.** Browse the event in Tasks and Shop beforehand, with claims and Christmas mode locked until opening. Shared countdowns show exactly when each window opens or closes. [Release checklist](docs-source/november-28-readiness.md).
+
 From **December 1, 2026 to January 2, 2027 (UTC)**, RNGdle Infinite runs RNGmas: an advent calendar and five weekly activities. Frostfall and the RNGmas pass also open on December 1, when First Light closes, and last until January 2. During December 1–January 2 UTC only, toggle decorations independently of your color theme with **Christmas mode**, under **TEMPORAL** in Appearance. Outside that season the switch is disabled and decorations cannot activate. Snow, lights and scenery adapt to phones, tablets and desktops; reduced-motion preferences are respected.
 
 Find all event missions, live gatherings and weekly chapters in **Tasks → RNGmas**. The shop contains the Advent calendar, reward gallery, market and exchange. The festival now includes **8 event auras and 5 companion skins**, plus the **3 winter-pass cosmetics**. Alongside the five weekly zones, a festival board gives you three season-long tasks, eleven scheduled gatherings and eight rotating commissions with personal progress—not invented global player counts.
@@ -80,7 +82,7 @@ Find all event missions, live gatherings and weekly chapters in **Tasks → RNGm
 
 The market offers **Polar Axolotl (100 Snowcoins)** once. The reward gallery previews eight auras and five companion skins. Previously earned auras stay yours. Skins need their base companion and do not change stats or odds.
 
-**Advent calendar.** A new door opens every day from December 1. Claim it on that UTC day or lose it; there is no catch-up. The last door holds the Gingerbread aura,
+**Advent calendar.** A new door opens every day from December 1. Claim it on that UTC day or lose it; there is no catch-up. The first six doors pay 10,000–22,500 EP, rising through December. The last door holds the Gingerbread aura,
 and the RNGmas Star is claimable only on Christmas Day.
 
 **Weekly activities.** Golem Smash (December 1–8), Christmas market (December 8–15), Snowcoin exchange (December 15–22), Gift workshop (December 22–29, 80 online numbers containing 0) and Midnight countdown (December 29–January 2, 100 online rolls). Each chapter is an expandable zone in Tasks → RNGmas → Weekly chapters; the live one opens by default. Claim during its week for a permanent aura, Snowcoins and a themed boost bundle:

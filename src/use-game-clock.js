@@ -1,3 +1,4 @@
+import { nextRngmasBoundary } from "./rngmas.js";
 import { useEffect, useState } from "react";
 import { gameNow } from "./game-clock.js";
 
@@ -28,7 +29,7 @@ export function useGameClock() {
     );
     const timer = setTimeout(
       () => setNow(gameNow()),
-      Math.max(1, midnight - now),
+      Math.max(1, Math.min(midnight, nextRngmasBoundary(now)) - now),
     );
     return () => clearTimeout(timer);
   }, [now]);

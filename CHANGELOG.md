@@ -57,3 +57,11 @@ deployment, new tag or new published release.
 Implementation and validation details are in
 [`docs-source/rngmas-design.md`](docs-source/rngmas-design.md) and
 [`docs-source/fix5-verification.md`](docs-source/fix5-verification.md).
+
+## November 28 readiness review
+
+- Unify notice/dialog, Tasks, Shop, winter pass and aura previews under one opaque Christmas-village style and shared headers.
+- Add read-only pre-launch event browsing, explicit reward sources and claim windows, a shared event guide and second-by-second countdowns.
+- Wake seasonal and global Tasks clocks on exact daily/chapter/gathering UTC boundaries, not a later polling tick; use the game clock for default Advent and chapter action timestamps.
+- Improve the first six Advent EP rewards with a bounded 37,500 EP increase, preserving all earlier claimed receipts and preventing reclaims.
+- Add dedicated November 28/opening/handover/reward-persistence checks and an operator checklist distinguishing the release, UTC event opening and Madrid Legacy shutdown.

@@ -155,12 +155,12 @@ export const RNGMAS_COSMETICS_BY_ID = new Map(
 );
 
 export const ADVENT_DOORS = [
-  { day: 1, ep: 2500 },
-  { day: 2, ep: 5000 },
-  { day: 3, ep: 7500 },
-  { day: 4, ep: 10000 },
-  { day: 5, ep: 15000 },
-  { day: 6, ep: 20000 },
+  { day: 1, ep: 10000 },
+  { day: 2, ep: 12500 },
+  { day: 3, ep: 15000 },
+  { day: 4, ep: 17500 },
+  { day: 5, ep: 20000 },
+  { day: 6, ep: 22500 },
   { day: 7, ep: 25000 },
   { day: 8, ep: 30000 },
   { day: 9, ep: 35000 },
@@ -720,4 +720,63 @@ export function winterReadyCount(record, at = gameNow()) {
   )
     ready++;
   return ready;
+}
+
+// UI clocks must change chapters, daily doors and gatherings at the exact UTC edge.
+export function nextRngmasBoundary(at = gameNow()) {
+  const dates = [
+    RNGMAS_START,
+    RNGMAS_END,
+    ...RNGMAS_WEEKS.flatMap((week) => [week.start, week.end]),
+    ...WINTER_LIVE_EVENTS.flatMap((event) => [event.start, event.end]),
+  ];
+  if (at >= RNGMAS_START && at < RNGMAS_END)
+    dates.push(Math.floor(at / RNGMAS_DAY_MS) * RNGMAS_DAY_MS + RNGMAS_DAY_MS);
+  return Math.min(...dates.filter((date) => date > at));
+}
+
+export function winterRewardSource(id) {
+  const mission = [...WINTER_SPECIAL_TASKS, ...WINTER_LIVE_EVENTS].find(
+    (item) => item.reward === id,
+  );
+  if (mission)
+    return {
+      label: mission.name,
+      opensAt: mission.start ?? RNGMAS_START,
+      closesAt: mission.end ?? RNGMAS_END,
+      section: "tasks",
+    };
+  const week = RNGMAS_WEEKS.find((item) => item.reward === id);
+  if (week)
+    return {
+      label: `Chapter ${week.index} · ${week.name}`,
+      opensAt: week.start,
+      closesAt: week.end,
+      section: "tasks",
+    };
+  if (id === "rngmas-gingerbread")
+    return {
+      label: "Advent door 24",
+      opensAt: Date.UTC(2026, 11, 24),
+      closesAt: Date.UTC(2026, 11, 25),
+      section: "calendar",
+    };
+  if (id === "rngmas-star")
+    return {
+      label: "Christmas Day star",
+      opensAt: Date.UTC(2026, 11, 25),
+      closesAt: Date.UTC(2026, 11, 26),
+      section: "calendar",
+    };
+  const item = ACTIVE_WINTER_MARKET.find(
+    (item) => item.cosmetic === id || item.aura === id,
+  );
+  return item
+    ? {
+        label: `Winter market · ${item.price} Snowcoins`,
+        opensAt: RNGMAS_WEEKS[1].start,
+        closesAt: RNGMAS_END,
+        section: "market",
+      }
+    : null;
 }

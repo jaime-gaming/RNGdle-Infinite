@@ -1,3 +1,4 @@
+import WinterCountdown from "./WinterCountdown.jsx";
 import WinterMotif from "./WinterMotif.jsx";
 import {
   WINTER_ROTATIONS,
@@ -15,7 +16,12 @@ import {
   WINTER_GATHERINGS,
   winterFestivalCount,
 } from "../winter-festival.js";
-import { RNGMAS_REWARDS, RNGMAS_COSMETICS_BY_ID } from "../rngmas.js";
+import {
+  RNGMAS_REWARDS,
+  RNGMAS_COSMETICS_BY_ID,
+  winterRewardSource,
+  rngmasDateLabel,
+} from "../rngmas.js";
 import NumberBox from "./NumberBox.jsx";
 
 const date = (at) =>
@@ -53,14 +59,15 @@ export default function WinterFestival({
     );
     return () => clearTimeout(timer);
   }, [now]);
-  if (!status.active) return null;
+  if (!status.shown && !collectionOnly) return null;
   const festival = progress.rngmas.festival;
   const card = (mission, live) => {
     const aura = RNGMAS_COSMETICS_BY_ID.get(mission.reward);
     const rewardName =
       aura?.name ??
       `${mission.charges} ${passBoostById(mission.boost)?.name ?? "boost"} charge${mission.charges > 1 ? "s" : ""}`;
-    const open = !live || (now >= mission.start && now < mission.end);
+    const open =
+      status.active && (!live || (now >= mission.start && now < mission.end));
     const claimed = live
       ? festival?.live?.[mission.id]?.claimed
       : festival?.claimed?.includes(mission.id);
@@ -116,16 +123,25 @@ export default function WinterFestival({
           <p className="festival-window">
             {date(mission.start)} – {date(mission.end)} UTC
             <br />
-            {open
-              ? `Closes in ${remaining(mission.end, now)}`
-              : now < mission.start
-                ? `Opens in ${remaining(mission.start, now)}`
-                : "This window has closed. Earned cosmetics stay yours."}
+            {now < mission.end ? (
+              <WinterCountdown
+                until={now < mission.start ? mission.start : mission.end}
+                label={now < mission.start ? "Opens in" : "Closes in"}
+              />
+            ) : (
+              "This window has closed. Earned rewards stay yours."
+            )}
           </p>
         )}
         <p>
           <strong>{rewardName}</strong>
           {mission.coins ? ` + ${mission.coins} Snowcoins` : ""}
+          {mission.boost && (
+            <span className="winter-reward-detail">
+              {passBoostById(mission.boost)?.blurb} Banked for you to activate
+              on the Pass page.
+            </span>
+          )}
         </p>
         <label>
           {count} / {mission.goal}
@@ -200,9 +216,11 @@ export default function WinterFestival({
               ? "In your collection"
               : "Collected"
             : !open
-              ? now < mission.start
-                ? "Not open yet"
-                : "Window closed"
+              ? status.upcoming
+                ? "Opens December 1"
+                : now < mission.start
+                  ? "Not open yet"
+                  : "Window closed"
               : `Collect ${rewardName}`}
         </button>
       </article>
@@ -276,8 +294,10 @@ export default function WinterFestival({
               aria-label="Season missions collected"
             />
             <span>
-              {remaining(status.endsInMs ? now + status.endsInMs : now, now)}{" "}
-              left this season · Claim before the window closes.
+              {status.upcoming
+                ? "Opens December 1 at 00:00 UTC."
+                : `${remaining(status.end, now)} left this season.`}{" "}
+              Claim before the window closes.
             </span>
           </div>
           <nav className="festival-tabs" aria-label="Festival sections">
@@ -352,21 +372,35 @@ export default function WinterFestival({
           winter pass rewards are separate.
         </p>
         <div className="festival-collection">
-          {RNGMAS_REWARDS.map((aura) => (
-            <article key={aura.id}>
-              {aura.kind === "pet-variant" ? (
-                <PetIcon pet={aura.petId} skin={aura.skinId} size={64} />
-              ) : (
-                <NumberBox value="2026" tier="rare" aura={aura.id} compact />
-              )}
-              <strong>{aura.name}</strong>
-              <small>
-                {progress.owned.includes(aura.id)
-                  ? "Collected"
-                  : "Exclusive · RNGmas 2026"}
-              </small>
-            </article>
-          ))}
+          {RNGMAS_REWARDS.map((aura) => {
+            const source = winterRewardSource(aura.id);
+            return (
+              <article key={aura.id}>
+                {aura.kind === "pet-variant" ? (
+                  <PetIcon pet={aura.petId} skin={aura.skinId} size={64} />
+                ) : (
+                  <NumberBox value="2026" tier="rare" aura={aura.id} compact />
+                )}
+                <strong>{aura.name}</strong>
+                <small>{source?.label}</small>
+                <small>
+                  {source
+                    ? `${rngmasDateLabel(source.opensAt)} – ${rngmasDateLabel(source.closesAt)} UTC`
+                    : "RNGmas 2026"}
+                </small>
+                <small>
+                  {aura.kind === "pet-variant"
+                    ? "Skin · base companion required"
+                    : "Permanent aura"}
+                </small>
+                <small>
+                  {progress.owned.includes(aura.id)
+                    ? "Collected"
+                    : "Exclusive · RNGmas 2026"}
+                </small>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>

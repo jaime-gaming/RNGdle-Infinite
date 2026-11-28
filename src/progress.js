@@ -1362,7 +1362,7 @@ function applyEvent(state, action) {
     return state.goalId === action.id ? state : { ...state, goalId: action.id };
   }
   if (action.type === "claim-advent") {
-    const at = action.at ?? Math.ceil(Date.now());
+    const at = action.at ?? Math.ceil(gameNow());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid advent claim time");
     const rngmas = state.rngmas ?? emptyRngmas();
@@ -1620,7 +1620,7 @@ function applyEvent(state, action) {
     };
   }
   if (action.type === "golem-smash" || action.type === "claim-winter-week") {
-    const at = action.at ?? Math.ceil(Date.now());
+    const at = action.at ?? Math.ceil(gameNow());
     if (!validAmount(at) || at > 8640000000000000)
       throw new Error("Invalid activity time");
     const week = rngmasWeekAt(at);

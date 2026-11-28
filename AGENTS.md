@@ -667,3 +667,23 @@ Run `npm run audit:winter` for deterministic 2,000-player-per-activity demand
 samples, calendar coverage and hard bonus-budget assertions. Added windows cap
 at 128 Snowcoins, 13 Spark charges and 2 Surge charges over the entire season.
 No new cosmetic IDs, scoring/odds/cooldown changes or unlimited farms.
+
+### November 28 release preparation
+
+Read `docs-source/november-28-readiness.md`. Release day is Nov 28; the event still
+opens Dec 1 00:00 UTC, an hour after the Legacy mirror's Madrid-midnight closure.
+Tasks and Shop expose read-only previews in the announcement period; claims and
+Christmas mode remain season-gated. `WinterEventHeader`, `WinterEventGuide` and
+`WinterCountdown` unify the announcement/modal/Tasks/Shop presentation; winter
+pass and RNGmas aura previews use the same `.winter-event` visual contract.
+Countdowns tick in leaves only, have no per-second aria-live announcements and
+reject invalid target times without crashing the page. `nextRngmasBoundary`
+wakes both seasonal status and the global game clock at daily and 18:00 handovers.
+Default Advent/chapter action timestamps use `gameNow`, like other event actions.
+
+Starter calendar EP is now 10k/12.5k/15k/17.5k/20k/22.5k for doors 1–6; total
+calendar EP is 1,547,500. The 37,500 increase cannot be claimed again from an old
+receipt and does not pay into cycle-earned EP. Source-labelled collection cards
+clarify exact acquisition windows and base-companion requirements. Preserve all
+old earned amounts, cosmetic IDs, receipts and opt-outs. Firestore's 25-pin rules
+still need an explicit operator deployment; tests do not imply it happened.

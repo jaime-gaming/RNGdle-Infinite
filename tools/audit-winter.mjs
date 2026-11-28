@@ -1,4 +1,4 @@
-import { ACTIVE_WINTER_MARKET } from "../src/rngmas.js";
+import { ACTIVE_WINTER_MARKET, ADVENT_DOORS } from "../src/rngmas.js";
 import assert from "node:assert/strict";
 import {
   WINTER_LIVE_EVENTS,
@@ -41,6 +41,13 @@ for (const [bundleId, singleId] of [
     "Bundles must beat their single-charge unit price",
   );
 }
+const adventEP = ADVENT_DOORS.reduce((sum, door) => sum + (door.ep ?? 0), 0);
+assert.equal(
+  adventEP,
+  1547500,
+  "The fixed Advent EP budget must be reviewed explicitly",
+);
+assert.equal(ADVENT_DOORS[0].ep, 10000);
 let seed = 20261217;
 const random = () => {
   seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
@@ -90,6 +97,7 @@ assert.equal(boostCharges["boost-overdrive"], 0);
 console.log(
   JSON.stringify(
     {
+      adventEP,
       windows: WINTER_LIVE_EVENTS.length,
       rotations: 8,
       gatherings: 11,

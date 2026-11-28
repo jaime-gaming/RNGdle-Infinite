@@ -1,3 +1,4 @@
+import WinterCountdown from "./WinterCountdown.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -1441,7 +1442,7 @@ export default function Shop({
                 <a
                   href={pathForSubpage("shop", "rngmas")}
                   aria-label="RNGmas 2026"
-                  className="shop-tile is-rngmas"
+                  className="shop-tile is-rngmas winter-event"
                   data-shelf="rngmas"
                   onClick={(event) => {
                     if (event.metaKey || event.ctrlKey || event.shiftKey)
@@ -1457,14 +1458,16 @@ export default function Shop({
                     <strong>RNGmas 2026</strong>
                     <small>
                       {rngmas.active
-                        ? "Daily doors and weekly activities."
-                        : "Advent calendar, weekly activities and a winter theme."}
+                        ? "Calendar in Shop · missions and mini-events in Tasks."
+                        : "Preview now · play December 1–January 2 UTC."}
                     </small>
                   </span>
                   <span className="shop-tile-stat">
-                    {rngmas.active
-                      ? `${progress.rngmas?.claimed?.length ?? 0} / 24 doors`
-                      : "Dec 1 – Jan 2"}
+                    <span>Dec 1 – Jan 2 UTC</span>
+                    <WinterCountdown
+                      until={rngmas.active ? rngmas.end : rngmas.start}
+                      label={rngmas.active ? "Season ends in" : "Opens in"}
+                    />
                   </span>
                 </a>
               )}
@@ -1783,7 +1786,11 @@ export default function Shop({
         </section>
       )}
       {shelf?.id === "auras" && (
-        <section className="shop-category" id="shop-auras" tabIndex={-1}>
+        <section
+          className={`shop-category${auraFamily?.id === "rngmas" ? " winter-event winter-aura-shelf" : ""}`}
+          id="shop-auras"
+          tabIndex={-1}
+        >
           <div className="shop-section-heading">
             <div>
               <h2>
@@ -2152,7 +2159,7 @@ export default function Shop({
       </dialog>
 
       <dialog
-        className="shop-preview-dialog"
+        className={`shop-preview-dialog${lookPreview?.family === "rngmas" ? " winter-event" : ""}`}
         ref={lookDialog}
         aria-labelledby="shop-look-title"
         onCancel={(event) => {

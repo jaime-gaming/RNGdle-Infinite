@@ -101,7 +101,7 @@ export default function Tasks({
   );
   const winterStatus = rngmasStatus(now);
   const activeView =
-    requestedView === "winter" && !winterStatus.active
+    requestedView === "winter" && !winterStatus.shown
       ? "regular"
       : requestedView;
   const summary = taskSummary(progress.tasks, now);
@@ -331,7 +331,7 @@ export default function Tasks({
             </span>
           )}
         </button>
-        {winterStatus.active && (
+        {winterStatus.shown && (
           <button
             type="button"
             className={activeView === "winter" ? "is-active" : ""}
@@ -354,7 +354,7 @@ export default function Tasks({
           </button>
         )}
       </div>
-      {activeView === "winter" && winterStatus.active && (
+      {activeView === "winter" && winterStatus.shown && (
         <WinterTasks
           progress={progress}
           status={winterStatus}
